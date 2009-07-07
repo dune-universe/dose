@@ -1,0 +1,4 @@
+<*.ml> or <*.mli> or <*.byte> or <*.native>: pkg_extlib, pkg_str
+<{version,parse}.cmx>: for-pack(Rpm)
+<bridge>: include
+<common>: include

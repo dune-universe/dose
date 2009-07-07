@@ -1,0 +1,38 @@
+
+the library builds a pipeline as follows :
+
+             inputs      cudf++     outputs
+
+deb  | (ipr)
+rpm  | (ipr)                                 | ??
+     | --------------> (algo) ----------->   | dot
+db   | (idbr)                                | dimacs
+     |
+cudf | (native)
+
+
+this pipeline is build around the folowing components :
+
+libcduf is the central - in memory - data structure
+
+bridge contains the intermediate package representation (Ipr) used
+to parse package information from different inputs.
+
+common contains input routines to read deb, cudf, db, etc into Ipr and
+the sat solver.
+
+db contains the databases modules all sharing a single interface Sql
+
+deb contains all the routines to parse debian related files.
+
+algo contains a collection of algorithm to manipulated dependencies:
+- Depsolver
+- Graph
+- Dominators
+- Strondeps
+- Statistic
+
+applications contains a collection of applications build upon the library.
+
+to compile all the applications :
+"ocamlbuild all.otarget" in applications.

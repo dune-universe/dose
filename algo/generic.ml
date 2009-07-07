@@ -1,0 +1,19 @@
+
+module S = Set.Make(struct type t = int let compare = compare end)
+let dependency_closure h root =
+  let queue = Queue.create () in
+  let visited = ref S.empty in
+  Queue.add root queue;
+  while (Queue.length queue > 0) do
+    let pid = Queue.take queue in
+    visited := S.add pid !visited;
+    List.iter (fun l ->
+      List.iter (fun p ->
+        if not (S.mem p !visited) then
+          Queue.add p queue;
+      ) l
+    ) (fst(Hashtbl.find h pid))
+  done;
+  S.elements !visited
+;;
+

@@ -1,0 +1,72 @@
+VERSION=@PACKAGE_VERSION@
+NAME=@PACKAGE_NAME@
+
+DESTDIR =
+LIBDIR = $(DESTDIR)/@OCAMLLIB@
+BINDIR = $(DESTDIR)/usr/bin
+ifeq ($(DESTDIR),)
+  INSTALL = $(OCAMLFIND) install
+  UNINSTALL = $(OCAMLFIND) remove
+else
+  INSTALL = $(OCAMLFIND) install -destdir $(LIBDIR)
+  UNINSTALL = $(OCAMLFIND) remove -destdir $(LIBDIR)
+endif
+
+OCAMLBUILD=@OCAMLBUILD@
+#ocamlbest
+ifeq ("@OCAMLBEST@","opt")
+  OCAMLBEST=native
+  OCAMLLIBBEST=cmxa
+else
+  OCAMLBEST=byte
+  OCAMLLIBBEST=cma
+endif
+
+TARGETS= \
+        applications/deb-cudf.$(OCAMLBEST) \
+				applications/randcudf.$(OCAMLBEST) \
+				applications/cudf-solver.$(OCAMLBEST) \
+				applications/distcheck.$(OCAMLBEST) \
+				applications/cudf-diff.$(OCAMLBEST)
+
+LIBS= \
+			common/common.$(OCAMLLIBBEST) \
+			bridge/iprLib.$(OCAMLLIBBEST) \
+			deb/debian.$(OCAMLLIBBEST) \
+			algo/algo.$(OCAMLLIBBEST)
+
+TESTS= \
+			 common/tests.$(OCAMLLIBBEST) \
+			 bridge/tests.$(OCAMLLIBBEST) \
+			 deb/tests.$(OCAMLLIBBEST) \
+			 algo/tests$(OCAMLLIBBEST)
+
+#database support
+ifeq ("@HAS_DB@","yes") 
+  TARGETS += applications/db-cudf.$(OCAMLBEST)
+  LIBS += db/db.$(OCAMLLIBBEST)
+endif
+
+#xml processing support
+ifeq ("@HAS_XML@","yes")
+  TARGETS += applications/debdudf/deb-dudftocudf.$(OCAMLBEST)
+endif
+
+#ocamlgraph support
+ifeq ("@HAS_OCAMLGRAPH@","yes")
+  TARGETS += \
+			  applications/rmat.$(OCAMLBEST) \
+				applications/pref-attach.$(OCAMLBEST) \
+				applications/depgraph.$(OCAMLBEST)
+endif
+
+#rpm support
+ifeq ("@HAS_RPM@","yes")
+  TARGETS += applications/rpm-cudf.$(OCAMLBEST)
+  LIBS += rpm/rpm.$(OCAMLLIBBEST)
+endif
+
+#ounit support
+ifeq ("@HAS_OUNIT@","yes")
+  TESTS = "$(TESTS) rpm/tests.$(OCAMLLIBBEST)"
+endif

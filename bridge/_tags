@@ -1,0 +1,3 @@
+<*.ml> or <*.mli> or <*.byte> or <*.native>: pkg_extlib, pkg_cudf
+<tests.*>: pkg_oUnit, pkg_extlib, pkg_cudf, pkg_zip, pkg_str
+<common>: include

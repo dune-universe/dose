@@ -1,0 +1,59 @@
+
+
+distcheck.native checks broken packages in a repository
+
+./distcheck.native cudf://test.cudf --failures
+./distcheck.native deb:///var/lib/apt/lists/ftp.fr.debian.org_debian_dists_unstable_main_binary-amd64_Packages --failures
+
+-----
+
+deb-cudf.native converts a debian archive in a cudf universe
+./deb-cudf.native deb:///var/lib/apt/lists/ftp.fr.debian.org_debian_dists_unstable_main_binary-amd64_Packages >test.cudf
+
+-----
+
+randcudf.native generates random cudf documents
+./randcudf.native --universe cudf://test-universe.cudf --status cudf://test-status.cudf --upgradeAll --outdir tests
+
+-----
+
+cudf-solver.native compute a solution for a cudf problem
+./cudf-solver.native --cudf tests/rande43c24.cudf > test-sol.cudf
+
+to test a solution : 
+cudf-check -sol test-sol.cudf -cudf tests/rande43c24.cudf
+
+-----
+
+cudf-diff.native prints the differences between two cudf documents
+eventually considering one of them as a solution file.
+
+./cudf-diff.native doc1.cudf doc2.cudf
+./cudf-diff.native --solution legacy.cudf leg-sol.pdf --verbose
+
+
+-----
+
+rmat.native generates a random graph with small world characteristic
+./rmat.native --dot > test.dot
+
+-----
+
+smallworld.native computes relevant small world measures of a dependecy graph
+./smallworld.native test.dot
+
+-----
+
+deb-dudf-cudf.native converts a debian dudf document to a cudf document
+./debdudf/deb-dudftocudf.native dudf.xml > doc.cudf
+
+-----
+
+db-cudf.native converts a debian archive stored in a database to a cudf universe
+
+depgraph.native generates a .dot graph of a repository
+
+dimacs.native generates a propositional problem in dimacs format from a repository
+
+strongdeps.native generates the strong dependency graph from a repository
+

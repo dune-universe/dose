@@ -1,0 +1,6 @@
+<*.ml> or <*.mli> or <*.cma> or <*.cmxa>: pkg_extlib, @PKG_ZIP@, @PKG_BZ2@
+<tests.*>: pkg_oUnit, pkg_extlib, pkg_zip, pkg_str
+<{input}.ml> or <{input}.mli>: pp(cpp -w @CONFIG_ZIP@ @CONFIG_BZ2@)
+<{input,solver,util}.cmx>: for-pack(Common)
+<bridge>: include
+<db>: include

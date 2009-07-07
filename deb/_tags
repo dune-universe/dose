@@ -1,0 +1,5 @@
+<*.ml> or <*.mli> or <*.byte> or <*.native>: pkg_extlib, pkg_cudf
+<{packages,version,parse,debcudf}.cmx>: for-pack(Debian)
+<tests.*>: pkg_extlib, pkg_cudf, pkg_oUnit, pkg_zip, pkg_str
+<bridge>: include
+<common>: include

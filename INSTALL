@@ -1,0 +1,22 @@
+
+required libraries :
+ - libextlib-ocaml-dev 
+ - libcudf (not in debian yet)
+ - libpcre-ocaml-dev
+
+additional libraries (enable compilation with --with-<library>) :
+ - libpostgresql-ocaml-dev
+ - libsqlite3-ocaml-dev
+ - libzip-ocaml-dev 
+ - libjson-static-camlp4-dev
+ - libocamlgraph-ocaml-dev
+
+
+To compile from git :
+aclocal -I m4
+autoconf
+./configure
+make
+
+To configure all features :
+configure --with-rpm --with-xml --with-ocamlgraph --with-sqlite --with-postgresql --with-zip
