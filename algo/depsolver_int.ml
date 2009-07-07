@@ -219,7 +219,11 @@ let solve (solver,maps) request =
         let l = ref [] in
         Array.iteri(fun i a ->
           if i <> solver.size -1 then
-            if a = S.True then l := (maps.from_sat i)::!l 
+            if a = S.True then begin
+              let pkg = (maps.from_sat i) in
+              let pkg = { pkg with installed = true } in
+              l := pkg::!l 
+            end
         ) (S.assignment solver.constraints)
         ;
         !l
