@@ -1,4 +1,5 @@
 
+open ExtLib
 open OUnit
 open IprLib
 open Cudf
@@ -7,11 +8,12 @@ open Algo
 module S = Set.Make(struct type t = Cudf.package let compare = compare end)
 
 let f_legacy = "tests/legacy.cudf"
+let f_legacy_sol = "tests/legacy-sol.cudf"
 let f_dependency = "tests/dependency.cudf"
 
-let universe =
-  let (univ,_) = Cudf_parser.parse_from_file f_legacy in
-  Cudf.load_universe univ
+let (universe,request) =
+  let (univ,request) = Cudf_parser.parse_from_file f_legacy in
+  (Cudf.load_universe univ,Option.get request)
 
 let dependency_set =
   let (pl,_) = Cudf_parser.parse_from_file f_dependency in
@@ -66,11 +68,42 @@ let test_depsolver =
     test_dependency_closure ;
   ]
 
-open Cudfsolver
+let solution_set =
+  let (pl,_) = Cudf_parser.parse_from_file f_legacy_sol in
+  List.fold_right S.add pl S.empty
 
+let solver = Cudfsolver.init universe request ;;
+
+let solve_same_legacy =
+  "solve legacy (same solution)" >:: (fun _ ->
+    let d = Cudfsolver.solve solver in
+    match d.Diagnostic.result with
+    |Diagnostic.Success f -> (
+        let set = List.fold_right S.add (f ()) S.empty in
+        assert_equal true (S.equal solution_set set)
+    )
+    |Diagnostic.Failure f -> assert_failure "fail"
+  )
+
+let solve_any_legacy =
+  "solve legacy (any solution)" >:: (fun _ ->
+    let d = Cudfsolver.solve solver in
+    match d.Diagnostic.result with
+    |Diagnostic.Success f ->
+        let sol = Cudf.load_universe (f ()) in
+        let cudf = (universe,request) in
+        assert_equal (true,[]) (Cudf_checker.is_solution cudf sol) 
+    |Diagnostic.Failure f -> assert_failure "fail"
+  )
+
+let test_cudfsolver = 
+  "cudf solver" >::: [
+    solve_same_legacy ;
+    solve_any_legacy
+  ]
 
 let all = 
-  "all tests" >::: [ test_depsolver ]
+  "all tests" >::: [ test_depsolver ; test_cudfsolver ]
 
 let main () =
   OUnit.run_test_tt_main all
