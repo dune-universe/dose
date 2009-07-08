@@ -16,8 +16,10 @@ val edos_install : solver -> Cudf.package -> Diagnostic.diagnosis
 val edos_coinstall : solver -> Cudf.package list -> Diagnostic.diagnosis
 
 (** check if all packages in the Cudf.universe can be installed 
-    @param callback : execute a function for each package *)
-val distribcheck : ?callback:(Diagnostic.diagnosis -> unit) -> solver -> unit
+    @param callback : execute a function for each package 
+    @return the number of broken packages
+*)
+val distribcheck : ?callback:(Diagnostic.diagnosis -> unit) -> solver -> int
 
 (** compute the dependencies closure (cone) of the give package *)
 val dependency_closure : Cudf.universe -> Cudf.package list -> Cudf.package list

@@ -218,12 +218,10 @@ let solve (solver,maps) request =
       let get_assignent () = 
         let l = ref [] in
         Array.iteri(fun i a ->
-          if i <> solver.size -1 then
-            if a = S.True then begin
-              let pkg = (maps.from_sat i) in
-              let pkg = { pkg with installed = true } in
-              l := pkg::!l 
-            end
+          if (i <> solver.size - 1) && (a = S.True) then
+            let pkg = (maps.from_sat i) in
+            let pkg = {pkg with installed = true} in
+            l := pkg::!l 
         ) (S.assignment solver.constraints)
         ;
         !l
@@ -237,7 +235,7 @@ let solve (solver,maps) request =
 
   let res = match request with
     |Diagnostic.Req ->
-        let res = result S.solve S.collect_reasons (solver.size -1) in
+        let res = result S.solve S.collect_reasons (solver.size - 1) in
         { Diagnostic.result = res ; request = request }
     |Diagnostic.Sng r ->
         let res = result S.solve S.collect_reasons (maps.to_sat r) in
@@ -259,14 +257,17 @@ let edos_coinstall (solver,maps) request_lst = solve (solver,maps) (Diagnostic.L
 let distribcheck ?callback (solver,maps) universe =
   let timer = Util.Timer.create "Algo.Depsolver.distribcheck" in
   Util.Timer.start timer;
+  let failed = ref 0 in
   let tested = Array.make solver.size false in
   Cudf.iter_packages (fun pkg ->
+    try
     if not(tested.(maps.to_sat pkg)) then begin
       let r = edos_install (solver,maps) pkg in
       begin match r with
       |{ Diagnostic.result = Diagnostic.Success(l) } -> 
-          List.iter (fun i -> tested.(maps.to_sat i) <- true) (l ())
-      |_ -> ()
+          begin try List.iter (fun i -> tested.(maps.to_sat i) <- true) (l ())
+          with Not_found -> assert false end
+      |_ -> incr failed
       end
       ;
       match callback with
@@ -275,8 +276,9 @@ let distribcheck ?callback (solver,maps) universe =
     end
     else if tested.(maps.to_sat pkg) then ()
     else assert false
+    with Not_found -> ()
   ) universe ;
-  Util.Timer.stop timer ()
+  Util.Timer.stop timer !failed
 ;;
 
 

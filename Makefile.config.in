@@ -35,12 +35,6 @@ LIBS= \
 			deb/debian.$(OCAMLLIBBEST) \
 			algo/algo.$(OCAMLLIBBEST)
 
-TESTS= \
-			 common/tests.$(OCAMLLIBBEST) \
-			 bridge/tests.$(OCAMLLIBBEST) \
-			 deb/tests.$(OCAMLLIBBEST) \
-			 algo/tests$(OCAMLLIBBEST)
-
 #database support
 ifeq ("@HAS_DB@","yes") 
   TARGETS += applications/db-cudf.$(OCAMLBEST)
@@ -68,5 +62,9 @@ endif
 
 #ounit support
 ifeq ("@HAS_OUNIT@","yes")
-  TESTS = "$(TESTS) rpm/tests.$(OCAMLLIBBEST)"
+  TESTS= \
+			 common/tests.$(OCAMLBEST) \
+			 bridge/tests.$(OCAMLBEST) \
+			 deb/tests.$(OCAMLBEST) \
+			 algo/tests.$(OCAMLBEST)
 endif

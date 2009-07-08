@@ -1,27 +1,27 @@
 
-  let dependency_graph available =
-    let gr = G.create () in
-    List.iter (fun (pid,dl,cl) ->
-      G.add_vertex gr pid ;
-      List.iter (function
-        |[p] ->
-            begin
-              G.add_vertex gr p ;
-              G.add_edge_e gr (G.E.create pid PkgE.Direct p)
-            end
-        |l ->
-            List.iter (fun p ->
-              G.add_vertex gr p ;
-              G.add_edge_e gr (G.E.create pid PkgE.Disjunctive p)
-            ) l
-      ) dl
-    ) available
-    ;
-    gr
-  ;;
+let dependency_graph available =
+  let gr = G.create () in
+  List.iter (fun (pid,dl,cl) ->
+    G.add_vertex gr pid ;
+    List.iter (function
+      |[p] ->
+          begin
+            G.add_vertex gr p ;
+            G.add_edge_e gr (G.E.create pid PkgE.Direct p)
+          end
+      |l ->
+          List.iter (fun p ->
+            G.add_vertex gr p ;
+            G.add_edge_e gr (G.E.create pid PkgE.Disjunctive p)
+          ) l
+    ) dl
+  ) available
+  ;
+  gr
+;;
 
 
-  (* ----------------------------------- *)
+(* ----------------------------------- *)
 
 module Make(G : Graph.Sig.G) = struct
 

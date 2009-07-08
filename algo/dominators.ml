@@ -10,7 +10,6 @@ module Make (G: Sig.I) = struct
     G.fold_pred (fun v s ->
       S.add v s
     ) graph p (S.singleton p)
-  ;;
 
   let memo f = 
     let h = Hashtbl.create 1031 in
@@ -21,17 +20,15 @@ module Make (G: Sig.I) = struct
         Hashtbl.add h p r;
         r
       end
-  ;;
 
   (* to be computed on the strong dependency graph *)
   let _scons graph p = 
     List.fold_left (fun s e -> 
       S.add e s
     ) S.empty (G.succ graph p)
-  ;;
 
-  let impactset = memo _impactset ;;
-  let scons = memo _scons ;;
+  let impactset = memo _impactset 
+  let scons = memo _scons 
 
   let stats max = 
     let curr = ref 0 in
@@ -81,5 +78,4 @@ module Make (G: Sig.I) = struct
         end
       ) graph p
     ) graph
-  ;;
 end

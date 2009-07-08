@@ -71,8 +71,8 @@ let main () =
 
   Printf.eprintf "done\n%!" ;
   Printf.eprintf "Solving...\n%!" ;
-
-  Depsolver.distribcheck ~callback:result_printer solver
+  let i = Depsolver.distribcheck ~callback:result_printer solver in
+  Printf.eprintf "Broken Packages: %d\n%!" i
 ;;
 
 main () ;;

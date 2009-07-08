@@ -6,12 +6,15 @@ module Cudf_printer = Ipr.Cudf_printer
 module Cudf_parser = Ipr.Cudf_parser
 module Cudf_checker = Ipr.Cudf_checker
 
+(* I want to hash packages by name/version without considering
+   other fields like Installed / keep / etc.
+*)
 module Cudf_hashtbl = 
   Hashtbl.Make(struct 
     type t = Cudf.package
     let equal = Cudf.(=%)
-    let hash = Hashtbl.hash end
-  )
+    let hash pkg = Hashtbl.hash (pkg.Cudf.package, pkg.Cudf.version)
+  end)
 
 let parse_cudf doc =
   try

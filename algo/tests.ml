@@ -50,7 +50,8 @@ let test_distribcheck =
       Cudf.load_universe pl
     in
     let solver = Depsolver.init universe in
-    Depsolver.distribcheck solver
+    let i = Depsolver.distribcheck solver in
+    assert_equal 425 i
   ) 
 
 let test_dependency_closure = 
@@ -64,7 +65,7 @@ let test_depsolver =
   "depsolver" >::: [
     test_install ;
     test_coinstall ;
-    (* test_distribcheck ; *)
+    test_distribcheck ;
     test_dependency_closure ;
   ]
 
