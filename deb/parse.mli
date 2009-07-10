@@ -34,7 +34,7 @@ val parse_release_in : IO.input -> release
 val parse_packages_in : (Ipr.package -> 'a) -> IO.input -> 'a list
 
 (** parse a list of Packages files *)
-val input_debian_raw : string list -> Ipr.package list
+val input_raw : string list -> Ipr.package list
 
 type apt_req_only = [ `Pkg of string ]
 type apt_req_pkg =

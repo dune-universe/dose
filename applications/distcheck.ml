@@ -47,7 +47,7 @@ let main () =
      end
 #endif
      |("deb",(_,_,_,_,file),_) -> begin
-       let l = Debian.Parse.input_debian_raw [file] in
+       let l = Debian.Parse.input_raw [file] in
        Debian.Debcudf.load_universe l
      end
      |("cudf",(_,_,_,_,file),_) -> begin

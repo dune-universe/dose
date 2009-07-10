@@ -25,7 +25,13 @@ headers: header.txt .headache.conf
 	headache -h header.txt -c .headache.conf $(SOURCES) $(C_LIB_SOURCES)
 
 test: 
-	$(OCAMLBUILD) $(OBFLAGS) $(TESTS)
+	@for i in $(TESTS); do\
+		cd $$i ;\
+		echo "==================TESTING $$i===================" ;\
+		$(OCAMLBUILD) $(OBFLAGS) tests.$(OCAMLBEST) ;\
+		./tests.$(OCAMLBEST) ;\
+		cd .. ;\
+	done
 
 tags: TAGS
 

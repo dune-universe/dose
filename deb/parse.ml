@@ -180,8 +180,8 @@ let parse_popcon s =
 
 (** parse a list of debian Packages file 
     @return a list of unique Ipr packages *)
-let input_debian_raw files =
-  let timer = Util.Timer.create "Debian.Parse.input_debian_raw" in
+let input_raw files =
+  let timer = Util.Timer.create "Debian.Parse.input_raw" in
   Util.Timer.start timer;
   let s =
     List.fold_left (fun acc f ->

@@ -1,5 +1,5 @@
 
-The file librpm_stubs.c contains X -> ocaml bindings for librpm.  In other to
+The file librpm_stubs.c contains ocaml bindings for librpm.  In other to
 create a Ipr.package list in ocaml we first trasform the hdlist in an
 associative list (key,value) where key is a label (ei. package, version,
 provides ...) and value is a string containing either a single element or a

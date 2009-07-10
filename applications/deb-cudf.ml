@@ -66,7 +66,7 @@ let main () =
       else ""
     in
     if status <> "" then
-      let l = Debian.Parse.input_debian_raw [status] in
+      let l = Debian.Parse.input_raw [status] in
       List.iter (fun pkg -> Hashtbl.add installed_h (pkg.name,pkg.version) ()) l ;
       l
     else []
@@ -81,7 +81,7 @@ let main () =
      end
 #endif
      |("deb",(_,_,_,_,file),_) -> begin
-       Debian.Parse.input_debian_raw [file] 
+       Debian.Parse.input_raw [file] 
      end
      |_ -> failwith "Not supported"
   in

@@ -45,7 +45,7 @@ let main () =
       List.map Debian.Debcudf.tocudf l
     end
     |("deb",(_,_,_,_,file),_) -> begin
-      let l = Debian.Parse.input_debian_raw [file] in
+      let l = Debian.Parse.input_raw [file] in
       List.map Debian.Debcudf.tocudf l
     end
     |_ -> failwith "Not supported"

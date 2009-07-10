@@ -185,7 +185,7 @@ let main () =
       Backend.load_selection (`All) 
     end
 #endif
-    |("deb",(_,_,_,_,file),_) -> Debian.Parse.input_debian_raw [file] 
+    |("deb",(_,_,_,_,file),_) -> Debian.Parse.input_raw [file] 
     |(s,_,_) -> failwith (Printf.sprintf "%s not supported" s)
   in
 

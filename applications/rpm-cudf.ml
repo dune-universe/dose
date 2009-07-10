@@ -52,11 +52,14 @@ let main () =
 
   let l =
      match Input.parse_uri !uri with
-     |("rpm",(_,_,_,_,file),_) -> begin
+     |("hdlist",(_,_,_,_,file),_) -> begin
        if !Options.dump_hdlist then
-         (Rpm.Parse.dump_hdlist Format.std_formatter file ; exit(0))
+         (Rpm.Hdlists.dump Format.std_formatter file ; exit(0))
        else
-         Rpm.Parse.input_hdlist_raw [file]
+         Rpm.Hdlists.input_raw [file]
+     end
+     |("synth",(_,_,_,_,file),_) -> begin
+         Rpm.Synthesis.input_raw [file]
      end
      |_ -> failwith "Not supported"
    in

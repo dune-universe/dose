@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <string.h>
 
+#include <rpm/rpmtypes.h>
 #include <rpm/rpmlib.h>
 #include <rpm/header.h>
 
@@ -168,7 +169,7 @@ char * tag_to_string (int32_t tag) {
   return res;
 }
 
-value assoc ( char* str, int32_t tag, int32_t type, hPTR_t data, int32_t count) {
+value assoc ( char* str, int32_t tag, int32_t type, rpm_constdata_t data, int32_t count) {
   CAMLparam0 ();
   CAMLlocal2( a, b );
 	char *tmp = NULL;
@@ -220,10 +221,10 @@ value rpm_parse_paragraph (value fd) {
   CAMLparam1 ( fd );
   CAMLlocal2 ( hd, tl );
 
-  HeaderIterator iter;
   Header header;
-  int32_t tag, type, count;
-  hPTR_t data;
+  HeaderIterator iter;
+  struct rpmtd_s td;
+
   FD_t _fd;
 
   tl = Val_emptylist;
@@ -234,10 +235,10 @@ value rpm_parse_paragraph (value fd) {
     CAMLreturn(Val_none);
 
   iter = headerInitIterator(header);
-  while (headerNextIterator (iter, &tag, &type, &data, &count)) {
+  while (headerNext(iter, &td)) {
     // we consider only meaninful tags. We ignore everything else
     // otherwise parsing and copy strings around takes forever
-    switch (tag) {
+    switch (td.tag) {
       case RPMTAG_NAME:
       case RPMTAG_VERSION:
       case RPMTAG_RELEASE:
@@ -260,13 +261,13 @@ value rpm_parse_paragraph (value fd) {
       case RPMTAG_BASENAMES:
       case RPMTAG_DIRINDEXES:
       case RPMTAG_DIRNAMES:
-        hd = assoc(tag_to_string(tag),tag,type,data,count);
+        hd = assoc(tag_to_string(td.tag),td.tag,td.type,td.data,td.count);
         tl = append(hd,tl);
         break;
       default:
         break;
     }
-    headerFreeData(data,type);
+    rpmtdFreeData(&td);
   }
   if (iter != NULL) headerFreeIterator(iter);
   if (header != NULL) headerFree (header);
@@ -277,10 +278,10 @@ value rpm_parse_hdlists (value fd) {
   CAMLparam1 ( fd );
   CAMLlocal3 ( hd, tl, tll);
 
-  HeaderIterator iter;
   Header header;
-  int32_t tag, type, count;
-  hPTR_t data;
+  HeaderIterator iter;
+  struct rpmtd_s td;
+
   FD_t _fd;
 
   _fd = fd_val(fd);
@@ -292,10 +293,10 @@ value rpm_parse_hdlists (value fd) {
 
   while ((iter = headerInitIterator(header)) != NULL) {
     tl = Val_emptylist;
-    while (headerNextIterator (iter, &tag, &type, &data, &count)) {
-      hd = assoc(tag_to_string(tag),tag,type,data,count);
+    while (headerNext(iter, &td)) {
+      hd = assoc(tag_to_string(td.tag),td.tag,td.type,td.data,td.count);
       tl = append(hd,tl);
-      headerFreeData(data,type);
+      rpmtdFreeData(&td);
     }
     headerFreeIterator(iter);
     tll = append(tl,tll);

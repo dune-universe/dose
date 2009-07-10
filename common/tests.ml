@@ -9,11 +9,17 @@ let parse_uri =
         Uri.parseUri "deb://path/to/file" 
       in assert_equal true (protocol = "deb" && path = "path/to/file")
     ) ;
-    "rpm" >:: (fun _ ->
+    "hdlist" >:: (fun _ ->
       let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
-        Uri.parseUri "rpm://path/to/file" 
-      in assert_equal true (protocol = "rpm" && path = "path/to/file")
+        Uri.parseUri "hdlist://path/to/file" 
+      in assert_equal true (protocol = "hdlist" && path = "path/to/file")
     ) ;
+    "synth" >:: (fun _ ->
+      let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
+        Uri.parseUri "synth://path/to/file" 
+      in assert_equal true (protocol = "synth" && path = "path/to/file")
+    ) ;
+
     "cudf" >:: (fun _ ->
       let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
         Uri.parseUri "cudf:///path/to/file" 

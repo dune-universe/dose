@@ -35,9 +35,16 @@ let test_virtual =
         let ssmtp = Cudf.lookup_package universe ("ssmtp",1) in
         let vpkg = ("mail-transport-agent--virtual",None) in
         let provides = Cudf.who_provides universe vpkg in
-        let _ = Printf.eprintf "%s\n%!" (Cudf_printer.string_of_package ssmtp) in
-        let _ = List.iter (fun (pkg,_) -> Printf.eprintf "%s\n%!" (Cudf_printer.string_of_package pkg)) provides in
-        assert_equal true (List.mem (ssmtp,None) provides)
+        let b = List.exists (fun (pkg,c) -> 
+          if not(pkg =% ssmtp) then begin
+            Printf.eprintf "%s\n%!" (Cudf_printer.string_of_package pkg);
+            Printf.eprintf "%s\n%!" (Cudf_printer.string_of_package ssmtp);
+            false
+            end
+          else
+            true
+          ) provides in
+        assert_equal true b 
       with Not_found -> assert_failure "ssmtp version mismatch"
     );
     "virtual real" >:: (fun _ -> ())
@@ -61,3 +68,8 @@ let main () =
 ;;
 
 main ()
+
+(*
+let _ = Printf.eprintf "%s\n%!" (Cudf_printer.string_of_package ssmtp) in
+let _ = List.iter (fun (pkg,Some(1)) -> Printf.eprintf "%s\n%!" (Cudf_printer.string_of_package pkg)) provides in
+*)

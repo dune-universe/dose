@@ -39,6 +39,7 @@ LIBS= \
 ifeq ("@HAS_DB@","yes") 
   TARGETS += applications/db-cudf.$(OCAMLBEST)
   LIBS += db/db.$(OCAMLLIBBEST)
+  TEST_DB=db
 endif
 
 #xml processing support
@@ -58,13 +59,10 @@ endif
 ifeq ("@HAS_RPM@","yes")
   TARGETS += applications/rpm-cudf.$(OCAMLBEST)
   LIBS += rpm/rpm.$(OCAMLLIBBEST)
+  TEST_RPM=rpm
 endif
 
 #ounit support
 ifeq ("@HAS_OUNIT@","yes")
-  TESTS= \
-			 common/tests.$(OCAMLBEST) \
-			 bridge/tests.$(OCAMLBEST) \
-			 deb/tests.$(OCAMLBEST) \
-			 algo/tests.$(OCAMLBEST)
+  TESTS= common bridge deb algo $(TEST_DB) $(TEST_RPM)
 endif

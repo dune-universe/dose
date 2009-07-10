@@ -3,17 +3,16 @@ open Common
 open ExtLib 
 
 type t
-external open_hdlist : string -> t = "rpm_open_hdlist"
-external close_hdlist : t -> unit = "rpm_close_hdlist"
+external _open_in : string -> t = "rpm_open_hdlist"
+external _close_in : t -> unit = "rpm_close_hdlist"
 external parse_paragraph : t -> ( string * string ) list option = "rpm_parse_paragraph"
-external parse_hdlists : t -> ( string * string ) list list = "rpm_parse_hdlists"
+external parse : t -> ( string * string ) list list = "rpm_parse_hdlists"
 
 let dump_raw ppf s par = 
   Format.fprintf ppf "%s\n%s\n@." s
   (String.concat "\n" 
   (List.map (fun (k,v) -> Printf.sprintf "%s: %s" k v ) (List.rev par))
   )
-;;
 
 let flags_to_string flag = 
   match (int_of_string flag) mod 16 with
@@ -23,11 +22,9 @@ let flags_to_string flag =
   |10 -> "<="
   |12 -> ">="
   |_ -> ""
-;;
 
 let split_string p par =
   Array.of_list (Str.split_delim (Str.regexp ",") (List.assoc p par))
-;;
 
 let list_deps p par =
   let name_s = p ^ "name" in
@@ -83,7 +80,6 @@ let provide_list par =
 let depend_list par =
   let l = (try list_deps "require" par with Not_found -> []) in
   List.map (fun e -> [e]) l
-;;
 
 exception Eof
 
@@ -98,7 +94,7 @@ let rec parse_822_rec parse f acc t =
   with Eof -> acc (* no more paragraphs *)
 
 let parse_822_iter parse f ch =
-  let progressbar = Util.progress "Rpm.Parse.parse_822_iter" in
+  let progressbar = Util.progress "Rpm.Parse.Hdlists.parse_822_iter" in
   let total = 6000 in (* estimate *)
   let i = ref 0 in
   let l = ref [] in
@@ -119,10 +115,11 @@ let parse_822_iter parse f ch =
 let parse_name par = List.assoc "package" par
 
 let parse_version par = 
-  Printf.sprintf "%s:%s-%s" 
-  (List.assoc "epoch" par)
-  (List.assoc "version" par)
-  (List.assoc "release" par)
+  let epoch = List.assoc "epoch" par in
+  let version = List.assoc "version" par in
+  let release = List.assoc "release" par in
+  if epoch <> "0" then Printf.sprintf "%s:%s-%s" epoch version release
+  else Printf.sprintf "%s-%s" version release
 
 let parse_packages_fields par =
   try
@@ -141,34 +138,32 @@ let parse_packages_fields par =
       }
     )
   with Not_found -> None
-;;
 
-let parse_packages_hdlist f filename =
-  let t = open_hdlist filename in
+let parse_packages f filename =
+  let t = _open_in filename in
   let parse_packages_rec = parse_822_iter parse_packages_fields in
   let l = parse_packages_rec f t in
-  close_hdlist t ;
+  _close_in t ;
   l
 ;;
 
-let input_hdlist_raw files =
-  let timer = Util.Timer.create "Rpm.Parse.input_hdlist_raw" in
+let input_raw files =
+  let timer = Util.Timer.create "Rpm.Parse.Hdlists.input_raw" in
   Util.Timer.start timer;
   let s =
     List.fold_left (fun acc f ->
-      let l = parse_packages_hdlist (fun x -> x) f in
+      let l = parse_packages (fun x -> x) f in
       List.fold_left (fun s x -> Ipr.Set.add x s) acc l
     ) Ipr.Set.empty files
   in
   Util.Timer.stop timer (Ipr.Set.elements s)
-;;
 
-let dump_hdlist ppf f =
-  let t = open_hdlist f in
+let dump ppf f =
+  let t = _open_in f in
   try 
   while true ; do
     match parse_paragraph t with
       |None -> raise Eof
       |Some par -> dump_raw ppf "" par
   done
-  with Eof -> close_hdlist t 
+  with Eof -> _close_in t 

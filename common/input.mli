@@ -33,11 +33,13 @@ val std_open_in : string -> IO.input
     @return ExtLib.IO.input channel *)
 val open_chan : string -> IO.input
 
+val close_chan : IO.input -> unit
+
 (** parse a uri.
     i.e. :
       deb://path/to/file
       rpm://path/to/file
-      pgsql://abate:tester@localhost/dbname?v1=k1&v2=k2
+      pgsql://test:tester@localhost/dbname?v1=k1&v2=k2
       sqlite://path/to/file
       cudf://path/to/file
 

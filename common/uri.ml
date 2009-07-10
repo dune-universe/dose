@@ -74,7 +74,7 @@ let getPath s =
 
 let parseUri s =
   match getProtocolSlashSlash s with
-  |(("deb"|"rpm"|"sqlite"|"cudf") as protocol,file) ->
+  |(("deb"|"hdlist"|"synth"|"sqlite"|"cudf") as protocol,file) ->
       (protocol,(None,None,None,None,file),None)
   |("pgsql" as protocol,s0) ->
       let (userOpt,passOpt,s1) = getUser s0 in
