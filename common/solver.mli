@@ -34,7 +34,8 @@ module type T = sig
 
   (** initialize the solver *)
   val initialize_problem :
-    ?print_var:(Format.formatter -> int -> unit) -> int -> state
+    ?print_var:(Format.formatter -> int -> unit) -> 
+      ?buffer: bool -> int -> state
 
   (** provide a deep copy of the current state of the solver *)
   val copy : state -> state
@@ -80,6 +81,8 @@ module type T = sig
 
   val collect_reasons : state -> var -> X.reason list
   val collect_reasons_lst : state -> var list -> X.reason list
+
+  val dump : state -> string
 end
 
 module M : functor (X : S) -> T with module X = X

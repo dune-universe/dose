@@ -9,6 +9,7 @@ module Options =
 struct
   let cudf = ref false
   let verbose = ref false
+  let dump = ref false
   let outdir = ref ""
 end
 
@@ -17,9 +18,11 @@ let usage = Printf.sprintf "usage: %s [-options] [cudf doc]" Sys.argv.(0)
 let options =
   [
    ("--verbose", Arg.Set Options.verbose, "");
+   ("--dump", Arg.Set Options.dump, "propositional solver dump");
    ("--cudf", Arg.Set  Options.cudf, "print the cudf solution (if any)");
    ("--outdir", Arg.String (fun l -> Options.outdir := l),  "Specify the output directory");
    ("--debug", Arg.Unit (fun () -> Util.set_verbosity Util.Summary), "Print debug information");
+
   ]
 
 let main () =
@@ -45,9 +48,13 @@ let main () =
   Printf.eprintf "Prepare ...%!";
   let timer = Util.Timer.create "Prepare" in
   Util.Timer.start timer;
-  let problem = Cudfsolver.init universe request in
+  let problem = Cudfsolver.init ~buffer:!Options.dump universe request in
   Util.Timer.stop timer ();
   Printf.eprintf "done.\n%!"; 
+
+  if !Options.dump then
+    Printf.printf "%s%!" (Cudfsolver.dump problem)
+  ;
 
   Printf.eprintf "Solve ...%!";
   let timer = Util.Timer.create "Solve" in
@@ -85,5 +92,3 @@ let main () =
 ;;
 
 main () ;;
-
-

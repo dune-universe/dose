@@ -7,8 +7,8 @@ open Depsolver_int
 
 type solver = Depsolver_int.solver
 
-let init cudf_universe =
-  let (solver,maps) = Depsolver_int.init cudf_universe in
+let init ?(buffer=false) cudf_universe =
+  let (solver,maps) = Depsolver_int.init buffer cudf_universe in
   { universe = cudf_universe ;
     maps = maps ;
     solver = solver 
@@ -29,3 +29,5 @@ let edos_coinstall s request_lst =
 let dependency_closure universe l =
   let maps = Depsolver_int.build_maps universe in
   Depsolver_int.dependency_closure maps l
+
+let dump s = Depsolver_int.S.dump s.solver.constraints

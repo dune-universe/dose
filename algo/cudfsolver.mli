@@ -100,7 +100,7 @@ open IprLib
 type solver
 
 (** init the solver *)
-val init : Cudf.universe -> Cudf.request -> solver
+val init : ?buffer:bool -> Cudf.universe -> Cudf.request -> solver
 
 (* re-initialize the solver to satisfy a different request *)
 val reinit : solver -> Cudf.request -> solver
@@ -108,3 +108,4 @@ val reinit : solver -> Cudf.request -> solver
 (** run the solver *)
 val solve : solver -> Diagnostic.diagnosis
 
+val dump : solver -> string

@@ -16,6 +16,7 @@ You should have received a copy of the GNU Lesser General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. *)
 
 let debug = ref false
+let buffer = ref false
 
 module type S = sig
   type reason
@@ -28,7 +29,8 @@ module type T = sig
   type lit
   val lit_of_var : var -> bool -> lit
   val initialize_problem :
-    ?print_var:(Format.formatter -> int -> unit) -> int -> state
+    ?print_var:(Format.formatter -> int -> unit) -> 
+      ?buffer: bool -> int -> state
   val copy : state -> state
   val propagate : state -> unit
   val protect : state -> unit
@@ -43,6 +45,7 @@ module type T = sig
   val solve_lst : state -> var list -> bool
   val collect_reasons : state -> var -> X.reason list
   val collect_reasons_lst : state -> var list -> X.reason list
+  val dump : state -> string
 end
 
 module M (X : S) = struct
@@ -86,7 +89,8 @@ module M (X : S) = struct
       st_var_queue : var Queue.t;
       mutable st_cost : int; (* Total computational cost so far *)
       st_print_var : Format.formatter -> int -> unit;
-      mutable st_coherent : bool }
+      mutable st_coherent : bool;
+      st_buffer : Buffer.t option}
 
   let copy_clause p =
       let n = Array.length p in
@@ -143,10 +147,11 @@ module M (X : S) = struct
       st_var_queue = Queue.copy st.st_var_queue;
       st_cost = st.st_cost;
       st_print_var = st.st_print_var;
-      st_coherent = st.st_coherent }
+      st_coherent = st.st_coherent;
+      st_buffer = st.st_buffer }
 
   (****)
-
+ 
   let charge st x = st.st_cost <- st.st_cost + x
   let get_bill st = st.st_cost
 
@@ -217,6 +222,27 @@ module M (X : S) = struct
     Format.fprintf ch " }"
 
   let print_rule st ch r = print_lits st ch r.lits
+
+  (****)
+
+  let store st r =
+    match st.st_buffer with
+    |None -> ()
+    |Some b -> begin
+      Array.iter
+        (fun p ->
+           if pol_of_lit p then
+             Format.bprintf b " %a" st.st_print_var (var_of_lit p)
+           else
+             Format.bprintf b " -%a" st.st_print_var (var_of_lit p))
+        r.lits;
+      Format.bprintf b "\n"
+    end
+
+  let dump st =
+    match st.st_buffer with 
+    |None -> ""
+    |Some b -> Buffer.contents b
 
   (****)
 
@@ -517,7 +543,7 @@ module M (X : S) = struct
 
   let solve_lst st l = solve_lst_rec st [] l
 
-  let initialize_problem ?(print_var = (fun fmt -> Format.fprintf fmt "%d")) n =
+  let initialize_problem ?(print_var = (fun fmt -> Format.fprintf fmt "%d")) ?(buffer=false) n =
     { st_assign = Array.make n Unknown;
       st_reason = Array.make n None;
       st_level = Array.make n (-1);
@@ -537,7 +563,8 @@ module M (X : S) = struct
       st_var_queue = Queue.create ();
       st_cost = 0;
       st_print_var = print_var;
-      st_coherent = true }
+      st_coherent = true;
+      st_buffer = if buffer then Some(Buffer.create 75) else None }
 
   let insert_simpl_prop st r p p' =
     let p = lit_neg p in
@@ -546,11 +573,13 @@ module M (X : S) = struct
 
   let add_bin_rule st p p' reasons =
     let r = { lits = [|p; p'|]; reasons = reasons } in
+    store st r ;
     insert_simpl_prop st r p p';
     insert_simpl_prop st r p' p
 
   let add_un_rule st p reasons =
     let r = { lits = [|p|]; reasons = reasons } in
+    store st r ;
     enqueue st p (Some r)
 
   let add_rule st lits reasons =
@@ -570,6 +599,7 @@ module M (X : S) = struct
     | 2 -> add_bin_rule st lits.(0) lits.(1) reasons
     | _ -> let rule = { lits = lits; reasons = reasons } in
            let p = lit_neg rule.lits.(0) in let p' = lit_neg rule.lits.(1) in
+           store st rule ;
            assert (val_of_lit st p <> False);
            assert (val_of_lit st p' <> False);
            st.st_watched.(p) <- rule :: st.st_watched.(p);

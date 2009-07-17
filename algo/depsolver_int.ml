@@ -111,14 +111,14 @@ type solver = {
   solver : solver_t
 }
 
-let init_solver proxy_size (universe,maps) =
+let init_solver buffer proxy_size (universe,maps) =
   let size = (Cudf.universe_size universe) + proxy_size in
 
   let progressbar = Util.progress "Depsolver.init_solver" in
   let total = size in
   let i = ref 0 in
 
-  let constraints = S.initialize_problem size in
+  let constraints = S.initialize_problem ~buffer:buffer size in
   let num_conflicts = ref 0 in
   let num_disjunctions = ref 0 in
   let num_dependencies = ref 0 in
@@ -194,11 +194,11 @@ let init_solver proxy_size (universe,maps) =
   }
 ;;
 
-let init universe =
+let init buffer universe =
   match Cudf_checker.is_consistent universe with
   |true,None -> 
       let maps = build_maps universe in
-      let solver = init_solver 0 (universe,maps) in
+      let solver = init_solver buffer 0 (universe,maps) in
       (solver,maps)
   |false,Some(r) -> begin
       Printf.eprintf "%s" 
