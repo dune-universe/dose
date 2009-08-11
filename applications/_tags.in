@@ -4,6 +4,6 @@
 <bridge>: include
 <db>: include
 <deb>: include
-<rpm>: include
 <algo>: include
 <common>: include
+@INCLUDE_RPM@
