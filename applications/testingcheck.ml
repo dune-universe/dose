@@ -1,4 +1,12 @@
 
+(* TODO :
+  * write a real command parser
+  * add transactions support
+  * add support to check if a single package is installable in the universe
+  * add support to check if a list of packages are installable together
+  * add support to check build-ability
+ *) 
+
 open IprLib
 
 open Debian
@@ -22,6 +30,7 @@ let options = [
 ];;
 
 let check universe =
+  Printf.eprintf "check packages ...%!";
   let solver = Depsolver.init universe in
 
   let result_printer = function
@@ -32,7 +41,8 @@ let check universe =
     |r -> Diagnostic.print ~explain:!Options.explain_results stdout r
   in
   let i = Depsolver.distribcheck ~callback:result_printer solver in
-  Printf.eprintf "Broken Packages: %d\n%!" i
+  Printf.eprintf "Broken Packages: %d\n%!" i;
+  Printf.eprintf "done\n%!";
 ;;
 
 (* add a package only if it does not exist or it is a more recent version *)
@@ -55,17 +65,41 @@ let init ps =
   cache
 ;;
 
-let read ps ch =
-  Printf.eprintf "read %!";
+(* invariant : ps contains only one version of each package *)
+let add ps ch =
   let ll = Debian.Parse.parse_packages_in (debianadd ps) ch in
-  Printf.eprintf "\n%d packages\n%!" (List.length ll);
+  if List.length ll = 0 then 
+    Printf.eprintf "Nothing to read\n"
+  else
+    Printf.eprintf "read %d packages\n%!" (List.length ll)
+  ;
   ps
 ;;
 
-let check cache =
-  Printf.eprintf "check packages ...%!";
-  check cache ;
-  Printf.eprintf "done \n%!";
+let rm ps ch =
+  let ll = Debian.Parse.parse_packages_in (fun x -> x) ch in
+  if List.length ll = 0 then 
+    Printf.eprintf "Nothing to remove\n"
+  else (
+    Printf.eprintf "remove %d packages\n%!" (List.length ll);
+    List.iter (fun p -> Hashtbl.remove ps p.Ipr.name) ll
+  );
+  ps
+;;
+
+let create file =
+  let socket = Unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
+  let _ = try Unix.unlink file with Unix.Unix_error _ -> () in
+  let _ = Unix.bind socket (Unix.ADDR_UNIX file) in
+  socket
+;;
+
+let server ?(timeout=0.0) socket =
+  Unix.listen socket 0;
+  Unix.setsockopt_float socket Unix.SO_RCVTIMEO timeout;
+  let (fd, caller) = Unix.accept socket in
+  let inch = Unix.in_channel_of_descr fd in
+  inch
 ;;
 
 let main () =
@@ -79,49 +113,67 @@ let main () =
     exit 2
   end ;
 
-  let cmdfile = "/tmp/cmd-pipe" in
-  let inputfile = "/tmp/input-pipe" in
-  let mkfd file =
-    try
-      (try Unix.mkfifo file 0o600 with _ -> ());
-      Unix.openfile file [Unix.O_RDONLY ; Unix.O_NONBLOCK] 0o600
-    with Unix.Unix_error (e,s1,s2) ->
-      failwith (Printf.sprintf "%s %s: %s" (Unix.error_message e) s1 s2)
-  in
-  let cmdfd = mkfd cmdfile in
-  let cmdch = Unix.in_channel_of_descr cmdfd in
-  let inputfd = mkfd inputfile in
-  let inputch = IO.input_channel (Unix.in_channel_of_descr inputfd) in 
+  let cmdfile = "/tmp/cmd.sock" in
+  let inputfile = "/tmp/input.sock" in
+  let cmdsock = create cmdfile in
+  let inputsock = create inputfile in
 
   let empty () = Hashtbl.create 30000 in
-  let ps = ref (read (empty ()) (Input.open_file !uri)) in
-  let undo = ref (empty ()) in
+  let ps = ref (add (empty ()) (Input.open_file !uri)) in
   let cache = ref (init (empty ())) in 
 
+  (* potentially unlimited undos, capped to 10 *)
+  let undo = ref [] in
+  let push undo ps =
+    let l =
+      if List.length undo > 9 then begin
+        List.rev (List.tl (List.rev undo))
+      end
+      else undo
+    in
+    (Hashtbl.copy ps)::l
+  in
+
+  let timeout = 60.0 in
   try
     while true do
-      match Unix.select [cmdfd] [] [] (-1.0) with
-      | [fd],[],[] when fd = cmdfd ->
-          begin try 
-            match input_line cmdch with
-            |"undo" -> ( ps := !undo ; undo := empty () )
-            |"add" -> ( undo := Hashtbl.copy !ps ; ps := read !ps inputch )
-            |"check" -> ( cache := init !ps ; check !cache )
-            |_ -> Printf.eprintf "Command Not recognized\n%!"
-          with End_of_file -> () end
-      | _ -> ()
+      begin try 
+        Printf.eprintf "> %!";
+        let ch = server cmdsock in
+        let s = input_line ch in
+        Printf.eprintf "%s\n%!" s;
+        match s with
+        |"add" -> (
+          (* try *)
+            let inputch = IO.input_channel (server ~timeout:timeout inputsock) in
+            undo := push !undo !ps;
+            ps := add !ps inputch
+          (* with _ -> Printf.eprintf "Timeout\n%!" *)
+        )
+        |"rm" -> (
+          try
+            let inputch = IO.input_channel (server ~timeout:timeout inputsock) in
+            undo := push !undo !ps;
+            ps := rm !ps inputch
+          with _ -> Printf.eprintf "Timeout\n%!"
+        )
+        |"check" -> (cache := init !ps ; check !cache)
+        |"undo" -> (
+          try ps := List.hd !undo ; undo := List.tl !undo
+          with Failure _ -> Printf.eprintf "Nothing to undo\n")
+        |_ -> Printf.eprintf "Command Not recognized\n%!"
+      with End_of_file -> (print_endline "ddd" ; ()) end
     done
   with
-  | Unix.Unix_error (e,s1,s2) ->
+  |Unix.Unix_error (e,s1,s2) ->
       Printf.eprintf "%s %s: %s" (Unix.error_message e) s1 s2
-  | e -> prerr_endline (Printexc.to_string e)
+  |e -> prerr_endline (Printexc.to_string e)
 
   ;
 
   Pervasives.at_exit (fun () -> 
-    (try Unix.close cmdfd with _ -> ());
-    (try Unix.unlink cmdfile with _ -> ());
-    (try Unix.unlink inputfile with _ -> ());
+    (try Unix.unlink cmdfile with Unix.Unix_error _ -> ());
+    (try Unix.unlink inputfile with Unix.Unix_error _ -> ());
     Util.dump Format.err_formatter
   );
 

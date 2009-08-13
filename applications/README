@@ -49,6 +49,27 @@ deb-dudf-cudf.native converts a debian dudf document to a cudf document
 
 -----
 
+./testingcheck.native /var/lib/apt/lists/ftp.de.debian.org_debian_dists_unstable_main_binary-amd64_Packages
+
+$echo "add" | socat - UNIX-CLIENT:/tmp/cmd.sock
+$cat <<EOF | socat - UNIX-CLIENT:/tmp/input.sock
+Package: pippo
+Version: 1.3
+EOF
+$
+
+$echo "check" | socat - UNIX-CLIENT:/tmp/cmd.sock
+
+$echo "rm" | socat - UNIX-CLIENT:/tmp/cmd.sock
+$cat <<EOF | socat - UNIX-CLIENT:/tmp/input.sock
+Package: pippo
+Version: 1.3
+EOF
+$
+
+$echo "undo" | socat - UNIX-CLIENT:/tmp/cmd.sock
+-----
+
 db-cudf.native converts a debian archive stored in a database to a cudf universe
 
 depgraph.native generates a .dot graph of a repository
