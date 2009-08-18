@@ -19,7 +19,7 @@ open Common
 open CudfAdd
 
 module R = struct type reason = Diagnostic.reason end
-module S = Solver.M(R)
+module S = EdosSolver.M(R)
 
 type maps = {
   to_sat : Cudf.package -> S.var ;
