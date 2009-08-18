@@ -1,5 +1,4 @@
 
-open IprLib
 open ExtLib
 
 let print_package ?(short=true) pkg =

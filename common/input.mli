@@ -16,24 +16,26 @@ open ExtLib
 #ifdef HASZIP
 (** load a file in gzip format
     @return ExtLib.IO.input channel *)
-val gzip_open_in : string -> IO.input
+val gzip_open_file : string -> IO.input
 #endif
 
 #ifdef HASBZ2
 (** load a file in bzip format - Not implemented yet
     @return ExtLib.IO.input channel *)
-val bzip_open_in : string -> IO.input
+val bzip_open_file : string -> IO.input
 #endif
 
 (** load a non compressed file  
     @return ExtLib.IO.input channel *)
-val std_open_in : string -> IO.input
+val std_open_file : string -> IO.input
 
 (** load a file either in gzip, bzip or not compressed format
     @return ExtLib.IO.input channel *)
-val open_chan : string -> IO.input
+val open_file : string -> IO.input
 
-val close_chan : IO.input -> unit
+val open_ch : in_channel -> IO.input
+val close_ch : IO.input -> unit
+
 
 (** parse a uri.
     i.e. :

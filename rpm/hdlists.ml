@@ -75,7 +75,6 @@ let provide_list par =
   let provide = (try list_deps "provide" par with Not_found -> []) in
   (* let fileprovide = fileprovide par in *)
   (List.unique provide)
-;;
 
 let depend_list par =
   let l = (try list_deps "require" par with Not_found -> []) in
@@ -120,43 +119,6 @@ let parse_version par =
   let release = List.assoc "release" par in
   if epoch <> "0" then Printf.sprintf "%s:%s-%s" epoch version release
   else Printf.sprintf "%s-%s" version release
-
-let parse_packages_fields par =
-  try
-    Some (
-      {
-        Ipr.name = parse_name par;
-        version = parse_version par;
-        depends = (try depend_list par with Not_found -> []);
-        pre_depends = [];
-        recommends = [];
-        suggests = [];
-        enhances = [];
-        conflicts = (try list_deps "conflict" par with Not_found -> []);
-        replaces = (try list_deps "obsolete" par with Not_found -> []);
-        provides = (try provide_list par with Not_found -> []);
-      }
-    )
-  with Not_found -> None
-
-let parse_packages f filename =
-  let t = _open_in filename in
-  let parse_packages_rec = parse_822_iter parse_packages_fields in
-  let l = parse_packages_rec f t in
-  _close_in t ;
-  l
-;;
-
-let input_raw files =
-  let timer = Util.Timer.create "Rpm.Parse.Hdlists.input_raw" in
-  Util.Timer.start timer;
-  let s =
-    List.fold_left (fun acc f ->
-      let l = parse_packages (fun x -> x) f in
-      List.fold_left (fun s x -> Ipr.Set.add x s) acc l
-    ) Ipr.Set.empty files
-  in
-  Util.Timer.stop timer (Ipr.Set.elements s)
 
 let dump ppf f =
   let t = _open_in f in

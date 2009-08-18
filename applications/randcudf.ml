@@ -1,6 +1,4 @@
 
-open IprLib
-
 open Cudf
 open ExtLib
 #ifdef HASDB
@@ -145,7 +143,7 @@ let read_basesytem system =
 
 let read_popcon max popcon =
   if popcon = "" then assert false
-  else Array.of_list (read_file ~max:max Debian.Parse.parse_popcon popcon)
+  else Array.of_list (read_file ~max:max Debian.Apt.parse_popcon popcon)
 
 (* -------------------------------- *)
 
@@ -185,14 +183,14 @@ let main () =
       Backend.load_selection (`All) 
     end
 #endif
-    |("deb",(_,_,_,_,file),_) -> Debian.Parse.input_raw [file] 
+    |("deb",(_,_,_,_,file),_) -> Debian.Packages.input_raw [file] 
     |(s,_,_) -> failwith (Printf.sprintf "%s not supported" s)
   in
 
   let (pkglist,universe) =
     match Input.parse_uri !Options.universe with
     |("cudf",(_,_,_,_,file),_) ->
-        let u = fst(parse_cudf file) in
+        let _,u,_ = parse_cudf file in
         (Cudf.get_packages u,u)
     |_ ->
       let u = 

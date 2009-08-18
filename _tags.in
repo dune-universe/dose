@@ -1,5 +1,4 @@
 <common>: include
-<bridge>: include
 <algo>: include
 <db>: include
 <deb>: include

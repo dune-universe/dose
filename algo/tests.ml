@@ -1,7 +1,6 @@
 
 open ExtLib
 open OUnit
-open IprLib
 open Cudf
 
 open Algo

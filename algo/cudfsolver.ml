@@ -9,9 +9,7 @@
 (*  library, see the COPYING file for more information.                      *)
 (*****************************************************************************)
 
-open IprLib
 open ExtLib
-
 open Cudf
 open Depsolver_int
 

@@ -1,6 +1,4 @@
 
-open IprLib
-
 type solver
 
 (** initialize the solver and indexes *)

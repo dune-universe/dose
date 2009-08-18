@@ -1,5 +1,4 @@
 (**************************************************************************)
-(*  debcudf - Debian Packages file to CUDF conversion tool                *)
 (*  Copyright (C) 2009  Pietro Abate <pietro.abate@pps.jussieu.fr>        *)
 (*                                                                        *)
 (*  This library is free software: you can redistribute it and/or modify  *)
@@ -10,7 +9,6 @@
 (*  library, see the COPYING file for more information.                   *)
 (**************************************************************************)
 
-open IprLib
 open ExtLib
 
 open Cudf
@@ -19,11 +17,11 @@ open Debian
 open Db
 #endif
 open Common
-open Ipr
+
+module Deb = Debian.Packages
 
 module Options =
 struct
-  let plain = ref false
   let installed = ref false
   let status_file = ref ""
   let outdir = ref ""
@@ -32,8 +30,6 @@ end
 let usage = Printf.sprintf "usage: %s [-options] [packages file]" (Sys.argv.(0))
 let options =
   [
-    ("--plain", Arg.Set Options.plain,
-    "Do not preserve debian semantic.  Creates a (possibly) unconsistent cudf document.");
     ("--get-selections", Arg.Set Options.installed,
     "Get the installed packages via 'dpkg -l'");
     ("--status", Arg.String (fun l -> Options.status_file := l),
@@ -66,8 +62,9 @@ let main () =
       else ""
     in
     if status <> "" then
-      let l = Debian.Parse.input_raw [status] in
-      List.iter (fun pkg -> Hashtbl.add installed_h (pkg.name,pkg.version) ()) l ;
+      let l = Deb.input_raw [status] in
+      List.iter (fun pkg -> Hashtbl.add installed_h
+      (pkg.Deb.name,pkg.Deb.version) ()) l ;
       l
     else []
   in
@@ -81,7 +78,7 @@ let main () =
      end
 #endif
      |("deb",(_,_,_,_,file),_) -> begin
-       Debian.Parse.input_raw [file] 
+       Deb.input_raw [file] 
      end
      |_ -> failwith "Not supported"
   in
@@ -92,24 +89,14 @@ let main () =
     let ul = if installed <> [] then (List.unique (l @ installed)) else l in
     let total = List.length ul in
     let i = ref 0 in
-    if !Options.plain then begin
-      Util.Timer.start timer;
-      Ipr.init_tables ~cmp:Debian.Version.compare ul;
-      let res = 
-        List.map (fun pkg ->
-          progressbar (incr i ; !i , total) ; 
-          let inst = Hashtbl.mem installed_h (pkg.name,pkg.version) in
-          Ipr.tocudf ~inst:inst pkg
-        ) ul
-      in Util.Timer.stop timer res
-    end
-    else begin
+    begin
       Util.Timer.start timer;
       Debian.Debcudf.init_tables ul ;
       let res = 
         List.map (fun pkg ->
           progressbar (incr i ; !i , total) ; 
-          let inst = Hashtbl.mem installed_h (pkg.name,pkg.version) in
+          let inst = Hashtbl.mem installed_h
+          (pkg.Deb.name,pkg.Deb.version) in
           Debian.Debcudf.tocudf ~inst:inst pkg
         ) ul
       in Util.Timer.stop timer res

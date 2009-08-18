@@ -1,16 +1,14 @@
 
-open IprLib
 open OUnit
 open Debian
 open Common
-
 open Cudf
 
 let f_packages = "tests/Packages" ;;
 let f_release = "tests/Release" ;;
 
-let ch = Input.open_chan f_packages ;;
-let ipr_list = Parse.parse_packages_in (fun x -> x) ch ;;
+let ch = Input.open_file f_packages ;;
+let ipr_list = Packages.parse_packages_in (fun x -> x) ch ;;
 let _ = Debcudf.init_tables ipr_list ;;
 let cudf_list = List.map Debcudf.tocudf ipr_list ;;
 let universe = Cudf.load_universe cudf_list ;;

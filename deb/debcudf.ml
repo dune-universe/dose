@@ -11,17 +11,40 @@
 
 (** Debian Specific Ipr to Cudf conversion routines *)
 
-open IprLib
 open ExtLib
 open Common
-
-open Ipr
+open Packages
 
 let virtual_table = Hashtbl.create 50000
 let unit_table = Hashtbl.create 50000
 let versions_table = Hashtbl.create 50000
 let temp_versions_table = Hashtbl.create 50000
 let versioned_table = Hashtbl.create 50000
+
+let escape_string s =
+  let make_hex chr = Printf.sprintf "%%%x" (Char.code chr) in
+  let notallowed_re = Str.regexp "[^a-z0-9.+-]" in
+  let n = String.length s in
+  let b = Buffer.create n in
+  for i = 0 to n-1 do
+    let s' = String.of_char s.[i] in
+    if Str.string_match notallowed_re s' 0 then
+      Buffer.add_string b (make_hex s.[i])
+    else
+      Buffer.add_string b s'
+  done;
+  Buffer.contents b
+
+let escape s =
+  let pkgname_re = Str.regexp "^[%a-z0-9][%a-z0-9.+-]+$" in
+  if Str.string_match pkgname_re s 0 then s
+  else
+    let s0 = String.lowercase s in
+    if String.length s0 = 1 then
+      escape_string (Printf.sprintf "//%s" s0)
+    else
+      escape_string s0
+
 
 (* this function is copy of a the same function in
    ipr but not exported in ipr.mli . At the moment is used
@@ -63,7 +86,6 @@ let init_versions_table =
       )
       (pkg.depends @ pkg.pre_depends)
     end
-;;
 
 let init_virtual_table pkg =
   let add name =
@@ -88,9 +110,15 @@ let init_versioned_table pkg =
       List.iter (fun (name,_)-> add name) disjunction
     ) (pkg.depends @ pkg.pre_depends)
   end
-;;
 
-let init_tables pkglist =
+let init_tables ?(reset=false) pkglist =
+  if reset then begin
+    Hashtbl.clear versions_table;
+    Hashtbl.clear virtual_table;
+    Hashtbl.clear versioned_table;
+    Hashtbl.clear unit_table;
+    Hashtbl.clear temp_versions_table
+  end;
   List.iter (fun pkg ->
     init_versions_table pkg;
     init_virtual_table pkg;
@@ -104,7 +132,6 @@ let init_tables pkglist =
   ) temp_versions_table
   ;
   Hashtbl.clear temp_versions_table
-;;
 
 (* versions start from 1 *)
 let get_version (package,version) =
@@ -119,28 +146,28 @@ let loadl l =
         |None ->
             if (Hashtbl.mem virtual_table name) &&
             (Hashtbl.mem versioned_table name) then
-              [(Ipr.escape (name^"--virtual"), None);
-               (Ipr.escape name, None)]
+              [(escape (name^"--virtual"), None);
+               (escape name, None)]
             else
-              [(Ipr.escape name, None)]
+              [(escape name, None)]
         |Some(op,v) ->
-            [(Ipr.escape name,Some(op,get_version (name,v)))]
+            [(escape name,Some(op,get_version (name,v)))]
     ) l
   )
 
-let loadlc name l = (Ipr.escape name, None)::(loadl l)
+let loadlc name l = (escape name, None)::(loadl l)
 
 let loadlp l =
   List.map (fun (name,sel) ->
     match cudfop sel with
       |None  ->
           if (Hashtbl.mem unit_table name) || (Hashtbl.mem versioned_table name)
-          then (Ipr.escape (name^"--virtual"),None)
-          else (Ipr.escape name, None)
+          then (escape (name^"--virtual"),None)
+          else (escape name, None)
       |Some(`Eq,v) ->
           if (Hashtbl.mem unit_table name) || (Hashtbl.mem versioned_table name)
-          then (Ipr.escape (name^"--virtual"),Some(`Eq,get_version (name,v)))
-          else (Ipr.escape name,Some(`Eq,get_version (name,v)))
+          then (escape (name^"--virtual"),Some(`Eq,get_version (name,v)))
+          else (escape name,Some(`Eq,get_version (name,v)))
       |_ -> assert false
   ) l
 
@@ -148,15 +175,17 @@ let loadll ll = List.map loadl ll
 
 (* ========================================= *)
 
+let preamble = [("Number",("string",`String ""))]
+
 let tocudf ?(inst=false) pkg =
-    { Cudf.package = Ipr.escape pkg.name ;
+    { Cudf.package = escape pkg.name ;
       Cudf.version = get_version (pkg.name,pkg.version) ;
       Cudf.depends = loadll (pkg.depends @ pkg.pre_depends);
       Cudf.conflicts = loadlc pkg.name pkg.conflicts ;
       Cudf.provides = loadlp pkg.provides ;
       Cudf.installed = inst ;
       Cudf.keep = None ;
-      Cudf.extra = [("number",`Version pkg.version)]
+      Cudf.extra = [("Number",`String pkg.version)] 
     }
 
 let load_universe ?(init=true) l =

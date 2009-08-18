@@ -17,7 +17,7 @@ let set_verbosity = (:=) verbosity
 
 let progress ?(v=Summary) label =
   let columns = 75 in
-  let full = "* 100.0%" in
+  let full = " %%100.0\n" in
   let rotate = "|/-\\" in
   let rotation = ref 0 in
   let b = Buffer.create columns in

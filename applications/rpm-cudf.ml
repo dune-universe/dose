@@ -10,13 +10,11 @@
 (*  library, see the COPYING file for more information.                   *)
 (**************************************************************************)
 
-open IprLib
 open ExtLib
 
 open Cudf
 open Rpm
 open Common
-open Ipr
 
 module Options =
 struct

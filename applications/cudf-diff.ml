@@ -1,6 +1,4 @@
 
-open IprLib
-
 open Cudf
 open ExtLib
 
@@ -153,9 +151,9 @@ let main () =
 
   let parse_univ f1 =
     match parse_cudf f1 with
-    |_,None -> 
+    |_,_,None -> 
         (Printf.eprintf "file %s is not a valid cudf document\n" f1 ; exit 1)
-    |u,Some r -> u,r
+    |_,u,Some r -> u,r
   in
 
   let check_sol u r s =
@@ -180,8 +178,8 @@ let main () =
   match !input_files with
   |[f3;f2;f1] when !Options.compare ->
       let (univ,req) = parse_univ f1 in
-      let sol1 = fst(parse_cudf f2) in
-      let sol2 = fst(parse_cudf f3) in
+      let (_,sol1,_) = parse_cudf f2 in
+      let (_,sol2,_) = parse_cudf f3 in
       begin match check_sol univ req sol1, check_sol univ req sol2 with
       |true,false -> (Printf.printf "%s is a valid solution but %s is not\n" f2 f3; exit 1)
       |false,true -> (Printf.printf "%s is a valid solution but %s is not\n" f3 f2; exit 1)
@@ -207,13 +205,13 @@ let main () =
       end
   |[f2;f1] when !Options.solution ->
       let (univ,req) = parse_univ f1 in
-      let sol = fst(parse_cudf f2) in
+      let (_,sol,_) = parse_cudf f2 in
       if check_sol univ req sol then
         ignore(diff univ sol)
       else exit 1
   |[f2;f1] ->
-      let univ1 = fst(parse_cudf f1) in
-      let univ2 = fst(parse_cudf f2) in
+      let (_,univ1,_) = parse_cudf f1 in
+      let (_,univ2,_) = parse_cudf f2 in
       ignore(diff univ1 univ2)
   |_ -> (Printf.eprintf "wrong number of parameters\n" ; exit 1)
 ;;

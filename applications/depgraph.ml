@@ -1,6 +1,4 @@
 
-open IprLib
-
 open Cudf
 open ExtLib
 open Common
@@ -82,7 +80,8 @@ let main () =
       Cudf.load_universe (
         List.map (fun pkg ->
           let cudfpkg = Debian.Debcudf.tocudf pkg in
-          Hashtbl.add versions (pkg.Ipr.name,pkg.Ipr.version) cudfpkg ;
+          Hashtbl.add versions 
+          (pkg.Debian.Packages.name,pkg.Debian.Packages.version) cudfpkg ;
           cudfpkg
         ) l
       )
@@ -98,10 +97,11 @@ let main () =
     end
 #endif
     |("deb",(_,_,_,_,file),_) -> begin
-      let l = Debian.Parse.input_raw [file] in
+      let l = Debian.Packages.input_raw [file] in
       load_universe l
     end
-    |("cudf",(_,_,_,_,file),_) -> fst(parse_cudf file)
+    |("cudf",(_,_,_,_,file),_) -> 
+        let (_,u,_) = parse_cudf file in u
     |_ -> failwith "Not supported"
   in
 

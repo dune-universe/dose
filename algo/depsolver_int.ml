@@ -13,10 +13,10 @@
 
 (* this module respect the cudf semantic. *)
 
-open IprLib
 open ExtLib
 open Cudf
 open Common
+open CudfAdd
 
 module R = struct type reason = Diagnostic.reason end
 module S = Solver.M(R)

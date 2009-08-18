@@ -1,10 +1,9 @@
 
-open IprLib
-
 open ExtLib
 open Common
 open Debian
-open Ipr
+
+module Deb = Debian.Packages
 
 module L = Xml.LazyList
 
@@ -33,7 +32,7 @@ module XmlDudf = struct
   }
   and dudfproblem = {
     mutable packageStatus : string;
-    mutable packageUniverse : (Debian.Parse.release * string) list;
+    mutable packageUniverse : (Debian.Release.release * string) list;
     mutable action : string ;
     mutable desiderata : string ;
     mutable outcome : string
@@ -108,32 +107,32 @@ module AptPref = struct
   let dummyspec = { name = "undef" ; version = None ; criteria = dummycriteria }
 
   let mapf preferences = function
-    { Debian.Parse.Pref.package = pkg ; pin = pin ; pin_priority = priority } ->
+    { Debian.Apt.Pref.package = pkg ; pin = pin ; pin_priority = priority } ->
       match pkg with
-      |Debian.Parse.Pref.Star ->
+      |Debian.Apt.Pref.Star ->
           begin match pin with
-          |Debian.Parse.Pref.Version _ -> assert false
-          |Debian.Parse.Pref.Origin origin -> begin
+          |Debian.Apt.Pref.Version _ -> assert false
+          |Debian.Apt.Pref.Origin origin -> begin
               Printf.eprintf "Warning : origin is not currectly supported\n" ;
               let c = { dummycriteria with origin = Some origin } in
               {preferences with generic = (c, priority) :: preferences.generic}
           end
-          |Debian.Parse.Pref.Release criteria -> 
+          |Debian.Apt.Pref.Release criteria -> 
               let c = List.fold_left map_criteria dummycriteria criteria in
               {preferences with generic = (c, priority) :: preferences.generic}
           end
-      |Debian.Parse.Pref.Package name ->
+      |Debian.Apt.Pref.Package name ->
           begin match pin with
-          |Debian.Parse.Pref.Version version -> 
+          |Debian.Apt.Pref.Version version -> 
               let s = { dummyspec with name = name ; version = Some version } in
               {preferences with specific = (s, priority) :: preferences.specific }
-          |Debian.Parse.Pref.Origin origin -> begin
+          |Debian.Apt.Pref.Origin origin -> begin
               Printf.eprintf "Warning : origin is not currectly supported\n" ;
               let c = { dummycriteria with origin = Some origin } in
               let s = { dummyspec with name = name ; criteria = c} in
               {preferences with specific = (s, priority) :: preferences.specific}
           end
-          |Debian.Parse.Pref.Release criteria ->
+          |Debian.Apt.Pref.Release criteria ->
               let c = List.fold_left map_criteria dummycriteria criteria in
               let s = { dummyspec with name = name ; criteria = c } in
               {preferences with specific = (s, priority) :: preferences.specific}
@@ -142,7 +141,7 @@ module AptPref = struct
 
   let parse ?tr s =
     let ch = IO.input_string s in
-    let l = Debian.Parse.parse_preferences_in (fun x -> x) ch in
+    let l = Debian.Apt.parse_preferences_in (fun x -> x) ch in
     let pref = List.fold_left mapf dummypref l in
     { pref with target_release = tr }
 
@@ -185,7 +184,7 @@ module AptPref = struct
     |[], None -> None
     |[], Some info ->
         begin
-          let constr = {dummycriteria with archive = Some(info.Debian.Parse.suite)} in
+          let constr = {dummycriteria with archive = Some(info.Debian.Release.suite)} in
           match find_generic constr pref.generic with
           |[] -> None 
           |l -> Some(find_max l)
@@ -197,10 +196,10 @@ module AptPref = struct
     |None ->
       begin match preferences.target_release,info with
       |(Some _, None) | (None,_) ->
-          if package.Ipr.Cudf.installed then 100 else 500
+          if package.Cudf.installed then 100 else 500
       |Some tr, Some info ->
-          if package.Ipr.Cudf.installed then 100 else
-          if not (tr = info.Debian.Parse.suite) then 500
+          if package.Cudf.installed then 100 else
+          if not (tr = info.Debian.Release.suite) then 500
           else 990
       end
     |Some p -> p
@@ -257,7 +256,7 @@ let main () =
               let s = Str.string_before relfn i in
               let reldata = 
                 let ch = IO.input_string c in
-                let r = Debian.Parse.parse_release_in ch in
+                let r = Debian.Release.parse_release_in ch in
                 let _ = IO.close_in ch in
                 r
               in
@@ -273,7 +272,7 @@ let main () =
         let without_release = 
           List.map (fun (fn,c) ->
             Printf.eprintf "Warning : Package List without Release. %s\n" fn;
-            (Debian.Parse.default_release,c)
+            (Debian.Release.default_release,c)
           ) (List.find_all (fun (fn,_) -> not(List.mem fn !fl)) ul) ;
         in
         {dudf with packageUniverse = universe @ without_release}
@@ -304,41 +303,44 @@ let main () =
   let all_packages =
     List.fold_left (fun acc (univinfo,contents) ->
       let ch = IO.input_string contents in
-      let l = Debian.Parse.parse_packages_in id ch in
+      let l = Deb.parse_packages_in id ch in
       let _ = IO.close_in ch in
       List.fold_left (fun s pkg -> 
-        Hashtbl.add infoH (pkg.name,pkg.version) univinfo ;
-        Ipr.Set.add pkg s
+        Hashtbl.add infoH (pkg.Deb.name,pkg.Deb.version) univinfo ;
+        Deb.Set.add pkg s
       ) acc l
-    ) Ipr.Set.empty dudf.problem.packageUniverse
+    ) Deb.Set.empty dudf.problem.packageUniverse
   in
 
   let installed_packages =
     let ch = IO.input_string dudf.problem.packageStatus in
-    let l = Debian.Parse.parse_packages_in id ch in
+    let l = Deb.parse_packages_in id ch in
     let _ = IO.close_in ch in
-    List.fold_left (fun s pkg -> Ipr.Set.add pkg s) Ipr.Set.empty l
+    List.fold_left (fun s pkg -> Deb.Set.add pkg s) Deb.Set.empty l
   in
 
-  let l = Ipr.Set.elements (Ipr.Set.union all_packages installed_packages) in
+  let l = Deb.Set.elements (Deb.Set.union all_packages installed_packages) in
   let _ = Debian.Debcudf.init_tables l in
 
   let installed =
     let h = Hashtbl.create 1031 in
-    Ipr.Set.iter (fun pkg ->
-      Hashtbl.add h (pkg.name,pkg.version) ()
+    Deb.Set.iter (fun pkg ->
+      Hashtbl.add h (pkg.Deb.name,pkg.Deb.version) ()
     ) installed_packages
     ;
     h
   in
+  
+  let preamble = ("Priority",("int",`Int 500))::Debcudf.preamble in
+  let add_extra (k,v) pkg = { pkg with Cudf.extra = (k,v) :: pkg.Cudf.extra } in
 
   let pl =
     List.map (fun pkg ->
-      let inst = Hashtbl.mem installed (pkg.name,pkg.version) in
-      let info = try Some(Hashtbl.find infoH (pkg.name,pkg.version)) with Not_found -> None in
+      let inst = Hashtbl.mem installed (pkg.Deb.name,pkg.Deb.version) in
+      let info = try Some(Hashtbl.find infoH (pkg.Deb.name,pkg.Deb.version)) with Not_found -> None in
       let cudfpkg = Debcudf.tocudf ~inst:inst pkg in
       let priority = AptPref.assign_priority preferences info cudfpkg in
-      let cudfpkg = Ipr.add_extra ("priority", `Priority priority) cudfpkg in
+      let cudfpkg = add_extra ("Priority", `Int priority) cudfpkg in
       cudfpkg
     ) l
   in
@@ -358,7 +360,7 @@ let main () =
             let pkg = List.find (fun pkg ->
                 let number = Cudf.lookup_package_property pkg "number" in
                 let info = Hashtbl.find infoH (pkg.Cudf.package,number) in
-                info.Debian.Parse.suite = d
+                info.Debian.Release.suite = d
               ) l
             in
             let number = Cudf.lookup_package_property pkg "number" in
@@ -366,21 +368,21 @@ let main () =
           with Not_found ->
             failwith (Printf.sprintf "There is no package %s in release %s " p d)
     in
-    match Debian.Parse.parse_request_apt dudf.problem.action with
-    |Debian.Parse.Upgrade (Some (suite))
-    |Debian.Parse.DistUpgrade (Some (suite)) -> 
-        let il = Set.fold (fun pkg acc -> `PkgDst (pkg.name,suite) :: acc) installed_packages [] in
+    match Debian.Apt.parse_request_apt dudf.problem.action with
+    |Debian.Apt.Upgrade (Some (suite))
+    |Debian.Apt.DistUpgrade (Some (suite)) -> 
+        let il = Deb.Set.fold (fun pkg acc -> `PkgDst (pkg.Deb.name,suite) :: acc) installed_packages [] in
         let l = List.map mapver il in
         { Cudf.problem_id = dudf.uid ; install = l ; remove = [] ; upgrade = [] }
-    |Debian.Parse.Install l ->
+    |Debian.Apt.Install l ->
         let l = List.map mapver l in
         { Cudf.problem_id = dudf.uid ; install = l ; remove = [] ; upgrade = [] } 
-    |Debian.Parse.Remove l -> 
+    |Debian.Apt.Remove l -> 
         let l = List.map (fun (`Pkg p) -> (p,None) ) l in
         { Cudf.problem_id = dudf.uid ; install = [] ; remove = l ; upgrade = [] }
-    |Debian.Parse.Upgrade None -> 
+    |Debian.Apt.Upgrade None -> 
         { Cudf.problem_id = dudf.uid ; install = [] ; remove = [] ; upgrade = [] }
-    |Debian.Parse.DistUpgrade None -> 
+    |Debian.Apt.DistUpgrade None -> 
         { Cudf.problem_id = dudf.uid ; install = [] ; remove = [] ; upgrade = [] }
 
   in
@@ -392,7 +394,7 @@ let main () =
       open_out (Filename.concat dirname ("res.cudf"))
     end else stdout
   in
-  Printf.fprintf oc "%s\n" (Cudf_printer.string_of_cudf (universe, request)) 
+  Printf.fprintf oc "%s\n" (Cudf_printer.string_of_cudf (preamble, universe, request)) 
 ;;
 
 main ();;

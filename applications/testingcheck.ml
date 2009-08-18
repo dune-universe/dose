@@ -7,8 +7,6 @@
   * add support to check build-ability
  *) 
 
-open IprLib
-
 open Debian
 open Common
 
@@ -48,12 +46,12 @@ let check universe =
 (* add a package only if it does not exist or it is a more recent version *)
 let debianadd tbl x =
   try 
-    let y = Hashtbl.find tbl x.Ipr.name in
-    if (Version.compare y.Ipr.version x.Ipr.version) = -1 then begin
-      Hashtbl.remove tbl y.Ipr.name ;
-      Hashtbl.add tbl x.Ipr.name x
+    let y = Hashtbl.find tbl x.Package.name in
+    if (Version.compare y.Packages.version x.Packages.version) = -1 then begin
+      Hashtbl.remove tbl y.Packages.name ;
+      Hashtbl.add tbl x.Packages.name x
     end
-  with Not_found -> Hashtbl.add tbl x.Ipr.name x
+  with Not_found -> Hashtbl.add tbl x.Packages.name x
 ;;
 
 let init ps =
@@ -67,7 +65,7 @@ let init ps =
 
 (* invariant : ps contains only one version of each package *)
 let add ps ch =
-  let ll = Debian.Parse.parse_packages_in (debianadd ps) ch in
+  let ll = Debian.Packages.parse_packages_in (debianadd ps) ch in
   if List.length ll = 0 then 
     Printf.eprintf "Nothing to read\n"
   else
@@ -77,12 +75,12 @@ let add ps ch =
 ;;
 
 let rm ps ch =
-  let ll = Debian.Parse.parse_packages_in (fun x -> x) ch in
+  let ll = Debian.Packages.parse_packages_in (fun x -> x) ch in
   if List.length ll = 0 then 
     Printf.eprintf "Nothing to remove\n"
   else (
     Printf.eprintf "remove %d packages\n%!" (List.length ll);
-    List.iter (fun p -> Hashtbl.remove ps p.Ipr.name) ll
+    List.iter (fun p -> Hashtbl.remove ps p.Packages.name) ll
   );
   ps
 ;;

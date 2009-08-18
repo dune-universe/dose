@@ -1,7 +1,6 @@
 <*.ml> or <*.mli> or <*.byte> or <*.native> or <*.cmxs>: pkg_extlib, pkg_cudf, pkg_str, pkg_zip, @PKG_PGSQL@, @PKG_SQLITE@, @PKG_XML@, @PKG_OCAMLGRAPH@
 <rpm-cudf.native> or <rpm-cudf.byte>: c_use_rpm
 <{randcudf,deb-cudf,distcheck,depgraph}.ml>: pp(cpp -w @CONFIG_DBBACKEND@)
-<bridge>: include
 <db>: include
 <deb>: include
 <algo>: include

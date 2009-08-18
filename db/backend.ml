@@ -509,7 +509,6 @@ let dump_from_list pkglist =
 
 
 (**************************************************************************)
-
 let loadl l =
     List.map (function
         |(id,"","") -> (id,None)
@@ -518,10 +517,9 @@ let loadl l =
 
 let loadll = List.map loadl
 
-(* we convert the low level implicit package representation Idbr in the intermediate
- * parser level Ipr *)
-let conv ( pkg : Idbr.package ) : Ipr.package =
-  { Ipr.name = pkg.name;
+(* ATM we support only debian *)
+let conv pkg =
+  { Debian.Packages.name = pkg.name;
     version = pkg.number;
     depends = loadll (List.assoc (`Depends) pkg.cnf_deps);
     pre_depends = loadll (List.assoc (`Pre_depends) pkg.cnf_deps);
@@ -532,17 +530,9 @@ let conv ( pkg : Idbr.package ) : Ipr.package =
     replaces = [];
     provides = loadl (List.assoc (`Provides) pkg.conj_deps);
   }
-;;
 
 let load_selection ?(relations=relations) ?(distribution=`Debian) query =
-  let module S =
-    Set.Make(
-      struct
-        type t = Ipr.package
-        let compare = compare end
-      )
-  in
+  let module S = Debian.Packages.Set in
   let rawl = select_map_packages conv query relations in
   let s = List.fold_left (fun s x -> S.add x s) S.empty rawl in
   S.elements s
-;;

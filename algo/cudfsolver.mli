@@ -95,8 +95,6 @@ installed packages and packages to install and to upgrade.
 
 *)
 
-open IprLib
-
 type solver
 
 (** init the solver *)

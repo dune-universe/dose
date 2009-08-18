@@ -1,5 +1,4 @@
 
-open IprLib
 open ExtLib 
 open Common
 
@@ -37,10 +36,10 @@ let main () =
   let timer = Util.Timer.create "Parse" in
   Util.Timer.start timer;
   let (universe,request) = 
-    match IprLib.parse_cudf !input_file with
-    |u,None -> 
+    match CudfAdd.parse_cudf !input_file with
+    |_,u,None -> 
         (Printf.eprintf "This cudf document does not contain a valid request\n" ; exit 1)
-    |u,Some(r) -> u,r
+    |_,u,Some(r) -> u,r
   in
   Util.Timer.stop timer ();
   Printf.eprintf "done.\n%!"; 

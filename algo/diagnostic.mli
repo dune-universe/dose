@@ -1,6 +1,4 @@
 
-open IprLib
-
 (** print a cudf package.
     @param short : optionally print only <name,number> *)
 val print_package : ?short : bool -> Cudf.package -> string

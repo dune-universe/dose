@@ -9,9 +9,15 @@ all:
 
 clean:
 	$(OCAMLBUILD) $(OBFLAGS) -clean
+	@for i in applications common deb rpm db; do\
+		cd $$i ;\
+		$(OCAMLBUILD) $(OBFLAGS) -clean\
+	  cd .. ;\
+	done
 
-distclean:
-	for i in applications/debdudf applications/ bridge common deb rpm db ; do ocamlbuild -clean $$i ; done
+#	for i in applications/debdudf applications/ bridge common deb rpm db ; do ocamlbuild -clean $$i ; done
+
+distclean: clean
 	rm -Rf Makefile.config aclocal.m4 config.log config.status autom4te.cache/
 
 _build/%:

@@ -1,9 +1,6 @@
 
-open IprLib
-
-module Cudf_oper = Cudf_oper.Make(Cudf)
-
 open Graph
+open Common
 
 module SyntacticDependencyGraph(Pr : sig val pr : Cudf.package -> string end) = struct
 
@@ -57,7 +54,7 @@ module SyntacticDependencyGraph(Pr : sig val pr : Cudf.package -> string end) = 
   module S = Set.Make(PkgV)
 
   let dependency_graph universe =
-    let maps = Cudf_oper.build_maps universe in
+    let maps = CudfAdd.build_maps universe in
     let gr = G.create () in
     Cudf.iter_packages (fun pkg ->
       let vpid = G.V.create (PkgV.Pkg pkg) in
@@ -70,7 +67,7 @@ module SyntacticDependencyGraph(Pr : sig val pr : Cudf.package -> string end) = 
               let edge = G.E.create vpid PkgE.DirDepends vp in
               G.add_vertex gr vp ;
               G.add_edge_e gr edge
-            ) (maps.Cudf_oper.who_provides (pkgname,constr))
+            ) (maps.CudfAdd.who_provides (pkgname,constr))
         |l -> begin
             let vor = G.V.create (PkgV.Or (pkg,!c)) in
             G.add_vertex gr vor;
@@ -83,7 +80,7 @@ module SyntacticDependencyGraph(Pr : sig val pr : Cudf.package -> string end) = 
                 G.add_vertex gr vp;
                 let oredge = G.E.create vor PkgE.OrDepends vp in
                 G.add_edge_e gr oredge
-              ) (maps.Cudf_oper.who_provides (pkgname,constr))
+              ) (maps.CudfAdd.who_provides (pkgname,constr))
             ) l
         end
       ) pkg.Cudf.depends
@@ -94,7 +91,7 @@ module SyntacticDependencyGraph(Pr : sig val pr : Cudf.package -> string end) = 
           let edge = G.E.create vpid PkgE.Conflict vp in
           G.add_vertex gr vp;
           G.add_edge_e gr edge
-        ) (maps.Cudf_oper.who_provides (pkgname,constr))
+        ) (maps.CudfAdd.who_provides (pkgname,constr))
       ) pkg.Cudf.conflicts
     ) universe
     ;
