@@ -15,8 +15,6 @@ clean:
 	  cd .. ;\
 	done
 
-#	for i in applications/debdudf applications/ bridge common deb rpm db ; do ocamlbuild -clean $$i ; done
-
 distclean: clean
 	rm -Rf Makefile.config aclocal.m4 config.log config.status autom4te.cache/
 

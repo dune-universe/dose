@@ -10,136 +10,7 @@
 (**************************************************************************)
 
 open ExtLib
-open Common
-open Packages
-
-type release = {
-  origin : string;
-  label : string;
-  suite : string;
-  version: string;
-  codename : string;
-  date: string;
-  architecture: string;
-  component : string;
-  description: string;
-  md5sums: (string * string * string) list;
-  sha1: (string * string * string) list;
-  sha256: (string * string * string) list
-}
-
-let default_release = {
-    origin = "";
-    label = "";
-    suite = "";
-    version = "";
-    codename = "";
-    date = "";
-    architecture = "";
-    component = "";
-    description = "";
-    md5sums = [];
-    sha1 = [];
-    sha256 = []
-}
-
-let parse_name = parse_package
-let parse_version s = parse_version s
-let parse_vpkg = parse_constr
-let parse_veqpkg = parse_constr
-let parse_conj s = parse_vpkglist parse_vpkg s
-let parse_cnf s = parse_vpkgformula parse_vpkg s
-let parse_prov s = parse_veqpkglist parse_veqpkg s
-
-exception Eof
-(** parse a 822 compliant file.
-    @return list of Ipr packages.
-    @param parse : paragraph parser
-    @param f : filter to be applied to each paragraph 
-    @param ExtLib.IO.input channel *)
-let parse_822_iter parse f ch =
-  let progressbar = Util.progress "Debian.Parse.parse_822_iter" in
-  let total = 25000 in (* estimate *)
-  let i = ref 0 in
-  let l = ref [] in
-  try
-    while true do
-      progressbar (incr i ; !i , total) ; 
-      match parse_paragraph ch with
-      |None -> raise Eof
-      |Some par -> 
-        begin match parse par with 
-        |None -> ()
-        |Some e -> l := (f e) :: !l
-        end
-    done ;
-    !l
-  with Eof -> !l
-
-let parse_packages_fields par =
-  let guard_field field s f = 
-    try
-      let l = (single_line field (List.assoc field par)) in
-      (* it has a status field and we ignore it if not correctly set *)
-      if l = s then Some(f) else None 
-    with Not_found -> Some(f) (* this package doesn't have a status field *)
-  in
-  let parse_s f field = f (single_line field (List.assoc field par)) in
-  let parse_m f field = f (String.concat " " (List.assoc field par)) in
-  let exec () = 
-      {
-        Ipr.name = parse_s parse_name "package";
-        version = parse_s parse_version "version";
-        depends = (try parse_m parse_cnf "depends" with Not_found -> []);
-        pre_depends = (try parse_m parse_cnf "pre-depends" with Not_found -> []);
-        recommends = (try parse_m parse_conj "recommends" with Not_found -> []);
-        suggests = (try parse_m parse_conj "suggests" with Not_found -> []);
-        enhances = (try parse_m parse_conj "enhances" with Not_found -> []);
-        conflicts = (try parse_m parse_conj "conflicts" with Not_found -> []);
-        replaces = (try parse_m parse_conj "replaces" with Not_found -> []);
-        provides = (try parse_m parse_prov "provides" with Not_found -> []);
-      }
-  in
-  try guard_field "status" "install ok installed" (exec ())
-  with Not_found -> None (* this package doesn't either have version or name *)
-;;
-
-(** parse a 822 compliant file 
-    @return list of Ipr packages.
-    @param f : filter to be applied to each paragraph
-    @param ExtLib.IO.input channel *)
-let parse_packages_in f ch =
-  let parse_packages = parse_822_iter parse_packages_fields in
-  parse_packages f (start_from_channel ch)
-;;
-
-let parse_release_in ch =
-  let parse_release_fields par =
-    let parse field = 
-      try (single_line field (List.assoc field par))
-      with Not_found -> ""
-    in
-    {
-      origin = parse "origin";
-      label = parse "label";
-      suite = parse "suite";
-      version = parse "version";
-      codename = parse "codename";
-      date = parse "date";
-      architecture = parse "architecture";
-      component = parse "component";
-      description = parse "description";
-      md5sums = [];
-      sha1 = [];
-      sha256 = [] 
-    }
-  in
-  match parse_paragraph (start_from_channel ch) with
-  |None -> default_release
-  |Some par -> parse_release_fields par
-;;
-
-(**********************************************************************)
+open Format822
 
 let space_re = Str.regexp "[ \t]+" 
 
@@ -176,24 +47,6 @@ let parse_popcon s =
   |rank::name::inst::_ -> (int_of_string rank,name,int_of_string inst)
   |_ -> (Printf.eprintf "Parse error %s\n" s ; exit 1)
 
-(**********************************************************************)
-
-(** parse a list of debian Packages file 
-    @return a list of unique Ipr packages *)
-let input_raw files =
-  let timer = Util.Timer.create "Debian.Parse.input_raw" in
-  Util.Timer.start timer;
-  let s =
-    List.fold_left (fun acc f ->
-      let ch = (Input.open_chan f) in
-      let l = parse_packages_in (fun x -> x) ch in
-      let _ = IO.close_in ch in
-      List.fold_left (fun s x -> Ipr.Set.add x s) acc l
-    ) Ipr.Set.empty files
-  in
-  Util.Timer.stop timer (Ipr.Set.elements s)
-;;
-
 (*****************************************************)
 
 (*
@@ -220,7 +73,7 @@ type apt_req =
   |Upgrade of string option
   |DistUpgrade of string option
 
-let parse_pkg_only s = `Pkg(Packages.parse_package s)
+let parse_pkg_only s = `Pkg(parse_package s)
 
 let distro_re = Str.regexp "^\\([^/]*\\)*/[ \t]*\\(.*\\)$"
 let version_re = Str.regexp "^\\([^=]*\\)*=[ \t]*\\(.*\\)$"
@@ -228,12 +81,12 @@ let parse_pkg_req suite s =
   try 
     if Str.string_match distro_re s 0 then
       `PkgDst(
-        Packages.parse_package(Str.matched_group 1 s),
+        parse_package(Str.matched_group 1 s),
         Str.matched_group 2 s
       )
     else if Str.string_match version_re s 0 then
       `PkgVer(
-        Packages.parse_package(Str.matched_group 1 s),
+        parse_package(Str.matched_group 1 s),
         (* Packages.parse_version *)(Str.matched_group 2 s)
       )
     else begin match suite with
