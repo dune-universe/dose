@@ -521,12 +521,14 @@ let loadll = List.map loadl
 let conv pkg =
   { Debian.Packages.name = pkg.name;
     version = pkg.number;
+    source = ("",None);
     depends = loadll (List.assoc (`Depends) pkg.cnf_deps);
     pre_depends = loadll (List.assoc (`Pre_depends) pkg.cnf_deps);
     recommends = [];
     suggests = [];
     enhances = [];
     conflicts = loadl (List.assoc (`Conflicts) pkg.conj_deps);
+    breaks = loadl (List.assoc (`Breaks) pkg.conj_deps);
     replaces = [];
     provides = loadl (List.assoc (`Provides) pkg.conj_deps);
   }

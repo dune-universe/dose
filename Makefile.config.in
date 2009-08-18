@@ -27,11 +27,11 @@ TARGETS= \
 				applications/randcudf.$(OCAMLBEST) \
 				applications/cudf-solver.$(OCAMLBEST) \
 				applications/distcheck.$(OCAMLBEST) \
-				applications/cudf-diff.$(OCAMLBEST)
+				applications/cudf-diff.$(OCAMLBEST) \
+				applications/testingcheck.$(OCAMLBEST)
 
 LIBS= \
 			common/common.$(OCAMLLIBBEST) \
-			bridge/iprLib.$(OCAMLLIBBEST) \
 			deb/debian.$(OCAMLLIBBEST) \
 			algo/algo.$(OCAMLLIBBEST)
 

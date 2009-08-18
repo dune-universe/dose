@@ -21,12 +21,14 @@ type veqpkg = (string * (string * string) option)
 type package = {
   name : name ;
   version : version;
+  source : (name * version option) ;
   depends : vpkg list list;
   pre_depends : vpkg list list;
   recommends : vpkg list;
   suggests : vpkg list;
   enhances : vpkg list;
   conflicts : vpkg list;
+  breaks : vpkg list;
   replaces : vpkg list;
   provides : veqpkg list;
 }
@@ -35,11 +37,13 @@ let default_package = {
   name = "";
   version = "";
   depends = [];
+  source = ("",None);
   pre_depends = [];
   recommends = [];
   suggests = [];
   enhances = [];
   conflicts = [];
+  breaks = [];
   replaces = [];
   provides = [];
 }
@@ -47,7 +51,6 @@ let default_package = {
 module Set = Set.Make(struct type t = package let compare = compare end)
 
 let parse_name = parse_package
-let parse_version s = parse_version s
 let parse_vpkg = parse_constr
 let parse_veqpkg = parse_constr
 let parse_conj s = parse_vpkglist parse_vpkg s
@@ -68,12 +71,14 @@ let parse_packages_fields par =
       {
         name = parse_s parse_name "package";
         version = parse_s parse_version "version";
+        source = (try parse_s parse_source "source" with Not_found -> ("",None));
         depends = (try parse_m parse_cnf "depends" with Not_found -> []);
         pre_depends = (try parse_m parse_cnf "pre-depends" with Not_found -> []);
         recommends = (try parse_m parse_conj "recommends" with Not_found -> []);
         suggests = (try parse_m parse_conj "suggests" with Not_found -> []);
         enhances = (try parse_m parse_conj "enhances" with Not_found -> []);
         conflicts = (try parse_m parse_conj "conflicts" with Not_found -> []);
+        breaks = (try parse_m parse_conj "breaks" with Not_found -> []);
         replaces = (try parse_m parse_conj "replaces" with Not_found -> []);
         provides = (try parse_m parse_prov "provides" with Not_found -> []);
       }

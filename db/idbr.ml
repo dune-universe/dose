@@ -9,6 +9,7 @@ type distribution = [
 
 type version_id = int
 type name = string
+type source = string
 type number = string
 type selector = Leq | Geq | Lt | Gt | Eq | Any
 
@@ -19,12 +20,12 @@ type cnf_relation = [
     | `Pre_depends
     | `Recommends
     | `Suggests
-    | `Breaks
     | `Enhances
 ]
 
 type conj_relation = [
     | `Conflicts
+    | `Breaks
     | `Provides
     | `Replaces
 ]

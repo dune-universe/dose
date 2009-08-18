@@ -73,7 +73,7 @@ let init_versions_table =
           |None -> ()
           |Some(_,version) -> add name version
       ) 
-      (pkg.provides @ pkg.conflicts)
+      (pkg.breaks @ pkg.provides @ pkg.conflicts)
     end
     ;
     begin
@@ -181,7 +181,7 @@ let tocudf ?(inst=false) pkg =
     { Cudf.package = escape pkg.name ;
       Cudf.version = get_version (pkg.name,pkg.version) ;
       Cudf.depends = loadll (pkg.depends @ pkg.pre_depends);
-      Cudf.conflicts = loadlc pkg.name pkg.conflicts ;
+      Cudf.conflicts = loadlc pkg.name (pkg.breaks @ pkg.conflicts) ;
       Cudf.provides = loadlp pkg.provides ;
       Cudf.installed = inst ;
       Cudf.keep = None ;

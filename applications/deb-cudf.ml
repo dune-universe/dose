@@ -111,6 +111,8 @@ let main () =
     end else stdout
   in
 
+  Printf.fprintf oc "%s\n" (Cudf_printer.string_of_preamble Debcudf.preamble) ;
+
   List.iter (fun pkg ->
     Printf.fprintf oc "%s\n" (Cudf_printer.string_of_package pkg)
   ) pkglist

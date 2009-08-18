@@ -9,6 +9,7 @@
 
 open Debian
 open Common
+module Deb = Debian.Packages
 
 module Options = struct
   let show_successes = ref true
@@ -46,12 +47,12 @@ let check universe =
 (* add a package only if it does not exist or it is a more recent version *)
 let debianadd tbl x =
   try 
-    let y = Hashtbl.find tbl x.Package.name in
-    if (Version.compare y.Packages.version x.Packages.version) = -1 then begin
-      Hashtbl.remove tbl y.Packages.name ;
-      Hashtbl.add tbl x.Packages.name x
+    let y = Hashtbl.find tbl x.Deb.name in
+    if (Debian.Version.compare y.Deb.version x.Deb.version) = -1 then begin
+      Hashtbl.remove tbl y.Deb.name ;
+      Hashtbl.add tbl x.Deb.name x
     end
-  with Not_found -> Hashtbl.add tbl x.Packages.name x
+  with Not_found -> Hashtbl.add tbl x.Deb.name x
 ;;
 
 let init ps =
@@ -80,7 +81,7 @@ let rm ps ch =
     Printf.eprintf "Nothing to remove\n"
   else (
     Printf.eprintf "remove %d packages\n%!" (List.length ll);
-    List.iter (fun p -> Hashtbl.remove ps p.Packages.name) ll
+    List.iter (fun p -> Hashtbl.remove ps p.Deb.name) ll
   );
   ps
 ;;

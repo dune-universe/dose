@@ -4,9 +4,9 @@ open ExtLib
 let print_package ?(short=true) pkg =
   if short then
     let (sp,sv) =
-      try (pkg.Cudf.package,Cudf.lookup_package_property pkg "number")
+      try (pkg.Cudf.package,Cudf.lookup_package_property pkg "Number")
       with Not_found -> (pkg.Cudf.package,string_of_int pkg.Cudf.version)
-    in Printf.sprintf "(%s,%s)" sp sv
+    in Printf.sprintf "%s (= %s)" sp sv
   else
     Cudf_printer.string_of_package pkg
 
@@ -44,19 +44,19 @@ let print ?(explain=false) oc result =
 
   match result,explain with
   |{result = Failure (_) ; request = r },false ->
-      Printf.fprintf oc "%s : FAILED\n" (print_request r)
+      Printf.fprintf oc "%s: FAILED\n" (print_request r)
   |{ result = Success (_); request = r },false ->
-      Printf.fprintf oc "%s : SUCCESS\n" (print_request r)
+      Printf.fprintf oc "%s: OK\n" (print_request r)
   |{ result = Success (f); request = r },true ->
       begin
-        Printf.fprintf oc "%s : SUCCESS\n" (print_request r) ;
+        Printf.fprintf oc "%s: OK\n" (print_request r) ;
         List.iter (fun p ->
           Printf.fprintf oc "%s\n" (print_package ~short:false p)
         ) (f ())
       end
   |{result = Failure (f) ; request = r },true -> 
      begin
-       Printf.fprintf oc "%s : FAILED\n" (print_request r) ;
+       Printf.fprintf oc "%s: FAILED\n" (print_request r) ;
        List.iter (function
          |Dependency(i,l) ->
             let l = List.map (print_package ~short:true) l in
