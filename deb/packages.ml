@@ -90,18 +90,6 @@ let parse_packages_in f ch =
   let parse_packages = parse_822_iter parse_packages_fields in
   parse_packages f (start_from_channel ch)
 
-(** parse a list of debian Packages file 
-    @return a list of unique Ipr packages *)
-let input_raw files =
-  let timer = Util.Timer.create "Debian.Parse.input_raw" in
-  Util.Timer.start timer;
-  let s =
-    List.fold_left (fun acc f ->
-      let ch = (Input.open_file f) in
-      let l = parse_packages_in (fun x -> x) ch in
-      let _ = Input.close_ch ch in
-      List.fold_left (fun s x -> Set.add x s) acc l
-    ) Set.empty files
-  in
-  Util.Timer.stop timer (Set.elements s)
-
+let input_raw = 
+  let module M = Format822.RawInput(Set) in
+  M.input_raw parse_packages_in

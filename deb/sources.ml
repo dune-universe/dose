@@ -27,6 +27,8 @@ type source = {
   architecture : string;
 }
 
+module Set = Set.Make(struct type t = source let compare = compare end)
+
 let parse_name = parse_package
 let parse_arch = parse_package
 let parse_version s = parse_version s
@@ -40,9 +42,9 @@ let parse_sources_fields par =
       {
         name = parse_s parse_name "package";
         version = parse_s parse_version "version";
-        build_depends = (try parse_m parse_cnf "build-depends" with Not_found -> []);
-        binary = (try parse_m parse_binary "binary" with Not_found -> []);
         architecture = parse_s parse_arch "architecture";
+        binary = (try parse_m parse_binary "binary" with Not_found -> []);
+        build_depends = (try parse_m parse_cnf "build-depends" with Not_found -> []);
       }
   in
   try Some (exec ()) with Not_found -> None (* this package doesn't either have version or name *)
@@ -51,3 +53,6 @@ let parse_sources_in f ch =
   let parse_packages = parse_822_iter parse_sources_fields in
   parse_packages f (start_from_channel ch)
 
+let input_raw =
+  let module M = Format822.RawInput(Set) in
+  M.input_raw parse_sources_in

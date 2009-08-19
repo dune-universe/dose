@@ -250,3 +250,17 @@ let parse_822_iter parse f ch =
     !l
   with Eof -> !l
 
+module RawInput ( Set : Set.S ) = struct
+  let input_raw f files =
+    let timer = Util.Timer.create "Debian.Format822.input_raw" in
+    Util.Timer.start timer;
+    let s =
+      List.fold_left (fun acc file ->
+        let ch = (Input.open_file file) in
+        let l = f (fun x -> x) ch in
+        let _ = Input.close_ch ch in
+        List.fold_left (fun s x -> Set.add x s) acc l
+      ) Set.empty files
+    in
+    Util.Timer.stop timer (Set.elements s)
+end

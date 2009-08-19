@@ -35,29 +35,40 @@ let main () =
   end;
 
   Printf.eprintf "Parsing and normalizing...%!" ;
+  let timer = Util.Timer.create "Parsing and normalizing" in
+  Util.Timer.start timer;
   let universe =
-     match Input.parse_uri !uri with
+    match Input.parse_uri !uri with
 #ifdef HASDB
-     |(("pgsql"|"sqlite") as dbtype,info,(Some query)) -> begin
-       Backend.init_database dbtype info (Idbr.parse_query query) ;
-       let l = Backend.load_selection (`All) in
-       Debian.Debcudf.load_universe l
-     end
+    |(("pgsql"|"sqlite") as dbtype,info,(Some query)) -> begin
+      Backend.init_database dbtype info (Idbr.parse_query query) ;
+      let l = Backend.load_selection (`All) in
+      Debian.Debcudf.load_universe l
+    end
 #endif
-     |("deb",(_,_,_,_,file),_) -> begin
-       let l = Debian.Packages.input_raw [file] in
-       Debian.Debcudf.load_universe l
-     end
-     |("cudf",(_,_,_,_,file),_) -> begin
-       let _, u, _ = CudfAdd.parse_cudf file in u
-     end
-     |_ -> failwith "Not supported"
-   in
-
+(*
+    |("debsrc",(_,_,_,_,file),_) -> begin
+      let l = Debian.Source.input_raw [file] in
+      Debian.Debcudf.load_universe l
+    end
+*)
+    |("deb",(_,_,_,_,file),_) -> begin
+      let l = Debian.Packages.input_raw [file] in
+      Debian.Debcudf.load_universe l
+    end
+    |("cudf",(_,_,_,_,file),_) -> begin
+      let _, u, _ = CudfAdd.parse_cudf file in u
+    end
+    |_ -> failwith "Not supported"
+  in
+  ignore(Util.Timer.stop timer ());
   Printf.eprintf "done\n%!" ;
   Printf.eprintf "Init solver...%!" ;
 
+  let timer = Util.Timer.create "Init solver" in
+  Util.Timer.start timer;
   let solver = Depsolver.init universe in
+  ignore(Util.Timer.stop timer ());
 
   let result_printer = function
     |{Diagnostic.result = Diagnostic.Failure (_) } when !Options.show_successes -> ()
@@ -69,7 +80,10 @@ let main () =
 
   Printf.eprintf "done\n%!" ;
   Printf.eprintf "Solving...\n%!" ;
+  let timer = Util.Timer.create "Solver" in
+  Util.Timer.start timer;
   let i = Depsolver.distribcheck ~callback:result_printer solver in
+  ignore(Util.Timer.stop timer ());
   Printf.eprintf "Broken Packages: %d\n%!" i
 ;;
 

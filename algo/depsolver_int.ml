@@ -209,8 +209,6 @@ let init buffer universe =
 ;;
 
 let solve (solver,maps) request =
-  let timer = Util.Timer.create "Algo.Depsolver.solve" in
-  Util.Timer.start timer;
   S.reset solver.constraints;
 
   let result solve collect var =
@@ -233,7 +231,7 @@ let solve (solver,maps) request =
       Diagnostic.Failure(get_reasons)
   in
 
-  let res = match request with
+  match request with
     |Diagnostic.Req ->
         let res = result S.solve S.collect_reasons (solver.size - 1) in
         { Diagnostic.result = res ; request = request }
@@ -244,8 +242,6 @@ let solve (solver,maps) request =
         let res =
           result S.solve_lst S.collect_reasons_lst (List.map maps.to_sat rl) in
         { Diagnostic.result = res ; request = request }
-  in
-  Util.Timer.stop timer res
 ;;
 
 (***********************************************************)

@@ -45,10 +45,6 @@ let escape s =
     else
       escape_string s0
 
-
-(* this function is copy of a the same function in
-   ipr but not exported in ipr.mli . At the moment is used
-   only here ... *)
 let cudfop = function
   |Some(("<<" | "<"),v) -> Some(`Lt,v)
   |Some((">>" | ">"),v) -> Some(`Gt,v)
@@ -65,51 +61,56 @@ let init_versions_table =
       Hashtbl.replace temp_versions_table name (version::l)
     with Not_found -> Hashtbl.add temp_versions_table name [version]
   in
-  fun pkg ->
-    add pkg.name pkg.version;
-    begin
+  let conj_iter =
+    List.iter (fun (name,sel) ->
+      match cudfop sel with
+      |None -> ()
+      |Some(_,version) -> add name version
+    ) 
+  in
+  let cnf_iter = 
+    List.iter (fun disjunction ->
       List.iter (fun (name,sel) ->
         match cudfop sel with
-          |None -> ()
-          |Some(_,version) -> add name version
-      ) 
-      (pkg.breaks @ pkg.provides @ pkg.conflicts)
-    end
-    ;
-    begin
-      List.iter (fun disjunction ->
-        List.iter (fun (name,sel) ->
-          match cudfop sel with
-            |None -> ()
-            |Some(_,version) -> add name version
-        ) disjunction
-      )
-      (pkg.depends @ pkg.pre_depends)
-    end
+        |None -> ()
+        |Some(_,version) -> add name version
+      ) disjunction
+    )
+  in
+  fun pkg ->
+    add pkg.name pkg.version;
+    conj_iter pkg.breaks;
+    conj_iter pkg.provides;
+    conj_iter pkg.conflicts ;
+    cnf_iter pkg.depends;
+    cnf_iter pkg.pre_depends
+;;
 
 let init_virtual_table pkg =
   let add name =
-    if not(Hashtbl.mem virtual_table name)
-    then Hashtbl.add virtual_table name ()
+    if not(Hashtbl.mem virtual_table name) then
+      Hashtbl.add virtual_table name ()
   in
   List.iter (fun (name,_) -> add name) pkg.provides
 
 let init_unit_table pkg =
-  if not(Hashtbl.mem unit_table pkg.name)
-  then Hashtbl.add unit_table pkg.name ()
+  if not(Hashtbl.mem unit_table pkg.name) then
+    Hashtbl.add unit_table pkg.name ()
 
 let init_versioned_table pkg =
   let add name =
-    if not(Hashtbl.mem versioned_table name)
-    then Hashtbl.add versioned_table name ()
+    if not(Hashtbl.mem versioned_table name) then
+      Hashtbl.add versioned_table name ()
   in
-  List.iter (fun (name,_) -> add name) pkg.conflicts
-  ;
-  begin
+  let add_iter_cnf =
     List.iter (fun disjunction ->
       List.iter (fun (name,_)-> add name) disjunction
-    ) (pkg.depends @ pkg.pre_depends)
-  end
+    ) 
+  in
+  List.iter (fun (name,_) -> add name) pkg.conflicts ;
+  add_iter_cnf pkg.pre_depends ;
+  add_iter_cnf pkg.depends
+;;
 
 let init_tables ?(reset=false) pkglist =
   if reset then begin
@@ -180,7 +181,7 @@ let preamble = [("Number",("string",`String ""))]
 let tocudf ?(inst=false) pkg =
     { Cudf.package = escape pkg.name ;
       Cudf.version = get_version (pkg.name,pkg.version) ;
-      Cudf.depends = loadll (pkg.depends @ pkg.pre_depends);
+      Cudf.depends = loadll (pkg.pre_depends @ pkg.depends);
       Cudf.conflicts = loadlc pkg.name (pkg.breaks @ pkg.conflicts) ;
       Cudf.provides = loadlp pkg.provides ;
       Cudf.installed = inst ;
