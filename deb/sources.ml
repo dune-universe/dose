@@ -13,28 +13,34 @@ open ExtLib
 open Common
 open Format822
 
-type name = string
-type version = string
-type vpkg = string * (string * string) option
-
 (** Representation of a parsed source description item. 
     all fields are string *)
+
+type architecture = string
 type source = {
   name : name;
   version : version;
   binary : vpkg list;
-  build_depends : vpkg list list;
-  architecture : string;
+  build_depends : (vpkg * (bool * architecture) list) list list;
+  build_depends_indep : (vpkg * (bool * architecture) list) list list;
+  build_conflicts : (vpkg * (bool * architecture) list) list;
+  build_conflicts_indep : (vpkg * (bool * architecture) list) list;
+  architecture : architecture list
 }
 
 module Set = Set.Make(struct type t = source let compare = compare end)
 
 let parse_name = parse_package
-let parse_arch = parse_package
+let parse_arch s = Str.split (Str.regexp " ") s
 let parse_version s = parse_version s
-let parse_cnf s = parse_vpkgformula parse_constr s
-let parse_binary s = parse_veqpkglist parse_constr s
+let parse_binary s = parse_vpkglist parse_constr s
+let parse_cnf s = parse_vpkgformula parse_builddeps s
+let parse_conj s = parse_vpkglist parse_builddeps s
 
+(* Relationships between source and binary packages
+ * http://www.debian.org/doc/debian-policy/ch-relationships.html
+ * Build-Depends, Build-Depends-Indep, Build-Conflicts, Build-Conflicts-Indep
+*)
 let parse_sources_fields par =
   let parse_s f field = f (single_line field (List.assoc field par)) in
   let parse_m f field = f (String.concat " " (List.assoc field par)) in
@@ -45,6 +51,9 @@ let parse_sources_fields par =
         architecture = parse_s parse_arch "architecture";
         binary = (try parse_m parse_binary "binary" with Not_found -> []);
         build_depends = (try parse_m parse_cnf "build-depends" with Not_found -> []);
+        build_depends_indep = (try parse_m parse_cnf "build-depends-indep" with Not_found -> []);
+        build_conflicts = (try parse_m parse_conj "build-conflicts" with Not_found -> []);
+        build_conflicts_indep = (try parse_m parse_conj "build-conflicts-indep" with Not_found -> []);
       }
   in
   try Some (exec ()) with Not_found -> None (* this package doesn't either have version or name *)

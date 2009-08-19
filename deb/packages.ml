@@ -13,11 +13,6 @@ open ExtLib
 open Common
 open Format822
 
-type name = string
-type version = string
-type vpkg = (string * (string * string) option)
-type veqpkg = (string * (string * string) option)
-
 type package = {
   name : name ;
   version : version;

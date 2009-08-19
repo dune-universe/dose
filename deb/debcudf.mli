@@ -14,7 +14,7 @@
 (** initialize the version conversion tables *)
 val init_tables : ?reset:bool -> Packages.package list -> unit
 
-val get_version : Packages.name * Packages.version -> int
+val get_version : Format822.name * Format822.version -> int
 
 (** convert the a package in the ipr format to cudf. The resulting
     cudf package will be obtained by:
@@ -25,6 +25,9 @@ val get_version : Packages.name * Packages.version -> int
    - Mapping APT request.
 *)
 val tocudf : ?inst:bool -> Packages.package -> Cudf.package
+
+val lltocudf : Format822.vpkg list list -> Cudf_types.vpkgformula
+val ltocudf  : Format822.vpkg list -> Cudf_types.vpkglist
 
 val preamble : Cudf.preamble
 

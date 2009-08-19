@@ -189,6 +189,9 @@ let tocudf ?(inst=false) pkg =
       Cudf.extra = [("Number",`String pkg.version)] 
     }
 
+let lltocudf = loadll
+let ltocudf = loadl
+
 let load_universe ?(init=true) l =
   let timer = Util.Timer.create "Debian.Debcudf.load_universe" in
   Util.Timer.start timer;

@@ -15,6 +15,11 @@
 open ExtLib
 open Common
 
+type name = string
+type version = string
+type vpkg = (string * (string * string) option)
+type veqpkg = (string * (string * string) option)
+
 type t =
   { mutable next : unit -> string;
     mutable cur : string;
@@ -92,7 +97,7 @@ let token_re =
   Str.regexp
     ("[ \t]+\\|\\(" ^
      String.concat "\\|"
-       [","; "|"; "("; ")"; "<<"; "<="; "="; ">="; ">>"; "<"; ">";
+     [","; "|"; "("; ")"; "\\["; "\\]"; "!"; "<<"; "<="; "="; ">="; ">>"; "<"; ">";
         "[A-Za-z0-9.:_+~-]+"] ^
      "\\)")
 
@@ -192,6 +197,29 @@ let parse_constr_aux vers s =
 let parse_constr s =
   let s = start_token_stream s in
   parse_constr_aux true s
+
+let parse_builddeps s =
+  let s = start_token_stream s in
+  let c = parse_constr_aux true s in
+  if not (eof s) then begin
+    next s;
+    if not (eof s) && cur s = "[" then begin
+      let l = ref [] in
+      next s;
+      while not (eof s) && (cur s) != "]" do
+        l :=
+          if not (eof s) && cur s = "!" 
+          then (next s ; (false,cur s)::!l)
+          else (true,cur s)::!l
+        ;
+        next s
+      done;
+      (c,!l)
+    end
+    else (c,[])
+  end
+  else (c,[])
+;;
 
 (*****************************************************)
 
