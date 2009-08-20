@@ -37,6 +37,17 @@ let progress ?(v=Summary) label =
     else ()
   end
 
+let rec unescape s =
+  let hex_re = Str.regexp "%[0-9a-f][0-9a-f]" in
+  let un s =
+    let s = Str.matched_string s in
+    let hex = String.sub s 1 2 in
+    let n = int_of_string ("0x" ^ hex) in
+    String.make 1 (Char.chr n)
+  in
+  Str.global_substitute hex_re un s
+
+
 let print ppf v label s =
   if v <= !verbosity then
      Format.fprintf ppf "%s: %s\n" label s

@@ -3,6 +3,8 @@
 open ExtLib
 open Debian
 open Common
+module Src = Debian.Sources
+module Deb = Debian.Packages
 
 module Options = struct
   let show_successes = ref true
@@ -37,24 +39,35 @@ let main () =
 
   Printf.eprintf "Parsing and normalizing...%!" ;
 
-  let pkglist = Debian.Packages.input_raw [List.hd !files] in
+  let pkglist = Deb.input_raw [List.hd !files] in
   let srclist arch =
-    let l = Debian.Sources.input_raw (List.tl !files) in
-    let conflicts l = List.filter_map (fun (v,l) -> Some v) l
+    let l = Src.input_raw (List.tl !files) in
+    (* as per policy, if the first arch restriction contains a !
+     * then we assume that all archs on the lists are bang-ed.
+     * cf: http://www.debian.org/doc/debian-policy/ch-relationships.html 7.1 *)
+    let select = function
+      |(v,(((false,_)::_) as al)) when List.for_all (fun (_,a) -> not(a = arch)) al -> Some v
+      |(v,(((true,_)::_) as al)) when List.exists (fun (_,a) -> a = arch) al -> Some v
+      |(v,[]) -> Some v
+      |_ -> None
     in
-    let depends ll =
-      List.map (fun l -> List.filter_map (fun (v,l) -> Some v) l) ll
+    let conflicts l = List.filter_map select l in
+    let depends ll = List.filter_map (fun l ->
+      match List.filter_map select l with [] -> None | l -> Some l
+      ) ll 
     in
     List.filter_map (fun pkg ->
-      let archs = pkg.Debian.Sources.architecture in
-      if List.mem "all" archs || List.mem arch archs then
+      let archs = pkg.Src.architecture in
+      if List.exists (fun a -> a = "all" || a = "any" || a = arch) archs then (
         Some (
-        { Debian.Packages.default_package with
-          Debian.Packages.name = pkg.Debian.Sources.name ^ "__source";
-          depends = depends pkg.Debian.Sources.build_depends;
-          conflicts = conflicts pkg.Debian.Sources.build_conflicts;
+        { Deb.default_package with
+          Deb.name = "source---" ^ pkg.Src.name ;
+          Deb.version = pkg.Src.version;
+          depends = depends (pkg.Src.build_depends_indep @ pkg.Src.build_depends);
+          conflicts = conflicts (pkg.Src.build_conflicts_indep @ pkg.Src.build_conflicts);
         }
         )
+      )
       else None
     ) l
   in
@@ -91,7 +104,7 @@ let main () =
       result_printer d
   ) sl
   ;
-  Printf.eprintf "Broken Packages: %d\n%!" !i
+  Printf.eprintf "Broken Packages: %d\n" !i
 ;;
 
 main () ;;

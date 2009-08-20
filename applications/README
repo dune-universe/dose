@@ -70,6 +70,10 @@ $
 $echo "undo" | socat - UNIX-CLIENT:/tmp/cmd.sock
 -----
 
+./buildcheck.native --arch amd64 /var/lib/apt/lists/ftp.debian.org_debian_dists_unstable_main_binary-amd64_Packages /var/lib/apt/lists/ftp.debian.org_debian_dists_unstable_main_source_Sources
+
+-----
+
 db-cudf.native converts a debian archive stored in a database to a cudf universe
 
 depgraph.native generates a .dot graph of a repository

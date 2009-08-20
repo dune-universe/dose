@@ -201,22 +201,18 @@ let parse_constr s =
 let parse_builddeps s =
   let s = start_token_stream s in
   let c = parse_constr_aux true s in
-  if not (eof s) then begin
+  if not (eof s) && (cur s) = "[" then begin
+    let l = ref [] in
     next s;
-    if not (eof s) && cur s = "[" then begin
-      let l = ref [] in
-      next s;
-      while not (eof s) && (cur s) != "]" do
-        l :=
-          if not (eof s) && cur s = "!" 
-          then (next s ; (false,cur s)::!l)
-          else (true,cur s)::!l
-        ;
-        next s
-      done;
-      (c,!l)
-    end
-    else (c,[])
+    while not (eof s) && not((cur s) = "]") do
+      if not (eof s) && cur s = "!" then
+        ( next s; l := (false,cur s)::!l )
+      else 
+        ( l := (true,cur s)::!l )
+      ;
+      next s
+    done;
+    (c,!l)
   end
   else (c,[])
 ;;
