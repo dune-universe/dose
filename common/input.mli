@@ -13,17 +13,17 @@
 
 open ExtLib
 
-#ifdef HASZIP
+IFDEF HASZIP THEN
 (** load a file in gzip format
     @return ExtLib.IO.input channel *)
 val gzip_open_file : string -> IO.input
-#endif
+END
 
-#ifdef HASBZ2
+IFDEF HASBZ2 THEN
 (** load a file in bzip format - Not implemented yet
     @return ExtLib.IO.input channel *)
 val bzip_open_file : string -> IO.input
-#endif
+END
 
 (** load a non compressed file  
     @return ExtLib.IO.input channel *)
@@ -35,7 +35,6 @@ val open_file : string -> IO.input
 
 val open_ch : in_channel -> IO.input
 val close_ch : IO.input -> unit
-
 
 (** parse a uri.
     i.e. :

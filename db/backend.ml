@@ -238,12 +238,10 @@ let dynlink_db dbtype =
 *)
 
 let late_binding = function
-#ifdef PGSQL
-  |"pgsql" -> Pgsql.load ()
-#endif
-#ifdef SQLITE
-  |"sqlite" -> Sqlite.load () 
-#endif
+  |"pgsql" ->
+      IFDEF PGSQL THEN Pgsql.load () ELSE failwith "pgsql not supported" END
+  |"sqlite" ->
+      IFDEF SQLITE THEN Sqlite.load () ELSE failwith "sqlite not supported" END
   |_ -> failwith "DB late binding failed"
 ;;
 

@@ -2,9 +2,9 @@
 open Cudf
 open ExtLib
 open Common
-#ifdef HASDB
+IFDEF HASDB THEN
 open Db
-#endif
+END
 
 exception Done
 
@@ -89,13 +89,16 @@ let main () =
 
   let universe =
     match Input.parse_uri !uri with
-#ifdef HASDB
-    |(("pgsql"|"sqlite") as dbtype,info,(Some query)) -> begin
-      Backend.init_database dbtype info (Idbr.parse_query query) ;
-      let l = Backend.load_selection (`All) in
-      load_universe l
-    end
-#endif
+    |(("pgsql"|"sqlite") as dbtype,info,(Some query)) ->
+IFDEF HASDB THEN        
+      begin
+        Backend.init_database dbtype info (Idbr.parse_query query) ;
+        let l = Backend.load_selection (`All) in
+        load_universe l
+      end
+ELSE
+      failwith (dbtype ^ " Not supported")
+END
     |("deb",(_,_,_,_,file),_) -> begin
       let l = Debian.Packages.input_raw [file] in
       load_universe l

@@ -3,7 +3,7 @@ open ExtLib
 
 let wrap f = try f () with End_of_file -> raise IO.No_more_input
 
-#ifdef HASZIP
+IFDEF HASZIP THEN
 let gzip_open_file file =
   let ch = Gzip.open_in file in
   IO.create_in
@@ -11,9 +11,9 @@ let gzip_open_file file =
   ~input:(wrap (fun _ -> Gzip.input ch))
   ~close:(fun () -> Gzip.close_in ch)
 ;;
-#endif
+END
 
-#ifdef HASBZ2
+IFDEF HASBZ2 THEN
 (*
  * Almost there , but not quite
 let bzip_open_in file =
@@ -25,24 +25,28 @@ let bzip_open_in file =
 *)
 
 let bzip_open_file file = failwith "Not Yet implemented"
-#endif
+END
 
 let std_open_file file = IO.input_channel (open_in file)
 let open_ch ch = IO.input_channel ch
 let close_ch ch = IO.close_in ch
 
 let open_file file =
-#ifdef HASZIP
   if Filename.check_suffix file ".gz" then
+IFDEF HASZIP THEN
     gzip_open_file file
+ELSE
+    failwith "gzip not supported"
+END
   else 
-#endif
-#ifdef HASBZ2
   if Filename.check_suffix file ".bz2" then
+IFDEF HASBZ2 THEN
     bzip_open_file file
-  else
-#endif
-  std_open_file file
+ELSE
+    failwith "bzip not supported"
+END
+  else 
+    std_open_file file
 ;;
 
 let parse_uri = Uri.parseUri

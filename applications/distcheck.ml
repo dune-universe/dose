@@ -1,9 +1,9 @@
 
 open Debian
 open Common
-#ifdef HASDB
+IFDEF HASDB THEN
 open Db
-#endif
+END
 
 module Options = struct
   let show_successes = ref true
@@ -39,13 +39,16 @@ let main () =
   Util.Timer.start timer;
   let universe =
     match Input.parse_uri !uri with
-#ifdef HASDB
-    |(("pgsql"|"sqlite") as dbtype,info,(Some query)) -> begin
-      Backend.init_database dbtype info (Idbr.parse_query query) ;
-      let l = Backend.load_selection (`All) in
-      Debian.Debcudf.load_universe l
-    end
-#endif
+    |(("pgsql"|"sqlite") as dbtype,info,(Some query)) ->
+IFDEF HASDB THEN
+      begin
+        Backend.init_database dbtype info (Idbr.parse_query query) ;
+        let l = Backend.load_selection (`All) in
+        Debian.Debcudf.load_universe l
+      end
+ELSE
+      failwith (dbtype ^ " Not supported")
+END
 (*
     |("debsrc",(_,_,_,_,file),_) -> begin
       let l = Debian.Source.input_raw [file] in

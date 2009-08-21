@@ -1,9 +1,9 @@
 
 open Cudf
 open ExtLib
-#ifdef HASDB
+IFDEF HASDB THEN
 open Db
-#endif
+END
 open Common
 
 exception Done
@@ -177,12 +177,15 @@ let main () =
 
   let load_uri uri =
     match Input.parse_uri uri with
-#ifdef HASDB
-    |(("pgsql"|"sqlite") as dbtype,info,(Some query)) -> begin
-      Backend.init_database dbtype info (Idbr.parse_query query) ;
-      Backend.load_selection (`All) 
-    end
-#endif
+    |(("pgsql"|"sqlite") as dbtype,info,(Some query)) -> 
+IFDEF HASDB THEN
+      begin
+        Backend.init_database dbtype info (Idbr.parse_query query) ;
+        Backend.load_selection (`All) 
+      end
+ELSE
+      failwith (dbtype ^ " Not supported")
+END
     |("deb",(_,_,_,_,file),_) -> Debian.Packages.input_raw [file] 
     |(s,_,_) -> failwith (Printf.sprintf "%s not supported" s)
   in
