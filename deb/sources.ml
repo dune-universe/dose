@@ -65,3 +65,35 @@ let parse_sources_in f ch =
 let input_raw =
   let module M = Format822.RawInput(Set) in
   M.input_raw parse_sources_in
+
+(* transforms a list of sources into dummy packages to be then converted to cudf *)
+let sources2packages arch l =
+  (* as per policy, if the first arch restriction contains a !
+   * then we assume that all archs on the lists are bang-ed.
+   * cf: http://www.debian.org/doc/debian-policy/ch-relationships.html 7.1 *)
+  let select = function
+    |(v,(((false,_)::_) as al)) when List.for_all (fun (_,a) -> not(a = arch)) al -> Some v
+    |(v,(((true,_)::_) as al)) when List.exists (fun (_,a) -> a = arch) al -> Some v
+    |(v,[]) -> Some v
+    |_ -> None
+  in
+  let conflicts l = List.filter_map select l in
+  let depends ll = List.filter_map (fun l ->
+    match List.filter_map select l with [] -> None | l -> Some l
+    ) ll
+  in
+  List.filter_map (fun pkg ->
+    let archs = pkg.architecture in
+    if List.exists (fun a -> a = "all" || a = "any" || a = arch) archs then (
+      Some (
+      { Packages.default_package with
+        Packages.name = "source---" ^ pkg.name ;
+        version = pkg.version;
+        depends = depends (pkg.build_depends_indep @ pkg.build_depends);
+        conflicts = conflicts (pkg.build_conflicts_indep @ pkg.build_conflicts);
+      }
+      )
+    )
+    else None
+  ) l
+

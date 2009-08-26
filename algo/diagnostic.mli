@@ -25,7 +25,7 @@ type request =
   | Req (* test a custom request *)
 
 (** the result of the solver *)
-type diagnosis = { request : request; result : result; }
+type diagnosis = { request : request; result : result }
 
 (** print the result of the solver.
     @param explain : add a more verbose explanation of the failure or

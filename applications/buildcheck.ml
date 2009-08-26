@@ -38,49 +38,16 @@ let main () =
   end;
 
   Printf.eprintf "Parsing and normalizing...%!" ;
-
   let pkglist = Deb.input_raw [List.hd !files] in
-  let srclist arch =
+  let srclist = 
     let l = Src.input_raw (List.tl !files) in
-    (* as per policy, if the first arch restriction contains a !
-     * then we assume that all archs on the lists are bang-ed.
-     * cf: http://www.debian.org/doc/debian-policy/ch-relationships.html 7.1 *)
-    let select = function
-      |(v,(((false,_)::_) as al)) when List.for_all (fun (_,a) -> not(a = arch)) al -> Some v
-      |(v,(((true,_)::_) as al)) when List.exists (fun (_,a) -> a = arch) al -> Some v
-      |(v,[]) -> Some v
-      |_ -> None
-    in
-    let conflicts l = List.filter_map select l in
-    let depends ll = List.filter_map (fun l ->
-      match List.filter_map select l with [] -> None | l -> Some l
-      ) ll 
-    in
-    List.filter_map (fun pkg ->
-      let archs = pkg.Src.architecture in
-      if List.exists (fun a -> a = "all" || a = "any" || a = arch) archs then (
-        Some (
-        { Deb.default_package with
-          Deb.name = "source---" ^ pkg.Src.name ;
-          Deb.version = pkg.Src.version;
-          depends = depends (pkg.Src.build_depends_indep @ pkg.Src.build_depends);
-          conflicts = conflicts (pkg.Src.build_conflicts_indep @ pkg.Src.build_conflicts);
-        }
-        )
-      )
-      else None
-    ) l
+    Src.sources2packages !Options.arch l 
   in
-
-  let source = srclist !Options.arch in
-  let _ = Debcudf.init_tables (source @ pkglist) in
+  let _ = Debcudf.init_tables (srclist @ pkglist) in
  
-  let sl = List.map (fun pkg -> Debcudf.tocudf pkg) source in
-  let universe =
-    let l = List.map (fun pkg -> Debcudf.tocudf pkg) pkglist in
-    Cudf.load_universe (sl @ l)
-  in
- 
+  let sl = List.map (fun pkg -> Debcudf.tocudf pkg) srclist in
+  let l = List.fold_left (fun acc pkg -> (Debcudf.tocudf pkg)::acc) sl pkglist in
+  let universe = Cudf.load_universe l in
   Printf.eprintf "done\n%!" ;
 
   Printf.eprintf "Init solver...%!" ;
