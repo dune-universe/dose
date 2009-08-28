@@ -70,6 +70,8 @@ $
 $echo "undo" | socat - UNIX-CLIENT:/tmp/cmd.sock
 -----
 
+grep-dctrl -n -s Package,Version '' /var/lib/apt/lists/ftp.de.debian.org_debian_dists_unstable_main_binary-amd64_Packages
+
 ./buildcheck.native --arch amd64 /var/lib/apt/lists/ftp.debian.org_debian_dists_unstable_main_binary-amd64_Packages /var/lib/apt/lists/ftp.debian.org_debian_dists_unstable_main_source_Sources
 
 -----

@@ -219,7 +219,7 @@ let parse_builddeps s =
 
 (*****************************************************)
 
-let space_re = Str.regexp " "
+let space_re = Str.regexp "[ \t]+"
 let and_sep_re = Str.regexp "[ \t]*,[ \t]*"
 let or_sep_re = Str.regexp "[ \t]*|[ \t]*"
 
@@ -227,9 +227,9 @@ let parse_source s =
   match Str.split space_re s with
   |[n] -> (n,None)
   |[n;s'] ->
-      let re = Str.regexp "(\\([^\\)]*\\))" in
-      if Str.string_match re s' 0 then
-        (n,Some (Str.matched_group 0 s'))
+      let re = Str.regexp "(\\([^)]+\\))" in
+      if Str.string_match re s' 0 then 
+        (n,Some (Str.matched_group 1 s'))
       else begin
         Printf.eprintf "Warning : bad source name '%s'\n" s;
         (n,None)
