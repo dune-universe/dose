@@ -70,10 +70,13 @@ $
 $echo "undo" | socat - UNIX-CLIENT:/tmp/cmd.sock
 -----
 
-grep-dctrl -n -s Package,Version '' /var/lib/apt/lists/ftp.de.debian.org_debian_dists_unstable_main_binary-amd64_Packages
 
 ./buildcheck.native --arch amd64 /var/lib/apt/lists/ftp.debian.org_debian_dists_unstable_main_binary-amd64_Packages /var/lib/apt/lists/ftp.debian.org_debian_dists_unstable_main_source_Sources
 
+-----
+grep-dctrl -s Package,Version '' /var/lib/apt/lists/ftp.de.debian.org_debian_dists_unstable_main_binary-amd64_Packages > candidates
+
+./migration.native candidates /var/lib/apt/lists/ftp.de.debian.org_debian_dists_testing_main_binary-amd64_Packages /var/lib/apt/lists/ftp.de.debian.org_debian_dists_unstable_main_binary-amd64_Packages /var/lib/apt/lists/ftp.de.debian.org_debian_dists_unstable_main_source_Sources
 -----
 
 db-cudf.native converts a debian archive stored in a database to a cudf universe

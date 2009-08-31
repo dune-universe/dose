@@ -67,9 +67,9 @@ let main () =
     List.iter (fun p -> Hashtbl.add h (p.Deb.name,Some p.Deb.version) p) l ;
     h
   in
-  Printf.eprintf "(%d) done\n%!" Hashtbl.length unstable;
+  Printf.eprintf "(%d) done\n%!" (Hashtbl.length unstable);
 
-  Printf.eprintf "Read testing\n%!" ;
+  Printf.eprintf "Read testing %!" ;
   let testing = Deb.input_raw [testing_f] in
   let testinghash = 
     let l = Deb.input_raw [testing_f] in
@@ -77,16 +77,19 @@ let main () =
     List.iter (fun p -> Hashtbl.add h (p.Deb.name,Some p.Deb.version) p) l ;
     h
   in
+  Printf.eprintf "(%d) done\n%!" (Hashtbl.length testinghash);
 
-  Printf.eprintf "Read sources\n%!" ;
+
+  Printf.eprintf "Read sources %!" ;
   let source = 
     let l = Src.input_raw [source_f] in
     let h = Hashtbl.create (List.length l) in
     List.iter (fun p -> Hashtbl.add h (p.Src.name,p.Src.version) p) l ;
     h
   in
+  Printf.eprintf "(%d) done\n%!" (Hashtbl.length source);
 
-  Printf.eprintf "Read candidates\n%!" ;
+  Printf.eprintf "Read candidates %!" ;
   let candidates =
     let ch = open_in candidates_f in
     let l = ref [] in
@@ -109,25 +112,30 @@ let main () =
     done ; assert false 
     with End_of_file -> (close_in ch ; !l)
   in
+  Printf.eprintf "(%d) done\n%!" (List.length candidates);
 
   Printf.eprintf "Compute mcbin\n%!" ;
   (* binary migration candidates. *)
   let mcbin = List.filter_map (fun (n,v) -> 
     try 
       if Hashtbl.mem testinghash (n,v) then begin
-         Printf.printf "Migration candidate %s (= %s) already in testing.  Ignoring\n%!" n (Option.get v);
+         (*
+          Printf.printf "Migration candidate %s (= %s) already in testing.  Ignoring\n%!" n (Option.get v);
+          *)
         None
       end
       else
         Some (Hashtbl.find unstable (n,v));
     with Not_found -> begin
+      (*
       Printf.printf "Migration candidate %s (= %s) not in unstable.  Ignoring\n%!" n (Option.get v);
+      *)
       None
     end
     ) candidates
   in
 
-  Printf.eprintf "Computing msbin\n%!" ;
+  Printf.eprintf "Computing msbin %!" ;
   (* MS/bin = MC/bin \cap ( \bigcup_{p \in MC/bin} Inst (p, Testing + MC/bin) ) *)
   let unionl = debunion testing mcbin in
   let _ = Debian.Debcudf.init_tables unionl in
@@ -157,7 +165,9 @@ let main () =
       ) [] mcbin
     in
     let solver = Depsolver.init universe in
-    (* XXX this can be faster if implemented as distrib check *)
+    (* XXX this can be faster if implemented like distrib check *)
+    (* all considered I only want the p \in mcbin that can be installed
+     * in Testing \cup mcbin *)
     List.fold_left (fun acc p ->
       match Depsolver.edos_install solver p with
       |{Diagnostic.result = Diagnostic.Success fl} -> p::acc
@@ -170,7 +180,9 @@ let main () =
     ) [] mcbincudf
   in
 
-  List.iter (fun p -> Printf.printf "%s\n%!" (Cudf_printer.string_of_package p)) msbin ;
+  Printf.eprintf "(%d) done\n%!" (List.length msbin);
+
+  (* List.iter (fun p -> Printf.printf "%s\n%!" (Cudf_printer.string_of_package p)) msbin ; *)
 
   Printf.eprintf "Compute mssource\n%!" ;
   (* MS/source = { S | \forall p \in S, p \in MS/bin } *)
