@@ -191,7 +191,23 @@ let loadll tables ll = List.map (loadl tables) ll
 
 (* ========================================= *)
 
-let preamble = [("Number",("string",`String ""))]
+let preamble = [
+  ("Number",("string", `String ""));
+  ("Source",("string", `String "")) ;
+  ("Sourceversion",("string", `String ""))
+]
+
+let extra pkg =
+  let number = ("Number",`String pkg.version) in
+  let (source,sourceversion) =
+    let n,v =
+      match pkg.source with
+      |"",_ -> (pkg.name,pkg.version)
+      |n,None -> (n,pkg.version)
+      |n,Some v -> (n,v)
+    in
+    ("Source",`String n), ("Sourceversion", `String v)
+  in [number;source;sourceversion]
 
 let tocudf tables ?(inst=false) pkg =
     { Cudf.package = escape pkg.name ;
@@ -201,7 +217,7 @@ let tocudf tables ?(inst=false) pkg =
       Cudf.provides = loadlp tables pkg.provides ;
       Cudf.installed = inst ;
       Cudf.keep = None ;
-      Cudf.extra = [("Number",`String pkg.version)] 
+      Cudf.extra = extra pkg ;
     }
 
 let lltocudf = loadll

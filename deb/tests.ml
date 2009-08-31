@@ -39,9 +39,10 @@ let test_virtual =
             Printf.eprintf "%s\n%!" (Cudf_printer.string_of_package ssmtp);
             false
             end
-          else
+          else 
             true
-          ) provides in
+          ) provides 
+        in
         assert_equal true b 
       with Not_found -> assert_failure "ssmtp version mismatch"
     );
