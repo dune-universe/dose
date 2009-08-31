@@ -43,11 +43,11 @@ let main () =
     let l = Src.input_raw (List.tl !files) in
     Src.sources2packages !Options.arch l 
   in
-  let _ = Debcudf.init_tables (srclist @ pkglist) in
+  let tables = Debcudf.init_tables (srclist @ pkglist) in
  
-  let sl = List.map (fun pkg -> Debcudf.tocudf pkg) srclist in
-  let l = List.fold_left (fun acc pkg -> (Debcudf.tocudf pkg)::acc) sl pkglist in
-  let universe = Cudf.load_universe l in
+  let sl = List.map (fun pkg -> Debcudf.tocudf tables pkg) srclist in
+  let l = List.fold_left (fun acc pkg -> (Debcudf.tocudf tables pkg)::acc) sl pkglist in
+  let universe = Cudf.load_universe tables l in
   Printf.eprintf "done\n%!" ;
 
   Printf.eprintf "Init solver...%!" ;

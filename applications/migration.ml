@@ -79,7 +79,6 @@ let main () =
   in
   Printf.eprintf "(%d) done\n%!" (Hashtbl.length testinghash);
 
-
   Printf.eprintf "Read sources %!" ;
   let source = 
     let l = Src.input_raw [source_f] in
@@ -138,22 +137,10 @@ let main () =
   Printf.eprintf "Computing msbin %!" ;
   (* MS/bin = MC/bin \cap ( \bigcup_{p \in MC/bin} Inst (p, Testing + MC/bin) ) *)
   let unionl = debunion testing mcbin in
-  let _ = Debian.Debcudf.init_tables unionl in
+  let tables = Debian.Debcudf.init_tables unionl in
   let universe =
-    let l = List.map (fun p ->
-        let source = 
-            let n,v = 
-              match p.Deb.source with
-              |"",_ -> (p.Deb.name,p.Deb.version)
-              |n,None -> (n,p.Deb.version)
-              |n,Some v -> (n,v)
-            in
-            [("Source",`String n) ; ("Sourceversion", `String v)]
-          in
-          let pkg = Debian.Debcudf.tocudf p in
-          { pkg with Cudf.extra = source @ pkg.Cudf.extra }
-      ) unionl
-    in Cudf.load_universe l
+    let l = List.map (Debian.Debcudf.tocudf tables) unionl in
+    Cudf.load_universe l
   in
 
   let msbin =
@@ -172,10 +159,12 @@ let main () =
       match Depsolver.edos_install solver p with
       |{Diagnostic.result = Diagnostic.Success fl} -> p::acc
       |{Diagnostic.result = Diagnostic.Failure (_) } as r -> begin
-          Printf.printf "Source package %s cannot migrate because :\n%!"
-          (Cudf.lookup_package_property p "Source") ;
-          Diagnostic.print ~explain:true stdout r ;
-          acc
+        Printf.printf "Install Dependency problem.\n%!" ;
+        Printf.printf "Source package %s cannot migrate because :\n%!"
+        (Cudf.lookup_package_property p "Source") ;
+        Diagnostic.print ~explain:true stdout r ;
+        print_newline ();
+        acc
       end
     ) [] mcbincudf
   in
@@ -194,34 +183,59 @@ let main () =
       let srcname = Cudf.lookup_package_property pkg "Source" in
       let srcver = Cudf.lookup_package_property pkg "Sourceversion" in
       try
-        let binlist = Hashtbl.find srchash srcname in
-        Hashtbl.replace srchash srcname (List.remove binlist (binname,None))
+        let binlist = Hashtbl.find srchash (srcname,srcver) in
+        Hashtbl.replace srchash (srcname,srcver) (List.remove binlist (binname,None))
       with Not_found ->
         begin try
           let src = Hashtbl.find source (srcname,srcver) in
           let l = List.remove src.Src.binary (binname,None) in
-          Hashtbl.add srchash srcname l
+          Hashtbl.add srchash (srcname,srcver) l
         with Not_found -> (
           Printf.printf
           "Package %s (= %s) is a migration candidate but I cannot find the corresponding source package %s (= %s). Ignoring.\n"
-          binname binver srcname srcver
+          binname binver srcname srcver ;
+          print_newline ();
           )
         end
     ) msbin ;
-    Hashtbl.fold (fun k v acc ->
-      if v = [] then k::acc (* or all binaries are already in testing *)
-      else 
-        begin
-        Printf.printf
-        "Source package %s cannot migrate because the following packages are not migration candidates : %s \n" k 
-        (String.concat "," (List.map (fun (n,_) -> n) v)) 
-        ;
+    let sl = 
+      Hashtbl.fold (fun (n,v) l acc ->
+        if l = [] then (* or all binaries are already in testing *)
+          let src = Hashtbl.find source (n,v) in src::acc
+        else 
+          begin
+          Printf.printf
+          "Source package %s (= %s) cannot migrate because the following packages are not migration candidates : %s \n" 
+          n v (String.concat "," (List.map (fun (n,_) -> n) l)) ;
+          print_newline ();
+          acc
+        end
+      ) srchash []
+    in
+    let sl = (Debian.Sources.sources2packages "amd64" sl) in
+    let u =  sl @ unionl in
+    let tables = Debcudf.init_tables u in
+    let sourcecudf = List.map (Debcudf.tocudf tables) sl in
+    let universe = Cudf.load_universe (List.map (Debcudf.tocudf tables) u) in
+    let solver = Depsolver.init universe in
+    List.fold_left (fun acc p ->
+      match Depsolver.edos_install solver p with
+      |{Diagnostic.result = Diagnostic.Success fl} -> p::acc
+      |{Diagnostic.result = Diagnostic.Failure (_) } as r -> begin
+        Printf.printf "Build Dependency problem.\n%!" ;
+        Printf.printf "Source package %s cannot migrate because :\n%!" p.Cudf.package ;
+        Diagnostic.print ~explain:true stdout r ;
+        print_newline ();
         acc
       end
-    ) srchash []
+    ) [] sourcecudf
   in
 
-  List.iter (fun p -> Printf.printf "Source Package ready to migrate %s\n%!" p) mssource ; 
+  List.iter (fun pkg ->
+    let srcname = Cudf.lookup_package_property pkg "Source" in
+    let srcver = Cudf.lookup_package_property pkg "Sourceversion" in
+    Printf.printf "Source Package %s (= %s) ready to migrate\n%!" srcname srcver
+  ) mssource ; 
 ;;
 
 main ();;
