@@ -15,11 +15,19 @@ open ExtLib
 open Common
 open Packages
 
-let virtual_table = Hashtbl.create 50000
-let unit_table = Hashtbl.create 50000
-let versions_table = Hashtbl.create 50000
-let temp_versions_table = Hashtbl.create 50000
-let versioned_table = Hashtbl.create 50000
+type tables = {
+  virtual_table : (string, unit) Hashtbl.t;
+  unit_table : (string, unit) Hashtbl.t ;
+  versions_table : (string, string list) Hashtbl.t;
+  versioned_table : (string, unit) Hashtbl.t
+}
+
+let create n = {
+  virtual_table = Hashtbl.create n;
+  unit_table = Hashtbl.create n;
+  versions_table = Hashtbl.create n;
+  versioned_table = Hashtbl.create n;
+}
 
 let escape_string s =
   let make_hex chr = Printf.sprintf "%%%x" (Char.code chr) in
@@ -64,12 +72,12 @@ let cudfop = function
   |None -> None
   |_ -> assert false
 
-let init_versions_table =
+let init_versions_table table =
   let add name version =
     try
-      let l = Hashtbl.find temp_versions_table name in
-      Hashtbl.replace temp_versions_table name (version::l)
-    with Not_found -> Hashtbl.add temp_versions_table name [version]
+      let l = Hashtbl.find table name in
+      Hashtbl.replace table name (version::l)
+    with Not_found -> Hashtbl.add table name [version]
   in
   let conj_iter =
     List.iter (fun (name,sel) ->
@@ -96,21 +104,21 @@ let init_versions_table =
     cnf_iter pkg.pre_depends
 ;;
 
-let init_virtual_table pkg =
+let init_virtual_table table pkg =
   let add name =
-    if not(Hashtbl.mem virtual_table name) then
-      Hashtbl.add virtual_table name ()
+    if not(Hashtbl.mem table name) then
+      Hashtbl.add table name ()
   in
   List.iter (fun (name,_) -> add name) pkg.provides
 
-let init_unit_table pkg =
-  if not(Hashtbl.mem unit_table pkg.name) then
-    Hashtbl.add unit_table pkg.name ()
+let init_unit_table table pkg =
+  if not(Hashtbl.mem table pkg.name) then
+    Hashtbl.add table pkg.name ()
 
-let init_versioned_table pkg =
+let init_versioned_table table pkg =
   let add name =
-    if not(Hashtbl.mem versioned_table name) then
-      Hashtbl.add versioned_table name ()
+    if not(Hashtbl.mem table name) then
+      Hashtbl.add table name ()
   in
   let add_iter_cnf =
     List.iter (fun disjunction ->
@@ -122,78 +130,75 @@ let init_versioned_table pkg =
   add_iter_cnf pkg.depends
 ;;
 
-let init_tables ?(reset=false) pkglist =
-  if reset then begin
-    Hashtbl.clear versions_table;
-    Hashtbl.clear virtual_table;
-    Hashtbl.clear versioned_table;
-    Hashtbl.clear unit_table;
-    Hashtbl.clear temp_versions_table
-  end;
-  List.iter (fun pkg ->
-    init_versions_table pkg;
-    init_virtual_table pkg;
-    init_versioned_table pkg;
-    init_unit_table pkg;
-  ) pkglist
-  ;
+let init_tables pkglist =
+  let n = 2 * List.length pkglist in
+  let tables = create n in 
+  let temp_versions_table = Hashtbl.create n in
+  let ivt = init_versions_table temp_versions_table in
+  let ivrt = init_virtual_table tables.virtual_table in
+  let ivdt = init_versioned_table tables.versioned_table in
+  let iut = init_unit_table tables.unit_table in
+
+  List.iter (fun pkg -> ivt pkg ; ivrt pkg ; ivdt pkg ; iut pkg) pkglist ;
+
   Hashtbl.iter (fun k l ->
-    Hashtbl.add versions_table k
+    Hashtbl.add tables.versions_table k
     (List.unique (List.sort ~cmp:Version.compare l))
   ) temp_versions_table
   ;
-  Hashtbl.clear temp_versions_table
+  Hashtbl.clear temp_versions_table ;
+  tables
 
 (* versions start from 1 *)
-let get_version (package,version) =
-  let l = Hashtbl.find versions_table package in
+let get_version tables (package,version) =
+  let l = Hashtbl.find tables.versions_table package in
   let i = fst(List.findi (fun i a -> a = version) l) in
   i + 1
 
-let loadl l =
+let loadl tables l =
   List.flatten (
     List.map (fun (name,sel) ->
       match cudfop sel with
         |None ->
-            if (Hashtbl.mem virtual_table name) &&
-            (Hashtbl.mem versioned_table name) then
+            if (Hashtbl.mem tables.virtual_table name) &&
+            (Hashtbl.mem tables.versioned_table name) then
               [(escape (name^"--virtual"), None);
                (escape name, None)]
             else
               [(escape name, None)]
         |Some(op,v) ->
-            [(escape name,Some(op,get_version (name,v)))]
+            [(escape name,Some(op,get_version tables (name,v)))]
     ) l
   )
 
-let loadlc name l = (escape name, None)::(loadl l)
+let loadlc tables name l = (escape name, None)::(loadl tables l)
 
-let loadlp l =
+let loadlp tables l =
   List.map (fun (name,sel) ->
     match cudfop sel with
       |None  ->
-          if (Hashtbl.mem unit_table name) || (Hashtbl.mem versioned_table name)
+          if (Hashtbl.mem tables.unit_table name) || (Hashtbl.mem tables.versioned_table name)
           then (escape (name^"--virtual"),None)
           else (escape name, None)
       |Some(`Eq,v) ->
-          if (Hashtbl.mem unit_table name) || (Hashtbl.mem versioned_table name)
-          then (escape (name^"--virtual"),Some(`Eq,get_version (name,v)))
-          else (escape name,Some(`Eq,get_version (name,v)))
+          if (Hashtbl.mem tables.unit_table name) || (Hashtbl.mem tables.versioned_table name)
+          then (escape (name^"--virtual"),Some(`Eq,get_version tables (name,v)))
+          else (escape name,Some(`Eq,get_version tables (name,v)))
       |_ -> assert false
   ) l
 
-let loadll ll = List.map loadl ll
+let loadll tables ll = List.map (loadl tables) ll
 
 (* ========================================= *)
 
 let preamble = [("Number",("string",`String ""))]
 
-let tocudf ?(inst=false) pkg =
+let tocudf tables ?(inst=false) pkg =
     { Cudf.package = escape pkg.name ;
-      Cudf.version = get_version (pkg.name,pkg.version) ;
-      Cudf.depends = loadll (pkg.pre_depends @ pkg.depends);
-      Cudf.conflicts = loadlc pkg.name (pkg.breaks @ pkg.conflicts) ;
-      Cudf.provides = loadlp pkg.provides ;
+      Cudf.version = get_version tables (pkg.name,pkg.version) ;
+      Cudf.depends = loadll tables (pkg.pre_depends @ pkg.depends);
+      Cudf.conflicts = loadlc tables pkg.name (pkg.breaks @ pkg.conflicts) ;
+      Cudf.provides = loadlp tables pkg.provides ;
       Cudf.installed = inst ;
       Cudf.keep = None ;
       Cudf.extra = [("Number",`String pkg.version)] 
@@ -202,9 +207,9 @@ let tocudf ?(inst=false) pkg =
 let lltocudf = loadll
 let ltocudf = loadl
 
-let load_universe ?(init=true) l =
+let load_universe l =
   let timer = Util.Timer.create "Debian.Debcudf.load_universe" in
   Util.Timer.start timer;
-  if init then init_tables l ;
-  let pl = Cudf.load_universe (List.map tocudf l) in
+  let tables =  init_tables l in
+  let pl = Cudf.load_universe (List.map (tocudf tables) l) in
   Util.Timer.stop timer pl

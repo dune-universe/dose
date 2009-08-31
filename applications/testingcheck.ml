@@ -58,8 +58,8 @@ let debianadd tbl x =
 let init ps =
   Printf.eprintf "init cache (%d packages) ... %!" (Hashtbl.length ps);
   let ul = Hashtbl.fold (fun _ v acc -> v::acc) ps [] in
-  Debian.Debcudf.init_tables ~reset:true ul ;
-  let cache = Cudf.load_universe (List.map Debian.Debcudf.tocudf ul) in
+  let tables = Debian.Debcudf.init_tables ul in
+  let cache = Cudf.load_universe (List.map (Debian.Debcudf.tocudf tables) ul) in
   Printf.eprintf "done\n%!";
   cache
 ;;

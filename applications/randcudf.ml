@@ -204,9 +204,9 @@ END
         if !Options.status <> "" then load_uri !Options.status
         else failwith "status required" 
       in
-      let _ = Debian.Debcudf.init_tables (List.unique (u @ s)) in
-      let u' = List.map Debian.Debcudf.tocudf u in
-      let s' = List.map (Debian.Debcudf.tocudf ~inst:true) s in
+      let tables = Debian.Debcudf.init_tables (List.unique (u @ s)) in
+      let u' = List.map (Debian.Debcudf.tocudf tables) u in
+      let s' = List.map (Debian.Debcudf.tocudf tables ~inst:true) s in
       let pkglist = List.unique (u' @ s') in
       (pkglist, Cudf.load_universe pkglist)
   in

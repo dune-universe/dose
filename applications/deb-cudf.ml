@@ -94,13 +94,13 @@ END
     let i = ref 0 in
     begin
       Util.Timer.start timer;
-      Debian.Debcudf.init_tables ul ;
+      let tables = Debian.Debcudf.init_tables ul in
       let res = 
         List.map (fun pkg ->
           progressbar (incr i ; !i , total) ; 
           let inst = Hashtbl.mem installed_h
           (pkg.Deb.name,pkg.Deb.version) in
-          Debian.Debcudf.tocudf ~inst:inst pkg
+          Debian.Debcudf.tocudf tables ~inst:inst pkg
         ) ul
       in Util.Timer.stop timer res
     end

@@ -11,11 +11,11 @@ let f_legacy_sol = "tests/legacy-sol.cudf"
 let f_dependency = "tests/dependency.cudf"
 
 let (universe,request) =
-  let (univ,request) = Cudf_parser.parse_from_file f_legacy in
+  let (_,univ,request) = Cudf_parser.parse_from_file f_legacy in
   (Cudf.load_universe univ,Option.get request)
 
 let dependency_set =
-  let (pl,_) = Cudf_parser.parse_from_file f_dependency in
+  let (_,pl,_) = Cudf_parser.parse_from_file f_dependency in
   List.fold_right S.add pl S.empty
 
 let bicycle = Cudf.lookup_package universe ("bicycle", 7)
@@ -45,7 +45,7 @@ let test_distribcheck =
   "distribcheck" >:: (fun _ -> 
     let f_debian = "tests/debian.cudf" in
     let universe =
-      let (pl,_) = Cudf_parser.parse_from_file f_debian in
+      let (_,pl,_) = Cudf_parser.parse_from_file f_debian in
       Cudf.load_universe pl
     in
     let solver = Depsolver.init universe in
@@ -69,7 +69,7 @@ let test_depsolver =
   ]
 
 let solution_set =
-  let (pl,_) = Cudf_parser.parse_from_file f_legacy_sol in
+  let (_,pl,_) = Cudf_parser.parse_from_file f_legacy_sol in
   List.fold_right S.add pl S.empty
 
 let solver = Cudfsolver.init universe request ;;

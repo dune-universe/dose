@@ -76,15 +76,15 @@ let main () =
 
   let versions = Hashtbl.create 1023 in
   let load_universe l = 
-      Debian.Debcudf.init_tables l ;
-      Cudf.load_universe (
-        List.map (fun pkg ->
-          let cudfpkg = Debian.Debcudf.tocudf pkg in
-          Hashtbl.add versions 
-          (pkg.Debian.Packages.name,pkg.Debian.Packages.version) cudfpkg ;
-          cudfpkg
-        ) l
-      )
+    let tables = Debian.Debcudf.init_tables l in
+    Cudf.load_universe (
+      List.map (fun pkg ->
+        let cudfpkg = Debian.Debcudf.tocudf tables pkg in
+        Hashtbl.add versions 
+        (pkg.Debian.Packages.name,pkg.Debian.Packages.version) cudfpkg ;
+        cudfpkg
+      ) l
+    )
   in
 
   let universe =
