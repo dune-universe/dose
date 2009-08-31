@@ -150,13 +150,13 @@ let init_solver buffer proxy_size (universe,maps) =
         S.add_rule constraints
           (Array.of_list (lit :: lit_list))
           [Diagnostic.Dependency(maps.from_sat pkg_id, List.map maps.from_sat disjunction)]
-        ;
-        if List.length disjunction > 1 then
-          S.associate_vars constraints (S.lit_of_var pkg_id true) disjunction
       end
       else
         S.add_un_rule constraints lit
         [Diagnostic.EmptyDependency(maps.from_sat pkg_id,vpkgs)]
+      ;
+      if List.length disjunction > 1 then
+        S.associate_vars constraints (S.lit_of_var pkg_id true) disjunction
     ) conjunction
   in
 

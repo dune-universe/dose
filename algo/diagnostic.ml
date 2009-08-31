@@ -61,16 +61,16 @@ let print ?(explain=false) oc result =
          |Dependency(i,l) ->
             let l = List.map (print_package ~short:true) l in
             Printf.fprintf oc
-            "Dependency Error %s -> %s\n"
+            "Dependency Problem. Package %s depends on package %s\n"
             (print_package ~short:true i)
             (String.concat " , " l)
          |Conflict (i,j) ->
             Printf.fprintf oc
-            "Conflict %s <-#-> %s \n"
+            "There is a Conflict between package %s and package %s\n"
             (print_package ~short:true i) (print_package ~short:true j)
          |EmptyDependency (i,vpkgs) ->
             Printf.fprintf oc
-            "Broken Dependency %s. %s cannot be satisfied\n"
+            "Package %s has dependencies that cannot be satisfied: %s\n"
             (print_package ~short:true i) 
             (String.concat " | " (
               List.map (fun vpkg -> (Cudf_types.string_of_vpkg vpkg)) vpkgs)
