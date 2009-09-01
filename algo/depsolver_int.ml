@@ -1,13 +1,13 @@
-(*****************************************************************************)
-(*  Copyright (C) 2009  <pietro.abate@pps.jussieu.fr>                        *)
-(*                                                                           *)
-(*  This library is free software: you can redistribute it and/or modify     *)
-(*  it under the terms of the GNU Lesser General Public License as           *)
-(*  published by the Free Software Foundation, either version 3 of the       *)
-(*  License, or (at your option) any later version.  A special linking       *)
-(*  exception to the GNU Lesser General Public License applies to this       *)
-(*  library, see the COPYING file for more information.                      *)
-(*****************************************************************************)
+(***************************************************************************************)
+(*  Copyright (C) 2009  Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
+(*                                                                                     *)
+(*  This library is free software: you can redistribute it and/or modify               *)
+(*  it under the terms of the GNU Lesser General Public License as                     *)
+(*  published by the Free Software Foundation, either version 3 of the                 *)
+(*  License, or (at your option) any later version.  A special linking                 *)
+(*  exception to the GNU Lesser General Public License applies to this                 *)
+(*  library, see the COPYING file for more information.                                *)
+(***************************************************************************************)
 
 (** Implementation of the EDOS algorithms *)
 
@@ -249,34 +249,45 @@ let solve (solver,maps) request =
 let edos_install (solver,maps) request = solve (solver,maps) (Diagnostic.Sng request) ;;
 let edos_coinstall (solver,maps) request_lst = solve (solver,maps) (Diagnostic.Lst request_lst) ;;
 
+let pkgcheck callback (solver,maps) failed tested pkg =
+  try
+  if not(tested.(maps.to_sat pkg)) then begin
+    let r = edos_install (solver,maps) pkg in
+    begin match r with
+    |{ Diagnostic.result = Diagnostic.Success(l) } -> 
+        begin try List.iter (fun i -> tested.(maps.to_sat i) <- true) (l ())
+        with Not_found -> assert false end
+    |_ -> incr failed
+    end
+    ;
+    match callback with
+    |None -> ()
+    |Some f -> f r
+  end
+  else if tested.(maps.to_sat pkg) then ()
+  else assert false
+  with Not_found -> ()
+
 (* callback : Diagnostic.result -> unit *)
 let distribcheck ?callback (solver,maps) universe =
   let timer = Util.Timer.create "Algo.Depsolver.distribcheck" in
   Util.Timer.start timer;
   let failed = ref 0 in
   let tested = Array.make solver.size false in
-  Cudf.iter_packages (fun pkg ->
-    try
-    if not(tested.(maps.to_sat pkg)) then begin
-      let r = edos_install (solver,maps) pkg in
-      begin match r with
-      |{ Diagnostic.result = Diagnostic.Success(l) } -> 
-          begin try List.iter (fun i -> tested.(maps.to_sat i) <- true) (l ())
-          with Not_found -> assert false end
-      |_ -> incr failed
-      end
-      ;
-      match callback with
-      |None -> ()
-      |Some f -> f r
-    end
-    else if tested.(maps.to_sat pkg) then ()
-    else assert false
-    with Not_found -> ()
-  ) universe ;
+  let check = pkgcheck callback (solver,maps) failed tested in
+  Cudf.iter_packages check universe ;
   Util.Timer.stop timer !failed
 ;;
 
+let pkglistcheck ?callback (solver,maps) pkglist =
+  let timer = Util.Timer.create "Algo.Depsolver.pkglistcheck" in
+  Util.Timer.start timer;
+  let failed = ref 0 in
+  let tested = Array.make solver.size false in
+  let check = pkgcheck callback (solver,maps) failed tested in
+  List.iter check pkglist ;
+  Util.Timer.stop timer !failed
+;;
 
 (***********************************************************)
 (* everything can end in tears if there is a package in l that was not

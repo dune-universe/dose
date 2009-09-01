@@ -1,3 +1,13 @@
+(***************************************************************************************)
+(*  Copyright (C) 2009  Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
+(*                                                                                     *)
+(*  This library is free software: you can redistribute it and/or modify               *)
+(*  it under the terms of the GNU Lesser General Public License as                     *)
+(*  published by the Free Software Foundation, either version 3 of the                 *)
+(*  License, or (at your option) any later version.  A special linking                 *)
+(*  exception to the GNU Lesser General Public License applies to this                 *)
+(*  library, see the COPYING file for more information.                                *)
+(***************************************************************************************)
 
 type solver
 
@@ -18,6 +28,9 @@ val edos_coinstall : solver -> Cudf.package list -> Diagnostic.diagnosis
     @return the number of broken packages
 *)
 val distribcheck : ?callback:(Diagnostic.diagnosis -> unit) -> solver -> int
+
+val pkglistcheck :
+  ?callback:(Diagnostic.diagnosis -> unit) -> solver -> Cudf.package list -> int
 
 (** compute the dependencies closure (cone) of the give package *)
 val dependency_closure : Cudf.universe -> Cudf.package list -> Cudf.package list

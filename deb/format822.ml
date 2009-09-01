@@ -1,16 +1,15 @@
-(**************************************************************************)
-(*  Copyright (C) 2009  Pietro Abate <pietro.abate@pps.jussieu.fr>        *)
-(*                                                                        *)
-(*  This library is free software: you can redistribute it and/or modify  *)
-(*  it under the terms of the GNU Lesser General Public License as        *)
-(*  published by the Free Software Foundation, either version 3 of the    *)
-(*  License, or (at your option) any later version.  A special linking    *)
-(*  exception to the GNU Lesser General Public License applies to this    *)
-(*  library, see the COPYING file for more information.                   *)
-(**************************************************************************)
-
-(* cannibalized from deb-rpm-check - Jerome *)
-(* cannibalized from cudflib - Zack *)
+(***************************************************************************************)
+(*  Copyright (C) 2009  Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
+(*  Parts taken from deb-rpm-check - Copyright (C) 2005 Jerome Vouillon               *)
+(*  Parts taken from cudflib - Copyright (C) 2008 Stefano Zacchiroli                  *)
+(*                                                                                     *)
+(*  This library is free software: you can redistribute it and/or modify               *)
+(*  it under the terms of the GNU Lesser General Public License as                     *)
+(*  published by the Free Software Foundation, either version 3 of the                 *)
+(*  License, or (at your option) any later version.  A special linking                 *)
+(*  exception to the GNU Lesser General Public License applies to this                 *)
+(*  library, see the COPYING file for more information.                                *)
+(***************************************************************************************)
 
 open ExtLib
 open Common

@@ -1,3 +1,13 @@
+(***************************************************************************************)
+(*  Copyright (C) 2009  Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
+(*                                                                                     *)
+(*  This library is free software: you can redistribute it and/or modify               *)
+(*  it under the terms of the GNU Lesser General Public License as                     *)
+(*  published by the Free Software Foundation, either version 3 of the                 *)
+(*  License, or (at your option) any later version.  A special linking                 *)
+(*  exception to the GNU Lesser General Public License applies to this                 *)
+(*  library, see the COPYING file for more information.                                *)
+(***************************************************************************************)
 
 
 open ExtLib
@@ -47,7 +57,7 @@ let main () =
  
   let sl = List.map (fun pkg -> Debcudf.tocudf tables pkg) srclist in
   let l = List.fold_left (fun acc pkg -> (Debcudf.tocudf tables pkg)::acc) sl pkglist in
-  let universe = Cudf.load_universe tables l in
+  let universe = Cudf.load_universe l in
   Printf.eprintf "done\n%!" ;
 
   Printf.eprintf "Init solver...%!" ;

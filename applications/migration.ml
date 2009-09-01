@@ -1,3 +1,13 @@
+(***************************************************************************************)
+(*  Copyright (C) 2009  Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
+(*                                                                                     *)
+(*  This library is free software: you can redistribute it and/or modify               *)
+(*  it under the terms of the GNU Lesser General Public License as                     *)
+(*  published by the Free Software Foundation, either version 3 of the                 *)
+(*  License, or (at your option) any later version.  A special linking                 *)
+(*  exception to the GNU Lesser General Public License applies to this                 *)
+(*  library, see the COPYING file for more information.                                *)
+(***************************************************************************************)
 
 open ExtLib
 open Debian
@@ -152,21 +162,25 @@ let main () =
       ) [] mcbin
     in
     let solver = Depsolver.init universe in
-    (* XXX this can be faster if implemented like distrib check *)
-    (* all considered I only want the p \in mcbin that can be installed
-     * in Testing \cup mcbin *)
-    List.fold_left (fun acc p ->
-      match Depsolver.edos_install solver p with
-      |{Diagnostic.result = Diagnostic.Success fl} -> p::acc
-      |{Diagnostic.result = Diagnostic.Failure (_) } as r -> begin
+    let l = ref [] in
+    let callback = function
+      |{Diagnostic.result = Diagnostic.Success fl ;
+        request = Diagnostic.Sng p} -> l := p::!l
+      |{Diagnostic.result = Diagnostic.Failure (_) ;
+        request = Diagnostic.Sng p} as r -> begin
         Printf.printf "Install Dependency problem.\n%!" ;
         Printf.printf "Source package %s cannot migrate because :\n%!"
         (Cudf.lookup_package_property p "Source") ;
         Diagnostic.print ~explain:true stdout r ;
-        print_newline ();
-        acc
+        print_newline ()
       end
-    ) [] mcbincudf
+      |_ -> assert false
+    in
+    (* XXX this can be faster if implemented like distrib check *)
+    (* all considered I only want the p \in mcbin that can be installed
+     * in Testing \cup mcbin *)
+    ignore (Depsolver.pkglistcheck ~callback:callback solver mcbincudf);
+    !l
   in
 
   Printf.eprintf "(%d) done\n%!" (List.length msbin);
@@ -218,17 +232,22 @@ let main () =
     let sourcecudf = List.map (Debcudf.tocudf tables) sl in
     let universe = Cudf.load_universe (List.map (Debcudf.tocudf tables) u) in
     let solver = Depsolver.init universe in
-    List.fold_left (fun acc p ->
-      match Depsolver.edos_install solver p with
-      |{Diagnostic.result = Diagnostic.Success fl} -> p::acc
-      |{Diagnostic.result = Diagnostic.Failure (_) } as r -> begin
+    let l = ref [] in
+    let callback = function
+      |{Diagnostic.result = Diagnostic.Success fl ;
+        request = Diagnostic.Sng p } -> l := p::!l
+      |{Diagnostic.result = Diagnostic.Failure (_) ;
+        request = Diagnostic.Sng p } as r -> begin
         Printf.printf "Build Dependency problem.\n%!" ;
-        Printf.printf "Source package %s cannot migrate because :\n%!" p.Cudf.package ;
+        Printf.printf "Source package %s cannot migrate because :\n%!"
+        (Cudf.lookup_package_property p "Source") ;
         Diagnostic.print ~explain:true stdout r ;
-        print_newline ();
-        acc
+        print_newline ()
       end
-    ) [] sourcecudf
+      |_ -> assert false
+    in
+    ignore(Depsolver.pkglistcheck ~callback:callback solver sourcecudf);
+    !l
   in
 
   List.iter (fun pkg ->
@@ -239,34 +258,3 @@ let main () =
 ;;
 
 main ();;
-
-(*
-Printf.eprintf "Binary Migration candidates \n%!" ;
-List.iter (fun p -> Printf.eprintf "%s (= %s)\n%!" p.Deb.name p.Deb.version) mcbin ; 
-*)
-
-(*
-Printf.eprintf "Compute mcsource\n%!" ;
-(* MC/source = { S | \forall p \in S, p \in MC/bin } *)
-let mcsource = 
-  let srchash = Hashtbl.create 200 in
-  List.iter (fun p ->
-    let binname = p.Deb.name in
-    let srcname = if fst(p.Deb.source) = "" then p.Deb.name else fst(p.Deb.source) in
-    try
-      let binlist = Hashtbl.find srchash srcname in
-      Hashtbl.replace srchash srcname (List.remove binlist (binname,None))
-    with Not_found ->
-      begin try
-        let src = Hashtbl.find source srcname in
-        let l = List.remove src.Src.binary (binname,None) in
-        Hashtbl.add srchash srcname l
-      with Not_found -> failwith "Source package not found" end
-  ) mcbin ;
-  Hashtbl.fold (fun k v acc -> if v = [] then k::acc else acc) srchash []
-in
-
-List.iter (fun p -> Printf.printf "%s \n%!" p) mcsource ;
-*)
-
-

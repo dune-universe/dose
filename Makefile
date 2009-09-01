@@ -3,6 +3,13 @@ include Makefile.config
 DIST_DIR = $(NAME)-$(VERSION)
 DIST_TARBALL = $(DIST_DIR).tar.gz
 DEB_TARBALL = $(subst -,_,$(DIST_DIR).orig.tar.gz)
+DEBSRC = $(filter-out deb/myocamlbuild.ml deb/version.ml deb/format822.ml, $(wildcard deb/*.ml deb/*.mli))
+DBSRC = $(filter-out db/myocamlbuild.ml, $(wildcard db/*.ml db/*.mli))
+ALGOSRC = $(filter-out algo/myocamlbuild.ml algo/statistics.ml,$(wildcard algo/*.ml algo/*.mli))
+APPSRC = $(filter-out applications/myocamlbuild.ml, $(wildcard applications/*.ml applications/*.mli))
+RPMSRC = $(filter-out rpm/myocamlbuild.ml, $(wildcard rpm/*.ml rpm/*.mli rpm/*.h rpm/*.c))
+COMSRC = $(filter-out common/myocamlbuild.ml common/edosSolver.ml common/edosSolver.mli common/util.ml,\
+				 $(wildcard common/*.ml common/*.mli))
 
 all:
 	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
@@ -22,11 +29,8 @@ _build/%:
 	$(OCAMLBUILD) $(OBFLAGS) $*
 	@touch $@
 
-SOURCES = $(wildcard *.ml *.mli)
-C_LIB_SOURCES = $(wildcard c-lib/*.c c-lib/*.h)
-
 headers: header.txt .headache.conf
-	headache -h header.txt -c .headache.conf $(SOURCES) $(C_LIB_SOURCES)
+	headache -h header.txt -c .headache.conf $(ALGOSRC) $(DEBSRC) $(DBSRC) $(APPSRC) $(RPMSRC) $(COMSRC)
 
 test: 
 	@for i in $(TESTS); do\

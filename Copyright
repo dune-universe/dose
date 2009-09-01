@@ -1,0 +1,6 @@
+deb/version.ml Jaap 
+deb/format822.ml Jerome, Zack, Pietro
+algo/statistics.ml Jaap, Zack Pietro
+common/edosSolver.ml common/edosSolver.mli Jerome
+common/util.ml Alain, Pietro
+everything else Pietro
