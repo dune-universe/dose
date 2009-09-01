@@ -22,6 +22,7 @@ let ipr_list = Packages.parse_packages_in (fun x -> x) ch ;;
 let tables = Debcudf.init_tables ipr_list ;;
 let cudf_list = List.map (Debcudf.tocudf tables) ipr_list ;;
 let universe = Cudf.load_universe cudf_list ;;
+let maps = CudfAdd.build_maps universe ;;
 
 let test_format =
   "name mangling" >::: []
@@ -42,18 +43,8 @@ let test_virtual =
       try
         let ssmtp = Cudf.lookup_package universe ("ssmtp",1) in
         let vpkg = ("mail-transport-agent--virtual",None) in
-        let provides = Cudf.who_provides universe vpkg in
-        let b = List.exists (fun (pkg,c) -> 
-          if not(pkg =% ssmtp) then begin
-            Printf.eprintf "%s\n%!" (Cudf_printer.string_of_package pkg);
-            Printf.eprintf "%s\n%!" (Cudf_printer.string_of_package ssmtp);
-            false
-            end
-          else 
-            true
-          ) provides 
-        in
-        assert_equal true b 
+        let provides = maps.CudfAdd.who_provides vpkg in
+        assert_equal true (List.exists ((=%) ssmtp) provides)
       with Not_found -> assert_failure "ssmtp version mismatch"
     );
     "virtual real" >:: (fun _ -> ())
