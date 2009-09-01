@@ -27,9 +27,9 @@ val edos_coinstall : solver -> Cudf.package list -> Diagnostic.diagnosis
     @param callback : execute a function for each package 
     @return the number of broken packages
 *)
-val distribcheck : ?callback:(Diagnostic.diagnosis -> unit) -> solver -> int
+val univcheck : ?callback:(Diagnostic.diagnosis -> unit) -> solver -> int
 
-val pkglistcheck :
+val listcheck :
   ?callback:(Diagnostic.diagnosis -> unit) -> solver -> Cudf.package list -> int
 
 (** compute the dependencies closure (cone) of the give package *)

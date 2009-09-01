@@ -1,0 +1,12 @@
+- Make reason in depsolver lazy. This way we can save a bit of time 
+  when building the sat problem
+
+- find a way to add a proper (debian/rpm/real) version to missing 
+  dependencies. atm this information is lost when traslating the 
+  problem to cudf
+
+- fix the broken dependencies explanation list. The reason list
+  sometimes does not include broken packages at the end of a reson
+  list. The solver does not provide this information.
+
+- add minisat backend to the depsolver

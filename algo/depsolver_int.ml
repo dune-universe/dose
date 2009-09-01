@@ -10,7 +10,6 @@
 (***************************************************************************************)
 
 (** Implementation of the EDOS algorithms *)
-
 (* this module respect the cudf semantic. *)
 
 open ExtLib
@@ -21,6 +20,8 @@ open CudfAdd
 module R = struct type reason = Diagnostic.reason end
 module S = EdosSolver.M(R)
 
+(* XXX the functions who_provides and who_conflict are dupicated in
+ * cudfAdd.ml ! *)
 type maps = {
   to_sat : Cudf.package -> S.var ;
   from_sat : S.var -> Cudf.package ;
@@ -140,7 +141,10 @@ let init_solver buffer proxy_size (universe,maps) =
     List.iter (fun (vpkgs,disjunction) ->
       let lit = S.lit_of_var pkg_id false in
       incr num_dependencies ;
-      if List.length disjunction > 0 then begin
+      if List.length disjunction = 0 then
+        S.add_un_rule constraints lit
+        [Diagnostic.EmptyDependency(maps.from_sat pkg_id,vpkgs)]
+      else begin
         let lit_list =
           List.map (fun v ->
             incr num_disjunctions;
@@ -148,15 +152,12 @@ let init_solver buffer proxy_size (universe,maps) =
           ) disjunction
         in
         S.add_rule constraints
-          (Array.of_list (lit :: lit_list))
-          [Diagnostic.Dependency(maps.from_sat pkg_id, List.map maps.from_sat disjunction)]
+        (Array.of_list (lit :: lit_list))
+        [Diagnostic.Dependency(maps.from_sat pkg_id, List.map maps.from_sat disjunction)]
+        ;
+        if List.length disjunction > 1 then 
+          S.associate_vars constraints (S.lit_of_var pkg_id true) disjunction
       end
-      else
-        S.add_un_rule constraints lit
-        [Diagnostic.EmptyDependency(maps.from_sat pkg_id,vpkgs)]
-      ;
-      if List.length disjunction > 1 then
-        S.associate_vars constraints (S.lit_of_var pkg_id true) disjunction
     ) conjunction
   in
 
@@ -268,26 +269,22 @@ let pkgcheck callback (solver,maps) failed tested pkg =
   else assert false
   with Not_found -> ()
 
-(* callback : Diagnostic.result -> unit *)
-let distribcheck ?callback (solver,maps) universe =
-  let timer = Util.Timer.create "Algo.Depsolver.distribcheck" in
+let __setcheck callback (solver,maps) universe iter =
+  let timer = Util.Timer.create "Algo.Depsolver" in
   Util.Timer.start timer;
   let failed = ref 0 in
   let tested = Array.make solver.size false in
   let check = pkgcheck callback (solver,maps) failed tested in
-  Cudf.iter_packages check universe ;
+  iter check universe ;
   Util.Timer.stop timer !failed
 ;;
 
-let pkglistcheck ?callback (solver,maps) pkglist =
-  let timer = Util.Timer.create "Algo.Depsolver.pkglistcheck" in
-  Util.Timer.start timer;
-  let failed = ref 0 in
-  let tested = Array.make solver.size false in
-  let check = pkgcheck callback (solver,maps) failed tested in
-  List.iter check pkglist ;
-  Util.Timer.stop timer !failed
-;;
+(* callback : Diagnostic.result -> unit *)
+let univcheck ?callback (solver,maps) universe =
+  __setcheck callback (solver,maps) universe Cudf.iter_packages
+
+let listcheck ?callback (solver,maps) pkglist =
+  __setcheck callback (solver,maps) pkglist List.iter
 
 (***********************************************************)
 (* everything can end in tears if there is a package in l that was not

@@ -35,7 +35,19 @@ let parse_cudf doc =
       doc (Printexc.to_string exn);
       exit 1
 
-(** additional Cudf indexes *)
+(** additional Cudf indexes
+ *
+ * the Cudf library does not consider features of packages that are not
+ * installed. who_provides is a lookup function that returns __all__ packages
+ * (installed or not) that implement a given feature 
+ *
+ * who_conflicts is a lookup function that returns all packages that conflict
+ * with a given package 
+ *
+ * XXX: depsolver_int.ml implements similar indexes. This is a minor code
+ * duplication.
+ * *)
+
 type maps = {
   who_conflicts : Cudf.package -> Cudf.package list;
   who_provides : Cudf_types.vpkg -> Cudf.package list

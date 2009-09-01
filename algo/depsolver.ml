@@ -26,11 +26,11 @@ let init ?(buffer=false) cudf_universe =
 let solve s request =
   Depsolver_int.solve (s.solver,s.maps) request
 
-let distribcheck ?callback s =
-  Depsolver_int.distribcheck ?callback (s.solver,s.maps) s.universe
+let univcheck ?callback s =
+  Depsolver_int.univcheck ?callback (s.solver,s.maps) s.universe
 
-let pkglistcheck ?callback s pkglist =
-  Depsolver_int.pkglistcheck ?callback (s.solver,s.maps) pkglist
+let listcheck ?callback s pkglist =
+  Depsolver_int.listcheck ?callback (s.solver,s.maps) pkglist
 
 let edos_install s request =
   Depsolver_int.edos_install (s.solver,s.maps) request

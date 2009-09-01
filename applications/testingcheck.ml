@@ -49,7 +49,7 @@ let check universe =
     |r when !Options.show_failures -> ()
     |r -> Diagnostic.print ~explain:!Options.explain_results stdout r
   in
-  let i = Depsolver.distribcheck ~callback:result_printer solver in
+  let i = Depsolver.univcheck ~callback:result_printer solver in
   Printf.eprintf "Broken Packages: %d\n%!" i;
   Printf.eprintf "done\n%!";
 ;;

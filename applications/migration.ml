@@ -25,31 +25,18 @@ let options = [
 ];;
 
 (* add a package only if it does not exist or it is a more recent version *)
-let debianadd tbl x =
-  try
-    let y = Hashtbl.find tbl x.Deb.name in
-    if (Debian.Version.compare y.Deb.version x.Deb.version) = -1 then
-      (
-        (*
-        Printf.eprintf "replacing %s (= %s) with %s (= %s)\n%!" 
-        x.Deb.name y.Deb.version y.Deb.name x.Deb.version ;
-        *)
-        Hashtbl.replace tbl x.Deb.name x
-      )
-  with Not_found -> 
-    (
-      (*
-      Printf.eprintf "adding %s (= %s)\n%!" x.Deb.name x.Deb.version;
-      *)
-      Hashtbl.add tbl x.Deb.name x
-    )
-;;
-
 let debunion u s =
-  let h = Hashtbl.create (List.length u) in
-  List.iter (fun p -> Hashtbl.add h p.Deb.name p) u;
-  List.iter (debianadd h) s ;
-  Hashtbl.fold (fun k v acc -> v::acc) h []
+  let tbl = Hashtbl.create (List.length u) in
+  List.iter (fun p -> Hashtbl.add tbl p.Deb.name p) u;
+  List.iter (fun x ->
+    try
+      let y = Hashtbl.find tbl x.Deb.name in
+      if (Debian.Version.compare y.Deb.version x.Deb.version) = -1 then
+          Hashtbl.replace tbl x.Deb.name x
+    with Not_found -> 
+        Hashtbl.add tbl x.Deb.name x
+  ) s ;
+  Hashtbl.fold (fun k v acc -> v::acc) tbl []
 ;;  
 
 let main () =
@@ -70,7 +57,7 @@ let main () =
     |_ -> assert false
   in
 
-  Printf.eprintf "Read unstable %!" ;
+  Printf.eprintf "Read packages from unstable %!" ;
   let unstable = 
     let l = Deb.input_raw [unstable_f] in
     let h = Hashtbl.create (List.length l) in
@@ -79,7 +66,7 @@ let main () =
   in
   Printf.eprintf "(%d) done\n%!" (Hashtbl.length unstable);
 
-  Printf.eprintf "Read testing %!" ;
+  Printf.eprintf "Read packages from testing %!" ;
   let testing = Deb.input_raw [testing_f] in
   let testinghash = 
     let l = Deb.input_raw [testing_f] in
@@ -89,7 +76,7 @@ let main () =
   in
   Printf.eprintf "(%d) done\n%!" (Hashtbl.length testinghash);
 
-  Printf.eprintf "Read sources %!" ;
+  Printf.eprintf "Read source packages %!" ;
   let source = 
     let l = Src.input_raw [source_f] in
     let h = Hashtbl.create (List.length l) in
@@ -98,7 +85,7 @@ let main () =
   in
   Printf.eprintf "(%d) done\n%!" (Hashtbl.length source);
 
-  Printf.eprintf "Read candidates %!" ;
+  Printf.eprintf "Read Migration Candidates %!" ;
   let candidates =
     let ch = open_in candidates_f in
     let l = ref [] in
@@ -123,7 +110,7 @@ let main () =
   in
   Printf.eprintf "(%d) done\n%!" (List.length candidates);
 
-  Printf.eprintf "Compute mcbin\n%!" ;
+  Printf.eprintf "Cleaning up Migration Candidates\n%!" ;
   (* binary migration candidates. *)
   let mcbin = List.filter_map (fun (n,v) -> 
     try 
@@ -144,8 +131,8 @@ let main () =
     ) candidates
   in
 
-  Printf.eprintf "Computing msbin %!" ;
-  (* MS/bin = MC/bin \cap ( \bigcup_{p \in MC/bin} Inst (p, Testing + MC/bin) ) *)
+  Printf.eprintf "Computing Migration Set Binaries (Install Check) %!" ;
+  (* MS/bin = { p | Inst (p, Testing + MC/bin) == Success } *)
   let unionl = debunion testing mcbin in
   let tables = Debian.Debcudf.init_tables unionl in
   let universe =
@@ -176,18 +163,13 @@ let main () =
       end
       |_ -> assert false
     in
-    (* XXX this can be faster if implemented like distrib check *)
-    (* all considered I only want the p \in mcbin that can be installed
-     * in Testing \cup mcbin *)
-    ignore (Depsolver.pkglistcheck ~callback:callback solver mcbincudf);
+    ignore (Depsolver.listcheck ~callback:callback solver mcbincudf);
     !l
   in
 
   Printf.eprintf "(%d) done\n%!" (List.length msbin);
 
-  (* List.iter (fun p -> Printf.printf "%s\n%!" (Cudf_printer.string_of_package p)) msbin ; *)
-
-  Printf.eprintf "Compute mssource\n%!" ;
+  Printf.eprintf "Compute Migration Set Sources (Build Check) %!" ;
   (* MS/source = { S | \forall p \in S, p \in MS/bin } *)
   let mssource = 
     let srchash = Hashtbl.create 200 in
@@ -214,7 +196,7 @@ let main () =
     ) msbin ;
     let sl = 
       Hashtbl.fold (fun (n,v) l acc ->
-        if l = [] then (* or all binaries are already in testing *)
+        if l = [] then (* XXX or all binaries are already in testing *)
           let src = Hashtbl.find source (n,v) in src::acc
         else 
           begin
@@ -246,9 +228,11 @@ let main () =
       end
       |_ -> assert false
     in
-    ignore(Depsolver.pkglistcheck ~callback:callback solver sourcecudf);
+    ignore(Depsolver.listcheck ~callback:callback solver sourcecudf);
     !l
   in
+
+  Printf.eprintf "(%d) done\n%!" (List.length mssource);
 
   List.iter (fun pkg ->
     let srcname = Cudf.lookup_package_property pkg "Source" in

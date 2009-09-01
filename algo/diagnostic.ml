@@ -31,6 +31,8 @@ type reason =
   |To_upgrade of (Cudf_types.vpkg * Cudf.package list)
   |To_upgrade_singleton of (Cudf_types.vpkg * Cudf.package list)
 
+(* XXX I could make reason a lazy value so to save some time in the 
+ * constraint building procedure *)
 type result =
   |Success of ( unit -> Cudf.package list )
   |Failure of ( unit -> reason list )

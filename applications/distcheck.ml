@@ -95,7 +95,7 @@ END
   Printf.eprintf "Solving...\n%!" ;
   let timer = Util.Timer.create "Solver" in
   Util.Timer.start timer;
-  let i = Depsolver.distribcheck ~callback:result_printer solver in
+  let i = Depsolver.univcheck ~callback:result_printer solver in
   ignore(Util.Timer.stop timer ());
   Printf.eprintf "Broken Packages: %d\n%!" i
 ;;

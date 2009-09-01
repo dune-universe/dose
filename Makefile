@@ -35,7 +35,7 @@ headers: header.txt .headache.conf
 test: 
 	@for i in $(TESTS); do\
 		cd $$i ;\
-		echo "==================TESTING $$i===================" ;\
+		echo "#######TESTING $$i" ;\
 		$(OCAMLBUILD) $(OBFLAGS) tests.$(OCAMLBEST) ;\
 		./tests.$(OCAMLBEST) ;\
 		cd .. ;\
