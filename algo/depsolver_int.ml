@@ -20,17 +20,29 @@ open CudfAdd
 module R = struct type reason = Diagnostic.reason end
 module S = EdosSolver.M(R)
 
-(* XXX the functions who_provides and who_conflict are dupicated in
- * cudfAdd.ml ! *)
 type maps = {
+  (* the sat solver assume a variable ordering.
+   * from_sat and to_sat map packages to integer and viceversa *)
   to_sat : Cudf.package -> S.var ;
   from_sat : S.var -> Cudf.package ;
+
+  (* the list of all packages the explicitely or implicitely
+   * conflict with the given package *)
   who_conflicts : Cudf.package -> Cudf.package list;
+
+  (* the list of all packages that provide the given feature *)
   who_provides : Cudf_types.vpkg -> Cudf.package list ;
-  lookup_packages : Cudf_types.vpkg -> Cudf.package list
+
+  (* the list of all packages that satisfy the give package 
+   * constraint. If there are no real packages, then the contraint
+   * is interpreted as a feature request as in who_provides *)
+  lookup_packages : Cudf_types.vpkg -> Cudf.package list ;
+
+  maps_size : int
 }
 
-(** the sat solver assume a variable ordering *)
+(* XXX the functions who_provides and who_conflict are dupicated in cudfAdd.ml !
+ * We maintain a copy here to avoid iterating twice on the package list *)
 let build_maps universe =
   let size = Cudf.universe_size universe in
   let backward_table = Hashtbl.create (2 * size) in
@@ -65,6 +77,8 @@ let build_maps universe =
     |l -> l
   in
 
+  (* we need to iterate twice on the package list as we need the
+   * list of all virtual packages in order to generate the conflict list *)
   Cudf.iter_packages (fun pkg ->
     List.iter (fun (name,constr) ->
       List.iter (fun p ->
@@ -95,9 +109,12 @@ let build_maps universe =
     who_conflicts = who_conflicts ;
     who_provides = who_provides ;
     lookup_packages = lookup_packages ;
+    maps_size = size;
   }
 ;;
 
+(* XXX these two type declarations are down here to avoid a name clash between
+ * the record field conflicts in Cudf.package and in solver_t *)
 type solver_t = {
   constraints : S.state ;
   size : int ;
@@ -112,8 +129,13 @@ type solver = {
   solver : solver_t
 }
 
-let init_solver buffer proxy_size (universe,maps) =
-  let size = (Cudf.universe_size universe) + proxy_size in
+let init_solver ?(buffer=false) proxy_size (universe,maps) =
+  (* Invariant ! otherwise the solver will allocate variable pool
+   * that is too small and will cause an index out of bound error
+   * if we try to call S.lit_of_var of a pkg_id > max pool index size.
+   * This way I make sure that even if the universe is a subset of the
+   * universe used to build the maps, everything is going to be ok.*)
+  let size =  maps.maps_size + proxy_size in
 
   let progressbar = Util.progress "Depsolver.init_solver" in
   let total = size in
@@ -125,6 +147,9 @@ let init_solver buffer proxy_size (universe,maps) =
   let num_dependencies = ref 0 in
 
   (* add conflicts *)
+  (* XXX there is a useless iteration on the conflict list.
+   * it is converted to integers and back to packages for the 
+   * explanation. *)
   let add_conj pkg_id conjunction =
     let x = S.lit_of_var pkg_id false in
     List.iter (fun pkg_id' ->
@@ -180,8 +205,10 @@ let init_solver buffer proxy_size (universe,maps) =
 
   Cudf.iter_packages (fun pkg ->
     progressbar (incr i ; !i , total) ;
-    exec_depends pkg ; 
-    exec_conflicts pkg 
+    (try exec_depends pkg
+    with Invalid_argument s -> failwith ("init solver  dependes : "^s)); 
+    (try exec_conflicts pkg
+    with Invalid_argument s -> failwith ("init solver conflicts : "^s));
   ) universe ;
 
   S.propagate constraints ;
@@ -195,11 +222,11 @@ let init_solver buffer proxy_size (universe,maps) =
   }
 ;;
 
-let init buffer universe =
+let init universe =
   match Cudf_checker.is_consistent universe with
   |true,None -> 
       let maps = build_maps universe in
-      let solver = init_solver buffer 0 (universe,maps) in
+      let solver = init_solver 0 (universe,maps) in
       (solver,maps)
   |false,Some(r) -> begin
       Printf.eprintf "%s" 
@@ -287,35 +314,54 @@ let listcheck ?callback (solver,maps) pkglist =
   __setcheck callback (solver,maps) pkglist List.iter
 
 (***********************************************************)
+module PKGS = Set.Make(struct type t = Cudf.package let compare = compare end) 
+
 (* everything can end in tears if there is a package in l that was not
  * indexed in maps *)
-let dependency_closure maps l =
-  let module S = Set.Make(struct type t = Cudf.package let compare = compare end) in
+let __dependency_closure maps l =
   let queue = Queue.create () in
-  let visited = ref S.empty in
+  let visited = ref PKGS.empty in
   List.iter (fun e -> Queue.add e queue) l;
   while (Queue.length queue > 0) do
     let root = Queue.take queue in
-    visited := S.add root !visited;
+    visited := PKGS.add root !visited;
     List.iter (fun disjunction ->
       List.iter (fun (pkgname,constr) ->
         List.iter (fun pkg ->
-          if not (S.mem pkg !visited) then
+          if not (PKGS.mem pkg !visited) then
             Queue.add pkg queue
         ) (maps.lookup_packages (pkgname,constr))
       ) disjunction
     ) root.depends
-  done;
-  S.elements !visited
-;;
+  done ;
+  !visited
+
+let dependency_closure maps l =
+  try
+    let s = __dependency_closure maps l in
+    PKGS.elements s
+  with _ -> failwith "dependency closure"
+
+let __conflict_closure maps l =
+  List.fold_left (fun acc pkg ->
+    let l = maps.who_conflicts pkg in
+    List.fold_left (fun set p -> PKGS.add p set) acc l
+  ) PKGS.empty l
 
 let conflict_closure maps l =
-  let module S = Set.Make(struct type t = Cudf.package let compare = compare end) in
-  let conflicts = 
-    List.fold_left (fun acc pkg ->
-      let l = maps.who_conflicts pkg in
-      List.fold_left (fun set p -> S.add p set) acc l
-    ) S.empty l
-  in
-  S.elements conflicts
-;;
+  try
+    let s = __conflict_closure maps l in
+    PKGS.elements s
+  with _ -> failwith "conflict closure"
+
+let cone maps l =
+  try
+    let s = __dependency_closure maps l in
+    let c = 
+      PKGS.fold (fun pkg acc ->
+        let l = maps.who_conflicts pkg in
+        List.fold_left (fun set p -> PKGS.add p set) acc l
+      ) s PKGS.empty
+    in
+    PKGS.elements (PKGS.union c s)
+  with _ -> failwith "cone closure"

@@ -70,7 +70,7 @@ END
       Debian.Debcudf.load_universe l
     end
     |("cudf",(_,_,_,_,file),_) -> begin
-      let _, u, _ = CudfAdd.parse_cudf file in u
+      let _, u, _ = CudfAdd.load_cudf file in u
     end
     |_ -> failwith "Not supported"
   in

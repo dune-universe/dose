@@ -26,7 +26,10 @@ val print_info : ?ppf:Format.formatter -> ?v:verbosity -> string -> unit
 
 val gettimeofday: (unit -> float) ref
 
+(** set the default verbosity of the logger *)
 val register: verbosity -> (Format.formatter -> unit) -> unit
+
+(** dump the content of the logger to the given formatter *)
 val dump: Format.formatter -> unit
 
 module Counter: sig

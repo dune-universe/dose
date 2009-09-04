@@ -57,7 +57,7 @@ let main () =
  
   let sl = List.map (fun pkg -> Debcudf.tocudf tables pkg) srclist in
   let l = List.fold_left (fun acc pkg -> (Debcudf.tocudf tables pkg)::acc) sl pkglist in
-  let universe = Cudf.load_universe l in
+  let universe = Cudf.load l in
   Printf.eprintf "done\n%!" ;
 
   Printf.eprintf "Init solver...%!" ;

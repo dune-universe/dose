@@ -87,7 +87,7 @@ let main () =
   let versions = Hashtbl.create 1023 in
   let load_universe l = 
     let tables = Debian.Debcudf.init_tables l in
-    Cudf.load_universe (
+    Cudf.load (
       List.map (fun pkg ->
         let cudfpkg = Debian.Debcudf.tocudf tables pkg in
         Hashtbl.add versions 
@@ -169,7 +169,7 @@ END
     else Cudf.get_packages universe
 
   in
-  Graph.D.output_graph stdout (Graph.dependency_graph (Cudf.load_universe plist))
+  Graph.D.output_graph stdout (Graph.dependency_graph (Cudf.load plist))
 ;;
 
 main ();;

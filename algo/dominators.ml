@@ -12,7 +12,7 @@
 open Graph
 open ExtLib
 
-module Make (G: Sig.I) = struct
+module Make (G: Sig.I with type V.t = Cudf.package) = struct
   module S = Set.Make(struct type t = G.V.t let compare = compare end)
 
   (* to be computed on the strong dependency graph *)
@@ -88,4 +88,43 @@ module Make (G: Sig.I) = struct
         end
       ) graph p
     ) graph
+
+
+(*
+
+let dominator pr gr root =
+  let module T = Graph.Traverse.Dfs(G) in
+  let dom = Hashtbl.create (G.nb_vertex gr) in
+  G.iter_vertex (fun v -> Hashtbl.add dom v S.empty) gr ;
+  let change = ref true in
+  while !change do
+    change := false ;
+    T.postfix_component (fun n ->
+      let newset =
+        let pred = (G.pred gr n) in
+        let rec inter = function
+          |[h] -> S.singleton h
+          |h::t -> S.inter (Hashtbl.find dom h) (inter t)
+          |[] -> S.empty
+        in
+        S.union (inter pred) (S.singleton n)
+      in
+      if not (S.equal newset (Hashtbl.find dom n)) then begin
+        Hashtbl.replace dom n newset ;
+        change := true
+      end
+    ) gr root
+  done;
+  (S.elements (Hashtbl.find dom root))
+;;
+
+let print_dom pr graph root =
+  G.iter_vertex (fun pid ->
+    let dom = dominator pr graph pid in
+    let s = String.concat "," (List.map pr dom) in
+    Printf.printf "%s dominance degree of %d : %s\n" (pr pid) ((List.length dom) -1) s
+  ) graph
+;;
+
+*)
 end

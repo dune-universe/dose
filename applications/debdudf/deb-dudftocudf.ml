@@ -345,7 +345,7 @@ let main () =
     ) l
   in
 
-  let universe = Cudf.load_universe pl in
+  let universe = Cudf.load pl in
 
   let request =
     let mapver = function

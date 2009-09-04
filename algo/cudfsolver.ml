@@ -92,7 +92,7 @@ let __prepare (cudf_universe,solver,maps) request =
 ;;
 
 let reinit s request =
-  let solver = Depsolver_int.init_solver false 1 (s.universe,s.maps) in
+  let solver = Depsolver_int.init_solver ~buffer:false 1 (s.universe,s.maps) in
   let s1 = __init (s.universe,solver,s.maps) in
   let cudf_universe = s1.universe in
   let solver = s1.solver in
@@ -112,7 +112,7 @@ let reduce s request =
   in
   let installed = List.flatten (installed (s.universe,s.maps)) in
   let u = Depsolver_int.dependency_closure s.maps (installed @ l) in
-  reinit {s with universe = Cudf.load_universe u} request
+  reinit {s with universe = Cudf.load u} request
 
 (* here we don't make any assumption to the freshness of the package that
    is going to be installed, upgraded or removed. The use should specify it
@@ -129,9 +129,9 @@ let init ?(buffer=false) cudf_universe request =
   in
   let installed = List.flatten (installed (cudf_universe,maps)) in
   let u = Depsolver_int.dependency_closure maps (installed @ l) in
-  let cudf_universe = Cudf.load_universe u in
+  let cudf_universe = Cudf.load u in
   let maps = Depsolver_int.build_maps cudf_universe in
-  let solver = Depsolver_int.init_solver buffer 1 (cudf_universe,maps) in
+  let solver = Depsolver_int.init_solver ~buffer:buffer 1 (cudf_universe,maps) in
   let s = __init (cudf_universe,solver,maps) in
   let cudf_universe = s.universe in
   let solver = s.solver in

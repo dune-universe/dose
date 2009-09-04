@@ -9,15 +9,23 @@
 (*  library, see the COPYING file for more information.                                *)
 (***************************************************************************************)
 
-module Make(Pr : Defaultgraphs.PrT) = struct
+open Graph
+open ExtLib
 
-  module Default = Defaultgraphs.SimpleDepGraph(Pr)
-  module PkgE = Default.PkgE
-  module PkgV = Default.PkgV
-  module G = Default.G
-  module Pr = Default.Pr
-  module S = Default.S
+module Make (G: Sig.I with type V.t = Cudf.package) = struct
+
+  open Depsolver_int
   open G
+
+  let strong_depends (universe,maps) p q =
+    let size = abs(maps.maps_size - (Cudf.universe_size universe)) in
+    let solver = Depsolver_int.init_solver size (universe,maps) in
+    let pid = maps.to_sat q in
+    let lit = Depsolver_int.S.lit_of_var pid false in
+    Depsolver_int.S.add_un_rule solver.constraints lit [];
+    match Depsolver_int.edos_install (solver,maps) p with
+    |{ Diagnostic.result = Diagnostic.Success _ } -> false
+    |_ -> true
 
   let dependency_graph available =
     let gr = G.create () in
@@ -30,103 +38,103 @@ module Make(Pr : Defaultgraphs.PrT) = struct
     ) available
     ;
     gr
-  ;;
 
-  let complete_sd_graph fs fd h root =
+  let conj_dependencies graph maps root =
+    let add p1 p2 =
+      if p1 <> p2 && not(G.mem_edge graph p1 p2) then begin
+        G.add_edge graph p1 p2
+      end else begin
+        G.iter_succ (fun p ->
+          if p <> p1 && not(G.mem_edge graph p1 p) then begin
+            G.add_edge graph p1 p ;
+          end
+        ) graph p2
+      end
+    in
+    let module S = Set.Make(struct type t = Cudf.package let compare = compare end) in
     let queue = Queue.create () in
     let visited = ref S.empty in
     Queue.add (root,[root]) queue;
     while (Queue.length queue > 0) do
-      let (pid,path) = Queue.take queue in
-      visited := S.add pid !visited;
+      let (pkg,path) = Queue.take queue in
+      visited := S.add pkg !visited;
       List.iter (function 
         |[p2] ->
               if not (S.mem p2 !visited) then begin
-                Queue.add (p2,pid::path) queue ;
-                fd pid p2 ;
-                List.iter(fun p1 -> fs p1 p2) (List.rev path)
+                Queue.add (p2,pkg::path) queue ;
+                add pkg p2 ;
+                List.iter(fun p1 -> add p1 p2) (List.rev path)
               end
         |_ -> ()
-      ) (fst(Hashtbl.find h pid))
+      ) (List.flatten (
+        List.map (List.map maps.lookup_packages) pkg.Cudf.depends))
     done
 
-  let memo_closure f size =
-    let h = Hashtbl.create size in
-    function p ->
-      try Hashtbl.find h p
-      with Not_found -> begin
-        let r = f p in
-        Hashtbl.add h p r;
-        r
-      end
+  let strongdeps available =
+    let graph = G.create () in
+    let universe = Cudf.load available in
+    let maps = Depsolver_int.build_maps universe in
+    List.iter (fun pkg1 ->
+      G.add_vertex graph pkg1;
 
-  let strong_pred graph p =
+      if pkg1.Cudf.depends <> [] then begin
+        let pkglist = Depsolver_int.cone maps [pkg1] in
+        let cone = Cudf.load pkglist in
+        let size = abs(maps.maps_size - (Cudf.universe_size universe)) in
+        let solver = Depsolver_int.init_solver size (cone,maps) in
+        match Depsolver_int.edos_install (solver,maps) pkg1 with
+        |{ Diagnostic.result = Diagnostic.Failure(_) } -> ()
+        |{ Diagnostic.result = Diagnostic.Success(f) } -> begin
+            conj_dependencies graph maps pkg1;
+            List.iter (fun pkg2 ->
+              if (pkg1 <> pkg2) && 
+                not(G.mem_edge graph pkg1 pkg2) && 
+                strong_depends (cone,maps) pkg1 pkg2 then begin
+                  G.add_vertex graph pkg2 ;
+                  G.add_edge graph pkg1 pkg2
+              end
+            ) (f ())
+        end
+      end
+    ) available;
+    graph
+
+(*
+
+  let strong_pred pr graph p =
     G.iter_pred_e (fun e ->
       if (G.E.label e) = PkgE.Strong then
         let pid = G.E.src e in
         let in_d = G.in_degree graph pid in
-        Printf.printf "%s with In degree of %d\n" (Pr.pr pid) in_d 
+        Printf.printf "%s with In degree of %d\n" (pr pid) in_d
     ) graph p
 
-
-  let add ~label p1 p2 =
-    if p1 <> p2 && not(G.mem_edge graph p1 p2) then begin
-        G.add_edge_e graph (G.E.create p1 label p2) ;
-    end else begin
-        G.iter_succ (fun p ->
-          if p <> p1 && not(G.mem_edge graph p1 p) then begin
-            G.add_edge_e graph (G.E.create p1 (PkgE.Strong) p) ;
-          end
-        ) graph p2
-    end
-    ;
-    print_stats (!outer,!inner1,!inner2,!skipcount);
-  ;;
-
-  let add_strong = add ~label:PkgE.Strong 
-  let add_direct = add ~label:PkgE.Direct
-
-  let strongdeps available =
-    List.iter (fun (p1,dl,_) ->
-      incr outer;
-      G.add_vertex graph p1;
-
-      if dl <> [] then begin
-        incr inner1 ;
-        let dc = memo_dc_exp p1 in
-        let problem = Installer.init_solver dc in
-        let pb = Installer.copy_problem problem in
-        (* let pb = Installer.init_solver dc in *)
-        if (pb.conflicts = 0) && (pb.disjunctions = 0) then
-          complete_sd_graph add_strong add_direct availableHash p1
-        else begin
-          let r = Installer.edos_install pb p1 in
-          match r.D.result with
-          |D.Failure(r) -> ()
-          |D.Success(instset) -> begin
-              print_info_solver pb p1 r instset dc;
-              complete_sd_graph add_strong add_direct availableHash p1;
-              List.iter (fun p2 ->
-                if (p1 <> p2) && not(G.mem_edge graph p1 p2) then begin
-                    incr inner2;
-
-                    let pb = Installer.copy_problem problem in
-                    (* let pb = Installer.init_solver dc in *)
-                    if Installer.strong_depends pb p1 p2 then begin
-                      G.add_vertex graph p2 ;
-                      G.add_edge_e graph (G.E.create p1 (PkgE.Strong) p2);
-                      print_debug 4 "%s --S-> %s\n" (print_package p1) (print_package p2);
-                      print_stats (!outer,!inner1,!inner2,!skipcount);
-                    end
-
-                end
-                else incr skipcount
-              ) instset
-          end
+  let sensitivity pr h f graph =
+    let ht = Hashtbl.create (G.nb_vertex graph) in
+    G.iter_vertex (fun v ->
+      G.iter_succ (fun v' ->
+        try Hashtbl.replace ht v' ((Hashtbl.find ht v') + 1)
+        with Not_found -> Hashtbl.add ht v' 1
+      ) graph v
+    ) graph;
+    Hashtbl.iter (fun p _ ->
+      if Hashtbl.mem ht p then
+        Printf.printf "%d %s\n" (Hashtbl.find ht p) (pr p)
+      else begin
+        let dom = dominator pr (dependency_graph (f h p)) p in
+        let d =
+          List.filter (fun x ->
+            try ((Hashtbl.find ht x) >= 5000) && x <> p
+            with Not_found -> false
+          ) dom
+        in
+        if d <> [] then begin
+          let s = String.concat "," (List.map pr d) in
+          Printf.printf "%s is dominated by %s \n" (pr p) s;
+          flush_all ()
         end
       end
-      ;
-    ) available
+    ) h
   ;;
-
+*)
 end

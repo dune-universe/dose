@@ -59,7 +59,7 @@ endif
 ifeq ("@HAS_RPM@","yes")
 #  TARGETS += applications/rpm-cudf.$(OCAMLBEST)
   LIBS += rpm/rpm.$(OCAMLLIBBEST)
-  TEST_RPM=rpm
+#  TEST_RPM=rpm
 endif
 
 #ounit support

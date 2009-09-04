@@ -27,13 +27,26 @@ open ExtLib
 let parse_cudf doc =
   try
     let p = Cudf_parser.from_in_channel (open_in doc) in
+    Cudf_parser.parse p
+  with
+  |Cudf_parser.Parse_error _
+  | Cudf.Constraint_violation _ as exn -> begin
+    Printf.eprintf "Error while loading CUDF from %s: %s\n%!"
+    doc (Printexc.to_string exn);
+    exit 1
+  end
+
+let load_cudf doc =
+  try
+    let p = Cudf_parser.from_in_channel (open_in doc) in
     Cudf_parser.load p
   with
-    Cudf_parser.Parse_error _
-    | Cudf.Constraint_violation _ as exn ->
-      Printf.eprintf "Error while loading CUDF from %s: %s\n%!"
-      doc (Printexc.to_string exn);
-      exit 1
+  |Cudf_parser.Parse_error _
+  | Cudf.Constraint_violation _ as exn -> begin
+    Printf.eprintf "Error while loading CUDF from %s: %s\n%!"
+    doc (Printexc.to_string exn);
+    exit 1
+  end
 
 (** additional Cudf indexes
  *

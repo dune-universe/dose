@@ -227,5 +227,5 @@ let load_universe l =
   let timer = Util.Timer.create "Debian.Debcudf.load_universe" in
   Util.Timer.start timer;
   let tables =  init_tables l in
-  let pl = Cudf.load_universe (List.map (tocudf tables) l) in
+  let pl = Cudf.load (List.map (tocudf tables) l) in
   Util.Timer.stop timer pl

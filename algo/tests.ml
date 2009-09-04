@@ -19,19 +19,39 @@ module S = Set.Make(struct type t = Cudf.package let compare = compare end)
 let f_legacy = "tests/legacy.cudf"
 let f_legacy_sol = "tests/legacy-sol.cudf"
 let f_dependency = "tests/dependency.cudf"
+let f_cone = "tests/cone.cudf"
+let f_engine_conflicts = "tests/engine-conflicts.cudf"
 
 let (universe,request) =
   let (_,univ,request) = Cudf_parser.parse_from_file f_legacy in
-  (Cudf.load_universe univ,Option.get request)
+  (Cudf.load univ,Option.get request)
 
-let dependency_set =
-  let (_,pl,_) = Cudf_parser.parse_from_file f_dependency in
+let toset f = 
+  let (_,pl,_) = Cudf_parser.parse_from_file f in
   List.fold_right S.add pl S.empty
+
+
+let dependency_set = toset f_dependency
+let cone_set = toset f_cone
+let engine_conflicts_set = toset f_engine_conflicts
 
 let bicycle = Cudf.lookup_package universe ("bicycle", 7)
 let car = Cudf.lookup_package universe ("car",1)
 let electric_engine1 = Cudf.lookup_package universe ("electric-engine",1)
 let electric_engine2 = Cudf.lookup_package universe ("electric-engine",2)
+
+let test_maps =
+  "who_conflict" >:: (fun _ ->
+    let maps = Depsolver_int.build_maps universe in
+    let l = maps.Depsolver_int.who_conflicts electric_engine2 in
+    let set = List.fold_right S.add l S.empty in
+    assert_equal true (S.equal engine_conflicts_set set)
+  )
+
+let test_depsolver_int = 
+  "depsolver_int" >::: [
+    test_maps
+  ]
 
 let solver = Depsolver.init universe ;;
 
@@ -56,10 +76,10 @@ let test_distribcheck =
     let f_debian = "tests/debian.cudf" in
     let universe =
       let (_,pl,_) = Cudf_parser.parse_from_file f_debian in
-      Cudf.load_universe pl
+      Cudf.load pl
     in
     let solver = Depsolver.init universe in
-    let i = Depsolver.distribcheck solver in
+    let i = Depsolver.univcheck solver in
     assert_equal 425 i
   ) 
 
@@ -70,12 +90,20 @@ let test_dependency_closure =
     assert_equal true (S.equal dependency_set set)
   )
 
+let test_cone = 
+  "package cone" >:: (fun _ -> 
+    let l = Depsolver.cone universe [car] in
+    let set = List.fold_right S.add l S.empty in
+    assert_equal true (S.equal cone_set set)
+  )
+
 let test_depsolver =
   "depsolver" >::: [
     test_install ;
     test_coinstall ;
     test_distribcheck ;
     test_dependency_closure ;
+    test_cone ;
   ]
 
 let solution_set =
@@ -100,7 +128,7 @@ let solve_any_legacy =
     let d = Cudfsolver.solve solver in
     match d.Diagnostic.result with
     |Diagnostic.Success f ->
-        let sol = Cudf.load_universe (f ()) in
+        let sol = Cudf.load (f ()) in
         let cudf = (universe,request) in
         assert_equal (true,[]) (Cudf_checker.is_solution cudf sol) 
     |Diagnostic.Failure f -> assert_failure "fail"
@@ -113,7 +141,7 @@ let test_cudfsolver =
   ]
 
 let all = 
-  "all tests" >::: [ test_depsolver ; test_cudfsolver ]
+  "all tests" >::: [ test_depsolver_int ; test_depsolver ; test_cudfsolver ]
 
 let main () =
   OUnit.run_test_tt_main all

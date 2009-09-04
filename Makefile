@@ -53,7 +53,7 @@ install:
 	test -d $(LIBDIR) || mkdir -p $(LIBDIR)
 	$(INSTALL) -patch-version $(VERSION) $(NAME) $(INSTALL_STUFF)
 	test -d $(BINDIR) || mkdir -p $(BINDIR)
-	if [ -f _build/cudf-check.native ] ; then \
+	if [ -f _build/*.native ] ; then \
 		cp applications/_build/*.native $(BINDIR)/ ; \
 	else \
 		cp applications/_build/*.byte $(BINDIR)/ ; \

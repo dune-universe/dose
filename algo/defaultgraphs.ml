@@ -12,7 +12,16 @@
 open Graph
 open Common
 
-module SyntacticDependencyGraph(Pr : sig val pr : Cudf.package -> string end) = struct
+let print_package ?(short=true) pkg =
+  if short then
+    let (sp,sv) =
+      try (pkg.Cudf.package,Cudf.lookup_package_property pkg "Number")
+      with Not_found -> (pkg.Cudf.package,string_of_int pkg.Cudf.version)
+    in Printf.sprintf "%s (= %s)" sp sv
+  else
+    Cudf_printer.string_of_package pkg
+
+module SyntacticDependencyGraph = struct
 
   module PkgV = struct
       type t = Pkg of Cudf.package | Or of (Cudf.package * int)
@@ -36,8 +45,8 @@ module SyntacticDependencyGraph(Pr : sig val pr : Cudf.package -> string end) = 
       include G
       let vertex_name v =
         match G.V.label v with
-        |PkgV.Pkg i -> Printf.sprintf "\"%s\"" (Pr.pr i)
-        |PkgV.Or (i,c) -> Printf.sprintf "\"Or%s-%d\"" (Pr.pr i) c
+        |PkgV.Pkg i -> Printf.sprintf "\"%s\"" (print_package i)
+        |PkgV.Or (i,c) -> Printf.sprintf "\"Or%s-%d\"" (print_package i) c
 
       let graph_attributes = fun _ -> []
       let get_subgraph = fun _ -> None
@@ -112,7 +121,7 @@ end
 
 (******************************************************)
 
-module BidirectionalGraph(Pr : sig val pr : Cudf.package -> string end) = struct
+module BidirectionalGraph = struct
 
   module PkgV = struct
       type t = Cudf.package
@@ -126,7 +135,7 @@ module BidirectionalGraph(Pr : sig val pr : Cudf.package -> string end) = struct
   module Display =
     struct
       include G
-      let vertex_name v = Printf.sprintf "\"%s\"" (Pr.pr v)
+      let vertex_name v = Printf.sprintf "\"%s\"" (print_package v)
 
       let graph_attributes = fun _ -> []
       let get_subgraph = fun _ -> None
