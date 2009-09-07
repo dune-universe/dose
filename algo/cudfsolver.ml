@@ -92,7 +92,7 @@ let __prepare (cudf_universe,solver,maps) request =
 ;;
 
 let reinit s request =
-  let solver = Depsolver_int.init_solver ~buffer:false 1 (s.universe,s.maps) in
+  let solver = Depsolver_int.init_solver ~buffer:false ~proxy_size:1 (s.universe,s.maps) in
   let s1 = __init (s.universe,solver,s.maps) in
   let cudf_universe = s1.universe in
   let solver = s1.solver in
@@ -131,7 +131,7 @@ let init ?(buffer=false) cudf_universe request =
   let u = Depsolver_int.dependency_closure maps (installed @ l) in
   let cudf_universe = Cudf.load u in
   let maps = Depsolver_int.build_maps cudf_universe in
-  let solver = Depsolver_int.init_solver ~buffer:buffer 1 (cudf_universe,maps) in
+  let solver = Depsolver_int.init_solver ~buffer:buffer ~proxy_size:1 (cudf_universe,maps) in
   let s = __init (cudf_universe,solver,maps) in
   let cudf_universe = s.universe in
   let solver = s.solver in

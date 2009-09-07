@@ -22,6 +22,12 @@ module Cudf_hashtbl =
     let hash pkg = Hashtbl.hash (pkg.Cudf.package, pkg.Cudf.version)
   end)
 
+module Cudf_set =
+  Set.Make(struct
+    type t = Cudf.package
+    let compare x y = if Cudf.(=%) x y then 0 else -1
+  end)
+
 open ExtLib
 
 let parse_cudf doc =

@@ -123,11 +123,7 @@ END
     with Not_found -> assert false
   in
 
-  let print_package i = Diagnostic.print_package ~short:true i in
-
-  let module Graph =
-    Defaultgraphs.SyntacticDependencyGraph(struct let pr = print_package end)
-  in
+  let module Graph = Defaultgraphs.SyntacticDependencyGraph in
 
   let pkg_src () = List.map get_cudfpkg (parse_pkg !Options.src) in
   let pkg_dst () =

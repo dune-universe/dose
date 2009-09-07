@@ -25,9 +25,23 @@ module SyntacticDependencyGraph = struct
 
   module PkgV = struct
       type t = Pkg of Cudf.package | Or of (Cudf.package * int)
-      let compare = Pervasives.compare
-      let hash = Hashtbl.hash
-      let equal l1 l2 = (l1 = l2)
+      (* XXX ok, att here. if I just use Pervasive.compare the records
+       * representing the same Cudf package (that is Cudf.(=%) x y = true)
+       * will result structully different . Do we loose in performance here ? *)
+      let compare x y =
+        match (x,y) with
+        |Pkg x , Pkg y -> if Cudf.(=%) x y then 0 else -1
+        |Or(x,i),Or(y,j) -> if (i = j) && Cudf.(=%) x y then 0 else -1
+        |_ -> 1
+      let hash p =
+        match p with
+        |Pkg p -> Hashtbl.hash (p.Cudf.package,p.Cudf.version)
+        |Or (p,i) -> Hashtbl.hash (p.Cudf.package,p.Cudf.version,i)
+      let equal x y =
+        match (x,y) with
+        |Pkg x , Pkg y -> Cudf.(=%) x y
+        |Or(x,i),Or(y,j) -> (i = j) && (Cudf.(=%) x y)
+        |_ -> false
   end
 
   module PkgE = struct
@@ -123,11 +137,14 @@ end
 
 module BidirectionalGraph = struct
 
+  (* XXX ok, att here. if I just use Pervasive.compare the records
+   * representing the same Cudf package (that is Cudf.(=%) x y = true)
+   * will result structully different . Do we loose in performance here ? *)
   module PkgV = struct
       type t = Cudf.package
-      let compare = Pervasives.compare
-      let hash = Hashtbl.hash
-      let equal l1 l2 = (l1 = l2)
+      let compare x y = if Cudf.(=%) x y then 0 else -1
+      let hash p = Hashtbl.hash (p.Cudf.package,p.Cudf.version)
+      let equal = Cudf.(=%)
   end
 
   module G = Imperative.Digraph.ConcreteBidirectional(PkgV)

@@ -31,7 +31,6 @@ let options =
    ("--cudf", Arg.Set  Options.cudf, "print the cudf solution (if any)");
    ("--outdir", Arg.String (fun l -> Options.outdir := l),  "Specify the output directory");
    ("--debug", Arg.Unit (fun () -> Util.set_verbosity Util.Summary), "Print debug information");
-
   ]
 
 let main () =

@@ -2,4 +2,3 @@
 <tests.*>: pkg_extlib, pkg_ocamlgraph, pkg_cudf, pkg_oUnit, pkg_zip, pkg_str
 <{defaultgraphs,dominators,statistics,diagnostic,depsolver,depsolver_int,cudfsolver,strongdeps}.cmx>: for-pack(Algo)
 <common>: include
-<bridge>: include

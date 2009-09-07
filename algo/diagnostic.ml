@@ -34,8 +34,8 @@ type reason =
 (* XXX I could make reason a lazy value so to save some time in the 
  * constraint building procedure *)
 type result =
-  |Success of ( unit -> Cudf.package list )
-  |Failure of ( unit -> reason list )
+  |Success of (unit -> Cudf.package list)
+  |Failure of (unit -> reason list)
 
 type request = 
   |Sng of Cudf.package

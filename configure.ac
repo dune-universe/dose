@@ -109,7 +109,7 @@ if test "$HAS_OCAMLGRAPH" = "yes" ; then
    AC_MSG_ERROR([Please install OCaml findlib module 'ocamlgraph'.])
   fi
   PKG_OCAMLGRAPH=pkg_ocamlgraph
-  MLPACK_OCAMLGRAPH="Defaultgraphs Statistics Dominators"
+  MLPACK_OCAMLGRAPH="Defaultgraphs Statistics Dominators Strongdeps"
 else
   PKG_OCAMLGRAPH=pkg_
 fi

@@ -25,7 +25,8 @@ type reason =
   | To_upgrade_singleton of (Cudf_types.vpkg * Cudf.package list)
 
 type result =
-  | Success of (unit -> Cudf.package list) (** list of installed packages *)
+  (** list of installed packages.  *)
+  | Success of (unit -> Cudf.package list)
   | Failure of (unit -> reason list)
 
 (** Low-level : the type of request passed to the solver *)
