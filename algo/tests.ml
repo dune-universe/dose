@@ -21,6 +21,10 @@ let f_legacy_sol = "tests/legacy-sol.cudf"
 let f_dependency = "tests/dependency.cudf"
 let f_cone = "tests/cone.cudf"
 let f_engine_conflicts = "tests/engine-conflicts.cudf"
+let f_strongdeps_simple = "tests/strongdep-simple.cudf"
+let f_strongdeps_conflict = "tests/strongdep-conflict.cudf"
+let f_strongdeps_cycle = "tests/strongdep-cycle.cudf"
+let f_strongdeps_conj = "tests/strongdep-conj.cudf"
 
 let (universe,request) =
   let (_,univ,request) = Cudf_parser.parse_from_file f_legacy in
@@ -140,8 +144,89 @@ let test_cudfsolver =
     solve_any_legacy
   ]
 
+let test_strong file edge_list =
+  let module G = Defaultgraphs.BidirectionalGraph.G in
+  let module StrongDep = Strongdeps.Make(G) in
+  let (_,pkglist,_) = Cudf_parser.parse_from_file file in
+  let u = Cudf.load pkglist in
+  let g = StrongDep.strongdeps pkglist in
+  let l = List.map (fun (v,z) ->
+      (Cudf.lookup_package u v,Cudf.lookup_package u z)
+    ) edge_list
+  in
+  G.iter_edges (fun v z ->
+    if not(List.exists (fun (p,q) -> (Cudf.(=%) v p) && (Cudf.(=%) z q)) l)
+    then assert_failure "fail"
+  ) g
+  ;
+  List.iter (fun (v,z) ->
+    if not(G.mem_edge g v z)
+    then assert_failure "fail" 
+  ) l
+
+let strongdep_simple =
+  "strongdep simple" >:: (fun _ ->
+    let edge_list = [
+      (("cc",1),("ee",1)) ;
+      (("aa",1),("ee",1)) ;
+      (("aa",1),("dd",1)) ;
+      (("bb",1),("ee",1)) ]
+    in
+    test_strong f_strongdeps_simple edge_list
+  )
+
+let strongdep_conflict =
+  "strongdep conflict" >:: (fun _ ->
+    let edge_list = [
+      (("cc",1),("ee",1)) ;
+      (("aa",1),("bb",1)) ;
+      (("aa",1),("ee",1)) ;
+      (("aa",1),("dd",1)) ;
+      (("bb",1),("ee",1)) ]
+    in
+    test_strong f_strongdeps_conflict edge_list
+  )
+
+let strongdep_cycle =
+  "strongdep cycle" >:: (fun _ ->
+    let edge_list = [
+      (("bb",1),("aa",1)) ]
+    in
+    test_strong f_strongdeps_cycle edge_list
+  )
+
+let strongdep_conj =
+  "strongdep conj" >:: (fun _ ->
+    let edge_list = [
+      (("cc",1),("ff",1)) ;
+      (("cc",1),("ee",1)) ;
+      (("ee",1),("ff",1)) ;
+      (("aa",1),("bb",1)) ;
+      (("aa",1),("ee",1)) ;
+      (("aa",1),("ff",1)) ;
+      (("aa",1),("dd",1)) ;
+      (("bb",1),("ff",1)) ;
+      (("bb",1),("ee",1)) ]
+    in
+    test_strong f_strongdeps_conj edge_list
+  )
+
+
+let test_strongdep =
+  "strong dependencies" >::: [
+    strongdep_simple ;
+    strongdep_conflict ;
+    strongdep_cycle ;
+  (*  strongdep_conj  XXX *)
+  ]
+
 let all = 
-  "all tests" >::: [ test_depsolver_int ; test_depsolver ; test_cudfsolver ]
+  "all tests" >::: [
+    test_depsolver_int ;
+    test_depsolver ;
+    test_cudfsolver ;
+    test_strongdep
+  ]
 
 let main () =
   OUnit.run_test_tt_main all

@@ -11,15 +11,16 @@
 
 open Graph
 open ExtLib
+open Common
+open CudfAdd
 
 module Make (G: Sig.I with type V.t = Cudf.package) = struct
-  module S = Set.Make(struct type t = G.V.t let compare = compare end)
 
   (* to be computed on the strong dependency graph *)
-  let _impactset graph p =
-    G.fold_pred (fun v s ->
-      S.add v s
-    ) graph p (S.singleton p)
+  let _impactset graph pkg =
+    G.fold_pred (fun p s ->
+      Cudf_set.add p s
+    ) graph pkg (Cudf_set.singleton pkg)
 
   let memo f = 
     let h = Hashtbl.create 1031 in
@@ -32,10 +33,10 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
       end
 
   (* to be computed on the strong dependency graph *)
-  let _scons graph p = 
-    List.fold_left (fun s e -> 
-      S.add e s
-    ) S.empty (G.succ graph p)
+  let _scons graph pkg = 
+    List.fold_left (fun s p -> 
+      Cudf_set.add p s
+    ) Cudf_set.empty (G.succ graph pkg)
 
   let impactset = memo _impactset 
   let scons = memo _scons 
@@ -46,23 +47,14 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
     fun i ->
       incr curr;
       if !curr >= step then begin
-        Printf.printf "Done %d out of %d\n" i max;
-        flush_all ();
+        Printf.printf "Done %d out of %d\n%!" i max;
         curr := 0
       end
   ;;
 
-  (* z -> p -> q 
-   * if z -> q && z -> p && q \in Succ(p) then p -> q 
-   *)
-  let transcond domgraph p q = 
-    List.exists (fun z ->
-      (G.mem_edge domgraph z p) && (G.mem_edge domgraph z q)
-    ) (G.pred domgraph q)
-
   (* the dominators are computed on the strong dependency graph
    * with transitive archs *)
-  let dominators pr graph =
+  let dominators graph =
     Printf.printf "N. of vertex graph %d\n" (G.nb_vertex graph);
     Printf.printf "N. of edges graph %d\n" (G.nb_edges graph);
     print_endline "start dominators";
@@ -76,55 +68,24 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
       stats !i; incr i;
       G.iter_succ (fun q ->
         G.add_vertex domgraph q;
-        if not(transcond domgraph p q) then begin
-          let isq = impactset graph q in
-          if S.subset (S.diff isq sconsp) isp then begin
-            G.add_edge domgraph p q;
-            Printf.printf "Dominator %s -D-> %s !\n" (pr p) (pr q)
-          end
-        end else begin
-            G.add_edge domgraph p q;
-            Printf.printf "Dominator %s -D-> %s !\n" (pr p) (pr q)
+        let isq = impactset graph q in
+        if Cudf_set.subset (Cudf_set.diff isq sconsp) isp then begin
+          G.add_edge domgraph p q;
+          Printf.printf "Dominator %s -D-> %s !\n"
+          (Diagnostic.print_package p)
+          (Diagnostic.print_package q)
         end
       ) graph p
     ) graph
 
-
 (*
-
-let dominator pr gr root =
-  let module T = Graph.Traverse.Dfs(G) in
-  let dom = Hashtbl.create (G.nb_vertex gr) in
-  G.iter_vertex (fun v -> Hashtbl.add dom v S.empty) gr ;
-  let change = ref true in
-  while !change do
-    change := false ;
-    T.postfix_component (fun n ->
-      let newset =
-        let pred = (G.pred gr n) in
-        let rec inter = function
-          |[h] -> S.singleton h
-          |h::t -> S.inter (Hashtbl.find dom h) (inter t)
-          |[] -> S.empty
-        in
-        S.union (inter pred) (S.singleton n)
-      in
-      if not (S.equal newset (Hashtbl.find dom n)) then begin
-        Hashtbl.replace dom n newset ;
-        change := true
-      end
-    ) gr root
-  done;
-  (S.elements (Hashtbl.find dom root))
-;;
-
-let print_dom pr graph root =
-  G.iter_vertex (fun pid ->
-    let dom = dominator pr graph pid in
-    let s = String.concat "," (List.map pr dom) in
-    Printf.printf "%s dominance degree of %d : %s\n" (pr pid) ((List.length dom) -1) s
-  ) graph
-;;
-
+  let print_dom graph root =
+    G.iter_vertex (fun pkg ->
+      let dom = dominators graph pkg in
+      let s = String.concat "," (List.map Diagnostic.print_package dom) in
+      Printf.printf "%s dominance degree of %d : %s\n"
+      (Diagnostic.print_package pkg)
+      ((List.length dom) -1) s
+    ) graph
 *)
 end

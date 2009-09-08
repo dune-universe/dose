@@ -256,7 +256,7 @@ let solve (solver,maps) request =
 
   match request with
     |Diagnostic.Req ->
-        let res = result S.solve S.collect_reasons (solver.size - 1) in
+        let res = result S.solve S.collect_reasons (maps.maps_size - 1) in
         { Diagnostic.result = res ; request = request }
     |Diagnostic.Sng r ->
         let res = result S.solve S.collect_reasons (maps.to_sat r) in
@@ -348,7 +348,7 @@ let __setcheck callback (solver,maps) universe iter =
   let timer = Util.Timer.create "Algo.Depsolver" in
   Util.Timer.start timer;
   let failed = ref 0 in
-  let tested = Array.make solver.size false in
+  let tested = Array.make maps.maps_size false in
   let check = pkgcheck callback (solver,maps) failed tested in
   iter check universe ;
   Util.Timer.stop timer !failed

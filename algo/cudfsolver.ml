@@ -37,7 +37,7 @@ let installed (cudf_universe,maps) =
 
 let __init (cudf_universe,solver,maps)  = 
   let add l exp = S.add_rule solver.constraints (Array.of_list l) exp in
-  let proxy_var = solver.size - 1 in
+  let proxy_var = maps.maps_size - 1 in
   let proxy_lit = S.lit_of_var proxy_var false in
   let installed = installed (cudf_universe,maps) in
 
@@ -52,7 +52,7 @@ let __init (cudf_universe,solver,maps)  =
 
 let __prepare (cudf_universe,solver,maps) request =
   let add l exp = S.add_rule solver.constraints (Array.of_list l) exp in
-  let proxy_var = solver.size - 1 in
+  let proxy_var = maps.maps_size - 1 in
 
   let proxy_lit = S.lit_of_var proxy_var false in
 

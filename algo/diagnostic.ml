@@ -58,10 +58,10 @@ let print ?(explain=false) oc result =
   |{result = Failure (_) ; request = r },false ->
       Printf.fprintf oc "%s: FAILED\n" (print_request r)
   |{ result = Success (_); request = r },false ->
-      Printf.fprintf oc "%s: OK\n" (print_request r)
+      Printf.fprintf oc "%s: SUCCESS\n" (print_request r)
   |{ result = Success (f); request = r },true ->
       begin
-        Printf.fprintf oc "%s: OK\n" (print_request r) ;
+        Printf.fprintf oc "%s: SUCCESS\n" (print_request r) ;
         List.iter (fun p ->
           Printf.fprintf oc "%s\n" (print_package ~short:false p)
         ) (f ())

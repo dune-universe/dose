@@ -11,21 +11,27 @@
 
 open Graph
 open ExtLib
+open Common
+open CudfAdd
 
 module Make (G: Sig.I with type V.t = Cudf.package) = struct
 
   open Depsolver_int
   open G
 
-  let strong_depends (solver,maps) p q =
-    Depsolver_int.S.reset solver.constraints ;
+  (* does p strongly dependens on q ?
+   * we check if it is possible to install p without q.
+   * if this is indeed possible, then p does not strongly
+   * dependes on q *)
+  let strong_depends (universe,maps) p q =
+    let solver = Depsolver_int.init_solver ~buffer:true (universe,maps) in
     let pid = maps.to_sat q in
     let lit = Depsolver_int.S.lit_of_var pid false in
     Depsolver_int.S.add_un_rule solver.constraints lit [];
-    Depsolver_int.S.propagate solver.constraints;
+    Depsolver_int.S.propagate solver.constraints; 
     match Depsolver_int.edos_install (solver,maps) p with
+    |{ Diagnostic.result = Diagnostic.Failure _ } -> true
     |{ Diagnostic.result = Diagnostic.Success _ } -> false
-    |_ -> true
 
   let dependency_graph available =
     let gr = G.create () in
@@ -41,34 +47,24 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
 
   let conj_dependencies graph maps root =
     let add p1 p2 =
-      if Cudf.(=%) p1 p2 then () else
-      if not(G.mem_edge graph p1 p2) then begin
-        Printf.printf "Adding Edge 111 %s - %s\n"
-        (Diagnostic.print_package p1)
-        (Diagnostic.print_package p2)
-        ;
-        G.add_edge graph p1 p2
-      end else
+      if (Cudf.(=%) p1 p2) then () else
+      if not(G.mem_edge graph p1 p2)
+      then G.add_edge graph p1 p2
+      else
         G.iter_succ (fun p ->
-          if not(Cudf.(=%) p1 p) && not(G.mem_edge graph p1 p) then begin
-            Printf.printf "Adding Edge 222 %s - %s\n"
-            (Diagnostic.print_package p1)
-            (Diagnostic.print_package p)
-            ;
-            G.add_edge graph p1 p 
-          end
+          if not(Cudf.(=%) p1 p) && not(G.mem_edge graph p1 p)
+          then G.add_edge graph p1 p 
         ) graph p2
     in
-    let module S = Set.Make(struct type t = Cudf.package let compare = compare end) in
     let queue = Queue.create () in
-    let visited = ref S.empty in
+    let visited = ref Cudf_set.empty in
     Queue.add (root,[root]) queue;
     while (Queue.length queue > 0) do
       let (pkg,path) = Queue.take queue in
-      visited := S.add pkg !visited;
+      visited := Cudf_set.add pkg !visited;
       List.iter (function 
         |[p2] ->
-              if not (S.mem p2 !visited) then begin
+              if not (Cudf_set.mem p2 !visited) then begin
                 Queue.add (p2,pkg::path) queue ;
                 add pkg p2 ;
                 List.iter(fun p1 -> add p1 p2) (List.rev path)
@@ -77,8 +73,7 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
       ) (List.map (fun l ->
           List.flatten (List.map maps.lookup_packages l)
         ) pkg.Cudf.depends)
-    done ;
-    graph
+    done 
 
   let strongdeps available =
     let graph = G.create () in
@@ -89,38 +84,29 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
         let pkglist = Depsolver_int.cone maps [pkg1] in
         let cone = Cudf.load pkglist in
         let solver = Depsolver_int.init_solver ~buffer:true (cone,maps) in
-        print_endline (Depsolver_int.S.dump solver.constraints);
         match Depsolver_int.edos_install (solver,maps) pkg1 with
         |{ Diagnostic.result = Diagnostic.Failure(_) } -> ()
         |{ Diagnostic.result = Diagnostic.Success(f) } -> begin
-          let graph = conj_dependencies graph maps pkg1 in
-          List.iter (fun p -> print_endline (Diagnostic.print_package p)) (f ()); 
+          conj_dependencies graph maps pkg1;
           List.iter (fun pkg2 ->
             if not(Cudf.(=%) pkg1 pkg2) && 
               not(G.mem_edge graph pkg1 pkg2) && 
-              strong_depends (solver,maps) pkg1 pkg2 then begin
-                Printf.printf "Adding Edge (strong) %s - %s\n"
-                (Diagnostic.print_package pkg1)
-                (Diagnostic.print_package pkg2) ;
-                G.add_edge graph pkg1 pkg2
-            end
+              strong_depends (cone,maps) pkg1 pkg2
+            then G.add_edge graph pkg1 pkg2
           ) (f ())
         end
       end
     ) available;
     graph
 
+  let strong_pred graph q =
+    G.iter_pred_e (fun edge ->
+      let p = G.E.src edge in
+      let in_d = G.in_degree graph p in
+      Printf.printf "%s with In degree of %d\n" (Diagnostic.print_package p) in_d
+    ) graph q
 (*
-
-  let strong_pred pr graph p =
-    G.iter_pred_e (fun e ->
-      if (G.E.label e) = PkgE.Strong then
-        let pid = G.E.src e in
-        let in_d = G.in_degree graph pid in
-        Printf.printf "%s with In degree of %d\n" (pr pid) in_d
-    ) graph p
-
-  let sensitivity pr h f graph =
+  let sensitivity h f graph =
     let ht = Hashtbl.create (G.nb_vertex graph) in
     G.iter_vertex (fun v ->
       G.iter_succ (fun v' ->
@@ -146,6 +132,5 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
         end
       end
     ) h
-  ;;
 *)
 end
