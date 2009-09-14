@@ -218,7 +218,7 @@ END
       let u' = List.map (Debian.Debcudf.tocudf tables) u in
       let s' = List.map (Debian.Debcudf.tocudf tables ~inst:true) s in
       let pkglist = List.unique (u' @ s') in
-      (pkglist, Cudf.load pkglist)
+      (pkglist, Cudf.load_universe pkglist)
   in
 
   let random_packages_popcon () =

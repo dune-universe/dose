@@ -40,7 +40,7 @@ let options = [
 
 let check universe =
   Printf.eprintf "check packages ...%!";
-  let solver = Depsolver.init universe in
+  let solver = Depsolver.load universe in
 
   let result_printer = function
     |{Diagnostic.result = Diagnostic.Failure (_) } when !Options.show_successes -> ()
@@ -69,7 +69,7 @@ let init ps =
   Printf.eprintf "init cache (%d packages) ... %!" (Hashtbl.length ps);
   let ul = Hashtbl.fold (fun _ v acc -> v::acc) ps [] in
   let tables = Debian.Debcudf.init_tables ul in
-  let cache = Cudf.load (List.map (Debian.Debcudf.tocudf tables) ul) in
+  let cache = Cudf.load_universe (List.map (Debian.Debcudf.tocudf tables) ul) in
   Printf.eprintf "done\n%!";
   cache
 ;;

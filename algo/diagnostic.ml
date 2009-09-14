@@ -10,15 +10,7 @@
 (***************************************************************************************)
 
 open ExtLib
-
-let print_package ?(short=true) pkg =
-  if short then
-    let (sp,sv) =
-      try (pkg.Cudf.package,Cudf.lookup_package_property pkg "Number")
-      with Not_found -> (pkg.Cudf.package,string_of_int pkg.Cudf.version)
-    in Printf.sprintf "%s (= %s)" sp sv
-  else
-    Cudf_printer.string_of_package pkg
+open Common
 
 type reason =
   |Dependency of (Cudf.package * Cudf.package list)
@@ -31,31 +23,27 @@ type reason =
   |To_upgrade of (Cudf_types.vpkg * Cudf.package list)
   |To_upgrade_singleton of (Cudf_types.vpkg * Cudf.package list)
 
-(* XXX I could make reason a lazy value so to save some time in the 
- * constraint building procedure *)
+type request =
+  |Package of Cudf.package
+  |PackageList of Cudf.package list
+  |Proxy
+
 type result =
   |Success of (unit -> Cudf.package list)
   |Failure of (unit -> reason list)
 
-type request = 
-  |Sng of Cudf.package
-  |Lst of Cudf.package list
-  |Req
+type diagnosis = { result : result ; request : request }
 
-type diagnosis = {
-  request : request ;
-  result : result
-}
+let print_package = CudfAdd.print_package
 
-let print ?(explain=false) oc result = 
-  let print_request = function
-    |Sng p -> (print_package ~short:true p)
-    |Lst pl -> String.concat "," (List.map (print_package ~short:true) pl)
-    |Req -> ""
-  in
+let print_request = function
+  |Package p -> (print_package ~short:true p)
+  |PackageList pl -> String.concat "," (List.map (print_package ~short:true) pl)
+  |Proxy -> ""
 
+let print ?(explain=false) oc result =
   match result,explain with
-  |{result = Failure (_) ; request = r },false ->
+  |{ result = Failure (_) ; request = r },false ->
       Printf.fprintf oc "%s: FAILED\n" (print_request r)
   |{ result = Success (_); request = r },false ->
       Printf.fprintf oc "%s: SUCCESS\n" (print_request r)

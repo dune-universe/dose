@@ -12,36 +12,18 @@
 open Graph
 open Common
 
-let print_package ?(short=true) pkg =
-  if short then
-    let (sp,sv) =
-      try (pkg.Cudf.package,Cudf.lookup_package_property pkg "Number")
-      with Not_found -> (pkg.Cudf.package,string_of_int pkg.Cudf.version)
-    in Printf.sprintf "%s (= %s)" sp sv
-  else
-    Cudf_printer.string_of_package pkg
+let print_package = CudfAdd.print_package
 
 module SyntacticDependencyGraph = struct
 
   module PkgV = struct
       type t = Pkg of Cudf.package | Or of (Cudf.package * int)
-      (* XXX ok, att here. if I just use Pervasive.compare the records
-       * representing the same Cudf package (that is Cudf.(=%) x y = true)
-       * will result structully different . Do we loose in performance here ? *)
-      let compare x y =
-        match (x,y) with
-        |Pkg x , Pkg y -> if Cudf.(=%) x y then 0 else -1
-        |Or(x,i),Or(y,j) -> if (i = j) && Cudf.(=%) x y then 0 else -1
-        |_ -> 1
+      let compare = Pervasives.compare 
       let hash p =
         match p with
         |Pkg p -> Hashtbl.hash (p.Cudf.package,p.Cudf.version)
         |Or (p,i) -> Hashtbl.hash (p.Cudf.package,p.Cudf.version,i)
-      let equal x y =
-        match (x,y) with
-        |Pkg x , Pkg y -> Cudf.(=%) x y
-        |Or(x,i),Or(y,j) -> (i = j) && (Cudf.(=%) x y)
-        |_ -> false
+      let equal x y = ((compare x y) = 0)
   end
 
   module PkgE = struct
@@ -49,7 +31,7 @@ module SyntacticDependencyGraph = struct
 
     let compare = Pervasives.compare
     let hash = Hashtbl.hash
-    let equal l1 l2 = (l1 = l2)
+    let equal x y = ((compare x y) = 0)
     let default = DirDepends
   end
 
@@ -137,17 +119,47 @@ end
 
 module BidirectionalGraph = struct
 
-  (* XXX ok, att here. if I just use Pervasive.compare the records
-   * representing the same Cudf package (that is Cudf.(=%) x y = true)
-   * will result structully different . Do we loose in performance here ? *)
   module PkgV = struct
       type t = Cudf.package
-      let compare x y = if Cudf.(=%) x y then 0 else -1
-      let hash p = Hashtbl.hash (p.Cudf.package,p.Cudf.version)
-      let equal = Cudf.(=%)
+      let compare = CudfAdd.compare
+      let hash = CudfAdd.hash
+      let equal = CudfAdd.equal
   end
 
   module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
+
+  module Display =
+    struct
+      include G
+      let vertex_name v = Printf.sprintf "\"%s\"" (print_package v)
+
+      let graph_attributes = fun _ -> []
+      let get_subgraph = fun _ -> None
+
+      let default_edge_attributes = fun _ -> []
+      let default_vertex_attributes = fun _ -> []
+
+      let vertex_attributes v = []
+
+      let edge_attributes e = []
+    end
+  
+  module D = Graph.Graphviz.Dot(Display)
+  module S = Set.Make(PkgV)
+end
+
+(******************************************************)
+
+module PackageGraph = struct
+
+  module PkgV = struct
+      type t = Cudf.package
+      let compare = CudfAdd.compare
+      let hash = CudfAdd.hash
+      let equal = CudfAdd.equal
+  end
+
+  module G = Imperative.Graph.Concrete(PkgV)
 
   module Display =
     struct

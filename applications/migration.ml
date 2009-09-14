@@ -137,7 +137,7 @@ let main () =
   let tables = Debian.Debcudf.init_tables unionl in
   let universe =
     let l = List.map (Debian.Debcudf.tocudf tables) unionl in
-    Cudf.load l
+    Cudf.load_universe l
   in
 
   let msbin =
@@ -212,7 +212,7 @@ let main () =
     let u =  sl @ unionl in
     let tables = Debcudf.init_tables u in
     let sourcecudf = List.map (Debcudf.tocudf tables) sl in
-    let universe = Cudf.load (List.map (Debcudf.tocudf tables) u) in
+    let universe = Cudf.load_universe (List.map (Debcudf.tocudf tables) u) in
     let solver = Depsolver.init universe in
     let l = ref [] in
     let callback = function

@@ -248,6 +248,7 @@ let parse_vpkgformula parse_vpkg s =
 
 let parse_veqpkglist parse_veqpkg = list_parser ~sep:and_sep_re parse_veqpkg
 
+let progressbar = Util.Progress.create "Debian.Parse.parse_822_iter"
 exception Eof
 (** parse a 822 compliant file.
     @return list of Ipr packages.
@@ -255,13 +256,12 @@ exception Eof
     @param f : filter to be applied to each paragraph 
     @param ExtLib.IO.input channel *)
 let parse_822_iter parse f ch =
-  let progressbar = Util.progress "Debian.Parse.parse_822_iter" in
   let total = 25000 in (* estimate *)
-  let i = ref 0 in
+  Util.Progress.set_total progressbar total;
   let l = ref [] in
   try
     while true do
-      progressbar (incr i ; !i , total) ;
+      Util.Progress.progress progressbar;
       match parse_paragraph ch with
       |None -> raise Eof
       |Some par ->

@@ -86,18 +86,18 @@ END
      |(s,(_,_,_,_,file),_) -> failwith (s ^ " Not supported")
   in
 
-  let progressbar = Util.progress "to cudf" in
-  let timer = Util.Timer.create "Deb-cudf.pkglist" in
   let pkglist =
     let ul = if installed <> [] then (List.unique (l @ installed)) else l in
     let total = List.length ul in
-    let i = ref 0 in
+    let progressbar = Util.Progress.create "to cudf" in
+    Util.Progress.set_total progressbar total ;
+    let timer = Util.Timer.create "Deb-cudf.pkglist" in
     begin
       Util.Timer.start timer;
       let tables = Debian.Debcudf.init_tables ul in
       let res = 
         List.map (fun pkg ->
-          progressbar (incr i ; !i , total) ; 
+          Util.Progress.progress progressbar ; 
           let inst = Hashtbl.mem installed_h
           (pkg.Deb.name,pkg.Deb.version) in
           Debian.Debcudf.tocudf tables ~inst:inst pkg

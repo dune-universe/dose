@@ -15,11 +15,14 @@ open Common
 open Algo
 open Graph
 
+(* enable the progress bar for strongdeps *)
+Common.Util.Progress.enable "Algo.Strongdep.main";;
+Common.Util.Progress.enable "Algo.Strongdep.conj";;
+
 exception Done
 
 module Options = struct
   let confile = ref ""
-  let debug = ref 0
   let dot = ref false
   let info = ref false
   let dump = ref false
@@ -32,13 +35,13 @@ let usage = Printf.sprintf "usage: %s [-options] [cudf doc]" (Sys.argv.(0))
 let options =
   [
    ("--confile",  Arg.String (fun l -> Options.confile := l ), "Specify a configuration file" );
-   ("-d", Arg.Int (fun i -> Options.debug := i), "Turn on debugging info level");
    ("--dot", Arg.Set Options.dot, "Print the graph in dot format");
    ("--src",  Arg.String (fun l -> Options.src := l ), "Specify a list of packages to analyze" );
    ("--dst",  Arg.String (fun l -> Options.dst := l ), "Specify a pivot package" );
    ("--info", Arg.Set Options.info, "Print various aggregate information");
    ("--dump", Arg.Set Options.dump, "Dump the strong dependency graph in graph.marshal");
    ("--pred", Arg.Set Options.strong_pred, "Print strong predecessor (not direct)");
+   ("--debug", Arg.Unit (fun () -> Common.Util.set_verbosity Common.Util.Summary), "Print debug information");
   ]
 
 let and_sep_re = Str.regexp "\\s*;\\s*"
@@ -92,6 +95,7 @@ END
       List.map Debian.Debcudf.tocudf sl
     end
 *)
+(* XXX here I don't want a semantic translation to cudf !!! *)
     |("deb",(_,_,_,_,file),_) -> begin
       let l = Debian.Packages.input_raw [file] in
       let tables = Debian.Debcudf.init_tables l in
@@ -106,7 +110,8 @@ END
   Printf.eprintf "done\n%!" ;
 
   let g = StrongDep.strongdeps pkglist in
-  Defaultgraphs.BidirectionalGraph.D.output_graph stdout g
+  Defaultgraphs.BidirectionalGraph.D.output_graph stdout g;
+  print_newline ()
 
 ;;
 

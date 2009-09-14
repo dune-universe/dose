@@ -10,40 +10,91 @@
 (***************************************************************************************)
 
 open ExtLib
-open Cudf
 open Common
-open Depsolver_int
+open CudfAdd
 
-type solver = Depsolver_int.solver
+type solver = {
+  mdf : Mdf.universe ;
+  solver : Depsolver_int.solver
+}
 
-let init cudf_universe =
-  let (solver,maps) = Depsolver_int.init cudf_universe in
-  { universe = cudf_universe ;
-    maps = maps ;
-    solver = solver 
-  } 
+let load universe =
+  match Cudf_checker.is_consistent universe with
+  |true,None ->
+      let mdf = Mdf.load_from_universe universe in
+      let solver = Depsolver_int.init_solver mdf.Mdf.index in
+      { mdf = mdf ; solver = solver }
+  |false,Some(r) -> begin
+      Printf.eprintf "%s"
+      (Cudf_checker.explain_reason (r :> Cudf_checker.bad_solution_reason)) ;
+      exit(1)
+  end
+  |_,_ -> assert false
 
-let solve s request =
-  Depsolver_int.solve (s.solver,s.maps) request
+let reason maps =
+  List.map (function
+    |Diagnostic_int.Dependency(i,il) ->
+        Diagnostic.Dependency(maps.from_sat i,List.map maps.from_sat il)
+    |Diagnostic_int.EmptyDependency(i,vl) ->
+        Diagnostic.EmptyDependency(maps.from_sat i,vl)
+    |Diagnostic_int.Conflict(i,j) ->
+        Diagnostic.Conflict(maps.from_sat i,maps.from_sat j)
+    |Diagnostic_int.Installed_alternatives(il) ->
+        Diagnostic.Installed_alternatives(List.map maps.from_sat il)
+    |Diagnostic_int.To_install(v,il) ->
+        Diagnostic.To_install(v,List.map maps.from_sat il)
+    |Diagnostic_int.To_remove(v,i) ->
+        Diagnostic.To_remove(v,maps.from_sat i) 
+    |Diagnostic_int.To_upgrade(v,il) ->
+        Diagnostic.To_upgrade(v,List.map maps.from_sat il)
+    |Diagnostic_int.To_upgrade_singleton(v,il) ->
+        Diagnostic.To_upgrade_singleton(v,List.map maps.from_sat il)
+  )
+
+let result maps = function
+  |Diagnostic_int.Success f ->
+      Diagnostic.Success (fun () ->
+        List.map (fun i ->
+          {(maps.from_sat i) with Cudf.installed = true}
+        ) (f ())
+      )
+  |Diagnostic_int.Failure f -> Diagnostic.Failure (fun () -> reason maps (f ()))
+
+let request maps = function
+  |Diagnostic_int.Sng i -> Diagnostic.Package (maps.from_sat i)
+  |Diagnostic_int.Lst il -> Diagnostic.PackageList (List.map maps.from_sat il)
+  |Diagnostic_int.Req i -> Diagnostic.Proxy
+
+let diagnosis maps res req =
+  let result = result maps res in
+  let request = request maps req in
+  { Diagnostic.result = result ; request = request }
 
 let univcheck ?callback s =
-  Depsolver_int.univcheck ?callback (s.solver,s.maps) s.universe
+  let maps = s.mdf.Mdf.maps in
+  match callback with
+  |None -> Depsolver_int.univcheck (s.mdf,s.solver)
+  |Some f ->
+      let callback_int (res,req) = f (diagnosis maps res req) in
+      Depsolver_int.univcheck ~callback:callback_int (s.mdf,s.solver)
 
-let listcheck ?callback s pkglist =
-  Depsolver_int.listcheck ?callback (s.solver,s.maps) pkglist
+let edos_install s pkg =
+  let maps = s.mdf.Mdf.maps in
+  let req = Diagnostic_int.Sng (maps.to_sat pkg) in
+  let res = Depsolver_int.solve s.solver req in
+  diagnosis maps res req
 
-let edos_install s request =
-  Depsolver_int.edos_install (s.solver,s.maps) request
+let edos_coinstall s pkglist =
+  let maps = s.mdf.Mdf.maps in
+  let idlist = List.map (maps.to_sat) pkglist in
+  let req = Diagnostic_int.Lst idlist in
+  let res = Depsolver_int.solve s.solver req in
+  diagnosis maps res req
 
-let edos_coinstall s request_lst =
-  Depsolver_int.edos_coinstall (s.solver,s.maps) request_lst
+let dependency_closure universe pkglist =
+  let mdf = Mdf.load_from_universe universe in
+  let maps = mdf.Mdf.maps in
+  let idlist = List.map maps.to_sat pkglist in
+  let closure = Depsolver_int.dependency_closure mdf.Mdf.index idlist in
+  List.map maps.from_sat closure
 
-let dependency_closure universe l =
-  let maps = Depsolver_int.build_maps universe in
-  Depsolver_int.dependency_closure maps l
-
-let cone universe l =
-  let maps = Depsolver_int.build_maps universe in
-  Depsolver_int.cone maps l
-
-let dump s = Depsolver_int.S.dump s.solver.constraints

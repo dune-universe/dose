@@ -13,109 +13,12 @@
 (* this module respect the cudf semantic. *)
 
 open ExtLib
-open Cudf
 open Common
-open CudfAdd
 
-module R = struct type reason = Diagnostic.reason end
+module R = struct type reason = Diagnostic_int.reason end
 module S = EdosSolver.M(R)
 
-type maps = {
-  (* the sat solver assume a variable ordering.
-   * from_sat and to_sat map packages to integer and viceversa *)
-  to_sat : Cudf.package -> S.var ;
-  from_sat : S.var -> Cudf.package ;
-
-  (* the list of all packages the explicitely or implicitely
-   * conflict with the given package *)
-  who_conflicts : Cudf.package -> Cudf.package list;
-
-  (* the list of all packages that provide the given feature *)
-  who_provides : Cudf_types.vpkg -> Cudf.package list ;
-
-  (* the list of all packages that satisfy the give package 
-   * constraint. If there are no real packages, then the contraint
-   * is interpreted as a feature request as in who_provides *)
-  lookup_packages : Cudf_types.vpkg -> Cudf.package list ;
-
-  maps_size : int
-}
-
-(* XXX the functions who_provides and who_conflict are dupicated in cudfAdd.ml !
- * We maintain a copy here to avoid iterating twice on the package list *)
-let build_maps universe =
-  let size = Cudf.universe_size universe in
-  let backward_table = Hashtbl.create (2 * size) in
-  let forward_table = Cudf_hashtbl.create (2 * size) in
-  let conflicts = Cudf_hashtbl.create (2 * size) in
-  let provides = Hashtbl.create (2 * size) in 
-  let i = ref 0 in
-
-  Cudf.iter_packages (fun pkg ->
-    Cudf_hashtbl.add forward_table pkg !i;
-    Hashtbl.add backward_table !i pkg;
-    incr i;
-
-    List.iter (function
-      |name, None -> Hashtbl.add provides name (pkg, None)
-      |name, Some (_, ver) -> Hashtbl.add provides name (pkg, (Some ver))
-    ) pkg.provides
-  ) universe
-  ;
-
-  let who_provides (pkgname,constr) =
-    List.filter_map (function
-      |pkg, None -> Some(pkg)
-      |pkg, Some v when Cudf.version_matches v constr -> Some(pkg)
-      |_,_ -> None
-    ) (Hashtbl.find_all provides pkgname)
-  in
-
-  let lookup_packages (pkgname,constr) =
-    match Cudf.lookup_packages ~filter:constr universe pkgname with
-    |[] -> who_provides (pkgname,constr)
-    |l -> l
-  in
-
-  (* we need to iterate twice on the package list as we need the
-   * list of all virtual packages in order to generate the conflict list *)
-  Cudf.iter_packages (fun pkg ->
-    List.iter (fun (name,constr) ->
-      List.iter (fun p ->
-        if p <> pkg then begin
-          Cudf_hashtbl.add conflicts pkg p ;
-          Cudf_hashtbl.add conflicts p pkg
-        end
-      ) (lookup_packages (name,constr))
-    ) pkg.conflicts
-  ) universe
-  ;
-
-  let who_conflicts pkg = List.unique ~cmp:Cudf.(=%) (Cudf_hashtbl.find_all conflicts pkg) in
-
-  let to_sat =
-    try Cudf_hashtbl.find forward_table 
-    with Not_found -> assert false
-  in
-
-  let from_sat =
-    try Hashtbl.find backward_table
-    with Not_found -> assert false
-  in
-
-  {
-    to_sat = to_sat ;
-    from_sat = from_sat ;
-    who_conflicts = who_conflicts ;
-    who_provides = who_provides ;
-    lookup_packages = lookup_packages ;
-    maps_size = size;
-  }
-;;
-
-(* XXX these two type declarations are down here to avoid a name clash between
- * the record field conflicts in Cudf.package and in solver_t *)
-type solver_t = {
+type solver = {
   constraints : S.state ;
   size : int ;
   conflicts : int ;
@@ -123,179 +26,181 @@ type solver_t = {
   dependencies : int
 }
 
-type solver = {
-  universe : Cudf.universe ;
-  maps : maps ;
-  solver : solver_t
-}
+let progressbar = Util.Progress.create "Depsolver.init_solver"
 
 (* low level constraint solver initialization
  * @param: buffer : debug buffer to print out debug messages
  * @param: proxy_size : proxy variables. These are additional variables 
  *                      used to encode specific contraint.
+ * @param: idlist : init the solver with a subset of packages id
+ * @param: index : 
  *)
-let init_solver ?(buffer=false) ?(proxy_size=0) (universe,maps) =
-  let size =  maps.maps_size + proxy_size in
-  assert (size >= Cudf.universe_size universe);
-
-  let progressbar = Util.progress "Depsolver.init_solver" in
-  let total = size in
-  let i = ref 0 in
-
+let init_solver ?(buffer=false) ?(proxy_size=0) ?idlist index =
+  let size = (Array.length index) + proxy_size in
   let constraints = S.initialize_problem ~buffer:buffer size in
   let num_conflicts = ref 0 in
   let num_disjunctions = ref 0 in
   let num_dependencies = ref 0 in
 
   (* add dependencies *)
-  let exec_depends pkg =
-    let pkg_id = maps.to_sat pkg in
+  let exec_depends pkg_id pkg =
     let lit = S.lit_of_var pkg_id false in
-    let conjunction =
-      List.map (fun disjunction ->
-        List.fold_left (fun (l1,l2,l3) vpkg ->
-          let dl = maps.lookup_packages vpkg in
-          let el = List.map (fun pkg -> maps.to_sat pkg) dl in
-          (* !!! this dl @ l3 is actually pretty expensive ! *)
-          (vpkg::l1,el @ l2,dl @ l3)
-        ) ([],[],[]) disjunction
-      ) pkg.depends
-    in 
-    List.iter (fun (vpkgs,disjunction,dependencies) ->
-      incr num_dependencies ;
-      if List.length disjunction = 0 then
-        S.add_un_rule constraints lit [Diagnostic.EmptyDependency(pkg,vpkgs)]
+    for i = 0 to (Array.length pkg.Mdf.depends) - 1 do
+      incr num_dependencies;
+      let (vpkg,disjunction,dependencies) = pkg.Mdf.depends.(i) in
+      if Array.length disjunction = 0 then
+        S.add_un_rule constraints lit [Diagnostic_int.EmptyDependency(pkg_id,vpkg)]
       else begin
-        let lit_list =
-          List.map (fun v ->
-            incr num_disjunctions;
-            S.lit_of_var v true
-          ) disjunction
+        let lit_array =
+          let a =
+            Array.map (fun i -> 
+              incr num_disjunctions;
+              S.lit_of_var i true
+            ) disjunction 
+          in
+          Array.append [|lit|] a
         in
-        S.add_rule constraints
-        (Array.of_list (lit :: lit_list))
-        [Diagnostic.Dependency(pkg, dependencies)]
+        S.add_rule constraints lit_array
+        [Diagnostic_int.Dependency(pkg_id,Array.to_list disjunction)]
         ;
-        if List.length disjunction > 1 then 
-          S.associate_vars constraints (S.lit_of_var pkg_id true) disjunction
+        if Array.length disjunction > 1 then
+          S.associate_vars constraints
+          (S.lit_of_var pkg_id true)
+          (Array.to_list disjunction)
       end
-    ) conjunction
+    done
   in
 
   (* add conflicts *)
-  let exec_conflicts pkg =
-    let pkg_id = maps.to_sat pkg in
-    let cl = (maps.who_conflicts pkg) in
-    let conjunction = List.map (fun p -> maps.to_sat p) cl in
-    let x = S.lit_of_var pkg_id false in
-    List.iter2 (fun pkg_id' pkg' ->
-      if pkg_id <> pkg_id' then begin
-        num_conflicts := !num_conflicts + 2;
-        let y = S.lit_of_var pkg_id' false in
-        S.add_bin_rule constraints x y [Diagnostic.Conflict(pkg, pkg')]
+  let exec_conflicts pkg_id1 pkg =
+    let conjunction = pkg.Mdf.conflicts in
+    let x = S.lit_of_var pkg_id1 false in 
+    for i = 0 to (Array.length conjunction) - 1 do
+      let (pkg1, pkg_id2) = conjunction.(i) in
+      if pkg_id1 <> pkg_id2 then begin
+        incr num_conflicts;
+        let y = S.lit_of_var pkg_id2 false in
+        S.add_bin_rule constraints x y [Diagnostic_int.Conflict(pkg_id1, pkg_id2)]
       end
-    ) conjunction cl
+    done
   in
 
-  Cudf.iter_packages (fun pkg ->
-    progressbar (incr i ; !i , total) ;
-    (try exec_depends pkg
-    with Invalid_argument s -> failwith ("init solver  dependes : "^s)); 
-    (try exec_conflicts pkg
-    with Invalid_argument s -> failwith ("init solver conflicts : "^s));
-  ) universe ;
+  begin match idlist with
+  |None -> 
+      for i = 0 to (Array.length index) - 1 do
+        exec_depends i index.(i);
+        exec_conflicts i index.(i); 
+      done
+  |Some(l) ->
+      List.iter (fun i ->
+        exec_depends i index.(i);
+        exec_conflicts i index.(i);
+      ) l
+  end
+  ;
 
   S.propagate constraints ;
 
   {
     constraints = constraints ;
-    size = size ;
+    size = Array.length index ;
     conflicts = !num_conflicts ;
     dependencies = !num_dependencies ;
     disjunctions = !num_disjunctions
   }
 ;;
 
-let init universe =
-  match Cudf_checker.is_consistent universe with
-  |true,None -> 
-      let maps = build_maps universe in
-      let solver = init_solver (universe,maps) in
-      (solver,maps)
-  |false,Some(r) -> begin
-      Printf.eprintf "%s" 
-      (Cudf_checker.explain_reason (r :> Cudf_checker.bad_solution_reason)) ;
-      exit(1)
-  end
-  |_,_ -> assert false
-;;
+let copy_solver solver =
+  { solver with constraints = S.copy solver.constraints }
 
-let solve (solver,maps) request =
+let solve solver request =
   S.reset solver.constraints;
 
-  let result solve collect var =
+  let result solve collect ?(ignore= -1) var =
     if solve solver.constraints var then begin
       let get_assignent () = 
         let l = ref [] in
         Array.iteri(fun i a ->
-          (* all indexes greater then maps_size are proxy variables *)
-          if (i < maps.maps_size) && (a = S.True) then
-            let pkg = (maps.from_sat i) in
-            let pkg = { pkg with installed = true } in
-            l := pkg::!l 
+          if (a = S.True) && (i <> ignore) then l := i::!l 
         ) (S.assignment solver.constraints)
         ;
         !l
       in 
-      Diagnostic.Success(get_assignent)
+      Diagnostic_int.Success(get_assignent)
     end
     else
       let get_reasons () = collect solver.constraints var in
-      Diagnostic.Failure(get_reasons)
+      Diagnostic_int.Failure(get_reasons)
   in
 
   match request with
-    |Diagnostic.Req ->
-        let res = result S.solve S.collect_reasons (maps.maps_size - 1) in
-        { Diagnostic.result = res ; request = request }
-    |Diagnostic.Sng r ->
-        let res = result S.solve S.collect_reasons (maps.to_sat r) in
-        { Diagnostic.result = res ; request = request }
-    |Diagnostic.Lst rl ->
-        let res =
-          result S.solve_lst S.collect_reasons_lst (List.map maps.to_sat rl) in
-        { Diagnostic.result = res ; request = request }
+  |Diagnostic_int.Req i -> result S.solve S.collect_reasons ~ignore:i i
+  |Diagnostic_int.Sng i -> result S.solve S.collect_reasons i
+  |Diagnostic_int.Lst il -> result S.solve_lst S.collect_reasons_lst il
 ;;
 
 (***********************************************************)
-module PKGS = Set.Make(struct type t = Cudf.package let compare = compare end) 
 
-(* everything can end in tears if there is a package in l that was not
- * indexed in maps *)
-let __dependency_closure maps l =
+let dependency_closure index l =
   let queue = Queue.create () in
-  let visited = ref PKGS.empty in
-  List.iter (fun e -> Queue.add e queue) l;
+  let visited = Hashtbl.create 1024 in
+  List.iter (fun e -> Queue.add e queue) (List.unique l);
   while (Queue.length queue > 0) do
-    let root = Queue.take queue in
-    visited := PKGS.add root !visited;
-    List.iter (fun disjunction ->
-      List.iter (fun (pkgname,constr) ->
-        List.iter (fun pkg ->
-          if not (PKGS.mem pkg !visited) then
-            Queue.add pkg queue
-        ) (maps.lookup_packages (pkgname,constr))
-      ) disjunction
-    ) root.depends
+    let id = Queue.take queue in
+    if not(Hashtbl.mem visited id) then begin
+      Hashtbl.add visited id ();
+      Array.iter (fun (_,dsj,_) ->
+        Array.iter (fun i ->
+          if not(Hashtbl.mem visited i) then
+            Queue.add i queue
+        ) dsj
+      ) index.(id).Mdf.depends
+    end
   done ;
-  !visited
+  Hashtbl.fold (fun k _ l -> k::l) visited []
 
-let dependency_closure maps l =
+let pkgcheck callback solver failed tested id =
   try
-    let s = __dependency_closure maps l in
-    PKGS.elements s
-  with _ -> failwith "dependency closure"
+    if not(tested.(id)) then begin
+      let req = Diagnostic_int.Sng id in
+      let res = solve solver req in
+      begin match res with
+      |Diagnostic_int.Success(f) -> 
+          begin try List.iter (fun i -> tested.(i) <- true) (f ())
+          with Not_found -> assert false end
+      |_ -> incr failed
+      end
+      ;
+      match callback with
+      |None -> ()
+      |Some f -> f (res,req)
+    end
+  with Not_found -> assert false
 
+let listcheck ?callback idlist mdf =
+  let solver = init_solver ~idlist mdf.Mdf.index in
+  let timer = Util.Timer.create "Algo.Depsolver.listcheck" in
+  Util.Timer.start timer;
+  let failed = ref 0 in
+  let tested = Array.make (Array.length mdf.Mdf.index) false in
+  let check = pkgcheck callback solver failed tested in
+  List.iter check idlist ;
+  Util.Timer.stop timer !failed
+;;
+
+let univcheck ?callback (mdf,solver) =
+  let timer = Util.Timer.create "Algo.Depsolver.univcheck" in
+  Util.Timer.start timer;
+  let failed = ref 0 in
+  let tested = Array.make (Array.length mdf.Mdf.index) false in
+  let check = pkgcheck callback solver failed tested in
+  for i = 0 to (Array.length mdf.Mdf.index) - 1 do check i done;
+  Util.Timer.stop timer !failed
+;;
+
+(************************************************)
+
+(*
 let __conflict_closure maps l =
   List.fold_left (fun acc pkg ->
     let l = maps.who_conflicts pkg in
@@ -322,41 +227,5 @@ let cone maps l =
 
 (***********************************************************)
 
-let edos_install (solver,maps) request = solve (solver,maps) (Diagnostic.Sng request) ;;
-let edos_coinstall (solver,maps) request_lst = solve (solver,maps) (Diagnostic.Lst request_lst) ;;
 
-let pkgcheck callback (solver,maps) failed tested pkg =
-  try
-  if not(tested.(maps.to_sat pkg)) then begin
-    let r = edos_install (solver,maps) pkg in
-    begin match r with
-    |{ Diagnostic.result = Diagnostic.Success(l) } -> 
-        begin try List.iter (fun i -> tested.(maps.to_sat i) <- true) (l ())
-        with Not_found -> assert false end
-    |_ -> incr failed
-    end
-    ;
-    match callback with
-    |None -> ()
-    |Some f -> f r
-  end
-  else if tested.(maps.to_sat pkg) then ()
-  else assert false
-  with Not_found -> ()
-
-let __setcheck callback (solver,maps) universe iter =
-  let timer = Util.Timer.create "Algo.Depsolver" in
-  Util.Timer.start timer;
-  let failed = ref 0 in
-  let tested = Array.make maps.maps_size false in
-  let check = pkgcheck callback (solver,maps) failed tested in
-  iter check universe ;
-  Util.Timer.stop timer !failed
-;;
-
-(* callback : Diagnostic.result -> unit *)
-let univcheck ?callback (solver,maps) universe =
-  __setcheck callback (solver,maps) universe Cudf.iter_packages
-
-let listcheck ?callback (solver,maps) pkglist =
-  __setcheck callback (solver,maps) pkglist List.iter
+*)

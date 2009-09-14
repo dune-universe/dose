@@ -10,10 +10,14 @@
 (***************************************************************************************)
 
 open ExtLib
-open Cudf
 open Depsolver_int
+open Common
+open CudfAdd
 
-type solver = Depsolver_int.solver
+type solver = {
+  mdf : Mdf.universe ;
+  solver : Depsolver_int.solver
+}
 
 (*
      - A package that is installed can be replaced by the same package with a
@@ -22,126 +26,163 @@ type solver = Depsolver_int.solver
        functionalities specified via provides
 *)
 
-let installed (cudf_universe,maps) =
-  Cudf.fold_packages (fun ll pkg ->
-    if pkg.installed then
+let installed mdf =
+  let maps = mdf.Mdf.maps in
+  let index = mdf.Mdf.index in
+  Array.fold_left (fun ll i ->
+    let pkg = i.Mdf.pkg in
+    if pkg.Cudf.installed then
       let pl1 = List.fold_left (fun l vpkg ->
-        l @ (maps.who_provides (vpkg :> Cudf_types.vpkg))
-        ) [] pkg.provides
+        (maps.who_provides (vpkg :> Cudf_types.vpkg)) @ l
+        ) [] pkg.Cudf.provides
       in
-      let pl2 = maps.lookup_packages (pkg.package,None) in
-      let pl = List.unique (pl1 @ pl2) in
+      let pl2 = maps.lookup_packages (pkg.Cudf.package,None) in
+      let pl = List.map maps.to_sat (List.unique (pl1 @ pl2)) in
       if pl <> [] then pl :: ll else ll
     else ll
-  ) [] cudf_universe
+  ) [] index
 
-let __init (cudf_universe,solver,maps)  = 
+let __init installed solver mdf = 
   let add l exp = S.add_rule solver.constraints (Array.of_list l) exp in
-  let proxy_var = maps.maps_size - 1 in
+  let proxy_var = mdf.Mdf.maps.size in
   let proxy_lit = S.lit_of_var proxy_var false in
-  let installed = installed (cudf_universe,maps) in
-
   List.iter (fun l ->
-    let lit_pos_list = List.map (fun pkg -> S.lit_of_var (maps.to_sat pkg) true) l in
-    add (proxy_lit :: lit_pos_list) [Diagnostic.Installed_alternatives l]
+    let lit_pos_list = List.map (fun id -> S.lit_of_var id true) l in
+    add (proxy_lit :: lit_pos_list) [Diagnostic_int.Installed_alternatives l]
   ) installed
   ;
-
-  { solver = solver; maps = maps; universe = cudf_universe }
+  solver
 ;;
 
-let __prepare (cudf_universe,solver,maps) request =
+let __prepare request solver mdf =
   let add l exp = S.add_rule solver.constraints (Array.of_list l) exp in
-  let proxy_var = maps.maps_size - 1 in
-
+  let proxy_var = mdf.Mdf.maps.size in
   let proxy_lit = S.lit_of_var proxy_var false in
 
   List.iter (fun vpkg ->
-    let alternatives = maps.lookup_packages vpkg in
-    let lit_pos_list =
-      List.map (fun pkg -> S.lit_of_var (maps.to_sat pkg) true) alternatives
-    in
-    add (proxy_lit :: lit_pos_list) [Diagnostic.To_install (vpkg, alternatives)];
-  ) request.install
+    let alternatives = List.map mdf.Mdf.maps.to_sat (mdf.Mdf.maps.lookup_packages vpkg) in
+    (* let l = (mdf.Mdf.maps.lookup_packages vpkg) in
+       Printf.printf "%s -> %s\n%!" (Cudf_types.string_of_vpkg vpkg) (String.concat ", " (List.map CudfAdd.print_package l)) ; *)
+    let lit_pos_list = List.map (fun id -> S.lit_of_var id true) alternatives in
+    add (proxy_lit :: lit_pos_list) [Diagnostic_int.To_install (vpkg, alternatives)];
+  ) request.Cudf.install
   ;
 
   List.iter (fun vpkg ->
-    let alternatives = maps.lookup_packages vpkg in
-    let lit_pos_list =
-      List.map (fun pkg -> S.lit_of_var (maps.to_sat pkg) true) alternatives
-    in
-    let lit_neg_list =
-      List.map (fun pkg -> S.lit_of_var (maps.to_sat pkg) false) alternatives
-    in
-    add (proxy_lit :: lit_pos_list) [Diagnostic.To_upgrade (vpkg, alternatives)];
-    if (List.length alternatives) > 1 then begin
-      add (proxy_lit :: lit_neg_list) [Diagnostic.To_upgrade_singleton (vpkg,alternatives)];
-    end ;
-  ) request.upgrade
+    let alternatives = List.map mdf.Mdf.maps.to_sat (mdf.Mdf.maps.lookup_packages vpkg) in
+    let lit_pos_list = List.map (fun id -> S.lit_of_var id true) alternatives in
+    add (proxy_lit :: lit_pos_list) [Diagnostic_int.To_upgrade (vpkg, alternatives)];
+    if (List.length alternatives) > 1 then
+      let lit_neg_list = List.map (fun id -> S.lit_of_var id false) alternatives in
+      add (proxy_lit :: lit_neg_list) [Diagnostic_int.To_upgrade_singleton (vpkg,alternatives)];
+  ) request.Cudf.upgrade
   ;
 
   List.iter (fun vpkg ->
-    List.iter (fun pkg ->
-      let lit = S.lit_of_var (maps.to_sat pkg) false in
-      S.add_bin_rule solver.constraints proxy_lit lit [Diagnostic.To_remove (vpkg,pkg)];
-    ) (maps.lookup_packages vpkg)
-  ) request.remove
+    let alternatives = List.map mdf.Mdf.maps.to_sat (mdf.Mdf.maps.lookup_packages vpkg) in
+    List.iter (fun id ->
+      let lit = S.lit_of_var id false in
+      S.add_bin_rule solver.constraints proxy_lit lit [Diagnostic_int.To_remove (vpkg,id)];
+    ) alternatives
+  ) request.Cudf.remove
   ;
 
-  { solver = solver; maps = maps; universe = cudf_universe }
+  solver
 ;;
 
-let reinit s request =
-  let solver = Depsolver_int.init_solver ~buffer:false ~proxy_size:1 (s.universe,s.maps) in
-  let s1 = __init (s.universe,solver,s.maps) in
-  let cudf_universe = s1.universe in
-  let solver = s1.solver in
-  let maps = s1.maps in
-  __prepare (cudf_universe,solver,maps) request
-
-(* return a new universe where I don't need to recompute the maps
- * as I know that it is a subset of the old universe *)
-let reduce s request =
-  let alternatives l =
-    List.flatten (List.map (fun vpkg -> s.maps.lookup_packages vpkg) l )
-  in
-  let l = 
-    ( alternatives request.install ) @
-    ( alternatives request.upgrade ) @
-    ( alternatives request.remove )
-  in
-  let installed = List.flatten (installed (s.universe,s.maps)) in
-  let u = Depsolver_int.dependency_closure s.maps (installed @ l) in
-  reinit {s with universe = Cudf.load u} request
+let load universe =
+  match Cudf_checker.is_consistent universe with
+  |true,None ->
+      let mdf = Mdf.load_from_universe universe in
+      let solver = Depsolver_int.init_solver mdf.Mdf.index in
+      { mdf = mdf; solver = solver }
+  |false,Some(r) -> begin
+      Printf.eprintf "%s"
+      (Cudf_checker.explain_reason (r :> Cudf_checker.bad_solution_reason)) ;
+      exit(1)
+  end
+  |_,_ -> assert false
 
 (* here we don't make any assumption to the freshness of the package that
-   is going to be installed, upgraded or removed. The use should specify it
+   is going to be installed, upgraded or removed. The user should specify it
    as a constraint in the request *)
-let init ?(buffer=false) cudf_universe request =
-  let maps = Depsolver_int.build_maps cudf_universe in
-  let alternatives l =
-    List.flatten (List.map (fun vpkg -> maps.lookup_packages vpkg) l )
+let init ?(buffer=false) universe request =
+  let mdf = Mdf.load_from_universe universe in
+  let alternatives vpkglist =
+    List.map (fun vpkg -> 
+      List.map mdf.Mdf.maps.to_sat (mdf.Mdf.maps.lookup_packages vpkg)
+    ) vpkglist
   in
-  let l = 
-    ( alternatives request.install ) @
-    ( alternatives request.upgrade ) @
-    ( alternatives request.remove )
+
+  let l_install = alternatives request.Cudf.install in
+  let l_upgrade = alternatives request.Cudf.upgrade in
+  let l_remove = alternatives request.Cudf.remove in
+  let l_request = (l_install @ l_upgrade @ l_remove ) in
+  let l_installed = installed mdf in
+  let idlist = List.flatten (l_request @ l_installed) in
+  let closure = Depsolver_int.dependency_closure mdf.Mdf.index idlist in
+  let solver = Depsolver_int.init_solver
+      ~buffer:buffer
+      ~proxy_size:1
+      ~idlist:closure
+      mdf.Mdf.index 
   in
-  let installed = List.flatten (installed (cudf_universe,maps)) in
-  let u = Depsolver_int.dependency_closure maps (installed @ l) in
-  let cudf_universe = Cudf.load u in
-  let maps = Depsolver_int.build_maps cudf_universe in
-  let solver = Depsolver_int.init_solver ~buffer:buffer ~proxy_size:1 (cudf_universe,maps) in
-  let s = __init (cudf_universe,solver,maps) in
-  let cudf_universe = s.universe in
-  let solver = s.solver in
-  let maps = s.maps in
-  __prepare (cudf_universe,solver,maps) request
+  let solver = __init l_installed solver mdf in
+  let solver = __prepare request solver mdf in
+  { mdf = mdf; solver = solver }
+
+let reason maps =
+  List.map (function
+    |Diagnostic_int.Dependency(i,il) ->
+        Diagnostic.Dependency(maps.from_sat i,List.map maps.from_sat il)
+    |Diagnostic_int.EmptyDependency(i,vl) ->
+        Diagnostic.EmptyDependency(maps.from_sat i,vl)
+    |Diagnostic_int.Conflict(i,j) ->
+        Diagnostic.Conflict(maps.from_sat i,maps.from_sat j)
+    |Diagnostic_int.Installed_alternatives(il) ->
+        Diagnostic.Installed_alternatives(List.map maps.from_sat il)
+    |Diagnostic_int.To_install(v,il) ->
+        Diagnostic.To_install(v,List.map maps.from_sat il)
+    |Diagnostic_int.To_remove(v,i) ->
+        Diagnostic.To_remove(v,maps.from_sat i)
+    |Diagnostic_int.To_upgrade(v,il) ->
+        Diagnostic.To_upgrade(v,List.map maps.from_sat il)
+    |Diagnostic_int.To_upgrade_singleton(v,il) ->
+        Diagnostic.To_upgrade_singleton(v,List.map maps.from_sat il)
+  )
+
+let result maps = function
+  |Diagnostic_int.Success f ->
+      Diagnostic.Success (fun () ->
+        List.map (fun i ->
+          {(maps.from_sat i) with Cudf.installed = true}
+        ) (f ())
+      )
+  |Diagnostic_int.Failure f -> Diagnostic.Failure (fun () -> reason maps (f ()))
+
+let request maps = function
+  |Diagnostic_int.Sng i -> Diagnostic.Package (maps.from_sat i)
+  |Diagnostic_int.Lst il -> Diagnostic.PackageList (List.map maps.from_sat il)
+  |Diagnostic_int.Req i -> Diagnostic.Proxy
+
+let diagnosis maps res req =
+  let result = result maps res in
+  let request = request maps req in
+  { Diagnostic.result = result ; request = request }
 
 let solve s =
-  let solver = s.solver in
-  let maps = s.maps in
-  Depsolver_int.solve (solver,maps) (Diagnostic.Req)
+  let maps = s.mdf.Mdf.maps in
+  let proxy_var = s.mdf.Mdf.maps.size in
+  let req = Diagnostic_int.Req(proxy_var) in
+  let res = Depsolver_int.solve s.solver req in
+  diagnosis maps res req
 
 let dump s =
   Depsolver_int.S.dump s.solver.constraints
+(*
+   let s = Depsolver_int.S.dump s.solver.constraints in
+  let input = IO.input_string s in
+  while true do
+    let line = IO.read_line input in
+    Str.split (
+      *)

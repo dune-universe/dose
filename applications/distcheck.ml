@@ -80,13 +80,13 @@ END
 
   let timer = Util.Timer.create "Init solver" in
   Util.Timer.start timer;
-  let solver = Depsolver.init universe in
+  let solver = Depsolver.load universe in
   ignore(Util.Timer.stop timer ());
 
   let result_printer = function
     |{Diagnostic.result = Diagnostic.Failure (_) } when !Options.show_successes -> ()
     |{Diagnostic.result = Diagnostic.Failure (_) } as r ->
-          Diagnostic.print ~explain:!Options.explain_results stdout r 
+          Diagnostic.print ~explain:!Options.explain_results stdout r
     |r when !Options.show_failures -> ()
     |r -> Diagnostic.print ~explain:!Options.explain_results stdout r
   in

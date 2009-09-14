@@ -17,7 +17,7 @@ val set_verbosity: verbosity -> unit
     @param ppf
     @param label 
     @param (percentage * total) *)
-val progress : ?v:verbosity -> string -> int * int -> unit
+(* val progress : ?v:verbosity -> string -> int * int -> unit *)
 
 val print_warning : ?ppf:Format.formatter -> ?v:verbosity -> string -> unit
 val print_info : ?ppf:Format.formatter -> ?v:verbosity -> string -> unit
@@ -26,24 +26,38 @@ val print_info : ?ppf:Format.formatter -> ?v:verbosity -> string -> unit
 
 val gettimeofday: (unit -> float) ref
 
-(** set the default verbosity of the logger *)
+(** add a logger *)
 val register: verbosity -> (Format.formatter -> unit) -> unit
 
-(** dump the content of the logger to the given formatter *)
+(** dump the content of all registered loggers to the given formatter *)
 val dump: Format.formatter -> unit
 
+module Progress: sig
+  type t
+    
+  val create: string -> t
+  val progress : t -> unit
+  val enable : string -> unit
+  val set_total : t -> int -> unit
+  val avalaible : unit -> string list
+end
+
+(** counter logger *)
 module Counter: sig
   type t
     
+  (** [create s] create and register a new logger named [s] *)
   val create: string -> t
   val incr: t -> unit
   val add: t -> int -> unit
   val print: Format.formatter -> t -> unit
 end
 
+(** timer logger *)
 module Timer: sig
   type t
     
+  (** [create s] create and register a new logger named [s] *)
   val create: string -> t
   val start: t -> unit
   val stop: t -> 'a -> 'a

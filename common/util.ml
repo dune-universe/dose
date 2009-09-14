@@ -15,28 +15,6 @@ type verbosity = Quiet | Summary | Details
 let verbosity = ref Quiet
 let set_verbosity = (:=) verbosity
 
-let progress ?(v=Summary) label =
-  let columns = 75 in
-  let full = " %%100.0\n" in
-  let rotate = "|/-\\" in
-  let rotation = ref 0 in
-  let b = Buffer.create columns in
-  fun (perc,total) -> begin
-    Buffer.clear b;
-    Buffer.add_char b '\r';
-    Buffer.add_string b label;
-    let f = floor (1000.0 *. (float perc) /. (float total)) in
-    let f = f /. 10.0 in
-    if f = 100.0 then Buffer.add_string b full
-    else begin
-      rotation := (1 + !rotation) land 3;
-      Printf.bprintf b "%c %%%4.1f" rotate.[!rotation] f
-    end ;
-    if v <= !verbosity then
-      Format.fprintf Format.err_formatter "%s" (Buffer.contents b)
-    else ()
-  end
-
 let rec unescape s =
   let hex_re = Str.regexp "%[0-9a-f][0-9a-f]" in
   let un s =
@@ -46,7 +24,6 @@ let rec unescape s =
     String.make 1 (Char.chr n)
   in
   Str.global_substitute hex_re un s
-
 
 let print ppf v label s =
   if v <= !verbosity then
@@ -62,14 +39,95 @@ let gettimeofday = ref (fun _ -> 0.)
 
 let () = gettimeofday := Unix.gettimeofday
 
-let todo = ref []
+let loggers = ref []
 
-let register level f = todo := (level,f) :: !todo
+let register level f = loggers := (level,f) :: !loggers
 
 let dump ppf =
   List.iter (function
-         | (level,f) when level <= !verbosity -> f ppf
-         | _ -> ()) !todo
+    |(level,f) when level <= !verbosity -> f ppf
+    |_ -> ()
+  ) !loggers
+
+(*
+let progress ?(v=Summary) label =
+  let columns = 75 in
+  let full = " %%100.0\n" in
+  let rotate = "|/-\\" in
+  let rotation = ref 0 in
+  let b = Buffer.create columns in
+  fun (perc,total) -> begin
+    if v <= !verbosity then begin
+      Buffer.clear b;
+      Buffer.add_char b '\r';
+      Buffer.add_string b label;
+      let f = floor (1000.0 *. (float perc) /. (float total)) in
+      let f = f /. 10.0 in
+      if f = 100.0 then Buffer.add_string b full
+      else begin
+        rotation := (1 + !rotation) land 3;
+        Printf.bprintf b "%c %%%4.1f" rotate.[!rotation] f
+      end ;
+      Format.fprintf Format.err_formatter "%s" (Buffer.contents b)
+    end
+    else ()
+  end
+*)
+
+module Progress = struct
+  type t = {
+    name : string ;
+    buffer : Buffer.t ;
+    mutable total : int ;
+    mutable perc : int ;
+    mutable rotation : int ;
+    mutable enabled : bool ;
+  }
+
+  let columns = 75 
+  let full = " %%100.0\n" 
+  let rotate = "|/-\\"
+  let bars = ref []
+
+  let create s =
+    let c = {
+      name = s;
+      buffer = Buffer.create columns ;
+      total = 0 ;
+      perc = 0 ;
+      rotation = 0 ;
+      enabled = false }
+    in
+    bars := (s,c)::!bars ;
+    c
+
+  let enable s =
+    try
+      let (_,c) = List.find (fun (n,_) -> s = n) !bars in
+      c.enabled <- true
+    with Not_found -> Printf.eprintf "Warning: Progress bar %s not found\n" s
+
+  let set_total c total = c.total <- total
+
+  let progress c =
+    if c.enabled then begin
+      c.perc <- c.perc + 1;
+      Buffer.clear c.buffer;
+      Buffer.add_char c.buffer '\r';
+      Buffer.add_string c.buffer c.name;
+      let f = floor (1000.0 *. (float c.perc) /. (float c.total)) in
+      let f = f /. 10.0 in
+      if f = 100.0 then Buffer.add_string c.buffer full
+      else begin
+        c.rotation <- (1 + c.rotation) land 3;
+        Printf.bprintf c.buffer "%c %%%4.1f%!" rotate.[c.rotation] f
+      end ;
+      Format.fprintf Format.err_formatter "%s%!" (Buffer.contents c.buffer)
+    end
+
+  let avalaible () = List.map (fun (n,_) -> n) !bars
+
+end
 
 module Timer = struct
   type t = {

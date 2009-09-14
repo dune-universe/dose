@@ -1,14 +1,17 @@
 
+
+------- OUTDATED ------------------
+
 the library builds a pipeline as follows :
 
              inputs      cudf++     outputs
 
-deb  | (ipr)
-rpm  | (ipr)                                 | ??
+deb  | 
+rpm  |                                       | ??
      | --------------> (algo) ----------->   | dot
-db   | (idbr)                                | dimacs
+db   |                                       | dimacs
      |
-cudf | (native)
+cudf |
 
 
 this pipeline is build around the folowing components :

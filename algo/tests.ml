@@ -13,7 +13,8 @@ open ExtLib
 open OUnit
 open Cudf
 
-open Algo
+open Common
+
 module S = Set.Make(struct type t = Cudf.package let compare = compare end)
 
 let f_legacy = "tests/legacy.cudf"
@@ -28,12 +29,11 @@ let f_strongdeps_conj = "tests/strongdep-conj.cudf"
 
 let (universe,request) =
   let (_,univ,request) = Cudf_parser.parse_from_file f_legacy in
-  (Cudf.load univ,Option.get request)
+  (Cudf.load_universe univ,Option.get request)
 
 let toset f = 
   let (_,pl,_) = Cudf_parser.parse_from_file f in
   List.fold_right S.add pl S.empty
-
 
 let dependency_set = toset f_dependency
 let cone_set = toset f_cone
@@ -44,27 +44,14 @@ let car = Cudf.lookup_package universe ("car",1)
 let electric_engine1 = Cudf.lookup_package universe ("electric-engine",1)
 let electric_engine2 = Cudf.lookup_package universe ("electric-engine",2)
 
-let test_maps =
-  "who_conflict" >:: (fun _ ->
-    let maps = Depsolver_int.build_maps universe in
-    let l = maps.Depsolver_int.who_conflicts electric_engine2 in
-    let set = List.fold_right S.add l S.empty in
-    assert_equal true (S.equal engine_conflicts_set set)
-  )
-
-let test_depsolver_int = 
-  "depsolver_int" >::: [
-    test_maps
-  ]
-
-let solver = Depsolver.init universe ;;
+let solver = Depsolver.load universe ;;
 
 let test_install =
   "install" >:: (fun _ ->
     let d = Depsolver.edos_install solver bicycle in
     match d.Diagnostic.result with
-    |Diagnostic.Success f -> assert_bool "pass" true
-    |Diagnostic.Failure f -> assert_failure "fail"
+    |Diagnostic.Success _ -> assert_bool "pass" true
+    |Diagnostic.Failure _ -> assert_failure "fail"
   )
 
 let test_coinstall = 
@@ -80,9 +67,9 @@ let test_distribcheck =
     let f_debian = "tests/debian.cudf" in
     let universe =
       let (_,pl,_) = Cudf_parser.parse_from_file f_debian in
-      Cudf.load pl
+      Cudf.load_universe pl
     in
-    let solver = Depsolver.init universe in
+    let solver = Depsolver.load universe in
     let i = Depsolver.univcheck solver in
     assert_equal 425 i
   ) 
@@ -90,15 +77,9 @@ let test_distribcheck =
 let test_dependency_closure = 
   "dependency closure" >:: (fun _ -> 
     let l = Depsolver.dependency_closure universe [car] in
+    (* List.iter (fun pkg -> print_endline (CudfAdd.print_package pkg)) l; *)
     let set = List.fold_right S.add l S.empty in
     assert_equal true (S.equal dependency_set set)
-  )
-
-let test_cone = 
-  "package cone" >:: (fun _ -> 
-    let l = Depsolver.cone universe [car] in
-    let set = List.fold_right S.add l S.empty in
-    assert_equal true (S.equal cone_set set)
   )
 
 let test_depsolver =
@@ -107,32 +88,30 @@ let test_depsolver =
     test_coinstall ;
     test_distribcheck ;
     test_dependency_closure ;
-    test_cone ;
   ]
 
 let solution_set =
   let (_,pl,_) = Cudf_parser.parse_from_file f_legacy_sol in
   List.fold_right S.add pl S.empty
 
-let solver = Cudfsolver.init universe request ;;
-
 let solve_same_legacy =
   "solve legacy (same solution)" >:: (fun _ ->
+    let solver = Cudfsolver.init ~buffer:true universe request in
     let d = Cudfsolver.solve solver in
     match d.Diagnostic.result with
-    |Diagnostic.Success f -> (
+    |Diagnostic.Success f ->
         let set = List.fold_right S.add (f ()) S.empty in
         assert_equal true (S.equal solution_set set)
-    )
     |Diagnostic.Failure f -> assert_failure "fail"
   )
 
 let solve_any_legacy =
   "solve legacy (any solution)" >:: (fun _ ->
+    let solver = Cudfsolver.init universe request in
     let d = Cudfsolver.solve solver in
     match d.Diagnostic.result with
     |Diagnostic.Success f ->
-        let sol = Cudf.load (f ()) in
+        let sol = Cudf.load_universe (f ()) in
         let cudf = (universe,request) in
         assert_equal (true,[]) (Cudf_checker.is_solution cudf sol) 
     |Diagnostic.Failure f -> assert_failure "fail"
@@ -140,22 +119,24 @@ let solve_any_legacy =
 
 let test_cudfsolver = 
   "cudf solver" >::: [
+    solve_any_legacy ;
     solve_same_legacy ;
-    solve_any_legacy
   ]
 
+(*
 let test_strong file edge_list =
-  let module G = Defaultgraphs.BidirectionalGraph.G in
+  let module DG = Defaultgraphs.MatrixGraph(struct let pr i = "" end) in
+  let module G = DG.G in
   let module StrongDep = Strongdeps.Make(G) in
   let (_,pkglist,_) = Cudf_parser.parse_from_file file in
-  let u = Cudf.load pkglist in
+  let u = Cudf.load_universe pkglist in
   let g = StrongDep.strongdeps pkglist in
   let l = List.map (fun (v,z) ->
       (Cudf.lookup_package u v,Cudf.lookup_package u z)
     ) edge_list
   in
   G.iter_edges (fun v z ->
-    if not(List.exists (fun (p,q) -> (Cudf.(=%) v p) && (Cudf.(=%) z q)) l)
+    if not(List.exists (fun (p,q) -> (v = p) && (z = q)) l)
     then assert_failure "fail"
   ) g
   ;
@@ -219,13 +200,12 @@ let test_strongdep =
     strongdep_cycle ;
   (*  strongdep_conj  XXX *)
   ]
+*)
 
 let all = 
   "all tests" >::: [
-    test_depsolver_int ;
-    test_depsolver ;
+    (* test_depsolver ; *)
     test_cudfsolver ;
-    test_strongdep
   ]
 
 let main () =

@@ -12,20 +12,37 @@
 open Cudf
 open Cudf_types
 
+let print_package ?(short=true) pkg =
+  if short then
+    let (sp,sv) =
+      try (pkg.package,Cudf.lookup_package_property pkg "Number")
+      with Not_found -> (pkg.package,string_of_int pkg.version)
+    in Printf.sprintf "%s (= %s)" sp sv
+  else
+    Cudf_printer.string_of_package pkg
+
 (* I want to hash packages by name/version without considering
    other fields like Installed / keep / etc.
 *)
+let compare x y =
+  Pervasives.compare
+  (x.Cudf.package,x.Cudf.version)
+  (y.Cudf.package,y.Cudf.version)
+let hash p = Hashtbl.hash (p.Cudf.package,p.Cudf.version)
+let equal = Cudf.(=%)
+
+
 module Cudf_hashtbl =
   Hashtbl.Make(struct
     type t = Cudf.package
-    let equal = Cudf.(=%)
-    let hash pkg = Hashtbl.hash (pkg.Cudf.package, pkg.Cudf.version)
+    let equal = equal
+    let hash = hash
   end)
 
 module Cudf_set =
   Set.Make(struct
     type t = Cudf.package
-    let compare x y = if Cudf.(=%) x y then 0 else -1
+    let compare = compare
   end)
 
 open ExtLib
@@ -68,48 +85,93 @@ let load_cudf doc =
  * *)
 
 type maps = {
+  (* the sat solver assume a variable ordering.
+   * from_sat and to_sat map packages to integer and viceversa *)
+  to_sat : Cudf.package -> int ;
+  from_sat : int -> Cudf.package ;
+
+  (* the list of all packages the explicitely or implicitely
+   * conflict with the given package *)
   who_conflicts : Cudf.package -> Cudf.package list;
-  who_provides : Cudf_types.vpkg -> Cudf.package list
+
+  (* the list of all packages that provide the given feature *)
+  who_provides : Cudf_types.vpkg -> Cudf.package list ;
+
+  (* the list of all packages that satisfy the give package 
+   * constraint. If there are no real packages, then the contraint
+   * is interpreted as a feature request as in who_provides *)
+  lookup_packages : Cudf_types.vpkg -> Cudf.package list ;
+
+  size : int
 }
 
 let build_maps universe =
   let size = Cudf.universe_size universe in
-  let conflicts = Hashtbl.create (2 * size) in
+  let backward_table = Hashtbl.create (2 * size) in
+  let forward_table = Cudf_hashtbl.create (2 * size) in
+  let conflicts = Cudf_hashtbl.create (2 * size) in
   let provides = Hashtbl.create (2 * size) in
+  let i = ref 0 in
+
   Cudf.iter_packages (fun pkg ->
+    Cudf_hashtbl.add forward_table pkg !i;
+    Hashtbl.add backward_table !i pkg;
+    incr i;
+
     List.iter (function
       |name, None -> Hashtbl.add provides name (pkg, None)
       |name, Some (_, ver) -> Hashtbl.add provides name (pkg, (Some ver))
     ) pkg.provides
   ) universe
-
   ;
 
   let who_provides (pkgname,constr) =
+    List.filter_map (function
+      |pkg, None -> Some(pkg)
+      |pkg, Some v when Cudf.version_matches v constr -> Some(pkg)
+      |_,_ -> None
+    ) (Hashtbl.find_all provides pkgname)
+  in
+
+  let lookup_packages (pkgname,constr) =
     match Cudf.lookup_packages ~filter:constr universe pkgname with
-    |[] ->
-        List.filter_map (function
-          |pkg, None -> Some(pkg)
-          |pkg, Some v when Cudf.version_matches v constr -> Some(pkg)
-          |_,_ -> None
-        ) (Hashtbl.find_all provides pkgname)
+    |[] -> who_provides (pkgname,constr)
     |l -> l
   in
 
+  (* we need to iterate twice on the package list as we need the
+   * list of all virtual packages in order to generate the conflict list *)
   Cudf.iter_packages (fun pkg ->
     List.iter (fun (name,constr) ->
       List.iter (fun p ->
-        Hashtbl.add conflicts pkg p ;
-        Hashtbl.add conflicts p pkg
-      ) (who_provides (name,constr))
+        if p <> pkg then begin
+          Cudf_hashtbl.add conflicts pkg p ;
+          Cudf_hashtbl.add conflicts p pkg
+        end
+      ) (lookup_packages (name,constr))
     ) pkg.conflicts
   ) universe
   ;
 
-  let who_conflicts pkg = List.unique (Hashtbl.find_all conflicts pkg) in
+  let who_conflicts pkg = List.unique ~cmp:equal (Cudf_hashtbl.find_all conflicts pkg) in
+
+  let to_sat =
+    try Cudf_hashtbl.find forward_table
+    with Not_found -> assert false
+  in
+
+  let from_sat =
+    try Hashtbl.find backward_table
+    with Not_found -> assert false
+  in
 
   {
+    to_sat = to_sat ;
+    from_sat = from_sat ;
     who_conflicts = who_conflicts ;
     who_provides = who_provides ;
+    lookup_packages = lookup_packages ;
+    size = size;
   }
+;;
 

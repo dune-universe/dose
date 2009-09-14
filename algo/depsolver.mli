@@ -13,10 +13,7 @@
 type solver
 
 (** initialize the solver and indexes *)
-val init : Cudf.universe -> solver
-
-(** Low-level : run the solver to satisfy the given request *)
-val solve : solver -> Diagnostic.request -> Diagnostic.diagnosis
+val load : Cudf.universe -> solver
 
 (** check if the given package can be installed in the universe *)
 val edos_install : solver -> Cudf.package -> Diagnostic.diagnosis
@@ -37,15 +34,17 @@ val univcheck : ?callback:(Diagnostic.diagnosis -> unit) -> solver -> int
  * @return the number of broken packages
  * Invariant : l is a subset of universe
  *)
+(*
 val listcheck :
   ?callback:(Diagnostic.diagnosis -> unit) -> solver -> Cudf.package list -> int
-
+*)
 (** [dependency_closure universe l] compute the dependencies closure 
  * of the give package list. Invariant : l is a subset of universe *)
 val dependency_closure : Cudf.universe -> Cudf.package list -> Cudf.package list
-
+(*
 (** [cone universe l] compute the dependency closure of [l] union the set
  * of conflicts with each package in [l] *)
 val cone : Cudf.universe -> Cudf.package list -> Cudf.package list
 
 val dump : solver -> string
+*)
