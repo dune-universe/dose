@@ -54,6 +54,8 @@ module type T = sig
   (* [assignment] return the array of values associated to every variable *)
   val assignment : state -> value array
 
+  val positive : state -> var list
+
   (** [add_un_rule] gets that state of the solver, a literal and 
       reasons to return in case this clause was involved in a clash. 
      *)

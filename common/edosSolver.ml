@@ -37,6 +37,7 @@ module type T = sig
   val reset : state -> unit
   type value = True | False | Unknown
   val assignment : state -> value array
+  val positive : state -> var list
   val add_un_rule : state -> lit -> X.reason list -> unit
   val add_bin_rule : state -> lit -> lit -> X.reason list -> unit
   val add_rule : state -> lit array -> X.reason list -> unit
@@ -90,7 +91,9 @@ module M (X : S) = struct
       mutable st_cost : int; (* Total computational cost so far *)
       st_print_var : Format.formatter -> int -> unit;
       mutable st_coherent : bool;
-      st_buffer : Buffer.t option}
+      st_buffer : Buffer.t option;
+      st_positive : (int,unit) Hashtbl.t;
+    }
 
   let copy_clause p =
       let n = Array.length p in
@@ -148,7 +151,8 @@ module M (X : S) = struct
       st_cost = st.st_cost;
       st_print_var = st.st_print_var;
       st_coherent = st.st_coherent;
-      st_buffer = st.st_buffer }
+      st_buffer = st.st_buffer;
+      st_positive = Hashtbl.copy st.st_positive;}
 
   (****)
  
@@ -277,6 +281,7 @@ module M (X : S) = struct
         end;
         let x = var_of_lit p in
         st.st_assign.(x) <- val_of_bool (pol_of_lit p);
+        if st.st_assign.(x) = True then Hashtbl.add st.st_positive x () ;
         st.st_reason.(x) <- reason;
         st.st_level.(x) <- st.st_cur_level;
         st.st_trail <- p :: st.st_trail;
@@ -363,6 +368,7 @@ module M (X : S) = struct
     let x = var_of_lit p in
     if !debug then Format.eprintf "Cancelling %a@." st.st_print_var x;
     st.st_assign.(x) <- Unknown;
+    Hashtbl.remove st.st_positive x ;
     st.st_reason.(x) <- None;
     st.st_level.(x) <- -1;
     List.iter
@@ -564,7 +570,8 @@ module M (X : S) = struct
       st_cost = 0;
       st_print_var = print_var;
       st_coherent = true;
-      st_buffer = if buffer then Some(Buffer.create 75) else None }
+      st_buffer = if buffer then Some(Buffer.create 75) else None;
+      st_positive = Hashtbl.create 1023; }
 
   let insert_simpl_prop st r p p' =
     let p = lit_neg p in
@@ -629,5 +636,7 @@ module M (X : S) = struct
     collect_rec st x []
 
   let assignment st = st.st_assign
+
+  let positive st = Hashtbl.fold (fun k _ l -> k::l ) st.st_positive []
 
 end
