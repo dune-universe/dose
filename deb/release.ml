@@ -9,6 +9,8 @@
 (*  library, see the COPYING file for more information.                                *)
 (***************************************************************************************)
 
+(** Representation of a debian release files *) 
+
 open ExtLib
 open Format822
 

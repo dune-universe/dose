@@ -9,6 +9,8 @@
 (*  library, see the COPYING file for more information.                                *)
 (***************************************************************************************)
 
+(** Representation of a debian package description item. *)
+
 open ExtLib
 open Common
 open Format822

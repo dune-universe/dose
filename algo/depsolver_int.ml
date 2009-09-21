@@ -38,15 +38,16 @@ class intprojection size = object
     else Hashtbl.find vartoint v
       
   (* int -> var *)
-  method inttovar i = match size with
+  method inttovar i =
+    (* match size with
     |0 -> i
     |n when 0 <= i && i < n -> inttovar.(i)
     |_ -> assert false
-(*    if size = 0 then i else begin
+    *)
+    if size = 0 then i else begin
       if (i > size - 1) then assert false;
       inttovar.(i)
     end
-*)
 end
 
 type solver = {
@@ -116,8 +117,7 @@ let init_solver ?(buffer=false) ?(proxy_size=0) ?idlist index =
             S.add_bin_rule constraints x y [Diagnostic_int.Conflict(pkg_id1, pkg_id2)]
         end
       done
-    with Not_found -> (* Printf.eprintf "Ignoring conflict with unknown
-    package\n%!" *) ()
+    with Not_found -> ()
     (* ignore conflicts that are implicately not in the closure.
      * This requires a leap of faith in the user ability to build an
      * appropriate closure. If the closure is wrong, you are on your own *)
@@ -179,12 +179,14 @@ let solve solver request =
   let result solve collect ?(proxies=[]) var =
     if solve solver.constraints var then begin
       let get_assignent () =
-        List.filter_map (fun i ->
-          if not(List.mem i proxies) then
-            Some (solver.map#inttovar i)
-          else None
-        ) (S.positive solver.constraints) 
-      in 
+        let l = ref [] in
+        Array.iteri (fun i v ->
+          if v = S.True then
+            if not(List.mem i proxies) then
+              l := (solver.map#inttovar i) :: !l
+        ) (S.assignment solver.constraints);
+        !l
+      in
       Diagnostic_int.Success(get_assignent)
     end
     else
@@ -268,35 +270,3 @@ let univcheck ?callback (mdf,solver) =
   for i = 0 to (Array.length mdf.Mdf.index) - 1 do check i done;
   Util.Timer.stop timer !failed
 ;;
-
-(************************************************)
-
-(*
-let __conflict_closure maps l =
-  List.fold_left (fun acc pkg ->
-    let l = maps.who_conflicts pkg in
-    List.fold_left (fun set p -> PKGS.add p set) acc l
-  ) PKGS.empty l
-
-let conflict_closure maps l =
-  try
-    let s = __conflict_closure maps l in
-    PKGS.elements s
-  with _ -> failwith "conflict closure"
-
-let cone maps l =
-  try
-    let s = __dependency_closure maps l in
-    let c = 
-      PKGS.fold (fun pkg acc ->
-        let l = maps.who_conflicts pkg in
-        List.fold_left (fun set p -> PKGS.add p set) acc l
-      ) s PKGS.empty
-    in
-    PKGS.elements (PKGS.union c s)
-  with _ -> failwith "cone closure"
-
-(***********************************************************)
-
-
-*)

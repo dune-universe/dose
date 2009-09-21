@@ -71,6 +71,7 @@ let load_cudf doc =
     exit 1
   end
 
+(* maps one to one cudf packages to integers *)
 class projection = object(self)
 
   val vartoint = Cudf_hashtbl.create 1023
@@ -122,6 +123,7 @@ type maps = {
    * is interpreted as a feature request as in who_provides *)
   lookup_packages : Cudf_types.vpkg -> Cudf.package list ;
 
+  (* assign an integer to each cudf package *)
   map : projection
 }
 

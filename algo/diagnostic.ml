@@ -61,7 +61,7 @@ let print ?(explain=false) oc result =
          |Dependency(i,l) ->
             let l = List.map (print_package ~short:true) l in
             Printf.fprintf oc
-            "Dependency Problem. Package %s depends on package %s\n"
+            "Dependency Problem. Package %s has an unfulfilled dependency on %s\n"
             (print_package ~short:true i)
             (String.concat " , " l)
          |Conflict (i,j) ->

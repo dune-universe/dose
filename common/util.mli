@@ -9,52 +9,31 @@
 (*  library, see the COPYING file for more information.                                *)
 (***************************************************************************************)
 
-type verbosity = Quiet | Summary | Details
-val set_verbosity: verbosity -> unit
+(** *)
 
-(** print a progress bar that increments at each invocation.
-
-    @param ppf
-    @param label 
-    @param (percentage * total) *)
-(* val progress : ?v:verbosity -> string -> int * int -> unit *)
-
-val print_warning : ?ppf:Format.formatter -> ?v:verbosity -> string -> unit
-val print_info : ?ppf:Format.formatter -> ?v:verbosity -> string -> unit
-
-(* the following code is borrowed from Cduce. Copyright: Alain Frish *)
-
-val gettimeofday: (unit -> float) ref
-
-(** add a logger *)
-val register: verbosity -> (Format.formatter -> unit) -> unit
-
-(** dump the content of all registered loggers to the given formatter *)
-val dump: Format.formatter -> unit
-
-module Progress: sig
+(** progress bar *)
+module Progress : sig
   type t
     
+  (** [create "barname"] : create new a progress bar labelled "barname". 
+      The progress bar is disabled by default *)
   val create: string -> t
-  val progress : t -> unit
+
+  (** [enable "barname"] : enable the progress bar with label "barname" *)
   val enable : string -> unit
+  
+  (** [set_total bar 10] : set the max width of the progress bar to 10 units *)
   val set_total : t -> int -> unit
+  
+  (** increment the progress bar of one unit *)
+  val progress : t -> unit
+
+  (** return the labels of all available progress bar *)
   val avalaible : unit -> string list
 end
 
-(** counter logger *)
-module Counter: sig
-  type t
-    
-  (** [create s] create and register a new logger named [s] *)
-  val create: string -> t
-  val incr: t -> unit
-  val add: t -> int -> unit
-  val print: Format.formatter -> t -> unit
-end
-
 (** timer logger *)
-module Timer: sig
+module Timer : sig
   type t
     
   (** [create s] create and register a new logger named [s] *)
@@ -63,3 +42,31 @@ module Timer: sig
   val stop: t -> 'a -> 'a
   val print: Format.formatter -> t -> unit
 end
+
+type verbosity = Quiet | Summary | Details
+val set_verbosity: verbosity -> unit
+
+val print_warning : ?ppf:Format.formatter -> ?v:verbosity -> string -> unit
+val print_info : ?ppf:Format.formatter -> ?v:verbosity -> string -> unit
+
+val gettimeofday: (unit -> float) ref
+
+(** register a logger *)
+val register: verbosity -> (Format.formatter -> unit) -> unit
+
+(** dump the content of all registered loggers to the given formatter *)
+val dump: Format.formatter -> unit
+
+(** counter logger *)
+module Counter : sig
+  type t
+    
+  (** [create s] create and register a new logger named [s] *)
+  val create: string -> t
+
+  val incr: t -> unit
+  val add: t -> int -> unit
+  val print: Format.formatter -> t -> unit
+end
+
+

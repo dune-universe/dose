@@ -1,19 +1,16 @@
-(* Copyright (C) 2005 Jerome Vouillon.
+(***************************************************************************************)
+(*  Copyright (C) 2005-2009 Jerome Vouillon                                            *)
+(*  Minor modifications :                                                              *)
+(*       Pietro Abate <pietro.abate@pps.jussieu.fr>                                    *)
+(*                                                                                     *)
+(*  This library is free software: you can redistribute it and/or modify               *)
+(*  it under the terms of the GNU Lesser General Public License as                     *)
+(*  published by the Free Software Foundation, either version 3 of the                 *)
+(*  License, or (at your option) any later version.  A special linking                 *)
+(*  exception to the GNU Lesser General Public License applies to this                 *)
+(*  library, see the COPYING file for more information.                                *)
+(***************************************************************************************)
 
-This file is part of Dose2.
-
-Dose2 is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-Dose2 is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>. *)
 
 module type S = sig
   type reason
@@ -34,7 +31,6 @@ module type T = sig
   val reset : state -> unit
   type value = True | False | Unknown
   val assignment : state -> value array
-  val positive : state -> var list
   val add_un_rule : state -> lit -> X.reason list -> unit
   val add_bin_rule : state -> lit -> lit -> X.reason list -> unit
   val add_rule : state -> lit array -> X.reason list -> unit
@@ -93,7 +89,6 @@ module M (X : S) = struct
       st_print_var : Format.formatter -> int -> unit;
       mutable st_coherent : bool;
       st_buffer : Buffer.t option;
-      st_positive : (int,unit) Hashtbl.t;
     }
 
   let copy_clause p =
@@ -153,7 +148,7 @@ module M (X : S) = struct
       st_print_var = st.st_print_var;
       st_coherent = st.st_coherent;
       st_buffer = st.st_buffer;
-      st_positive = Hashtbl.copy st.st_positive;}
+    }
 
   (****)
  
@@ -282,7 +277,6 @@ module M (X : S) = struct
         end;
         let x = var_of_lit p in
         st.st_assign.(x) <- val_of_bool (pol_of_lit p);
-        if st.st_assign.(x) = True then Hashtbl.add st.st_positive x () ; 
         st.st_reason.(x) <- reason;
         st.st_level.(x) <- st.st_cur_level;
         st.st_trail <- p :: st.st_trail;
@@ -368,7 +362,7 @@ module M (X : S) = struct
   let undo_one st p =
     let x = var_of_lit p in
     if !debug then Format.eprintf "Cancelling %a@." st.st_print_var x;
-    st.st_assign.(x) <- Unknown; Hashtbl.remove st.st_positive x ;
+    st.st_assign.(x) <- Unknown;
     st.st_reason.(x) <- None;
     st.st_level.(x) <- -1;
     List.iter
@@ -571,7 +565,7 @@ module M (X : S) = struct
       st_print_var = print_var;
       st_coherent = true;
       st_buffer = if buffer then Some(Buffer.create 75) else None;
-      st_positive = Hashtbl.create (2 * n) }
+    }
 
   let insert_simpl_prop st r p p' =
     let p = lit_neg p in
@@ -636,8 +630,6 @@ module M (X : S) = struct
     collect_rec st x []
 
   let assignment st = st.st_assign
-
-  let positive st = Hashtbl.fold (fun k _ l -> k::l ) st.st_positive []
 
   let debug b = debug := b
 

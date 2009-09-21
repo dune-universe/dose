@@ -37,6 +37,14 @@ module Make (G: Sig.I with type V.t = int) = struct
     |Diagnostic_int.Failure _ -> true
     |Diagnostic_int.Success _ -> false
 
+  let check_strong graph solver p s =
+    List.iter (fun q ->
+      if not(p = q) then
+        if not(G.mem_edge graph p q) then
+          if strong_depends solver p q then 
+            G.add_edge graph p q
+    ) s
+
   let conj_dependencies graph index l =
     let rec __conj_dependencies path =
       let id = List.hd path in
@@ -69,8 +77,10 @@ module Make (G: Sig.I with type V.t = int) = struct
     let size = List.length pkglist in
     Util.Progress.set_total mainbar size;
     Util.Progress.set_total conjbar size;
-    let timer = Util.Timer.create "Algo.Strongdep" in
-    Util.Timer.start timer;
+    let conjtimer = Util.Timer.create "Algo.Strongdep.conjdep" in
+    let strongtimer = Util.Timer.create "Algo.Strongdep.strong" in
+
+    Util.Timer.start conjtimer;
     let available = 
       let dummy = (Mdf.default_package,0,[]) in
       let a = Array.create size dummy in
@@ -84,44 +94,45 @@ module Make (G: Sig.I with type V.t = int) = struct
       a
     in
     Array.sort (fun (_,n,_) (_,m,_) -> m - n) available;  
+    Util.Timer.stop conjtimer ();
 
+    Util.Timer.start strongtimer;
+    let processed = Array.make size false in
     for i = 0 to (Array.length available) -1 do
-      let (pkg1,_,closure) = available.(i) in
-      let pkg1_id = pkg1.Mdf.id in
-      Util.Progress.progress mainbar;
-      if Array.length pkg1.Mdf.depends > 0 then begin
-        let solver = Depsolver_int.init_solver ~idlist:closure mdf.Mdf.index in
-        match Depsolver_int.solve solver (Diagnostic_int.Sng pkg1_id) with
-        |Diagnostic_int.Failure(_) -> ()
-        |Diagnostic_int.Success(f) -> begin
-          (* Printf.eprintf "Package: %s\n%!" (CudfAdd.print_package pkg1.Mdf.pkg);
-          Printf.eprintf "Closure size: %d\n%!" (List.length closure);
-          Printf.eprintf "IS size: %d\n%!" (List.length (f()));
-          *)
-          let i = ref 0 in
-          List.iter (fun pkg2_id ->
-            if not(pkg1_id = pkg2_id) then
-              if not(G.mem_edge graph pkg1_id pkg2_id) then
-                if strong_depends solver pkg1_id pkg2_id then 
-                  (incr i ; G.add_edge graph pkg1_id pkg2_id)
-          ) (f ())
-(*
-          let inter a b = List.filter (fun i -> List.mem i b) a in
-          let is = f () in
-          List.iter (fun p ->
-            let closure = let (_,_,c) = available.(p) in c in
-            List.iter (fun q ->
-              if not(p = q) && not(G.mem_edge graph p q) then
-                if strong_depends solver p q then 
-                  (incr i ; G.add_edge graph p q)
-            ) (inter closure is)
-          ) is
-*)
-(* ; Printf.eprintf "n strong dep: %d\n%!" !i; *)
+      if not(processed.(i)) then begin
+        let (pkg1,_,closure) = available.(i) in
+        let pkg1_id = pkg1.Mdf.id in
+        Util.Progress.progress mainbar;
+        if Array.length pkg1.Mdf.depends > 0 then begin
+          let solver = Depsolver_int.init_solver ~idlist:closure mdf.Mdf.index in
+          match Depsolver_int.solve solver (Diagnostic_int.Sng pkg1_id) with
+          |Diagnostic_int.Failure(_) -> ()
+          |Diagnostic_int.Success(f) -> begin
+            check_strong graph solver pkg1_id (f ())
+            (*
+            let inter a b =
+              if List.length a < List.length b then
+                List.filter (fun i -> List.mem i b) a 
+              else
+                List.filter (fun i -> List.mem i a) b
+            in
+            let is = f () in
+            List.iter (fun p ->
+              if not(processed.(p)) then begin
+                let closure = let (_,_,c) = available.(p) in c in
+                processed.(p) <- true;
+                Util.Progress.progress mainbar;
+                check_strong graph solver p (inter closure is)
+              end
+            ) is
+            *)
+          end
         end
       end
     done ;
-    Util.Timer.stop timer graph
+    Util.Timer.stop strongtimer graph
+
+(*   let strongdep_incr g pkglist = *)
 
 (* 
   let strong_pred graph q =

@@ -113,7 +113,7 @@ let load universe =
 (* here we don't make any assumption to the freshness of the package that
    is going to be installed, upgraded or removed. The user should specify it
    as a constraint in the request *)
-let init ?(buffer=false) universe request =
+let load universe request =
   let mdf = Mdf.load_from_universe universe in
   let maps = mdf.Mdf.maps in
   let vartoint = maps.map#vartoint in
@@ -132,7 +132,6 @@ let init ?(buffer=false) universe request =
   let idlist = List.flatten (l_request @ l_installed) in
   let closure = Depsolver_int.dependency_closure mdf.Mdf.index idlist in
   let solver = Depsolver_int.init_solver
-      ~buffer:true
       ~proxy_size:1
       ~idlist:closure
       mdf.Mdf.index 
@@ -193,10 +192,3 @@ let solve s =
 
 let dump s =
   Depsolver_int.S.dump s.solver.constraints
-(*
-   let s = Depsolver_int.S.dump s.solver.constraints in
-  let input = IO.input_string s in
-  while true do
-    let line = IO.read_line input in
-    Str.split (
-      *)

@@ -9,10 +9,10 @@
 (*  library, see the COPYING file for more information.                                *)
 (***************************************************************************************)
 
-(** Debian Specific Ipr to Cudf conversion routines *)
+(** Debian Specific Cudf conversion routines *)
 
 (** abstract data type holding the conversion tables 
- * for the debcudf translation. *)
+    for the debcudf translation. *)
 type tables
 
 (** initialize the version conversion tables *)
@@ -21,12 +21,12 @@ val init_tables : Packages.package list -> tables
 (** return the cudf version associated to a tuple (name,version) *)
 val get_version : tables -> Format822.name * Format822.version -> int
 
-(** convert the a package in the ipr format to cudf. The resulting
-    cudf package will be obtained by:
+(** [tocudf tbl p] 
+    convert the a debian package representation to cudf.
    - Version and package name normalization.
    - Adding self conflicts.
    - Virtual package normalization.
-   - Adding priority information.
+   - Adding priority information if avaiblable.
    - Mapping APT request.
 *)
 val tocudf : tables -> ?inst:bool -> Packages.package -> Cudf.package
@@ -37,9 +37,12 @@ val lltocudf : tables -> Format822.vpkg list list -> Cudf_types.vpkgformula
 (** convert a debian conflict list in a cudf constraints list *)
 val ltocudf  : tables -> Format822.vpkg list -> Cudf_types.vpkglist
 
-(** declare the Cudf preamble used by cudf. Namely, Debcudf add a property named
- * Number of type string containing the original debian version *)
+(** declare the Cudf preamble used by cudf. Namely, debcudf add :
+    - a property named {b Number} of type string containing the original debian version
+    - a property named {b SourceName} of type string
+    - a property named {b SourceNumnber} of type string
+    *)
 val preamble : Cudf.preamble
 
-(** load a Cudf universe. *)
+(** create a Cudf universe from a debian package representation list. *)
 val load_universe : Packages.package list -> Cudf.universe

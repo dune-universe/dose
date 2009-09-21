@@ -56,15 +56,11 @@ let main () =
   Printf.eprintf "Prepare ...%!";
   let timer = Util.Timer.create "Prepare" in
   Util.Timer.start timer;
-  let problem = Cudfsolver.init ~buffer:!Options.dump universe request in
+  let problem = Cudfsolver.load universe request in
   Util.Timer.stop timer ();
   Printf.eprintf "done.\n%!"; 
 
-  if !Options.dump then
-    Printf.printf "%s%!" (Cudfsolver.dump problem)
-  ;
-
-  Printf.eprintf "Solve ...%!";
+    Printf.eprintf "Solve ...%!";
   let timer = Util.Timer.create "Solve" in
   Util.Timer.start timer;
   let result = Cudfsolver.solve problem in

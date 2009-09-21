@@ -9,19 +9,23 @@
 (*  library, see the COPYING file for more information.                                *)
 (***************************************************************************************)
 
-(* version ::=
+(** Debian version comparison function.
+  A string representing a debian version is parsed using the following
+  bnf grammar.
+  {v
+  version ::=
    | epoch':'.upstream_version.'-'.debian_revision
    | upstream_version_no_colon.'-'.debian_revision
    | upstream_version_no_colon_no_dash
    | epoch':'.upstream_version_no_dash
- * epoch ::= [0-9]+
- * upstream_version ::= [a-zA-Z0-9.+-:]+
- * upstream_version_no_colon ::= [a-zA-Z0-9.+-]+
- * upstream_version_no_dash ::= [a-zA-Z0-9.+:]+
- * upstream_version_no_colon_no_dash ::= [a-zA-Z0-9.+]+
- * debian_revision ::= [a-zA-Z0-9+.]+
+  epoch ::= [0-9]+
+  upstream_version ::= [a-zA-Z0-9.+-:]+
+  upstream_version_no_colon ::= [a-zA-Z0-9.+-]+
+  upstream_version_no_dash ::= [a-zA-Z0-9.+:]+
+  upstream_version_no_colon_no_dash ::= [a-zA-Z0-9.+]+
+  debian_revision ::= [a-zA-Z0-9+.]+
+  v}
  *)
 
 (** compare two debian versions *)
 val compare : string -> string -> int
-
