@@ -88,7 +88,9 @@ let parse_packages_in f ch =
   let parse_packages = parse_822_iter parse_packages_fields in
   parse_packages f (start_from_channel ch)
 
+(**/**)
 module Set = Set.Make(struct type t = package let compare = compare end) 
+(**/**)
 
 (** input_raw [file] : parse a debian Packages file from [file] *)
 let input_raw = 
