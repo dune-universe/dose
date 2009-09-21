@@ -49,31 +49,6 @@ let dump ppf =
     |_ -> ()
   ) !loggers
 
-(*
-let progress ?(v=Summary) label =
-  let columns = 75 in
-  let full = " %%100.0\n" in
-  let rotate = "|/-\\" in
-  let rotation = ref 0 in
-  let b = Buffer.create columns in
-  fun (perc,total) -> begin
-    if v <= !verbosity then begin
-      Buffer.clear b;
-      Buffer.add_char b '\r';
-      Buffer.add_string b label;
-      let f = floor (1000.0 *. (float perc) /. (float total)) in
-      let f = f /. 10.0 in
-      if f = 100.0 then Buffer.add_string b full
-      else begin
-        rotation := (1 + !rotation) land 3;
-        Printf.bprintf b "%c %%%4.1f" rotate.[!rotation] f
-      end ;
-      Format.fprintf Format.err_formatter "%s" (Buffer.contents b)
-    end
-    else ()
-  end
-*)
-
 module Progress = struct
   type t = {
     name : string ;
@@ -120,7 +95,7 @@ module Progress = struct
       if f = 100.0 then Buffer.add_string c.buffer full
       else begin
         c.rotation <- (1 + c.rotation) land 3;
-        Printf.bprintf c.buffer "%c %%%4.1f%!" rotate.[c.rotation] f
+        Printf.bprintf c.buffer "%c %%%4.1f" rotate.[c.rotation] f
       end ;
       Format.fprintf Format.err_formatter "%s%!" (Buffer.contents c.buffer)
     end

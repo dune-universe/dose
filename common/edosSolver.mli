@@ -85,6 +85,8 @@ module type T = sig
   val collect_reasons_lst : state -> var list -> X.reason list
 
   val dump : state -> string
+  val debug : bool -> unit
+
 end
 
 module M : functor (X : S) -> T with module X = X

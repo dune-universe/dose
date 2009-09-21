@@ -31,6 +31,7 @@ let (universe,request) =
   let (_,univ,request) = Cudf_parser.parse_from_file f_legacy in
   (Cudf.load_universe univ,Option.get request)
 
+
 let toset f = 
   let (_,pl,_) = Cudf_parser.parse_from_file f in
   List.fold_right S.add pl S.empty
@@ -123,16 +124,22 @@ let test_cudfsolver =
     solve_same_legacy ;
   ]
 
-(*
 let test_strong file edge_list =
-  let module DG = Defaultgraphs.MatrixGraph(struct let pr i = "" end) in
-  let module G = DG.G in
-  let module StrongDep = Strongdeps.Make(G) in
   let (_,pkglist,_) = Cudf_parser.parse_from_file file in
   let u = Cudf.load_universe pkglist in
+  let maps = CudfAdd.build_maps u in
+  let module IntGraph = Defaultgraphs.IntGraph(struct
+    let pr i = CudfAdd.print_package (maps.CudfAdd.map#inttovar i)
+    end)
+  in
+  let module G = IntGraph.G in
+  let module StrongDep = Strongdeps.Make(G) in
   let g = StrongDep.strongdeps pkglist in
-  let l = List.map (fun (v,z) ->
-      (Cudf.lookup_package u v,Cudf.lookup_package u z)
+  let l =
+    List.map (fun (v,z) ->
+      let p = maps.CudfAdd.map#vartoint (Cudf.lookup_package u v) in
+      let q = maps.CudfAdd.map#vartoint (Cudf.lookup_package u z) in
+      (p,q)
     ) edge_list
   in
   G.iter_edges (fun v z ->
@@ -200,12 +207,12 @@ let test_strongdep =
     strongdep_cycle ;
   (*  strongdep_conj  XXX *)
   ]
-*)
 
 let all = 
   "all tests" >::: [
-    (* test_depsolver ; *)
+    test_depsolver ;
     test_cudfsolver ;
+    test_strongdep;
   ]
 
 let main () =

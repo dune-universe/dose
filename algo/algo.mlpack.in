@@ -1,5 +1,6 @@
 @MLPACK_OCAMLGRAPH@
 Diagnostic
+Diagnostic_int
 Depsolver
 Cudfsolver
 Depsolver_int

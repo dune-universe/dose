@@ -28,6 +28,7 @@ type solver = {
 
 let installed mdf =
   let maps = mdf.Mdf.maps in
+  let vartoint = maps.map#vartoint in
   let index = mdf.Mdf.index in
   Array.fold_left (fun ll i ->
     let pkg = i.Mdf.pkg in
@@ -37,17 +38,17 @@ let installed mdf =
         ) [] pkg.Cudf.provides
       in
       let pl2 = maps.lookup_packages (pkg.Cudf.package,None) in
-      let pl = List.map maps.to_sat (List.unique (pl1 @ pl2)) in
+      let pl = List.map vartoint (List.unique (pl1 @ pl2)) in
       if pl <> [] then pl :: ll else ll
     else ll
   ) [] index
 
 let __init installed solver mdf = 
   let add l exp = S.add_rule solver.constraints (Array.of_list l) exp in
-  let proxy_var = mdf.Mdf.maps.size in
+  let proxy_var = solver.Depsolver_int.proxy 0 in
   let proxy_lit = S.lit_of_var proxy_var false in
   List.iter (fun l ->
-    let lit_pos_list = List.map (fun id -> S.lit_of_var id true) l in
+    let lit_pos_list = List.map (fun id -> S.lit_of_var (solver.Depsolver_int.map#vartoint id) true) l in
     add (proxy_lit :: lit_pos_list) [Diagnostic_int.Installed_alternatives l]
   ) installed
   ;
@@ -55,33 +56,39 @@ let __init installed solver mdf =
 ;;
 
 let __prepare request solver mdf =
+  let maps = mdf.Mdf.maps in
+  let to_sat = maps.map#vartoint in
+
   let add l exp = S.add_rule solver.constraints (Array.of_list l) exp in
-  let proxy_var = mdf.Mdf.maps.size in
+  let proxy_var = solver.Depsolver_int.proxy 0 in
   let proxy_lit = S.lit_of_var proxy_var false in
+  let lit_list polarity alternatives = 
+    List.map (fun id ->
+      S.lit_of_var (solver.Depsolver_int.map#vartoint id) polarity
+    ) alternatives
+  in
 
   List.iter (fun vpkg ->
-    let alternatives = List.map mdf.Mdf.maps.to_sat (mdf.Mdf.maps.lookup_packages vpkg) in
-    (* let l = (mdf.Mdf.maps.lookup_packages vpkg) in
-       Printf.printf "%s -> %s\n%!" (Cudf_types.string_of_vpkg vpkg) (String.concat ", " (List.map CudfAdd.print_package l)) ; *)
-    let lit_pos_list = List.map (fun id -> S.lit_of_var id true) alternatives in
+    let alternatives = List.map to_sat (mdf.Mdf.maps.lookup_packages vpkg) in
+    let lit_pos_list = lit_list true alternatives in
     add (proxy_lit :: lit_pos_list) [Diagnostic_int.To_install (vpkg, alternatives)];
   ) request.Cudf.install
   ;
 
   List.iter (fun vpkg ->
-    let alternatives = List.map mdf.Mdf.maps.to_sat (mdf.Mdf.maps.lookup_packages vpkg) in
-    let lit_pos_list = List.map (fun id -> S.lit_of_var id true) alternatives in
+    let alternatives = List.map to_sat (mdf.Mdf.maps.lookup_packages vpkg) in
+    let lit_pos_list = lit_list true alternatives in
     add (proxy_lit :: lit_pos_list) [Diagnostic_int.To_upgrade (vpkg, alternatives)];
     if (List.length alternatives) > 1 then
-      let lit_neg_list = List.map (fun id -> S.lit_of_var id false) alternatives in
+      let lit_neg_list = lit_list false alternatives in
       add (proxy_lit :: lit_neg_list) [Diagnostic_int.To_upgrade_singleton (vpkg,alternatives)];
   ) request.Cudf.upgrade
   ;
 
   List.iter (fun vpkg ->
-    let alternatives = List.map mdf.Mdf.maps.to_sat (mdf.Mdf.maps.lookup_packages vpkg) in
+    let alternatives = List.map to_sat (mdf.Mdf.maps.lookup_packages vpkg) in
     List.iter (fun id ->
-      let lit = S.lit_of_var id false in
+      let lit = S.lit_of_var (solver.Depsolver_int.map#vartoint id) false in
       S.add_bin_rule solver.constraints proxy_lit lit [Diagnostic_int.To_remove (vpkg,id)];
     ) alternatives
   ) request.Cudf.remove
@@ -108,9 +115,12 @@ let load universe =
    as a constraint in the request *)
 let init ?(buffer=false) universe request =
   let mdf = Mdf.load_from_universe universe in
+  let maps = mdf.Mdf.maps in
+  let vartoint = maps.map#vartoint in
+
   let alternatives vpkglist =
     List.map (fun vpkg -> 
-      List.map mdf.Mdf.maps.to_sat (mdf.Mdf.maps.lookup_packages vpkg)
+      List.map vartoint (mdf.Mdf.maps.lookup_packages vpkg)
     ) vpkglist
   in
 
@@ -122,7 +132,7 @@ let init ?(buffer=false) universe request =
   let idlist = List.flatten (l_request @ l_installed) in
   let closure = Depsolver_int.dependency_closure mdf.Mdf.index idlist in
   let solver = Depsolver_int.init_solver
-      ~buffer:buffer
+      ~buffer:true
       ~proxy_size:1
       ~idlist:closure
       mdf.Mdf.index 
@@ -132,38 +142,43 @@ let init ?(buffer=false) universe request =
   { mdf = mdf; solver = solver }
 
 let reason maps =
+  let from_sat = maps.map#inttovar in
   List.map (function
     |Diagnostic_int.Dependency(i,il) ->
-        Diagnostic.Dependency(maps.from_sat i,List.map maps.from_sat il)
+        Diagnostic.Dependency(from_sat i,List.map from_sat il)
     |Diagnostic_int.EmptyDependency(i,vl) ->
-        Diagnostic.EmptyDependency(maps.from_sat i,vl)
+        Diagnostic.EmptyDependency(from_sat i,vl)
     |Diagnostic_int.Conflict(i,j) ->
-        Diagnostic.Conflict(maps.from_sat i,maps.from_sat j)
+        Diagnostic.Conflict(from_sat i,from_sat j)
     |Diagnostic_int.Installed_alternatives(il) ->
-        Diagnostic.Installed_alternatives(List.map maps.from_sat il)
+        Diagnostic.Installed_alternatives(List.map from_sat il)
     |Diagnostic_int.To_install(v,il) ->
-        Diagnostic.To_install(v,List.map maps.from_sat il)
+        Diagnostic.To_install(v,List.map from_sat il)
     |Diagnostic_int.To_remove(v,i) ->
-        Diagnostic.To_remove(v,maps.from_sat i)
+        Diagnostic.To_remove(v,from_sat i)
     |Diagnostic_int.To_upgrade(v,il) ->
-        Diagnostic.To_upgrade(v,List.map maps.from_sat il)
+        Diagnostic.To_upgrade(v,List.map from_sat il)
     |Diagnostic_int.To_upgrade_singleton(v,il) ->
-        Diagnostic.To_upgrade_singleton(v,List.map maps.from_sat il)
+        Diagnostic.To_upgrade_singleton(v,List.map from_sat il)
   )
 
-let result maps = function
+let result maps result =
+  let from_sat = maps.map#inttovar in
+  match result with
   |Diagnostic_int.Success f ->
       Diagnostic.Success (fun () ->
         List.map (fun i ->
-          {(maps.from_sat i) with Cudf.installed = true}
+          {(from_sat i) with Cudf.installed = true}
         ) (f ())
       )
   |Diagnostic_int.Failure f -> Diagnostic.Failure (fun () -> reason maps (f ()))
 
-let request maps = function
-  |Diagnostic_int.Sng i -> Diagnostic.Package (maps.from_sat i)
-  |Diagnostic_int.Lst il -> Diagnostic.PackageList (List.map maps.from_sat il)
-  |Diagnostic_int.Req i -> Diagnostic.Proxy
+let request maps result =
+  let from_sat = maps.map#inttovar in
+  match result with
+  |Diagnostic_int.Sng i -> Diagnostic.Package (from_sat i)
+  |Diagnostic_int.Lst il -> Diagnostic.PackageList (List.map from_sat il)
+  |Diagnostic_int.Req _ -> Diagnostic.Proxy
 
 let diagnosis maps res req =
   let result = result maps res in
@@ -172,8 +187,7 @@ let diagnosis maps res req =
 
 let solve s =
   let maps = s.mdf.Mdf.maps in
-  let proxy_var = s.mdf.Mdf.maps.size in
-  let req = Diagnostic_int.Req(proxy_var) in
+  let req = Diagnostic_int.Req 0 in
   let res = Depsolver_int.solve s.solver req in
   diagnosis maps res req
 

@@ -22,23 +22,24 @@ let default_package = {
 }
 
 let __load maps universe =
-  let a = Array.create maps.size default_package in
+  let to_sat = maps.map#vartoint in
+  let a = Array.create (Cudf.universe_size universe) default_package in
   Cudf.iter_packages (fun pkg ->
+    let id = to_sat pkg in
     let cl =
       List.map (fun p ->
-        (p,maps.to_sat p)
+        (p,to_sat p)
       ) (maps.who_conflicts pkg)
     in
     let dll =
       List.map (fun disjunction ->
         List.fold_left (fun (l1,l2,l3) vpkg ->
           let dl = (maps.lookup_packages vpkg) in
-          let el = Array.of_list (List.map maps.to_sat dl) in
+          let el = Array.of_list (List.map to_sat dl) in
           (vpkg::l1,Array.append el l2, dl @ l3)
         ) ([],[||],[]) disjunction
       ) pkg.Cudf.depends
     in
-    let id = maps.to_sat pkg in
     let p = {
       id = id;
       pkg = pkg;
@@ -53,6 +54,7 @@ let __load maps universe =
 let load_from_list pkglist =
   let universe = Cudf.load_universe pkglist in
   let maps = build_maps universe in
+
   let index = __load maps universe in
   { cudf = universe ; index = index ; maps = maps }
 
@@ -61,9 +63,10 @@ let load_from_universe universe =
   let index = __load maps universe in
   { cudf = universe ; index = index ; maps = maps }
 
+(*
 let dump mdf =
   let index = mdf.index in
   for i=0 to mdf.maps.size - 1; do
     Printf.eprintf "%d -> %s\n%!" i (CudfAdd.print_package index.(i).pkg);
   done
-
+*)

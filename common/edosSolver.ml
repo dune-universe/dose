@@ -15,9 +15,6 @@ GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. *)
 
-let debug = ref false
-let buffer = ref false
-
 module type S = sig
   type reason
 end
@@ -47,11 +44,15 @@ module type T = sig
   val collect_reasons : state -> var -> X.reason list
   val collect_reasons_lst : state -> var list -> X.reason list
   val dump : state -> string
+  val debug : bool -> unit
 end
 
 module M (X : S) = struct
 
   module X = X
+
+  let debug = ref false
+  let buffer = ref false
 
   (* Variables *)
   type var = int
@@ -281,7 +282,7 @@ module M (X : S) = struct
         end;
         let x = var_of_lit p in
         st.st_assign.(x) <- val_of_bool (pol_of_lit p);
-        if st.st_assign.(x) = True then Hashtbl.add st.st_positive x () ;
+        if st.st_assign.(x) = True then Hashtbl.add st.st_positive x () ; 
         st.st_reason.(x) <- reason;
         st.st_level.(x) <- st.st_cur_level;
         st.st_trail <- p :: st.st_trail;
@@ -367,8 +368,7 @@ module M (X : S) = struct
   let undo_one st p =
     let x = var_of_lit p in
     if !debug then Format.eprintf "Cancelling %a@." st.st_print_var x;
-    st.st_assign.(x) <- Unknown;
-    Hashtbl.remove st.st_positive x ;
+    st.st_assign.(x) <- Unknown; Hashtbl.remove st.st_positive x ;
     st.st_reason.(x) <- None;
     st.st_level.(x) <- -1;
     List.iter
@@ -571,7 +571,7 @@ module M (X : S) = struct
       st_print_var = print_var;
       st_coherent = true;
       st_buffer = if buffer then Some(Buffer.create 75) else None;
-      st_positive = Hashtbl.create 1023; }
+      st_positive = Hashtbl.create (2 * n) }
 
   let insert_simpl_prop st r p p' =
     let p = lit_neg p in
@@ -638,5 +638,7 @@ module M (X : S) = struct
   let assignment st = st.st_assign
 
   let positive st = Hashtbl.fold (fun k _ l -> k::l ) st.st_positive []
+
+  let debug b = debug := b
 
 end

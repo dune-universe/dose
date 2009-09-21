@@ -71,6 +71,31 @@ let load_cudf doc =
     exit 1
   end
 
+class projection = object(self)
+
+  val vartoint = Cudf_hashtbl.create 1023
+  val inttovar = Hashtbl.create 1023
+  val mutable counter = 0
+
+  method init = List.iter self#add
+
+  method add (v : Cudf.package) =
+    let j = counter in
+    Cudf_hashtbl.add vartoint v j ;
+    Hashtbl.add inttovar j v ;
+    counter <- counter + 1
+
+  (* var -> int *)
+  method vartoint (v : Cudf.package) : int =
+    try Cudf_hashtbl.find vartoint v
+    with Not_found -> assert false
+      
+  (* int -> var *)
+  method inttovar (i : int) : Cudf.package =
+    try Hashtbl.find inttovar i 
+    with Not_found -> assert false
+end 
+
 (** additional Cudf indexes
  *
  * the Cudf library does not consider features of packages that are not
@@ -85,11 +110,6 @@ let load_cudf doc =
  * *)
 
 type maps = {
-  (* the sat solver assume a variable ordering.
-   * from_sat and to_sat map packages to integer and viceversa *)
-  to_sat : Cudf.package -> int ;
-  from_sat : int -> Cudf.package ;
-
   (* the list of all packages the explicitely or implicitely
    * conflict with the given package *)
   who_conflicts : Cudf.package -> Cudf.package list;
@@ -102,22 +122,17 @@ type maps = {
    * is interpreted as a feature request as in who_provides *)
   lookup_packages : Cudf_types.vpkg -> Cudf.package list ;
 
-  size : int
+  map : projection
 }
 
 let build_maps universe =
   let size = Cudf.universe_size universe in
-  let backward_table = Hashtbl.create (2 * size) in
-  let forward_table = Cudf_hashtbl.create (2 * size) in
   let conflicts = Cudf_hashtbl.create (2 * size) in
   let provides = Hashtbl.create (2 * size) in
-  let i = ref 0 in
+  let map = new projection in
 
   Cudf.iter_packages (fun pkg ->
-    Cudf_hashtbl.add forward_table pkg !i;
-    Hashtbl.add backward_table !i pkg;
-    incr i;
-
+    map#add pkg;
     List.iter (function
       |name, None -> Hashtbl.add provides name (pkg, None)
       |name, Some (_, ver) -> Hashtbl.add provides name (pkg, (Some ver))
@@ -155,23 +170,10 @@ let build_maps universe =
 
   let who_conflicts pkg = List.unique ~cmp:equal (Cudf_hashtbl.find_all conflicts pkg) in
 
-  let to_sat =
-    try Cudf_hashtbl.find forward_table
-    with Not_found -> assert false
-  in
-
-  let from_sat =
-    try Hashtbl.find backward_table
-    with Not_found -> assert false
-  in
-
   {
-    to_sat = to_sat ;
-    from_sat = from_sat ;
     who_conflicts = who_conflicts ;
     who_provides = who_provides ;
     lookup_packages = lookup_packages ;
-    size = size;
+    map = map
   }
 ;;
-

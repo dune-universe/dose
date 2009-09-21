@@ -32,37 +32,42 @@ let load universe =
   |_,_ -> assert false
 
 let reason maps =
+  let from_sat = maps.map#inttovar in
   List.map (function
     |Diagnostic_int.Dependency(i,il) ->
-        Diagnostic.Dependency(maps.from_sat i,List.map maps.from_sat il)
+        Diagnostic.Dependency(from_sat i,List.map from_sat il)
     |Diagnostic_int.EmptyDependency(i,vl) ->
-        Diagnostic.EmptyDependency(maps.from_sat i,vl)
+        Diagnostic.EmptyDependency(from_sat i,vl)
     |Diagnostic_int.Conflict(i,j) ->
-        Diagnostic.Conflict(maps.from_sat i,maps.from_sat j)
+        Diagnostic.Conflict(from_sat i,from_sat j)
     |Diagnostic_int.Installed_alternatives(il) ->
-        Diagnostic.Installed_alternatives(List.map maps.from_sat il)
+        Diagnostic.Installed_alternatives(List.map from_sat il)
     |Diagnostic_int.To_install(v,il) ->
-        Diagnostic.To_install(v,List.map maps.from_sat il)
+        Diagnostic.To_install(v,List.map from_sat il)
     |Diagnostic_int.To_remove(v,i) ->
-        Diagnostic.To_remove(v,maps.from_sat i) 
+        Diagnostic.To_remove(v,from_sat i) 
     |Diagnostic_int.To_upgrade(v,il) ->
-        Diagnostic.To_upgrade(v,List.map maps.from_sat il)
+        Diagnostic.To_upgrade(v,List.map from_sat il)
     |Diagnostic_int.To_upgrade_singleton(v,il) ->
-        Diagnostic.To_upgrade_singleton(v,List.map maps.from_sat il)
+        Diagnostic.To_upgrade_singleton(v,List.map from_sat il)
   )
 
-let result maps = function
+let result maps result = 
+  let from_sat = maps.map#inttovar in
+  match result with
   |Diagnostic_int.Success f ->
       Diagnostic.Success (fun () ->
         List.map (fun i ->
-          {(maps.from_sat i) with Cudf.installed = true}
+          {(from_sat i) with Cudf.installed = true}
         ) (f ())
       )
   |Diagnostic_int.Failure f -> Diagnostic.Failure (fun () -> reason maps (f ()))
 
-let request maps = function
-  |Diagnostic_int.Sng i -> Diagnostic.Package (maps.from_sat i)
-  |Diagnostic_int.Lst il -> Diagnostic.PackageList (List.map maps.from_sat il)
+let request maps result = 
+  let from_sat = maps.map#inttovar in
+  match result with
+  |Diagnostic_int.Sng i -> Diagnostic.Package (from_sat i)
+  |Diagnostic_int.Lst il -> Diagnostic.PackageList (List.map from_sat il)
   |Diagnostic_int.Req i -> Diagnostic.Proxy
 
 let diagnosis maps res req =
@@ -80,13 +85,13 @@ let univcheck ?callback s =
 
 let edos_install s pkg =
   let maps = s.mdf.Mdf.maps in
-  let req = Diagnostic_int.Sng (maps.to_sat pkg) in
+  let req = Diagnostic_int.Sng (maps.map#vartoint pkg) in
   let res = Depsolver_int.solve s.solver req in
   diagnosis maps res req
 
 let edos_coinstall s pkglist =
   let maps = s.mdf.Mdf.maps in
-  let idlist = List.map (maps.to_sat) pkglist in
+  let idlist = List.map maps.map#vartoint pkglist in
   let req = Diagnostic_int.Lst idlist in
   let res = Depsolver_int.solve s.solver req in
   diagnosis maps res req
@@ -94,7 +99,7 @@ let edos_coinstall s pkglist =
 let dependency_closure universe pkglist =
   let mdf = Mdf.load_from_universe universe in
   let maps = mdf.Mdf.maps in
-  let idlist = List.map maps.to_sat pkglist in
+  let idlist = List.map maps.map#vartoint pkglist in
   let closure = Depsolver_int.dependency_closure mdf.Mdf.index idlist in
-  List.map maps.from_sat closure
+  List.map maps.map#inttovar closure
 

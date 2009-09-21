@@ -159,7 +159,7 @@ module PackageGraph = struct
       let equal = CudfAdd.equal
   end
 
-  module G = Imperative.Graph.Concrete(PkgV)
+  module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
 
   module Display =
     struct
@@ -206,3 +206,37 @@ module MatrixGraph(Pr : sig val pr : int -> string end) = struct
   module D = Graph.Graphviz.Dot(Display)
   module S = Set.Make(struct type t = int let compare = compare end)
 end
+
+(******************************************************)
+
+module IntGraph(Pr : sig val pr : int -> string end) = struct
+
+  module PkgV = struct
+      type t = int
+      let compare = compare
+      let hash = Hashtbl.hash
+      let equal = (=)
+  end
+
+  module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
+
+  module Display =
+    struct
+      include G
+      let vertex_name v = Printf.sprintf "\"%s\"" (Pr.pr v)
+
+      let graph_attributes = fun _ -> []
+      let get_subgraph = fun _ -> None
+
+      let default_edge_attributes = fun _ -> []
+      let default_vertex_attributes = fun _ -> []
+
+      let vertex_attributes v = []
+
+      let edge_attributes e = []
+    end
+
+  module D = Graph.Graphviz.Dot(Display)
+  module S = Set.Make(PkgV)
+end
+

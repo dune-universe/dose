@@ -1,4 +1,4 @@
 <*.ml> or <*.mli> or <*.cma> or <*.cmxa>: pkg_extlib, pkg_ocamlgraph, pkg_cudf
 <tests.*>: pkg_extlib, pkg_ocamlgraph, pkg_cudf, pkg_oUnit, pkg_zip, pkg_str
-<{defaultgraphs,dominators,statistics,diagnostic,depsolver,depsolver_int,cudfsolver,strongdeps}.cmx>: for-pack(Algo)
+<{defaultgraphs,dominators,statistics,diagnostic,diagnostic_int,depsolver,depsolver_int,cudfsolver,strongdeps}.cmx>: for-pack(Algo)
 <common>: include
