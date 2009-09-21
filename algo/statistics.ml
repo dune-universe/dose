@@ -11,6 +11,8 @@
  * http://en.wikipedia.org/wiki/Small-world_network
  *)
 
+(** Small World analisys *)
+
 open Graph
 open ExtLib
 

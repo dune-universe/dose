@@ -9,8 +9,12 @@
 (*  library, see the COPYING file for more information.                                *)
 (***************************************************************************************)
 
+(** Synthesis rpm parser *)
+
 open Common
 open ExtLib 
+
+let progressbar = Util.Progress.create "Rpm.Parse.Hdlists.parse_822_iter"
 
 type t
 external _open_in : string -> t = "rpm_open_hdlist"
@@ -103,13 +107,12 @@ let rec parse_822_rec parse f acc t =
   with Eof -> acc (* no more paragraphs *)
 
 let parse_822_iter parse f ch =
-  let progressbar = Util.progress "Rpm.Parse.Hdlists.parse_822_iter" in
   let total = 6000 in (* estimate *)
-  let i = ref 0 in
+  Util.Progress.set_total progressbar total;
   let l = ref [] in
   try
     while true do
-      progressbar (incr i ; !i , total) ;
+      Util.Progress.progress progressbar ;
       match parse_paragraph ch with
       |None -> raise Eof
       |Some p ->

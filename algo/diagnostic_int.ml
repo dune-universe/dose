@@ -9,6 +9,8 @@
 (*  library, see the COPYING file for more information.                                *)
 (***************************************************************************************)
 
+(** Solver output and diagnostic . Low Level API *)
+
 open ExtLib
 open Common
 open Mdf

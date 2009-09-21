@@ -11,6 +11,8 @@
 (*  library, see the COPYING file for more information.                                *)
 (***************************************************************************************)
 
+(** Low level debian format parser *)
+
 open ExtLib
 open Common
 
@@ -250,8 +252,9 @@ let parse_veqpkglist parse_veqpkg = list_parser ~sep:and_sep_re parse_veqpkg
 
 let progressbar = Util.Progress.create "Debian.Parse.parse_822_iter"
 exception Eof
+
 (** parse a 822 compliant file.
-    @return list of Ipr packages.
+    @return list of packages.
     @param parse : paragraph parser
     @param f : filter to be applied to each paragraph 
     @param ExtLib.IO.input channel *)

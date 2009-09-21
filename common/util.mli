@@ -9,7 +9,7 @@
 (*  library, see the COPYING file for more information.                                *)
 (***************************************************************************************)
 
-(** *)
+(** Progress bar Timer and Logger *)
 
 (** progress bar *)
 module Progress : sig

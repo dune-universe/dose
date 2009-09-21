@@ -97,7 +97,7 @@ let solution_set =
 
 let solve_same_legacy =
   "solve legacy (same solution)" >:: (fun _ ->
-    let solver = Cudfsolver.init ~buffer:true universe request in
+    let solver = Cudfsolver.load universe request in
     let d = Cudfsolver.solve solver in
     match d.Diagnostic.result with
     |Diagnostic.Success f ->
@@ -108,7 +108,7 @@ let solve_same_legacy =
 
 let solve_any_legacy =
   "solve legacy (any solution)" >:: (fun _ ->
-    let solver = Cudfsolver.init universe request in
+    let solver = Cudfsolver.load universe request in
     let d = Cudfsolver.solve solver in
     match d.Diagnostic.result with
     |Diagnostic.Success f ->

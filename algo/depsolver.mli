@@ -9,7 +9,7 @@
 (*  library, see the COPYING file for more information.                                *)
 (***************************************************************************************)
 
-(** This module implements the edos algorithms *)
+(** Dependency solver. Implementation of the Edos algorithms *)
 
 (** the solver is an abstract data type associated to a universe *)
 type solver

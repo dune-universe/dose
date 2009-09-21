@@ -9,7 +9,7 @@
 (*  library, see the COPYING file for more information.                                *)
 (***************************************************************************************)
 
-(** *)
+(** Solver output and diagnostic *)
 
 (** Failures reasons for sat solver *)
 type reason =

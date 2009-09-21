@@ -9,6 +9,8 @@
 (*  library, see the COPYING file for more information.                                *)
 (***************************************************************************************)
 
+(** Strong Dependencies *)
+
 open Graph
 open ExtLib
 open Common

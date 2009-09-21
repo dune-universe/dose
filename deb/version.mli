@@ -9,8 +9,12 @@
 (*  library, see the COPYING file for more information.                                *)
 (***************************************************************************************)
 
-(** Debian version comparison function.
-  A string representing a debian version is parsed using the following
+(** Debian version comparison function. *)
+
+(** compare two debian versions *)
+val compare : string -> string -> int
+
+(** A string representing a debian version is parsed using the following
   bnf grammar.
   {v
   version ::=
@@ -27,5 +31,4 @@
   v}
  *)
 
-(** compare two debian versions *)
-val compare : string -> string -> int
+

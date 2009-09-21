@@ -28,6 +28,7 @@ val get_version : tables -> Format822.name * Format822.version -> int
    - Virtual package normalization.
    - Adding priority information if avaiblable.
    - Mapping APT request.
+   @param inst : set the {i Installed} cudf field
 *)
 val tocudf : tables -> ?inst:bool -> Packages.package -> Cudf.package
 
@@ -39,8 +40,8 @@ val ltocudf  : tables -> Format822.vpkg list -> Cudf_types.vpkglist
 
 (** declare the Cudf preamble used by cudf. Namely, debcudf add :
     - a property named {b Number} of type string containing the original debian version
-    - a property named {b SourceName} of type string
-    - a property named {b SourceNumnber} of type string
+    - a property named {b Source} of type string
+    - a property named {b Sourceversion} of type string
     *)
 val preamble : Cudf.preamble
 

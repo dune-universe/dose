@@ -9,12 +9,11 @@
 (*  library, see the COPYING file for more information.                                *)
 (***************************************************************************************)
 
+(** Representation of a parsed source description item. all fields are string *)
+
 open ExtLib
 open Common
 open Format822
-
-(** Representation of a parsed source description item. 
-    all fields are string *)
 
 type architecture = string
 type source = {
@@ -28,7 +27,6 @@ type source = {
   architecture : architecture list
 }
 
-module Set = Set.Make(struct type t = source let compare = compare end)
 
 let parse_name = parse_package
 let parse_arch s = Str.split (Str.regexp " ") s
@@ -58,15 +56,18 @@ let parse_sources_fields par =
   in
   try Some (exec ()) with Not_found -> None (* this package doesn't either have version or name *)
 
+(** parse a debian Sources file from channel *)
 let parse_sources_in f ch =
   let parse_packages = parse_822_iter parse_sources_fields in
   parse_packages f (start_from_channel ch)
 
+(** parse a debian Sources file *)
 let input_raw =
+  let module Set = Set.Make(struct type t = source let compare = compare end) in
   let module M = Format822.RawInput(Set) in
   M.input_raw parse_sources_in
 
-(* transforms a list of sources into dummy packages to be then converted to cudf *)
+(** transform a list of sources into dummy packages to be then converted to cudf *)
 let sources2packages arch l =
   (* as per policy, if the first arch restriction contains a !
    * then we assume that all archs on the lists are bang-ed.

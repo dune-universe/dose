@@ -15,6 +15,7 @@ open ExtLib
 open Common
 open Format822
 
+(** debian package format *)
 type package = {
   name : name ;
   version : version;
@@ -45,7 +46,6 @@ let default_package = {
   provides = [];
 }
 
-module Set = Set.Make(struct type t = package let compare = compare end)
 
 let parse_name = parse_package
 let parse_vpkg = parse_constr
@@ -83,10 +83,14 @@ let parse_packages_fields par =
   try guard_field "status" "install ok installed" (exec ())
   with Not_found -> None (* this package doesn't either have version or name *)
 
+(** parse a debian Packages file from the channel [ch] *)
 let parse_packages_in f ch =
   let parse_packages = parse_822_iter parse_packages_fields in
   parse_packages f (start_from_channel ch)
 
+module Set = Set.Make(struct type t = package let compare = compare end) 
+
+(** input_raw [file] : parse a debian Packages file from [file] *)
 let input_raw = 
   let module M = Format822.RawInput(Set) in
   M.input_raw parse_packages_in

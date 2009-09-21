@@ -9,6 +9,8 @@
 (*  library, see the COPYING file for more information.                                *)
 (***************************************************************************************)
 
+(** Cudf Solver *)
+
 (** 
 In order to find a solution we make the following assumptions/restrictions:
 

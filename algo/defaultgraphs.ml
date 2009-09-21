@@ -9,6 +9,8 @@
 (*  library, see the COPYING file for more information.                                *)
 (***************************************************************************************)
 
+(** Specialized Ocamlgraph modules *)
+
 open Graph
 open Common
 
