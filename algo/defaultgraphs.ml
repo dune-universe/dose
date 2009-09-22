@@ -16,6 +16,13 @@ open Common
 
 let print_package = CudfAdd.print_package
 
+(** syntactic dependency graph. Vertex are Cudf packages and
+    are indexed considering only the pair name,version .
+    Edges are labelled with
+    - [OrDepends] : disjuctive dependency
+    - [DirDepends] : direct dependecy 
+    - [Conflict] : conflict
+    *) 
 module SyntacticDependencyGraph = struct
 
   module PkgV = struct
@@ -67,9 +74,11 @@ module SyntacticDependencyGraph = struct
         t
     end
 
+  (** Graphviz outoput module *)
   module D = Graph.Graphviz.Dot(Display) 
   module S = Set.Make(PkgV)
 
+  (** Build a Syntactic Dependency Graph graph from the give cudf universe *)
   let dependency_graph universe =
     let maps = CudfAdd.build_maps universe in
     let gr = G.create () in
@@ -119,39 +128,8 @@ end
 
 (******************************************************)
 
-module BidirectionalGraph = struct
-
-  module PkgV = struct
-      type t = Cudf.package
-      let compare = CudfAdd.compare
-      let hash = CudfAdd.hash
-      let equal = CudfAdd.equal
-  end
-
-  module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
-
-  module Display =
-    struct
-      include G
-      let vertex_name v = Printf.sprintf "\"%s\"" (print_package v)
-
-      let graph_attributes = fun _ -> []
-      let get_subgraph = fun _ -> None
-
-      let default_edge_attributes = fun _ -> []
-      let default_vertex_attributes = fun _ -> []
-
-      let vertex_attributes v = []
-
-      let edge_attributes e = []
-    end
-  
-  module D = Graph.Graphviz.Dot(Display)
-  module S = Set.Make(PkgV)
-end
-
-(******************************************************)
-
+(** Imperative bidirectional graph. This graph should be preferred when 
+    using operation like nb_edges, inter_prec, iter_succ *)
 module PackageGraph = struct
 
   module PkgV = struct
@@ -185,6 +163,8 @@ end
 
 (******************************************************)
 
+(** Integer matrix graph. Space efficient, but not so effient for
+    general operations like nb_edges, iter_prec *)
 module MatrixGraph(Pr : sig val pr : int -> string end) = struct
 
   module G = Imperative.Matrix.Digraph
@@ -211,6 +191,7 @@ end
 
 (******************************************************)
 
+(** Integer Imperative Bidirectional Graph *)
 module IntGraph(Pr : sig val pr : int -> string end) = struct
 
   module PkgV = struct

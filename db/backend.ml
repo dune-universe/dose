@@ -9,6 +9,8 @@
 (*  library, see the COPYING file for more information.                                *)
 (***************************************************************************************)
 
+(** database backend *)
+
 open Printf
 open ExtLib
 open Json_type

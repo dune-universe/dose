@@ -125,25 +125,19 @@ let test_cudfsolver =
   ]
 
 let test_strong file edge_list =
+  let module G = Defaultgraphs.PackageGraph.G in
   let (_,pkglist,_) = Cudf_parser.parse_from_file file in
   let u = Cudf.load_universe pkglist in
-  let maps = CudfAdd.build_maps u in
-  let module IntGraph = Defaultgraphs.IntGraph(struct
-    let pr i = CudfAdd.print_package (maps.CudfAdd.map#inttovar i)
-    end)
-  in
-  let module G = IntGraph.G in
-  let module StrongDep = Strongdeps.Make(G) in
-  let g = StrongDep.strongdeps pkglist in
+  let g = Strongdeps.strongdeps pkglist in
   let l =
     List.map (fun (v,z) ->
-      let p = maps.CudfAdd.map#vartoint (Cudf.lookup_package u v) in
-      let q = maps.CudfAdd.map#vartoint (Cudf.lookup_package u z) in
+      let p = Cudf.lookup_package u v in
+      let q = Cudf.lookup_package u z in
       (p,q)
     ) edge_list
   in
   G.iter_edges (fun v z ->
-    if not(List.exists (fun (p,q) -> (v = p) && (z = q)) l)
+    if not(List.exists (fun (p,q) -> (Cudf.(=%) v p) && (Cudf.(=%) z q)) l)
     then assert_failure "fail"
   ) g
   ;

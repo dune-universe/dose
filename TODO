@@ -14,3 +14,10 @@
 - when init the depsolver, create a new data structure where all dependencies
   and conflicts are explicit. Then use this data structure when iterate
   over packages. This way we can perform all lookups once and forall.
+!! DONE
+
+- fix common/EdosSolver documentation. For some reason only part of it is
+  actually generated
+
+- implement a debdistcheck that builds the sat problem directly from 
+  debian Packages without passing through cudf and friends

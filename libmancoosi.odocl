@@ -6,6 +6,7 @@ algo/Diagnostic_int
 algo/Strongdeps
 algo/Defaultgraphs
 algo/Statistics
+common/CudfAdd
 common/EdosSolver
 common/Input
 common/Util
@@ -16,3 +17,8 @@ deb/Sources
 deb/Release
 deb/Apt
 deb/Format822
+#rpm/Packages
+#rpm/Hdlists
+#rpm/Version
+db/Backend
+db/Idbr

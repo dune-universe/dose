@@ -9,9 +9,16 @@
 (*  library, see the COPYING file for more information.                                *)
 (***************************************************************************************)
 
+(** additional functions on Cudf data type.  *)
+
 open Cudf
 open Cudf_types
 
+(** print a cudf package.
+    @param short : only name and version are printed (default true). If the
+    cudf package has an extra attribute "Number" then, this is used instead of
+    Cudf.version
+    *)
 let print_package ?(short=true) pkg =
   if short then
     let (sp,sv) =
@@ -24,14 +31,19 @@ let print_package ?(short=true) pkg =
 (* I want to hash packages by name/version without considering
    other fields like Installed / keep / etc.
 *)
+(** compare two cudf packages only using name and version *)
 let compare x y =
   Pervasives.compare
   (x.Cudf.package,x.Cudf.version)
   (y.Cudf.package,y.Cudf.version)
+
+(** has a cudf package only using name and version *)
 let hash p = Hashtbl.hash (p.Cudf.package,p.Cudf.version)
+
+(** two cudf packages are equal if name and version are the same *)
 let equal = Cudf.(=%)
 
-
+(** specialized Hash table for cudf packages *)
 module Cudf_hashtbl =
   Hashtbl.Make(struct
     type t = Cudf.package
@@ -39,6 +51,7 @@ module Cudf_hashtbl =
     let hash = hash
   end)
 
+(** specialized Set for cudf packages *)
 module Cudf_set =
   Set.Make(struct
     type t = Cudf.package
@@ -47,6 +60,8 @@ module Cudf_set =
 
 open ExtLib
 
+(** parse a cudf file and return a triple (preamble,package list,request
+    option). If the package is not valid fails and exit *)
 let parse_cudf doc =
   try
     let p = Cudf_parser.from_in_channel (open_in doc) in
@@ -59,6 +74,8 @@ let parse_cudf doc =
     exit 1
   end
 
+(** parse a cudf file and return a triple (preamble,universe,request option).
+    If the package is not valid fails and exit *)
 let load_cudf doc =
   try
     let p = Cudf_parser.from_in_channel (open_in doc) in
@@ -71,7 +88,7 @@ let load_cudf doc =
     exit 1
   end
 
-(* maps one to one cudf packages to integers *)
+(** maps one to one cudf packages to integers *)
 class projection = object(self)
 
   val vartoint = Cudf_hashtbl.create 1023
@@ -80,53 +97,47 @@ class projection = object(self)
 
   method init = List.iter self#add
 
+  (** add a cudf package to the map *)
   method add (v : Cudf.package) =
     let j = counter in
     Cudf_hashtbl.add vartoint v j ;
     Hashtbl.add inttovar j v ;
     counter <- counter + 1
 
-  (* var -> int *)
+  (** var -> int *)
   method vartoint (v : Cudf.package) : int =
     try Cudf_hashtbl.find vartoint v
     with Not_found -> assert false
       
-  (* int -> var *)
+  (** int -> var *)
   method inttovar (i : int) : Cudf.package =
     try Hashtbl.find inttovar i 
     with Not_found -> assert false
 end 
 
-(** additional Cudf indexes
- *
- * the Cudf library does not consider features of packages that are not
- * installed. who_provides is a lookup function that returns __all__ packages
- * (installed or not) that implement a given feature 
- *
- * who_conflicts is a lookup function that returns all packages that conflict
- * with a given package 
- *
- * XXX: depsolver_int.ml implements similar indexes. This is a minor code
- * duplication.
- * *)
-
+(*
+ the Cudf library does not consider features of packages that are not
+ installed. who_provides is a lookup function that returns all packages
+ (installed or not) that implement a given feature 
+*)
 type maps = {
-  (* the list of all packages the explicitely or implicitely
-   * conflict with the given package *)
+  (** the list of all packages the explicitely or implicitely
+      conflict with the given package *)
   who_conflicts : Cudf.package -> Cudf.package list;
 
-  (* the list of all packages that provide the given feature *)
+  (** the list of all packages that provide the given feature *)
   who_provides : Cudf_types.vpkg -> Cudf.package list ;
 
-  (* the list of all packages that satisfy the give package 
-   * constraint. If there are no real packages, then the contraint
-   * is interpreted as a feature request as in who_provides *)
+  (** the list of all packages that satisfy the give package 
+      constraint. If there are no real packages, then the contraint
+      is interpreted as a feature request as in who_provides *)
   lookup_packages : Cudf_types.vpkg -> Cudf.package list ;
 
-  (* assign an integer to each cudf package *)
+  (** assign an integer to each cudf package *)
   map : projection
 }
 
+(** build a map from a cudf universe *)
 let build_maps universe =
   let size = Cudf.universe_size universe in
   let conflicts = Cudf_hashtbl.create (2 * size) in

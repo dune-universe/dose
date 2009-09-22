@@ -105,15 +105,9 @@ END
   ignore(Common.Util.Timer.stop timer ());
   Printf.eprintf "done\n%!" ;
 
-  let maps = CudfAdd.build_maps (Cudf.load_universe pkglist) in
-  let module IntGraph = Defaultgraphs.IntGraph(struct
-    let pr i = CudfAdd.print_package (maps.CudfAdd.map#inttovar i)
-    end)
-  in
-  let module G = IntGraph.G in
-  let module StrongDep = Strongdeps.Make(G) in
-  let g = StrongDep.strongdeps pkglist in
-  IntGraph.D.output_graph stdout g;
+  let g = Strongdeps.strongdeps pkglist in
+  let module D = Defaultgraphs.PackageGraph.D in
+  D.output_graph stdout g;
   print_newline ()
 
 ;;

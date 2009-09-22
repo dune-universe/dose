@@ -72,8 +72,8 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
         if Cudf_set.subset (Cudf_set.diff isq sconsp) isp then begin
           G.add_edge domgraph p q;
           Printf.printf "Dominator %s -D-> %s !\n"
-          (Diagnostic.print_package p)
-          (Diagnostic.print_package q)
+          (CudfAdd.print_package p)
+          (CudfAdd.print_package q)
         end
       ) graph p
     ) graph

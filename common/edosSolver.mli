@@ -18,35 +18,35 @@ module type S = sig
   type reason
 end
 
-(** Sat solver *)
+(** Sat solver functor type *)
 module type T = sig
 
-  (** *)
+  (** i *)
   module X : S
 
-  (** *)
+  (** i *)
   type state
 
-  (** variables are integers numbered from 0 to size - 1 *)
+  (** variables are integers numbered from 0 to (size - 1) *)
   type var = int
 
-  (** the value of a literal *)
+  (** The value of a literal *)
   type value = True | False | Unknown
 
-  (** a literal can be positive or negative *)
+  (** A literal. Literals can be positive or negative *)
   type lit
 
   (** [lit_of_var] given a variable create a positive or a negative literal.
-     By default the {b assigment} of all variables (that is its value) is Unknown. *)
+      By default the {b assigment} of all variables (that is its value) is
+      {b Unknown}. *)
   val lit_of_var : var -> bool -> lit
 
-  (** initialize the solver  [initialize_problem n]
+  (** initialize the solver [initialize_problem n]
       @param ?print_var : a function to print a variable 
       @param ?buffer : decide weather or not to store a human readable
       representaion of the sat problem.
       @param n : the size of the sat problem. that is the max number of
-      variables to consider
-  *)
+      variables to consider *)
   val initialize_problem :
     ?print_var:(Format.formatter -> int -> unit) -> 
       ?buffer: bool -> int -> state
@@ -100,5 +100,5 @@ module type T = sig
 
 end
 
-(** *)
+(** functor *)
 module M : functor (X : S) -> T with module X = X
