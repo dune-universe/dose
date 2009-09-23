@@ -16,15 +16,23 @@
 open ExtLib
 open Common
 
+(** progress bar *)
+let progressbar_init = Util.Progress.create "Depsolver_int.init_solver"
+
+(** progress bar *)
+let progressbar_univcheck = Util.Progress.create "Depsolver_int.univcheck"
+
 module R = struct type reason = Diagnostic_int.reason end
 module S = EdosSolver.M(R)
 
+(** associate a sat solver variable to a package id *)
 class intprojection size = object
 
   val vartoint = Hashtbl.create (2 * size)
   val inttovar = Array.create size 0
   val mutable counter = 0
 
+  (** add a package id to the map *)
   method add v =
     if (size = 0) then assert false ;
     if (counter > size - 1) then assert false;
@@ -33,42 +41,36 @@ class intprojection size = object
     inttovar.(counter) <- v;
     counter <- counter + 1
 
-  (* var -> int *)
+  (** given a package id return a sat solver variable *)
   method vartoint v =
     if size = 0 then v
     else Hashtbl.find vartoint v
       
-  (* int -> var *)
+  (* given a sat solver variable return a package id *)
   method inttovar i =
-    (* match size with
-    |0 -> i
-    |n when 0 <= i && i < n -> inttovar.(i)
-    |_ -> assert false
-    *)
     if size = 0 then i else begin
       if (i > size - 1) then assert false;
       inttovar.(i)
     end
 end
 
+(** low level solver data type *)
 type solver = {
-  constraints : S.state ;
-  conflicts : int ;
-  disjunctions : int ;
-  dependencies : int ;
-  map : intprojection;
-  proxy : int -> int;
+  constraints : S.state ; (** the sat problem *)
+  conflicts : int ;       (** total number of conflicts *)
+  disjunctions : int ;    (** total number of disjunctions *)
+  dependencies : int ;    (** total number of dependencies *)
+  map : intprojection;    (** map a package id to a sat solver variable *)
+  proxy : int -> int;     (** return the index of a proxy variable. 
+                              Proxy variables are numbered from 0 to proxy_size - 1 *)
 }
 
-let progressbar_init = Util.Progress.create "Depsolver_int.init_solver"
-let progressbar_univcheck = Util.Progress.create "Depsolver_int.univcheck"
-
-(* low level constraint solver initialization
- * @param: buffer : debug buffer to print out debug messages
- * @param: proxy_size : proxy variables. These are additional variables 
- *                      used to encode specific contraint.
- * @param: idlist : init the solver with a subset of packages id
- * @param: index : 
+(** low level constraint solver initialization
+    @param buffer debug buffer to print out debug messages
+    @param proxy_size  proxy variables. These are additional variables 
+                       used to encode specific contraint.
+    @param idlist init the solver with a subset of packages id
+    @param index package index
  *)
 let init_solver ?(buffer=false) ?(proxy_size=0) ?idlist index =
   let num_conflicts = ref 0 in
@@ -171,9 +173,11 @@ let init_solver ?(buffer=false) ?(proxy_size=0) ?idlist index =
   }
 ;;
 
+(** return a copy of the state of the solver *)
 let copy_solver solver =
   { solver with constraints = S.copy solver.constraints }
 
+(** low level call to the sat solver *)
 let solve solver request =
   S.reset solver.constraints;
 
@@ -207,6 +211,11 @@ let solve solver request =
 
 (***********************************************************)
 
+(** [dependency_closure index l] return the union of the dependency closure of
+    all packages in [l] .
+    @param index the package universe
+    @param l a subset of [index]
+*)
 let dependency_closure index l =
   let queue = Queue.create () in
   let visited = Hashtbl.create 1023 in
@@ -224,6 +233,40 @@ let dependency_closure index l =
     end
   done ;
   Hashtbl.fold (fun k _ l -> k::l) visited []
+
+(* [reverse_dependencies index] return an array that associates to a package id
+    [i] the list of all packages ids that have a dependency on [i].
+    @param index the package universe
+*)
+(*
+let reverse_dependencies ?(idlist=[]) mdf =
+  let index = mdf.Mdf.index in
+  match idlist with begin
+  |[] ->
+    let size = Array.length index in
+    let reverse = Arr
+    for i = 0 to size - 1 do
+      Array.iter (fun (_,a,_) ->
+        Array.iter (fun j ->
+          let l = try Hashtbl.find reverse i with Not_found -> [] in
+          Hashtbl.replace reverse (i::l)
+        ) a
+      ) index.(i).Mdf.depends
+    done
+  |_ -> 
+      List.iter (fun i ->
+        Array.iter (fun (_,a,_) ->
+          Array.iter (fun j ->
+            let l = try Hashtbl.find reverse i with Not_found -> [] in
+            Hashtbl.replace reverse (i::l)
+          ) a
+        ) index.(i).Mdf.depends
+      ) idlist
+   end
+  reverse
+*)
+
+(***********************************************************)
 
 let pkgcheck callback solver failed tested id =
   try
@@ -247,6 +290,12 @@ let pkgcheck callback solver failed tested id =
     end
   with Not_found -> assert false
 
+(** [listcheck ?callback idlist mdf] check if a subset of packages 
+    known by the solver [idlist] are installable
+    @param idlist list of packages id to be checked
+    @param mdf package index
+    @return the number of packages that cannot be installed
+*)
 let listcheck ?callback idlist mdf =
   let solver = init_solver ~idlist mdf.Mdf.index in
   let timer = Util.Timer.create "Algo.Depsolver.listcheck" in
@@ -260,6 +309,12 @@ let listcheck ?callback idlist mdf =
   Util.Timer.stop timer !failed
 ;;
 
+(** [univcheck ?callback (mdf,solver)] check if all packages known by 
+    the solver are installable. XXX
+    @param mdf package index 
+    @param solver dependency solver
+    @return the number of packages that cannot be installed
+*)
 let univcheck ?callback (mdf,solver) =
   let timer = Util.Timer.create "Algo.Depsolver.univcheck" in
   Util.Timer.start timer;

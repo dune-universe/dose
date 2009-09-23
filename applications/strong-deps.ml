@@ -15,33 +15,32 @@ open Common
 open Algo
 open Graph
 
-(* enable the progress bar for strongdeps *)
-Common.Util.Progress.enable "Algo.Strongdep.main";;
-Common.Util.Progress.enable "Algo.Strongdep.conj";;
+let enable_debug () = 
+  (* enable the progress bar for strongdeps *)
+  Common.Util.Progress.enable "Algo.Strongdep.main" ;
+  Common.Util.Progress.enable "Algo.Strongdep.conj" ;
+  Common.Util.set_verbosity Common.Util.Summary
+;;
 
 exception Done
 
 module Options = struct
-  let confile = ref ""
   let dot = ref false
-  let info = ref false
-  let dump = ref false
-  let strong_pred = ref false
-  let src = ref ""
-  let dst = ref ""
+  let dump = ref true
+  let load = ref false
+  let incr = ref false
+  let detrans = ref false
 end
 
-let usage = Printf.sprintf "usage: %s [-options] [cudf doc]" (Sys.argv.(0))
+let usage = Printf.sprintf "usage: %s [--options] doc" (Sys.argv.(0))
 let options =
   [
-   ("--confile",  Arg.String (fun l -> Options.confile := l ), "Specify a configuration file" );
    ("--dot", Arg.Set Options.dot, "Print the graph in dot format");
-   ("--src",  Arg.String (fun l -> Options.src := l ), "Specify a list of packages to analyze" );
-   ("--dst",  Arg.String (fun l -> Options.dst := l ), "Specify a pivot package" );
-   ("--info", Arg.Set Options.info, "Print various aggregate information");
-   ("--dump", Arg.Set Options.dump, "Dump the strong dependency graph in graph.marshal");
-   ("--pred", Arg.Set Options.strong_pred, "Print strong predecessor (not direct)");
-   ("--debug", Arg.Unit (fun () -> Common.Util.set_verbosity Common.Util.Summary), "Print debug information");
+   ("--incr", Arg.Set Options.incr, "");
+   ("--load", Arg.Set Options.incr, "Load a strong dependency graph");
+   ("--dump", Arg.Set Options.dump, "Dump the transitive reduction of the strong dependency graph in graph.marshal");
+   ("--detrans", Arg.Set Options.detrans, "Transitive reduction. Used in conjuction with --dot.");
+   ("--debug", Arg.Unit enable_debug, "Print debug information");
   ]
 
 let and_sep_re = Str.regexp "\\s*;\\s*"
@@ -57,41 +56,67 @@ let parse_pkg s =
 
 (* ----------------------------------- *)
 
-let main () =
-  at_exit (fun () -> Common.Util.dump Format.err_formatter);
-  let uri = ref "" in
-  let _ =
-    try Arg.parse options (fun f -> uri := f ) usage
-    with Arg.Bad s -> failwith s
-  in
-  if !uri == "" then begin
-    Arg.usage options (usage ^ "\nNo input file specified");
-    exit 2
-  end;
+module G = Defaultgraphs.PackageGraph.G 
+module D = Defaultgraphs.PackageGraph.D 
+module O = Defaultgraphs.GraphOper(G)
 
+(* "graph.marshal" *)
+let strong_incr oldfile newfile =
+  let ic = open_in oldfile in 
+  let oldgraph = ((Marshal.from_channel ic) :> G.t) in 
+  close_in ic ;
+  let (_,newuniv,_) = CudfAdd.parse_cudf newfile in
+  let olduniv = G.fold_vertex (fun pkg acc -> pkg::acc) oldgraph [] in
+  let oldh = CudfAdd.realversionmap olduniv in
+  let newh = CudfAdd.realversionmap newuniv in
+
+  let (newlist,oldlist) =
+    let nl = ref [] in
+    let ol = ref [] in
+    Hashtbl.iter (fun (n,v) pkg ->
+      if not(Hashtbl.mem oldh (n,v) ) then
+        nl := pkg :: !nl
+    ) newh;
+    Hashtbl.iter (fun (n,v) pkg ->
+      if not(Hashtbl.mem newh (n,v) ) then
+        ol := pkg :: !ol
+    ) oldh;
+    (!nl,!ol)
+  in
+
+  (* compute strong deps only for the new packages *)
+  let newgraph = Strongdeps.strongdeps newlist in
+
+  (* add all the new edges *)
+  G.iter_edges (fun p q ->
+    G.add_edge oldgraph p q
+  ) newgraph;
+
+  (* remove all old vertex and associated edges *)
+  List.iter (fun p ->
+    G.iter_succ (G.remove_edge oldgraph p) oldgraph p ;
+    G.iter_pred (fun q -> G.remove_edge oldgraph q p) oldgraph p;
+    G.remove_vertex oldgraph p
+  ) oldlist 
+  ;
+
+  if !Options.dump then
+    let oc = open_out "graph.marshal" in 
+    (Marshal.to_channel oc oldgraph []; close_out oc)
+  ;
+
+  if !Options.dot then
+    let module D = Defaultgraphs.PackageGraph.D in
+    (D.output_graph stdout oldgraph; print_newline ())
+
+;;
+
+let strong_plain uri =
   Printf.eprintf "Parsing and normalizing...%!" ;
   let timer = Common.Util.Timer.create "Parsing and normalizing" in
   Common.Util.Timer.start timer;
   let pkglist =
-    match Input.parse_uri !uri with
-    |(("pgsql"|"sqlite") as dbtype,info,(Some query)) ->
-IFDEF HASDB THEN
-      begin
-        Backend.init_database dbtype info (Idbr.parse_query query) ;
-        let l = Backend.load_selection (`All) in
-        List.map Debian.Debcudf.tocudf l
-      end
-ELSE
-      failwith (dbtype ^ " Not supported")
-END
-(*
-    |("debsrc",(_,_,_,_,file),_) -> begin
-      let l = Debian.Source.input_raw [file] in
-      let sl = Debian.Source.sources2packages "" l in
-      List.map Debian.Debcudf.tocudf sl
-    end
-*)
-(* XXX here I don't want a semantic translation to cudf !!! *)
+    match Input.parse_uri uri with
     |("deb",(_,_,_,_,file),_) -> begin
       let l = Debian.Packages.input_raw [file] in
       let tables = Debian.Debcudf.init_tables l in
@@ -106,9 +131,37 @@ END
   Printf.eprintf "done\n%!" ;
 
   let g = Strongdeps.strongdeps pkglist in
-  let module D = Defaultgraphs.PackageGraph.D in
-  D.output_graph stdout g;
-  print_newline ()
+
+  if !Options.dump then begin
+    let detransg = O.transitive_reduction g in
+    let oc = open_out "graph.marshal" in 
+    Marshal.to_channel oc detransg [];
+    close_out oc
+  end ;
+
+  if !Options.dot then begin
+    if !Options.detrans then
+      O.transitive_reduction g;
+    D.output_graph stdout g;
+    print_newline ();
+    (* D.output_graph stdout (O.O.transitive_closure g);
+    print_newline (); *)
+  end
+;;
+
+let main () =
+  at_exit (fun () -> Common.Util.dump Format.err_formatter);
+  let files = ref [] in
+  let _ =
+    try Arg.parse options (fun f -> files := f::!files ) usage
+    with Arg.Bad s -> failwith s
+  in
+  match !files with
+  |[] -> (Arg.usage options (usage ^ "\nNo input file specified"); exit 2)
+  |[f] when !Options.load = true -> failwith "not yet"
+  |[f] when !Options.incr = false -> strong_plain f
+  |[oldf;newf] when !Options.incr = true -> strong_incr oldf newf
+  |_ -> assert false
 
 ;;
 

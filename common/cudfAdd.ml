@@ -115,6 +115,16 @@ class projection = object(self)
     with Not_found -> assert false
 end 
 
+let realversionmap pkglist =
+  let h = Hashtbl.create (2 * (List.length pkglist)) in
+  begin try
+    List.iter (fun pkg ->
+      let version = Cudf.lookup_package_property pkg "Number" in
+      Hashtbl.add h (pkg.package,version) pkg
+    ) pkglist
+  with Not_found -> assert false end ;
+  h
+
 (*
  the Cudf library does not consider features of packages that are not
  installed. who_provides is a lookup function that returns all packages
@@ -190,3 +200,4 @@ let build_maps universe =
     map = map
   }
 ;;
+

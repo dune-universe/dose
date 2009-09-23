@@ -1,5 +1,7 @@
 (***************************************************************************************)
 (*  Copyright (C) 2009  Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
+(*  Contributors:                                                                      *)
+(*      Jaap Boender                                                                   *)
 (*                                                                                     *)
 (*  This library is free software: you can redistribute it and/or modify               *)
 (*  it under the terms of the GNU Lesser General Public License as                     *)
@@ -15,6 +17,28 @@ open Graph
 open Common
 
 let print_package = CudfAdd.print_package
+
+(** generic operation over graphs *)
+module GraphOper (G : Sig.I) = struct
+
+  (** transitive reduction.  Uses the transitive reduction algorithm from The
+      Transitive Reduction of a Directed Graph, Aho, Garey and Ullman, 1972 - 
+      with the proviso that we know that our graph already is a transitive 
+      closure *)
+  let transitive_reduction graph =
+    G.iter_vertex (fun v ->
+      List.iter (fun v' ->
+        if v <> v' then
+        List.iter (fun v'' ->
+          if v' <> v'' then
+            G.remove_edge graph v v''
+        ) (G.succ graph v')
+      ) (G.succ graph v);
+    ) graph
+
+  module O = Oper.I (G) 
+  
+end
 
 (** syntactic dependency graph. Vertex are Cudf packages and
     are indexed considering only the pair name,version .
@@ -222,4 +246,3 @@ module IntGraph(Pr : sig val pr : int -> string end) = struct
   module D = Graph.Graphviz.Dot(Display)
   module S = Set.Make(PkgV)
 end
-
