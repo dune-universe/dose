@@ -31,7 +31,6 @@ let (universe,request) =
   let (_,univ,request) = Cudf_parser.parse_from_file f_legacy in
   (Cudf.load_universe univ,Option.get request)
 
-
 let toset f = 
   let (_,pl,_) = Cudf_parser.parse_from_file f in
   List.fold_right S.add pl S.empty
@@ -42,6 +41,7 @@ let engine_conflicts_set = toset f_engine_conflicts
 
 let bicycle = Cudf.lookup_package universe ("bicycle", 7)
 let car = Cudf.lookup_package universe ("car",1)
+let battery = Cudf.lookup_package universe ("battery",3)
 let electric_engine1 = Cudf.lookup_package universe ("electric-engine",1)
 let electric_engine2 = Cudf.lookup_package universe ("electric-engine",2)
 
@@ -83,12 +83,24 @@ let test_dependency_closure =
     assert_equal true (S.equal dependency_set set)
   )
 
+let test_reverse_dependencies =
+  "reverse dependencies" >:: (fun _ ->
+    let h = Depsolver.reverse_dependencies universe in
+    let l = CudfAdd.Cudf_hashtbl.find h battery in
+    let set = List.fold_right S.add l S.empty in
+    let rev_dependency_set =
+      List.fold_right S.add [car;electric_engine1;electric_engine2] S.empty
+    in
+    assert_equal true (S.equal rev_dependency_set set)
+  )
+
 let test_depsolver =
   "depsolver" >::: [
     test_install ;
     test_coinstall ;
     test_distribcheck ;
     test_dependency_closure ;
+    test_reverse_dependencies ;
   ]
 
 let solution_set =

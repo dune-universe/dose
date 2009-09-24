@@ -2,4 +2,3 @@
 <tests.*>: pkg_oUnit, pkg_extlib, pkg_zip, pkg_str, pkg_cudf
 <*.ml> or <*.mli>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@)
 <{input,edosSolver,util,cudfAdd,mdf}.cmx>: for-pack(Common)
-<db>: include

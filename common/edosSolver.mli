@@ -42,11 +42,13 @@ module type T = sig
   val lit_of_var : var -> bool -> lit
 
   (** initialize the solver [initialize_problem n]
-      @param ?print_var : a function to print a variable 
-      @param ?buffer : decide weather or not to store a human readable
+     
+      @param print_var a function to print a variable 
+      @param buffer decide weather or not to store a human readable
       representaion of the sat problem.
-      @param n : the size of the sat problem. that is the max number of
-      variables to consider *)
+      @param n the size of the sat problem. that is the max number of
+      variables to consider
+  *)
   val initialize_problem :
     ?print_var:(Format.formatter -> int -> unit) -> 
       ?buffer: bool -> int -> state

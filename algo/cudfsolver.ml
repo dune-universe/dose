@@ -130,7 +130,7 @@ let load universe request =
   let l_request = (l_install @ l_upgrade @ l_remove ) in
   let l_installed = installed mdf in
   let idlist = List.flatten (l_request @ l_installed) in
-  let closure = Depsolver_int.dependency_closure mdf.Mdf.index idlist in
+  let closure = Depsolver_int.dependency_closure mdf idlist in
   let solver = Depsolver_int.init_solver
       ~proxy_size:1
       ~idlist:closure

@@ -10,7 +10,7 @@ additional libraries (enable compilation with --with-<library>) :
  - libzip-ocaml-dev 
  - libjson-static-camlp4-dev
  - libocamlgraph-ocaml-dev
-
+ - libounit-ocaml-dev
 
 To compile from git :
 aclocal -I m4
@@ -18,5 +18,13 @@ autoconf
 ./configure
 make
 
-To configure all features :
-configure --with-rpm --with-xml --with-ocamlgraph --with-sqlite --with-postgresql --with-zip
+--with-rpm
+--with-xml
+--with-ocamlgraph
+--with-sqlite
+--with-postgresql
+--with-zip
+--with-oUnit
+
+Ex :
+./configure --with-xml --with-ocamlgraph --with-zip --with-oUnit

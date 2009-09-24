@@ -100,6 +100,16 @@ let dependency_closure universe pkglist =
   let mdf = Mdf.load_from_universe universe in
   let maps = mdf.Mdf.maps in
   let idlist = List.map maps.map#vartoint pkglist in
-  let closure = Depsolver_int.dependency_closure mdf.Mdf.index idlist in
+  let closure = Depsolver_int.dependency_closure mdf idlist in
   List.map maps.map#inttovar closure
+
+let reverse_dependencies universe =
+  let mdf = Mdf.load_from_universe universe in
+  let maps = mdf.Mdf.maps in
+  let rev = Depsolver_int.reverse_dependencies mdf in
+  let h = Cudf_hashtbl.create (Array.length rev) in
+  Array.iteri (fun i l ->
+    Cudf_hashtbl.add h (maps.map#inttovar i) (List.map maps.map#inttovar l)
+  ) rev ;
+  h
 

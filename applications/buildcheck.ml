@@ -61,7 +61,7 @@ let main () =
   Printf.eprintf "done\n%!" ;
 
   Printf.eprintf "Init solver...%!" ;
-  let solver = Depsolver.init universe in
+  let solver = Depsolver.load universe in
   Printf.eprintf "done\n%!" ;
 
   let i = ref 0 in

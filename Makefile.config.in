@@ -27,7 +27,9 @@ TARGETS= \
 				applications/randcudf.$(OCAMLBEST) \
 				applications/cudf-solver.$(OCAMLBEST) \
 				applications/distcheck.$(OCAMLBEST) \
+				applications/buildcheck.$(OCAMLBEST) \
 				applications/cudf-diff.$(OCAMLBEST) \
+				applications/strong-deps.$(OCAMLBEST) \
 				applications/testingcheck.$(OCAMLBEST)
 
 LIBS= \

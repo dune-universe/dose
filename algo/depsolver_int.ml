@@ -66,6 +66,7 @@ type solver = {
 }
 
 (** low level constraint solver initialization
+ 
     @param buffer debug buffer to print out debug messages
     @param proxy_size  proxy variables. These are additional variables 
                        used to encode specific contraint.
@@ -213,13 +214,15 @@ let solve solver request =
 
 (** [dependency_closure index l] return the union of the dependency closure of
     all packages in [l] .
+
     @param index the package universe
     @param l a subset of [index]
 *)
-let dependency_closure index l =
+let dependency_closure mdf idlist =
+  let index = mdf.Mdf.index in
   let queue = Queue.create () in
   let visited = Hashtbl.create 1023 in
-  List.iter (fun e -> Queue.add e queue) (List.unique l);
+  List.iter (fun e -> Queue.add e queue) (List.unique idlist);
   while (Queue.length queue > 0) do
     let id = Queue.take queue in
     if not(Hashtbl.mem visited id) then begin
@@ -236,35 +239,24 @@ let dependency_closure index l =
 
 (* [reverse_dependencies index] return an array that associates to a package id
     [i] the list of all packages ids that have a dependency on [i].
+
     @param index the package universe
 *)
-(*
-let reverse_dependencies ?(idlist=[]) mdf =
+let reverse_dependencies mdf =
   let index = mdf.Mdf.index in
-  match idlist with begin
-  |[] ->
-    let size = Array.length index in
-    let reverse = Arr
-    for i = 0 to size - 1 do
-      Array.iter (fun (_,a,_) ->
-        Array.iter (fun j ->
-          let l = try Hashtbl.find reverse i with Not_found -> [] in
-          Hashtbl.replace reverse (i::l)
-        ) a
-      ) index.(i).Mdf.depends
-    done
-  |_ -> 
-      List.iter (fun i ->
-        Array.iter (fun (_,a,_) ->
-          Array.iter (fun j ->
-            let l = try Hashtbl.find reverse i with Not_found -> [] in
-            Hashtbl.replace reverse (i::l)
-          ) a
-        ) index.(i).Mdf.depends
-      ) idlist
-   end
+  let size = Array.length index in
+  let reverse = Array.create size [] in
+  let rev i dl = 
+    Array.iter (fun (_,a,_) ->
+      Array.iter (fun j ->
+        if i <> j then
+          if not(List.mem i reverse.(j)) then
+            reverse.(j) <- i::reverse.(j)
+      ) a
+    ) dl
+  in
+  for i = 0 to size - 1 do rev i index.(i).Mdf.depends done;
   reverse
-*)
 
 (***********************************************************)
 
@@ -292,11 +284,12 @@ let pkgcheck callback solver failed tested id =
 
 (** [listcheck ?callback idlist mdf] check if a subset of packages 
     known by the solver [idlist] are installable
+
     @param idlist list of packages id to be checked
     @param mdf package index
     @return the number of packages that cannot be installed
 *)
-let listcheck ?callback idlist mdf =
+let listcheck ?callback mdf idlist =
   let solver = init_solver ~idlist mdf.Mdf.index in
   let timer = Util.Timer.create "Algo.Depsolver.listcheck" in
   Util.Timer.start timer;
@@ -311,6 +304,7 @@ let listcheck ?callback idlist mdf =
 
 (** [univcheck ?callback (mdf,solver)] check if all packages known by 
     the solver are installable. XXX
+
     @param mdf package index 
     @param solver dependency solver
     @return the number of packages that cannot be installed

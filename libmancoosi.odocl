@@ -1,3 +1,7 @@
+common/CudfAdd
+common/EdosSolver
+common/Input
+common/Util
 algo/Depsolver
 algo/Diagnostic
 algo/Cudfsolver
@@ -6,10 +10,6 @@ algo/Diagnostic_int
 algo/Strongdeps
 algo/Defaultgraphs
 algo/Statistics
-common/CudfAdd
-common/EdosSolver
-common/Input
-common/Util
 deb/Version
 deb/Debcudf
 deb/Packages

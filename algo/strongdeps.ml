@@ -111,7 +111,7 @@ let strongdeps pkglist =
       let pkg = mdf.Mdf.index.(id) in
       Util.Progress.progress conjbar;
       conj_dependencies graph mdf.Mdf.index [id]; 
-      let closure = dependency_closure mdf.Mdf.index [id] in 
+      let closure = dependency_closure mdf [id] in 
       a.(id) <- (pkg,List.length closure,closure)
     done ;
     a
