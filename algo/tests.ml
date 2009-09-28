@@ -39,16 +39,11 @@ let dependency_set = toset f_dependency
 let cone_set = toset f_cone
 let engine_conflicts_set = toset f_engine_conflicts
 
-let bicycle = Cudf.lookup_package universe ("bicycle", 7)
-let car = Cudf.lookup_package universe ("car",1)
-let battery = Cudf.lookup_package universe ("battery",3)
-let electric_engine1 = Cudf.lookup_package universe ("electric-engine",1)
-let electric_engine2 = Cudf.lookup_package universe ("electric-engine",2)
-
 let solver = Depsolver.load universe ;;
 
 let test_install =
   "install" >:: (fun _ ->
+    let bicycle = Cudf.lookup_package universe ("bicycle", 7) in
     let d = Depsolver.edos_install solver bicycle in
     match d.Diagnostic.result with
     |Diagnostic.Success _ -> assert_bool "pass" true
@@ -57,6 +52,8 @@ let test_install =
 
 let test_coinstall = 
   "coinstall" >:: (fun _ -> 
+    let electric_engine1 = Cudf.lookup_package universe ("electric-engine",1) in
+    let electric_engine2 = Cudf.lookup_package universe ("electric-engine",2) in
     let d = Depsolver.edos_coinstall solver [electric_engine1;electric_engine2] in
     match d.Diagnostic.result with
     |Diagnostic.Success f -> assert_failure "fail"
@@ -77,6 +74,7 @@ let test_distribcheck =
 
 let test_dependency_closure = 
   "dependency closure" >:: (fun _ -> 
+    let car = Cudf.lookup_package universe ("car",1) in
     let l = Depsolver.dependency_closure universe [car] in
     (* List.iter (fun pkg -> print_endline (CudfAdd.print_package pkg)) l; *)
     let set = List.fold_right S.add l S.empty in
@@ -84,12 +82,30 @@ let test_dependency_closure =
   )
 
 let test_reverse_dependencies =
-  "reverse dependencies" >:: (fun _ ->
+  "direct reverse dependencies" >:: (fun _ ->
+    let car = Cudf.lookup_package universe ("car",1) in
+    let electric_engine1 = Cudf.lookup_package universe ("electric-engine",1) in
+    let electric_engine2 = Cudf.lookup_package universe ("electric-engine",2) in
+    let battery = Cudf.lookup_package universe ("battery",3) in
     let h = Depsolver.reverse_dependencies universe in
     let l = CudfAdd.Cudf_hashtbl.find h battery in
     let set = List.fold_right S.add l S.empty in
     let rev_dependency_set =
       List.fold_right S.add [car;electric_engine1;electric_engine2] S.empty
+    in
+    assert_equal true (S.equal rev_dependency_set set)
+  )
+
+let test_reverse_dependency_closure =
+  "reverse dependency closure" >:: (fun _ ->
+    let car = Cudf.lookup_package universe ("car",1) in
+    let glass = Cudf.lookup_package universe ("glass",2) in
+    let window = Cudf.lookup_package universe ("window",3) in
+    let door = Cudf.lookup_package universe ("door",2) in
+    let l = Depsolver.reverse_dependency_closure universe [glass] in
+    let set = List.fold_right S.add l S.empty in
+    let rev_dependency_set =
+      List.fold_right S.add [car;glass;door;window] S.empty
     in
     assert_equal true (S.equal rev_dependency_set set)
   )
@@ -101,6 +117,7 @@ let test_depsolver =
     test_distribcheck ;
     test_dependency_closure ;
     test_reverse_dependencies ;
+    test_reverse_dependency_closure ;
   ]
 
 let solution_set =
@@ -135,16 +152,16 @@ let test_cudfsolver =
     solve_any_legacy ;
     solve_same_legacy ;
   ]
+;;
 
 let test_strong file edge_list =
   let module G = Defaultgraphs.PackageGraph.G in
-  let (_,pkglist,_) = Cudf_parser.parse_from_file file in
-  let u = Cudf.load_universe pkglist in
-  let g = Strongdeps.strongdeps pkglist in
+  let (_,universe,_) = Cudf_parser.load_from_file file in
+  let g = Strongdeps.strongdeps_univ universe in
   let l =
     List.map (fun (v,z) ->
-      let p = Cudf.lookup_package u v in
-      let q = Cudf.lookup_package u z in
+      let p = Cudf.lookup_package universe v in
+      let q = Cudf.lookup_package universe z in
       (p,q)
     ) edge_list
   in
@@ -172,7 +189,7 @@ let strongdep_simple =
 let strongdep_conflict =
   "strongdep conflict" >:: (fun _ ->
     let edge_list = [
-      (("cc",1),("ee",1)) ;
+      (("cc",2),("ee",1)) ;
       (("aa",1),("bb",1)) ;
       (("aa",1),("ee",1)) ;
       (("aa",1),("dd",1)) ;

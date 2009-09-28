@@ -113,3 +113,11 @@ let reverse_dependencies universe =
   ) rev ;
   h
 
+let reverse_dependency_closure universe pkglist =
+  let mdf = Mdf.load_from_universe universe in
+  let maps = mdf.Mdf.maps in
+  let idlist = List.map maps.map#vartoint pkglist in
+  let reverse = Depsolver_int.reverse_dependencies mdf in
+  let closure = Depsolver_int.reverse_dependency_closure reverse idlist in
+  List.map maps.map#inttovar closure
+

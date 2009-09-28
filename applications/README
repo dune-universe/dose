@@ -85,5 +85,10 @@ depgraph.native generates a .dot graph of a repository
 
 dimacs.native generates a propositional problem in dimacs format from a repository
 
-strongdeps.native generates the strong dependency graph from a repository
+-----
+strong-deps.native generates the strong dependency graph from a repository
+
+./strong-deps.native --dump --dot cudf://algo/tests/strongdep-simple.cudf
+
+./strong-deps.native --incr --dot graph.marshal cudf://algo/tests/strongdep-simple.cudf cudf://algo/tests/strongdep-conflict.cudf
 

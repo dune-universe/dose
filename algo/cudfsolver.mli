@@ -35,59 +35,59 @@ indentified by the cudf semantics. A real cudf_installer should allow all
 solutions and at the same time use different optimization criterias to select
 only solutions that match these criterias.
 
-We encode the installation problem as follows:
+The first clauses correspond to the edos econding.  The function [_] :
+(pkg,constraint) -> pkg list is the expansion function that for a package and a
+contraint returns the list of all versions of this package matching this
+constraint. The expansion function is also provides aware.
+
+We encode the installation problem as follows. Consider a package 
 
 pkg: a
 depends : b, c | d
+conflict : e
+
+First we add the following constraints for dependencies and conflicts.
+
 - {v -a v [b] v}
 - {v -a v [c] v [d] v}
+- {v -a v [-e] v}
 
---------------------------
-
-pkg: a
-conflicts: c, d
-- {v -a v [-c] v}
-- {v -a v [-d] v}
-
---------------------------
+In order to encode the status of a package (installed = true) we add a proxy
+varible {b request} and a constraint as follow:
 
 pkg: a
 installed: true
 - {v -request v [a] v}
 
---------------------------
-
-The first two clauses correspond to the edos econding.  The function [_] :
-(pkg,constraint) -> pkg list is the expansion function that for a package and a
-contraint returns the list of all versions of this package matching this
-constraint. The expansion function is also provides aware.
-
 The last clause encodes the fact that if a package is installed, then it can be
-eventually replaced by another package that respects the assumption n. 1
+eventually replaced by another package.
+
+--------------------------
 
 We encode requests as follows:
 
-Install: aa
+Install: a
 - {v -request v [a] v}
 
-This condition simply states that in order to satisfy the request at least
-an alternative for [a] must be true.
+If the request is to install the package a, then this condition simply states 
+that in order to satisfy the request at least an alternative for [a] must 
+be true.
 
+Upgrade: b
+- {v -request v [b] v}
+- {v -request v [-b] v}
 
-Upgrade: bb
-- {v -request v [a] v}
-- {v -request v [-a] v}
+In case of an upgrade request, this conditions implies that only one alternative 
+for [a] must be installed.
 
-This conditions implies that only one alternative for [a] must be installed.
+Remove: c
+- for all a' in [c]
+- {v -request v -c' v}
 
-Remove: cc
-- for all a' in [a]
-- {v -request v -a' v}
-
-This condition states that in order to fulfill the request none of the
-alternatives for [a] can be installed. In order to satisfy this constraint we
-also remove all occurrences of a' \in [a] from the set of alternatives of
-installed packages and packages to install and to upgrade.
+For a remove request, this condition states that in order to fulfill the request
+none of the alternatives for [c] can be installed. In order to satisfy this
+constraint we also remove all occurrences of c' \in [c] from the set of
+alternatives of installed packages and packages to install and to upgrade.
 *)
 
 type solver

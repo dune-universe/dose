@@ -4504,7 +4504,7 @@ $as_echo "not found" >&6; }
    as_fn_error "Please install OCaml findlib module 'ocamlgraph'." "$LINENO" 5
   fi
   PKG_OCAMLGRAPH=pkg_ocamlgraph
-  MLPACK_OCAMLGRAPH="Defaultgraphs Statistics Dominators Strongdeps"
+  MLPACK_OCAMLGRAPH="Defaultgraphs Statistics Dominators Strongdeps Strongdeps_int"
 else
   PKG_OCAMLGRAPH=pkg_
 fi

@@ -1,17 +1,30 @@
+(***************************************************************************************)
+(*  Copyright (C) 2009  Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
+(*                                                                                     *)
+(*  This library is free software: you can redistribute it and/or modify               *)
+(*  it under the terms of the GNU Lesser General Public License as                     *)
+(*  published by the Free Software Foundation, either version 3 of the                 *)
+(*  License, or (at your option) any later version.  A special linking                 *)
+(*  exception to the GNU Lesser General Public License applies to this                 *)
+(*  library, see the COPYING file for more information.                                *)
+(***************************************************************************************)
+
+(** Internal data package data format. Packages dependencies and conflicts are
+    all expanded and explicit *)
 
 open CudfAdd
 
 type package = {
-  id : int ;
-  pkg : Cudf.package;
+  id : int ; (** package id relative to the universe *)
+  pkg : Cudf.package; (** cudf package *)
   depends : (Cudf_types.vpkg list * int array * Cudf.package list) array ;
-  conflicts : (Cudf.package * int) array
+  conflicts : (Cudf.package * int) array (** cudf package and package id *)
 }
 
 type universe = {
   cudf : Cudf.universe ;
-  index : package array ;
-  maps : CudfAdd.maps
+  index : package array ; (** the array index is equal to the package id *)
+  maps : CudfAdd.maps (** maps to associate a cudf package to an id *)
 }
 
 let default_package = {
@@ -51,22 +64,17 @@ let __load maps universe =
   ) universe;
   a
 
+(** trasfrom a cudf package list in a Mdf universe. All references are
+    explicit and given in terms of integer *)
 let load_from_list pkglist =
   let universe = Cudf.load_universe pkglist in
   let maps = build_maps universe in
-
   let index = __load maps universe in
   { cudf = universe ; index = index ; maps = maps }
 
+(** transform a cudf universe in a mdf universe. All references are
+    explicit and given in terms of integer *)
 let load_from_universe universe =
   let maps = build_maps universe in
   let index = __load maps universe in
   { cudf = universe ; index = index ; maps = maps }
-
-(*
-let dump mdf =
-  let index = mdf.index in
-  for i=0 to mdf.maps.size - 1; do
-    Printf.eprintf "%d -> %s\n%!" i (CudfAdd.print_package index.(i).pkg);
-  done
-*)

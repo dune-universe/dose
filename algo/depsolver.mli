@@ -48,3 +48,6 @@ val dependency_closure : Cudf.universe -> Cudf.package list -> Cudf.package list
     packages in [l] in the universe [univ] *)
 val reverse_dependencies :
   Cudf.universe -> (Cudf.package list) Common.CudfAdd.Cudf_hashtbl.t
+
+val reverse_dependency_closure :
+  Cudf.universe -> Cudf.package list -> Cudf.package list

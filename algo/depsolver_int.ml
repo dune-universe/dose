@@ -212,6 +212,27 @@ let solve solver request =
 
 (***********************************************************)
 
+(* [reverse_dependencies index] return an array that associates to a package id
+    [i] the list of all packages ids that have a dependency on [i].
+
+    @param index the package universe
+*)
+let reverse_dependencies mdf =
+  let index = mdf.Mdf.index in
+  let size = Array.length index in
+  let reverse = Array.create size [] in
+  let rev i dl = 
+    Array.iter (fun (_,a,_) ->
+      Array.iter (fun j ->
+        if i <> j then
+          if not(List.mem i reverse.(j)) then
+            reverse.(j) <- i::reverse.(j)
+      ) a
+    ) dl
+  in
+  for i = 0 to size - 1 do rev i index.(i).Mdf.depends done;
+  reverse
+
 (** [dependency_closure index l] return the union of the dependency closure of
     all packages in [l] .
 
@@ -234,29 +255,29 @@ let dependency_closure mdf idlist =
         ) dsj
       ) index.(id).Mdf.depends
     end
-  done ;
+  done;
   Hashtbl.fold (fun k _ l -> k::l) visited []
 
-(* [reverse_dependencies index] return an array that associates to a package id
-    [i] the list of all packages ids that have a dependency on [i].
-
+(** return the dependency closure of the reverse dependency graph 
+ 
     @param index the package universe
+    @param l a subset of [index]
 *)
-let reverse_dependencies mdf =
-  let index = mdf.Mdf.index in
-  let size = Array.length index in
-  let reverse = Array.create size [] in
-  let rev i dl = 
-    Array.iter (fun (_,a,_) ->
-      Array.iter (fun j ->
-        if i <> j then
-          if not(List.mem i reverse.(j)) then
-            reverse.(j) <- i::reverse.(j)
-      ) a
-    ) dl
-  in
-  for i = 0 to size - 1 do rev i index.(i).Mdf.depends done;
-  reverse
+let reverse_dependency_closure reverse idlist =
+  let queue = Queue.create () in
+  let visited = Hashtbl.create 1023 in
+  List.iter (fun e -> Queue.add e queue) (List.unique idlist);
+  while (Queue.length queue > 0) do
+    let id = Queue.take queue in
+    if not(Hashtbl.mem visited id) then begin
+      Hashtbl.add visited id ();
+      List.iter (fun i ->
+        if not(Hashtbl.mem visited i) then
+          Queue.add i queue
+      ) reverse.(id)
+    end
+  done;
+  Hashtbl.fold (fun k _ l -> k::l) visited []
 
 (***********************************************************)
 

@@ -56,18 +56,32 @@ let parse_uri =
   ]
 
 (*
-let test_maps =
+let test_who_conflicts =
   "who_conflict" >:: (fun _ ->
-    let maps = Depsolver_int.build_maps universe in
-    let l = maps.Depsolver_int.who_conflicts electric_engine2 in
+    let maps = CudfAdd.build_maps universe in
+    let l = maps.CudfAdd.who_conflicts electric_engine2 in
     let set = List.fold_right S.add l S.empty in
     assert_equal true (S.equal engine_conflicts_set set)
   )
 
-let test_depsolver_int = 
-  "depsolver_int" >::: [
-    test_maps
-  ]
+let test_who_provides =
+  "who_provides" >:: (fun _ ->
+    let maps = CudfAdd.build_maps universe in
+    let l = maps.CudfAdd.who_conflicts electric_engine2 in
+    let set = List.fold_right S.add l S.empty in
+    assert_equal true (S.equal engine_conflicts_set set)
+  )
+
+let test_lookup_packages = 
+
+let test_projection
+
+let test_compare
+
+let test_realversionmap
+
+let test_mdf
+
 *)
 
 

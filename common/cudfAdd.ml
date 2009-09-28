@@ -117,12 +117,13 @@ end
 
 let realversionmap pkglist =
   let h = Hashtbl.create (2 * (List.length pkglist)) in
-  begin try
-    List.iter (fun pkg ->
-      let version = Cudf.lookup_package_property pkg "Number" in
-      Hashtbl.add h (pkg.package,version) pkg
-    ) pkglist
-  with Not_found -> assert false end ;
+  List.iter (fun pkg ->
+    let version =
+      try Cudf.lookup_package_property pkg "Number" 
+      with Not_found -> string_of_int pkg.version
+    in
+    Hashtbl.add h (pkg.package,version) pkg
+  ) pkglist ;
   h
 
 (*

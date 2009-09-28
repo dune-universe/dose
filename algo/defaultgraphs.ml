@@ -1,7 +1,5 @@
 (***************************************************************************************)
 (*  Copyright (C) 2009  Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
-(*  Contributors:                                                                      *)
-(*      Jaap Boender                                                                   *)
 (*                                                                                     *)
 (*  This library is free software: you can redistribute it and/or modify               *)
 (*  it under the terms of the GNU Lesser General Public License as                     *)
@@ -243,6 +241,41 @@ module IntGraph(Pr : sig val pr : int -> string end) = struct
       let edge_attributes e = []
     end
 
+  module D = Graph.Graphviz.Dot(Display)
+  module S = Set.Make(PkgV)
+end
+
+(******************************************************)
+
+(** Imperative bidirectional graph. This graph should be preferred when 
+    using operation like nb_edges, inter_prec, iter_succ *)
+module StrongDepGraph = struct
+
+  module PkgV = struct
+      type t = (string * string)
+      let compare = compare
+      let hash = Hashtbl.hash
+      let equal = (=)
+  end
+
+  module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
+
+  module Display =
+    struct
+      include G
+      let vertex_name (n,v) = Printf.sprintf "\"(%s,%s)\"" n v
+
+      let graph_attributes = fun _ -> []
+      let get_subgraph = fun _ -> None
+
+      let default_edge_attributes = fun _ -> []
+      let default_vertex_attributes = fun _ -> []
+
+      let vertex_attributes v = []
+
+      let edge_attributes e = []
+    end
+  
   module D = Graph.Graphviz.Dot(Display)
   module S = Set.Make(PkgV)
 end
