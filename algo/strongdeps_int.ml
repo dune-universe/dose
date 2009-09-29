@@ -57,6 +57,7 @@ let check_strong graph solver p l =
   ) l
 
 let conj_dependencies graph index l =
+  let disj = ref false in
   let rec __conj_dependencies path =
     let id = List.hd path in
     let altlist = index.(id).Mdf.depends in
@@ -78,9 +79,11 @@ let conj_dependencies graph index l =
             if not(List.mem p path) then
               __conj_dependencies (p::path)
           end
-      |_ -> ()
+      |_ -> disj := true
     ) altlist
-  in try __conj_dependencies l with _ -> assert false
+  in
+  try ( __conj_dependencies l ; !disj ) with _ -> assert false
+;;
 
 (** [strongdeps l] build the strong dependency graph of l *)
 let strongdeps_int graph mdf available =
@@ -94,11 +97,16 @@ let strongdeps_int graph mdf available =
     let pkg1_id = pkg1.Mdf.id in
     Util.Progress.progress mainbar;
     if Array.length pkg1.Mdf.depends > 0 then begin
-      let solver = Depsolver_int.init_solver ~idlist:closure mdf.Mdf.index in
-      match Depsolver_int.solve solver (Diagnostic_int.Sng pkg1_id) with
-      |Diagnostic_int.Failure(_) -> ()
-      |Diagnostic_int.Success(f) -> begin
-        check_strong graph solver pkg1_id (f ())
+      (* we don't bother to call the solver if the package does not have
+       * any real disjunction *)
+      let anydisjuctions = conj_dependencies graph mdf.Mdf.index [pkg1_id] in
+      if anydisjuctions then begin 
+        let solver = Depsolver_int.init_solver ~idlist:closure mdf.Mdf.index in
+        match Depsolver_int.solve solver (Diagnostic_int.Sng pkg1_id) with
+        |Diagnostic_int.Failure(_) -> ()
+        |Diagnostic_int.Success(f) -> begin
+          check_strong graph solver pkg1_id (f ())
+        end
       end
     end
   ) available ;
@@ -116,7 +124,7 @@ let strongdeps mdf idlist =
     List.fold_left (fun acc id ->
       let pkg = mdf.Mdf.index.(id) in
       Util.Progress.progress conjbar;
-      conj_dependencies graph mdf.Mdf.index [id];
+      (* conj_dependencies graph mdf.Mdf.index [id]; *)
       let closure = dependency_closure mdf [id] in
       (pkg,List.length closure,closure) :: acc
     ) [] idlist
@@ -137,7 +145,7 @@ let strongdeps_univ mdf =
     let id = ref 0 in
     Array.fold_left (fun acc pkg ->
       Util.Progress.progress conjbar;
-      conj_dependencies graph mdf.Mdf.index [!id];
+      (* conj_dependencies graph mdf.Mdf.index [!id]; *)
       let closure = dependency_closure mdf [!id] in
       incr id ;
       (pkg,List.length closure,closure) :: acc

@@ -277,5 +277,20 @@ module StrongDepGraph = struct
     end
   
   module D = Graph.Graphviz.Dot(Display)
+
+  module DIn = Dot.Parse (Builder.I(G))(
+    struct
+      let node (id,_) _ =
+        match id with
+        |Graph.Dot_ast.String s -> 
+            let rex = Str.regexp "(\\([a-zA-Z0-9_-.]+\\),\\([a-zA-Z0-9.-]+\\))" in
+            if Str.string_match rex s 0 then
+              (Str.matched_group 1 s , Str.matched_group 2 s)
+            else (s,"")
+        |_ -> assert false
+      let edge _ = ()
+    end
+  )
+
   module S = Set.Make(PkgV)
 end

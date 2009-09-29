@@ -27,7 +27,6 @@ exception Done
 module Options = struct
   let dot = ref false
   let dump = ref false
-  let load = ref false
   let incr = ref false
   let detrans = ref false
 end
@@ -37,7 +36,6 @@ let options =
   [
    ("--dot", Arg.Set Options.dot, "Print the graph in dot format");
    ("--incr", Arg.Set Options.incr, "");
-   ("--load", Arg.Set Options.incr, "Load a strong dependency graph");
    ("--dump", Arg.Set Options.dump, "Dump the transitive reduction of the strong dependency graph in graph.marshal");
    ("--detrans", Arg.Set Options.detrans, "Transitive reduction. Used in conjuction with --dot.");
    ("--debug", Arg.Unit enable_debug, "Print debug information");
@@ -86,72 +84,108 @@ let parse uri =
   pkglist
 ;;
 
-let out g =
-  if !Options.dump then begin
+let out ?(dump=false) ?(dot=false) ?(detrans=false) g =
+  if !Options.dump || dump then begin
     SO.transitive_reduction g;
     let oc = open_out "graph.marshal" in
     Marshal.to_channel oc (g :> SG.t) [];
     close_out oc
   end ;
 
-  if !Options.dot then begin
-    if !Options.detrans then
+  if !Options.dot || dot then begin
+    if !Options.detrans || detrans then
       SO.transitive_reduction g;
     SD.output_graph stdout g;
     print_newline ();
   end
 ;;
 
-(* "graph.marshal" *)
+(* this function can be more efficient if integrated in the library
+ * and written using the low level strongdeps_int instead of 
+ * the use level interface *)
+
 let strong_incr (oldgraph,oldpkglist) newpkglist =
   let newuniv = Cudf.load_universe newpkglist in
   let oldh = CudfAdd.realversionmap oldpkglist in
   let newh = CudfAdd.realversionmap newpkglist in
 
-  let (modified,toremove) =
-    let nl = ref [] in
-    let ol = ref [] in
+  (* same     : packages that exists in old and new
+   * changed  : packages that exists in new and have an older version in old
+   * toremove : packages that exists in old but not in new
+   * *)
+  let (same,changed,toremove) =
+    let same = ref [] in
+    let changed = ref [] in
+    let toremove = ref [] in
     Hashtbl.iter (fun (n,v) pkg ->
       if not(Hashtbl.mem oldh (n,v) ) then
-        nl := pkg :: !nl
+        changed := pkg :: !changed
+      else
+        same := pkg :: !same
     ) newh;
+    (* toremove : packages that do exist in old but not in new *)
     Hashtbl.iter (fun (n,v) pkg ->
       if not(Hashtbl.mem newh (n,v) ) then
-        ol := pkg :: !ol
+        toremove := pkg :: !toremove
     ) oldh;
-    (!nl,!ol)
+    (!same,!changed,!toremove)
   in
 
-  print_endline "modified----------------";
-  List.iter (fun p -> print_endline (CudfAdd.print_package p) ) modified;
+  print_endline "newpkglist----------------";
+  (* List.iter (fun p -> print_endline (CudfAdd.print_package p) ) newpkglist; *)
+
+
+  print_endline "changed----------------";
+  List.iter (fun p -> print_endline (CudfAdd.print_package p) ) changed;
   print_endline "toremove----------------";
   List.iter (fun p -> print_endline (CudfAdd.print_package p) ) toremove;
 
+  (* the packages to recompute are the union of all packages that
+   * exists in new and have an older version in old plus
+   * the set of packages that have a same version in old and new BUT
+   * are mentioned in the conflict list of a packages that is changed *)
+  let torecompute =
+    let module S = CudfAdd.Cudf_set in
+    let maps = CudfAdd.build_maps newuniv in
+    let changed = List.fold_right S.add changed S.empty in
+    let notsame =
+      List.fold_right (fun pkg acc ->
+        let l = maps.CudfAdd.who_conflicts pkg in
+        let s = List.fold_right S.add l S.empty in
+        if S.is_empty (S.inter s changed) then acc else (S.add pkg acc)
+      ) same S.empty
+    in
+    S.elements (S.union changed notsame)
+  in
+
+  print_endline "torecompute----------------";
+  List.iter (fun p -> print_endline (CudfAdd.print_package p)) torecompute;
+
+  (* the new list is the union of the dependency and reverse dependency closure
+   * of all packages to recompute *)
   let newlist =
     let module S = CudfAdd.Cudf_set in
-    let rl = Depsolver.reverse_dependency_closure newuniv modified in
-    let dl = Depsolver.dependency_closure newuniv modified in
+    let rl = Depsolver.reverse_dependency_closure newuniv torecompute in
+    let dl = Depsolver.dependency_closure newuniv torecompute in
     let s = List.fold_right S.add dl S.empty in
     let s = List.fold_right S.add rl s in
     S.elements s
   in
 
-  print_endline "newlist----------------";
+  print_endline "newlist after closure----------------";
   List.iter (fun p -> print_endline (CudfAdd.print_package p) ) newlist;
-  print_endline "newpkglist----------------";
-  List.iter (fun p -> print_endline (CudfAdd.print_package p) ) newpkglist;
+  print_int (List.length newlist);
+  print_newline ();
 
   print_endline "strong deps only for the new packages-----------------------------";
-  (* compute strong deps only for the new packages *)
+  (* the graph of strong dependencies is computer considering a subset newlist
+   * of packages of the new universe  *)
   let newgraph = transform (Strongdeps.strongdeps newuniv newlist) in
   SO.transitive_reduction newgraph;
-  out newgraph;
+  out ~dot:true ~detrans:true newgraph;
   print_endline "-----------------------------";
 
-  (* add all the new edges *)
-  SG.iter_edges (fun p q -> SG.add_edge oldgraph p q) newgraph;
-
-  (* remove all old vertex and associated edges *)
+  (* Cleanup : remove all old vertex and associated edges *)
   List.iter (fun pkg ->
     let p = version pkg in
     SG.iter_succ (SG.remove_edge oldgraph p) oldgraph p ;
@@ -159,7 +193,9 @@ let strong_incr (oldgraph,oldpkglist) newpkglist =
     SG.remove_vertex oldgraph p
   ) toremove ;
 
-  print_endline "merge-----------------------------";
+  (* Cleanup : add all the new edges *)
+  SG.iter_edges (fun p q -> SG.add_edge oldgraph p q) newgraph;
+
   oldgraph
 
 ;;
@@ -172,7 +208,6 @@ let main () =
     with Arg.Bad s -> failwith s
   in
   match !files with
-  |[f] when !Options.load = true -> failwith "not yet"
   |[f] when !Options.incr = false ->
       let universe = Cudf.load_universe (parse f) in
       out (transform (Strongdeps.strongdeps_univ universe))

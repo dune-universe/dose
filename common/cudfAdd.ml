@@ -156,7 +156,7 @@ let build_maps universe =
   let map = new projection in
 
   Cudf.iter_packages (fun pkg ->
-    map#add pkg;
+    map#add pkg; (* associate an integer to each package *)
     List.iter (function
       |name, None -> Hashtbl.add provides name (pkg, None)
       |name, Some (_, ver) -> Hashtbl.add provides name (pkg, (Some ver))
