@@ -26,7 +26,7 @@ exception Done
 
 module Options = struct
   let dot = ref false
-  let dump = ref false
+  let dump = ref None
   let incr = ref false
   let detrans = ref false
 end
@@ -36,7 +36,7 @@ let options =
   [
    ("--dot", Arg.Set Options.dot, "Print the graph in dot format");
    ("--incr", Arg.Set Options.incr, "");
-   ("--dump", Arg.Set Options.dump, "Dump the transitive reduction of the strong dependency graph in graph.marshal");
+   ("--dump", Arg.String (fun f -> Options.dump := Some f ), "Dump the transitive reduction of the strong dependency graph");
    ("--detrans", Arg.Set Options.detrans, "Transitive reduction. Used in conjuction with --dot.");
    ("--debug", Arg.Unit enable_debug, "Print debug information");
   ]
@@ -85,9 +85,14 @@ let parse uri =
 ;;
 
 let out ?(dump=false) ?(dot=false) ?(detrans=false) g =
-  if !Options.dump || dump then begin
+  if !Options.dump <> None || dump then begin
+    let f =
+      if dump then "graph.marshal"
+      else Option.get !Options.dump
+    in
+    Printf.eprintf "Dumping graph in %s\n" f ;
     SO.transitive_reduction g;
-    let oc = open_out "graph.marshal" in
+    let oc = open_out f in
     Marshal.to_channel oc (g :> SG.t) [];
     close_out oc
   end ;
@@ -131,65 +136,77 @@ let strong_incr (oldgraph,oldpkglist) newpkglist =
     (!same,!changed,!toremove)
   in
 
-  print_endline "newpkglist----------------";
-  (* List.iter (fun p -> print_endline (CudfAdd.print_package p) ) newpkglist; *)
-
+  (* print_endline "newpkglist----------------";
+  List.iter (fun p -> print_endline (CudfAdd.print_package p) ) newpkglist;
 
   print_endline "changed----------------";
   List.iter (fun p -> print_endline (CudfAdd.print_package p) ) changed;
   print_endline "toremove----------------";
-  List.iter (fun p -> print_endline (CudfAdd.print_package p) ) toremove;
+  List.iter (fun p -> print_endline (CudfAdd.print_package p) ) toremove; *)
 
-  (* the packages to recompute are the union of all packages that
-   * exists in new and have an older version in old plus
-   * the set of packages that have a same version in old and new BUT
-   * are mentioned in the conflict list of a packages that is changed *)
+  (* the strong dependencies of a package p must be recomputed if either
+   * closure p \inter changed = \neq \emptyset 
+   * OR
+   * conflicts (closure p) \inter changed = \neq \emptyset
+   *)
   let torecompute =
     let module S = CudfAdd.Cudf_set in
     let maps = CudfAdd.build_maps newuniv in
-    let changed = List.fold_right S.add changed S.empty in
+    (* compute the list of all packages that conflict with a package
+     * that was modified *)
+    let sc = List.fold_right S.add changed S.empty in 
     let notsame =
-      List.fold_right (fun pkg acc ->
+      List.fold_left (fun acc pkg ->
         let l = maps.CudfAdd.who_conflicts pkg in
         let s = List.fold_right S.add l S.empty in
-        if S.is_empty (S.inter s changed) then acc else (S.add pkg acc)
-      ) same S.empty
+        if S.is_empty (S.inter s sc) then acc else (S.add pkg acc)
+      ) S.empty changed
     in
-    S.elements (S.union changed notsame)
+    S.elements notsame
   in
 
-  print_endline "torecompute----------------";
-  List.iter (fun p -> print_endline (CudfAdd.print_package p)) torecompute;
+  (*print_endline "torecompute----------------";
+  List.iter (fun p -> print_endline (CudfAdd.print_package p)) torecompute; *)
 
   (* the new list is the union of the dependency and reverse dependency closure
    * of all packages to recompute *)
   let newlist =
     let module S = CudfAdd.Cudf_set in
     let rl = Depsolver.reverse_dependency_closure newuniv torecompute in
-    let dl = Depsolver.dependency_closure newuniv torecompute in
-    let s = List.fold_right S.add dl S.empty in
+    (* let dl = Depsolver.dependency_closure newuniv torecompute in *)
+    let s = List.fold_right S.add changed S.empty in
     let s = List.fold_right S.add rl s in
     S.elements s
   in
 
+  Printf.eprintf "same : %d\nchanged : %d\ntoremove : %d\ntorecompute : %d\nafterclosure : %d\n" 
+  (List.length same)
+  (List.length changed)
+  (List.length toremove)
+  (List.length torecompute)
+  (List.length newlist)
+  ;
+
+  (*
   print_endline "newlist after closure----------------";
   List.iter (fun p -> print_endline (CudfAdd.print_package p) ) newlist;
   print_int (List.length newlist);
   print_newline ();
-
   print_endline "strong deps only for the new packages-----------------------------";
+*)
+
   (* the graph of strong dependencies is computer considering a subset newlist
    * of packages of the new universe  *)
   let newgraph = transform (Strongdeps.strongdeps newuniv newlist) in
   SO.transitive_reduction newgraph;
-  out ~dot:true ~detrans:true newgraph;
+  (* out ~dot:true ~detrans:true newgraph;
   print_endline "-----------------------------";
-
+  *)
   (* Cleanup : remove all old vertex and associated edges *)
   List.iter (fun pkg ->
     let p = version pkg in
-    SG.iter_succ (SG.remove_edge oldgraph p) oldgraph p ;
-    SG.iter_pred (fun q -> SG.remove_edge oldgraph q p) oldgraph p;
+    (* SG.iter_succ (SG.remove_edge oldgraph p) oldgraph p ;
+    SG.iter_pred (fun q -> SG.remove_edge oldgraph q p) oldgraph p; *)
     SG.remove_vertex oldgraph p
   ) toremove ;
 

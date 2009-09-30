@@ -13,14 +13,15 @@
 
 (** progress bar *)
 module Progress : sig
+  type label = string
   type t
     
   (** [create "barname"] : create new a progress bar labelled "barname". 
       The progress bar is disabled by default *)
-  val create: string -> t
+  val create: label -> t
 
   (** [enable "barname"] : enable the progress bar with label "barname" *)
-  val enable : string -> unit
+  val enable : label -> unit
   
   (** [set_total bar 10] : set the max width of the progress bar to 10 units *)
   val set_total : t -> int -> unit
@@ -29,7 +30,7 @@ module Progress : sig
   val progress : t -> unit
 
   (** return the labels of all available progress bar *)
-  val avalaible : unit -> string list
+  val avalaible : unit -> label list
 end
 
 (** timer logger *)

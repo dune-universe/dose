@@ -50,8 +50,10 @@ let dump ppf =
   ) !loggers
 
 module Progress = struct
+  type label = string
+
   type t = {
-    name : string ;
+    name : label ;
     buffer : Buffer.t ;
     mutable total : int ;
     mutable perc : int ;
