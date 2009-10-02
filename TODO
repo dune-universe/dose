@@ -6,8 +6,9 @@
   problem to cudf
 
 - fix the broken dependencies explanation list. The reason list
-  sometimes does not include broken packages at the end of a reson
-  list. The solver does not provide this information.
+  sometimes does not include broken packages at the end of a reason
+  list. The solver does not provide this information. Actually this is 
+  a problem with distcheck.
 
 - add minisat backend to the depsolver
 

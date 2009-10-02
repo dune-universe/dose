@@ -34,10 +34,10 @@ let installed mdf =
     let pkg = i.Mdf.pkg in
     if pkg.Cudf.installed then
       let pl1 = List.fold_left (fun l vpkg ->
-        (maps.who_provides (vpkg :> Cudf_types.vpkg)) @ l
+        (maps.lookup_virtual (vpkg :> Cudf_types.vpkg)) @ l
         ) [] pkg.Cudf.provides
       in
-      let pl2 = maps.lookup_packages (pkg.Cudf.package,None) in
+      let pl2 = maps.who_provides (pkg.Cudf.package,None) in
       let pl = List.map vartoint (List.unique (pl1 @ pl2)) in
       if pl <> [] then pl :: ll else ll
     else ll
@@ -69,14 +69,14 @@ let __prepare request solver mdf =
   in
 
   List.iter (fun vpkg ->
-    let alternatives = List.map to_sat (mdf.Mdf.maps.lookup_packages vpkg) in
+    let alternatives = List.map to_sat (mdf.Mdf.maps.who_provides vpkg) in
     let lit_pos_list = lit_list true alternatives in
     add (proxy_lit :: lit_pos_list) [Diagnostic_int.To_install (vpkg, alternatives)];
   ) request.Cudf.install
   ;
 
   List.iter (fun vpkg ->
-    let alternatives = List.map to_sat (mdf.Mdf.maps.lookup_packages vpkg) in
+    let alternatives = List.map to_sat (mdf.Mdf.maps.who_provides vpkg) in
     let lit_pos_list = lit_list true alternatives in
     add (proxy_lit :: lit_pos_list) [Diagnostic_int.To_upgrade (vpkg, alternatives)];
     if (List.length alternatives) > 1 then
@@ -86,7 +86,7 @@ let __prepare request solver mdf =
   ;
 
   List.iter (fun vpkg ->
-    let alternatives = List.map to_sat (mdf.Mdf.maps.lookup_packages vpkg) in
+    let alternatives = List.map to_sat (mdf.Mdf.maps.who_provides vpkg) in
     List.iter (fun id ->
       let lit = S.lit_of_var (solver.Depsolver_int.map#vartoint id) false in
       S.add_bin_rule solver.constraints proxy_lit lit [Diagnostic_int.To_remove (vpkg,id)];
@@ -120,7 +120,7 @@ let load universe request =
 
   let alternatives vpkglist =
     List.map (fun vpkg -> 
-      List.map vartoint (mdf.Mdf.maps.lookup_packages vpkg)
+      List.map vartoint (mdf.Mdf.maps.who_provides vpkg)
     ) vpkglist
   in
 

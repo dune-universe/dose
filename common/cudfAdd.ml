@@ -115,6 +115,8 @@ class projection = object(self)
     with Not_found -> assert false
 end 
 
+(** build an hash table that associates (package name, String version) to
+ * cudf packages *)
 let realversionmap pkglist =
   let h = Hashtbl.create (2 * (List.length pkglist)) in
   List.iter (fun pkg ->
@@ -136,13 +138,14 @@ type maps = {
       conflict with the given package *)
   who_conflicts : Cudf.package -> Cudf.package list;
 
-  (** the list of all packages that provide the given feature *)
-  who_provides : Cudf_types.vpkg -> Cudf.package list ;
+  (** [lookup_virtual feature] the list of all packages that
+      explicitely declared [feature] as provide *)
+  lookup_virtual : Cudf_types.vpkg -> Cudf.package list ;
 
-  (** the list of all packages that satisfy the give package 
-      constraint. If there are no real packages, then the contraint
-      is interpreted as a feature request as in who_provides *)
-  lookup_packages : Cudf_types.vpkg -> Cudf.package list ;
+  (** [who_provides constr] the list of all packages that satisfy [constr]. 
+      If there are no real packages, then the contraint is interpreted as 
+      a feature request as in lookup_virtual *)
+  who_provides : Cudf_types.vpkg -> Cudf.package list ;
 
   (** assign an integer to each cudf package *)
   map : projection
@@ -164,7 +167,7 @@ let build_maps universe =
   ) universe
   ;
 
-  let who_provides (pkgname,constr) =
+  let lookup_virtual (pkgname,constr) =
     List.filter_map (function
       |pkg, None -> Some(pkg)
       |pkg, Some v when Cudf.version_matches v constr -> Some(pkg)
@@ -172,9 +175,9 @@ let build_maps universe =
     ) (Hashtbl.find_all provides pkgname)
   in
 
-  let lookup_packages (pkgname,constr) =
+  let who_provides (pkgname,constr) =
     match Cudf.lookup_packages ~filter:constr universe pkgname with
-    |[] -> who_provides (pkgname,constr)
+    |[] -> lookup_virtual (pkgname,constr)
     |l -> l
   in
 
@@ -187,7 +190,7 @@ let build_maps universe =
           Cudf_hashtbl.add conflicts pkg p ;
           Cudf_hashtbl.add conflicts p pkg
         end
-      ) (lookup_packages (name,constr))
+      ) (who_provides (name,constr))
     ) pkg.conflicts
   ) universe
   ;
@@ -197,7 +200,7 @@ let build_maps universe =
   {
     who_conflicts = who_conflicts ;
     who_provides = who_provides ;
-    lookup_packages = lookup_packages ;
+    lookup_virtual = lookup_virtual ;
     map = map
   }
 ;;
