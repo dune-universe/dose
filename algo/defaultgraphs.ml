@@ -66,7 +66,7 @@ module SyntacticDependencyGraph = struct
     let default = DirDepends
   end
 
-  module G = Imperative.Digraph.ConcreteLabeled(PkgV)(PkgE) 
+  module G = Imperative.Digraph.ConcreteBidirectionalLabeled(PkgV)(PkgE) 
 
   module Display = struct
       include G
@@ -117,19 +117,31 @@ module SyntacticDependencyGraph = struct
               G.add_edge_e gr edge
             ) (maps.CudfAdd.who_provides (pkgname,constr))
         |l -> begin
-            let vor = G.V.create (PkgV.Or (pkg,!c)) in
-            G.add_vertex gr vor;
-            let edgeor = G.E.create vpid PkgE.OrDepends vor in
-            G.add_edge_e gr edgeor;
-            incr c;
-            List.iter (fun (pkgname,constr) ->
-              List.iter (fun p ->
-                let vp = G.V.create (PkgV.Pkg p) in
-                G.add_vertex gr vp;
-                let oredge = G.E.create vor PkgE.OrDepends vp in
-                G.add_edge_e gr oredge
-              ) (maps.CudfAdd.who_provides (pkgname,constr))
-            ) l
+            let providing_packages = 
+            List.fold_left (fun d (pkgname,constr) ->
+              List.fold_left (fun d' p ->
+                p::d'
+              ) d (maps.CudfAdd.who_provides (pkgname,constr))
+            ) [] l in
+            match providing_packages with
+            | [] -> ()
+            | [p] -> let vp = G.V.create (PkgV.Pkg p) in
+                let edge = G.E.create vpid PkgE.DirDepends vp in
+                G.add_vertex gr vp ;
+                G.add_edge_e gr edge
+            | l -> begin
+                let vor = G.V.create (PkgV.Or (pkg,!c)) in
+                G.add_vertex gr vor;
+                let edgeor = G.E.create vpid PkgE.OrDepends vor in
+                G.add_edge_e gr edgeor;
+                incr c;
+                List.iter (fun p ->
+                  let vp = G.V.create (PkgV.Pkg p) in
+                  G.add_vertex gr vp;
+                  let oredge = G.E.create vor PkgE.OrDepends vp in
+                  G.add_edge_e gr oredge
+                ) l
+               end
         end
       ) pkg.Cudf.depends
       ;
