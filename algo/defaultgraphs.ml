@@ -66,7 +66,7 @@ module SyntacticDependencyGraph = struct
     let default = DirDepends
   end
 
-  module G = Imperative.Digraph.ConcreteBidirectionalLabeled(PkgV)(PkgE) 
+  module G = Imperative.Digraph.ConcreteLabeled(PkgV)(PkgE) 
 
   module Display = struct
       include G
