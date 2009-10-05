@@ -331,7 +331,7 @@ let main () =
     h
   in
   
-  let preamble = ("Priority",("int",`Int 500))::Debcudf.preamble in
+  let preamble = ("Priority",(`Int 500))::Debcudf.preamble in
   let add_extra (k,v) pkg = { pkg with Cudf.extra = (k,v) :: pkg.Cudf.extra } in
 
   let pl =

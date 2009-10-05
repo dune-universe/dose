@@ -192,9 +192,9 @@ let loadll tables ll = List.map (loadl tables) ll
 (* ========================================= *)
 
 let preamble = [
-  ("Number",("string", `String ""));
-  ("Source",("string", `String "")) ;
-  ("Sourceversion",("string", `String ""))
+  ("Number",(`String ""));
+  ("Source",(`String "")) ;
+  ("Sourceversion",(`String ""))
 ]
 
 let extra pkg =
