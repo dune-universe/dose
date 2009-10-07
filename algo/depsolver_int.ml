@@ -283,24 +283,32 @@ let reverse_dependency_closure reverse idlist =
 
 let pkgcheck callback solver failed tested id =
   try
-    if not(tested.(id)) then begin
-      let req = Diagnostic_int.Sng id in
-      let res = solve solver req in
-      begin match res with
-      |Diagnostic_int.Success(f) -> 
-          (try
-            List.iter (fun i ->
-              Util.Progress.progress progressbar_univcheck;
-              tested.(i) <- true
-            ) (f ())
-          with Not_found -> assert false)
-      |_ -> incr failed
+    let req = Diagnostic_int.Sng id in
+    let res =
+      if not(tested.(id)) then begin
+        let res = solve solver req in
+        begin match res with
+        |Diagnostic_int.Success(f) -> 
+            (try
+              List.iter (fun i ->
+                Util.Progress.progress progressbar_univcheck;
+                tested.(i) <- true
+              ) (f ())
+            with Not_found -> assert false)
+        |_ -> incr failed
+        end
+        ;
+        res
       end
-      ;
-      match callback with
-      |None -> ()
-      |Some f -> f (res,req)
-    end
+      else begin (* we know this package is not broken *)
+        let f () = Printf.eprintf
+        "Warning: this installation set is empty.\n" ; []
+        in Diagnostic_int.Success(f) 
+      end
+    in
+    match callback with
+    |None -> ()
+    |Some f -> f (res,req) 
   with Not_found -> assert false
 
 (** [listcheck ?callback idlist mdf] check if a subset of packages 
