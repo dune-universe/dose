@@ -231,11 +231,27 @@ let test_strongdep =
   (*  strongdep_conj  XXX *)
   ]
 
+let test_dependency_graph =
+  "syntactic dependency graph" >:: (fun _ ->
+    let module SDG = Defaultgraphs.SyntacticDependencyGraph in
+    let module G = SDG.G in
+    let g = SDG.dependency_graph universe in
+    G.iter_edges_e (fun edge ->
+      print_endline (SDG.string_of_edge edge)
+    ) g
+  )
+
+let test_defaultgraphs =
+  "default graphs algorithms" >::: [
+    (* test_dependency_graph *)
+  ]
+
 let all = 
   "all tests" >::: [
     test_depsolver ;
     test_cudfsolver ;
-    test_strongdep;
+    test_strongdep ;
+    test_defaultgraphs ;
   ]
 
 let main () =
