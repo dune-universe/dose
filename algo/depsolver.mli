@@ -23,6 +23,9 @@ val edos_install : solver -> Cudf.package -> Diagnostic.diagnosis
 (** check if the give package list can be installed in the universe *)
 val edos_coinstall : solver -> Cudf.package list -> Diagnostic.diagnosis
 
+(** trim uninstallable packages from the list *)
+val trim : solver -> Cudf.package list -> Cudf.package list
+
 (** [univcheck solver] check if all packages in the 
   universe associated with the solver can be installed.
   @param callback : execute a function for each package

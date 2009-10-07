@@ -96,6 +96,20 @@ let edos_coinstall s pkglist =
   let res = Depsolver_int.solve s.solver req in
   diagnosis maps res req
 
+let trim s pkglist =
+  let trimmed_pkgs = ref pkglist in
+  ignore (univcheck ~callback:(function d ->
+    match d.Diagnostic.result with
+    | Diagnostic.Failure _ ->
+      begin
+        match d.Diagnostic.request with
+        | Diagnostic.Package p -> trimmed_pkgs := List.remove !trimmed_pkgs p
+        | _ -> assert false
+      end
+    | _ -> ()
+  ) s);
+  !trimmed_pkgs
+
 let dependency_closure universe pkglist =
   let mdf = Mdf.load_from_universe universe in
   let maps = mdf.Mdf.maps in
