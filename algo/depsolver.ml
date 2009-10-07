@@ -97,13 +97,13 @@ let edos_coinstall s pkglist =
   diagnosis maps res req
 
 let trim s pkglist =
-  let trimmed_pkgs = ref pkglist in
+  let trimmed_pkgs = ref [] in
   ignore (univcheck ~callback:(function d ->
     match d.Diagnostic.result with
-    | Diagnostic.Failure _ ->
+    | Diagnostic.Success _ ->
       begin
         match d.Diagnostic.request with
-        | Diagnostic.Package p -> trimmed_pkgs := List.remove !trimmed_pkgs p
+        | Diagnostic.Package p -> trimmed_pkgs := p::!trimmed_pkgs
         | _ -> assert false
       end
     | _ -> ()
