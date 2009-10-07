@@ -68,6 +68,25 @@ module SyntacticDependencyGraph = struct
 
   module G = Imperative.Digraph.ConcreteLabeled(PkgV)(PkgE) 
 
+  let string_of_vertex vertex =
+    match G.V.label vertex with
+    |PkgV.Pkg p -> Printf.sprintf "Pkg %s" (print_package p)
+    |PkgV.Or (p, i) -> Printf.sprintf "Or %s %d" (print_package p) i
+
+  let string_of_edge edge =
+    let label =
+      match G.E.label edge with
+      |PkgE.DirDepends -> "Direct"
+      |PkgE.OrDepends -> "Disjunctive"
+      |PkgE.Conflict -> "Conflict"
+    in
+    let src = G.E.src edge in
+    let dst = G.E.dst edge in
+    Printf.sprintf "%s %s %s"
+    (string_of_vertex src)
+    label
+    (string_of_vertex dst)
+
   module Display = struct
       include G
       let vertex_name v =
@@ -107,53 +126,40 @@ module SyntacticDependencyGraph = struct
     Cudf.iter_packages (fun pkg ->
       let vpid = G.V.create (PkgV.Pkg pkg) in
       let c = ref 0 in
-      G.add_vertex gr vpid ;
       List.iter (function
         |[(pkgname,constr)] ->
             List.iter (fun p ->
               let vp = G.V.create (PkgV.Pkg p) in
               let edge = G.E.create vpid PkgE.DirDepends vp in
-              G.add_vertex gr vp ;
               G.add_edge_e gr edge
             ) (maps.CudfAdd.who_provides (pkgname,constr))
         |l ->
-          begin
-            let providing_packages = 
-            List.fold_left (fun d (pkgname,constr) ->
-              List.fold_left (fun d' p ->
-                p::d'
-              ) d (maps.CudfAdd.who_provides (pkgname,constr))
-            ) [] l in
-            match providing_packages with
-            | [] -> ()
-            | [p] ->
+            match List.flatten (List.map maps.CudfAdd.who_provides l) with 
+            |[] -> ()
+            |[p] ->
                 let vp = G.V.create (PkgV.Pkg p) in
                 let edge = G.E.create vpid PkgE.DirDepends vp in
-                G.add_vertex gr vp ;
                 G.add_edge_e gr edge
-            | l ->
+            |l ->
                 begin
                   let vor = G.V.create (PkgV.Or (pkg,!c)) in
-                  G.add_vertex gr vor;
                   let edgeor = G.E.create vpid PkgE.OrDepends vor in
                   G.add_edge_e gr edgeor;
                   incr c;
                   List.iter (fun p ->
                     let vp = G.V.create (PkgV.Pkg p) in
-                    G.add_vertex gr vp;
                     let oredge = G.E.create vor PkgE.OrDepends vp in
                     G.add_edge_e gr oredge
                   ) l
                 end
-          end
       ) pkg.Cudf.depends
       ;
       List.iter (fun (pkgname,constr) ->
         List.iter (fun p ->
-          let vp = G.V.create (PkgV.Pkg p) in
-          let edge = G.E.create vpid PkgE.Conflict vp in
-          G.add_vertex gr vp;
-          G.add_edge_e gr edge
+          if not(CudfAdd.equal p pkg) then
+            let vp = G.V.create (PkgV.Pkg p) in
+            let edge = G.E.create vpid PkgE.Conflict vp in
+            G.add_edge_e gr edge
         ) (maps.CudfAdd.who_provides (pkgname,constr))
       ) pkg.Cudf.conflicts
     ) universe
