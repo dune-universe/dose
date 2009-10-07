@@ -71,7 +71,7 @@ module SyntacticDependencyGraph = struct
   let string_of_vertex vertex =
     match G.V.label vertex with
     |PkgV.Pkg p -> Printf.sprintf "Pkg %s" (print_package p)
-    |PkgV.Or (p, i) -> Printf.sprintf "Or %s %d" (print_package p) i
+    |PkgV.Or (p, _) -> Printf.sprintf "Or %s" (print_package p)
 
   let string_of_edge edge =
     let label =
@@ -154,14 +154,12 @@ module SyntacticDependencyGraph = struct
                 end
       ) pkg.Cudf.depends
       ;
-      List.iter (fun (pkgname,constr) ->
-        List.iter (fun p ->
-          if not(CudfAdd.equal p pkg) then
-            let vp = G.V.create (PkgV.Pkg p) in
-            let edge = G.E.create vpid PkgE.Conflict vp in
-            G.add_edge_e gr edge
-        ) (maps.CudfAdd.who_provides (pkgname,constr))
-      ) pkg.Cudf.conflicts
+      List.iter (fun p ->
+        if not(CudfAdd.equal p pkg) then
+          let vp = G.V.create (PkgV.Pkg p) in
+          let edge = G.E.create vpid PkgE.Conflict vp in
+          G.add_edge_e gr edge
+      ) (maps.CudfAdd.who_conflicts pkg)
     ) universe
     ;
     gr
