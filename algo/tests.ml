@@ -60,6 +60,18 @@ let test_coinstall =
     |Diagnostic.Failure f -> assert_bool "pass" true
   )
 
+let test_trim =
+  "trim" >:: (fun _ ->
+    let f_debian = "tests/debian.cudf" in
+    let universe =
+      let (_,pl,_) = Cudf_parser.parse_from_file f_debian in
+      Cudf.load_universe pl
+    in
+    let solver = Depsolver.load universe in
+    let l = Depsolver.trim solver (Cudf.get_packages universe) in
+    assert_equal 24342 (List.length l)
+  )
+    
 let test_distribcheck =
   "distribcheck" >:: (fun _ -> 
     let f_debian = "tests/debian.cudf" in
@@ -114,6 +126,7 @@ let test_depsolver =
   "depsolver" >::: [
     test_install ;
     test_coinstall ;
+    test_trim ;
     test_distribcheck ;
     test_dependency_closure ;
     test_reverse_dependencies ;
