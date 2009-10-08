@@ -186,7 +186,7 @@ let build_maps universe =
   Cudf.iter_packages (fun pkg ->
     List.iter (fun (name,constr) ->
       List.iter (fun p ->
-        if p <> pkg then begin
+        if not(equal p pkg) then begin
           Cudf_hashtbl.add conflicts pkg p ;
           Cudf_hashtbl.add conflicts p pkg
         end

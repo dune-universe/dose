@@ -550,8 +550,11 @@ module M (X : S) = struct
       st_seen_var = Array.make n (-1);
       st_refs = Array.make n 0;
       st_pinned = Array.make n false;
+      (* to each literal, positive or negative, 
+       * we associate the list of rules where it appears *)
       st_simpl_prop = Array.make (2 * n) [];
       st_watched = Array.make (2 * n) [];
+      (* to each literal we associate the list of assiciated variables *)
       st_associated_vars = Array.make (2 * n) [];
       st_trail = [];
       st_trail_lim = [];

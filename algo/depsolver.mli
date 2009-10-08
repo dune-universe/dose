@@ -23,13 +23,19 @@ val edos_install : solver -> Cudf.package -> Diagnostic.diagnosis
 (** check if the give package list can be installed in the universe *)
 val edos_coinstall : solver -> Cudf.package list -> Diagnostic.diagnosis
 
-(** trim uninstallable packages from the list *)
+(** remove uninstallable packages from the list *)
 val trim : solver -> Cudf.package list -> Cudf.package list
 
 (** [univcheck solver] check if all packages in the 
-  universe associated with the solver can be installed.
-  @param callback : execute a function for each package
-  @return the number of broken packages
+    universe associated with the solver can be installed.
+    Since not all packages
+    are directly tested for installation, if a packages is installable, the 
+    installation might be empty. To obtain an installation set for
+    each installable packages, the correct procedure is to iter on the list of
+    packages and use the function [edos_install].
+ 
+    @param callback : execute a function for each package
+    @return the number of broken packages
  *)
 val univcheck : ?callback:(Diagnostic.diagnosis -> unit) -> solver -> int
 
@@ -44,7 +50,7 @@ val univcheck : ?callback:(Diagnostic.diagnosis -> unit) -> solver -> int
   ?callback:(Diagnostic.diagnosis -> unit) -> solver -> Cudf.package list -> int *)
 
 (** [dependency_closure universe l] compute the dependencies closure 
- * of the give package list. Invariant : l is a subset of universe *)
+    of the give package list. Invariant : l is a subset of universe *)
 val dependency_closure : Cudf.universe -> Cudf.package list -> Cudf.package list
 
 (** [reverse_dependencies univ l] compute the reverse dependency list of all

@@ -77,11 +77,34 @@ let parse_uri =
     test_sqlite;
   ]
 
-(*
+(* XXX this file should not be in the algo test directory, but in a more
+ * central location *)
+let f_legacy = "../algo/tests/legacy.cudf"
+
+module S = CudfAdd.Cudf_set
+
+let (universe,request) =
+  let (_,univ,request) = Cudf_parser.parse_from_file f_legacy in
+  (Cudf.load_universe univ,Option.get request)
+
+let toset l =
+  List.fold_right (fun e set ->
+    S.add (Cudf.lookup_package universe e) set
+  ) l S.empty
+
+let engine_provides_set = S.empty
+let engine_conflicts_set = S.empty
+let electric_engine2 = Cudf.lookup_package universe ("electric-engine",2) 
+
 let test_who_conflicts =
   "who_conflict" >:: (fun _ ->
     let maps = CudfAdd.build_maps universe in
     let l = maps.CudfAdd.who_conflicts electric_engine2 in
+    let engine_conflicts_set = toset 
+      [ ("electric-engine",1);
+        ("gasoline-engine",1);
+        ("gasoline-engine",2); ]
+    in
     let set = List.fold_right S.add l S.empty in
     assert_equal true (S.equal engine_conflicts_set set)
   )
@@ -89,13 +112,22 @@ let test_who_conflicts =
 let test_who_provides =
   "who_provides" >:: (fun _ ->
     let maps = CudfAdd.build_maps universe in
-    let l = maps.CudfAdd.who_conflicts electric_engine2 in
+    let l = maps.CudfAdd.who_provides ("electric-engine",None) in
+    let engine_provides_set = toset 
+      [ ("electric-engine",1);
+        ("electric-engine",2); ]
+    in
     let set = List.fold_right S.add l S.empty in
-    assert_equal true (S.equal engine_conflicts_set set)
+    assert_equal true (S.equal engine_provides_set set)
   )
 
-let test_lookup_packages = 
+let test_lookup_packages =
+  "look up packages" >::: [
+    test_who_conflicts;
+    test_who_provides;
+  ]
 
+(*
 let test_projection
 
 let test_compare
@@ -106,10 +138,10 @@ let test_mdf
 
 *)
 
-
 let all = 
   "all tests" >::: [
     parse_uri ;
+    test_lookup_packages;
   ]
 
 let main () =
