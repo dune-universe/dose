@@ -85,6 +85,10 @@ module Progress = struct
     with Not_found -> Printf.eprintf "Warning: Progress bar %s not found\n" s
 
   let set_total c total = c.total <- total
+  let reset c =
+    Buffer.clear c.buffer;
+    c.perc <- 0;
+    c.rotation <- 0
 
   let progress c =
     if c.enabled then begin

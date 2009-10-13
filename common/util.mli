@@ -29,6 +29,9 @@ module Progress : sig
   (** increment the progress bar of one unit *)
   val progress : t -> unit
 
+  (** reset the progress bar *)
+  val reset: t -> unit
+
   (** return the labels of all available progress bar *)
   val avalaible : unit -> label list
 end
