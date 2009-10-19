@@ -15,31 +15,31 @@ open Common
 let test_deb =
   "deb" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
-      Uri.parseUri "deb://path/to/file" 
-    in assert_equal true (protocol = "deb" && path = "path/to/file")
+      Input.parse_uri "deb:///path/to/file" 
+    in assert_equal true (protocol = "deb" && path = "/path/to/file")
   )
 ;;
 
 let test_hdlist = 
   "hdlist" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
-      Uri.parseUri "hdlist://path/to/file" 
-    in assert_equal true (protocol = "hdlist" && path = "path/to/file")
+      Input.parse_uri "hdlist:///path/to/file" 
+    in assert_equal true (protocol = "hdlist" && path = "/path/to/file")
   )
 ;;
 
 let test_synth =
   "synth" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
-      Uri.parseUri "synth://path/to/file" 
-    in assert_equal true (protocol = "synth" && path = "path/to/file")
+      Input.parse_uri "synth:///path/to/file" 
+    in assert_equal true (protocol = "synth" && path = "/path/to/file")
   )
 ;;
 
 let test_cudf = 
   "cudf" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
-      Uri.parseUri "cudf:///path/to/file" 
+      Input.parse_uri "cudf:///path/to/file" 
     in assert_equal true (protocol = "cudf" && path = "/path/to/file")
   )
 ;;
@@ -47,23 +47,23 @@ let test_cudf =
 let test_sqlite =
   "sqlite" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
-      Uri.parseUri "sqlite:///path/to/file" 
+      Input.parse_uri "sqlite:///path/to/file" 
     in assert_equal true (protocol = "sqlite" && path = "/path/to/file")
   ) 
 ;;
 
-(* TODO : I know that the dbname and queryOpt are wrong *)
 let test_pgsql =
   "pgsql" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
-      Uri.parseUri "pgsql://test:tester@localhost/dbname?v1=k1&v2=k2"
+      Input.parse_uri "pgsql://test:tester@localhost:10/dbname?query=lalalal&v2=k2"
     in assert_equal true (
       protocol = "pgsql" && 
       userOpt = Some "test" &&
       passOpt = Some "tester" &&
       hostOpt = Some "localhost" &&
+      portOpt = Some "10" &&
       path = "dbname" &&
-      queryOpt = Some "v1=k1&v2=k2"
+      queryOpt = Some "lalalal"
     )
   ) 
 ;;
@@ -75,6 +75,7 @@ let parse_uri =
     test_synth;
     test_cudf;
     test_sqlite;
+    test_pgsql;
   ]
 
 (* XXX this file should not be in the algo test directory, but in a more
