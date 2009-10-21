@@ -541,6 +541,7 @@ let conv pkg =
     breaks = loadl (List.assoc (`Breaks) pkg.conj_deps);
     replaces = [];
     provides = loadl (List.assoc (`Provides) pkg.conj_deps);
+    extras = [];
   }
 
 let load_selection ?(relations=relations) ?(distribution=`Debian) query =
