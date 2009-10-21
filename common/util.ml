@@ -15,32 +15,38 @@ type verbosity = Quiet | Summary | Details
 let verbosity = ref Quiet
 let set_verbosity = (:=) verbosity
 
-let rec unescape s =
-  let hex_re = Str.regexp "%[0-9a-f][0-9a-f]" in
-  let un s =
-    let s = Str.matched_string s in
-    let hex = String.sub s 1 2 in
-    let n = int_of_string ("0x" ^ hex) in
-    String.make 1 (Char.chr n)
-  in
-  Str.global_substitute hex_re un s
-
+(*
 let print ppf v label s =
   if v <= !verbosity then
      Format.fprintf ppf "%s: %s\n" label s
+*)
 
+let print ppf v label fmt =
+  Printf.kprintf (
+    if v <= !verbosity then 
+      (fun s -> Format.fprintf ppf "%s: %s\n%!" label s)
+    else ignore
+  ) fmt
+;;
+
+let print_warning ?(ppf=Format.err_formatter) fmt =
+  print ppf Summary "Warning" fmt
+
+let print_info ?(ppf=Format.err_formatter) fmt =
+  print ppf Summary "Info" fmt
+
+(*
 let print_warning ?(ppf=Format.err_formatter) ?(v=Summary) s =
   print ppf v "Warning" s
 
 let print_info ?(ppf=Format.err_formatter) ?(v=Summary) s =
   print ppf v "Info" s
+*)
 
 let gettimeofday = ref (fun _ -> 0.)
-
 let () = gettimeofday := Unix.gettimeofday
 
 let loggers = ref []
-
 let register level f = loggers := (level,f) :: !loggers
 
 let dump ppf =
@@ -62,7 +68,7 @@ module Progress = struct
   }
 
   let columns = 75 
-  let full = " %%100.0\n" 
+  let full = " %100.0\n" 
   let rotate = "|/-\\"
   let bars = ref []
 
@@ -164,4 +170,13 @@ module Counter = struct
   let add c n =
     c.count <- c.count + n
 end
+
+(* we always print user / sys timers if the user ask to print Summary info *)
+let print_process_time ppf =
+  let pt = Unix.times() in
+  Format.fprintf ppf "Process time (user):  %5.2f\n" pt.Unix.tms_utime;
+  Format.fprintf ppf "Process time (sys):   %5.2f\n" pt.Unix.tms_stime
+;;
+
+register Summary (fun ppf -> print_process_time ppf) ;;
 
