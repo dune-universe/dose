@@ -12,11 +12,19 @@
 open OUnit
 open Common
 
-let test_deb =
-  "deb" >:: (fun _ ->
+let test_deb_local =
+  "deb local" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
-      Input.parse_uri "deb:///path/to/file" 
-    in assert_equal true (protocol = "deb" && path = "/path/to/file")
+      Input.parse_uri "deb://Packages.gz" 
+    in assert_equal true (protocol = "deb" && path = "Packages.gz")
+  ) 
+;;
+
+let test_deb_path =
+  "deb path" >:: (fun _ ->
+    let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
+      Input.parse_uri "deb:///var/lib/Packages.gz" 
+    in assert_equal true (protocol = "deb" && path = "/var/lib/Packages.gz")
   )
 ;;
 
@@ -70,7 +78,8 @@ let test_pgsql =
 
 let parse_uri =
   "parse uri" >::: [
-    test_deb;
+    test_deb_local;
+    test_deb_path;
     test_hdlist;
     test_synth;
     test_cudf;

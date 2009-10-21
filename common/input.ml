@@ -59,7 +59,22 @@ END
     std_open_file file
 ;;
 
-let parse_uri = Uri.parseUri
+let parse_uri s =
+  let opt s = if s <> "" then Some s else None in 
+  let url = Url.of_string ~args:[] s in
+  let user = opt url.Url.user in
+  let pass = opt url.Url.passwd in
+  let host = opt url.Url.server in
+  let port = if url.Url.port = 0 then None else Some (string_of_int url.Url.port) in
+  let query = try Some (List.assoc "query" url.Url.args) with Not_found -> None in
+  let db =
+    match url.Url.proto with
+    |"pgsql" ->
+        if (Str.string_before url.Url.file 1) = "/" then
+        Str.string_after url.Url.file 1 else url.Url.file
+    |_ -> url.Url.file
+  in
+  (url.Url.proto,(user,pass,host,port,db),query)
 
 (*******************************)
 

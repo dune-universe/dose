@@ -187,12 +187,14 @@ let put_args s args =
 
 let of_string ?(args=[]) s =
   let s = put_args s args in
+  let size = String.length s in
   let url =
     let get_two init_pos =
       let pos = ref init_pos in
-      while s.[!pos] <> ':' && s.[!pos] <> '/' && s.[!pos] <> '@' do
+      while s.[!pos] <> ':' && s.[!pos] <> '/' && s.[!pos] <> '@' && !pos < size -1 do
         incr pos
       done;
+      if !pos = size -1 then pos := init_pos ;
       let first = String.sub s init_pos (!pos - init_pos) in
       if s.[!pos] = ':'
       then
