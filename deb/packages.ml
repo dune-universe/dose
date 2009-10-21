@@ -29,6 +29,7 @@ type package = {
   breaks : vpkg list;
   replaces : vpkg list;
   provides : veqpkg list;
+  extras : (string * string) list;
 }
 
 let default_package = {
@@ -44,6 +45,7 @@ let default_package = {
   breaks = [];
   replaces = [];
   provides = [];
+  extras = [];
 }
 
 
@@ -54,7 +56,7 @@ let parse_conj s = parse_vpkglist parse_vpkg s
 let parse_cnf s = parse_vpkgformula parse_vpkg s
 let parse_prov s = parse_veqpkglist parse_veqpkg s
 
-let parse_packages_fields par =
+let parse_packages_fields extras par =
   let guard_field field s f = 
     try
       let l = (single_line field (List.assoc field par)) in
@@ -64,6 +66,13 @@ let parse_packages_fields par =
   in
   let parse_s f field = f (single_line field (List.assoc field par)) in
   let parse_m f field = f (String.concat " " (List.assoc field par)) in
+  let parse_e extras =
+    List.filter_map (fun prop -> 
+      let prop = String.lowercase prop in
+      try Some (prop,single_line prop (List.assoc prop par))
+      with Not_found -> None
+      ) extras
+  in
   let exec () = 
       {
         name = parse_s parse_name "package";
@@ -78,14 +87,15 @@ let parse_packages_fields par =
         breaks = (try parse_m parse_conj "breaks" with Not_found -> []);
         replaces = (try parse_m parse_conj "replaces" with Not_found -> []);
         provides = (try parse_m parse_prov "provides" with Not_found -> []);
+        extras = parse_e extras;
       }
   in
   try guard_field "status" "install ok installed" (exec ())
   with Not_found -> None (* this package doesn't either have version or name *)
 
 (** parse a debian Packages file from the channel [ch] *)
-let parse_packages_in f ch =
-  let parse_packages = parse_822_iter parse_packages_fields in
+let parse_packages_in ?(extras=[]) f ch =
+  let parse_packages = parse_822_iter (parse_packages_fields extras) in
   parse_packages f (start_from_channel ch)
 
 (**/**)
@@ -93,6 +103,6 @@ module Set = Set.Make(struct type t = package let compare = compare end)
 (**/**)
 
 (** input_raw [file] : parse a debian Packages file from [file] *)
-let input_raw = 
+let input_raw ?(extras=[]) = 
   let module M = Format822.RawInput(Set) in
-  M.input_raw parse_packages_in
+  M.input_raw (parse_packages_in ~extras)

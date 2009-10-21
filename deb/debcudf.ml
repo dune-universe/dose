@@ -192,13 +192,13 @@ let loadll tables ll = List.map (loadl tables) ll
 (* ========================================= *)
 
 let preamble = [
-  ("Number",(`String ""));
-  ("Source",(`String "")) ;
-  ("Sourceversion",(`String ""))
+  ("number",(`String ""));
+  ("source",(`String "")) ;
+  ("sourceversion",(`String ""))
 ]
 
-let extra pkg =
-  let number = ("Number",`String pkg.version) in
+let add_extra extras pkg =
+  let number = ("number",`String pkg.version) in
   let (source,sourceversion) =
     let n,v =
       match pkg.source with
@@ -206,10 +206,18 @@ let extra pkg =
       |n,None -> (n,pkg.version)
       |n,Some v -> (n,v)
     in
-    ("Source",`String n), ("Sourceversion", `String v)
-  in [number;source;sourceversion]
+    ("source",`String n), ("sourceversion", `String v)
+  in
+  let l =
+    List.filter_map (fun (n,v) ->
+      let prop = String.lowercase n in
+      try Some (prop,Cudf_types.parse_basetype v (List.assoc prop pkg.extras))
+      with Not_found -> None
+    ) extras
+  in
+  [number;source;sourceversion] @ l
 
-let tocudf tables ?(inst=false) pkg =
+let tocudf tables ?(extras=[]) ?(inst=false) pkg =
     { Cudf.package = escape pkg.name ;
       Cudf.version = get_version tables (pkg.name,pkg.version) ;
       Cudf.depends = loadll tables (pkg.pre_depends @ pkg.depends);
@@ -217,7 +225,7 @@ let tocudf tables ?(inst=false) pkg =
       Cudf.provides = loadlp tables pkg.provides ;
       Cudf.installed = inst ;
       Cudf.keep = None ;
-      Cudf.extra = extra pkg ;
+      Cudf.extra = add_extra extras pkg ;
     }
 
 let lltocudf = loadll

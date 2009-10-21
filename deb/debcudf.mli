@@ -30,7 +30,7 @@ val get_version : tables -> Format822.name * Format822.version -> int
    - Mapping APT request.
    @param inst : set the {i Installed} cudf field
 *)
-val tocudf : tables -> ?inst:bool -> Packages.package -> Cudf.package
+val tocudf : tables -> ?extras:Cudf.preamble -> ?inst:bool -> Packages.package -> Cudf.package
 
 (** convert a debian dependency list in a cudf constraints formula *)
 val lltocudf : tables -> Format822.vpkg list list -> Cudf_types.vpkgformula

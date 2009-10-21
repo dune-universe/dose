@@ -18,11 +18,22 @@ let f_packages = "tests/Packages" ;;
 let f_release = "tests/Release" ;;
 
 let ch = Input.open_file f_packages ;;
-let ipr_list = Packages.parse_packages_in (fun x -> x) ch ;;
+let extras_preamble = [("Maintainer", `String "");("Size", `Nat 0); ("Installed-Size", `Nat 0)];;
+let extras = List.map fst extras_preamble ;;
+let ipr_list = Packages.parse_packages_in ~extras:extras (fun x -> x) ch ;;
 let tables = Debcudf.init_tables ipr_list ;;
-let cudf_list = List.map (Debcudf.tocudf tables) ipr_list ;;
+let cudf_list = List.map (Debcudf.tocudf ~extras:extras_preamble tables) ipr_list ;;
 let universe = Cudf.load_universe cudf_list ;;
 let maps = CudfAdd.build_maps universe ;;
+
+(*
+let () = 
+  Printf.printf "%s\n" (Cudf_printer.string_of_preamble (Debcudf.preamble @ extras_preamble)) ;
+  List.iter (fun pkg ->
+    Printf.printf "%s\n" (Cudf_printer.string_of_package pkg)
+  ) cudf_list
+;;
+*)
 
 let test_format =
   "name mangling" >::: []
@@ -60,8 +71,15 @@ let test_conflicts =
     );
   ]
 
+let test_mapping =
+  "test deb -> cudf mapping" >::: [
+    test_format ;
+    test_numbering ;
+    test_virtual
+  ]
+
 let all = 
-  "all tests" >::: [ test_format ; test_numbering ; test_virtual ]
+  "all tests" >::: [ test_mapping ]
 
 let main () =
   OUnit.run_test_tt_main all
