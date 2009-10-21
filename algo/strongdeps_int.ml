@@ -155,6 +155,9 @@ let strongdeps_univ mdf =
   Util.Timer.stop conjtimer ();
   strongdeps_int graph mdf l
 
+(* we assume the graph is NOT detransitivitized *)
+let impactset graph q =
+  G.fold_pred (fun p acc -> p :: acc ) graph q []
 
 (* 
 let strong_pred graph q =

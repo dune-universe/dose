@@ -205,9 +205,11 @@ let strong_incr (oldgraph,oldpkglist) newpkglist =
   (* Cleanup : remove all old vertex and associated edges *)
   List.iter (fun pkg ->
     let p = version pkg in
-    (* SG.iter_succ (SG.remove_edge oldgraph p) oldgraph p ;
-    SG.iter_pred (fun q -> SG.remove_edge oldgraph q p) oldgraph p; *)
-    SG.remove_vertex oldgraph p
+    if SG.mem_vertex oldgraph p then begin
+      SG.iter_succ (SG.remove_edge oldgraph p) oldgraph p ;
+      SG.iter_pred (fun q -> SG.remove_edge oldgraph q p) oldgraph p; 
+      SG.remove_vertex oldgraph p
+    end
   ) toremove ;
 
   (* Cleanup : add all the new edges *)
