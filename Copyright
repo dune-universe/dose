@@ -1,6 +1,7 @@
-deb/version.ml Jaap 
-deb/format822.ml Jerome, Zack, Pietro
-algo/statistics.ml Jaap, Zack Pietro
-common/edosSolver.ml common/edosSolver.mli Jerome
-common/util.ml Alain, Pietro
-everything else Pietro
+deb/version.ml : Jaap Boender
+deb/format822.ml Jerome Vouillion, Stefano Zacchiroli, Pietro Abate
+algo/statistics.ml Jaap Boender, Stefano Zacchiroli, Pietro Abate
+common/edosSolver.ml common/edosSolver.mli : Jerome Vouillion
+common/util.ml : Alain Frish, Pietro Abate
+common/url.ml : b8_bavard, b8_fee_carabine, INRIA
+everything else : Pietro Abate

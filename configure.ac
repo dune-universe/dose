@@ -90,7 +90,7 @@ if test "$HAS_PGSQL" = "yes" ; then
    AC_MSG_ERROR([Please install OCaml findlib module 'json-static'.])
   fi
   TAGS_PGSQL=pgsql
-  PKG_PGSQL="pkg_postgresql, pkg_json-static"
+  PKG_PGSQL="pkg_postgresql, pkg_json-static, pkg_threads"
   MLPACK_PGSQL=Pgsql
   CONFIG_DBBACKEND="$CONFIG_DBBACKEND -DPGSQL"
 else
