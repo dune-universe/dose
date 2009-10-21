@@ -50,6 +50,11 @@ let parse_task s = Str.split and_sep_re s
 
 (* -------------------------------- *)
 
+let enable_debug () =
+  (* Util.Progress.enable "to cudf" ; *)
+  Util.set_verbosity Common.Util.Summary
+;;
+
 module Options =
 struct
   let installR = ref 0
@@ -104,6 +109,8 @@ let options =
    ("--outdir", Arg.String (fun l -> Options.outdir := l),  "Specify the results directory"); 
    ("--confile",  Arg.String (fun l -> Options.confile := l ), "Specify a configuration file" );
    ("--seed", Arg.Int (fun l -> Options.seed := l ), "Set the pseudo-random generator seed" );
+
+   ("--debug", Arg.Unit enable_debug, "debug");
   ]
 
 let parse_conf s =
@@ -185,8 +192,9 @@ let main () =
     else Random.self_init ()
   in
 
-  let extras_preamble = [("size", `Nat 0); ("installed-size", `Nat 0)] in
+  let extras_preamble = [("Size", ("size", `Nat 0)); ("Installed-Size", ("installedsize", `Nat 0))] in
   let extras = List.map fst extras_preamble in
+  let preamble = List.map snd extras_preamble in
 
   let load_uri uri =
     match Input.parse_uri uri with
@@ -203,6 +211,8 @@ END
     |(s,_,_) -> failwith (Printf.sprintf "%s not supported" s)
   in
 
+  let progressbar = Util.Progress.create ~enabled:true "to cudf" in
+
   let (pkglist,universe) =
     match Input.parse_uri !Options.universe with
     |("cudf",(_,_,_,_,file),_) ->
@@ -210,17 +220,38 @@ END
         (Cudf.get_packages u,u)
     |_ ->
       let u = 
+        Printf.eprintf "Loading Universe\n%!";
         if !Options.universe <> "" then load_uri !Options.universe 
         else failwith "universe required"
       in
       let s =
+        Printf.eprintf "Loading Status\n%!";
         if !Options.status <> "" then load_uri !Options.status
         else failwith "status required" 
       in
-      let tables = Debian.Debcudf.init_tables (List.unique (u @ s)) in
-      let u' = List.map (Debian.Debcudf.tocudf tables ~extras:extras_preamble) u in
-      let s' = List.map (Debian.Debcudf.tocudf tables ~extras:extras_preamble ~inst:true) s in
-      let pkglist = List.unique (u' @ s') in
+      Printf.eprintf "Init conversion tables\n%!";
+      let tables = Debian.Debcudf.init_tables ((s @ u)) in
+      Util.Progress.set_total progressbar (List.length u) ;
+      let u' =
+        List.fold_left (fun acc p -> 
+          Util.Progress.progress progressbar ;
+          let pkg = Debian.Debcudf.tocudf tables ~extras:extras_preamble p in
+          CudfAdd.Cudf_set.add pkg acc
+        ) CudfAdd.Cudf_set.empty u 
+      in
+      Util.Progress.reset progressbar;
+      Util.Progress.set_total progressbar (List.length s) ;
+      let s' =
+        List.fold_left (fun acc p ->
+          Util.Progress.progress progressbar ;
+          let pkg = Debian.Debcudf.tocudf tables ~extras:extras_preamble ~inst:true p in
+          if CudfAdd.Cudf_set.mem pkg acc then
+            CudfAdd.Cudf_set.add pkg (CudfAdd.Cudf_set.remove pkg acc)
+          else CudfAdd.Cudf_set.add pkg acc
+        ) u' s
+      in
+      let pkglist = CudfAdd.Cudf_set.elements s' in
+      Printf.eprintf "Creating Cudf universe\n%!";
       (pkglist, Cudf.load_universe pkglist)
   in
 
@@ -297,7 +328,9 @@ END
         let tmpfile = Filename.temp_file "rand" ".cudf" in
         let dirname = !Options.outdir in
         if not(Sys.file_exists dirname) then Unix.mkdir dirname 0o777 ;
-        open_out (Filename.concat dirname (Filename.basename tmpfile)) 
+        let file = (Filename.concat dirname (Filename.basename tmpfile)) in
+        Printf.eprintf "Writing %s\n%!" file ;
+        open_out file
       end else stdout
     in
 
@@ -309,6 +342,7 @@ END
       }
     in
 
+    Printf.fprintf oc "%s\n" (Cudf_printer.string_of_preamble (Debian.Debcudf.preamble @ preamble));
     Printf.fprintf oc "%s" (Cudf_printer.string_of_universe universe);
     Printf.fprintf oc "%s" (Cudf_printer.string_of_request request);
     close_out oc

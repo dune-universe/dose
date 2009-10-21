@@ -72,14 +72,14 @@ module Progress = struct
   let rotate = "|/-\\"
   let bars = ref []
 
-  let create s =
+  let create ?(enabled=false) ?(total=0) s =
     let c = {
       name = s;
       buffer = Buffer.create columns ;
-      total = 0 ;
+      total = total ;
       perc = 0 ;
       rotation = 0 ;
-      enabled = false }
+      enabled = enabled }
     in
     bars := (s,c)::!bars ;
     c

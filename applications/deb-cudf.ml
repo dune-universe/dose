@@ -69,8 +69,13 @@ let main () =
     else []
   in
 
-  let extras_preamble = [("size", `Nat 0); ("installed-size", `Nat 0)] in
+  let extras_preamble = [
+    ("Size", ("size", `Nat 0));
+    ("Installed-Size", ("installedsize", `Nat 0))
+    ] 
+  in
   let extras = List.map fst extras_preamble in
+  let preamble = List.map snd extras_preamble in
 
   let l =
      match Input.parse_uri !uri with
@@ -118,7 +123,7 @@ END
   in
 
   Printf.fprintf oc "%s\n" (
-    Cudf_printer.string_of_preamble (Debcudf.preamble @ extras_preamble)
+    Cudf_printer.string_of_preamble (Debcudf.preamble @ preamble)
   ) ;
 
   List.iter (fun pkg ->

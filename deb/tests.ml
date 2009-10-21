@@ -18,7 +18,11 @@ let f_packages = "tests/Packages" ;;
 let f_release = "tests/Release" ;;
 
 let ch = Input.open_file f_packages ;;
-let extras_preamble = [("Maintainer", `String "");("Size", `Nat 0); ("Installed-Size", `Nat 0)];;
+let extras_preamble = [
+  ("Maintainer", ("maintainer", `String ""));
+  ("Size", ("size", `Nat 0));
+  ("Installed-Size", ("installedsize", `Nat 0))
+];;
 let extras = List.map fst extras_preamble ;;
 let ipr_list = Packages.parse_packages_in ~extras:extras (fun x -> x) ch ;;
 let tables = Debcudf.init_tables ipr_list ;;
@@ -28,7 +32,8 @@ let maps = CudfAdd.build_maps universe ;;
 
 (*
 let () = 
-  Printf.printf "%s\n" (Cudf_printer.string_of_preamble (Debcudf.preamble @ extras_preamble)) ;
+  let preamble = List.map snd extras_preamble in
+  Printf.printf "%s\n" (Cudf_printer.string_of_preamble (Debcudf.preamble @ preamble)) ;
   List.iter (fun pkg ->
     Printf.printf "%s\n" (Cudf_printer.string_of_package pkg)
   ) cudf_list

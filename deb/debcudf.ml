@@ -191,6 +191,8 @@ let loadll tables ll = List.map (loadl tables) ll
 
 (* ========================================= *)
 
+type extramap = (string * (string * Cudf_types.basetype)) list
+
 let preamble = [
   ("number",(`String ""));
   ("source",(`String "")) ;
@@ -209,9 +211,10 @@ let add_extra extras pkg =
     ("source",`String n), ("sourceversion", `String v)
   in
   let l =
-    List.filter_map (fun (n,v) ->
-      let prop = String.lowercase n in
-      try Some (prop,Cudf_types.parse_basetype v (List.assoc prop pkg.extras))
+    List.filter_map (fun (debprop, (cudfprop,v)) ->
+      let debprop = String.lowercase debprop in
+      let cudfprop = String.lowercase cudfprop in
+      try Some (cudfprop,Cudf_types.parse_basetype v (List.assoc debprop pkg.extras))
       with Not_found -> None
     ) extras
   in

@@ -21,6 +21,8 @@ val init_tables : Packages.package list -> tables
 (** return the cudf version associated to a tuple (name,version) *)
 val get_version : tables -> Format822.name * Format822.version -> int
 
+type extramap = (string * (string * Cudf_types.basetype)) list
+
 (** [tocudf tbl p] 
     convert the a debian package representation to cudf.
    - Version and package name normalization.
@@ -30,7 +32,7 @@ val get_version : tables -> Format822.name * Format822.version -> int
    - Mapping APT request.
    @param inst : set the {i Installed} cudf field
 *)
-val tocudf : tables -> ?extras:Cudf.preamble -> ?inst:bool -> Packages.package -> Cudf.package
+val tocudf : tables -> ?extras:extramap -> ?inst:bool -> Packages.package -> Cudf.package
 
 (** convert a debian dependency list in a cudf constraints formula *)
 val lltocudf : tables -> Format822.vpkg list list -> Cudf_types.vpkgformula

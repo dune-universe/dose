@@ -18,7 +18,7 @@ module Progress : sig
     
   (** [create "barname"] : create new a progress bar labelled "barname". 
       The progress bar is disabled by default *)
-  val create: label -> t
+  val create: ?enabled:bool -> ?total:int -> label -> t
 
   (** [enable "barname"] : enable the progress bar with label "barname" *)
   val enable : label -> unit
