@@ -69,6 +69,9 @@ let main () =
     else []
   in
 
+  let extras_preamble = [("maintainer", `String "");("size", `Nat 0); ("installed-size", `Nat 0)] in
+  let extras = List.map fst extras_preamble in
+
   let l =
      match Input.parse_uri !uri with
      |(("pgsql"|"sqlite") as dbtype,info,(Some query)) -> 
@@ -81,7 +84,7 @@ ELSE
        failwith (dbtype ^ "Not supported")
 END
      |("deb",(_,_,_,_,file),_) -> begin
-       Deb.input_raw [file] 
+       Deb.input_raw ~extras:extras [file] 
      end
      |(s,(_,_,_,_,file),_) -> failwith (s ^ " Not supported")
   in
@@ -100,7 +103,7 @@ END
           Util.Progress.progress progressbar ; 
           let inst = Hashtbl.mem installed_h
           (pkg.Deb.name,pkg.Deb.version) in
-          Debian.Debcudf.tocudf tables ~inst:inst pkg
+          Debian.Debcudf.tocudf tables ~extras:extras_preamble ~inst:inst pkg
         ) ul
       in Util.Timer.stop timer res
     end
@@ -114,7 +117,9 @@ END
     end else stdout
   in
 
-  Printf.fprintf oc "%s\n" (Cudf_printer.string_of_preamble Debcudf.preamble) ;
+  Printf.fprintf oc "%s\n" (
+    Cudf_printer.string_of_preamble (Debcudf.preamble @ extras_preamble)
+  ) ;
 
   List.iter (fun pkg ->
     Printf.fprintf oc "%s\n" (Cudf_printer.string_of_package pkg)
