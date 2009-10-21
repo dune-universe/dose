@@ -143,8 +143,8 @@ type maps = {
   lookup_virtual : Cudf_types.vpkg -> Cudf.package list ;
 
   (** [who_provides constr] the list of all packages that satisfy [constr]. 
-      If there are no real packages, then the contraint is interpreted as 
-      a feature request as in lookup_virtual *)
+      A package is provided by real packages or other packages that provide that
+      name as a feature. *)
   who_provides : Cudf_types.vpkg -> Cudf.package list ;
 
   (** assign an integer to each cudf package *)
@@ -176,9 +176,9 @@ let build_maps universe =
   in
 
   let who_provides (pkgname,constr) =
-    match Cudf.lookup_packages ~filter:constr universe pkgname with
-    |[] -> lookup_virtual (pkgname,constr)
-    |l -> l
+    let real = Cudf.lookup_packages ~filter:constr universe pkgname in
+    let virt = lookup_virtual (pkgname,constr) in
+    (real @ virt)
   in
 
   (* we need to iterate twice on the package list as we need the
