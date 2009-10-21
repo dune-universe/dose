@@ -47,7 +47,7 @@ let __load maps universe =
     let dll =
       List.map (fun disjunction ->
         List.fold_left (fun (l1,l2,l3) vpkg ->
-          let dl = (maps.who_provides vpkg) in
+          let dl = maps.who_provides vpkg in
           let el = Array.of_list (List.map to_sat dl) in
           (vpkg::l1,Array.append el l2, dl @ l3)
         ) ([],[||],[]) disjunction
