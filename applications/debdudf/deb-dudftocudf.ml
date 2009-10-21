@@ -300,7 +300,10 @@ let main () =
   let preferences = AptPref.parse dudf.problem.desiderata in
 
   let infoH = Hashtbl.create 1031 in
-  let extras_preamble = [("size", `Nat 0); ("installed-size", `Nat 0)] in
+  let extras_preamble = [
+    ("Size", ("size", `Nat 0));
+    ("Installed-Size", ("installedsize", `Nat 0))] 
+  in
   let extras = List.map fst extras_preamble in
 
   let all_packages =
@@ -334,7 +337,7 @@ let main () =
     h
   in
   
-  let preamble = ("Priority",(`Int 500))::(extras_preamble @ Debcudf.preamble) in
+  let preamble = ("Priority",(`Int 500))::((List.map snd extras_preamble) @ Debcudf.preamble) in
   let add_extra (k,v) pkg = { pkg with Cudf.extra = (k,v) :: pkg.Cudf.extra } in
 
   let pl =
