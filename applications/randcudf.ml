@@ -185,6 +185,9 @@ let main () =
     else Random.self_init ()
   in
 
+  let extras_preamble = [("size", `Nat 0); ("installed-size", `Nat 0)] in
+  let extras = List.map fst extras_preamble in
+
   let load_uri uri =
     match Input.parse_uri uri with
     |(("pgsql"|"sqlite") as dbtype,info,(Some query)) -> 
@@ -196,7 +199,7 @@ IFDEF HASDB THEN
 ELSE
       failwith (dbtype ^ " Not supported")
 END
-    |("deb",(_,_,_,_,file),_) -> Debian.Packages.input_raw [file] 
+    |("deb",(_,_,_,_,file),_) -> Debian.Packages.input_raw ~extras:extras [file] 
     |(s,_,_) -> failwith (Printf.sprintf "%s not supported" s)
   in
 
@@ -215,8 +218,8 @@ END
         else failwith "status required" 
       in
       let tables = Debian.Debcudf.init_tables (List.unique (u @ s)) in
-      let u' = List.map (Debian.Debcudf.tocudf tables) u in
-      let s' = List.map (Debian.Debcudf.tocudf tables ~inst:true) s in
+      let u' = List.map (Debian.Debcudf.tocudf tables ~extras:extras_preamble) u in
+      let s' = List.map (Debian.Debcudf.tocudf tables ~extras:extras_preamble ~inst:true) s in
       let pkglist = List.unique (u' @ s') in
       (pkglist, Cudf.load_universe pkglist)
   in

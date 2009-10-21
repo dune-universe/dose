@@ -13,7 +13,7 @@ deb-cudf.native converts a debian archive in a cudf universe
 -----
 
 randcudf.native generates random cudf documents
-./randcudf.native --universe cudf://test-universe.cudf --status cudf://test-status.cudf --upgradeAll --outdir tests
+./randcudf.native --universe deb://Packages. --status deb://status --upgradeAll --outdir tests
 
 -----
 

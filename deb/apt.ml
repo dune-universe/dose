@@ -9,7 +9,7 @@
 (*  library, see the COPYING file for more information.                                *)
 (***************************************************************************************)
 
-(** Apt *)
+(** Apt command line parsing *)
 
 open ExtLib
 open Format822
@@ -103,11 +103,15 @@ let parse_pkg_req suite s =
 (* XXX upgrade with suite <> None == Install PkgDst ... *)
 let parse_request_apt s =
   let suite = ref None in
-  let options = [ ("-t", Arg.String (fun l -> suite := Some(l)), "") ] in
+  let options = [
+    ("-t", Arg.String (fun l -> suite := Some(l)), "");
+    ("-s", Arg.Unit (fun _ -> ()), "") ] 
+  in
   let reqlist = ref [] in
   let anon s = reqlist := s :: !reqlist in
   begin
-    Arg.parse_argv ~current:(ref 0) (Array.of_list (Str.split space_re s)) options anon "" ;
+    begin try Arg.parse_argv ~current:(ref 0) (Array.of_list (Str.split space_re s)) options anon ""
+    with Arg.Bad s -> failwith s end ;
     if List.mem "install" !reqlist then
       Install(List.map (parse_pkg_req !suite) (List.remove !reqlist "install"))
     else if List.mem "remove" !reqlist then

@@ -69,7 +69,7 @@ let main () =
     else []
   in
 
-  let extras_preamble = [("maintainer", `String "");("size", `Nat 0); ("installed-size", `Nat 0)] in
+  let extras_preamble = [("size", `Nat 0); ("installed-size", `Nat 0)] in
   let extras = List.map fst extras_preamble in
 
   let l =

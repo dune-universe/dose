@@ -99,7 +99,10 @@ let parse_packages_in ?(extras=[]) f ch =
   parse_packages f (start_from_channel ch)
 
 (**/**)
-module Set = Set.Make(struct type t = package let compare = compare end) 
+module Set = Set.Make(struct 
+  type t = package
+  let compare p1 p2 = compare (p1.name,p1.version) (p2.name,p2.version)
+end) 
 (**/**)
 
 (** input_raw [file] : parse a debian Packages file from [file] *)

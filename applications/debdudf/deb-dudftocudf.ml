@@ -300,10 +300,13 @@ let main () =
   let preferences = AptPref.parse dudf.problem.desiderata in
 
   let infoH = Hashtbl.create 1031 in
+  let extras_preamble = [("size", `Nat 0); ("installed-size", `Nat 0)] in
+  let extras = List.map fst extras_preamble in
+
   let all_packages =
     List.fold_left (fun acc (univinfo,contents) ->
       let ch = IO.input_string contents in
-      let l = Deb.parse_packages_in id ch in
+      let l = Deb.parse_packages_in ~extras:extras id ch in
       let _ = IO.close_in ch in
       List.fold_left (fun s pkg -> 
         Hashtbl.add infoH (pkg.Deb.name,pkg.Deb.version) univinfo ;
@@ -314,7 +317,7 @@ let main () =
 
   let installed_packages =
     let ch = IO.input_string dudf.problem.packageStatus in
-    let l = Deb.parse_packages_in id ch in
+    let l = Deb.parse_packages_in ~extras:extras id ch in
     let _ = IO.close_in ch in
     List.fold_left (fun s pkg -> Deb.Set.add pkg s) Deb.Set.empty l
   in
@@ -331,14 +334,14 @@ let main () =
     h
   in
   
-  let preamble = ("Priority",(`Int 500))::Debcudf.preamble in
+  let preamble = ("Priority",(`Int 500))::(extras_preamble @ Debcudf.preamble) in
   let add_extra (k,v) pkg = { pkg with Cudf.extra = (k,v) :: pkg.Cudf.extra } in
 
   let pl =
     List.map (fun pkg ->
       let inst = Hashtbl.mem installed (pkg.Deb.name,pkg.Deb.version) in
       let info = try Some(Hashtbl.find infoH (pkg.Deb.name,pkg.Deb.version)) with Not_found -> None in
-      let cudfpkg = Debcudf.tocudf tables ~inst:inst pkg in
+      let cudfpkg = Debcudf.tocudf tables ~extras:extras_preamble ~inst:inst pkg in
       let priority = AptPref.assign_priority preferences info cudfpkg in
       let cudfpkg = add_extra ("Priority", `Int priority) cudfpkg in
       cudfpkg
