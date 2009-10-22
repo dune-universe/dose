@@ -29,7 +29,6 @@ TARGETS= \
 				applications/distcheck.$(OCAMLBEST) \
 				applications/buildcheck.$(OCAMLBEST) \
 				applications/cudf-diff.$(OCAMLBEST) \
-				applications/strong-deps.$(OCAMLBEST) \
 				applications/testingcheck.$(OCAMLBEST)
 
 LIBS= \
@@ -54,6 +53,7 @@ ifeq ("@HAS_OCAMLGRAPH@","yes")
   TARGETS += \
 			  applications/rmat.$(OCAMLBEST) \
 				applications/pref-attach.$(OCAMLBEST) \
+				applications/strong-deps.$(OCAMLBEST) \
 				applications/depgraph.$(OCAMLBEST)
 endif
 
