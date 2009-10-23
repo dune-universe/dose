@@ -168,6 +168,7 @@ end;;
 let _ =
 let uri = ref "" in
 begin
+  Common.Util.set_verbosity Common.Util.Summary;
   at_exit (fun () -> Util.dump Format.err_formatter);
   let _ =
     try Arg.parse options (fun f -> uri := f) usage
@@ -193,8 +194,8 @@ begin
   Printf.eprintf "done\n%!";
 
   Printf.eprintf "Packages: %d\n" (universe_size u);
+  let u = Depsolver.trim u in
   let slv = Depsolver.load u in
-  let u = Cudf.load_universe (Depsolver.trim (Depsolver.load u) (Cudf.get_packages u)) in
   Printf.eprintf "Trimmed: %d\n" (universe_size u);
 
   Printf.eprintf "Generating dependency graphs...%!";

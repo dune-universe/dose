@@ -75,7 +75,8 @@ let diagnosis maps res req =
   let request = request maps req in
   { Diagnostic.result = result ; request = request }
 
-let univcheck ?callback s =
+let univcheck ?callback universe =
+  let s = load universe in
   let maps = s.mdf.Mdf.maps in
   match callback with
   |None -> Depsolver_int.univcheck (s.mdf,s.solver)
@@ -96,7 +97,7 @@ let edos_coinstall s pkglist =
   let res = Depsolver_int.solve s.solver req in
   diagnosis maps res req
 
-let trim s pkglist =
+let trim universe =
   let trimmed_pkgs = ref [] in
   ignore (univcheck ~callback:(function d ->
     match d.Diagnostic.result with
@@ -107,8 +108,8 @@ let trim s pkglist =
         | _ -> assert false
       end
     | _ -> ()
-  ) s);
-  !trimmed_pkgs
+  ) universe);
+  Cudf.load_universe !trimmed_pkgs
 
 let dependency_closure universe pkglist =
   let mdf = Mdf.load_from_universe universe in
