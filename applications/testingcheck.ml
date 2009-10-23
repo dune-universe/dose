@@ -40,8 +40,6 @@ let options = [
 
 let check universe =
   Printf.eprintf "check packages ...%!";
-  let solver = Depsolver.load universe in
-
   let result_printer = function
     |{Diagnostic.result = Diagnostic.Failure (_) } when !Options.show_successes -> ()
     |{Diagnostic.result = Diagnostic.Failure (_) } as r ->
@@ -49,7 +47,7 @@ let check universe =
     |r when !Options.show_failures -> ()
     |r -> Diagnostic.print ~explain:!Options.explain_results stdout r
   in
-  let i = Depsolver.univcheck ~callback:result_printer solver in
+  let i = Depsolver.univcheck ~callback:result_printer universe in
   Printf.eprintf "Broken Packages: %d\n%!" i;
   Printf.eprintf "done\n%!";
 ;;

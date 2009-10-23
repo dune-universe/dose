@@ -47,18 +47,14 @@ let main () =
 
   let l = 
     match Input.parse_uri !uri with
-    |(("pgsql"|"sqlite") as dbtype,info,(Some query)) -> begin
-      Backend.init_database dbtype info (Idbr.parse_query query) ;
-      let l = Backend.load_selection (`All) in
+    |(("pgsql"|"sqlite") as dbtype,info, Some query) -> begin
+      let db = Backend.open_database dbtype info in
+      let db = Backend.init_database db (Idbr.parse_query query) in
+      let l = Backend.load_selection db (`All) in
       let tables = Debian.Debcudf.init_tables l in
       List.map (Debian.Debcudf.tocudf tables) l
     end
-    |("deb",(_,_,_,_,file),_) -> begin
-      let l = Debian.Packages.input_raw [file] in
-      let tables = Debian.Debcudf.init_tables l in
-      List.map (Debian.Debcudf.tocudf tables) l
-    end
-    |_ -> failwith "Not supported"
+    |(s,_,_) -> failwith ( s ^ " Not supported")
   in
 
   let oc =
@@ -68,6 +64,9 @@ let main () =
       open_out (Filename.concat dirname ("res.cudf"))
     end else stdout
   in
+  Printf.fprintf oc "%s\n" (
+    Cudf_printer.string_of_preamble Debian.Debcudf.preamble
+  );
   List.iter (fun pkg ->
     Printf.fprintf oc "%s\n" (Cudf_printer.string_of_package pkg)
   ) l

@@ -17,35 +17,32 @@ open Json_type
 open Idbr 
 open Sql
 
-let debug = ref true
-
-let print_debug s = 
-  if !debug then begin
-    Printf.eprintf "Backend Debug %s\n" s;
-    flush_all()
-  end
-;;
-
 let cnf_assoc_relations = [
   `Depends,"depends";
   `Pre_depends,"pre_depends";
   `Recommends,"recommends";
   `Suggests,"suggests";
-(*  `Breaks,"breaks";*)
   `Enhances,"enhances"
 ]
 
 let conj_assoc_relations = [
   `Conflicts,"conflicts";
   `Provides,"provides";
-  `Replaces,"replaces"
+  `Replaces,"replaces";
+  `Breaks,"breaks"; 
 ]
 
 (* Default set of relations to be considered *)
-let relations = [`Conflicts;`Depends;`Pre_depends;`Provides]
+let relations = [`Conflicts;`Depends;`Pre_depends;`Provides;(* `Breaks *)]
 
-(* XXX: global variable *)
-let uni_rels : Idbr.relation list ref = ref []
+type database = {
+  relations : Idbr.relation list ;
+  extras : string list ;
+  connection : Sql.dbraw ;
+}
+
+let createdb relations extras connection =
+  { relations = relations ; extras = extras ; connection = connection }
 
 let reverse l = List.map (fun (x,y) -> (y,x)) l
 let assoc_rels = conj_assoc_relations @ cnf_assoc_relations
@@ -63,7 +60,7 @@ let unpack_json = function
   |_ -> assert false
 
 (** unpacks the json string stored in the db and returns a compact
-  representation json independent (list of list of triples) *)
+    representation json independent (list of list of triples) *)
 let unpack_json_cnf_depends = function
   |None -> []
   |Some(input) ->
@@ -72,12 +69,17 @@ let unpack_json_cnf_depends = function
     (Json_io.json_of_string input)
 
 (** unpacks the json string stored in the db and returns a compact
-  representation json independent (list of triples) *)
+    representation json independent (list of triples) *)
 let unpack_json_conj_depends = function
   |None -> []
   |Some(input) -> 
        Json_type.Browse.list unpack_json
        (Json_io.json_of_string input)
+
+let default_hd = 
+  ["name";"number";"version_id"] @
+  (List.map fst (reverse_cnf @ reverse_conj))
+;;
 
 (* from Jason to Idbr.package *)
 let pack (name,number,id) row header =
@@ -87,20 +89,26 @@ let pack (name,number,id) row header =
     number = number;
     version_id = id;
     cnf_deps = [];
-    conj_deps = [] }
+    conj_deps = [];
+    extra = []; }
   in
   Array.fold_left (fun s hd ->
     let pkg = 
-      if List.mem_assoc hd reverse_conj then
+      if List.mem_assoc hd reverse_conj then (
         let t = List.assoc hd reverse_conj in
         let dep = (t, unpack_json_conj_depends row.(!i)) in
         { s with conj_deps=dep::s.conj_deps }
-      else if List.mem_assoc hd reverse_cnf then
+      )
+      else if List.mem_assoc hd reverse_cnf then (
         let t = List.assoc hd reverse_cnf in
         let dep = (t, unpack_json_cnf_depends row.(!i)) in
         { s with cnf_deps=dep::s.cnf_deps }
-      else
-        s
+      ) 
+      else if not (List.mem hd default_hd) then begin
+        try { s with extra = (hd,Option.get row.(!i))::s.extra }
+        with Not_found -> s
+      end 
+      else s
     in incr i ; pkg
   ) init header
 
@@ -136,12 +144,6 @@ type db_selector = ( string * string * string * string )
 type row = (string option array * string array)
 type row_no_header = string option array
 
-(* XXX: global variable *)
-let _db = ref None
-let get_db () =
-  try Option.get !_db
-  with Option.No_value -> failwith "Backend: database not initialized"
-
 let compile_query query = 
   let rec aux = function
     |`Or [] | `And [] | `All -> None
@@ -174,16 +176,24 @@ let compile_query query =
   if Option.is_none r then ""
   else "where " ^ (Option.get r)
 
+let map_concat f l =
+  if List.length l = 0 then ""
+  else
+    let sl = List.map(fun r -> f r) l
+    in ", " ^ (String.concat "," sl)
+
 (** create a commodity temporary sql view to simplify all successive queries *)
-let create_view_all_packages relations query =
-  let sql_rel = match relations with
-    |[] -> ""
-    |_ -> let l =
-      List.map(fun r ->
-        let s = List.assoc r assoc_rels in
-        Printf.sprintf "version.%s as %s" s s
-      ) relations
-      in ", " ^ (String.concat "," l)
+let create_view_all_packages db query =
+  let sql_rel = 
+    let f r =
+      let s = List.assoc r assoc_rels in
+      Printf.sprintf "version.%s as %s" s s
+    in
+    map_concat f db.relations
+  in
+  let sql_extras = 
+    let f s = Printf.sprintf "info.%s as %s" s s in
+    map_concat f db.extras
   in
   let q = compile_query query in
   let sql = Printf.sprintf "
@@ -196,30 +206,203 @@ aptlist.id as aptlist_id,
 aptlist.timestamp as timestamp,
 packages.suite as suite,
 packages.arch as arch,
-packages.comp as comp %s
-from version,aptlist,interval,packages %s and
+packages.comp as comp %s %s
+from version,aptlist,interval,packages,info %s and
 version.id = interval.version_id and 
 interval.aptlist_id = aptlist.id and 
-packages.id = aptlist.packages_id 
+packages.id = aptlist.packages_id and
+info.id = version.info_id
 order by version.id,name,number;
-" sql_rel q
+" sql_rel sql_extras q
   in
-  print_debug sql ;
-  !Sql.database.exec_no_result (get_db ()) sql
+  Common.Util.print_info "%s" sql ;
+  !Sql.database.exec_no_result db.connection sql
 ;;
 
 
 (** create a temporary sql table and indexes to hold the 
   current package selection. The table will be removed at exit. *)
-let create_view_universe () =
-  let db = get_db () in
-  let sql = Printf.sprintf "create temp table universe as Select * from all_t"
-  in
-  print_debug sql ;
+let create_view_universe db =
+  let sql = Printf.sprintf "create temp table universe as Select * from all_t" in
+  Common.Util.print_info "%s" sql ;
   let version_idx = "create index version_idx on universe (version_id)" in
-  !Sql.database.exec_no_result db sql;
-  !Sql.database.exec_no_result db version_idx
+  !Sql.database.exec_no_result db.connection sql;
+  !Sql.database.exec_no_result db.connection version_idx
 ;;
+
+let late_binding = function
+  |"pgsql" ->
+      IFDEF PGSQL THEN Pgsql.load () ELSE failwith "pgsql not supported" END
+  |"sqlite" ->
+      IFDEF SQLITE THEN Sqlite.load () ELSE failwith "sqlite not supported" END
+  |_ -> failwith "DB late binding failed"
+;;
+
+let open_database dbtype (user,pass,host,port,dbname) =
+  ignore(late_binding dbtype) ;
+  let db = !Sql.database.open_db (user,pass,host,port,dbname) in
+  createdb [] [] db
+;;
+
+(** initialize the db *)
+let init_database ?(extras=[]) ?(relations=relations) db query =
+(*  begin try dynlink_db dbtype with Dynlink.Error(e) -> failwith (Dynlink.error_message e) end ; *)
+  let db = { db with relations = relations ; extras = extras } in
+  create_view_all_packages db query;
+  create_view_universe db;
+  db
+;;
+
+let clear_database db =
+  let s1 = "drop view all_t" in
+  let s2 = "drop index version_idx" in
+  let s3 = "drop table universe" in
+  !Sql.database.exec_no_result db.connection s1;
+  !Sql.database.exec_no_result db.connection s2;
+  !Sql.database.exec_no_result db.connection s3;
+;;
+
+(* FIXME : This should be something more explicit *)
+exception Error
+
+let check_relations db l = 
+  if List.exists(fun r -> not(List.mem r db.relations)) l then begin
+    List.iter (fun r -> print_endline (relation_to_string r)) l;
+    List.iter (fun r -> print_endline (relation_to_string r)) db.relations;
+    raise Error
+  end
+  else ()
+
+let __select_packages db f query =
+  let sql_rel =
+    let f r = List.assoc r assoc_rels in
+    map_concat f db.relations
+  in
+  let sql_extra = map_concat (fun x -> x) db.extras in
+  let q = compile_query query in
+  let sql =
+    Printf.sprintf "select name,number,version_id %s %s from universe %s" 
+    sql_rel sql_extra q
+  in
+  f db.connection sql
+
+(** Map the function [f] over the list of all packages. [relations] is a list
+  of dependency relation to consider *)
+let select_map_packages db f query =
+  let proc_func db = !Sql.database.exec_map db (fun r -> fun h -> f (build (r,h))) in
+  __select_packages db proc_func query
+
+(** Iter the function [f] over the list of all packages. [relations] is a list
+  of dependency relation to consider *)
+let select_iter_packages db f query =
+  let proc_func db = !Sql.database.exec_iter db (fun r -> fun h -> f (build (r,h))) in
+  __select_packages db proc_func query
+
+(** returns the list of all packages in the universe. [relations] is a list
+  of dependency relation to consider *)
+let select_packages db query =
+  __select_packages db (fun db -> !Sql.database.exec db) query
+
+(****************************************************************)
+
+let select_package_by_version_id db relations extras version_id = 
+  match 
+  select_map_packages db (fun p -> p) (`And [ `Version_id version_id ])
+  with
+  |[a] -> a
+  |_ -> assert false
+
+let select_no_headers db sql =
+  match !Sql.database.exec_no_headers db.connection sql with
+  |[a] -> Option.get a.(0)
+  |_ -> failwith (Printf.sprintf "Db Inconsistency : %s\n" sql)
+
+(** select the unit name give the version id *)
+let select_unit_by_version_id db id =
+  let sql = Printf.sprintf "select name from universe where version_id = %i" id in
+  select_no_headers db sql
+
+(** select the unit name give the version id *)
+let select_number_by_version_id db id =
+  let sql = Printf.sprintf "select number from universe where version_id = %i" id in
+  select_no_headers db sql
+
+(** select the most recent version of a unit in the universe*)
+let select_version_by_unit db name =
+  let sql = Printf.sprintf "select version_id from universe where name='%s'" name in
+  match !Sql.database.exec_no_headers db.connection sql with
+  |a::_ -> int_of_string (Option.get a.(0))
+  |_ -> raise Not_found
+
+let mem_version_by_unit db name =
+  let sql = Printf.sprintf "select count(version_id) from universe where name='%s'" name in
+  match !Sql.database.exec_no_headers db.connection sql with
+  |[a] when ((int_of_string (Option.get a.(0))) = 0) -> false
+  |[a] when ((int_of_string (Option.get a.(0))) >= 1) -> true
+  |_ -> assert false
+
+let universe_size db =
+  let sql = Printf.sprintf "select count(*) from universe" in
+  match !Sql.database.exec_no_headers db.connection sql with
+  |[a] -> int_of_string (Option.get a.(0))
+  |_ -> assert false
+
+(**************************************************************************)
+
+let select_timestamps db query =
+  let q = compile_query query in
+  let sql = Printf.sprintf "select timestamp from aptlist %s" q in
+  Common.Util.print_info "%s" sql ;
+  let rowl = !Sql.database.exec_no_headers db.connection sql in
+  List.fold_left (fun acc a -> (Option.get a.(0))::acc) [] rowl
+
+(**************************************************************************)
+
+let dump_from_query db query =
+  select_iter_packages db (fun p ->
+    Printf.printf "Package: %s\nVersion: %s\n\n" 
+    (select_unit_by_version_id db p.version_id)
+    (select_number_by_version_id db p.version_id)
+  ) query 
+
+let dump_from_list db pkglist =
+  List.iter (fun (pid,_,_) ->
+    Printf.printf "Package: %s\nVersion: %s\n\n"
+    (select_unit_by_version_id db pid)
+    (select_number_by_version_id db pid)
+  ) pkglist
+
+(**************************************************************************)
+let loadl l =
+    List.map (function
+        |(id,"","") -> (id,None)
+        |(id,op,version) -> (id,Some(op,version))
+    ) l
+
+let loadll = List.map loadl
+
+(* ATM we support only debian *)
+let conv pkg =
+  { Debian.Packages.name = pkg.name;
+    version = pkg.number;
+    source = ("",None);
+    depends = loadll (List.assoc (`Depends) pkg.cnf_deps);
+    pre_depends = loadll (List.assoc (`Pre_depends) pkg.cnf_deps);
+    recommends = [];
+    suggests = [];
+    enhances = [];
+    conflicts = loadl (List.assoc (`Conflicts) pkg.conj_deps);
+    breaks = []; (* loadl (List.assoc (`Breaks) pkg.conj_deps); *)
+    replaces = [];
+    provides = loadl (List.assoc (`Provides) pkg.conj_deps);
+    extras = pkg.extra;
+  }
+
+let load_selection db ?(distribution=`Debian) query =
+  let module S = Debian.Packages.Set in
+  let rawl = select_map_packages db conv query in
+  let s = List.fold_left (fun s x -> S.add x s) S.empty rawl in
+  S.elements s
 
 (* TODO we should support dynlinking !!! *)
 (*
@@ -249,303 +432,4 @@ let dynlink_db dbtype =
 ;;
 *)
 
-let late_binding = function
-  |"pgsql" ->
-      IFDEF PGSQL THEN Pgsql.load () ELSE failwith "pgsql not supported" END
-  |"sqlite" ->
-      IFDEF SQLITE THEN Sqlite.load () ELSE failwith "sqlite not supported" END
-  |_ -> failwith "DB late binding failed"
-;;
 
-(** initialize the db *)
-let init_database ?(relations=relations) dbtype (user,pass,host,port,dbname) query =
-(*  begin try dynlink_db dbtype with Dynlink.Error(e) -> failwith (Dynlink.error_message e) end ; *)
-  ignore(late_binding dbtype) ;
-  _db := Some(!Sql.database.open_db (user,pass,host,port,dbname)) ;
-  uni_rels := relations;
-  print_debug "create views and temp tables";
-  create_view_all_packages relations query;
-  create_view_universe ();
-  print_debug "done";
-;;
-
-(* FIXME : This should be something more explicit *)
-exception Error
-
-let check_relations l = 
-  if List.exists(fun r -> not(List.mem r !uni_rels)) l then begin
-    List.iter (fun r -> print_endline (relation_to_string r)) l;
-    List.iter (fun r -> print_endline (relation_to_string r)) !uni_rels;
-    raise Error
-  end
-  else ()
-
-let __select_versions f query relations =
-  check_relations relations;
-  let sql_rel = match relations with
-    |[] -> ""
-    |_ -> let l =
-      List.map(fun r ->
-        let s = List.assoc r assoc_rels in
-        Printf.sprintf "%s" s
-      ) relations
-      in ", " ^ (String.concat "," l)
-  in
-  let q = compile_query query in
-  let sql = Printf.sprintf "select name,number,version_id %s from universe %s" sql_rel q in
-  f (get_db ()) sql
-
-let __select_packages f query relations =
-  check_relations relations;
-  let sql_rel = match relations with
-    |[] -> ""
-    |_ -> let l =
-      List.map(fun r ->
-        let s = List.assoc r assoc_rels in
-        Printf.sprintf "%s" s
-      ) relations
-      in ", " ^ (String.concat "," l)
-  in
-  let q = compile_query query in
-  let sql = Printf.sprintf "select name,number,version_id %s from universe %s" sql_rel q in
-  f (get_db ()) sql
-
-(** Map the function [f] over the list of all packages. [relations] is a list
-  of dependency relation to consider *)
-let select_iter_versions f query relations =
-  let proc_func db = !Sql.database.exec_iter db (fun r -> fun h -> f (build (r,h))) in
-  __select_versions proc_func query relations
-
-(** Iter the function [f] over the list of all packages matching the give
-  selection. [relations] is a list of dependency relation to consider *)
-let select_map_versions f query relations =
-  let proc_func db = !Sql.database.exec_map db (fun r -> fun h -> f (build (r,h))) in
-  __select_versions proc_func query relations
-
-(** returns a list of all package versions matching the give selection. *)
-let select_versions query relations =
-  __select_versions (fun db -> !Sql.database.exec db) query relations
-
-(** Map the function [f] over the list of all packages. [relations] is a list
-  of dependency relation to consider *)
-let select_map_packages f query relations =
-  let proc_func db = !Sql.database.exec_map db (fun r -> fun h -> f (build (r,h))) in
-  __select_packages proc_func query relations
-
-(** Iter the function [f] over the list of all packages. [relations] is a list
-  of dependency relation to consider *)
-let select_iter_packages f query relations =
-  let proc_func db = !Sql.database.exec_iter db (fun r -> fun h -> f (build (r,h))) in
-  __select_packages proc_func query relations
-
-(** returns the list of all packages in the universe. [relations] is a list
-  of dependency relation to consider *)
-let select_packages query relations =
-  __select_packages (fun db -> !Sql.database.exec db) query relations
-
-(****************************************************************)
-
-let select_package_by_version_id relations version_id = 
-  match 
-  select_map_packages (fun p -> p) (`And [ `Version_id version_id ]) relations
-  with
-  |[a] -> a
-  |_ -> assert false
-
-(** select the unit name give the version id *)
-let select_unit_by_version_id id =
-  let sql = 
-    Printf.sprintf "select name from universe where version_id = %i" id
-  in
-  match !Sql.database.exec_no_headers (get_db ()) sql with
-  |[a] -> Option.get a.(0)
-  |_ -> Printf.printf "select_unit_by_version_id %d" id ; assert false
-
-(** select the unit name give the version id *)
-let select_number_by_version_id id =
-  let sql = 
-    Printf.sprintf "select number from universe where version_id = %i" id
-  in
-  match !Sql.database.exec_no_headers (get_db ()) sql with
-  |[a] -> Option.get a.(0)
-  |_ -> ""
-
-(** select the most recent version of a unit in the universe*)
-let select_version_by_unit name =
-  let db = get_db () in
-  let sql = Printf.sprintf "select version_id from universe where name='%s'" name in
-  match !Sql.database.exec_no_headers db sql with
-  |a::t -> int_of_string (Option.get a.(0))
-  |_ -> raise Not_found
-
-let mem_version_by_unit name =
-  let db = get_db () in
-  let sql = Printf.sprintf "select count(version_id) from universe where name='%s'" name in
-  match !Sql.database.exec_no_headers db sql with
-  |[a] when ((int_of_string (Option.get a.(0))) = 0) -> false
-  |[a] when ((int_of_string (Option.get a.(0))) >= 1) -> true
-  |_ -> assert false
-
-let universe_size () =
-  let sql = Printf.sprintf "select count(*) from universe" in
-  match !Sql.database.exec_no_headers (get_db ()) sql with
-  |[a] -> int_of_string (Option.get a.(0))
-  |_ -> assert false
-
-(* we build this table as the number of virtual units is much smaller
- * then the number of real packages in the universe *)
-let init_provides () =
-  let sql = Printf.sprintf "
-    create temp table provides (unit_id INT, version_id INT, number VARCHAR)"
-  in ignore(!Sql.database.exec (get_db ()) sql)
-
-(** provides can't be transitive *)
-let update_provides () =
-  let db = get_db () in
-  let extract p = 
-    match List.assoc (`Provides) p.conj_deps with
-    |[] -> ()
-    |l ->
-        List.iter (fun (name,sel,ver) ->
-          let vl =
-            let q = compile_query (`And [ `Name name ; `Version (sel,ver)]) in
-            let sql = Printf.sprintf "select version_id, number from universe %s" q in
-            List.map (fun r ->
-              (int_of_string (Option.get r.(0)), Option.get r.(1))
-            ) (!Sql.database.exec_no_headers db sql)
-          in
-          let sql vid number =
-            Printf.sprintf "insert into provides values (%s,%d,'%s')" name vid number
-          in
-          List.iter (fun (vid,num) ->
-            ignore(!Sql.database.exec db (sql vid num))
-          ) vl
-        ) l
-  in
-  select_iter_versions extract (`All) [`Provides]
-
-let __expand_provides relations f (name,sel,ver) =
-  check_relations relations;
-  let sql_rel = match relations with
-    |[] -> ""
-    |_ -> let l =
-      List.map(fun r ->
-        let s = List.assoc r assoc_rels in
-        Printf.sprintf "%s" s
-      ) relations
-      in ", " ^ (String.concat "," l)
-  in
-  let q = compile_query (`And [ `Name name ; `Version (sel,ver)]) in
-  let sql = Printf.sprintf "
-  select name,number,version_id %s from universe where version_id in (
-    select version_id from provides %s)" sql_rel q
-  in
-  f (get_db ()) sql
-
-let expand_map_provides relations f (id,sel,ver) =
-  __expand_provides relations 
-  (fun db -> !Sql.database.exec_map db (fun r -> fun h -> f (build (r,h)))) (id,sel,ver)
-
-let expand_iter_provides relations f (id,sel,ver) =
-  __expand_provides relations 
-  (fun db -> !Sql.database.exec_iter db (fun r -> fun h -> f (build (r,h)))) (id,sel,ver)
-
-let expand_map_versions relations f (name,sel,ver) =
-  match
-  select_map_versions f (`And [ `Name name ; `Version (sel,ver)]) relations
-  with
-  |[] -> expand_map_provides relations f (name,sel,ver)
-  |l -> l
-
-let expand_iter_versions relations f (name,sel,ver) =
-  let empty = ref true in
-  let f' x = empty := false ; f x in
-  select_iter_versions f' (`And [ `Name name ; `Version (sel,ver)]) relations
-  ;
-  if !empty then expand_iter_provides relations f (name,sel,ver)
-;;
-
-let init_conflicts () =
-  let db = get_db () in
-  let sql = Printf.sprintf "create temp table conflicts (pkg1 INT, pkg2 INT)" in
-  let _idx = "create index conflict_idx on conflicts (pkg1,pkg2)" in
-  !Sql.database.exec_no_result db sql;
-  !Sql.database.exec_no_result db _idx
-;;
-
-let update_conflicts () =
-  let db = get_db () in
-  let extract p = 
-    match List.assoc (`Conflicts) p.conj_deps with
-    |[] -> ()
-    |l -> List.iter (fun (uid,sel,ver) ->
-        let vl = expand_map_versions [] (fun x -> x) (uid,sel,ver) in
-        let sql vid =
-          Printf.sprintf "replace into conflicts values (%d,%d)" p.version_id vid
-        in
-        List.iter (fun p -> !Sql.database.exec_no_result db (sql p.version_id)) vl
-        ) l
-  in
-  select_iter_versions extract (`All) [`Conflicts]
-
-let select_conflicts id = 
-  let sql =
-    Printf.sprintf "select * from conflicts where pkg1 = %d or pkg2 = %d" id id
-  in
-  let res : Idbr.version_id list ref = ref [] in
-  !Sql.database.exec_iter_no_headers (get_db ()) (fun r -> 
-    let p1 = int_of_string (Option.get r.(0)) in
-    let p2 = int_of_string (Option.get r.(1)) in
-    if p1 <> id then res := p1 :: !res else res := p2 :: !res
-  ) sql
-  ;
-  !res
-
-(**************************************************************************)
-
-let dump_from_query query =
-  select_iter_packages (fun p ->
-    Printf.printf "Package: %s\nVersion: %s\n\n" 
-    (select_unit_by_version_id p.version_id)
-    (select_number_by_version_id p.version_id)
-  ) query []
-
-let dump_from_list pkglist =
-  List.iter (fun (pid,_,_) ->
-    Printf.printf "Package: %s\nVersion: %s\n\n"
-    (select_unit_by_version_id pid)
-    (select_number_by_version_id pid)
-  ) pkglist
-
-
-(**************************************************************************)
-let loadl l =
-    List.map (function
-        |(id,"","") -> (id,None)
-        |(id,op,version) -> (id,Some(op,version))
-    ) l
-
-let loadll = List.map loadl
-
-(* ATM we support only debian *)
-let conv pkg =
-  { Debian.Packages.name = pkg.name;
-    version = pkg.number;
-    source = ("",None);
-    depends = loadll (List.assoc (`Depends) pkg.cnf_deps);
-    pre_depends = loadll (List.assoc (`Pre_depends) pkg.cnf_deps);
-    recommends = [];
-    suggests = [];
-    enhances = [];
-    conflicts = loadl (List.assoc (`Conflicts) pkg.conj_deps);
-    breaks = loadl (List.assoc (`Breaks) pkg.conj_deps);
-    replaces = [];
-    provides = loadl (List.assoc (`Provides) pkg.conj_deps);
-    extras = [];
-  }
-
-let load_selection ?(relations=relations) ?(distribution=`Debian) query =
-  let module S = Debian.Packages.Set in
-  let rawl = select_map_packages conv query relations in
-  let s = List.fold_left (fun s x -> S.add x s) S.empty rawl in
-  S.elements s

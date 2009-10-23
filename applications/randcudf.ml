@@ -201,8 +201,8 @@ let main () =
     |(("pgsql"|"sqlite") as dbtype,info,(Some query)) -> 
 IFDEF HASDB THEN
       begin
-        Backend.init_database dbtype info (Idbr.parse_query query) ;
-        Backend.load_selection (`All) 
+        let db = Backend.init_database dbtype info (Idbr.parse_query query) in
+        Backend.load_selection db (`All) 
       end
 ELSE
       failwith (dbtype ^ " Not supported")

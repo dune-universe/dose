@@ -49,7 +49,8 @@ type package = {
     number : number ;
     version_id : version_id;
     cnf_deps : cnf_dep list;
-    conj_deps : conj_dep list
+    conj_deps : conj_dep list;
+    extra : (string * string) list
 }
 
 let parse_selector = function
@@ -114,7 +115,8 @@ let parse_query s =
   let parse_aux str =
     let res =
       match Str.split space_re str with
-      |["Date";ss] -> `Date ss
+      |["Date";d;t] -> `Date (Printf.sprintf "%s %s" d t)
+      |["Interval";d1;d2] -> `Interval (d1,d2)
       |["Suite";ss] -> `Suite ss
       |["Priority";ss] -> `Priority ss
       |["Section";ss] -> `Section ss
