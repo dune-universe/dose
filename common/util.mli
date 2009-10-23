@@ -49,10 +49,12 @@ end
 
 type verbosity = Quiet | Summary | Details
 val set_verbosity: verbosity -> unit
-(*
-val print_warning : ?ppf:Format.formatter ->  
-val print_info : ?ppf:Format.formatter ->  
-*)
+
+val print_warning :
+  ?ppf:Format.formatter -> ('a, unit, string, unit) format4 -> 'a
+val print_info :
+  ?ppf:Format.formatter -> ('a, unit, string, unit) format4 -> 'a
+
 val gettimeofday: (unit -> float) ref
 
 (** register a logger *)
