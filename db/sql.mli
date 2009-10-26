@@ -24,6 +24,7 @@ type conn =
 
 type db = {
   open_db : conn -> dbraw ;
+  close_db : dbraw -> unit ;
 
   exec_iter : dbraw -> (row -> headers -> unit) -> sql -> unit ;
   exec_iter_no_headers : dbraw -> (row -> unit) -> sql -> unit ;

@@ -26,6 +26,7 @@ type conn =
 
 type db = {
   open_db : conn -> dbraw ;
+  close_db : dbraw -> unit ;
 
   exec_iter : dbraw -> (row -> headers -> unit) -> sql -> unit ;
   exec_iter_no_headers : dbraw -> (row -> unit) -> sql -> unit ;
@@ -42,6 +43,7 @@ let dbobj = ref 0
 
 let database = ref {
   open_db = (fun _ -> failwith "open_db stub") ;
+  close_db = (fun _ -> failwith "close_db stub") ;
 
   exec_iter = (fun _ _ _ -> failwith "exec_iter stub") ;
   exec_iter_no_headers = (fun _ _ _ -> failwith "exec_iter_no_headers stub");

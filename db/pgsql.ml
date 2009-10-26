@@ -114,6 +114,7 @@ let load () =
   in
     Sql.database := {
       open_db = (fun conn -> Obj.magic { db = open_db conn; dbobj = dbobj });
+      close_db = guard (fun db -> db#finish);
       exec_iter = guard exec_iter;
 
       exec_iter_no_headers = guard exec_iter_no_headers;
