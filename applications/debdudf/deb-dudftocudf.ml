@@ -152,7 +152,6 @@ module AptPref = struct
 
   let parse ?tr s =
     let ch = IO.input_string s in
-    Printf.eprintf "%s\n%!" s;
     let l = Debian.Apt.parse_preferences_in (fun x -> x) ch in
     let pref = List.fold_left mapf dummypref l in
     { pref with target_release = tr }
@@ -438,8 +437,12 @@ let main () =
   let oc =
     if !Options.outdir <> "" then begin
       let dirname = !Options.outdir in
-      if not(Sys.file_exists dirname) then Unix.mkdir dirname 777 ;
-      open_out (Filename.concat dirname ("res.cudf"))
+      let file =
+        let s = Filename.basename !input_file in
+        try Filename.chop_extension s with Invalid_argument _ -> s
+      in
+      if not(Sys.file_exists dirname) then Unix.mkdir dirname 0o777 ;
+      open_out (Filename.concat dirname (file^".cudf"))
     end else stdout
   in
   Printf.fprintf oc "%s\n" (Cudf_printer.string_of_cudf (preamble, universe, request)) 
