@@ -60,7 +60,7 @@ let main () =
   Util.Timer.stop timer ();
   Printf.eprintf "done.\n%!"; 
 
-    Printf.eprintf "Solve ...%!";
+  Printf.eprintf "Solve ...%!";
   let timer = Util.Timer.create "Solve" in
   Util.Timer.start timer;
   let result = Cudfsolver.solve problem in

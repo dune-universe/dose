@@ -5,18 +5,22 @@ open Debian
 
 module Deb = Debian.Packages
 
-module L = Xml.LazyList
+module L = Xml.LazyList ;;
+
+Random.self_init () ;;
 
 module Options =
-struct
-  let outdir = ref ""
-end
+  struct
+    let outdir = ref ""
+    let problemid = ref ""
+  end
 
-let usage = Printf.sprintf "usage: %s [-options] [debian dudf doc]" (Sys.argv.(0))
+let usage = Printf.sprintf "usage: %s [--options] [debian dudf doc]" (Sys.argv.(0))
 let options =
   [
-    ("--outdir", Arg.String (fun l -> Options.outdir := l),
-    "Specify the results directory");
+    ("--outdir", Arg.String (fun l -> Options.outdir := l), "Specify the results directory");
+    ("--problemid", Arg.String (fun l -> Options.problemid := l), "Specify the problem identifier");
+    ("--debug", Arg.Unit (fun () -> Util.set_verbosity Util.Summary), "Print debug information");
   ]
 let input_file = ref ""
 
@@ -34,8 +38,15 @@ module XmlDudf = struct
     mutable packageStatus : string;
     mutable packageUniverse : (Debian.Release.release * string) list;
     mutable action : string ;
-    mutable desiderata : string ;
-    mutable outcome : string
+    mutable desiderata : dudfdesiderata ;
+    mutable outcome : dudfoutcome
+  }
+  and dudfoutcome = {
+    result : string ;
+    error : string
+  }
+  and dudfdesiderata = {
+    aptpref : string
   }
 
   let dummydudf = {
@@ -47,8 +58,8 @@ module XmlDudf = struct
       packageStatus = "";
       packageUniverse = [];
       action = "";
-      desiderata = "" ;
-      outcome = ""
+      desiderata = { aptpref = "" } ;
+      outcome = { result = "" ; error = "" }
     };
   }
 end
@@ -141,6 +152,7 @@ module AptPref = struct
 
   let parse ?tr s =
     let ch = IO.input_string s in
+    Printf.eprintf "%s\n%!" s;
     let l = Debian.Apt.parse_preferences_in (fun x -> x) ch in
     let pref = List.fold_left mapf dummypref l in
     { pref with target_release = tr }
@@ -215,10 +227,12 @@ let main () =
     try Arg.parse options (fun f -> input_file := f) usage
     with Arg.Bad s -> failwith s
   in
+  Util.print_info "parse xml";
   let xdata = XmlParser.parse_string (IO.read_all (Input.open_file !input_file)) in
   let content_to_string node = Xml.fold (fun a x -> a^(Xml.to_string x)) "" node in
   let dudfproblem dudfprob node =
     Xml.fold (fun dudf node ->
+      Util.print_info "  %s" (Xml.tag node);
       match Xml.tag node with
       |"package-status" -> {
         dudf with packageStatus = 
@@ -277,13 +291,31 @@ let main () =
         in
         {dudf with packageUniverse = universe @ without_release}
       |"action" -> {dudf with action = content_to_string node}
-      |"desiderata" -> {dudf with desiderata = content_to_string node}
-      |"outcome" -> {dudf with outcome = content_to_string node}
+      |"desiderata" -> 
+          {dudf with desiderata = {
+            aptpref =
+              Xml.fold (fun s n ->
+                match Xml.tag n with
+                |"apt_preferences" -> content_to_string n
+                |_ -> assert false
+              ) "" node
+            }
+          }
+      |"outcome" ->
+          {dudf with outcome =
+            Xml.fold (fun t n ->
+              match Xml.tag n with
+              |"result" -> { t with result = content_to_string n }
+              |"error" -> { t with error = content_to_string n }
+              |_ -> assert false
+            ) { result = "" ; error = "" } node
+          }
       |s -> (Printf.eprintf "Warning : Unknown element %s\n" s ; dudf)
     ) dudfprob node
   in
   let dudfdoc dudfdoc node =
     Xml.fold (fun dudf node -> 
+      Util.print_info " %s" (Xml.tag node);
       match Xml.tag node with
       |"distribution" -> dudf
       |"timestamp" -> {dudf with timestamp = content_to_string node}
@@ -296,8 +328,9 @@ let main () =
   in
 
   let id x = x in
+  Util.print_info "convert to dom ... ";
   let dudf = dudfdoc dummydudf xdata in
-  let preferences = AptPref.parse dudf.problem.desiderata in
+  let preferences = AptPref.parse dudf.problem.desiderata.aptpref in
 
   let infoH = Hashtbl.create 1031 in
   let extras_preamble = [
@@ -306,6 +339,7 @@ let main () =
   in
   let extras = List.map fst extras_preamble in
 
+  Util.print_info "parse all packages";
   let all_packages =
     List.fold_left (fun acc (univinfo,contents) ->
       let ch = IO.input_string contents in
@@ -318,6 +352,7 @@ let main () =
     ) Deb.Set.empty dudf.problem.packageUniverse
   in
 
+  Util.print_info "installed packages";
   let installed_packages =
     let ch = IO.input_string dudf.problem.packageStatus in
     let l = Deb.parse_packages_in ~extras:extras id ch in
@@ -325,6 +360,7 @@ let main () =
     List.fold_left (fun s pkg -> Deb.Set.add pkg s) Deb.Set.empty l
   in
 
+  Util.print_info "union";
   let l = Deb.Set.elements (Deb.Set.union all_packages installed_packages) in
   let tables = Debian.Debcudf.init_tables l in
 
@@ -340,6 +376,7 @@ let main () =
   let preamble = ("Priority",(`Int 500))::((List.map snd extras_preamble) @ Debcudf.preamble) in
   let add_extra (k,v) pkg = { pkg with Cudf.extra = (k,v) :: pkg.Cudf.extra } in
 
+  Util.print_info "convert";
   let pl =
     List.map (fun pkg ->
       let inst = Hashtbl.mem installed (pkg.Deb.name,pkg.Deb.version) in
@@ -374,22 +411,27 @@ let main () =
           with Not_found ->
             failwith (Printf.sprintf "There is no package %s in release %s " p d)
     in
+    let problem_id =
+      if !Options.problemid <> "" then !Options.problemid
+      else if dudf.uid <> "" then dudf.uid
+      else (string_of_int (Random.bits ()))
+    in
     match Debian.Apt.parse_request_apt dudf.problem.action with
     |Debian.Apt.Upgrade (Some (suite))
     |Debian.Apt.DistUpgrade (Some (suite)) -> 
         let il = Deb.Set.fold (fun pkg acc -> `PkgDst (pkg.Deb.name,suite) :: acc) installed_packages [] in
         let l = List.map mapver il in
-        { Cudf.problem_id = dudf.uid ; install = l ; remove = [] ; upgrade = [] }
+        { Cudf.problem_id = problem_id ; install = l ; remove = [] ; upgrade = [] }
     |Debian.Apt.Install l ->
         let l = List.map mapver l in
-        { Cudf.problem_id = dudf.uid ; install = l ; remove = [] ; upgrade = [] } 
+        { Cudf.problem_id = problem_id ; install = l ; remove = [] ; upgrade = [] } 
     |Debian.Apt.Remove l -> 
         let l = List.map (fun (`Pkg p) -> (p,None) ) l in
-        { Cudf.problem_id = dudf.uid ; install = [] ; remove = l ; upgrade = [] }
+        { Cudf.problem_id = problem_id ; install = [] ; remove = l ; upgrade = [] }
     |Debian.Apt.Upgrade None -> 
-        { Cudf.problem_id = dudf.uid ; install = [] ; remove = [] ; upgrade = [] }
+        { Cudf.problem_id = problem_id ; install = [] ; remove = [] ; upgrade = [] }
     |Debian.Apt.DistUpgrade None -> 
-        { Cudf.problem_id = dudf.uid ; install = [] ; remove = [] ; upgrade = [] }
+        { Cudf.problem_id = problem_id ; install = [] ; remove = [] ; upgrade = [] }
 
   in
 
