@@ -6,6 +6,7 @@ open Common
 open ExtLib
 open Cudf
 open Cudf_types
+open Diagnostic
 
 module Graph = Defaultgraphs.SyntacticDependencyGraph
 module G = Graph.G
@@ -43,7 +44,10 @@ begin
    ) gr p []
 end;;
 
-type conflict_type = Strong | Other;;
+type conflict_type =
+  Strong
+| Other of reason list;;
+
 let nr_conj_pairs = ref 0;;
 let nr_other_pairs = ref 0;;
 
@@ -57,7 +61,7 @@ begin
       Hashtbl.add c1_ht c2 (ct,root);
       match ct with
       | Strong -> incr nr_conj_pairs
-      | Other -> incr nr_other_pairs
+      | Other _ -> incr nr_other_pairs
     end
   with Not_found ->
   begin
@@ -66,7 +70,7 @@ begin
     Hashtbl.add pair_ht c1 c1_ht;
     match ct with
     | Strong -> incr nr_conj_pairs
-    | Other -> incr nr_other_pairs
+    | Other _ -> incr nr_other_pairs
   end
 end;;
 
@@ -278,7 +282,7 @@ begin
   List.iter (fun (c1, c2) ->
     List.iter (fun c1p ->
       List.iter (fun c2p ->
-        if c1p <> c2p then add_pair pair_ht c1p c2p Other (c1,c2)
+        if c1p <> c2p then add_pair pair_ht c1p c2p (Other []) (c1,c2)
       ) (Hashtbl.find pred_ht c2)
     ) (Hashtbl.find pred_ht c1)
   ) clf;
@@ -299,12 +303,12 @@ begin
       Util.Progress.progress p;
       match ct with
       | Strong -> (incr nr_sc; add_strong_conflict sc_ht c1 c2 root ct)
-      | Other -> 
+      | Other _ -> 
         let d = Depsolver.edos_coinstall slv [c1;c2] in
         begin
-          match d.Diagnostic.result with
-          | Diagnostic.Failure _ ->
-            (incr nr_sc; add_strong_conflict sc_ht c1 c2 root ct)
+          match d.result with
+          | Failure f ->
+            (incr nr_sc; add_strong_conflict sc_ht c1 c2 root (Other (f ())))
           | _ -> () 
         end
     ) c1_ht
@@ -320,9 +324,21 @@ begin
         (string_of_pkgname r1.package) (string_of_version r1.version)
         (string_of_pkgname r2.package) (string_of_version r2.version);
       List.iter (fun (c2, ct) ->
-        Printf.printf "    * %s-%s (%s)\n" (string_of_pkgname c2.package)
-          (string_of_version c2.version)
-          (match ct with Strong -> "strong-dep" | Other -> "other")
+        match ct with
+        | Strong -> Printf.printf "    * %s-%s (strong-dep)\n" (string_of_pkgname c2.package) (string_of_version c2.version)
+        | Other f -> Printf.printf "    * %s-%s (other-dep)\n%s\n" (string_of_pkgname c2.package) (string_of_version c2.version)
+          (String.concat "\n" 
+            (List.map (function 
+              | Dependency (d, l) -> Printf.sprintf "      - dependency: %s-%s -> %s" (string_of_pkgname d.package) (string_of_version c2.version) 
+                (String.concat " | " (List.map (fun d' -> Printf.sprintf "%s-%s" (string_of_pkgname d'.package) (string_of_version d'.version)) l))
+              | EmptyDependency (d, l) -> Printf.sprintf "     - empty dependency: %s-%s -> %s" (string_of_pkgname d.package) (string_of_version d.version)
+                (String.concat " | " (List.map string_of_vpkg l))
+              | Conflict (c1', c2') -> Printf.sprintf "      - conflict: %s-%s <-> %s-%s"
+                (string_of_pkgname c1'.package) (string_of_version c1'.version)
+                (string_of_pkgname c2'.package) (string_of_version c2'.version)
+              | _ -> Printf.sprintf "     - aliens ate my distribution"
+            ) f)
+          )
       ) cl
     ) c1_ht
   ) sc_ht;
