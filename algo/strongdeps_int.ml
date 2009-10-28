@@ -95,6 +95,9 @@ let strongdeps_int graph mdf available =
   Util.Timer.start strongtimer;
   List.iter (fun (pkg1,_,closure) ->
     let pkg1_id = pkg1.Mdf.id in
+    (* always add the vertex, even if it isn't involved in any strong
+     * dependencies *)
+    G.add_vertex graph pkg1_id;
     Util.Progress.progress mainbar;
     if Array.length pkg1.Mdf.depends > 0 then begin
       (* we don't bother to call the solver if the package does not have

@@ -67,9 +67,8 @@ let test_trim =
       let (_,pl,_) = Cudf_parser.parse_from_file f_debian in
       Cudf.load_universe pl
     in
-    let solver = Depsolver.load universe in
-    let l = Depsolver.trim solver (Cudf.get_packages universe) in
-    assert_equal 24342 (List.length l)
+    let l = Depsolver.trim universe in
+    assert_equal 24342 (Cudf.universe_size l)
   )
     
 let test_distribcheck =
@@ -79,8 +78,7 @@ let test_distribcheck =
       let (_,pl,_) = Cudf_parser.parse_from_file f_debian in
       Cudf.load_universe pl
     in
-    let solver = Depsolver.load universe in
-    let i = Depsolver.univcheck solver in
+    let i = Depsolver.univcheck universe in
     assert_equal 425 i
   ) 
 

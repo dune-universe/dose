@@ -66,7 +66,7 @@ module SyntacticDependencyGraph = struct
     let default = DirDepends
   end
 
-  module G = Imperative.Digraph.ConcreteLabeled(PkgV)(PkgE) 
+  module G = Imperative.Digraph.ConcreteBidirectionalLabeled(PkgV)(PkgE) 
 
   let string_of_vertex vertex =
     match G.V.label vertex with
