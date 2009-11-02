@@ -633,8 +633,8 @@ CC
 HAS_RPM
 OCAML_PKG_zip
 HAS_ZIP
-OCAML_PKG_cudf
 OCAML_PKG_extlib
+OCAML_PKG_cudf
 OCAMLFIND
 OCAMLBUILD
 OCAMLDOC
@@ -3010,35 +3010,6 @@ if test "$OCAMLFIND" = "no"; then
 fi
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package extlib" >&5
-$as_echo_n "checking for OCaml findlib package extlib... " >&6; }
-
-  unset found
-  unset pkg
-  found=no
-  for pkg in extlib  ; do
-    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
-$as_echo "found" >&6; }
-      OCAML_PKG_extlib=$pkg
-      found=yes
-      break
-    fi
-  done
-  if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-    OCAML_PKG_extlib=no
-  fi
-
-
-
-if test "$OCAML_PKG_extlib" = "no"; then
- as_fn_error "Please install OCaml findlib module 'extlib'." "$LINENO" 5
-fi
-
-
-
 # Check whether --with-libcudf was given.
 if test "${with_libcudf+set}" = set; then :
   withval=$with_libcudf; HAS_LIBCUDF=no
@@ -3087,6 +3058,34 @@ $as_echo "$as_me: using local libcudf" >&6;}
 fi
 
 
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package extlib" >&5
+$as_echo_n "checking for OCaml findlib package extlib... " >&6; }
+
+  unset found
+  unset pkg
+  found=no
+  for pkg in extlib  ; do
+    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+      OCAML_PKG_extlib=$pkg
+      found=yes
+      break
+    fi
+  done
+  if test "$found" = "no" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+    OCAML_PKG_extlib=no
+  fi
+
+
+
+if test "$OCAML_PKG_extlib" = "no"; then
+ as_fn_error "Please install OCaml findlib module 'extlib'." "$LINENO" 5
+fi
+
+
 # Check whether --with-zip was given.
 if test "${with_zip+set}" = set; then :
   withval=$with_zip; HAS_ZIP=yes
@@ -3096,8 +3095,6 @@ fi
 
 
 if test "$HAS_ZIP" = "yes" ; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: zip support enabled" >&5
-$as_echo "$as_me: zip support enabled" >&6;}
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package zip" >&5
 $as_echo_n "checking for OCaml findlib package zip... " >&6; }
@@ -4352,8 +4349,6 @@ else
 fi
 
 if test "$HAS_SQLITE" = "yes" ; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: sqlite3 support enabled" >&5
-$as_echo "$as_me: sqlite3 support enabled" >&6;}
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package sqlite3" >&5
 $as_echo_n "checking for OCaml findlib package sqlite3... " >&6; }
@@ -4425,8 +4420,6 @@ else
 fi
 
 if test "$HAS_PGSQL" = "yes" ; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: postgresql installation enabled" >&5
-$as_echo "$as_me: postgresql installation enabled" >&6;}
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package postgresql" >&5
 $as_echo_n "checking for OCaml findlib package postgresql... " >&6; }
@@ -4499,8 +4492,6 @@ fi
 
 
 if test "$HAS_OCAMLGRAPH" = "yes" ; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: ocamlgraph installation enabled" >&5
-$as_echo "$as_me: ocamlgraph installation enabled" >&6;}
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package ocamlgraph" >&5
 $as_echo_n "checking for OCaml findlib package ocamlgraph... " >&6; }
@@ -4544,8 +4535,6 @@ fi
 
 
 if test "$HAS_XML" = "yes" ; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: expat installation enabled" >&5
-$as_echo "$as_me: expat installation enabled" >&6;}
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package expat" >&5
 $as_echo_n "checking for OCaml findlib package expat... " >&6; }
@@ -4615,8 +4604,6 @@ fi
 
 
 if test "$HAS_OUNIT" = "yes" ; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: oUnit installation enabled" >&5
-$as_echo "$as_me: oUnit installation enabled" >&6;}
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package oUnit" >&5
 $as_echo_n "checking for OCaml findlib package oUnit... " >&6; }

@@ -11,12 +11,6 @@ if test "$OCAMLFIND" = "no"; then
  AC_MSG_ERROR([You must install OCaml findlib (the ocamlfind command)])
 fi
 
-AC_CHECK_OCAML_PKG([extlib])
-if test "$OCAML_PKG_extlib" = "no"; then
- AC_MSG_ERROR([Please install OCaml findlib module 'extlib'.])
-fi
-
-
 AC_ARG_WITH(libcudf,
         [ --with-libcudf ],
         HAS_LIBCUDF=no,
@@ -36,13 +30,17 @@ else
   INCLUDE_CUDF="<libcudf>: include"
 fi
 
+AC_CHECK_OCAML_PKG([extlib])
+if test "$OCAML_PKG_extlib" = "no"; then
+ AC_MSG_ERROR([Please install OCaml findlib module 'extlib'.])
+fi
+
 AC_ARG_WITH(zip,
         [ --with-zip ],
         HAS_ZIP=yes,
         HAS_ZIP=no)
 AC_SUBST(HAS_ZIP)
 if test "$HAS_ZIP" = "yes" ; then
-  AC_MSG_NOTICE([zip support enabled])
   AC_CHECK_OCAML_PKG([zip])
   if test "$OCAML_PKG_zip" = "no"; then
    AC_MSG_ERROR([Please install OCaml findlib module 'zip'.])
@@ -73,7 +71,6 @@ AC_ARG_WITH(sqlite,
         HAS_SQLITE=yes,
         HAS_SQLITE=no)
 if test "$HAS_SQLITE" = "yes" ; then
-  AC_MSG_NOTICE([sqlite3 support enabled])
   AC_CHECK_OCAML_PKG([sqlite3])
   if test "$OCAML_PKG_sqlite3" = "no"; then
    AC_MSG_ERROR([Please install OCaml findlib module 'sqlite3'.])
@@ -95,7 +92,6 @@ AC_ARG_WITH(postgresql,
         HAS_PGSQL=yes,
         HAS_PGSQL=no)
 if test "$HAS_PGSQL" = "yes" ; then
-  AC_MSG_NOTICE([postgresql installation enabled])
   AC_CHECK_OCAML_PKG([postgresql])
   if test "$OCAML_PKG_postgresql" = "no"; then
    AC_MSG_ERROR([Please install OCaml findlib module 'postgresql'.])
@@ -118,7 +114,6 @@ AC_ARG_WITH(ocamlgraph,
         HAS_OCAMLGRAPH=no)
 AC_SUBST(HAS_OCAMLGRAPH)
 if test "$HAS_OCAMLGRAPH" = "yes" ; then
-  AC_MSG_NOTICE([ocamlgraph installation enabled])
   AC_CHECK_OCAML_PKG([ocamlgraph])
   if test "$OCAML_PKG_ocamlgraph" = "no"; then
    AC_MSG_ERROR([Please install OCaml findlib module 'ocamlgraph'.])
@@ -135,7 +130,6 @@ AC_ARG_WITH(xml,
         HAS_XML=no)
 AC_SUBST(HAS_XML)
 if test "$HAS_XML" = "yes" ; then
-  AC_MSG_NOTICE([expat installation enabled])
   AC_CHECK_OCAML_PKG([expat])
   if test "$OCAML_PKG_expat" = "no"; then
    AC_MSG_ERROR([Please install OCaml findlib module 'expat'.])
@@ -155,7 +149,6 @@ AC_ARG_WITH(oUnit,
         HAS_OUNIT=no)
 AC_SUBST(HAS_OUNIT)
 if test "$HAS_OUNIT" = "yes" ; then
-  AC_MSG_NOTICE([oUnit installation enabled])
   AC_CHECK_OCAML_PKG([oUnit])
   if test "$OCAML_PKG_oUnit" = "no"; then
    AC_MSG_ERROR([Please install OCaml findlib module 'oUnit'.])
