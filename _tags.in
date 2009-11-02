@@ -3,3 +3,4 @@
 <db>: include
 <deb>: include
 @INCLUDE_RPM@
+@INCLUDE_CUDF@

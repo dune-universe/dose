@@ -17,12 +17,22 @@ if test "$OCAML_PKG_extlib" = "no"; then
 fi
 
 AC_CHECK_OCAML_PKG([cudf])
-if test "$OCAML_PKG_cudf" = "no"; then
- AC_MSG_ERROR([Please install OCaml findlib module 'cudf'.])
+
+AC_ARG_WITH(localcudf,
+        [ --with-localcudf ],
+        HAS_LOCALCUDF=yes,
+        HAS_LOCALCUDF=no)
+if test "$HAS_LOCALCUDF" = "yes" ; then
+  AC_MSG_NOTICE([using local libcudf])
+  INCLUDE_CUDF="<libcudf>: include"
+  PKG_CUDF=pkg_cudf
+else
+  PKG_CUDF=pkg_
 fi
 
-#AC_CHECK_OCAML_PKG([bz2])
-PKG_BZ2=pkg_
+if (test "$OCAML_PKG_cudf" = "no") && (test "$HAS_LOCALCUDF" = "no"); then
+ AC_MSG_ERROR([Please install OCaml findlib module 'cudf'.])
+fi
 
 AC_ARG_WITH(zip,
         [ --with-zip ],
@@ -40,6 +50,9 @@ if test "$HAS_ZIP" = "yes" ; then
 else
   PKG_ZIP=pkg_
 fi
+
+#AC_CHECK_OCAML_PKG([bz2])
+PKG_BZ2=pkg_
 
 AC_ARG_WITH(rpm,
         [ --with-rpm ],
@@ -169,6 +182,7 @@ AC_SUBST(CONFIG_BZ2)
 AC_SUBST(PKG_BZ2)
 
 AC_SUBST(INCLUDE_RPM)
+AC_SUBST(INCLUDE_CUDF)
 
 if (test "$HAS_SQLITE" = "yes") || (test "$HAS_PGSQL" = "yes") then
   HAS_DB=yes
@@ -191,6 +205,8 @@ AC_CONFIG_FILES([
   db/db.mlpack
   db/_tags
   algo/_tags
+  rpm/_tags
+  deb/_tags
   algo/algo.mlpack
   common/_tags
   applications/_tags
