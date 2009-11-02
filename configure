@@ -596,6 +596,7 @@ PKG_XML
 PKG_OCAMLGRAPH
 MLPACK_OCAMLGRAPH
 HAS_DB
+PKG_CUDF
 INCLUDE_CUDF
 INCLUDE_RPM
 PKG_BZ2
@@ -688,7 +689,7 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
-with_localcudf
+with_libcudf
 with_zip
 with_rpm
 with_sqlite
@@ -1315,7 +1316,7 @@ if test -n "$ac_init_help"; then
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
- --with-localcudf
+ --with-libcudf
  --with-zip
  --with-rpm
  --with-sqlite
@@ -3037,6 +3038,16 @@ if test "$OCAML_PKG_extlib" = "no"; then
 fi
 
 
+
+# Check whether --with-libcudf was given.
+if test "${with_libcudf+set}" = set; then :
+  withval=$with_libcudf; HAS_LIBCUDF=no
+else
+  HAS_LIBCUDF=yes
+fi
+
+if test "$HAS_LIBCUDF" = "no" ; then
+
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package cudf" >&5
 $as_echo_n "checking for OCaml findlib package cudf... " >&6; }
 
@@ -3060,26 +3071,19 @@ $as_echo "not found" >&6; }
 
 
 
-
-
-# Check whether --with-localcudf was given.
-if test "${with_localcudf+set}" = set; then :
-  withval=$with_localcudf; HAS_LOCALCUDF=yes
+  if (test "$OCAML_PKG_cudf" = "no"); then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: using local libcudf instead" >&5
+$as_echo "$as_me: using local libcudf instead" >&6;}
+    PKG_CUDF=pkg_
+    INCLUDE_CUDF="<libcudf>: include"
+  else
+    PKG_CUDF=pkg_cudf
+  fi
 else
-  HAS_LOCALCUDF=no
-fi
-
-if test "$HAS_LOCALCUDF" = "yes" ; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: using local libcudf" >&5
 $as_echo "$as_me: using local libcudf" >&6;}
-  INCLUDE_CUDF="<libcudf>: include"
-  PKG_CUDF=pkg_cudf
-else
   PKG_CUDF=pkg_
-fi
-
-if (test "$OCAML_PKG_cudf" = "no") && (test "$HAS_LOCALCUDF" = "no"); then
- as_fn_error "Please install OCaml findlib module 'cudf'." "$LINENO" 5
+  INCLUDE_CUDF="<libcudf>: include"
 fi
 
 
@@ -4644,6 +4648,7 @@ $as_echo "not found" >&6; }
 else
   PKG_OUNIT=pkg_
 fi
+
 
 
 

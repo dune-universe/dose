@@ -16,22 +16,24 @@ if test "$OCAML_PKG_extlib" = "no"; then
  AC_MSG_ERROR([Please install OCaml findlib module 'extlib'.])
 fi
 
-AC_CHECK_OCAML_PKG([cudf])
 
-AC_ARG_WITH(localcudf,
-        [ --with-localcudf ],
-        HAS_LOCALCUDF=yes,
-        HAS_LOCALCUDF=no)
-if test "$HAS_LOCALCUDF" = "yes" ; then
-  AC_MSG_NOTICE([using local libcudf])
-  INCLUDE_CUDF="<libcudf>: include"
-  PKG_CUDF=pkg_cudf
+AC_ARG_WITH(libcudf,
+        [ --with-libcudf ],
+        HAS_LIBCUDF=no,
+        HAS_LIBCUDF=yes)
+if test "$HAS_LIBCUDF" = "no" ; then
+  AC_CHECK_OCAML_PKG([cudf])
+  if (test "$OCAML_PKG_cudf" = "no"); then
+    AC_MSG_NOTICE([using local libcudf instead])
+    PKG_CUDF=pkg_
+    INCLUDE_CUDF="<libcudf>: include"
+  else
+    PKG_CUDF=pkg_cudf
+  fi
 else
+  AC_MSG_NOTICE([using local libcudf])
   PKG_CUDF=pkg_
-fi
-
-if (test "$OCAML_PKG_cudf" = "no") && (test "$HAS_LOCALCUDF" = "no"); then
- AC_MSG_ERROR([Please install OCaml findlib module 'cudf'.])
+  INCLUDE_CUDF="<libcudf>: include"
 fi
 
 AC_ARG_WITH(zip,
@@ -183,6 +185,7 @@ AC_SUBST(PKG_BZ2)
 
 AC_SUBST(INCLUDE_RPM)
 AC_SUBST(INCLUDE_CUDF)
+AC_SUBST(PKG_CUDF)
 
 if (test "$HAS_SQLITE" = "yes") || (test "$HAS_PGSQL" = "yes") then
   HAS_DB=yes
