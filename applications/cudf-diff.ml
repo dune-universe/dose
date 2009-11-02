@@ -41,8 +41,7 @@ let usage = Printf.sprintf "usage: %s [--options] file1 file2 [file3]" Sys.argv.
 let options =
   [
    ("--verbose",  Arg.Set  Options.verbose,  "print propositional solver diagnostic");
-   ("--solution",  Arg.Set  Options.solution,  "consider file2 as a solution to 
-the cudf problem in file1 and print the complete list of installed packages");
+   ("--solution",  Arg.Set  Options.solution,  "consider file2 as a solution to the cudf problem in file1 and print the complete list of installed packages");
    ("--compare", Arg.Set Options.compare, "compare solutions file2 file3")
   ]
 

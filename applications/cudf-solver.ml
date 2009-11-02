@@ -19,7 +19,7 @@ struct
   let cudf = ref false
   let verbose = ref false
   let dump = ref false
-  let outdir = ref ""
+  let out = ref ""
 end
 
 let usage = Printf.sprintf "usage: %s [-options] [cudf doc]" Sys.argv.(0)
@@ -29,7 +29,7 @@ let options =
    ("--verbose", Arg.Set Options.verbose, "");
    ("--dump", Arg.Set Options.dump, "propositional solver dump");
    ("--cudf", Arg.Set  Options.cudf, "print the cudf solution (if any)");
-   ("--outdir", Arg.String (fun l -> Options.outdir := l),  "Specify the output directory");
+   ("--out", Arg.String (fun l -> Options.out := l),  "Specify the output file");
    ("--debug", Arg.Unit (fun () -> Util.set_verbosity Util.Summary), "Print debug information");
   ]
 
@@ -71,15 +71,9 @@ let main () =
   |{Diagnostic.result = Diagnostic.Success f } ->
       if !Options.cudf then begin
         let oc = 
-          if !Options.outdir <> "" then begin
-            let tmpfile =
-              if !input_file = "" then (Filename.temp_file "solution" ".cudf")
-              else "sol-"^(Filename.basename !input_file)
-            in
-            let dirname = !Options.outdir in
-            if not(Sys.file_exists dirname) then Unix.mkdir dirname 0o740;
-            let fname = (Filename.concat dirname tmpfile) in
-            let _ = Printf.printf "cudf solution saved in %s\n" fname in
+          if !Options.out <> "" then begin
+            let fname = !Options.out in
+            Printf.printf "cudf solution saved in %s\n" fname;
             open_out fname
           end else stdout
         in
