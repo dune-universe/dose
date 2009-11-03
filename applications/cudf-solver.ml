@@ -69,24 +69,31 @@ let main () =
 
   match result with
   |{Diagnostic.result = Diagnostic.Success f } ->
-      if !Options.cudf then begin
-        let oc = 
-          if !Options.out <> "" then begin
-            let fname = !Options.out in
-            Printf.printf "cudf solution saved in %s\n" fname;
-            open_out fname
-          end else stdout
-        in
-        List.iter (fun pkg ->
-          Printf.fprintf oc "%s\n" 
-          (Cudf_printer.string_of_package 
-          { pkg with Cudf.installed = true })
-        ) (f ())
+      begin 
+        if !Options.cudf then begin
+          let oc = 
+            if !Options.out <> "" then begin
+              let fname = !Options.out in
+              Printf.printf "cudf solution saved in %s\n" fname;
+              open_out fname
+            end else stdout
+          in
+          List.iter (fun pkg ->
+            Printf.fprintf oc "%s\n" 
+            (Cudf_printer.string_of_package 
+            { pkg with Cudf.installed = true })
+          ) (f ())
+        end
+        else
+          Diagnostic.print stdout result
+        ;
+        exit(0)
       end
-      else
-        Diagnostic.print stdout result
-  |_ -> Diagnostic.print ~explain:true stdout result
-
+  |_ ->
+      begin
+        Diagnostic.print ~explain:true stdout result;
+        exit(1)
+      end
 ;;
 
 main () ;;

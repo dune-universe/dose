@@ -57,7 +57,7 @@ let open_db (user,pass,host,port,dbname) =
     try List.find Sys.file_exists [custom;local;system]
     with Not_found -> begin
       Printf.eprintf "Error: sqlite3 debian collation not found\n" ;
-      exit 1
+      exit (-1)
     end
   in
   let sql = Printf.sprintf "SELECT load_extension('%s')" sqliteext in

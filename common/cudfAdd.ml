@@ -71,7 +71,7 @@ let parse_cudf doc =
   | Cudf.Constraint_violation _ as exn -> begin
     Printf.eprintf "Error while loading CUDF from %s: %s\n%!"
     doc (Printexc.to_string exn);
-    exit 1
+    exit (-1)
   end
 
 (** parse a cudf file and return a triple (preamble,universe,request option).
@@ -85,7 +85,7 @@ let load_cudf doc =
   | Cudf.Constraint_violation _ as exn -> begin
     Printf.eprintf "Error while loading CUDF from %s: %s\n%!"
     doc (Printexc.to_string exn);
-    exit 1
+    exit (-1)
   end
 
 (** maps one to one cudf packages to integers *)

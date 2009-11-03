@@ -27,7 +27,7 @@ let load universe =
   |false,Some(r) -> begin
       Printf.eprintf "%s"
       (Cudf_checker.explain_reason (r :> Cudf_checker.bad_solution_reason)) ;
-      exit(1)
+      exit (-1)
   end
   |_,_ -> assert false
 

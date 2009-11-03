@@ -99,7 +99,7 @@ let parse_aptlist s =
       |1 -> `Suite e
       |2 -> `Comp e
       |3 -> `Date e
-      |_ -> Printf.eprintf "parsing error %s\n" s ; exit 1
+      |_ -> Printf.eprintf "parsing error %s\n" s ; exit (-1)
     ) (Str.split query_sep_RE s)
   in `And l
 
@@ -122,7 +122,7 @@ let parse_query s =
       |["Section";ss] -> `Section ss
       |["Essential";"true"] -> `Essential true
       |["Essential";"false"] -> `Essential false
-      |_ -> (Printf.eprintf "Parse error %s\n" s ; exit 1)
+      |_ -> (Printf.eprintf "Parse error %s\n" s ; exit (-1))
     in (res :> query)
   in
   `And (List.map (fun disj -> `Or disj ) (parse_cnf parse_aux s))
