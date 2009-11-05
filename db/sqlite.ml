@@ -120,7 +120,7 @@ let load () =
   in
   Sql.database := {
     open_db = (fun conn -> Obj.magic { db = open_db conn; dbobj = dbobj });
-    close_db _ = failwith "Not implemented yet";
+    close_db = (fun _ -> failwith "Not implemented yet");
     exec_iter = guard exec_iter;
 
     exec_iter_no_headers = guard exec_iter_no_headers;
