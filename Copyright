@@ -4,4 +4,5 @@ algo/statistics.ml Jaap Boender, Stefano Zacchiroli, Pietro Abate
 common/edosSolver.ml common/edosSolver.mli : Jerome Vouillion
 common/util.ml : Alain Frish, Pietro Abate
 common/url.ml : b8_bavard, b8_fee_carabine, INRIA
+libcudf/* : Stefano Zacchiroli
 everything else : Pietro Abate
