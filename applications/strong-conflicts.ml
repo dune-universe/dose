@@ -1,6 +1,6 @@
 (* copyright (c) 2009 Jaap Boender & the MANCOOSI project *)
 
-(* attempt at computation of strong conflicts with libmancoosi *)
+(* attempt at computation of strong conflicts with dose3 (TLFKAlibmancoosi) *)
 
 open Common
 open ExtLib
@@ -172,7 +172,6 @@ end;;
 let _ =
 let uri = ref "" in
 begin
-  Common.Util.set_verbosity Common.Util.Summary;
   at_exit (fun () -> Util.dump Format.err_formatter);
   let _ =
     try Arg.parse options (fun f -> uri := f) usage
