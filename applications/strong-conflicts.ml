@@ -23,12 +23,13 @@ let options = [
 
 let log s = 
 begin
-  output_string !logfile s
+  output_string !logfile s;
+  flush !logfile
 end;;
 
 let preceding_packages gr p =
 begin
-  G.fold_pred_e (fun (_, dt, v) l ->
+  G.fold_pred_e (fun (v, dt, _) l ->
     match dt with
     | E.DirDepends | E.OrDepends ->
       begin
@@ -45,13 +46,15 @@ begin
 end;;
 
 type conflict_type =
-  Strong
+  Explicit
+| Strong
 | Other of reason list;;
 
 let nr_conj_pairs = ref 0;;
 let nr_other_pairs = ref 0;;
+let pair_ht = Hashtbl.create 8192;;
 
-let add_pair pair_ht x y ct root =
+let add_pair x y ct root =
 let (c1, c2) = if x < y then (x, y) else (y, x) in
 begin
   try
@@ -60,6 +63,7 @@ begin
     begin
       Hashtbl.add c1_ht c2 (ct,root);
       match ct with
+      | Explicit -> incr nr_conj_pairs
       | Strong -> incr nr_conj_pairs
       | Other _ -> incr nr_other_pairs
     end
@@ -69,6 +73,7 @@ begin
     Hashtbl.add c1_ht c2 (ct,root);
     Hashtbl.add pair_ht c1 c1_ht;
     match ct with
+    | Explicit -> incr nr_conj_pairs
     | Strong -> incr nr_conj_pairs
     | Other _ -> incr nr_other_pairs
   end
@@ -144,13 +149,16 @@ end;;
  * package) *)
 let debconf_special gr c1 c2 c1preds c2preds =
 begin
+  log (Printf.sprintf "debconf_special for %s and %s\n" (string_of_pkgname c1.package) (string_of_pkgname c2.package));
+  (* the common packages between c1preds and c2preds *)
   let common = List.filter (fun z -> List.mem z c2preds) c1preds in
-  match common with
-  | [] -> true
+  match common with 
+  | [] -> true (* if there are no common packages, keep the conflict *)
   | _ -> begin
   let c1_rest = List.filter (fun z -> not (List.mem z c2preds)) c1preds
   and c2_rest = List.filter (fun z -> not (List.mem z c1preds)) c2preds in
   if List.fold_left (fun acc pred ->
+    (* pred_pred: predecessors of common packages *)
     let pred_pred = preceding_packages gr (V.Pkg pred) in
       if (List.mem c1 pred_pred) && (List.mem c2 pred_pred)
       then
@@ -163,6 +171,7 @@ begin
         false
     ) true common then
     (log (Printf.sprintf "Discounting conflict (%s, %s)\n" (string_of_pkgname c1.package) (string_of_pkgname c2.package));
+    add_pair c1 c2 Explicit (c1,c2);
     false)
   else
     true
@@ -237,11 +246,15 @@ begin
     | [c1_pred] ->
       begin
         match preceding_packages gr (V.Pkg c2) with
-        | [c2_pred] -> if c1_pred = c2_pred then
+        | [c2_pred] -> 
           begin
-            log (Printf.sprintf "%s and %s share a unique predecessor.\n"
-            (string_of_pkgname c1.package) (string_of_pkgname c2.package));
-            not (List.exists (fun v ->
+            if c1_pred = c2_pred then
+            begin
+              log (Printf.sprintf "%s and %s share a unique predecessor.\n"
+              (string_of_pkgname c1.package) (string_of_pkgname c2.package));
+              add_pair c1 c2 Explicit (c1,c2);
+              false
+            (* not (List.exists (fun v ->
               match v with
               | V.Pkg _ -> false
               | V.Or _ -> let vs = G.succ gr v in
@@ -252,9 +265,10 @@ begin
                   else
                     false
                 end
-            ) (G.succ gr (V.Pkg c1_pred)))
+            ) (G.succ gr (V.Pkg c1_pred))) *)
+            end
+            else true
           end
-          else true
         | c2_preds -> debconf_special gr c1 c2 [c1_pred] c2_preds
       end
     | c1preds -> debconf_special gr c1 c2 c1preds (preceding_packages gr (V.Pkg c2))
@@ -268,20 +282,19 @@ begin
   Util.Timer.start timer;
   let pred_ht = Hashtbl.create (2 * List.length clf) in
   let c_pred_ht = Hashtbl.create (2 * List.length clf) in
-  let pair_ht = Hashtbl.create 8192 in
   List.iter (fun (c1, c2) ->
     add_predecessors u gr sd_gr c_pred_ht pred_ht c1;
     add_predecessors u gr sd_gr c_pred_ht pred_ht c2;
     List.iter (fun c1p ->
       List.iter (fun c2p ->
-        if c1p <> c2p then add_pair pair_ht c1p c2p Strong (c1,c2)
+        if c1p <> c2p then add_pair c1p c2p Strong (c1,c2)
       ) (Hashtbl.find c_pred_ht c2)
     ) (Hashtbl.find c_pred_ht c1);
   ) clf;
   List.iter (fun (c1, c2) ->
     List.iter (fun c1p ->
       List.iter (fun c2p ->
-        if c1p <> c2p then add_pair pair_ht c1p c2p (Other []) (c1,c2)
+        if c1p <> c2p then add_pair c1p c2p (Other []) (c1,c2)
       ) (Hashtbl.find pred_ht c2)
     ) (Hashtbl.find pred_ht c1)
   ) clf;
@@ -301,7 +314,7 @@ begin
     Hashtbl.iter (fun c2 (ct, root) ->
       Util.Progress.progress p;
       match ct with
-      | Strong -> (incr nr_sc; add_strong_conflict sc_ht c1 c2 root ct)
+      | Explicit | Strong -> (incr nr_sc; add_strong_conflict sc_ht c1 c2 root ct)
       | Other _ -> 
         let d = Depsolver.edos_coinstall slv [c1;c2] in
         begin
@@ -324,6 +337,7 @@ begin
         (string_of_pkgname r2.package) (string_of_version r2.version);
       List.iter (fun (c2, ct) ->
         match ct with
+        | Explicit -> Printf.printf "    * %s-%s (explicit)\n" (string_of_pkgname c2.package) (string_of_version c2.version)
         | Strong -> Printf.printf "    * %s-%s (strong-dep)\n" (string_of_pkgname c2.package) (string_of_version c2.version)
         | Other f -> Printf.printf "    * %s-%s (other-dep)\n%s\n" (string_of_pkgname c2.package) (string_of_version c2.version)
           (String.concat "\n" 
