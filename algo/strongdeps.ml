@@ -20,6 +20,10 @@ let intcudf index intgraph =
   let trasformtimer = Util.Timer.create "Algo.Strongdep.intcudf" in
   Util.Timer.start trasformtimer;
   let cudfgraph = Defaultgraphs.PackageGraph.G.create () in
+  Strongdeps_int.G.iter_vertex (fun v ->
+    let p = index.(v) in
+    Defaultgraphs.PackageGraph.G.add_vertex cudfgraph p.Mdf.pkg
+  ) intgraph ;
   Strongdeps_int.G.iter_edges (fun x y ->
     let p = index.(x) in
     let q = index.(y) in
@@ -31,6 +35,9 @@ let cudfint maps cudfgraph =
   let trasformtimer = Util.Timer.create "Algo.Strongdep.cudfint" in
   Util.Timer.start trasformtimer;
   let intgraph = Strongdeps_int.G.create () in
+  Defaultgraphs.PackageGraph.G.iter_vertex (fun v ->
+    Strongdeps_int.G.add_vertex intgraph (maps.map#vartoint v)
+  ) cudfgraph;
   Defaultgraphs.PackageGraph.G.iter_edges (fun x y ->
     Strongdeps_int.G.add_edge intgraph
     (maps.map#vartoint x) (maps.map#vartoint y)
