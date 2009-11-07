@@ -157,7 +157,12 @@ begin
   | _ -> begin
   let c1_rest = List.filter (fun z -> not (List.mem z c2preds)) c1preds
   and c2_rest = List.filter (fun z -> not (List.mem z c1preds)) c2preds in
-  if List.fold_left (fun acc pred ->
+  if c1_rest = [] && c2_rest = [] then (* all preds are common *)
+  begin
+    log (Printf.sprintf "packages %s and %s have all-common predecessors, ignoring..." (string_of_pkgname c1.package) (string_of_pkgname c2.package));
+    false
+  end
+  else if List.fold_left (fun acc pred ->
     (* pred_pred: predecessors of common packages *)
     let pred_pred = preceding_packages gr (V.Pkg pred) in
       if (List.mem c1 pred_pred) && (List.mem c2 pred_pred)
