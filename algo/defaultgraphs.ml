@@ -108,9 +108,9 @@ module SyntacticDependencyGraph = struct
       let edge_attributes e =
         let t =
           match G.E.label e with
-          |PkgE.DirDepends -> [`Style `Dotted]
-          |PkgE.OrDepends -> [`Style `Dotted]
-          |PkgE.Conflict -> [`Style `Dotted; `Label "#"]
+          |PkgE.DirDepends -> [`Style `Solid]
+          |PkgE.OrDepends -> [`Style `Dashed]
+          |PkgE.Conflict -> [`Color 0xFF0000; `Style `Solid; `Label "#"]
         in
         t
     end

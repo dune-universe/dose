@@ -111,11 +111,13 @@ let trim universe =
   ) universe);
   Cudf.load_universe !trimmed_pkgs
 
-let dependency_closure universe pkglist =
+let dependency_closure ?maxdepth universe pkglist =
   let mdf = Mdf.load_from_universe universe in
   let maps = mdf.Mdf.maps in
   let idlist = List.map maps.map#vartoint pkglist in
-  let closure = Depsolver_int.dependency_closure mdf idlist in
+  let closure = match maxdepth with
+  | None -> Depsolver_int.dependency_closure mdf idlist
+  | Some d -> Depsolver_int.dependency_closure ~maxdepth:d mdf idlist in
   List.map maps.map#inttovar closure
 
 let reverse_dependencies universe =
@@ -128,11 +130,14 @@ let reverse_dependencies universe =
   ) rev ;
   h
 
-let reverse_dependency_closure universe pkglist =
+let reverse_dependency_closure ?maxdepth universe pkglist =
   let mdf = Mdf.load_from_universe universe in
   let maps = mdf.Mdf.maps in
   let idlist = List.map maps.map#vartoint pkglist in
   let reverse = Depsolver_int.reverse_dependencies mdf in
-  let closure = Depsolver_int.reverse_dependency_closure reverse idlist in
+  let closure = match maxdepth with
+  | None -> Depsolver_int.reverse_dependency_closure reverse idlist
+  | Some d ->
+    Depsolver_int.reverse_dependency_closure ~maxdepth:d reverse idlist in
   List.map maps.map#inttovar closure
 

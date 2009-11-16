@@ -236,22 +236,24 @@ let reverse_dependencies mdf =
 (** [dependency_closure index l] return the union of the dependency closure of
     all packages in [l] .
 
+    @param maxdepth the maximum cone depth (infinite by default)
     @param index the package universe
     @param l a subset of [index]
 *)
-let dependency_closure mdf idlist =
+let dependency_closure ?maxdepth mdf idlist =
   let index = mdf.Mdf.index in
   let queue = Queue.create () in
   let visited = Hashtbl.create 1023 in
-  List.iter (fun e -> Queue.add e queue) (List.unique idlist);
+  let mxd = match maxdepth with None -> (Array.length index)+1 | Some z -> z in
+  List.iter (fun e -> Queue.add (e,0) queue) (List.unique idlist);
   while (Queue.length queue > 0) do
-    let id = Queue.take queue in
-    if not(Hashtbl.mem visited id) then begin
+    let (id,level) = Queue.take queue in
+    if not(Hashtbl.mem visited id) && level<mxd then begin
       Hashtbl.add visited id ();
       Array.iter (fun (_,dsj,_) ->
         Array.iter (fun i ->
           if not(Hashtbl.mem visited i) then
-            Queue.add i queue
+            Queue.add (i,level+1) queue
         ) dsj
       ) index.(id).Mdf.depends
     end
@@ -260,20 +262,22 @@ let dependency_closure mdf idlist =
 
 (** return the dependency closure of the reverse dependency graph 
  
+    @param maxdepth the maximum cone depth (infinite by default)
     @param index the package universe
     @param l a subset of [index]
 *)
-let reverse_dependency_closure reverse idlist =
+let reverse_dependency_closure ?maxdepth reverse idlist =
   let queue = Queue.create () in
   let visited = Hashtbl.create 1023 in
-  List.iter (fun e -> Queue.add e queue) (List.unique idlist);
+  let mxd = match maxdepth with None -> (Array.length reverse)+1 | Some z -> z in
+  List.iter (fun e -> Queue.add (e,0) queue) (List.unique idlist);
   while (Queue.length queue > 0) do
-    let id = Queue.take queue in
-    if not(Hashtbl.mem visited id) then begin
+    let (id,level) = Queue.take queue in
+    if not(Hashtbl.mem visited id) && level<mxd then begin
       Hashtbl.add visited id ();
       List.iter (fun i ->
         if not(Hashtbl.mem visited i) then
-          Queue.add i queue
+          Queue.add (i,level+1) queue
       ) reverse.(id)
     end
   done;

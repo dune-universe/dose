@@ -159,7 +159,9 @@ begin
   and c2_rest = List.filter (fun z -> not (List.mem z c1preds)) c2preds in
   if c1_rest = [] && c2_rest = [] then (* all preds are common *)
   begin
-    log (Printf.sprintf "packages %s and %s have all-common predecessors, ignoring..." (string_of_pkgname c1.package) (string_of_pkgname c2.package));
+    log (Printf.sprintf "packages %s and %s have all-common predecessors (%s), ignoring..." (string_of_pkgname c1.package) (string_of_pkgname c2.package)
+    (String.concat "," (List.map (fun c -> string_of_pkgname c.package) common)));
+    add_pair c1 c2 Explicit (c1,c2);
     false
   end
   else if List.fold_left (fun acc pred ->

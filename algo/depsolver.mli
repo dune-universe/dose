@@ -51,12 +51,12 @@ val univcheck : ?callback:(Diagnostic.diagnosis -> unit) -> Cudf.universe -> int
 
 (** [dependency_closure universe l] compute the dependencies closure 
     of the give package list. Invariant : l is a subset of universe *)
-val dependency_closure : Cudf.universe -> Cudf.package list -> Cudf.package list
+val dependency_closure : ?maxdepth:int -> Cudf.universe -> Cudf.package list -> Cudf.package list
 
 (** [reverse_dependencies univ l] compute the reverse dependency list of all
     packages in [l] in the universe [univ] *)
-val reverse_dependencies :
+val reverse_dependencies : 
   Cudf.universe -> (Cudf.package list) Common.CudfAdd.Cudf_hashtbl.t
 
-val reverse_dependency_closure :
+val reverse_dependency_closure : ?maxdepth:int ->
   Cudf.universe -> Cudf.package list -> Cudf.package list
