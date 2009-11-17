@@ -70,8 +70,8 @@ let main () =
   in
 
   let extras_preamble = [
-    ("Size", ("size", `Nat 0));
-    ("Installed-Size", ("installedsize", `Nat 0))
+    ("Size", ("size", `Nat (Some 0)));
+    ("Installed-Size", ("installedsize", `Nat (Some 0)))
     ] 
   in
   let extras = List.map fst extras_preamble in
@@ -123,7 +123,7 @@ END
   in
 
   Printf.fprintf oc "%s\n" (
-    Cudf_printer.string_of_preamble (Debcudf.preamble @ preamble)
+    Cudf_types_pp.string_of_typedecl (Debcudf.preamble @ preamble)
   ) ;
 
   List.iter (fun pkg ->

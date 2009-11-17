@@ -191,12 +191,12 @@ let loadll tables ll = List.map (loadl tables) ll
 
 (* ========================================= *)
 
-type extramap = (string * (string * Cudf_types.basetype)) list
+type extramap = (string * (string * Cudf_types.typedecl1)) list
 
 let preamble = [
-  ("number",(`String ""));
-  ("source",(`String "")) ;
-  ("sourceversion",(`String ""))
+  ("number",(`String (Some "")));
+  ("source",(`String (Some ""))) ;
+  ("sourceversion",(`String (Some "")))
 ]
 
 let add_extra extras pkg =
@@ -214,7 +214,10 @@ let add_extra extras pkg =
     List.filter_map (fun (debprop, (cudfprop,v)) ->
       let debprop = String.lowercase debprop in
       let cudfprop = String.lowercase cudfprop in
-      try Some (cudfprop,Cudf_types.parse_basetype v (List.assoc debprop pkg.extras))
+      try Some (cudfprop,
+		Cudf_types_pp.parse_value
+		  (Cudf_types.type_of_typedecl v)
+		  (List.assoc debprop pkg.extras))
       with Not_found -> None
     ) extras
   in
@@ -227,8 +230,9 @@ let tocudf tables ?(extras=[]) ?(inst=false) pkg =
       Cudf.conflicts = loadlc tables pkg.name (pkg.breaks @ pkg.conflicts) ;
       Cudf.provides = loadlp tables pkg.provides ;
       Cudf.installed = inst ;
-      Cudf.keep = None ;
-      Cudf.extra = add_extra extras pkg ;
+      Cudf.was_installed = false ;
+      Cudf.keep = `Keep_none ;
+      Cudf.pkg_extra = add_extra extras pkg ;
     }
 
 let lltocudf = loadll

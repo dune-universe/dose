@@ -21,7 +21,7 @@ val init_tables : Packages.package list -> tables
 (** return the cudf version associated to a tuple (name,version) *)
 val get_version : tables -> Format822.name * Format822.version -> int
 
-type extramap = (string * (string * Cudf_types.basetype)) list
+type extramap = (string * (string * Cudf_types.typedecl1)) list
 
 (** [tocudf tbl p] 
     convert the a debian package representation to cudf.
@@ -45,7 +45,7 @@ val ltocudf  : tables -> Format822.vpkg list -> Cudf_types.vpkglist
     - a property named {b Source} of type string
     - a property named {b Sourceversion} of type string
     *)
-val preamble : Cudf.preamble
+val preamble : Cudf_types.typedecl
 
 (** create a Cudf universe from a debian package representation list. *)
 val load_universe : Packages.package list -> Cudf.universe
