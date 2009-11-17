@@ -129,14 +129,15 @@ let strongconflicts sdgraph mdf idlist =
     let (a2,b2) = (closures.(x2).rdc, closures.(y2).rdc) in
     ((S.cardinal a1) * (S.cardinal b1)) - ((S.cardinal a2) * (S.cardinal b2))
   in
-  let module ECF = Set.Make (struct type t = (int * int) let compare = cmp end) in
 
-  let ex = List.fold_left (fun s v -> ECF.add v s) ECF.empty (explicit mdf) in
-  Printf.eprintf "Conflicts %d\n%!" (ECF.cardinal ex);
+  let cl = explicit mdf in
+  Printf.eprintf "Conflicts %d\n%!" (List.length cl);
+  let ex = List.unique (List.sort ~cmp cl) in
+  Printf.eprintf "Conflicts %d\n%!" (List.length ex);
   let total = ref 0 in
 
-  let conflict_size = ECF.cardinal ex in
-  ECF.iter (fun (x,y) -> 
+  let conflict_size = List.length ex in
+  List.iter (fun (x,y) -> 
     if not((S.mem x cache.(y)) || (S.mem y cache.(x))) then begin
       incr i;
       let pkg_x = index.(x) in
