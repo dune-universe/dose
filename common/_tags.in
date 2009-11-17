@@ -1,4 +1,5 @@
-<*.ml> or <*.mli> or <*.cma> or <*.cmxa>: pkg_extlib, @PKG_CUDF@, @PKG_ZIP@, @PKG_BZ2@
+<*.ml> or <*.mli> or <*.cma> or <*.cmxa>: pkg_extlib, pkg_unix, @PKG_CUDF@, @PKG_ZIP@, @PKG_BZ2@
 <tests.*>: pkg_oUnit, pkg_extlib, pkg_zip, pkg_str, @PKG_CUDF@
 <*.ml> or <*.mli>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@)
 <{input,edosSolver,util,cudfAdd,mdf}.cmx>: for-pack(Common)
+@INCLUDE_CUDF@

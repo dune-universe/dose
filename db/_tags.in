@@ -4,3 +4,4 @@
 <{idbr,sql,@TAGS_SQLITE@,@TAGS_PGSQL@,backend}.cmx>: for-pack(Db)
 <{@TAGS_SQLITE@,@TAGS_PGSQL@}.cmxs>: shared
 <common>: include
+@INCLUDE_CUDF@

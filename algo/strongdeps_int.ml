@@ -107,9 +107,7 @@ let strongdeps_int graph mdf available =
         let solver = Depsolver_int.init_solver ~idlist:closure mdf.Mdf.index in
         match Depsolver_int.solve solver (Diagnostic_int.Sng pkg1_id) with
         |Diagnostic_int.Failure(_) -> ()
-        |Diagnostic_int.Success(f) -> begin
-          check_strong graph solver pkg1_id (f ())
-        end
+        |Diagnostic_int.Success(f) -> check_strong graph solver pkg1_id (f ())
       end
     end
   ) available ;
