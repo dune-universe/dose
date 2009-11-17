@@ -209,17 +209,6 @@ let rmatGenGraph (pA,pB,pC,pD) =
   gr
 ;;
 
-let default_package = {
-  Cudf.package = "" ;
-  version = 0 ;
-  depends = [] ;
-  conflicts = [] ;
-  provides = [] ;
-  installed = false ;
-  keep = None ;
-  extra = [] ;
-}
-
 let main () =
   let _ =
     try Arg.parse options (fun f -> ()) usage

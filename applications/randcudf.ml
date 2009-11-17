@@ -152,11 +152,11 @@ let read_tasks task =
   if task = "" then []
   else 
     let filename = Printf.sprintf "tasks/%s.list" task in
-    read_file Cudf_types.parse_vpkg filename
+    read_file Cudf_types_pp.parse_vpkg filename
 
 let read_basesytem system =
   if system = "" then []
-  else read_file Cudf_types.parse_veqpkg system
+  else read_file Cudf_types_pp.parse_veqpkg system
 
 let read_popcon max popcon =
   if popcon = "" then assert false
@@ -192,7 +192,9 @@ let main () =
     else Random.self_init ()
   in
 
-  let extras_preamble = [("Size", ("size", `Nat 0)); ("Installed-Size", ("installedsize", `Nat 0))] in
+  let extras_preamble =
+    [("Size", ("size", `Nat (Some 0)));
+     ("Installed-Size", ("installedsize", `Nat (Some 0)))] in
   let extras = List.map fst extras_preamble in
   let preamble = List.map snd extras_preamble in
 
@@ -335,14 +337,16 @@ END
     in
 
     let request =
-      { problem_id = "RAND-CUDF-GENERATOR";
+      { request_id = "RAND-CUDF-GENERATOR";
         install = to_install ;
         upgrade = to_upgrade ;
-        remove = to_remove
+        remove = to_remove ;
+	req_extra = [] ;
       }
     in
 
-    Printf.fprintf oc "%s\n" (Cudf_printer.string_of_preamble (Debian.Debcudf.preamble @ preamble));
+    Printf.fprintf oc "%s\n"
+      (Cudf_types_pp.string_of_typedecl (Debian.Debcudf.preamble @ preamble));
     Printf.fprintf oc "%s" (Cudf_printer.string_of_universe universe);
     Printf.fprintf oc "%s" (Cudf_printer.string_of_request request);
     close_out oc

@@ -333,8 +333,8 @@ let main () =
 
   let infoH = Hashtbl.create 1031 in
   let extras_preamble = [
-    ("Size", ("size", `Nat 0));
-    ("Installed-Size", ("installedsize", `Nat 0))] 
+    ("Size", ("size", `Nat (Some 0)));
+    ("Installed-Size", ("installedsize", `Nat (Some 0)))] 
   in
   let extras = List.map fst extras_preamble in
 
@@ -372,8 +372,11 @@ let main () =
     h
   in
   
-  let preamble = ("Priority",(`Int 500))::((List.map snd extras_preamble) @ Debcudf.preamble) in
-  let add_extra (k,v) pkg = { pkg with Cudf.extra = (k,v) :: pkg.Cudf.extra } in
+  let preamble =
+    ("Priority",(`Int (Some 500)))
+    :: ((List.map snd extras_preamble) @ Debcudf.preamble) in
+  let add_extra (k,v) pkg =
+    { pkg with Cudf.pkg_extra = (k,v) :: pkg.Cudf.pkg_extra } in
 
   Util.print_info "convert";
   let pl =
@@ -410,7 +413,7 @@ let main () =
           with Not_found ->
             failwith (Printf.sprintf "There is no package %s in release %s " p d)
     in
-    let problem_id =
+    let request_id =
       if !Options.problemid <> "" then !Options.problemid
       else if dudf.uid <> "" then dudf.uid
       else (string_of_int (Random.bits ()))
@@ -420,17 +423,22 @@ let main () =
     |Debian.Apt.DistUpgrade (Some (suite)) -> 
         let il = Deb.Set.fold (fun pkg acc -> `PkgDst (pkg.Deb.name,suite) :: acc) installed_packages [] in
         let l = List.map mapver il in
-        { Cudf.problem_id = problem_id ; install = l ; remove = [] ; upgrade = [] }
+        { Cudf.request_id = request_id ; install = l ; remove = [] ; upgrade = [] ;
+	  req_extra = [] ; }
     |Debian.Apt.Install l ->
         let l = List.map mapver l in
-        { Cudf.problem_id = problem_id ; install = l ; remove = [] ; upgrade = [] } 
+        { Cudf.request_id = request_id ; install = l ; remove = [] ; upgrade = [] ;
+	  req_extra = [] ; } 
     |Debian.Apt.Remove l -> 
         let l = List.map (fun (`Pkg p) -> (p,None) ) l in
-        { Cudf.problem_id = problem_id ; install = [] ; remove = l ; upgrade = [] }
+        { Cudf.request_id = request_id ; install = [] ; remove = l ; upgrade = [] ;
+	  req_extra = [] ;}
     |Debian.Apt.Upgrade None -> 
-        { Cudf.problem_id = problem_id ; install = [] ; remove = [] ; upgrade = [] }
+        { Cudf.request_id = request_id ; install = [] ; remove = [] ; upgrade = [] ;
+	  req_extra = [] ; }
     |Debian.Apt.DistUpgrade None -> 
-        { Cudf.problem_id = problem_id ; install = [] ; remove = [] ; upgrade = [] }
+        { Cudf.request_id = request_id ; install = [] ; remove = [] ; upgrade = [] ;
+	  req_extra = [] ; }
 
   in
 
@@ -445,7 +453,9 @@ let main () =
       open_out (Filename.concat dirname (file^".cudf"))
     end else stdout
   in
-  Printf.fprintf oc "%s\n" (Cudf_printer.string_of_cudf (preamble, universe, request)) 
+  let preamble' = { Cudf.default_preamble with Cudf.property = preamble } in
+  Printf.fprintf oc "%s\n"
+    (Cudf_printer.string_of_cudf (preamble', universe, request)) 
 ;;
 
 main ();;

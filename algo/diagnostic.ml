@@ -73,7 +73,7 @@ let print ?(explain=false) oc result =
             "Package %s has dependencies that cannot be satisfied: %s\n"
             (print_package ~short:true i) 
             (String.concat " | " (
-              List.map (fun vpkg -> (Cudf_types.string_of_vpkg vpkg)) vpkgs)
+              List.map (fun vpkg -> (Cudf_types_pp.string_of_vpkg vpkg)) vpkgs)
             )
 
          |Installed_alternatives(l) ->
@@ -85,28 +85,28 @@ let print ?(explain=false) oc result =
          |To_install(vpkg,[]) ->
             Printf.fprintf oc
             "You have requested to install %s, but no package in the current universe match the given contraint\n"
-            (Cudf_types.string_of_vpkg vpkg)
+            (Cudf_types_pp.string_of_vpkg vpkg)
          |To_install(vpkg,l) ->
             let l = List.map (print_package ~short:true) l in
             Printf.fprintf oc 
             "No alternatives for the installation of %s.\n The package %s is in the current universe, but it has broken dependencies\n"
-            (Cudf_types.string_of_vpkg vpkg)
+            (Cudf_types_pp.string_of_vpkg vpkg)
             (String.concat " , " l)
 
          |To_remove(vpkg,i) ->
             Printf.fprintf oc
             "You have requested to remove %s.  But I cannot remove %s\n"
-            (Cudf_types.string_of_vpkg vpkg) (print_package ~short:true i)
+            (Cudf_types_pp.string_of_vpkg vpkg) (print_package ~short:true i)
 
          |To_upgrade(vpkg,l) ->
             let l = List.map (print_package ~short:true) l in
             Printf.fprintf oc
             "You have requested to upgrade %s. Candidate alternatives : %s\n"
-            (Cudf_types.string_of_vpkg vpkg) (String.concat " , " l)
+            (Cudf_types_pp.string_of_vpkg vpkg) (String.concat " , " l)
          |To_upgrade_singleton(vpkg,l) ->
             let l = List.map (print_package ~short:true) l in
             Printf.fprintf oc
             "Singleton constraint %s to upgrade for %s\n"
-            (Cudf_types.string_of_vpkg vpkg) (String.concat " , " l)
+            (Cudf_types_pp.string_of_vpkg vpkg) (String.concat " , " l)
        ) (f ())
    end
