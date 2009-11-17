@@ -58,27 +58,6 @@ let coinst_partial solver (p,q) =
   |Diagnostic_int.Failure _ -> false
 ;;
 
-(* conflicts are ordered with the packages with more conflicts at the beginning *)
-(* XXX this piece of code is not elegant at all ! *)
-let explicit mdf =
-  let module M = Map.Make(struct type t = int let compare = Pervasives.compare end) in
-  let index = mdf.Mdf.index in
-  let l = ref [] in
-  let m = ref M.empty in
-  for i=0 to (Array.length index - 1) do
-    let pkg = index.(i) in
-    let conflicts = Array.map snd pkg.Mdf.conflicts in
-    for j=0 to ((Array.length conflicts) - 1) do
-      (let counter = (try M.find i !m with Not_found -> 1) in m := M.add i (counter + 1) !m);
-      (let counter = (try M.find conflicts.(j) !m with Not_found -> 1) in m := M.add conflicts.(j) (counter + 1) !m);
-      l := swap(i,conflicts.(j)):: !l
-    done
-  done;
-  let swap1 (z,v) = if M.find z !m > M.find v !m then z,v else v,z in
-(*  let cmp (a1,_) (a2,_) = (M.find a2 !m) - (M.find a1 !m) in
-  List.sort ~cmp:cmp (List.map swap1 (List.unique !l)) *)
-  List.map swap1 (List.unique !l)
-
 let explicit mdf =
   let index = mdf.Mdf.index in
   let l = ref [] in
@@ -130,19 +109,16 @@ let strongconflicts sdgraph mdf idlist =
     ((S.cardinal a1) * (S.cardinal b1)) - ((S.cardinal a2) * (S.cardinal b2))
   in
 
-  let cl = explicit mdf in
-  Printf.eprintf "Conflicts %d\n%!" (List.length cl);
-  let ex = List.unique (List.sort ~cmp cl) in
-  Printf.eprintf "Conflicts %d\n%!" (List.length ex);
+  let ex = List.unique (List.sort ~cmp (explicit mdf)) in
   let total = ref 0 in
-
   let conflict_size = List.length ex in
+
   List.iter (fun (x,y) -> 
     if not((S.mem x cache.(y)) || (S.mem y cache.(x))) then begin
       incr i;
       let pkg_x = index.(x) in
       let pkg_y = index.(y) in
-      let (a,b) = (closures.(x).rdc, closures.(y).rdc) in
+      let (a,b) = (closures.(x).rdc, closures.(y).rdc) in 
       let (a,b) = if S.cardinal a < S.cardinal b then (a,b) else (b,a) in
       let donei = ref 0 in
 
@@ -161,7 +137,7 @@ let strongconflicts sdgraph mdf idlist =
       Util.Progress.set_total mainbar (S.cardinal a);
 
       (* debconf-i18n | debconf-english problem ? *)
-      if not (S.equal a b) && 
+      if not (S.equal a b) &&
       not (S.equal (to_set reverse.(x)) (to_set reverse.(y))) then begin
         S.iter (fun p ->
           Util.Progress.progress mainbar;
@@ -172,18 +148,13 @@ let strongconflicts sdgraph mdf idlist =
                 addstrong closures result (p,q);
                 (* seed cache closures (p,q) *)
               end
-              (* else begin
-                cache.(q) <- S.add p cache.(q) ;
-                cache.(p) <- S.add q cache.(p)
-              end *)
             end
-          ;
-          begin
-            cache.(q) <- S.add p cache.(q) ;
-            cache.(p) <- S.add q cache.(p)
-          end
+            ;
+            begin
+              cache.(q) <- S.add p cache.(q) ;
+              cache.(p) <- S.add q cache.(p)
+            end
           ) (S.diff b cache.(p)) ;
-          (* cache.(p) <- S.union b cache.(p); *)
         ) a
        end ;
 
