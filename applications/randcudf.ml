@@ -192,11 +192,10 @@ let main () =
     else Random.self_init ()
   in
 
-  let extras_preamble =
+  let extras_properties =
     [("Size", ("size", `Nat (Some 0)));
      ("Installed-Size", ("installedsize", `Nat (Some 0)))] in
-  let extras = List.map fst extras_preamble in
-  let preamble = List.map snd extras_preamble in
+  let extras = List.map fst extras_properties in
 
   let load_uri uri =
     match Input.parse_uri uri with
@@ -237,7 +236,7 @@ END
       let u' =
         List.fold_left (fun acc p -> 
           Util.Progress.progress progressbar ;
-          let pkg = Debian.Debcudf.tocudf tables ~extras:extras_preamble p in
+          let pkg = Debian.Debcudf.tocudf tables ~extras:extras_properties p in
           CudfAdd.Cudf_set.add pkg acc
         ) CudfAdd.Cudf_set.empty u 
       in
@@ -246,7 +245,7 @@ END
       let s' =
         List.fold_left (fun acc p ->
           Util.Progress.progress progressbar ;
-          let pkg = Debian.Debcudf.tocudf tables ~extras:extras_preamble ~inst:true p in
+          let pkg = Debian.Debcudf.tocudf tables ~extras:extras_properties ~inst:true p in
           if CudfAdd.Cudf_set.mem pkg acc then
             CudfAdd.Cudf_set.add pkg (CudfAdd.Cudf_set.remove pkg acc)
           else CudfAdd.Cudf_set.add pkg acc
@@ -335,20 +334,20 @@ END
         open_out file
       end else stdout
     in
-
     let request =
       { request_id = "RAND-CUDF-GENERATOR";
-        install = to_install ;
-        upgrade = to_upgrade ;
-        remove = to_remove ;
-	req_extra = [] ;
+          install = to_install ;
+          upgrade = to_upgrade ;
+          remove = to_remove ;
+          req_extra = [] ;
       }
     in
+    let preamble =
+      let l = List.map snd extras_properties in
+      CudfAdd.add_properties Debian.Debcudf.preamble l
+    in
 
-    Printf.fprintf oc "%s\n"
-      (Cudf_types_pp.string_of_typedecl (Debian.Debcudf.preamble @ preamble));
-    Printf.fprintf oc "%s" (Cudf_printer.string_of_universe universe);
-    Printf.fprintf oc "%s" (Cudf_printer.string_of_request request);
+    Printf.fprintf oc "%s" (Cudf_printer.string_of_cudf (preamble,universe,request)) ;
     close_out oc
   in 
 

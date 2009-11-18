@@ -332,11 +332,11 @@ let main () =
   let preferences = AptPref.parse dudf.problem.desiderata.aptpref in
 
   let infoH = Hashtbl.create 1031 in
-  let extras_preamble = [
+  let extras_property = [
     ("Size", ("size", `Nat (Some 0)));
     ("Installed-Size", ("installedsize", `Nat (Some 0)))] 
   in
-  let extras = List.map fst extras_preamble in
+  let extras = List.map fst extras_property in
 
   Util.print_info "parse all packages";
   let all_packages =
@@ -372,9 +372,6 @@ let main () =
     h
   in
   
-  let preamble =
-    ("Priority",(`Int (Some 500)))
-    :: ((List.map snd extras_preamble) @ Debcudf.preamble) in
   let add_extra (k,v) pkg =
     { pkg with Cudf.pkg_extra = (k,v) :: pkg.Cudf.pkg_extra } in
 
@@ -383,7 +380,7 @@ let main () =
     List.map (fun pkg ->
       let inst = Hashtbl.mem installed (pkg.Deb.name,pkg.Deb.version) in
       let info = try Some(Hashtbl.find infoH (pkg.Deb.name,pkg.Deb.version)) with Not_found -> None in
-      let cudfpkg = Debcudf.tocudf tables ~extras:extras_preamble ~inst:inst pkg in
+      let cudfpkg = Debcudf.tocudf tables ~extras:extras_property ~inst:inst pkg in
       let priority = AptPref.assign_priority preferences info cudfpkg in
       let cudfpkg = add_extra ("Priority", `Int priority) cudfpkg in
       cudfpkg
@@ -453,9 +450,13 @@ let main () =
       open_out (Filename.concat dirname (file^".cudf"))
     end else stdout
   in
-  let preamble' = { Cudf.default_preamble with Cudf.property = preamble } in
+  let preamble =
+    let p = ("Priority",(`Int (Some 500))) in
+    let l = List.map snd extras_property in
+    CudfAdd.add_properties Debcudf.preamble (p::l)
+  in
   Printf.fprintf oc "%s\n"
-    (Cudf_printer.string_of_cudf (preamble', universe, request)) 
+    (Cudf_printer.string_of_cudf (preamble, universe, request)) 
 ;;
 
 main ();;

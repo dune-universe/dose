@@ -69,14 +69,12 @@ let main () =
     else []
   in
 
-  let extras_preamble = [
+  let extras_properties = [
     ("Size", ("size", `Nat (Some 0)));
     ("Installed-Size", ("installedsize", `Nat (Some 0)))
     ] 
   in
-  let extras = List.map fst extras_preamble in
-  let preamble = List.map snd extras_preamble in
-
+  let extras = List.map fst extras_properties in
   let l =
      match Input.parse_uri !uri with
      |(("pgsql"|"sqlite") as dbtype,info,(Some query)) -> 
@@ -108,7 +106,7 @@ END
           Util.Progress.progress progressbar ; 
           let inst = Hashtbl.mem installed_h
           (pkg.Deb.name,pkg.Deb.version) in
-          Debian.Debcudf.tocudf tables ~extras:extras_preamble ~inst:inst pkg
+          Debian.Debcudf.tocudf tables ~extras:extras_properties ~inst:inst pkg
         ) ul
       in Util.Timer.stop timer res
     end
@@ -121,11 +119,11 @@ END
       open_out (Filename.concat dirname ("res.cudf"))
     end else stdout
   in
-
-  Printf.fprintf oc "%s\n" (
-    Cudf_types_pp.string_of_typedecl (Debcudf.preamble @ preamble)
-  ) ;
-
+  let preamble =
+    let l = List.map snd extras_properties in
+    CudfAdd.add_properties Debcudf.preamble l
+  in
+  Printf.fprintf oc "%s\n" ( Cudf_printer.string_of_preamble preamble) ;
   List.iter (fun pkg ->
     Printf.fprintf oc "%s\n" (Cudf_printer.string_of_package pkg)
   ) pkglist

@@ -16,27 +16,20 @@ open Graph
 
 let enable_debug () = 
   (* enable the progress bar for strongdeps *)
-  Common.Util.Progress.enable "Algo.Strongconflicts.main" ;
+  Common.Util.Progress.enable "Algo.Strongconflicts.local" ;
+  Common.Util.Progress.enable "Algo.Strongconflicts.seeding" ;
   Common.Util.set_verbosity Common.Util.Summary
 ;;
 
 exception Done
 
 module Options = struct
-  let dot = ref false
-  let dump = ref None
-  let incr = ref false
-  let detrans = ref false
-  let test = ref false
+  let debug = ref false
 end
 
-let usage = Printf.sprintf "usage: %s [--options] doc" (Sys.argv.(0))
+let usage = Printf.sprintf "usage: %s [--options] [strong deps graph] doc" (Sys.argv.(0))
 let options =
   [
-   ("--test", Arg.Set Options.test, "");
-   ("--dot", Arg.Set Options.dot, "Print the graph in dot format");
-   ("--dump", Arg.String (fun f -> Options.dump := Some f ), "Dump the transitive reduction of the strong dependency graph");
-   ("--detrans", Arg.Set Options.detrans, "Transitive reduction. Used in conjuction with --dot.");
    ("--debug", Arg.Unit enable_debug, "Print debug information");
   ]
 
@@ -86,6 +79,19 @@ let parse uri =
 
 open CudfAdd
 
+let soundness universe l =
+  let solver = Depsolver.load universe in
+  List.iter (fun (p,q) ->
+    let d = Depsolver.edos_coinstall solver [p;q] in
+    match d.Diagnostic.result with
+    |Diagnostic.Success _ -> failwith "Unsound"
+    |Diagnostic.Failure _ -> ()
+  ) l
+  ;
+;;
+
+let swap (p,q) = if p.Cudf.package < q.Cudf.package then (p,q) else (q,p)
+
 let main () =
   at_exit (fun () -> Common.Util.dump Format.err_formatter);
   let files = ref [] in
@@ -97,43 +103,48 @@ let main () =
   |[u] ->
       let pkglist = parse u in
       let universe = Cudf.load_universe pkglist in
-      Printf.eprintf "strong deps\n%!";
+      Util.print_info "Computing Strong Dependencies %!";
       let tgraph = Strongdeps.strongdeps_univ universe in
-      Printf.eprintf "done with graph\n%!";
-      Printf.eprintf "ready to roll\n%!";
+      Util.print_info "done\n%!";
+
       let l = Strongconflicts.strongconflicts tgraph universe pkglist in
-      List.iter (fun (x,y) ->
-        Printf.printf "%s <-> %s\n" (CudfAdd.print_package x) (CudfAdd.print_package y)
-      ) l
-      ;
-      Printf.eprintf "Total strong conflicts %d\n" (List.length l)
-  |[u;g] ->
-      let ic = open_in g in 
-      let graph = ((Marshal.from_channel ic) :> SG.t) in 
-      close_in ic ;
-      let pkglist = parse u in
-      let tg = transform pkglist graph in
-      Printf.eprintf "done with transform\n%!";
-      let tgraph = SO.O.add_transitive_closure tg in
-      Printf.eprintf "done with graph\n%!";
-      let universe = Cudf.load_universe pkglist in
-      Printf.eprintf "ready to roll\n%!";
-      let l = Strongconflicts.strongconflicts tgraph universe pkglist in
-      let swap (p,q) = if p.Cudf.package < q.Cudf.package then (p,q) else (q,p) in
-      let solver = Depsolver.load universe in
-      List.iter (fun (p,q) ->
-        let d = Depsolver.edos_coinstall solver [p;q] in
-        match d.Diagnostic.result with
-        |Diagnostic.Success _ -> failwith "Unsound"
-        |Diagnostic.Failure _ -> ()
-      ) l
-      ;
+      Util.print_info "Soundness test %!" ;
+      soundness universe l;
+      Util.print_info "done\n%!"; 
+
       List.iter (fun (x,y) ->
         let (x,y) = swap (x,y) in
         Printf.printf "%s <-> %s\n" (CudfAdd.print_package x) (CudfAdd.print_package y)
       ) l
       ;
-      Printf.eprintf "Total strong conflicts %d\n" (List.length l)
+      Util.print_info "Total strong conflicts %d\n" (List.length l)
+  |[u;g] ->
+      Util.print_info "Load Strong Dependencies graph %!";
+      let ic = open_in g in 
+      let graph = ((Marshal.from_channel ic) :> SG.t) in 
+      close_in ic ;
+      let pkglist = parse u in
+      let tg = transform pkglist graph in
+      Util.print_info "done\n%!";
+
+      Util.print_info "Compute transitive closusure of the SD graph%!";
+      let tgraph = SO.O.add_transitive_closure tg in
+      Util.print_info "done\n%!";
+
+      let universe = Cudf.load_universe pkglist in
+      let l = Strongconflicts.strongconflicts tgraph universe pkglist in
+
+      Util.print_info "Soundness test %!" ;
+      soundness universe l;
+      Util.print_info "done\n%!" ;
+
+      List.iter (fun (x,y) ->
+        let (x,y) = swap (x,y) in
+        Printf.printf "%s <-> %s\n" (CudfAdd.print_package x) (CudfAdd.print_package y)
+      ) l
+
+      ;
+      Util.print_info "Total strong conflicts %d\n" (List.length l)
   |_ -> (print_endline usage ; exit 2)
 
 ;;
