@@ -19,6 +19,7 @@ open CudfAdd
 module SG = Strongdeps_int.G
 
 (** progress bar *)
+let seeding = Util.Progress.create "Algo.Strongconflicts.seeding" ;;
 let mainbar = Util.Progress.create "Algo.Strongconflicts.main" ;;
 
 open Depsolver_int
@@ -70,13 +71,6 @@ let explicit mdf =
   done;
   !l
 
-let seed cache closures (p,q) =
-  let isp = closures.(p).impactset in
-  let isq = closures.(q).impactset in
-  S.iter (fun x -> cache.(x) <- S.union isp cache.(x)) isq;
-  S.iter (fun x -> cache.(x) <- S.union isq cache.(x)) isp
-;;
-  
 let strongconflicts sdgraph mdf idlist =
   let index = mdf.Mdf.index in
   let solver = init_solver ~idlist index in
@@ -90,16 +84,15 @@ let strongconflicts sdgraph mdf idlist =
   let to_set l = List.fold_right S.add l S.empty in
 
   Printf.eprintf "Pre-seeding ...%!\n";
-  Util.Progress.set_total mainbar (List.length idlist);
+  Util.Progress.set_total seeding (List.length idlist);
   for i=0 to (size - 1) do
-    Util.Progress.progress mainbar;
+    Util.Progress.progress seeding;
     let rdc = to_set (reverse_dependency_closure reverse [i]) in
     let is = impactset sdgraph i in
     let ss = strongset sdgraph i in
     closures.(i) <- {rdc = rdc; impactset = is};
     cache.(i) <- S.union is ss;
   done;
-  Util.Progress.reset mainbar;
 
   let i = ref 0 in
 
@@ -130,7 +123,6 @@ let strongconflicts sdgraph mdf idlist =
       ((S.cardinal a) * (S.cardinal b));
 
       addstrong closures result (x,y);
-      (* seed cache closures (x,y); *)
       cache.(x) <- S.add y cache.(x) ;
       cache.(y) <- S.add x cache.(y) ;
 
@@ -144,16 +136,12 @@ let strongconflicts sdgraph mdf idlist =
           S.iter (fun q ->
             if not ((S.mem p cache.(q)) || (S.mem q cache.(p))) then begin
               incr donei;
-              if not (coinst (p,q)) then begin
+              if not (coinst (p,q)) then
                 addstrong closures result (p,q);
-                (* seed cache closures (p,q) *)
-              end
             end
             ;
-            begin
-              cache.(q) <- S.add p cache.(q) ;
-              cache.(p) <- S.add q cache.(p)
-            end
+            cache.(q) <- S.add p cache.(q) ;
+            cache.(p) <- S.add q cache.(p)
           ) (S.diff b cache.(p)) ;
         ) a
        end ;
