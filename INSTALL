@@ -25,7 +25,7 @@ make
 --with-postgresql
 --with-zip
 --with-oUnit
---with-localcudf
+--with-libcudf
 
 Ex :
-./configure --with-localcudf --with-xml --with-ocamlgraph --with-zip --with-oUnit
+./configure --with-xml --with-ocamlgraph --with-zip --with-oUnit

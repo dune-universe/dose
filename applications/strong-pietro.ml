@@ -103,40 +103,40 @@ let main () =
   |[u] ->
       let pkglist = parse u in
       let universe = Cudf.load_universe pkglist in
-      Util.print_info "Computing Strong Dependencies %!";
+      Common.Util.print_info "Computing Strong Dependencies %!";
       let tgraph = Strongdeps.strongdeps_univ universe in
-      Util.print_info "done\n%!";
+      Common.Util.print_info "done\n%!";
 
       let l = Strongconflicts.strongconflicts tgraph universe pkglist in
-      Util.print_info "Soundness test %!" ;
+      Common.Util.print_info "Soundness test %!" ;
       soundness universe l;
-      Util.print_info "done\n%!"; 
+      Common.Util.print_info "done\n%!"; 
 
       List.iter (fun (x,y) ->
         let (x,y) = swap (x,y) in
         Printf.printf "%s <-> %s\n" (CudfAdd.print_package x) (CudfAdd.print_package y)
       ) l
       ;
-      Util.print_info "Total strong conflicts %d\n" (List.length l)
+      Common.Util.print_info "Total strong conflicts %d\n" (List.length l)
   |[u;g] ->
-      Util.print_info "Load Strong Dependencies graph %!";
+      Common.Util.print_info "Load Strong Dependencies graph %!";
       let ic = open_in g in 
       let graph = ((Marshal.from_channel ic) :> SG.t) in 
       close_in ic ;
       let pkglist = parse u in
       let tg = transform pkglist graph in
-      Util.print_info "done\n%!";
+      Common.Util.print_info "done\n%!";
 
-      Util.print_info "Compute transitive closusure of the SD graph%!";
+      Common.Util.print_info "Compute transitive closusure of the SD graph%!";
       let tgraph = SO.O.add_transitive_closure tg in
-      Util.print_info "done\n%!";
+      Common.Util.print_info "done\n%!";
 
       let universe = Cudf.load_universe pkglist in
       let l = Strongconflicts.strongconflicts tgraph universe pkglist in
 
-      Util.print_info "Soundness test %!" ;
+      Common.Util.print_info "Soundness test %!" ;
       soundness universe l;
-      Util.print_info "done\n%!" ;
+      Common.Util.print_info "done\n%!" ;
 
       List.iter (fun (x,y) ->
         let (x,y) = swap (x,y) in
@@ -144,7 +144,7 @@ let main () =
       ) l
 
       ;
-      Util.print_info "Total strong conflicts %d\n" (List.length l)
+      Common.Util.print_info "Total strong conflicts %d\n" (List.length l)
   |_ -> (print_endline usage ; exit 2)
 
 ;;

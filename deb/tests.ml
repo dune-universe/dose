@@ -18,15 +18,15 @@ let f_packages = "tests/Packages" ;;
 let f_release = "tests/Release" ;;
 
 let ch = Input.open_file f_packages ;;
-let extras_preamble = [
-  ("Maintainer", ("maintainer", `String ""));
-  ("Size", ("size", `Nat 0));
-  ("Installed-Size", ("installedsize", `Nat 0))
+let extras_properties = [
+  ("maintainer", ("maintainer", `String None));
+  ("size", ("size", `Nat None));
+  ("installed-Size", ("installedsize", `Nat None))
 ];;
-let extras = List.map fst extras_preamble ;;
+let extras = List.map fst extras_properties ;;
 let ipr_list = Packages.parse_packages_in ~extras:extras (fun x -> x) ch ;;
 let tables = Debcudf.init_tables ipr_list ;;
-let cudf_list = List.map (Debcudf.tocudf ~extras:extras_preamble tables) ipr_list ;;
+let cudf_list = List.map (Debcudf.tocudf ~extras:extras_properties tables) ipr_list ;;
 let universe = Cudf.load_universe cudf_list ;;
 let maps = CudfAdd.build_maps universe ;;
 

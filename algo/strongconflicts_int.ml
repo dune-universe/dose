@@ -19,8 +19,8 @@ open CudfAdd
 module SG = Strongdeps_int.G
 
 (** progress bar *)
-let seeding = Util.Progress.create "Algo.Strongconflicts.seeding" ;;
-let mainbar = Util.Progress.create "Algo.Strongconflicts.main" ;;
+let seedingbar = Util.Progress.create "Algo.Strongconflicts.seeding" ;;
+let localbar = Util.Progress.create "Algo.Strongconflicts.local" ;;
 
 open Depsolver_int
 
@@ -70,10 +70,10 @@ let strongconflicts sdgraph mdf idlist =
   let closures = Array.create size cl_dummy in
   let to_set l = List.fold_right S.add l S.empty in
 
-  Printf.eprintf "Pre-seeding ...%!\n";
-  Util.Progress.set_total seeding (List.length idlist);
+  Util.print_info "Pre-seeding ...%!\n";
+  Util.Progress.set_total seedingbar (List.length idlist);
   for i=0 to (size - 1) do
-    Util.Progress.progress seeding;
+    Util.Progress.progress seedingbar;
     let rdc = to_set (reverse_dependency_closure reverse [i]) in
     let is = impactset sdgraph i in
     let ss = strongset sdgraph i in
@@ -110,7 +110,7 @@ let strongconflicts sdgraph mdf idlist =
       let (a,b) = if S.cardinal a < S.cardinal b then (a,b) else (b,a) in
       let donei = ref 0 in
 
-      Printf.eprintf "(%d of %d) %s # %s ; Strong conflicts %d Tuples %d %!\n"
+      Util.print_info "(%d of %d) %s # %s ; Strong conflicts %d Tuples %d %!\n"
       !i conflict_size
       (CudfAdd.print_package pkg_x.Mdf.pkg) 
       (CudfAdd.print_package pkg_y.Mdf.pkg)
@@ -121,13 +121,13 @@ let strongconflicts sdgraph mdf idlist =
       cache.(x) <- S.add y cache.(x) ;
       cache.(y) <- S.add x cache.(y) ;
 
-      Util.Progress.set_total mainbar (S.cardinal a);
+      Util.Progress.set_total localbar (S.cardinal a);
 
       (* debconf-i18n | debconf-english problem ? *)
       if not (S.equal a b) &&
       not (S.equal closures.(x).rd closures.(y).rd) then begin
         S.iter (fun p ->
-          Util.Progress.progress mainbar;
+          Util.Progress.progress localbar;
           S.iter (fun q ->
             if not ((S.mem q cache.(p)) || (S.mem p cache.(q))) then begin
               incr donei;
@@ -141,9 +141,9 @@ let strongconflicts sdgraph mdf idlist =
         ) a
        end ;
 
-      Util.Progress.reset mainbar;
+      Util.Progress.reset localbar;
 
-      Printf.eprintf " | tuple examined %d\n%!" !donei;
+      Util.print_info " | tuple examined %d\n%!" !donei;
       total := !total + !donei
     end
   ) ex ;
@@ -160,6 +160,6 @@ let strongconflicts sdgraph mdf idlist =
       ) isq
   ) !stronglist;
 
-  Printf.eprintf " total tuple examined %d\n%!" !total;
+  Util.print_info " total tuple examined %d\n%!" !total;
   Hashtbl.fold (fun k _ l -> k::l) result []
 ;;

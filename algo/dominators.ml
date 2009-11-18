@@ -47,7 +47,7 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
     fun i ->
       incr curr;
       if !curr >= step then begin
-        Printf.printf "Done %d out of %d\n%!" i max;
+        Util.print_info "Done %d out of %d\n%!" i max;
         curr := 0
       end
   ;;
@@ -55,9 +55,9 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
   (* the dominators are computed on the strong dependency graph
    * with transitive archs *)
   let dominators graph =
-    Printf.printf "N. of vertex graph %d\n" (G.nb_vertex graph);
-    Printf.printf "N. of edges graph %d\n" (G.nb_edges graph);
-    print_endline "start dominators";
+    Util.print_info "N. of vertex graph %d\n" (G.nb_vertex graph);
+    Util.print_info "N. of edges graph %d\n" (G.nb_edges graph);
+    Util.print_info "start dominators";
     let i = ref 0 in
     let stats = stats (G.nb_vertex graph) in
     let domgraph = G.create () in
@@ -71,7 +71,7 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
         let isq = impactset graph q in
         if Cudf_set.subset (Cudf_set.diff isq sconsp) isp then begin
           G.add_edge domgraph p q;
-          Printf.printf "Dominator %s -D-> %s !\n"
+          Util.print_info "Dominator %s -D-> %s !\n"
           (CudfAdd.print_package p)
           (CudfAdd.print_package q)
         end

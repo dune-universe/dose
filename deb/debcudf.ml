@@ -193,11 +193,13 @@ let loadll tables ll = List.map (loadl tables) ll
 
 type extramap = (string * (string * Cudf_types.typedecl1)) list
 
-let preamble = [
-  ("number",(`String (Some "")));
-  ("source",(`String (Some ""))) ;
-  ("sourceversion",(`String (Some "")))
-]
+let preamble = 
+  let l = [
+    ("number",(`String None));
+    ("source",(`String None)) ;
+    ("sourceversion",(`String None)) ]
+  in
+  CudfAdd.add_properties Cudf.default_preamble l
 
 let add_extra extras pkg =
   let number = ("number",`String pkg.version) in
@@ -214,10 +216,10 @@ let add_extra extras pkg =
     List.filter_map (fun (debprop, (cudfprop,v)) ->
       let debprop = String.lowercase debprop in
       let cudfprop = String.lowercase cudfprop in
-      try Some (cudfprop,
-		Cudf_types_pp.parse_value
-		  (Cudf_types.type_of_typedecl v)
-		  (List.assoc debprop pkg.extras))
+      try 
+        let s = List.assoc debprop pkg.extras in
+        let typ = Cudf_types.type_of_typedecl v in
+        Some (cudfprop, Cudf_types_pp.parse_value typ s)
       with Not_found -> None
     ) extras
   in

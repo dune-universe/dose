@@ -14,6 +14,11 @@
 open Cudf
 open Cudf_types
 
+let add_properties preamble l =
+  List.fold_left (fun pre prop ->
+    {pre with Cudf.property = prop :: pre.Cudf.property}
+  ) preamble l
+
 (** print a cudf package.
     @param short : only name and version are printed (default true). If the
     cudf package has an extra attribute "Number" then, this is used instead of

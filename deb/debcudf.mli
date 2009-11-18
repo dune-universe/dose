@@ -45,7 +45,7 @@ val ltocudf  : tables -> Format822.vpkg list -> Cudf_types.vpkglist
     - a property named {b Source} of type string
     - a property named {b Sourceversion} of type string
     *)
-val preamble : Cudf_types.typedecl
+val preamble : Cudf.preamble
 
 (** create a Cudf universe from a debian package representation list. *)
 val load_universe : Packages.package list -> Cudf.universe

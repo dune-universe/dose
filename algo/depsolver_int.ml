@@ -240,15 +240,14 @@ let reverse_dependencies mdf =
     @param index the package universe
     @param l a subset of [index]
 *)
-let dependency_closure ?maxdepth mdf idlist =
+let dependency_closure ?(maxdepth=max_int) mdf idlist =
   let index = mdf.Mdf.index in
   let queue = Queue.create () in
   let visited = Hashtbl.create 1023 in
-  let mxd = match maxdepth with None -> (Array.length index)+1 | Some z -> z in
   List.iter (fun e -> Queue.add (e,0) queue) (List.unique idlist);
   while (Queue.length queue > 0) do
     let (id,level) = Queue.take queue in
-    if not(Hashtbl.mem visited id) && level<mxd then begin
+    if not(Hashtbl.mem visited id) && level < maxdepth then begin
       Hashtbl.add visited id ();
       Array.iter (fun (_,dsj,_) ->
         Array.iter (fun i ->
