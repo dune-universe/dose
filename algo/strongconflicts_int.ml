@@ -26,7 +26,7 @@ open Depsolver_int
 
 module ST = Set.Make (struct type t = (int * int) let compare = Pervasives.compare end)
 module S = Set.Make (struct type t = int let compare = Pervasives.compare end)
-type cl = { rdc : S.t ; impactset : S.t} 
+type cl = { rdc : S.t ; impactset : S.t; rd : S.t } 
 
 let impactset graph q =
   if SG.mem_vertex graph q then
@@ -39,18 +39,6 @@ let strongset graph q =
   else S.empty
 
 let swap (p,q) = if p < q then (p,q) else (q,p) ;;
-
-let addstrong closures s (p,q) =
-  let isp = S.add p closures.(p).impactset in
-  let isq = S.add q closures.(q).impactset in
-  let res = 
-    S.fold (fun a acc ->
-      S.fold (fun b acc ->
-        ST.add (swap (a,b)) acc
-      ) isp acc
-    ) isq !s
-  in s := res
-;;
 
 let coinst_partial solver (p,q) =
   let req = Diagnostic_int.Lst [p;q] in
@@ -74,12 +62,11 @@ let explicit mdf =
 let strongconflicts sdgraph mdf idlist =
   let index = mdf.Mdf.index in
   let solver = init_solver ~idlist index in
-  let result = ref ST.empty in
   let coinst = coinst_partial solver in
   let reverse = reverse_dependencies mdf in
   let size = (List.length idlist) in
   let cache = Array.create size S.empty in
-  let cl_dummy = {rdc = S.empty ; impactset = S.empty} in
+  let cl_dummy = {rdc = S.empty ; impactset = S.empty; rd = S.empty} in
   let closures = Array.create size cl_dummy in
   let to_set l = List.fold_right S.add l S.empty in
 
@@ -90,7 +77,8 @@ let strongconflicts sdgraph mdf idlist =
     let rdc = to_set (reverse_dependency_closure reverse [i]) in
     let is = impactset sdgraph i in
     let ss = strongset sdgraph i in
-    closures.(i) <- {rdc = rdc; impactset = is};
+    let rd = to_set reverse.(i) in
+    closures.(i) <- {rdc = rdc; impactset = is ; rd = rd};
     cache.(i) <- S.union is ss;
   done;
 
@@ -106,9 +94,16 @@ let strongconflicts sdgraph mdf idlist =
   let total = ref 0 in
   let conflict_size = List.length ex in
 
+  (* The simplest algorithm. We iter over all explicit conflicts, 
+   * filtering out all couples that cannot possiby be in conflict
+   * because either of strong dependencies or because already considered.
+   * Then we iter over the reverse dependency closures of the selected 
+   * conflict and we check all pairs that have not been considered before.
+   * *)
+  let stronglist = ref [] in
   List.iter (fun (x,y) -> 
+    incr i;
     if not((S.mem x cache.(y)) || (S.mem y cache.(x))) then begin
-      incr i;
       let pkg_x = index.(x) in
       let pkg_y = index.(y) in
       let (a,b) = (closures.(x).rdc, closures.(y).rdc) in 
@@ -119,10 +114,10 @@ let strongconflicts sdgraph mdf idlist =
       !i conflict_size
       (CudfAdd.print_package pkg_x.Mdf.pkg) 
       (CudfAdd.print_package pkg_y.Mdf.pkg)
-      (ST.cardinal !result)
+      (List.length !stronglist)
       ((S.cardinal a) * (S.cardinal b));
 
-      addstrong closures result (x,y);
+      stronglist := (swap(x,y)) :: !stronglist ;
       cache.(x) <- S.add y cache.(x) ;
       cache.(y) <- S.add x cache.(y) ;
 
@@ -130,14 +125,14 @@ let strongconflicts sdgraph mdf idlist =
 
       (* debconf-i18n | debconf-english problem ? *)
       if not (S.equal a b) &&
-      not (S.equal (to_set reverse.(x)) (to_set reverse.(y))) then begin
+      not (S.equal closures.(x).rd closures.(y).rd) then begin
         S.iter (fun p ->
           Util.Progress.progress mainbar;
           S.iter (fun q ->
-            if not ((S.mem p cache.(q)) || (S.mem q cache.(p))) then begin
+            if not ((S.mem q cache.(p)) || (S.mem p cache.(q))) then begin
               incr donei;
               if not (coinst (p,q)) then
-                addstrong closures result (p,q);
+                stronglist := (swap(p,q)) :: !stronglist ;
             end
             ;
             cache.(q) <- S.add p cache.(q) ;
@@ -153,6 +148,18 @@ let strongconflicts sdgraph mdf idlist =
     end
   ) ex ;
 
+  let result = Hashtbl.create (2 * (List.length !stronglist)) in
+  List.iter (fun (p,q) ->
+    if not (Hashtbl.mem result (p,q)) then
+      let isp = S.add p closures.(p).impactset in
+      let isq = S.add q closures.(q).impactset in
+      S.iter (fun a ->
+        S.iter (fun b ->
+          Hashtbl.replace result (swap (a,b)) ()
+        ) isp
+      ) isq
+  ) !stronglist;
+
   Printf.eprintf " total tuple examined %d\n%!" !total;
-  ST.elements !result
+  Hashtbl.fold (fun k _ l -> k::l) result []
 ;;
