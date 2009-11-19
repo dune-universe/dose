@@ -16,11 +16,11 @@ all:
 
 clean:
 	$(OCAMLBUILD) $(OBFLAGS) -clean
-	@for i in applications common deb rpm db; do\
-		cd $$i ;\
-		$(OCAMLBUILD) $(OBFLAGS) -clean\
-	  cd .. ;\
-	done
+	@cd deb ; $(OCAMLBUILD) $(OBFLAGS) -clean ; cd ..
+	@cd rpm ; $(OCAMLBUILD) $(OBFLAGS) -clean ; cd ..
+	@cd db ; $(OCAMLBUILD) $(OBFLAGS) -clean ; cd ..
+	@cd algo ; $(OCAMLBUILD) $(OBFLAGS) -clean ; cd ..
+	@cd applications ; $(OCAMLBUILD) $(OBFLAGS) -clean ; cd ..
 
 distclean: clean
 	rm -Rf Makefile.config aclocal.m4 config.log config.status autom4te.cache/
