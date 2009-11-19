@@ -238,7 +238,7 @@ module IntGraph(Pr : sig val pr : int -> string end) = struct
   module PkgV = struct
       type t = int
       let compare = compare
-      let hash = Hashtbl.hash
+      let hash i = i
       let equal = (=)
   end
 

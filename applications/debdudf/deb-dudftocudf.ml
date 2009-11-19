@@ -382,7 +382,7 @@ let main () =
       let info = try Some(Hashtbl.find infoH (pkg.Deb.name,pkg.Deb.version)) with Not_found -> None in
       let cudfpkg = Debcudf.tocudf tables ~extras:extras_property ~inst:inst pkg in
       let priority = AptPref.assign_priority preferences info cudfpkg in
-      let cudfpkg = add_extra ("Priority", `Int priority) cudfpkg in
+      let cudfpkg = add_extra ("priority", `Int priority) cudfpkg in
       cudfpkg
     ) l
   in
@@ -451,7 +451,7 @@ let main () =
     end else stdout
   in
   let preamble =
-    let p = ("Priority",(`Int (Some 500))) in
+    let p = ("priority",(`Int (Some 500))) in
     let l = List.map snd extras_property in
     CudfAdd.add_properties Debcudf.preamble (p::l)
   in
