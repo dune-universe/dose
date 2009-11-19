@@ -1,8 +1,6 @@
 
 required libraries :
  - libextlib-ocaml-dev 
- - libcudf (not in debian yet)
- - libpcre-ocaml-dev
 
 additional libraries (enable compilation with --with-<library>) :
  - libpostgresql-ocaml-dev
@@ -25,7 +23,10 @@ make
 --with-postgresql
 --with-zip
 --with-oUnit
---with-libcudf
+
+libcudf is included in the source tree of dose3. 
+To use libcudf as an ocamlfind external library you can specify
+--with-libcudf as configure option.
 
 Ex :
 ./configure --with-xml --with-ocamlgraph --with-zip --with-oUnit
