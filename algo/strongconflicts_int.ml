@@ -18,15 +18,6 @@ open CudfAdd
 
 module SG = Strongdeps_int.G
 
-(* we use an undirected graph as cache *)
-module PkgV = struct
-    type t = int
-    let compare = Pervasives.compare
-    let hash i = i
-    let equal = (=)
-end
-module UG = Graph.Imperative.Graph.Concrete(PkgV)
-
 (** progress bar *)
 let seedingbar = Util.Progress.create "Algo.Strongconflicts.seeding" ;;
 let localbar = Util.Progress.create "Algo.Strongconflicts.local" ;;
@@ -74,12 +65,12 @@ let strongconflicts sdgraph mdf idlist =
   let coinst = coinst_partial solver in
   let reverse = reverse_dependencies mdf in
   let size = (List.length idlist) in
-  let cachegraph = UG.create ~size:(SG.nb_vertex sdgraph) () in
+  let cache = Array.create size S.empty in
   let cl_dummy = {rdc = S.empty ; impactset = S.empty; rd = S.empty} in
   let closures = Array.create size cl_dummy in
   let to_set l = List.fold_right S.add l S.empty in
 
-  Util.print_info "Pre-seeding ...%!";
+  Util.print_info "Pre-seeding ...%!\n";
   Util.Progress.set_total seedingbar (List.length idlist);
   for i=0 to (size - 1) do
     Util.Progress.progress seedingbar;
@@ -88,9 +79,8 @@ let strongconflicts sdgraph mdf idlist =
     let ss = strongset sdgraph i in
     let rd = to_set reverse.(i) in
     closures.(i) <- {rdc = rdc; impactset = is ; rd = rd};
+    cache.(i) <- S.union is ss;
   done;
-  SG.iter_edges (UG.add_edge cachegraph) sdgraph ;
-  Util.print_info " done%!\n";
 
   let i = ref 0 in
 
@@ -113,7 +103,7 @@ let strongconflicts sdgraph mdf idlist =
   let stronglist = ref [] in
   List.iter (fun (x,y) -> 
     incr i;
-    if not(UG.mem_edge cachegraph x y) then begin
+    if not((S.mem x cache.(y)) || (S.mem y cache.(x))) then begin
       let pkg_x = index.(x) in
       let pkg_y = index.(y) in
       let (a,b) = (closures.(x).rdc, closures.(y).rdc) in 
@@ -128,7 +118,8 @@ let strongconflicts sdgraph mdf idlist =
       ((S.cardinal a) * (S.cardinal b));
 
       stronglist := (swap(x,y)) :: !stronglist ;
-      UG.add_edge cachegraph x y;
+      cache.(x) <- S.add y cache.(x) ;
+      cache.(y) <- S.add x cache.(y) ;
 
       Util.Progress.set_total localbar (S.cardinal a);
 
@@ -138,13 +129,15 @@ let strongconflicts sdgraph mdf idlist =
         S.iter (fun p ->
           Util.Progress.progress localbar;
           S.iter (fun q ->
-            incr donei;
-            UG.add_edge cachegraph p q;
-            if not (UG.mem_edge cachegraph p q) then begin
+            if not ((S.mem q cache.(p)) || (S.mem p cache.(q))) then begin
+              incr donei;
               if not (coinst (p,q)) then
                 stronglist := (swap(p,q)) :: !stronglist ;
             end
-          ) (S.diff b (to_set (UG.succ cachegraph p))) ;
+            ;
+            cache.(q) <- S.add p cache.(q) ;
+            cache.(p) <- S.add q cache.(p)
+          ) (S.diff b cache.(p)) ;
         ) a
        end ;
 
