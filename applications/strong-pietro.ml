@@ -117,7 +117,7 @@ let main () =
         Printf.printf "%s <-> %s\n" (CudfAdd.print_package x) (CudfAdd.print_package y)
       ) l
       ;
-      Common.Util.print_info "Total strong conflicts" (List.length l)
+      Common.Util.print_info "Total strong conflicts %d" (List.length l)
   |[u;g] ->
       Common.Util.print_info "Load Strong Dependencies graph";
       let ic = open_in g in 
@@ -144,7 +144,7 @@ let main () =
       ) l
 
       ;
-      Common.Util.print_info "Total strong conflicts" (List.length l)
+      Common.Util.print_info "Total strong conflicts %d" (List.length l)
   |_ -> (print_endline usage ; exit 2)
 
 ;;
