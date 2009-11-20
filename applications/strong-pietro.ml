@@ -104,7 +104,8 @@ let main () =
       let pkglist = parse u in
       let universe = Cudf.load_universe pkglist in
       Common.Util.print_info "Computing Strong Dependencies";
-      let tgraph = Strongdeps.strongdeps_univ universe in
+      (* let tgraph = Strongdeps.strongdeps_univ universe in *)
+      let tgraph = SO.O.add_transitive_closure (Strongdeps.conjdeps universe) in
       Common.Util.print_info "done";
 
       let l = Strongconflicts.strongconflicts tgraph universe pkglist in

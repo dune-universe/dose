@@ -20,6 +20,7 @@ module S = Set.Make(struct type t = Cudf.package let compare = compare end)
 let f_legacy = "tests/legacy.cudf"
 let f_legacy_sol = "tests/legacy-sol.cudf"
 let f_dependency = "tests/dependency.cudf"
+let f_conj_dependency = "tests/conj_dependency.cudf"
 let f_cone = "tests/cone.cudf"
 let f_engine_conflicts = "tests/engine-conflicts.cudf"
 let f_strongdeps_simple = "tests/strongdep-simple.cudf"
@@ -36,6 +37,7 @@ let toset f =
   List.fold_right S.add pl S.empty
 
 let dependency_set = toset f_dependency
+let conj_dependency_set = toset f_conj_dependency
 let cone_set = toset f_cone
 let engine_conflicts_set = toset f_engine_conflicts
 
@@ -92,6 +94,22 @@ let test_dependency_closure =
     assert_equal true (S.equal dependency_set set)
   )
 
+(* blah ... *)
+let test_dependency_closure_graph = 
+  "conjunctive dependency closure" >:: (fun _ -> 
+    let (_,pkglist,_) = Cudf_parser.parse_from_file f_legacy in
+    let mdf = Mdf.load_from_list pkglist in
+    let maps = mdf.Mdf.maps in
+    let idlist = List.map maps.CudfAdd.map#vartoint pkglist in
+    let graph = Strongdeps_int.conjdepgraph mdf.Mdf.index idlist in
+    let car = Cudf.lookup_package universe ("bicycle",7) in
+    let l = Strongdeps_int.conjdeps graph (maps.CudfAdd.map#vartoint car) in
+    let l = List.map maps.CudfAdd.map#inttovar l in
+    (* List.iter (fun pkg -> print_endline (CudfAdd.print_package pkg)) l; *)
+    let set = List.fold_right S.add l S.empty in
+    assert_equal true (S.equal conj_dependency_set set)
+  )
+
 let test_reverse_dependencies =
   "direct reverse dependencies" >:: (fun _ ->
     let car = Cudf.lookup_package universe ("car",1) in
@@ -128,6 +146,7 @@ let test_depsolver =
     test_trim ;
     test_distribcheck ;
     test_dependency_closure ;
+    test_dependency_closure_graph ;
     test_reverse_dependencies ;
     test_reverse_dependency_closure ;
   ]
@@ -166,26 +185,26 @@ let test_cudfsolver =
   ]
 ;;
 
-let test_strong file edge_list =
+let test_strong file l =
   let module G = Defaultgraphs.PackageGraph.G in
   let (_,universe,_) = Cudf_parser.load_from_file file in
   let g = Strongdeps.strongdeps_univ universe in
-  let l =
+  let sdedges = G.fold_edges (fun p q l -> (p,q)::l) g [] in
+  let testedges =
     List.map (fun (v,z) ->
       let p = Cudf.lookup_package universe v in
       let q = Cudf.lookup_package universe z in
       (p,q)
-    ) edge_list
+    ) l
   in
-  G.iter_edges (fun v z ->
-    if not(List.exists (fun (p,q) -> (Cudf.(=%) v p) && (Cudf.(=%) z q)) l)
-    then assert_failure "fail"
-  ) g
+  if not((List.sort sdedges) = (List.sort testedges)) then
+    List.iter (fun (p,q) -> 
+      Printf.eprintf "%s -> %s\n" 
+      (CudfAdd.print_package p)
+      (CudfAdd.print_package q)
+    ) sdedges
   ;
-  List.iter (fun (v,z) ->
-    if not(G.mem_edge g v z)
-    then assert_failure "fail" 
-  ) l
+  assert_equal (List.sort sdedges) (List.sort testedges)
 
 let strongdep_simple =
   "strongdep simple" >:: (fun _ ->
@@ -240,7 +259,7 @@ let test_strongdep =
     strongdep_simple ;
     strongdep_conflict ;
     strongdep_cycle ;
-  (*  strongdep_conj  XXX *)
+    strongdep_conj 
   ]
 
 let test_dependency_graph =

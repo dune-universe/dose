@@ -154,7 +154,7 @@ let strongconflicts sdgraph mdf idlist =
       total := !total + !donei
     end
   ) ex ;
-
+(*
   let result = Hashtbl.create (2 * (List.length !stronglist)) in
   List.iter (fun (p,q) ->
     if not (Hashtbl.mem result (p,q)) then
@@ -166,7 +166,9 @@ let strongconflicts sdgraph mdf idlist =
         ) isp
       ) isq
   ) !stronglist;
-
+*)
+ (* Util.print_info " partial tuple examined %d" (List.length !stronglist); *)
   Util.print_info " total tuple examined %d" !total;
-  Hashtbl.fold (fun k _ l -> k::l) result []
+  (* Hashtbl.fold (fun k _ l -> k::l) result [] *)
+  !stronglist
 ;;

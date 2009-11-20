@@ -85,6 +85,9 @@ let parse uri =
 ;;
 
 let out ?(dump=false) ?(dot=false) ?(detrans=false) g =
+  Common.Util.print_info "Before transitive reduction : nodes %d , edges %d"
+  (SG.nb_vertex g) (SG.nb_edges g) ;
+
   if !Options.dump <> None || dump then begin
     let f =
       if dump then "graph.marshal"
@@ -102,7 +105,10 @@ let out ?(dump=false) ?(dot=false) ?(detrans=false) g =
       SO.transitive_reduction g;
     SD.output_graph stdout g;
     print_newline ();
-  end
+  end ;
+
+  Common.Util.print_info "After transitive reduction : nodes %d , edges %d"
+  (SG.nb_vertex g) (SG.nb_edges g)
 ;;
 
 (* this function can be more efficient if integrated in the library

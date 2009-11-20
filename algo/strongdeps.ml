@@ -65,3 +65,15 @@ let strongdeps_univ universe =
 let impactset graph q =
   let module G = Defaultgraphs.StrongDepGraph.G in
   G.fold_pred (fun p acc -> p :: acc ) graph q []
+
+let conjdeps universe =
+  let mdf = Mdf.load_from_universe universe in
+  let maps = mdf.Mdf.maps in
+  let g = Strongdeps_int.G.create () in
+  Cudf.iter_packages (fun pkg ->
+    let id = maps.map#vartoint pkg in
+    Strongdeps_int.conjdepgraph_int g mdf.Mdf.index id
+  ) universe
+  ;
+  intcudf mdf.Mdf.index g
+
