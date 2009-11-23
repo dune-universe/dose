@@ -42,13 +42,16 @@ module SG = Defaultgraphs.StrongDepGraph.G
 module SD = Defaultgraphs.StrongDepGraph.D
 module SO = Defaultgraphs.GraphOper(G)
 
-
 let transform pkglist graph =
   let vermap = CudfAdd.realversionmap pkglist in
   let package vermap (n,v) =
       try Hashtbl.find vermap (n,v) with Not_found -> assert false
   in
   let cudfgraph = G.create () in
+  SG.iter_vertex (fun p ->
+    let v = package vermap p in 
+    G.add_vertex cudfgraph v
+  ) graph;
   SG.iter_edges (fun p q ->
     let x = package vermap p in
     let y = package vermap q in
@@ -105,7 +108,7 @@ let main () =
       let universe = Cudf.load_universe pkglist in
       Common.Util.print_info "Computing Strong Dependencies";
       (* let tgraph = Strongdeps.strongdeps_univ universe in *)
-      let tgraph = SO.O.add_transitive_closure (Strongdeps.conjdeps universe) in
+      let tgraph = Strongdeps.conjdeps universe in
       Common.Util.print_info "done";
 
       let l = Strongconflicts.strongconflicts tgraph universe pkglist in
@@ -120,11 +123,12 @@ let main () =
       ;
       Common.Util.print_info "Total strong conflicts %d" (List.length l)
   |[u;g] ->
+      Common.Util.print_info "Parsing Universe";
+      let pkglist = parse u in
       Common.Util.print_info "Load Strong Dependencies graph";
       let ic = open_in g in 
       let graph = ((Marshal.from_channel ic) :> SG.t) in 
       close_in ic ;
-      let pkglist = parse u in
       let tg = transform pkglist graph in
       Common.Util.print_info "done";
 

@@ -90,6 +90,7 @@ let strongconflicts sdgraph mdf idlist =
     closures.(i) <- {rdc = rdc; impactset = is ; rd = rd};
   done;
   SG.iter_edges (UG.add_edge cachegraph) sdgraph ;
+  SG.iter_vertex (UG.add_vertex cachegraph) sdgraph ;
   Util.print_info " done";
 
   let i = ref 0 in
@@ -104,7 +105,19 @@ let strongconflicts sdgraph mdf idlist =
   let total = ref 0 in
   let conflict_size = List.length ex in
 
-  (* The simplest algorithm. We iter over all explicit conflicts, 
+  (* either all predecessor are the same or there exists a 
+   * predecessor in the intersection that can however always
+   * be installed with x and y *)
+  let triangles x y =
+    let s1 = closures.(x).rd in
+    let s2 = closures.(y).rd in
+    if not (S.equal s1 s2) then true
+    else
+      not (List.exists (fun e -> coinst (e,x) && coinst (e,y))
+      (S.elements (S.inter s1 s2)))
+  in
+
+  (* The simplest algorithm. We iterate over all explicit conflicts, 
    * filtering out all couples that cannot possiby be in conflict
    * because either of strong dependencies or because already considered.
    * Then we iter over the reverse dependency closures of the selected 
@@ -113,6 +126,7 @@ let strongconflicts sdgraph mdf idlist =
   let stronglist = ref [] in
   List.iter (fun (x,y) -> 
     incr i;
+    stronglist := (swap(x,y)) :: !stronglist ;
     if not(UG.mem_edge cachegraph x y) then begin
       let pkg_x = index.(x) in
       let pkg_y = index.(y) in
@@ -127,14 +141,11 @@ let strongconflicts sdgraph mdf idlist =
       (List.length !stronglist)
       ((S.cardinal a) * (S.cardinal b));
 
-      stronglist := (swap(x,y)) :: !stronglist ;
       UG.add_edge cachegraph x y;
 
       Util.Progress.set_total localbar (S.cardinal a);
 
-      (* debconf-i18n | debconf-english problem ? *)
-      if not (S.equal a b) &&
-      not (S.equal closures.(x).rd closures.(y).rd) then begin
+      if triangles x y then begin
         S.iter (fun p ->
           S.iter (fun q ->
             incr donei;
@@ -154,10 +165,10 @@ let strongconflicts sdgraph mdf idlist =
       total := !total + !donei
     end
   ) ex ;
-(*
-  let result = Hashtbl.create (2 * (List.length !stronglist)) in
+
+(*  let result = Hashtbl.create (2 * (List.length !stronglist)) in
   List.iter (fun (p,q) ->
-    if not (Hashtbl.mem result (p,q)) then
+    if not (Hashtbl.mem result (swap(p,q))) then begin
       let isp = S.add p closures.(p).impactset in
       let isq = S.add q closures.(q).impactset in
       S.iter (fun a ->
@@ -165,10 +176,11 @@ let strongconflicts sdgraph mdf idlist =
           Hashtbl.replace result (swap (a,b)) ()
         ) isp
       ) isq
+    end
   ) !stronglist;
 *)
- (* Util.print_info " partial tuple examined %d" (List.length !stronglist); *)
+  Util.print_info " partial tuple examined %d" (List.length !stronglist);
   Util.print_info " total tuple examined %d" !total;
   (* Hashtbl.fold (fun k _ l -> k::l) result [] *)
-  !stronglist
+  List.unique !stronglist
 ;;

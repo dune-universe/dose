@@ -17,31 +17,39 @@ open CudfAdd
 
 (** transform an integer graph in a cudf graph *)
 let intcudf index intgraph =
+  let module PG = Defaultgraphs.PackageGraph.G in
+  let module SG = Strongdeps_int.G in
   let trasformtimer = Util.Timer.create "Algo.Strongdep.intcudf" in
   Util.Timer.start trasformtimer;
-  let cudfgraph = Defaultgraphs.PackageGraph.G.create () in
-  Strongdeps_int.G.iter_vertex (fun v ->
-    let p = index.(v) in
-    Defaultgraphs.PackageGraph.G.add_vertex cudfgraph p.Mdf.pkg
-  ) intgraph ;
-  Strongdeps_int.G.iter_edges (fun x y ->
+  let cudfgraph = PG.create () in
+  SG.iter_edges (fun x y ->
     let p = index.(x) in
     let q = index.(y) in
-    Defaultgraphs.PackageGraph.G.add_edge cudfgraph p.Mdf.pkg q.Mdf.pkg
+    PG.add_edge cudfgraph p.Mdf.pkg q.Mdf.pkg
   ) intgraph ;
+  SG.iter_vertex (fun v ->
+    let p = index.(v) in
+    PG.add_vertex cudfgraph p.Mdf.pkg
+  ) intgraph ;
+  Common.Util.print_info "cudfgraph: nodes %d , edges %d" 
+  (PG.nb_vertex cudfgraph) (PG.nb_edges cudfgraph); 
   Util.Timer.stop trasformtimer cudfgraph
 
 let cudfint maps cudfgraph =
+  let module PG = Defaultgraphs.PackageGraph.G in
+  let module SG = Strongdeps_int.G in
   let trasformtimer = Util.Timer.create "Algo.Strongdep.cudfint" in
   Util.Timer.start trasformtimer;
-  let intgraph = Strongdeps_int.G.create () in
-  Defaultgraphs.PackageGraph.G.iter_vertex (fun v ->
-    Strongdeps_int.G.add_vertex intgraph (maps.map#vartoint v)
-  ) cudfgraph;
-  Defaultgraphs.PackageGraph.G.iter_edges (fun x y ->
-    Strongdeps_int.G.add_edge intgraph
+  let intgraph = SG.create () in
+  PG.iter_edges (fun x y ->
+    SG.add_edge intgraph
     (maps.map#vartoint x) (maps.map#vartoint y)
   ) cudfgraph;
+  PG.iter_vertex (fun v ->
+    SG.add_vertex intgraph (maps.map#vartoint v)
+  ) cudfgraph;
+  Common.Util.print_info "intcudf: nodes %d , edges %d" 
+  (SG.nb_vertex intgraph) (SG.nb_edges intgraph); 
   Util.Timer.stop trasformtimer intgraph
 
 (** [strongdeps u l] build the strong dependency graph of all packages in 
@@ -66,14 +74,19 @@ let impactset graph q =
   let module G = Defaultgraphs.StrongDepGraph.G in
   G.fold_pred (fun p acc -> p :: acc ) graph q []
 
+(** compute the conjunctive dependency graph *)
 let conjdeps universe =
   let mdf = Mdf.load_from_universe universe in
-  let maps = mdf.Mdf.maps in
   let g = Strongdeps_int.G.create () in
-  Cudf.iter_packages (fun pkg ->
-    let id = maps.map#vartoint pkg in
+  for id=0 to (Array.length mdf.Mdf.index)-1 do
     Strongdeps_int.conjdepgraph_int g mdf.Mdf.index id
-  ) universe
-  ;
-  intcudf mdf.Mdf.index g
+  done;
+  let clousure = Strongdeps_int.SO.O.add_transitive_closure g in
+  Common.Util.print_info
+  "Conjunctive dependency graph (before clousure): nodes %d , edges %d"
+  (Strongdeps_int.G.nb_vertex g) (Strongdeps_int.G.nb_edges g); 
+  Common.Util.print_info
+  "Conjunctive dependency graph (after clousure): nodes %d , edges %d" 
+  (Strongdeps_int.G.nb_vertex clousure) (Strongdeps_int.G.nb_edges clousure); 
+  intcudf mdf.Mdf.index clousure
 

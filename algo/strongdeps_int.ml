@@ -16,15 +16,13 @@ open ExtLib
 open Common
 open CudfAdd
 
-(** progress bar *)
 let mainbar = Util.Progress.create "Algo.Strongdep.main"
-
-(** progress bar *)
 let conjbar = Util.Progress.create "Algo.Strongdep.conj"
 
 (* I'm not using Defaultgraphs.IntGraph because otherwise I would
  * need to provide a printing function making this code less elegant
  * \methink *)
+(* XXX this is debatable ... need to refactor *)
 module PkgV = struct
     type t = int
     let compare = Pervasives.compare
@@ -80,6 +78,7 @@ let check_strong graph solver p l =
           G.add_edge graph p q
   ) l
 
+(* true if all dependencies are conjunctive *)
 let allconj depends = 
   if Array.length depends > 0 then
     try
@@ -89,34 +88,30 @@ let allconj depends =
   else true
 
 (** [strongdeps l] build the strong dependency graph of l *)
-(* each package is in the graph, even if it does not have  
+(* each package has a node in the graph, even if it does not have  
  * any strong dependencies *)
 let strongdeps_int graph mdf l =
   let available = List.sort ~cmp:(fun (_,n,_) (_,m,_) -> m - n) l in
   let size = List.length available in
 
-  Common.Util.print_info "Conjunctive : nodes %d , edges %d"
-  (G.nb_vertex graph) (G.nb_edges graph);
-  let g1 = (SO.O.add_transitive_closure graph) in
-  Common.Util.print_info "Conjunctive transitive: nodes %d , edges %d"
-  (G.nb_vertex g1) (G.nb_edges g1);
-
   Util.Progress.set_total mainbar size;
   let strongtimer = Util.Timer.create "Algo.Strongdep.strong" in
 
   Util.Timer.start strongtimer;
-  List.iter (fun (pkg1,_,closure) ->
-    let pkg1_id = pkg1.Mdf.id in
-    G.add_vertex graph pkg1_id;
+  List.iter (fun (pkg,_,closure) ->
+    let id = pkg.Mdf.id in
+    G.add_vertex graph id;
     Util.Progress.progress mainbar;
-    if allconj pkg1.Mdf.depends then begin
+    if allconj pkg.Mdf.depends then begin
       let solver = Depsolver_int.init_solver ~idlist:closure mdf.Mdf.index in
-      match Depsolver_int.solve solver (Diagnostic_int.Sng pkg1_id) with
+      match Depsolver_int.solve solver (Diagnostic_int.Sng id) with
       |Diagnostic_int.Failure(_) -> ()
-      |Diagnostic_int.Success(f) -> check_strong graph solver pkg1_id (f ())
+      |Diagnostic_int.Success(f) -> check_strong graph solver id (f ())
     end
   ) available ;
+
   Util.Timer.stop strongtimer (SO.O.add_transitive_closure graph)
+;;
 
 (* XXX this can be refactored in a better way ... *)
 let strongdeps mdf idlist =
@@ -159,6 +154,12 @@ let strongdeps_univ mdf =
   Util.Timer.stop conjtimer ();
   strongdeps_int graph mdf l
 
-(* we assume the graph is NOT detransitivitized *)
+(** return the impact set (list) of the node [q] in [graph] *)
+(** invariant : we assume the graph is NOT detransitivitized *)
 let impactset graph q =
   G.fold_pred (fun p acc -> p :: acc ) graph q []
+
+(** return the list of strong dependencies of the node [q] in [graph] *)
+(** invariant : we assume the graph is NOT detransitivitized *)
+let strongset graph q =
+  G.fold_succ (fun p acc -> p :: acc ) graph q []
