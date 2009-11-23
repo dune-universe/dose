@@ -24,6 +24,8 @@ module GraphOper (G : Sig.I) = struct
       with the proviso that we know that our graph already is a transitive 
       closure *)
   let transitive_reduction graph =
+    let timer = Util.Timer.create "Defaultgraph.GraphOper.transitive_reduction" in
+    Util.Timer.start timer;
     G.iter_vertex (fun v ->
       List.iter (fun v' ->
         if v <> v' then
@@ -32,7 +34,8 @@ module GraphOper (G : Sig.I) = struct
             G.remove_edge graph v v''
         ) (G.succ graph v')
       ) (G.succ graph v);
-    ) graph
+    ) graph;
+    Util.Timer.stop timer ()
 
   module O = Oper.I (G) 
   
@@ -121,6 +124,8 @@ module SyntacticDependencyGraph = struct
 
   (** Build a Syntactic Dependency Graph graph from the give cudf universe *)
   let dependency_graph universe =
+    let timer = Util.Timer.create "Defaultgraph.GraphOper.transitive_reduction" in
+    Util.Timer.start timer;
     let maps = CudfAdd.build_maps universe in
     let gr = G.create () in
     Cudf.iter_packages (fun pkg ->
@@ -162,7 +167,7 @@ module SyntacticDependencyGraph = struct
       ) (maps.CudfAdd.who_conflicts pkg)
     ) universe
     ;
-    gr
+    Util.Timer.stop timer gr
   ;;
 
 end
@@ -315,6 +320,8 @@ module StrongDepGraph = struct
 
   (* PackageGraph.G -> StrongDepGraph.G *)
   let transform_out pkggraph =
+    let timer = Util.Timer.create "Defaultgraph.StrongDepGraph.transform_out" in
+    Util.Timer.start timer;
     let version p =
       try (p.Cudf.package,Cudf.lookup_package_property p "Number")
       with Not_found -> (p.Cudf.package,string_of_int p.Cudf.version)
@@ -329,10 +336,12 @@ module StrongDepGraph = struct
       let (np,vp) = version p in
       G.add_vertex graph (np,vp)
     ) pkggraph;
-    graph
+    Util.Timer.stop timer graph
 
   (* StrongDepGraph.G -> PackageGraph.G *)
   let transform_in pkglist graph =
+    let timer = Util.Timer.create "Defaultgraph.StrongDepGraph.transform_in" in
+    Util.Timer.start timer;
     let vermap = CudfAdd.realversionmap pkglist in
     let package vermap (n,v) =
         try Hashtbl.find vermap (n,v) with Not_found -> assert false
@@ -347,9 +356,11 @@ module StrongDepGraph = struct
       let v = package vermap p in
       PackageGraph.G.add_vertex pkggraph v
     ) graph;
-    pkggraph
+    Util.Timer.stop timer pkggraph
 
   let load pkglist filename =
+    let timer = Util.Timer.create "Defaultgraph.StrongDepGraph.load" in
+    Util.Timer.start timer;
     let ic = open_in filename in
     let graph = ((Marshal.from_channel ic) :> G.t) in
     close_in ic ;
@@ -357,7 +368,7 @@ module StrongDepGraph = struct
     let tg = transform_in pkglist graph in
     let sg = PackageGraph.O.O.add_transitive_closure tg in
     Common.Util.print_info "done";
-    sg
+    Util.Timer.stop timer sg
 
   (* StrongDepGraph.G -> PackageGraph.G *)
   let out ?(dump=None) ?(dot=false) ?(detrans=false) pkggraph =

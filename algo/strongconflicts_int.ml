@@ -35,17 +35,7 @@ open Depsolver_int
 
 module ST = Set.Make (struct type t = (int * int) let compare = Pervasives.compare end)
 module S = Set.Make (struct type t = int let compare = Pervasives.compare end)
-type cl = { rdc : S.t ; impactset : S.t; rd : S.t } 
-
-let impactset graph q =
-  if SG.mem_vertex graph q then
-    SG.fold_pred (fun p acc -> S.add p acc) graph q S.empty
-  else S.empty
-
-let strongset graph q =
-  if SG.mem_vertex graph q then
-    SG.fold_succ (fun p acc -> S.add p acc) graph q S.empty
-  else S.empty
+type cl = { rdc : S.t ; rd : S.t } 
 
 let swap (p,q) = if p < q then (p,q) else (q,p) ;;
 
@@ -75,7 +65,7 @@ let strongconflicts sdgraph mdf idlist =
   let reverse = reverse_dependencies mdf in
   let size = (List.length idlist) in
   let cachegraph = UG.create ~size:(SG.nb_vertex sdgraph) () in
-  let cl_dummy = {rdc = S.empty ; impactset = S.empty; rd = S.empty} in
+  let cl_dummy = {rdc = S.empty ; rd = S.empty} in
   let closures = Array.create size cl_dummy in
   let to_set l = List.fold_right S.add l S.empty in
 
@@ -84,12 +74,11 @@ let strongconflicts sdgraph mdf idlist =
   for i=0 to (size - 1) do
     Util.Progress.progress seedingbar;
     let rdc = to_set (reverse_dependency_closure reverse [i]) in
-    let is = impactset sdgraph i in
-    let ss = strongset sdgraph i in
     let rd = to_set reverse.(i) in
-    closures.(i) <- {rdc = rdc; impactset = is ; rd = rd};
+    closures.(i) <- {rdc = rdc; rd = rd};
   done;
   SG.iter_edges (UG.add_edge cachegraph) sdgraph ;
+  (* we add all vertex so to avoid succ exceptions *)
   SG.iter_vertex (UG.add_vertex cachegraph) sdgraph ;
   Util.print_info " done";
 
@@ -98,7 +87,7 @@ let strongconflicts sdgraph mdf idlist =
   let cmp (x1,y1) (x2,y2) =
     let (a1,b1) = (closures.(x1).rdc, closures.(y1).rdc) in
     let (a2,b2) = (closures.(x2).rdc, closures.(y2).rdc) in
-    ((S.cardinal a2) * (S.cardinal b2)) - ((S.cardinal a1) * (S.cardinal b1))
+    ((S.cardinal a1) * (S.cardinal b1)) - ((S.cardinal a2) * (S.cardinal b2))
   in
 
   let ex = List.unique (List.sort ~cmp (explicit mdf)) in
@@ -108,16 +97,33 @@ let strongconflicts sdgraph mdf idlist =
   (* either all predecessor are the same or there exists a 
    * predecessor in the intersection that can however always
    * be installed with x and y *)
-  let triangles x y =
+  let triangles mdf x y =
     let s1 = closures.(x).rd in
     let s2 = closures.(y).rd in
-    if not (S.equal s1 s2) then true
+(*    Printf.eprintf "s1 :";
+    S.iter (Printf.eprintf "%d ") s1;
+    Printf.eprintf "\ns2 :";
+    S.iter (Printf.eprintf "%d ") s2;
+    Printf.eprintf "\n"; *)
+    if S.equal s1 s2 then false (* discount the conflict *)
     else begin
       let inter = S.inter s1 s2 in
-      if S.is_empty inter then true
-      else
-        not (List.for_all (fun e -> coinst (e,x) || coinst (e,y))
-        (S.elements inter))
+(*      Printf.eprintf "inter :";
+      S.iter (Printf.eprintf "%d ") inter;
+      Printf.eprintf "\n";
+*)
+      let s = S.diff (S.union s1 s2) inter in
+(*      Printf.eprintf "s :";
+      S.iter (Printf.eprintf "%d ") s;
+      Printf.eprintf "\n";
+      *)
+      if List.for_all (fun e ->
+        let dc = Depsolver_int.dependency_closure ~maxdepth:4 mdf [e] in
+        List.mem x dc && List.mem y dc
+        (*  coinst (e,x) || coinst (e,y)
+        else false *)
+        ) (S.elements s) then false
+      else true
     end
   in
 
@@ -149,7 +155,7 @@ let strongconflicts sdgraph mdf idlist =
 
       Util.Progress.set_total localbar (S.cardinal a);
 
-      if triangles x y then begin
+      if triangles mdf x y then begin
         S.iter (fun p ->
           S.iter (fun q ->
             incr donei;

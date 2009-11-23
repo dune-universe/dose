@@ -156,10 +156,23 @@ let strongdeps_univ mdf =
 
 (** return the impact set (list) of the node [q] in [graph] *)
 (** invariant : we assume the graph is NOT detransitivitized *)
-let impactset graph q =
+let impactlist graph q =
   G.fold_pred (fun p acc -> p :: acc ) graph q []
 
 (** return the list of strong dependencies of the node [q] in [graph] *)
 (** invariant : we assume the graph is NOT detransitivitized *)
-let strongset graph q =
+let stronglist graph q =
   G.fold_succ (fun p acc -> p :: acc ) graph q []
+
+module S = Set.Make (struct type t = int let compare = Pervasives.compare end)
+
+let impactset graph q =
+  if G.mem_vertex graph q then
+    G.fold_pred (fun p acc -> S.add p acc) graph q S.empty
+  else S.empty
+
+let strongset graph q =
+  if G.mem_vertex graph q then
+    G.fold_succ (fun p acc -> S.add p acc) graph q S.empty
+  else S.empty
+

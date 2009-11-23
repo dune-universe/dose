@@ -259,8 +259,9 @@ let dependency_closure ?(maxdepth=max_int) mdf idlist =
   done;
   Hashtbl.fold (fun k _ l -> k::l) visited []
 
-(** return the dependency closure of the reverse dependency graph 
- 
+(** return the dependency closure of the reverse dependency graph.
+    The visit of the code is bfs.    
+
     @param maxdepth the maximum cone depth (infinite by default)
     @param index the package universe
     @param l a subset of [index]
