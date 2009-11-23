@@ -5,7 +5,7 @@
 open Common
 open ExtLib
 open Cudf
-open Cudf_types
+open Cudf_types_pp
 open Diagnostic
 
 module Graph = Defaultgraphs.SyntacticDependencyGraph
@@ -162,6 +162,10 @@ begin
     log (Printf.sprintf "packages %s and %s have all-common predecessors (%s), ignoring..." (string_of_pkgname c1.package) (string_of_pkgname c2.package)
     (String.concat "," (List.map (fun c -> string_of_pkgname c.package) common)));
     add_pair c1 c2 Explicit (c1,c2);
+    List.iter (fun p ->
+      add_pair p c1 (Other []) (p,c1);
+      add_pair p c2 (Other []) (p,c2);
+    ) common;
     false
   end
   else if List.fold_left (fun acc pred ->
@@ -179,6 +183,10 @@ begin
     ) true common then
     (log (Printf.sprintf "Discounting conflict (%s, %s)\n" (string_of_pkgname c1.package) (string_of_pkgname c2.package));
     add_pair c1 c2 Explicit (c1,c2);
+    List.map (fun p ->
+      add_pair p c1 (Other []) (p,c1);
+      add_pair p c2 (Other []) (p,c2);
+    ) common;
     false)
   else
     true
@@ -260,19 +268,9 @@ begin
               log (Printf.sprintf "%s and %s share a unique predecessor.\n"
               (string_of_pkgname c1.package) (string_of_pkgname c2.package));
               add_pair c1 c2 Explicit (c1,c2);
+              add_pair c1_pred c1 (Other []) (c1_pred,c1);
+              add_pair c2_pred c2 (Other []) (c2_pred,c2);
               false
-            (* not (List.exists (fun v ->
-              match v with
-              | V.Pkg _ -> false
-              | V.Or _ -> let vs = G.succ gr v in
-                begin
-                  if vs = [V.Pkg c1; V.Pkg c2] || vs = [V.Pkg c2; V.Pkg c1]
-                  then
-                    (log "-> and it is OK\n"; true)
-                  else
-                    false
-                end
-            ) (G.succ gr (V.Pkg c1_pred))) *)
             end
             else true
           end
