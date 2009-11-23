@@ -13,11 +13,19 @@ module G = Graph.G
 module V = Graph.PkgV
 module E = Graph.PkgE
 
+let enable_debug () =
+    (* enable the progress bars *)
+    Common.Util.Progress.enable "Algo.Strongdep.main" ;
+    Common.Util.Progress.enable "SyntacticDependencyGraph.dependency_graph" ;
+    Common.Util.set_verbosity Common.Util.Summary
+;;
+
+
 let usage = Printf.sprintf "usage: %s [--debug] [--log file] uri" Sys.argv.(0);;
 let logfile = ref (open_out "/dev/null");;
 
 let options = [
-  ("--debug", Arg.Unit (fun () -> Util.set_verbosity Util.Summary), "Print debug information");
+  ("--debug", Arg.Unit enable_debug, "Print debug information");
   ("--log", Arg.String (fun s -> close_out !logfile; logfile := open_out s), "Dump log information in file");
 ];;
 
@@ -183,7 +191,7 @@ begin
     ) true common then
     (log (Printf.sprintf "Discounting conflict (%s, %s)\n" (string_of_pkgname c1.package) (string_of_pkgname c2.package));
     add_pair c1 c2 Explicit (c1,c2);
-    List.map (fun p ->
+    List.iter (fun p ->
       add_pair p c1 (Other []) (p,c1);
       add_pair p c2 (Other []) (p,c2);
     ) common;
