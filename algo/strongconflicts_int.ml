@@ -98,7 +98,7 @@ let strongconflicts sdgraph mdf idlist =
   let cmp (x1,y1) (x2,y2) =
     let (a1,b1) = (closures.(x1).rdc, closures.(y1).rdc) in
     let (a2,b2) = (closures.(x2).rdc, closures.(y2).rdc) in
-    ((S.cardinal a1) * (S.cardinal b1)) - ((S.cardinal a2) * (S.cardinal b2))
+    ((S.cardinal a2) * (S.cardinal b2)) - ((S.cardinal a1) * (S.cardinal b1))
   in
 
   let ex = List.unique (List.sort ~cmp (explicit mdf)) in
@@ -112,9 +112,13 @@ let strongconflicts sdgraph mdf idlist =
     let s1 = closures.(x).rd in
     let s2 = closures.(y).rd in
     if not (S.equal s1 s2) then true
-    else
-      not (List.exists (fun e -> coinst (e,x) && coinst (e,y))
-      (S.elements (S.inter s1 s2)))
+    else begin
+      let inter = S.inter s1 s2 in
+      if S.is_empty inter then true
+      else
+        not (List.for_all (fun e -> coinst (e,x) || coinst (e,y))
+        (S.elements inter))
+    end
   in
 
   (* The simplest algorithm. We iterate over all explicit conflicts, 

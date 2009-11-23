@@ -181,6 +181,7 @@ module PackageGraph = struct
   end
 
   module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
+  module O = GraphOper(G)
 
   module Display =
     struct
@@ -278,6 +279,7 @@ module StrongDepGraph = struct
   end
 
   module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
+  module O = GraphOper(G)
 
   module Display =
     struct
@@ -310,6 +312,79 @@ module StrongDepGraph = struct
       let edge _ = ()
     end
   )
+
+  (* PackageGraph.G -> StrongDepGraph.G *)
+  let transform_out pkggraph =
+    let version p =
+      try (p.Cudf.package,Cudf.lookup_package_property p "Number")
+      with Not_found -> (p.Cudf.package,string_of_int p.Cudf.version)
+    in
+    let graph = G.create () in
+    PackageGraph.G.iter_edges (fun p q ->
+      let (np,vp) = version p in
+      let (nq,vq) = version q in
+      G.add_edge graph (np,vp) (nq,vq)
+    ) pkggraph ;
+    PackageGraph.G.iter_vertex (fun p ->
+      let (np,vp) = version p in
+      G.add_vertex graph (np,vp)
+    ) pkggraph;
+    graph
+
+  (* StrongDepGraph.G -> PackageGraph.G *)
+  let transform_in pkglist graph =
+    let vermap = CudfAdd.realversionmap pkglist in
+    let package vermap (n,v) =
+        try Hashtbl.find vermap (n,v) with Not_found -> assert false
+    in
+    let pkggraph = PackageGraph.G.create () in
+    G.iter_edges (fun p q ->
+      let x = package vermap p in
+      let y = package vermap q in
+      PackageGraph.G.add_edge pkggraph x y
+    ) graph ;
+    G.iter_vertex (fun p ->
+      let v = package vermap p in
+      PackageGraph.G.add_vertex pkggraph v
+    ) graph;
+    pkggraph
+
+  let load pkglist filename =
+    let ic = open_in filename in
+    let graph = ((Marshal.from_channel ic) :> G.t) in
+    close_in ic ;
+    Common.Util.print_info "Load Strong Dependencies graph";
+    let tg = transform_in pkglist graph in
+    let sg = PackageGraph.O.O.add_transitive_closure tg in
+    Common.Util.print_info "done";
+    sg
+
+  (* StrongDepGraph.G -> PackageGraph.G *)
+  let out ?(dump=None) ?(dot=false) ?(detrans=false) pkggraph =
+    Common.Util.print_info "Dumping Graph : nodes %d , edges %d"
+    (PackageGraph.G.nb_vertex pkggraph) (PackageGraph.G.nb_edges pkggraph) ;
+    
+    let cudfgraph = transform_out pkggraph in
+
+    if detrans then begin
+      O.transitive_reduction cudfgraph;
+      Common.Util.print_info "After transitive reduction : nodes %d , edges %d"
+      (G.nb_vertex cudfgraph) (G.nb_edges cudfgraph)
+    end ;
+
+    if dump <> None then begin
+      let f = Option.get dump in
+      Common.Util.print_info "Dumping graph in %s\n" f ;
+      let oc = open_out f in
+      Marshal.to_channel oc (cudfgraph :> G.t) [];
+      close_out oc
+    end ;
+
+    if dot then begin
+      D.output_graph stdout cudfgraph;
+      print_newline ();
+    end
+  ;;
 
   module S = Set.Make(PkgV)
 end

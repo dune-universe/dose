@@ -16,7 +16,7 @@ open Algo
 open Graph
 
 let enable_debug () = 
-  (* enable the progress bar for strongdeps *)
+  (* enable the progress bars *)
   Common.Util.Progress.enable "Algo.Strongdep.main" ;
   Common.Util.Progress.enable "Algo.Strongdep.conj" ;
   Common.Util.set_verbosity Common.Util.Summary
@@ -50,19 +50,6 @@ module SG = Defaultgraphs.StrongDepGraph.G
 module SD = Defaultgraphs.StrongDepGraph.D
 module SO = Defaultgraphs.GraphOper(SG)
 
-let version p =
-  try (p.package,Cudf.lookup_package_property p "Number")
-  with Not_found -> (p.package,string_of_int p.version)
-
-let transform cudfgraph =
-  let graph = SG.create () in
-  G.iter_edges (fun p q ->
-    let (np,vp) = version p in
-    let (nq,vq) = version q in
-    SG.add_edge graph (np,vp) (nq,vq)
-  ) cudfgraph ;
-  graph
-
 let parse uri =
   Printf.eprintf "Parsing and normalizing...%!" ;
   let timer = Common.Util.Timer.create "Parsing and normalizing" in
@@ -84,32 +71,40 @@ let parse uri =
   pkglist
 ;;
 
-let out ?(dump=false) ?(dot=false) ?(detrans=false) g =
-  Common.Util.print_info "Before transitive reduction : nodes %d , edges %d"
-  (SG.nb_vertex g) (SG.nb_edges g) ;
+let main () =
+  at_exit (fun () -> Common.Util.dump Format.err_formatter);
+  let files = ref [] in
+  let _ =
+    try Arg.parse options (fun f -> files := f::!files ) usage
+    with Arg.Bad s -> failwith s
+  in
+  match !files with
+  |[f] when !Options.incr = false ->
+      let universe = Cudf.load_universe (parse f) in
+      let sdgraph = Strongdeps.strongdeps_univ universe in
+      Defaultgraphs.StrongDepGraph.out 
+      ~dump:!Options.dump ~dot:!Options.dot ~detrans:!Options.detrans
+      sdgraph
+(*  |[newl;oldl;oldg] when !Options.incr = true ->
+      begin
+        let oldgraph = Defaultgraphs.StrongDepGraph.load oldg in
+        let g = strong_incr (oldgraph,parse oldl) (parse newl) in
+        Defaultgraphs.StrongDepGraph.out
+        ~dump:!Options.dump ~dot:!Options.dot ~detrans:!Options.detrans
+        g
+      end
+*)
+  |_ -> (print_endline usage ; exit 2)
 
-  if !Options.dump <> None || dump then begin
-    let f =
-      if dump then "graph.marshal"
-      else Option.get !Options.dump
-    in
-    Printf.eprintf "Dumping graph in %s\n" f ;
-    SO.transitive_reduction g;
-    let oc = open_out f in
-    Marshal.to_channel oc (g :> SG.t) [];
-    close_out oc
-  end ;
-
-  if !Options.dot || dot then begin
-    if !Options.detrans || detrans then
-      SO.transitive_reduction g;
-    SD.output_graph stdout g;
-    print_newline ();
-  end ;
-
-  Common.Util.print_info "After transitive reduction : nodes %d , edges %d"
-  (SG.nb_vertex g) (SG.nb_edges g)
 ;;
+
+main ();;
+
+(* 
+let version p =
+  try (p.package,Cudf.lookup_package_property p "Number")
+  with Not_found -> (p.package,string_of_int p.version)
+
 
 (* this function can be more efficient if integrated in the library
  * and written using the low level strongdeps_int instead of 
@@ -203,7 +198,8 @@ let strong_incr (oldgraph,oldpkglist) newpkglist =
 
   (* the graph of strong dependencies is computer considering a subset newlist
    * of packages of the new universe  *)
-  let newgraph = transform (Strongdeps.strongdeps newuniv newlist) in
+  let sdgraph = Strongdeps.strongdeps newuniv newlist in
+  let newgraph = Defaultgraphs.StrongDepGraph.transform sdgraph in
   SO.transitive_reduction newgraph;
   (* out ~dot:true ~detrans:true newgraph;
   print_endline "-----------------------------";
@@ -225,27 +221,4 @@ let strong_incr (oldgraph,oldpkglist) newpkglist =
 
 ;;
 
-let main () =
-  at_exit (fun () -> Common.Util.dump Format.err_formatter);
-  let files = ref [] in
-  let _ =
-    try Arg.parse options (fun f -> files := f::!files ) usage
-    with Arg.Bad s -> failwith s
-  in
-  match !files with
-  |[f] when !Options.incr = false ->
-      let universe = Cudf.load_universe (parse f) in
-      out (transform (Strongdeps.strongdeps_univ universe))
-  |[newl;oldl;oldg] when !Options.incr = true ->
-      begin
-        let ic = open_in oldg in 
-        let oldgraph = ((Marshal.from_channel ic) :> SG.t) in 
-        close_in ic ;
-        let g = strong_incr (oldgraph,parse oldl) (parse newl) in
-        out g
-      end
-  |_ -> (print_endline usage ; exit 2)
-
-;;
-
-main ();;
+*)

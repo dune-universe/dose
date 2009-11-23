@@ -42,23 +42,6 @@ module SG = Defaultgraphs.StrongDepGraph.G
 module SD = Defaultgraphs.StrongDepGraph.D
 module SO = Defaultgraphs.GraphOper(G)
 
-let transform pkglist graph =
-  let vermap = CudfAdd.realversionmap pkglist in
-  let package vermap (n,v) =
-      try Hashtbl.find vermap (n,v) with Not_found -> assert false
-  in
-  let cudfgraph = G.create () in
-  SG.iter_vertex (fun p ->
-    let v = package vermap p in 
-    G.add_vertex cudfgraph v
-  ) graph;
-  SG.iter_edges (fun p q ->
-    let x = package vermap p in
-    let y = package vermap q in
-    G.add_edge cudfgraph x y
-  ) graph ;
-  cudfgraph
-
 let parse uri =
   Printf.eprintf "Parsing and normalizing...%!" ;
   let timer = Common.Util.Timer.create "Parsing and normalizing" in
@@ -107,11 +90,11 @@ let main () =
       let pkglist = parse u in
       let universe = Cudf.load_universe pkglist in
       Common.Util.print_info "Computing Strong Dependencies";
-      (* let tgraph = Strongdeps.strongdeps_univ universe in *)
-      let tgraph = Strongdeps.conjdeps universe in
+      (* let sdgraph = Strongdeps.strongdeps_univ universe in *)
+      let sdgraph = Strongdeps.conjdeps universe in
       Common.Util.print_info "done";
 
-      let l = Strongconflicts.strongconflicts tgraph universe pkglist in
+      let l = Strongconflicts.strongconflicts sdgraph universe pkglist in
       Common.Util.print_info "Soundness test" ;
       soundness universe l;
       Common.Util.print_info "done"; 
@@ -123,21 +106,11 @@ let main () =
       ;
       Common.Util.print_info "Total strong conflicts %d" (List.length l)
   |[u;g] ->
-      Common.Util.print_info "Parsing Universe";
       let pkglist = parse u in
-      Common.Util.print_info "Load Strong Dependencies graph";
-      let ic = open_in g in 
-      let graph = ((Marshal.from_channel ic) :> SG.t) in 
-      close_in ic ;
-      let tg = transform pkglist graph in
-      Common.Util.print_info "done";
-
-      Common.Util.print_info "Compute transitive closusure of the SD graph";
-      let tgraph = SO.O.add_transitive_closure tg in
-      Common.Util.print_info "done";
+      let sdgraph = Defaultgraphs.StrongDepGraph.load pkglist g in
 
       let universe = Cudf.load_universe pkglist in
-      let l = Strongconflicts.strongconflicts tgraph universe pkglist in
+      let l = Strongconflicts.strongconflicts sdgraph universe pkglist in
 
       Common.Util.print_info "Soundness test " ;
       soundness universe l;
