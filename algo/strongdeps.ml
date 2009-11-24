@@ -75,18 +75,25 @@ let impactset graph q =
   G.fold_pred (fun p acc -> p :: acc ) graph q []
 
 (** compute the conjunctive dependency graph *)
-let conjdeps universe =
+let conjdeps_univ universe =
   let mdf = Mdf.load_from_universe universe in
   let g = Strongdeps_int.G.create () in
   for id=0 to (Array.length mdf.Mdf.index)-1 do
     Strongdeps_int.conjdepgraph_int g mdf.Mdf.index id
   done;
   let clousure = Strongdeps_int.SO.O.add_transitive_closure g in
-  Common.Util.print_info
-  "Conjunctive dependency graph (before clousure): nodes %d , edges %d"
-  (Strongdeps_int.G.nb_vertex g) (Strongdeps_int.G.nb_edges g); 
-  Common.Util.print_info
-  "Conjunctive dependency graph (after clousure): nodes %d , edges %d" 
-  (Strongdeps_int.G.nb_vertex clousure) (Strongdeps_int.G.nb_edges clousure); 
+  intcudf mdf.Mdf.index clousure
+
+(** compute the conjunctive dependency graph considering only packages in
+    [pkglist] *)
+let conjdeps universe pkglist =
+  let mdf = Mdf.load_from_universe universe in
+  let maps = mdf.Mdf.maps in
+  let idlist = List.map maps.map#vartoint pkglist in
+  let g = Strongdeps_int.G.create () in
+  List.iter (fun id ->
+    Strongdeps_int.conjdepgraph_int g mdf.Mdf.index id
+  ) idlist ;
+  let clousure = Strongdeps_int.SO.O.add_transitive_closure g in
   intcudf mdf.Mdf.index clousure
 

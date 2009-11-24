@@ -91,7 +91,7 @@ let main () =
       let universe = Cudf.load_universe pkglist in
       Common.Util.print_info "Computing Strong Dependencies";
       (* let sdgraph = Strongdeps.strongdeps_univ universe in *)
-      let sdgraph = Strongdeps.conjdeps universe in
+      let sdgraph = Strongdeps.conjdeps_univ universe in
       Common.Util.print_info "done";
 
       let l = Strongconflicts.strongconflicts sdgraph universe pkglist in

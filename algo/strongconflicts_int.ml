@@ -96,35 +96,32 @@ let strongconflicts sdgraph mdf idlist =
 
   (* either all predecessor are the same or there exists a 
    * predecessor in the intersection that can however always
-   * be installed with x and y *)
+   * choose between x and y *)
   let triangles mdf x y =
     let s1 = closures.(x).rd in
     let s2 = closures.(y).rd in
-(*    Printf.eprintf "s1 :";
-    S.iter (Printf.eprintf "%d ") s1;
-    Printf.eprintf "\ns2 :";
-    S.iter (Printf.eprintf "%d ") s2;
-    Printf.eprintf "\n"; *)
-    if S.equal s1 s2 then false (* discount the conflict *)
-    else begin
-      let inter = S.inter s1 s2 in
-(*      Printf.eprintf "inter :";
-      S.iter (Printf.eprintf "%d ") inter;
-      Printf.eprintf "\n";
-*)
-      let s = S.diff (S.union s1 s2) inter in
-(*      Printf.eprintf "s :";
-      S.iter (Printf.eprintf "%d ") s;
-      Printf.eprintf "\n";
-      *)
+    if S.equal s1 s2 then  
+      (* we can always choose either x or y *)
       if List.for_all (fun e ->
-        let dc = Depsolver_int.dependency_closure ~maxdepth:4 mdf [e] in
-        List.mem x dc && List.mem y dc
-        (*  coinst (e,x) || coinst (e,y)
-        else false *)
+        List.exists (fun (_,a,_) ->
+          Array.mem x a && Array.mem y a
+        ) (Array.to_list index.(e).Mdf.depends)
+      ) (S.elements s1) then false
+      (* common predecessors, but no x,y disjunctions *)
+      else true 
+    else (* begin
+      (* all common predecessors *)
+      let inter = S.inter s1 s2 in
+      (* predecessors that are not common *)
+      let s = S.diff (S.union s1 s2) inter in
+      (* all non-common predecessors can be installed with both x and y,
+       * meaning that I can always choose one of them *)
+      if List.for_all (fun e ->
+        let dc = Depsolver_int.dependency_closure ~maxdepth:2 mdf [e] in
+        List.mem x dc && List.mem y dc && coinst(x,e) && coinst(y,e)
         ) (S.elements s) then false
       else true
-    end
+    end *) true
   in
 
   (* The simplest algorithm. We iterate over all explicit conflicts, 
@@ -133,10 +130,11 @@ let strongconflicts sdgraph mdf idlist =
    * Then we iter over the reverse dependency closures of the selected 
    * conflict and we check all pairs that have not been considered before.
    * *)
-  let stronglist = ref [] in
+  (* let stronglist = ref [] in *)
+  let stronglist = UG.create () in
   List.iter (fun (x,y) -> 
     incr i;
-    stronglist := (swap(x,y)) :: !stronglist ;
+    UG.add_edge stronglist x y;
     if not(UG.mem_edge cachegraph x y) then begin
       let pkg_x = index.(x) in
       let pkg_y = index.(y) in
@@ -148,7 +146,7 @@ let strongconflicts sdgraph mdf idlist =
       !i conflict_size
       (CudfAdd.print_package pkg_x.Mdf.pkg) 
       (CudfAdd.print_package pkg_y.Mdf.pkg)
-      (List.length !stronglist)
+      (UG.nb_edges stronglist)
       ((S.cardinal a) * (S.cardinal b));
 
       UG.add_edge cachegraph x y;
@@ -161,8 +159,8 @@ let strongconflicts sdgraph mdf idlist =
             incr donei;
             if not (UG.mem_edge cachegraph p q) then begin
               UG.add_edge cachegraph p q;
-              if not (coinst (p,q)) then
-                stronglist := (swap(p,q)) :: !stronglist ;
+              if not (coinst (p,q)) then 
+                UG.add_edge stronglist p q;
             end
           ) (S.diff b (to_set (UG.succ cachegraph p))) ;
           Util.Progress.progress localbar;
@@ -176,21 +174,6 @@ let strongconflicts sdgraph mdf idlist =
     end
   ) ex ;
 
-(*  let result = Hashtbl.create (2 * (List.length !stronglist)) in
-  List.iter (fun (p,q) ->
-    if not (Hashtbl.mem result (swap(p,q))) then begin
-      let isp = S.add p closures.(p).impactset in
-      let isq = S.add q closures.(q).impactset in
-      S.iter (fun a ->
-        S.iter (fun b ->
-          Hashtbl.replace result (swap (a,b)) ()
-        ) isp
-      ) isq
-    end
-  ) !stronglist;
-*)
-  Util.print_info " partial tuple examined %d" (List.length !stronglist);
   Util.print_info " total tuple examined %d" !total;
-  (* Hashtbl.fold (fun k _ l -> k::l) result [] *)
-  List.unique !stronglist
+  UG.fold_edges (fun p q l -> swap(p,q) :: l) stronglist []
 ;;

@@ -15,6 +15,7 @@ open Graph
 open Common
 
 let print_package = CudfAdd.print_package
+let depgraphbar = Util.Progress.create "SyntacticDependencyGraph.dependency_graph"
 
 (** generic operation over graphs *)
 module GraphOper (G : Sig.I) = struct
@@ -127,8 +128,10 @@ module SyntacticDependencyGraph = struct
     let timer = Util.Timer.create "Defaultgraph.GraphOper.transitive_reduction" in
     Util.Timer.start timer;
     let maps = CudfAdd.build_maps universe in
+    Util.Progress.set_total depgraphbar (Cudf.universe_size universe);
     let gr = G.create () in
     Cudf.iter_packages (fun pkg ->
+      Util.Progress.progress depgraphbar;
       let vpid = G.V.create (PkgV.Pkg pkg) in
       let c = ref 0 in
       List.iter (function

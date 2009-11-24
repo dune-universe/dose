@@ -18,8 +18,6 @@ open Common
 
 (** progress bar *)
 let progressbar_init = Util.Progress.create "Depsolver_int.init_solver"
-
-(** progress bar *)
 let progressbar_univcheck = Util.Progress.create "Depsolver_int.univcheck"
 
 module R = struct type reason = Diagnostic_int.reason end
