@@ -18,14 +18,14 @@ open CudfAdd
 
 module SG = Strongdeps_int.G
 
-(* we use an undirected graph as cache *)
 module PkgV = struct
     type t = int
     let compare = Pervasives.compare
     let hash i = i
     let equal = (=)
 end
-module UG = Graph.Imperative.Graph.Concrete(PkgV)
+(* unlabelled indirected graph *)
+module IG = Graph.Imperative.Graph.Concrete(PkgV)
 
 (** progress bar *)
 let seedingbar = Util.Progress.create "Algo.Strongconflicts.seeding" ;;
@@ -58,28 +58,38 @@ let explicit mdf =
   done;
   !l
 
-let strongconflicts sdgraph mdf idlist =
+let strongconflicts ?graph mdf idlist =
   let index = mdf.Mdf.index in
   let solver = init_solver ~idlist index in
   let coinst = coinst_partial solver in
   let reverse = reverse_dependencies mdf in
   let size = (List.length idlist) in
-  let cachegraph = UG.create ~size:(SG.nb_vertex sdgraph) () in
+  let cachegraph = IG.create ~size:size () in
   let cl_dummy = {rdc = S.empty ; rd = S.empty} in
   let closures = Array.create size cl_dummy in
   let to_set l = List.fold_right S.add l S.empty in
 
   Util.print_info "Pre-seeding ...";
+
   Util.Progress.set_total seedingbar (List.length idlist);
   for i=0 to (size - 1) do
     Util.Progress.progress seedingbar;
     let rdc = to_set (reverse_dependency_closure reverse [i]) in
     let rd = to_set reverse.(i) in
     closures.(i) <- {rdc = rdc; rd = rd};
+
+    IG.add_vertex cachegraph i ;
+    if Option.is_none graph then begin
+      Array.iter (function
+        |(_,[|p|],_) -> IG.add_edge cachegraph i p
+        | _ -> ()
+      ) index.(i).Mdf.depends
+    end 
   done;
-  SG.iter_edges (UG.add_edge cachegraph) sdgraph ;
-  (* we add all vertex so to avoid succ exceptions *)
-  SG.iter_vertex (UG.add_vertex cachegraph) sdgraph ;
+
+  if not(Option.is_none graph) then
+    SG.iter_edges (IG.add_edge cachegraph) (Option.get graph) ;
+
   Util.print_info " done";
 
   let i = ref 0 in
@@ -94,6 +104,60 @@ let strongconflicts sdgraph mdf idlist =
   let total = ref 0 in
   let conflict_size = List.length ex in
 
+  (* The simplest algorithm. We iterate over all explicit conflicts, 
+   * filtering out all couples that cannot possiby be in conflict
+   * because either of strong dependencies or because already considered.
+   * Then we iter over the reverse dependency closures of the selected 
+   * conflict and we check all pairs that have not been considered before.
+   * *)
+  (* let stronglist = ref [] in *)
+  let stronglist = IG.create () in
+  List.iter (fun (x,y) -> 
+    incr i;
+    if not(IG.mem_edge cachegraph x y) then begin
+      let pkg_x = index.(x) in
+      let pkg_y = index.(y) in
+      let (a,b) = (closures.(x).rdc, closures.(y).rdc) in 
+      let (a,b) = if S.cardinal a < S.cardinal b then (a,b) else (b,a) in
+      let donei = ref 0 in
+
+      IG.add_edge cachegraph x y;
+      IG.add_edge stronglist x y;
+
+      Util.print_info "(%d of %d) %s # %s ; Strong conflicts %d Tuples %d"
+      !i conflict_size
+      (CudfAdd.print_package pkg_x.Mdf.pkg) 
+      (CudfAdd.print_package pkg_y.Mdf.pkg)
+      (IG.nb_edges stronglist)
+      ((S.cardinal a) * (S.cardinal b));
+
+      Util.Progress.set_total localbar (S.cardinal a);
+
+      if not(S.equal a b) then begin
+        S.iter (fun p ->
+          S.iter (fun q ->
+            incr donei;
+            if not (IG.mem_edge cachegraph p q) then begin
+              IG.add_edge cachegraph p q;
+              if not (coinst (p,q)) then 
+                IG.add_edge stronglist p q;
+            end
+          ) (S.diff b (to_set (IG.succ cachegraph p))) ;
+          Util.Progress.progress localbar;
+        ) a
+      end;
+
+      Util.Progress.reset localbar;
+
+      Util.print_info " | tuple examined %d" !donei;
+      total := !total + !donei
+    end
+  ) ex ;
+  Util.print_info " total tuple examined %d" !total;
+  IG.fold_edges (fun p q l -> swap(p,q) :: l) stronglist []
+;;
+
+(*
   (* either all predecessor are the same or there exists a 
    * predecessor in the intersection that can however always
    * choose between x and y *)
@@ -109,7 +173,8 @@ let strongconflicts sdgraph mdf idlist =
       ) (S.elements s1) then false
       (* common predecessors, but no x,y disjunctions *)
       else true 
-    else (* begin
+    else if S.equal closures.(x).rdc closures.(y).rdc then false else true
+      (* begin
       (* all common predecessors *)
       let inter = S.inter s1 s2 in
       (* predecessors that are not common *)
@@ -121,59 +186,14 @@ let strongconflicts sdgraph mdf idlist =
         List.mem x dc && List.mem y dc && coinst(x,e) && coinst(y,e)
         ) (S.elements s) then false
       else true
-    end *) true
+    end *)
   in
 
-  (* The simplest algorithm. We iterate over all explicit conflicts, 
-   * filtering out all couples that cannot possiby be in conflict
-   * because either of strong dependencies or because already considered.
-   * Then we iter over the reverse dependency closures of the selected 
-   * conflict and we check all pairs that have not been considered before.
-   * *)
-  (* let stronglist = ref [] in *)
-  let stronglist = UG.create () in
-  List.iter (fun (x,y) -> 
-    incr i;
-    UG.add_edge stronglist x y;
-    if not(UG.mem_edge cachegraph x y) then begin
-      let pkg_x = index.(x) in
-      let pkg_y = index.(y) in
-      let (a,b) = (closures.(x).rdc, closures.(y).rdc) in 
-      let (a,b) = if S.cardinal a < S.cardinal b then (a,b) else (b,a) in
-      let donei = ref 0 in
+  let triangles mdf x y = 
+    if S.equal closures.(x).rd closures.(y).rd then false
+    else
+      if S.equal closures.(x).rdc closures.(y).rdc then false
+      else true
+  in
 
-      Util.print_info "(%d of %d) %s # %s ; Strong conflicts %d Tuples %d"
-      !i conflict_size
-      (CudfAdd.print_package pkg_x.Mdf.pkg) 
-      (CudfAdd.print_package pkg_y.Mdf.pkg)
-      (UG.nb_edges stronglist)
-      ((S.cardinal a) * (S.cardinal b));
-
-      UG.add_edge cachegraph x y;
-
-      Util.Progress.set_total localbar (S.cardinal a);
-
-      if triangles mdf x y then begin
-        S.iter (fun p ->
-          S.iter (fun q ->
-            incr donei;
-            if not (UG.mem_edge cachegraph p q) then begin
-              UG.add_edge cachegraph p q;
-              if not (coinst (p,q)) then 
-                UG.add_edge stronglist p q;
-            end
-          ) (S.diff b (to_set (UG.succ cachegraph p))) ;
-          Util.Progress.progress localbar;
-        ) a
-       end ;
-
-      Util.Progress.reset localbar;
-
-      Util.print_info " | tuple examined %d" !donei;
-      total := !total + !donei
-    end
-  ) ex ;
-
-  Util.print_info " total tuple examined %d" !total;
-  UG.fold_edges (fun p q l -> swap(p,q) :: l) stronglist []
-;;
+*)

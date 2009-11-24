@@ -12,11 +12,15 @@
 open Common
 open CudfAdd
 
-let strongconflicts cudfgraph universe pkglist =
+let strongconflicts ?graph universe pkglist =
   let mdf = Mdf.load_from_universe universe in
   let maps = mdf.Mdf.maps in
   let idlist = List.map maps.map#vartoint pkglist in
-  let intgraph = Strongdeps.cudfint maps cudfgraph in
-  let l = Strongconflicts_int.strongconflicts intgraph mdf idlist in
+  let l = 
+    if not(Option.is_none graph) then
+      let intgraph = Strongdeps.cudfint maps (Option.get graph) in
+      Strongconflicts_int.strongconflicts ~graph:intgraph mdf idlist
+    else Strongconflicts_int.strongconflicts mdf idlist
+  in
   List.map (fun (x,y) -> (maps.map#inttovar x,maps.map#inttovar y)) l
 

@@ -25,12 +25,14 @@ exception Done
 
 module Options = struct
   let debug = ref false
+  let strong = ref false
 end
 
 let usage = Printf.sprintf "usage: %s [--options] [strong deps graph] doc" (Sys.argv.(0))
 let options =
   [
    ("--debug", Arg.Unit enable_debug, "Print debug information");
+   ("--strong", Arg.Set Options.strong, "Compute the strong dependency graph")
   ]
 
 (* ----------------------------------- *)
@@ -89,12 +91,15 @@ let main () =
   |[u] ->
       let pkglist = parse u in
       let universe = Cudf.load_universe pkglist in
-      Common.Util.print_info "Computing Strong Dependencies";
-      (* let sdgraph = Strongdeps.strongdeps_univ universe in *)
-      let sdgraph = Strongdeps.conjdeps_univ universe in
-      Common.Util.print_info "done";
 
-      let l = Strongconflicts.strongconflicts sdgraph universe pkglist in
+      let l = 
+        if !Options.strong then
+          let sdg = Strongdeps.strongdeps_univ universe in
+          Strongconflicts.strongconflicts ~graph:sdg universe pkglist
+        else
+          Strongconflicts.strongconflicts universe pkglist
+      in
+
       Common.Util.print_info "Soundness test" ;
       soundness universe l;
       Common.Util.print_info "done"; 
@@ -107,10 +112,10 @@ let main () =
       Common.Util.print_info "Total strong conflicts %d" (List.length l)
   |[u;g] ->
       let pkglist = parse u in
-      let sdgraph = Defaultgraphs.StrongDepGraph.load pkglist g in
+      let sdg = Defaultgraphs.StrongDepGraph.load pkglist g in
 
       let universe = Cudf.load_universe pkglist in
-      let l = Strongconflicts.strongconflicts sdgraph universe pkglist in
+      let l = Strongconflicts.strongconflicts ~graph:sdg universe pkglist in
 
       Common.Util.print_info "Soundness test " ;
       soundness universe l;
