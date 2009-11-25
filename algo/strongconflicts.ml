@@ -12,15 +12,15 @@
 open Common
 open CudfAdd
 
-let strongconflicts ?graph universe pkglist =
+(** strongconflicts return the list of all strong conflicts in universe.
+    
+    invariant: the universe must contain only edos-installable packages : see
+    Depsolver.trim.
+*)
+let strongconflicts universe =
   let mdf = Mdf.load_from_universe universe in
   let maps = mdf.Mdf.maps in
-  let idlist = List.map maps.map#vartoint pkglist in
-  let l = 
-    if not(Option.is_none graph) then
-      let intgraph = Strongdeps.cudfint maps (Option.get graph) in
-      Strongconflicts_int.strongconflicts ~graph:intgraph mdf idlist
-    else Strongconflicts_int.strongconflicts mdf idlist
-  in
+  let idlist = Cudf.fold_packages (fun l p -> (maps.map#vartoint p)::l) [] universe in
+  let l = Strongconflicts_int.strongconflicts mdf idlist in
   List.map (fun (x,y) -> (maps.map#inttovar x,maps.map#inttovar y)) l
 

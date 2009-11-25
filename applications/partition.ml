@@ -99,6 +99,8 @@ let connected_components g =
   !l
 ;;
 
+let cmp l1 l2 = (List.length l2) - (List.length l1)
+
 let main () =
   at_exit (fun () -> Common.Util.dump Format.err_formatter);
   let files = ref [] in
@@ -112,6 +114,10 @@ let main () =
       let mdf = Mdf.load_from_list pkglist in
       let cg = conflictgraph mdf in
       let cc = connected_components cg in
+      Printf.eprintf "conflict graph = vertex : %d , edges : %d\n"
+      (IG.nb_vertex cg)(IG.nb_edges cg);
+      Printf.eprintf "connected components = n. %d , largest : %d\n"
+      (List.length cc) (List.length (List.hd (List.sort ~cmp:cmp cc)));
       ()
       (* conflict graph,
        * connected components,
@@ -120,3 +126,4 @@ let main () =
   |_ -> (print_endline usage ; exit 2)
 ;;
 
+main ();;

@@ -35,14 +35,6 @@ let print_warning ?(ppf=Format.err_formatter) fmt =
 let print_info ?(ppf=Format.err_formatter) fmt =
   print ppf Summary "Info" fmt
 
-(*
-let print_warning ?(ppf=Format.err_formatter) ?(v=Summary) s =
-  print ppf v "Warning" s
-
-let print_info ?(ppf=Format.err_formatter) ?(v=Summary) s =
-  print ppf v "Info" s
-*)
-
 let gettimeofday = ref (fun _ -> 0.)
 let () = gettimeofday := Unix.gettimeofday
 
@@ -178,5 +170,6 @@ let print_process_time ppf =
   Format.fprintf ppf "Process time (sys):   %5.2f\n" pt.Unix.tms_stime
 ;;
 
+(* XXX this does not work for some reason ... *)
 register Summary (fun ppf -> print_process_time ppf) ;;
 

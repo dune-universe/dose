@@ -89,16 +89,8 @@ let main () =
   in
   match !files with
   |[u] ->
-      let pkglist = parse u in
-      let universe = Cudf.load_universe pkglist in
-
-      let l = 
-        if !Options.strong then
-          let sdg = Strongdeps.strongdeps_univ universe in
-          Strongconflicts.strongconflicts ~graph:sdg universe pkglist
-        else
-          Strongconflicts.strongconflicts universe pkglist
-      in
+      let universe = Depsolver.trim (Cudf.load_universe (parse u)) in
+      let l = Strongconflicts.strongconflicts universe in
 
       Common.Util.print_info "Soundness test" ;
       soundness universe l;
@@ -108,24 +100,6 @@ let main () =
         let (x,y) = swap (x,y) in
         Printf.printf "%s <-> %s\n" (CudfAdd.print_package x) (CudfAdd.print_package y)
       ) l
-      ;
-      Common.Util.print_info "Total strong conflicts %d" (List.length l)
-  |[u;g] ->
-      let pkglist = parse u in
-      let sdg = Defaultgraphs.StrongDepGraph.load pkglist g in
-
-      let universe = Cudf.load_universe pkglist in
-      let l = Strongconflicts.strongconflicts ~graph:sdg universe pkglist in
-
-      Common.Util.print_info "Soundness test " ;
-      soundness universe l;
-      Common.Util.print_info "done" ;
-
-      List.iter (fun (x,y) ->
-        let (x,y) = swap (x,y) in
-        Printf.printf "%s <-> %s\n" (CudfAdd.print_package x) (CudfAdd.print_package y)
-      ) l
-
       ;
       Common.Util.print_info "Total strong conflicts %d" (List.length l)
   |_ -> (print_endline usage ; exit 2)

@@ -79,8 +79,8 @@ let main () =
     with Arg.Bad s -> failwith s
   in
   match !files with
-  |[f] when !Options.incr = false ->
-      let universe = Cudf.load_universe (parse f) in
+  |[u] when !Options.incr = false ->
+      let universe = Depsolver.trim (Cudf.load_universe (parse u)) in
       let sdgraph = Strongdeps.strongdeps_univ universe in
       Defaultgraphs.StrongDepGraph.out 
       ~dump:!Options.dump ~dot:!Options.dot ~detrans:!Options.detrans
