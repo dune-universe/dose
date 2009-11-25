@@ -177,8 +177,7 @@ end
 
 (******************************************************)
 
-(** Imperative bidirectional graph. This graph should be preferred when 
-    using operation like nb_edges, inter_prec, iter_succ *)
+(** Imperative bidirectional graph. *)
 module PackageGraph = struct
 
   module PkgV = struct
@@ -213,8 +212,7 @@ end
 
 (******************************************************)
 
-(** Integer matrix graph. Space efficient, but not so effient for
-    general operations like nb_edges, iter_prec *)
+(** Integer matrix graph. *)
 module MatrixGraph(Pr : sig val pr : int -> string end) = struct
 
   module G = Imperative.Matrix.Digraph
@@ -275,8 +273,9 @@ end
 
 (******************************************************)
 
-(** Imperative bidirectional graph. This graph should be preferred when 
-    using operation like nb_edges, inter_prec, iter_succ *)
+(** Imperative bidirectional graph. The Strong dependency graph
+    is represented as a graph with (package name, package version)
+    nodes *)
 module StrongDepGraph = struct
 
   module PkgV = struct
@@ -369,6 +368,7 @@ module StrongDepGraph = struct
     close_in ic ;
     Common.Util.print_info "Load Strong Dependencies graph";
     let tg = transform_in pkglist graph in
+    (* we assume the graph is detransitivitized *)
     let sg = PackageGraph.O.O.add_transitive_closure tg in
     Common.Util.print_info "done";
     Util.Timer.stop timer sg
