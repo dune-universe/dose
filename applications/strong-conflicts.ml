@@ -224,6 +224,11 @@ begin
       let l = Debian.Packages.input_raw [file] in
       Debian.Debcudf.load_universe l
     end
+  | ("rpm", (_,_,_,_,file),_) ->
+    begin
+      let l = Rpm.Packages.Hdlists.input_raw [file] in
+      Rpm.RpmCudf.load_universe l
+    end
   | (s, _, _) -> failwith (Printf.sprintf "%s: not supported\n" s) in
   (* ignore (Util.Timer.stop timer ()); *)
   Printf.eprintf "done\n%!";
