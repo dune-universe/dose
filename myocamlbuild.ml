@@ -48,6 +48,7 @@ let _ = dispatch begin function
        (* When one link an OCaml library/binary/package, one should use -linkpkg *)
        flag ["ocaml"; "link"] & A"-linkpkg";
 
+       flag ["ocaml"; "compile"] & S[A"-w"; A"x"];
        (* For each ocamlfind package one inject the -package option when
         * compiling, computing dependencies, generating documentation and
         * linking. *)
@@ -59,7 +60,7 @@ let _ = dispatch begin function
        end (find_packages ());
 
        (* Like -package but for extensions syntax. Morover -syntax is useless
-        * when linking. *)
+        &* when linking. *)
        List.iter begin fun syntax ->
          flag ["ocaml"; "compile";  "syntax_"^syntax] & S[A"-syntax"; A syntax];
          flag ["ocaml"; "ocamldep"; "syntax_"^syntax] & S[A"-syntax"; A syntax];
@@ -67,11 +68,11 @@ let _ = dispatch begin function
        end (find_syntaxes ());
 
        List.iter begin fun (lib,dir) ->
-         flag ["ocaml"; "link"; "c_use_"^lib; "byte"] (S[A"-custom"; A"-cclib"; A("-l"^lib)]);
-         flag ["ocaml"; "link"; "c_use_"^lib; "native"] (S[A"-cclib"; A("-l"^lib)]);
-         dep ["ocaml"; "link"; "c_use_"^lib] [dir^"/lib"^lib^"_stubs.a"];
+         flag ["ocaml"; "link"; "c_use_"^lib; "byte"] & S[A"-custom"; A"-cclib"; A("-l"^lib)];
+         flag ["ocaml"; "link"; "c_use_"^lib; "native"] & S[A"-cclib"; A("-l"^lib)];
+         dep ["ocaml"; "link"; "c_use_"^lib] & [dir^"/lib"^lib^"_stubs.a"];
          (* Make sure the C pieces and built... *)
-         dep ["ocaml"; "compile"; "c_use_"^lib ] [dir^"/lib"^lib^"_stubs.a"];
+         dep ["ocaml"; "compile"; "c_use_"^lib ] & [dir^"/lib"^lib^"_stubs.a"];
        end clibs ;
 
        (* The default "thread" tag is not compatible with ocamlfind.
@@ -82,8 +83,8 @@ let _ = dispatch begin function
           To solve this, one approach is to add the "-thread" option when using
           the "threads" package using the previous plugin.
         *)
-       flag ["ocaml"; "pkg_threads"; "compile"] (S[A "-thread"]);
-       flag ["ocaml"; "pkg_threads"; "link"] (S[A "-thread"]);
+       flag ["ocaml"; "pkg_threads"; "compile"] & S[A "-thread"];
+       flag ["ocaml"; "pkg_threads"; "link"] & S[A "-thread"];
        
        (** Rule for native dynlinkable plugins *)
        rule ".cmxa.cmxs" ~prod:"%.cmxs" ~dep:"%.cmxa"
