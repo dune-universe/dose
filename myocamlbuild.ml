@@ -48,7 +48,6 @@ let _ = dispatch begin function
        (* When one link an OCaml library/binary/package, one should use -linkpkg *)
        flag ["ocaml"; "link"] & A"-linkpkg";
 
-       flag ["ocaml"; "compile"] & S[A"-w"; A"x"];
        (* For each ocamlfind package one inject the -package option when
         * compiling, computing dependencies, generating documentation and
         * linking. *)
