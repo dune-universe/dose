@@ -18,6 +18,8 @@ let enable_debug () =
   (* enable the progress bar for strongdeps *)
   Common.Util.Progress.enable "Algo.Strongconflicts.local" ;
   Common.Util.Progress.enable "Algo.Strongconflicts.seeding" ;
+  Common.Util.Progress.enable "Algo.Strongdep.main" ;
+  Common.Util.Progress.enable "Algo.Strongdep.conj" ;
   Common.Util.set_verbosity Common.Util.Summary
 ;;
 

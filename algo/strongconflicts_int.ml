@@ -17,7 +17,6 @@ open Common
 open CudfAdd
 
 module SG = Strongdeps_int.G
-
 module PkgV = struct
     type t = int
     let compare = Pervasives.compare
@@ -37,14 +36,27 @@ module ST = Set.Make (struct type t = (int * int) let compare = Pervasives.compa
 module S = Set.Make (struct type t = int let compare = Pervasives.compare end)
 type cl = { rdc : S.t ; rd : S.t } 
 
+let impactset graph q =
+  if SG.mem_vertex graph q then
+    SG.fold_pred (fun p acc -> S.add p acc) graph q S.empty
+  else S.empty
+
+let strongset graph q =
+  if SG.mem_vertex graph q then
+    SG.fold_succ (fun p acc -> S.add p acc) graph q S.empty
+  else S.empty
+
 let swap (p,q) = if p < q then (p,q) else (q,p) ;;
 
-let coinst_partial solver (p,q) =
-  let req = Diagnostic_int.Lst [p;q] in
+
+let coinst_partial_list solver l =
+  let req = Diagnostic_int.Lst l in
   match Depsolver_int.solve solver req with
   |Diagnostic_int.Success _ -> true
   |Diagnostic_int.Failure _ -> false
 ;;
+
+let coinst_partial solver (p,q) = coinst_partial_list solver [p;q] ;;
 
 let explicit mdf =
   let index = mdf.Mdf.index in
@@ -58,38 +70,78 @@ let explicit mdf =
   done;
   !l
 
-let strongconflicts ?graph mdf idlist =
+class cache size = object
+  val data = Array.make size S.empty
+
+  method init g i =
+    let is = impactset g i in
+    let ss = strongset g i in
+    data.(i) <- S.union is ss;
+
+  method add p q =
+    data.(q) <- S.add p data.(q);
+    data.(p) <- S.add q data.(p)
+
+  method get p = data.(p)
+
+  method mem p q = 
+    (S.mem q data.(p)) || (S.mem p data.(q))
+
+end
+
+let strongconflicts mdf idlist =
   let index = mdf.Mdf.index in
   let solver = init_solver ~idlist index in
   let coinst = coinst_partial solver in
   let reverse = reverse_dependencies mdf in
   let size = (List.length idlist) in
-  let cachegraph = IG.create ~size:size () in
+  let cacheobj = new cache size in
   let cl_dummy = {rdc = S.empty ; rd = S.empty} in
   let closures = Array.create size cl_dummy in
   let to_set l = List.fold_right S.add l S.empty in
 
+  let triangles x y =
+    let s1 = closures.(x).rd in
+    let s2 = closures.(y).rd in
+    (S.equal s1 s2) &&
+    (List.for_all (fun e ->
+      List.exists (fun (_,a,_) ->
+        Array.mem x a && Array.mem y a
+      ) (Array.to_list index.(e).Mdf.depends)
+    ) (S.elements s1)) &&
+    (List.for_all (fun e ->
+      coinst (e,x) && coinst (e,y)
+    ) (S.elements s1))
+    (*
+    (coinst_partial_list solver (x::(S.elements s1))) &&
+    (coinst_partial_list solver (y::(S.elements s1))) *)
+
+    (* (S.cardinal s1 = 1) *)
+(*    (S.equal s1 s2) &&
+    List.for_all (fun e ->
+      List.exists (fun (_,a,_) ->
+        Array.mem x a && Array.mem y a
+      ) (Array.to_list index.(e).Mdf.depends)
+    ) (S.elements s1)
+*)
+  in
+
   Util.print_info "Pre-seeding ...";
 
   Util.Progress.set_total seedingbar (List.length idlist);
+  let cg = Strongdeps_int.G.create ~size:(List.length idlist) () in
+  (* let cg = Strongdeps_int.strongdeps mdf idlist in *)
   for i=0 to (size - 1) do
     Util.Progress.progress seedingbar;
     let rdc = to_set (reverse_dependency_closure reverse [i]) in
     let rd = to_set reverse.(i) in
     closures.(i) <- {rdc = rdc; rd = rd};
-
-    IG.add_vertex cachegraph i ;
-    if Option.is_none graph then begin
-      Array.iter (function
-        |(_,[|p|],_) -> IG.add_edge cachegraph i p
-        | _ -> ()
-      ) index.(i).Mdf.depends
-    end 
+    Strongdeps_int.conjdepgraph_int cg index i ; 
   done;
-
-  if not(Option.is_none graph) then
-    SG.iter_edges (IG.add_edge cachegraph) (Option.get graph) ;
-
+  let cg = Strongdeps_int.SO.O.add_transitive_closure cg in
+  Util.print_info "dependency graph : nodes %d , edges %d" 
+  (SG.nb_vertex cg) (SG.nb_edges cg);
+  for i=0 to (size - 1) do cacheobj#init cg i done;
   Util.print_info " done";
 
   let i = ref 0 in
@@ -97,7 +149,7 @@ let strongconflicts ?graph mdf idlist =
   let cmp (x1,y1) (x2,y2) =
     let (a1,b1) = (closures.(x1).rdc, closures.(y1).rdc) in
     let (a2,b2) = (closures.(x2).rdc, closures.(y2).rdc) in
-    ((S.cardinal a1) * (S.cardinal b1)) - ((S.cardinal a2) * (S.cardinal b2))
+    ( ((S.cardinal a1) * (S.cardinal b1)) - ((S.cardinal a2) * (S.cardinal b2)))
   in
 
   let ex = List.unique (List.sort ~cmp (explicit mdf)) in
@@ -110,19 +162,27 @@ let strongconflicts ?graph mdf idlist =
    * Then we iter over the reverse dependency closures of the selected 
    * conflict and we check all pairs that have not been considered before.
    * *)
-  (* let stronglist = ref [] in *)
   let stronglist = IG.create () in
   List.iter (fun (x,y) -> 
     incr i;
-    if not(IG.mem_edge cachegraph x y) then begin
+    if not(cacheobj#mem x y) then begin
       let pkg_x = index.(x) in
       let pkg_y = index.(y) in
       let (a,b) = (closures.(x).rdc, closures.(y).rdc) in 
-      let (a,b) = if S.cardinal a < S.cardinal b then (a,b) else (b,a) in
+(*      let (a,b) = if S.cardinal a < S.cardinal b then (a,b) else (b,a) in *)
       let donei = ref 0 in
 
-      IG.add_edge cachegraph x y;
+      cacheobj#add x y;
       IG.add_edge stronglist x y;
+(*      SG.iter_pred (fun v ->
+        IG.add_edge stronglist x v;
+        cacheobj#add x v
+      ) cg y;
+      SG.iter_pred (fun v ->
+        IG.add_edge stronglist y v;
+        cacheobj#add y v
+      ) cg x;
+*)
 
       Util.print_info "(%d of %d) %s # %s ; Strong conflicts %d Tuples %d"
       !i conflict_size
@@ -133,16 +193,37 @@ let strongconflicts ?graph mdf idlist =
 
       Util.Progress.set_total localbar (S.cardinal a);
 
-      if not(S.equal a b) then begin
+      let s1 = closures.(x).rd in
+      let s2 = closures.(y).rd in
+
+      Printf.printf "%s # %s\n"
+      (CudfAdd.print_package pkg_x.Mdf.pkg)
+      (CudfAdd.print_package pkg_y.Mdf.pkg);
+
+      Printf.printf "x : %d\n" x;
+      Printf.printf "y : %d\n" y;
+
+      Printf.printf "s1 : %!"; S.iter (Printf.printf "%d %!") s1; Printf.printf "\n%!";
+      Printf.printf "s2 : %!"; S.iter (Printf.printf "%d %!") s2; Printf.printf "\n%!";
+
+      Printf.printf "a : %!"; S.iter (Printf.printf "%d %!") a; Printf.printf "\n%!";
+      Printf.printf "b : %!"; S.iter (Printf.printf "%d %!") b; Printf.printf "\n%!";
+
+      (* useless to check if *)
+      if (S.is_empty closures.(x).rd && S.is_empty closures.(y).rd) ||
+         (triangles x y) ||
+         (S.equal a b)
+      then ()
+      else begin
         S.iter (fun p ->
           S.iter (fun q ->
             incr donei;
-            if not (IG.mem_edge cachegraph p q) then begin
-              IG.add_edge cachegraph p q;
+            if not (cacheobj#mem p q) then begin
               if not (coinst (p,q)) then 
                 IG.add_edge stronglist p q;
-            end
-          ) (S.diff b (to_set (IG.succ cachegraph p))) ;
+            end ;
+            cacheobj#add p q;
+          ) (S.diff b (cacheobj#get p)) ;
           Util.Progress.progress localbar;
         ) a
       end;

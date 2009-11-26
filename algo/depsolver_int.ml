@@ -262,12 +262,14 @@ let dependency_closure ?(maxdepth=max_int) ?(conjuntive=false) mdf idlist =
   done;
   Hashtbl.fold (fun k _ l -> k::l) visited []
 
+(*    XXX : elements in idlist should be included only if because
+ *    of circular dependencies *)
 (** return the dependency closure of the reverse dependency graph.
-    The visit of the code is bfs.    
+    The visit is bfs.    
 
     @param maxdepth the maximum cone depth (infinite by default)
     @param index the package universe
-    @param l a subset of [index]
+    @param idlist a subset of [index]
 *)
 let reverse_dependency_closure ?(maxdepth=max_int) reverse idlist =
   let queue = Queue.create () in
