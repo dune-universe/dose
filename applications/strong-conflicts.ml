@@ -1,4 +1,14 @@
-(* copyright (c) 2009 Jaap Boender & the MANCOOSI project *)
+(**************************************************************************************)
+(*  Copyright (c) 2009 Jaap Boender                                                   *)
+(*  Copyright (C) 2009 Mancoosi Project                                               *)
+(*                                                                                    *)
+(*  This library is free software: you can redistribute it and/or modify              *)
+(*  it under the terms of the GNU Lesser General Public License as                    *)
+(*  published by the Free Software Foundation, either version 3 of the                *)
+(*  License, or (at your option) any later version.  A special linking                *)
+(*  exception to the GNU Lesser General Public License applies to this                *)
+(*  library, see the COPYING file for more information.                               *)
+(**************************************************************************************)
 
 (* attempt at computation of strong conflicts with dose3 (TLFKAlibmancoosi) *)
 

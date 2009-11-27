@@ -1,14 +1,16 @@
-(***************************************************************************************)
-(*  Copyright (C) 2009  Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
-(*                                                                                     *)
-(*  This library is free software: you can redistribute it and/or modify               *)
-(*  it under the terms of the GNU Lesser General Public License as                     *)
-(*  published by the Free Software Foundation, either version 3 of the                 *)
-(*  License, or (at your option) any later version.  A special linking                 *)
-(*  exception to the GNU Lesser General Public License applies to this                 *)
-(*  library, see the COPYING file for more information.                                *)
-(***************************************************************************************)
+(**************************************************************************************)
+(*  Copyright (C) 2009 Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
+(*  Copyright (C) 2009 Mancoosi Project                                               *)
+(*                                                                                    *)
+(*  This library is free software: you can redistribute it and/or modify              *)
+(*  it under the terms of the GNU Lesser General Public License as                    *)
+(*  published by the Free Software Foundation, either version 3 of the                *)
+(*  License, or (at your option) any later version.  A special linking                *)
+(*  exception to the GNU Lesser General Public License applies to this                *)
+(*  library, see the COPYING file for more information.                               *)
+(**************************************************************************************)
 
+open ExtLib
 open Common
 open Packages
 
@@ -23,7 +25,7 @@ let cudfop = function
 
 let versions_table = Hashtbl.create 50000
 let temp_versions_table = Hashtbl.create 50000
-let deps_table = Hashtbl.create 50000
+(* let deps_table = Hashtbl.create 50000 *)
 
 let init_versions_table =
   let add name version =
@@ -51,7 +53,7 @@ let init_versions_table =
             |Some(_,version) -> add name version
         ) disjunction
       )
-      (pkg.depends @ pkg.pre_depends)
+      (pkg.depends)
     end
 ;;
 
@@ -127,19 +129,14 @@ let loadll_plain ll = List.map loadl_plain ll
 (* ========================================= *)
 
 let tocudf ?(inst=false) pkg =
-  { Cudf.package = escape pkg.name ;
+  { Cudf.default_package with
+    Cudf.package = escape pkg.name ;
     Cudf.version = get_version (pkg.name,pkg.version) ;
     Cudf.depends = loadll_plain pkg.depends ;
     Cudf.conflicts = loadl_plain ( pkg.conflicts @ pkg.obsoletes ) ;
     Cudf.provides = loadlp_plain pkg.provides ;
-    Cudf.installed = inst ;
-    Cudf.keep = None ;
-    Cudf.extra = []
+    Cudf.installed = inst 
   }
-
-let add_extra (k,v) pkg = { pkg with Cudf.extra = (k,v) :: pkg.extra }
-
-module Set = Set.Make(struct type t = package let compare = compare end)
 
 let load_universe ?(init=true) ?(cmp=compare) l =
   let timer = Util.Timer.create "Ipr.load_universe" in
