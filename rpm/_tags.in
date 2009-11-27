@@ -1,4 +1,4 @@
-<*.ml> or <*.mli> or <*.byte> or <*.native>: pkg_extlib, pkg_str, pkg_unix, @PKG_CUDF@
+<*.ml> or <*.mli> or <*.byte> or <*.native>: pkg_extlib, pkg_str, pkg_unix, c_use_rpm, @PKG_CUDF@
 <{version,hdlists,synthesis,packages,rpmCudf}.cmx>: for-pack(Rpm)
 <common>: include
 @INCLUDE_CUDF@

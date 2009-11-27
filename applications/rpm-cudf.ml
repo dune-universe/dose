@@ -13,7 +13,6 @@
 open ExtLib
 
 open Cudf
-open Rpm
 open Common
 
 module Options =
@@ -52,12 +51,12 @@ let main () =
      match Input.parse_uri !uri with
      |("hdlist",(_,_,_,_,file),_) -> begin
        if !Options.dump_hdlist then
-         (Rpm.Hdlists.dump Format.std_formatter file ; exit(0))
+         (Hdlists.dump Format.std_formatter file ; exit(0))
        else
-         Rpm.Hdlists.input_raw [file]
+         Packages.Hdlists.input_raw [file]
      end
      |("synth",(_,_,_,_,file),_) -> begin
-         Rpm.Synthesis.input_raw [file]
+         Packages.Synthesis.input_raw [file]
      end
      |_ -> failwith "Not supported"
    in
@@ -65,8 +64,8 @@ let main () =
   let pkglist =
     let timer = Util.Timer.create "Rpm-cudf.pkglist" in
     Util.Timer.start timer;
-    Rpm.RpmCudf.init_tables ~cmp:Rpm.Version.compare l ;
-    let pl = List.map Rpm.RpmCudf.tocudf l in
+    Rpmcudf.init_tables ~cmp:Version.compare l ;
+    let pl = List.map Rpmcudf.tocudf l in
     Util.Timer.stop timer pl
   in
 
