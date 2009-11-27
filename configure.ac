@@ -13,11 +13,13 @@ fi
 
 AC_ARG_WITH(libcudf,
         [ --with-libcudf ],
-        HAS_LIBCUDF=no,
-        HAS_LIBCUDF=yes)
-if test "$HAS_LIBCUDF" = "no" ; then
+        HAS_LIBCUDF=yes,
+        HAS_LIBCUDF=no)
+AC_SUBST(HAS_LIBCUDF)
+if test "$HAS_LIBCUDF" = "yes" ; then
   AC_CHECK_OCAML_PKG([cudf])
   if (test "$OCAML_PKG_cudf" = "no"); then
+    AC_MSG_NOTICE([you asked to use an external libcudf, but ocamlfind cannot find it])
     AC_MSG_NOTICE([using local libcudf instead])
     PKG_CUDF=pkg_
     INCLUDE_CUDF="<libcudf>: include"
