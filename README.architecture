@@ -1,7 +1,7 @@
 
 the library builds a pipeline as follows :
 
-        inputs      libcudf++     outputs
+        inputs      libcudf                outputs
 
 deb  | 
 rpm  |                                       |
