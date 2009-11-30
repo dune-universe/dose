@@ -94,8 +94,8 @@ module type T = sig
   val collect_reasons_lst : state -> var list -> X.reason list
 
   (** if the solver was initialized with [buffer = true], 
-      dump the state of the solver. Return an empty string otherwise *)
-  val dump : state -> string
+      dump the state of the solver. Return an empty list otherwise *)
+  val dump : state -> int list list
 
   (** enable debug messages *)
   val debug : bool -> unit
