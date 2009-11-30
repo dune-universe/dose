@@ -2,6 +2,7 @@
 (*  Copyright (C) 2005-2009 Jerome Vouillon                                            *)
 (*  Minor modifications :                                                              *)
 (*       Pietro Abate <pietro.abate@pps.jussieu.fr>                                    *)
+(*       Jaap Boender <boender@pps.jussieu.fr>                                         *)
 (*                                                                                     *)
 (*  This library is free software: you can redistribute it and/or modify               *)
 (*  it under the terms of the GNU Lesser General Public License as                     *)
@@ -39,7 +40,7 @@ module type T = sig
   val solve_lst : state -> var list -> bool
   val collect_reasons : state -> var -> X.reason list
   val collect_reasons_lst : state -> var list -> X.reason list
-  val dump : state -> string
+  val dump : state -> int list list
   val debug : bool -> unit
 end
 
@@ -88,7 +89,7 @@ module M (X : S) = struct
       mutable st_cost : int; (* Total computational cost so far *)
       st_print_var : Format.formatter -> int -> unit;
       mutable st_coherent : bool;
-      st_buffer : Buffer.t option;
+      mutable st_buffer : int list list option;
     }
 
   let copy_clause p =
@@ -229,20 +230,20 @@ module M (X : S) = struct
     match st.st_buffer with
     |None -> ()
     |Some b -> begin
-      Array.iter
-        (fun p ->
+      let clause = Array.fold_left
+        (fun acc p ->
            if pol_of_lit p then
-             Format.bprintf b " %a" st.st_print_var (var_of_lit p)
+              (var_of_lit p)::acc
            else
-             Format.bprintf b " -%a" st.st_print_var (var_of_lit p))
-        r.lits;
-      Format.bprintf b "\n"
+              -(var_of_lit p)::acc) 
+        [] r.lits in
+      st.st_buffer <- Some (clause::b)
     end
 
   let dump st =
     match st.st_buffer with 
-    |None -> ""
-    |Some b -> Buffer.contents b
+    |None -> []
+    |Some b -> List.rev_map (fun x -> List.rev x) b
 
   (****)
 
@@ -567,7 +568,7 @@ module M (X : S) = struct
       st_cost = 0;
       st_print_var = print_var;
       st_coherent = true;
-      st_buffer = if buffer then Some(Buffer.create 75) else None;
+      st_buffer = if buffer then Some [] else None;
     }
 
   let insert_simpl_prop st r p p' =
