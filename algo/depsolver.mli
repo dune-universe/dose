@@ -61,3 +61,8 @@ val reverse_dependencies :
 
 val reverse_dependency_closure : ?maxdepth:int ->
   Cudf.universe -> Cudf.package list -> Cudf.package list
+
+(** [output_clauses c univ] prints the clauses generated from the universe
+    [univ] to output channel [c] *)
+val output_clauses :
+  out_channel -> Cudf.universe -> unit 

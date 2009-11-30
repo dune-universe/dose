@@ -13,6 +13,8 @@
 open ExtLib
 open Common
 open CudfAdd
+open Cudf
+open Cudf_types_pp
 
 type solver = {
   mdf : Mdf.universe ;
@@ -142,3 +144,28 @@ let reverse_dependency_closure ?maxdepth universe pkglist =
     Depsolver_int.reverse_dependency_closure ~maxdepth:d reverse idlist in
   List.map maps.map#inttovar closure
 
+let output_clauses chan universe =
+  let mdf = Mdf.load_from_universe universe in
+  let maps = mdf.Mdf.maps in
+  let str v =
+  begin
+    if v < 0 then 
+      let p = maps.map#inttovar (-v) in
+      Printf.sprintf "!%s-%s" (string_of_pkgname p.package) (string_of_version p.version)
+    else
+      let p = maps.map#inttovar v in
+      Printf.sprintf "%s-%s" (string_of_pkgname p.package) (string_of_version p.version)
+  end in
+  let solver = Depsolver_int.init_solver ~buffer:true mdf.Mdf.index in
+  List.iter (fun cl ->
+    match cl with
+    | [] -> (* empty clause *) ()
+    | h::t -> 
+    begin
+      Printf.fprintf chan "%s" (str h);
+      List.iter (fun var ->
+        Printf.fprintf chan " %s" (str var)
+      ) t;
+    end;
+    Printf.fprintf chan "\n"
+  ) (Depsolver_int.S.dump solver.Depsolver_int.constraints)
