@@ -55,5 +55,5 @@ begin
   ignore (Util.Timer.stop timer ());
   Printf.eprintf "done\n%!";
 
-  Depsolver.output_clauses stdout u
+  Depsolver.output_clauses !outchan u
 end;;
