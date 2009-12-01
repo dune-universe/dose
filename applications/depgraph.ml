@@ -30,6 +30,7 @@ struct
   let src = ref ""
   let dst = ref ""
   let cone = ref ""
+  let pred_cone = ref ""
   let cone_maxdepth = ref None
 
 end
@@ -44,13 +45,14 @@ let options =
    ("--src",  Arg.String (fun l -> Options.src := l ), "Specify a list of packages to analyze" );
    ("--dst",  Arg.String (fun l -> Options.dst := l ), "Specify a pivot package" );
    ("--cone",  Arg.String (fun l -> Options.cone := l ), "Compute the dependency closure" );
+   ("--pred-cone",  Arg.String (fun l -> Options.pred_cone := l ), "Compute the dependency closure" );
    ("--cone-maxdepth", Arg.Int (fun i -> Options.cone_maxdepth := Some i ), "Maximum depth of dependency cone");
    ("--info", Arg.Set Options.info, "Print various aggregate information");
    ("--pred", Arg.Set Options.strong_pred, "Print strong predecessor (not direct)");
   ]
 
 let and_sep_re = Str.regexp "\\s*;\\s*"
-let pkg_re = Str.regexp "(\\([a-z][a-z0-9.+-]+\\)\\s*,\\s*\\([a-zA-Z0-9.-]+\\))"
+let pkg_re = Str.regexp "(\\([a-z][a-z0-9.+-]+\\)\\s*,\\s*\\([a-zA-Z0-9.:-]+\\))"
 let parse_pkg s =
   let parse_aux str =
     if Str.string_match pkg_re str 0 then begin
@@ -140,11 +142,20 @@ END
     ) (Cudf.get_packages universe) 
   in
   let pkg_cone () =
-    let (p,v) = List.hd(parse_pkg !Options.cone) in
-    let pid = get_cudfpkg (p,v) in
-    match !Options.cone_maxdepth with
-    | None -> Depsolver.dependency_closure universe [pid]
-    | Some d -> Depsolver.dependency_closure ~maxdepth:d universe [pid]
+    List.unique (List.fold_left (fun acc (p,v) ->
+      let pid = get_cudfpkg (p,v) in
+      match !Options.cone_maxdepth with
+      | None -> (Depsolver.dependency_closure universe [pid]) @ acc
+      | Some d -> (Depsolver.dependency_closure ~maxdepth:d universe [pid]) @ acc
+    ) [] (parse_pkg !Options.cone))
+  in
+  let pkg_pred_cone () =
+    List.unique (List.fold_left (fun acc (p,v) ->
+      let pid = get_cudfpkg (p,v) in
+      match !Options.cone_maxdepth with
+      | None -> (Depsolver.reverse_dependency_closure universe [pid]) @ acc
+      | Some d -> (Depsolver.reverse_dependency_closure ~maxdepth:d universe [pid]) @ acc
+    ) [] (parse_pkg !Options.pred_cone))
   in
 
   let pkg_src_list = ref [] in
@@ -167,6 +178,8 @@ END
     end
     else if !Options.cone <> "" then 
       pkg_cone ()
+    else if !Options.pred_cone <> "" then
+      pkg_pred_cone ()
     else Cudf.get_packages universe
 
   in
