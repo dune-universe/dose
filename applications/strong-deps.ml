@@ -62,10 +62,22 @@ let parse uri =
       let tables = Debian.Debcudf.init_tables l in
       List.map (Debian.Debcudf.tocudf tables) l
     end
-    |("cudf",(_,_,_,_,file),_) -> begin
-      let _, l, _ = CudfAdd.parse_cudf file in l
+    |("cudf",(_,_,_,_,file),_) ->
+        let _, l, _ = CudfAdd.parse_cudf file in l
+(* IFDEF HASRPM THEN *)
+    |("hdlist",(_,_,_,_,file),_) -> begin
+      let l = Rpm.Packages.Hdlists.input_raw [file] in
+      let tables = Rpm.Rpmcudf.init_tables l in
+      List.map (Rpm.Rpmcudf.tocudf tables) l
     end
+    |("synth",(_,_,_,_,file),_) -> begin
+      let l = Rpm.Packages.Synthesis.input_raw [file] in
+      let tables = Rpm.Rpmcudf.init_tables l in
+      List.map (Rpm.Rpmcudf.tocudf tables) l
+    end
+(* END *)
     |_ -> failwith "Not supported"
+
   in
   ignore(Common.Util.Timer.stop timer ());
   Printf.eprintf "done\n%!" ;

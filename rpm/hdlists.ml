@@ -128,7 +128,7 @@ let parse_822_iter parse f ch =
 let parse_name par = List.assoc "package" par
 
 let parse_version par = 
-  let epoch = List.assoc "epoch" par in
+  let epoch = try List.assoc "epoch" par with Not_found -> "0" in
   let version = List.assoc "version" par in
   let release = List.assoc "release" par in
   if epoch <> "0" then Printf.sprintf "%s:%s-%s" epoch version release

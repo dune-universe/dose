@@ -211,15 +211,16 @@ let build_maps universe =
   }
 ;;
 
+let not_allowed = Str.regexp ".*[^a-zA-Z0-9@-/+().].*" 
+let not_allowed_single = Str.regexp  "[^a-zA-Z0-9@-/+().]" 
 let encode s =
   let make_hex chr = Printf.sprintf "%%%x" (Char.code chr) in
-  let notallowed_re = Str.regexp "[_:]" in
-  if Str.string_match (Str.regexp ".*[_:].*") s 0 then begin
+  if Str.string_match not_allowed s 0 then begin
     let n = String.length s in
     let b = Buffer.create n in
     for i = 0 to n-1 do
       let s' = String.of_char s.[i] in
-      if Str.string_match notallowed_re s' 0 then
+      if Str.string_match not_allowed_single s' 0 then
         Buffer.add_string b (make_hex s.[i])
       else
         Buffer.add_string b s'
@@ -238,4 +239,13 @@ let rec decode s =
     in
     Str.global_substitute hex_re un s
   end else s
+
+let cudfop = function
+  |Some(("<<" | "<"),v) -> Some(`Lt,v)
+  |Some((">>" | ">"),v) -> Some(`Gt,v)
+  |Some("<=",v) -> Some(`Leq,v)
+  |Some(">=",v) -> Some(`Geq,v)
+  |Some("=",v) -> Some(`Eq,v)
+  |None -> None
+  |_ -> assert false
 

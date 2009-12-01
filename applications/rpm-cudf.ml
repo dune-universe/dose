@@ -68,8 +68,9 @@ let main () =
   let pkglist =
     let timer = Util.Timer.create "Rpm-cudf.pkglist" in
     Util.Timer.start timer;
-    Rpmcudf.init_tables ~cmp:Version.compare l ;
-    let pl = List.map Rpmcudf.tocudf l in
+    let tables = Rpmcudf.init_tables l in
+    let pl = List.map (Rpmcudf.tocudf tables) l in
+    Rpmcudf.clear tables;
     Util.Timer.stop timer pl
   in
 

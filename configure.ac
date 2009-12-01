@@ -66,6 +66,7 @@ if test "$HAS_RPM" = "yes" ; then
   AC_CHECK_HEADERS([rpm/rpmlib.h],,AC_MSG_ERROR([missing rpmlib.h]))
   AC_CHECK_HEADERS([rpm/rpmio.h],,AC_MSG_ERROR([missing rpmlib.h]))
   INCLUDE_RPM="<rpm>: include"
+  CONFIG_RPM="-DHASRPM"
 fi
 
 AC_ARG_WITH(sqlite,
@@ -178,6 +179,7 @@ AC_SUBST(PKG_ZIP)
 AC_SUBST(CONFIG_BZ2)
 AC_SUBST(PKG_BZ2)
 
+AC_SUBST(CONFIG_RPM)
 AC_SUBST(INCLUDE_RPM)
 AC_SUBST(INCLUDE_CUDF)
 AC_SUBST(PKG_CUDF)

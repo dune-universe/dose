@@ -40,15 +40,6 @@ let clear tables =
   Hashtbl.clear tables.reverse_table
 ;;
 
-let cudfop = function
-  |Some(("<<" | "<"),v) -> Some(`Lt,v)
-  |Some((">>" | ">"),v) -> Some(`Gt,v)
-  |Some("<=",v) -> Some(`Leq,v)
-  |Some(">=",v) -> Some(`Geq,v)
-  |Some("=",v) -> Some(`Eq,v)
-  |None -> None
-  |_ -> assert false
-
 let init_versions_table table =
   let add name version =
     try
@@ -58,7 +49,7 @@ let init_versions_table table =
   in
   let conj_iter =
     List.iter (fun (name,sel) ->
-      match cudfop sel with
+      match CudfAdd.cudfop sel with
       |None -> ()
       |Some(_,version) -> add name version
     ) 
@@ -66,7 +57,7 @@ let init_versions_table table =
   let cnf_iter = 
     List.iter (fun disjunction ->
       List.iter (fun (name,sel) ->
-        match cudfop sel with
+        match CudfAdd.cudfop sel with
         |None -> ()
         |Some(_,version) -> add name version
       ) disjunction
@@ -137,32 +128,32 @@ let get_version tables (package,version) =
 let loadl tables l =
   List.flatten (
     List.map (fun (name,sel) ->
-      match cudfop sel with
+      match CudfAdd.cudfop sel with
         |None ->
             if (Hashtbl.mem tables.virtual_table name) &&
             (Hashtbl.mem tables.versioned_table name) then
-              [(CudfAdd.escape (name^"--virtual"), None);
-               (CudfAdd.escape name, None)]
+              [(CudfAdd.encode (name^"--virtual"), None);
+               (CudfAdd.encode name, None)]
             else
-              [(CudfAdd.escape name, None)]
+              [(CudfAdd.encode name, None)]
         |Some(op,v) ->
-            [(CudfAdd.escape name,Some(op,get_version tables (name,v)))]
+            [(CudfAdd.encode name,Some(op,get_version tables (name,v)))]
     ) l
   )
 
-let loadlc tables name l = (CudfAdd.escape name, None)::(loadl tables l)
+let loadlc tables name l = (CudfAdd.encode name, None)::(loadl tables l)
 
 let loadlp tables l =
   List.map (fun (name,sel) ->
-    match cudfop sel with
+    match CudfAdd.cudfop sel with
       |None  ->
           if (Hashtbl.mem tables.unit_table name) || (Hashtbl.mem tables.versioned_table name)
-          then (CudfAdd.escape (name^"--virtual"),None)
-          else (CudfAdd.escape name, None)
+          then (CudfAdd.encode (name^"--virtual"),None)
+          else (CudfAdd.encode name, None)
       |Some(`Eq,v) ->
           if (Hashtbl.mem tables.unit_table name) || (Hashtbl.mem tables.versioned_table name)
-          then (CudfAdd.escape (name^"--virtual"),Some(`Eq,get_version tables (name,v)))
-          else (CudfAdd.escape name,Some(`Eq,get_version tables (name,v)))
+          then (CudfAdd.encode (name^"--virtual"),Some(`Eq,get_version tables (name,v)))
+          else (CudfAdd.encode name,Some(`Eq,get_version tables (name,v)))
       |_ -> assert false
   ) l
 
@@ -206,7 +197,7 @@ let add_extra extras pkg =
 
 let tocudf tables ?(extras=[]) ?(inst=false) pkg =
     { Cudf.default_package with
-      Cudf.package = CudfAdd.escape pkg.name ;
+      Cudf.package = CudfAdd.encode pkg.name ;
       Cudf.version = get_version tables (pkg.name,pkg.version) ;
       Cudf.depends = loadll tables (pkg.pre_depends @ pkg.depends);
       Cudf.conflicts = loadlc tables pkg.name (pkg.breaks @ pkg.conflicts) ;
