@@ -15,12 +15,6 @@ type verbosity = Quiet | Summary | Details
 let verbosity = ref Quiet
 let set_verbosity = (:=) verbosity
 
-(*
-let print ppf v label s =
-  if v <= !verbosity then
-     Format.fprintf ppf "%s: %s\n" label s
-*)
-
 let print ppf v label fmt =
   Printf.kprintf (
     if v <= !verbosity then 

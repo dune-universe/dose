@@ -211,3 +211,31 @@ let build_maps universe =
   }
 ;;
 
+let encode s =
+  let make_hex chr = Printf.sprintf "%%%x" (Char.code chr) in
+  let notallowed_re = Str.regexp "[_:]" in
+  if Str.string_match (Str.regexp ".*[_:].*") s 0 then begin
+    let n = String.length s in
+    let b = Buffer.create n in
+    for i = 0 to n-1 do
+      let s' = String.of_char s.[i] in
+      if Str.string_match notallowed_re s' 0 then
+        Buffer.add_string b (make_hex s.[i])
+      else
+        Buffer.add_string b s'
+    done;
+    Buffer.contents b
+  end else s
+
+let rec decode s =
+  let hex_re = Str.regexp "%[0-9a-f][0-9a-f]" in
+  if Str.string_match hex_re s 0 then begin
+    let un s =
+      let s = Str.matched_string s in
+      let hex = String.sub s 1 2 in
+      let n = int_of_string ("0x" ^ hex) in
+      String.make 1 (Char.chr n)
+    in
+    Str.global_substitute hex_re un s
+  end else s
+

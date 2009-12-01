@@ -56,7 +56,9 @@ type request =
 type diagnosis = { result : result ; request : request }
 
 (** print the result of the solver.
+ 
     @param explain : add a more verbose explanation of the failure or
     print the list of installed packages. 
-    *)
-val print : ?explain:bool -> out_channel -> diagnosis -> unit
+    @param pp : print a cudf package
+*)
+val print : ?pp:(?short:bool -> Cudf.package -> string) -> ?explain:bool -> out_channel -> diagnosis -> unit

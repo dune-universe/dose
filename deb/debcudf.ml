@@ -10,7 +10,7 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-(** Debian Specific Ipr to Cudf conversion routines *)
+(** Debian Specific Cudf conversion routines *)
 
 open ExtLib
 open Common
@@ -20,7 +20,8 @@ type tables = {
   virtual_table : (string, unit) Hashtbl.t;
   unit_table : (string, unit) Hashtbl.t ;
   versions_table : (string, string list) Hashtbl.t;
-  versioned_table : (string, unit) Hashtbl.t
+  versioned_table : (string, unit) Hashtbl.t;
+  reverse_table : ((string * int), string) Hashtbl.t
 }
 
 let create n = {
@@ -28,41 +29,16 @@ let create n = {
   unit_table = Hashtbl.create n;
   versions_table = Hashtbl.create n;
   versioned_table = Hashtbl.create n;
+  reverse_table = Hashtbl.create n;
 }
 
-let escape_string s =
-  let make_hex chr = Printf.sprintf "%%%x" (Char.code chr) in
-  let notallowed_re = Str.regexp "[^a-z0-9.+-]" in
-  let n = String.length s in
-  let b = Buffer.create n in
-  for i = 0 to n-1 do
-    let s' = String.of_char s.[i] in
-    if Str.string_match notallowed_re s' 0 then
-      Buffer.add_string b (make_hex s.[i])
-    else
-      Buffer.add_string b s'
-  done;
-  Buffer.contents b
-
-let escape s =
-  let pkgname_re = Str.regexp "^[%a-z0-9][%a-z0-9.+-]+$" in
-  if Str.string_match pkgname_re s 0 then s
-  else
-    let s0 = String.lowercase s in
-    if String.length s0 = 1 then
-      escape_string (Printf.sprintf "//%s" s0)
-    else
-      escape_string s0
-
-let rec unescape s =
-  let hex_re = Str.regexp "%[0-9a-f][0-9a-f]" in
-  let un s =
-    let s = Str.matched_string s in
-    let hex = String.sub s 1 2 in
-    let n = int_of_string ("0x" ^ hex) in
-    String.make 1 (Char.chr n)
-  in
-  Str.global_substitute hex_re un s
+let clear tables =
+  Hashtbl.clear tables.virtual_table;
+  Hashtbl.clear tables.unit_table;
+  Hashtbl.clear tables.versions_table;
+  Hashtbl.clear tables.versioned_table;
+  Hashtbl.clear tables.reverse_table
+;;
 
 let cudfop = function
   |Some(("<<" | "<"),v) -> Some(`Lt,v)
@@ -142,6 +118,7 @@ let init_tables pkglist =
 
   List.iter (fun pkg -> ivt pkg ; ivrt pkg ; ivdt pkg ; iut pkg) pkglist ;
 
+  (* XXX I guess this could be a bit faster if implemented with Sets *)
   Hashtbl.iter (fun k l ->
     Hashtbl.add tables.versions_table k
     (List.unique (List.sort ~cmp:Version.compare l))
@@ -154,6 +131,7 @@ let init_tables pkglist =
 let get_version tables (package,version) =
   let l = Hashtbl.find tables.versions_table package in
   let i = fst(List.findi (fun i a -> a = version) l) in
+  Hashtbl.add tables.reverse_table (package,i+1) version;
   i + 1
 
 let loadl tables l =
@@ -163,28 +141,28 @@ let loadl tables l =
         |None ->
             if (Hashtbl.mem tables.virtual_table name) &&
             (Hashtbl.mem tables.versioned_table name) then
-              [(escape (name^"--virtual"), None);
-               (escape name, None)]
+              [(CudfAdd.escape (name^"--virtual"), None);
+               (CudfAdd.escape name, None)]
             else
-              [(escape name, None)]
+              [(CudfAdd.escape name, None)]
         |Some(op,v) ->
-            [(escape name,Some(op,get_version tables (name,v)))]
+            [(CudfAdd.escape name,Some(op,get_version tables (name,v)))]
     ) l
   )
 
-let loadlc tables name l = (escape name, None)::(loadl tables l)
+let loadlc tables name l = (CudfAdd.escape name, None)::(loadl tables l)
 
 let loadlp tables l =
   List.map (fun (name,sel) ->
     match cudfop sel with
       |None  ->
           if (Hashtbl.mem tables.unit_table name) || (Hashtbl.mem tables.versioned_table name)
-          then (escape (name^"--virtual"),None)
-          else (escape name, None)
+          then (CudfAdd.escape (name^"--virtual"),None)
+          else (CudfAdd.escape name, None)
       |Some(`Eq,v) ->
           if (Hashtbl.mem tables.unit_table name) || (Hashtbl.mem tables.versioned_table name)
-          then (escape (name^"--virtual"),Some(`Eq,get_version tables (name,v)))
-          else (escape name,Some(`Eq,get_version tables (name,v)))
+          then (CudfAdd.escape (name^"--virtual"),Some(`Eq,get_version tables (name,v)))
+          else (CudfAdd.escape name,Some(`Eq,get_version tables (name,v)))
       |_ -> assert false
   ) l
 
@@ -227,14 +205,13 @@ let add_extra extras pkg =
   [number;source;sourceversion] @ l
 
 let tocudf tables ?(extras=[]) ?(inst=false) pkg =
-    { Cudf.package = escape pkg.name ;
+    { Cudf.default_package with
+      Cudf.package = CudfAdd.escape pkg.name ;
       Cudf.version = get_version tables (pkg.name,pkg.version) ;
       Cudf.depends = loadll tables (pkg.pre_depends @ pkg.depends);
       Cudf.conflicts = loadlc tables pkg.name (pkg.breaks @ pkg.conflicts) ;
       Cudf.provides = loadlp tables pkg.provides ;
       Cudf.installed = inst ;
-      Cudf.was_installed = false ;
-      Cudf.keep = `Keep_none ;
       Cudf.pkg_extra = add_extra extras pkg ;
     }
 
@@ -245,5 +222,7 @@ let load_universe l =
   let timer = Util.Timer.create "Debian.Debcudf.load_universe" in
   Util.Timer.start timer;
   let tables =  init_tables l in
-  let pl = Cudf.load_universe (List.map (tocudf tables) l) in
-  Util.Timer.stop timer pl
+  let univ = Cudf.load_universe (List.map (tocudf tables) l) in
+  let reverse = Hashtbl.copy tables.reverse_table in
+  clear tables;
+  Util.Timer.stop timer univ

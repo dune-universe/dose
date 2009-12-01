@@ -15,6 +15,11 @@ open ExtLib
 open Cudf
 open Common
 
+let enable_debug () =
+  Common.Util.set_verbosity Common.Util.Summary
+;;
+
+
 module Options =
 struct
   let plain = ref false
@@ -28,9 +33,8 @@ let options =
     ("--plain", Arg.Set Options.plain,
     "Do not preserve debian semantic.  Creates a (possibly) unconsistent cudf document.");
     ("--dump", Arg.Set Options.dump_hdlist, "Dump the hdlist contentes in raw format");
-    ("--debug", Arg.Unit (fun () -> Util.set_verbosity Util.Summary), "Print debug information");
-    ("--outdir", Arg.String (fun l -> Options.outdir := l),
-    "Specify the results directory");
+    ("--debug", Arg.Unit enable_debug, "Print debug information");
+    ("--outdir", Arg.String (fun l -> Options.outdir := l), "Specify the results directory");
   ]
 
 (* ========================================= *)
