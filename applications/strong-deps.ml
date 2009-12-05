@@ -64,7 +64,7 @@ let parse uri =
     end
     |("cudf",(_,_,_,_,file),_) ->
         let _, l, _ = CudfAdd.parse_cudf file in l
-(* IFDEF HASRPM THEN *)
+(* IFDEF HASRPM THEN
     |("hdlist",(_,_,_,_,file),_) -> begin
       let l = Rpm.Packages.Hdlists.input_raw [file] in
       let tables = Rpm.Rpmcudf.init_tables l in
@@ -75,7 +75,7 @@ let parse uri =
       let tables = Rpm.Rpmcudf.init_tables l in
       List.map (Rpm.Rpmcudf.tocudf tables) l
     end
-(* END *)
+END *)
     |_ -> failwith "Not supported"
 
   in
