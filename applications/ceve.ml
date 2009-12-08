@@ -1,5 +1,6 @@
 (**************************************************************************************)
 (*  Copyright (C) 2009 Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
+(*  and Jaap Boender <boender@pps.jussieu.fr *)
 (*  Copyright (C) 2009 Mancoosi Project                                               *)
 (*                                                                                    *)
 (*  This library is free software: you can redistribute it and/or modify              *)
@@ -21,9 +22,10 @@ exception Done
 
 module Options =
 struct
+  type output_types = Dot | CNF | Dimacs
+
   let confile = ref ""
   let debug = ref 0
-  let dot = ref false
   let boolean = ref false
   let info = ref false
   let strong_pred = ref false
@@ -32,7 +34,14 @@ struct
   let cone = ref ""
   let pred_cone = ref ""
   let cone_maxdepth = ref None
+  let output_type = ref Dot
+  let output_ch = ref stdout
 
+  let set_output_type s =
+    if s = "dot" then output_type := Dot
+    else if s = "cnf" then output_type := CNF
+    else if s = "dimacs" then output_type := Dimacs
+    else failwith (Printf.sprintf "Unknown output type: %s" s)
 end
 
 let usage = Printf.sprintf "usage: %s [-options] [cudf doc]" (Sys.argv.(0))
@@ -40,7 +49,6 @@ let options =
   [
    ("--confile",  Arg.String (fun l -> Options.confile := l ), "Specify a configuration file" );
    ("-d", Arg.Int (fun i -> Options.debug := i), "Turn on debugging info level");
-   ("--dot", Arg.Set Options.dot, "Print the graph in dot format");
    ("--boolean", Arg.Set Options.boolean, "Output the boolean graph");
    ("--src",  Arg.String (fun l -> Options.src := l ), "Specify a list of packages to analyze" );
    ("--dst",  Arg.String (fun l -> Options.dst := l ), "Specify a pivot package" );
@@ -49,6 +57,8 @@ let options =
    ("--cone-maxdepth", Arg.Int (fun i -> Options.cone_maxdepth := Some i ), "Maximum depth of dependency cone");
    ("--info", Arg.Set Options.info, "Print various aggregate information");
    ("--pred", Arg.Set Options.strong_pred, "Print strong predecessor (not direct)");
+   ("--output-type", Arg.String Options.set_output_type, "Set the output type (dot, cnf)");
+   ("--output-file", Arg.String (fun s -> Options.output_ch := open_out s), "Send output to a file");
   ]
 
 let and_sep_re = Str.regexp "\\s*;\\s*"
@@ -183,7 +193,11 @@ END
     else Cudf.get_packages universe
 
   in
-  Graph.D.output_graph stdout (Graph.dependency_graph (Cudf.load_universe plist))
+  let u = Cudf.load_universe plist in
+  match !Options.output_type with
+  | Options.Dot -> Graph.D.output_graph !Options.output_ch (Graph.dependency_graph u)
+  | Options.CNF -> Depsolver.output_clauses !Options.output_ch u
+  | Options.Dimacs -> Depsolver.output_clauses ~dimacs:true !Options.output_ch u
 ;;
 
 main ();;
