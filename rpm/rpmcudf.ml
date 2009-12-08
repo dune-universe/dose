@@ -16,16 +16,13 @@ open Common
 open Packages
 
 type tables = {
-  units : (string, string list) Hashtbl.t;
-  versions : (string, int Trie.t) Hashtbl.t;
+  units : (string, int Trie.t) Hashtbl.t;
   files : ((string * string), string) Hashtbl.t;
 }
 
 let create n = {
   (* all real packages associated with all versions *)
   units = Hashtbl.create (2 * n);
-  (* all provides and real packages associated with a trie of versions *)
-  versions = Hashtbl.create (2 * n);
   (* all files associated to a package that are mentioned as a conflict or
    * depends *)
   files = Hashtbl.create (2 * n);
@@ -33,33 +30,30 @@ let create n = {
 
 let clear tables =
   Hashtbl.clear tables.units;
-  Hashtbl.clear tables.versions;
   Hashtbl.clear tables.files;
 ;;
 
 let init_tables pkglist =
   let tables = create (List.length pkglist) in
 
-  (* temp_versions is the list of all versions associated to a package reference *)
-  let temp_versions = Hashtbl.create (List.length pkglist) in
-  (* temp_units is the list of all versions associated to a real package or
-   * provide *)
+  (* temp_units is the list of all versions associated to a real package or provide *)
   let temp_units = Hashtbl.create (List.length pkglist) in
+  (* all avalaible files *)
   let temp_files = Hashtbl.create (10 * (List.length pkglist)) in
-  let add_versions name version =
+
+  let add_units name version =
     try
-      let l = Hashtbl.find temp_versions name in
-      Hashtbl.replace temp_versions name (version::l)
-    with Not_found -> Hashtbl.add temp_versions name [version] 
+      let l = Hashtbl.find temp_units name in
+      Hashtbl.replace temp_units name (version::l)
+    with Not_found -> Hashtbl.add temp_units name [version] 
   in
-  let add_units = Hashtbl.add temp_units in
+
   let add_files (n,v) filename =
-    if String.starts_with "\\/" filename then 
+    (* if String.starts_with "\\/" filename then *)
       if Hashtbl.mem temp_files filename then
         Hashtbl.add tables.files (n,v) filename
   in
 
-  (* all avalaible files *)
   List.iter (fun pkg ->
     List.iter (fun (file,_) ->
       Hashtbl.add temp_files file ()
@@ -67,112 +61,80 @@ let init_tables pkglist =
   ) pkglist;
 
   List.iter (fun pkg ->
-    add_versions pkg.name pkg.version ;
     add_units pkg.name pkg.version ;
-
     List.iter (fun (name,sel) ->
       match CudfAdd.cudfop sel with
       |None -> add_units name ""
-      |Some(_,version) -> begin
-        add_versions name version;
-        add_units name version
-      end
+      |Some(_,version) -> add_units name version
     ) pkg.provides
-    ;
+  ) pkglist;
+
+  List.iter (fun pkg ->
     List.iter (fun (name,sel) ->
       add_files (pkg.name,pkg.version) name;
-      match CudfAdd.cudfop sel with
-        |None -> ()
-        |Some(_,version) -> add_versions name version
     ) pkg.conflicts
     ;
     List.iter (fun disjunction ->
       List.iter (fun (name,sel) ->
         add_files (pkg.name,pkg.version) name;
-        match CudfAdd.cudfop sel with
-          |None -> ()
-          |Some(_,version) -> add_versions name version
       ) disjunction
     ) (pkg.depends)
   ) pkglist
   ;
 
+  let initialid = 2 in
   Hashtbl.iter (fun name l ->
     let vl = List.unique (List.sort ~cmp:Version.compare l) in
     let (_,t) = 
       List.fold_left (fun (i,acc) k ->
         (i+1,Trie.add k i acc)
-      ) (1,Trie.empty) vl 
+      ) (initialid,Trie.empty) vl 
     in
-    Hashtbl.add tables.versions name t ;
+    Hashtbl.add tables.units name t ;
 
-    begin match Hashtbl.find_all temp_units name with
-    |[] -> ()
-    |l -> Hashtbl.add tables.units name (List.unique l) 
-    end
-  ) temp_versions;
+  ) temp_units;
 
 
   Hashtbl.clear temp_units;
-  Hashtbl.clear temp_versions;
   Hashtbl.clear temp_files;
 
   tables
 ;;
 
-(* versions start from 1 *)
-let get_version tables (package,version) =
-  try
-    let t = 
-      try Hashtbl.find tables.versions package 
-      with Not_found -> assert false
-    in (Trie.find version t)
-  with Not_found -> assert false
-
 let get_versions tables (package,prefix) =
   try
-  let t =
-    try Hashtbl.find tables.versions package
-    with Not_found -> assert false
-  in
-  let l = 
-    try Hashtbl.find tables.units package 
-    with Not_found -> (Printf.eprintf "%s is not in units\n" package ; [])
-  in
-  let elements t =
-    Trie.fold (fun k v acc -> v::acc
-      (* if List.mem k l then v::acc else acc *)
-    ) t []
-  in
-(*  let s = Trie.fold (fun k v acc -> k::acc) (Trie.restrict prefix t) [] in
-  Printf.printf "name : %s prefix : %s list : %s\n" package prefix
-  (String.concat "," s); *)
-  (elements (Trie.restrict prefix t))
+    let trie = Hashtbl.find tables.units package in
+    let elements t = Trie.fold (fun k v acc -> v::acc) t [] in
+    (elements (Trie.restrict prefix trie))
+  with Not_found -> []
+
+let get_version tables (package,version) =
+  try
+    let trie = Hashtbl.find tables.units package in
+    Trie.find version trie
   with Not_found -> assert false
-;;
 
 (* ========================================= *)
 
-let expand tables (name,v) =
+let expand tables ?(op=`Eq) (name,v) =
   match get_versions tables (name,v) with
-  |[] -> None
-  |l -> Some(List.map (fun x -> (CudfAdd.encode name,Some(`Eq,x))) l)
+  |[] -> [CudfAdd.encode name,Some(op,1)]
+  |l ->  List.map (fun x -> (CudfAdd.encode name,Some(op,x))) l
 
 let loadl_plain tables l =
   List.flatten (
-    List.filter_map (fun (name,sel) ->
+    List.map (fun (name,sel) ->
       match CudfAdd.cudfop sel with
-      |None -> Some([(CudfAdd.encode name, None)])
-      |Some(`Eq,v) -> expand tables (name,v)
-      |Some(op,v) -> Some([(CudfAdd.encode name,Some(op,get_version tables (name,v)))])
+      |None -> [(CudfAdd.encode name, None)]
+      |Some(op,v) -> expand tables ~op:op (name,v)
     ) l
   )
 
 let loadlp_plain tables l =
   List.flatten (
-    List.filter_map (fun (name,sel) ->
+    List.map (fun (name,sel) ->
       match CudfAdd.cudfop sel with
-      |None  -> Some([(CudfAdd.encode name, None)])
+      |None  -> [(CudfAdd.encode name, None)]
       (* we normalize everything to equality *)
       |Some(_,v) -> expand tables (name,v)
     ) l
@@ -184,12 +146,7 @@ let loadp_files tables (name,version) =
     ) (Hashtbl.find_all tables.files (name,version))
   )
 
-let loadll_plain tables ll =
-  List.filter_map (fun l ->
-    match loadl_plain tables l with
-    |[] -> None
-    |l -> Some l
-  ) ll
+let loadll_plain tables ll = List.map (loadl_plain tables) ll
 
 (* ========================================= *)
 
