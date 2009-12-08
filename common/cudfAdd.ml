@@ -211,16 +211,18 @@ let build_maps universe =
   }
 ;;
 
-let not_allowed = Str.regexp ".*[^a-zA-Z0-9@-/+().].*" 
-let not_allowed_single = Str.regexp  "[^a-zA-Z0-9@-/+().]" 
+let not_allowed = Str.regexp  "[^a-zA-Z0-9@/+().-]" 
+let search s =
+  try (Str.search_forward not_allowed s 0) >= 0
+  with Not_found -> false
 let encode s =
   let make_hex chr = Printf.sprintf "%%%x" (Char.code chr) in
-  if Str.string_match not_allowed s 0 then begin
+  if search s then begin
     let n = String.length s in
     let b = Buffer.create n in
     for i = 0 to n-1 do
       let s' = String.of_char s.[i] in
-      if Str.string_match not_allowed_single s' 0 then
+      if Str.string_match not_allowed s' 0 then
         Buffer.add_string b (make_hex s.[i])
       else
         Buffer.add_string b s'

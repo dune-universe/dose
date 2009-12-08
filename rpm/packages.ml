@@ -25,6 +25,7 @@ type package = {
   conflicts : vpkg list;
   obsoletes : vpkg list;
   provides : veqpkg list;
+  files : vpkg list;
 }
 
 let default_package = {
@@ -34,6 +35,7 @@ let default_package = {
   conflicts = [];
   obsoletes = [];
   provides = [];
+  files = [];
 }
 
 module Set = Set.Make(struct type t = package let compare = compare end)
@@ -63,6 +65,7 @@ module Hdlists = struct
           conflicts = (try list_deps "conflict" par with Not_found -> []);
           obsoletes = (try list_deps "obsolete" par with Not_found -> []);
           provides = (try provide_list par with Not_found -> []);
+          files = (try fileprovide par with Not_found -> []);
         }
       )
     with Not_found -> None
