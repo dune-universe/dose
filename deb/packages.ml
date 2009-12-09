@@ -110,3 +110,9 @@ end)
 let input_raw ?(extras=[]) = 
   let module M = Format822.RawInput(Set) in
   M.input_raw (parse_packages_in ~extras)
+
+(** input_raw_ch ch : parse a debian Packages file from channel [ch] *)
+let input_raw_ch ?(extras=[]) = 
+  let module M = Format822.RawInput(Set) in
+  M.input_raw_ch (parse_packages_in ~extras)
+

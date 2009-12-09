@@ -289,4 +289,14 @@ module RawInput ( Set : Set.S ) = struct
       ) Set.empty files
     in
     Util.Timer.stop timer (Set.elements s)
+
+  let input_raw_ch f ch =
+    let timer = Util.Timer.create "Debian.Format822.input_raw_ch" in
+    Util.Timer.start timer;
+    let s =
+      let l = f (fun x -> x) ch in
+      let _ = Input.close_ch ch in
+      List.fold_left (fun s x -> Set.add x s) Set.empty l
+    in
+    Util.Timer.stop timer (Set.elements s)
 end

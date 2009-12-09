@@ -60,6 +60,10 @@ IFDEF HASDB THEN
 ELSE
       failwith (dbtype ^ " Not supported")
 END
+    |("deb",(_,_,_,_,"-"),_) -> begin
+      let l = Debian.Packages.input_raw_ch (IO.input_channel stdin) in
+      Debian.Debcudf.load_universe l
+    end
     |("deb",(_,_,_,_,file),_) -> begin
       let l = Debian.Packages.input_raw [file] in
       Debian.Debcudf.load_universe l

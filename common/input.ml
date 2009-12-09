@@ -76,12 +76,3 @@ let parse_uri s =
     |_ -> url.Url.file
   in
   (url.Url.proto,(user,pass,host,port,db),query)
-
-(*******************************)
-
-(* XXX stubs *)
-(*let parseUri uri =
-  ("pgsql", (Some("test"), Some("tester"), Some("localhost"), None, "debian"))
-let query = (`Interval ("2007-01-01", "2007-01-02"))
-*)
-(*******************************)

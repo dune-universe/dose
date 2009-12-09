@@ -38,6 +38,7 @@ let init_tables pkglist =
 
   (* temp_units is the list of all versions associated to a real package or provide *)
   let temp_units = Hashtbl.create (List.length pkglist) in
+  let temp_versions = Hashtbl.create (List.length pkglist) in
   (* all avalaible files *)
   let temp_files = Hashtbl.create (10 * (List.length pkglist)) in
 
@@ -48,85 +49,106 @@ let init_tables pkglist =
     with Not_found -> Hashtbl.add temp_units name [version] 
   in
 
+  let add_versions name version =
+    try
+      let l = Hashtbl.find temp_versions name in
+      Hashtbl.replace temp_versions name (version::l)
+    with Not_found -> Hashtbl.add temp_versions name [version] 
+  in
+
   let add_files (n,v) filename =
-    (* if String.starts_with "\\/" filename then *)
-      if Hashtbl.mem temp_files filename then
-        Hashtbl.add tables.files (n,v) filename
+    if Hashtbl.mem temp_files filename then
+      Hashtbl.add tables.files (n,v) filename
   in
 
   List.iter (fun pkg ->
+    add_units pkg.name pkg.version ;
+
     List.iter (fun (file,_) ->
       Hashtbl.add temp_files file ()
-    ) pkg.Packages.files 
-  ) pkglist;
+    ) pkg.Packages.files ;
 
-  List.iter (fun pkg ->
-    add_units pkg.name pkg.version ;
-    List.iter (fun (name,sel) ->
-      match CudfAdd.cudfop sel with
-      |None -> add_units name ""
-      |Some(_,version) -> add_units name version
+    List.iter (fun (name,_) ->
+      add_units name pkg.version
     ) pkg.provides
   ) pkglist;
 
   List.iter (fun pkg ->
     List.iter (fun (name,sel) ->
       add_files (pkg.name,pkg.version) name;
+      match CudfAdd.cudfop sel with
+      |None -> ()
+      |Some(_,version) -> add_versions name version
     ) pkg.conflicts
     ;
     List.iter (fun disjunction ->
       List.iter (fun (name,sel) ->
         add_files (pkg.name,pkg.version) name;
+        match CudfAdd.cudfop sel with
+        |None -> ()
+        |Some(_,version) -> add_versions name version
       ) disjunction
-    ) (pkg.depends)
+    ) pkg.depends
   ) pkglist
   ;
 
   let initialid = 2 in
   Hashtbl.iter (fun name l ->
-    let vl = List.unique (List.sort ~cmp:Version.compare l) in
-    let (_,t) = 
+    let l1 = try Hashtbl.find temp_versions name with Not_found -> [] in
+    let vl = List.unique (List.sort ~cmp:Version.compare (l@l1)) in
+    let (_,m) = 
       List.fold_left (fun (i,acc) k ->
         (i+1,Trie.add k i acc)
       ) (initialid,Trie.empty) vl 
     in
-    Hashtbl.add tables.units name t ;
-
+    Hashtbl.add tables.units name m ;
   ) temp_units;
-
 
   Hashtbl.clear temp_units;
   Hashtbl.clear temp_files;
+  Hashtbl.clear temp_versions;
 
   tables
 ;;
 
 let get_versions tables (package,prefix) =
-  try
-    let trie = Hashtbl.find tables.units package in
-    let elements t = Trie.fold (fun k v acc -> v::acc) t [] in
-    (elements (Trie.restrict prefix trie))
-  with Not_found -> []
+  if Hashtbl.mem tables.units package then begin
+    let all = Hashtbl.find tables.units package in
+    try
+      let t = Trie.restrict prefix all in
+      Trie.fold (fun k v acc -> v::acc) t [] 
+    with Not_found -> (
+      Util.print_warning "prefix %s does not match any version for unit %s"
+      prefix package;
+      [1] )
+  end else (
+    Util.print_warning "unit %s is not mentioned as a provide or real package" package;
+    [1]
+  )
 
 let get_version tables (package,version) =
-  try
-    let trie = Hashtbl.find tables.units package in
-    Trie.find version trie
-  with Not_found -> assert false
+  if Hashtbl.mem tables.units package then begin
+    let m = Hashtbl.find tables.units package in
+    try Trie.find version m
+    with Not_found -> assert false
+  end else (
+    Util.print_warning "!!!!unit %s is not mentioned as a provide or real package" package;
+    assert false
+  )
 
 (* ========================================= *)
 
 let expand tables ?(op=`Eq) (name,v) =
-  match get_versions tables (name,v) with
-  |[] -> [CudfAdd.encode name,Some(op,1)]
-  |l ->  List.map (fun x -> (CudfAdd.encode name,Some(op,x))) l
+  List.map (fun x -> (CudfAdd.encode name,Some(op,x)))
+  (get_versions tables (name,v))
 
 let loadl_plain tables l =
   List.flatten (
     List.map (fun (name,sel) ->
       match CudfAdd.cudfop sel with
       |None -> [(CudfAdd.encode name, None)]
-      |Some(op,v) -> expand tables ~op:op (name,v)
+      |Some(`Eq,v) -> expand tables (name,v)
+      |Some(op,v) -> [(CudfAdd.encode name, Some(op,get_version tables (name,v)))]
     ) l
   )
 
