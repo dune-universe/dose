@@ -68,8 +68,10 @@ let init_tables pkglist =
       Hashtbl.add temp_files file ()
     ) pkg.Packages.files ;
 
-    List.iter (fun (name,_) ->
-      add_units name pkg.version
+    List.iter (fun (name,sel) ->
+      match CudfAdd.cudfop sel with
+      |None -> add_units name ""
+      |Some(_,version) -> add_units name version
     ) pkg.provides
   ) pkglist;
 
@@ -118,9 +120,8 @@ let get_versions tables (package,prefix) =
       let t = Trie.restrict prefix all in
       Trie.fold (fun k v acc -> v::acc) t [] 
     with Not_found -> (
-      Util.print_warning "prefix %s does not match any version for unit %s"
-      prefix package;
-      [1] )
+      Util.print_warning "prefix %s does not match any version for unit %s" prefix package;
+      assert false )
   end else (
     Util.print_warning "unit %s is not mentioned as a provide or real package" package;
     [1]
@@ -133,7 +134,7 @@ let get_version tables (package,version) =
     with Not_found -> assert false
   end else (
     Util.print_warning "!!!!unit %s is not mentioned as a provide or real package" package;
-    assert false
+    1
   )
 
 (* ========================================= *)
