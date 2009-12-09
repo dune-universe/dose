@@ -341,5 +341,5 @@ value rpm_compare ( value x, value y ) {
   CAMLparam2 ( x , y );
   CAMLlocal1 ( res );
   res = rpmvercmp ( (char *) x , (char *) y );
-  CAMLreturn ( res );
+  CAMLreturn (Val_int(res));
 }
