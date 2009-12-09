@@ -56,16 +56,17 @@ let init_tables pkglist =
     with Not_found -> Hashtbl.add temp_versions name [version] 
   in
 
-  let add_files (n,v) filename =
-    if Hashtbl.mem temp_files filename then
-      Hashtbl.add tables.files (n,v) filename
+  let add_files filename =
+    List.iter (fun u -> 
+      Hashtbl.add tables.files u filename
+    ) (Hashtbl.find_all temp_files filename)
   in
 
   List.iter (fun pkg ->
     add_units pkg.name pkg.version ;
 
     List.iter (fun (file,_) ->
-      Hashtbl.add temp_files file ()
+      Hashtbl.add temp_files file (pkg.name,pkg.version)
     ) pkg.Packages.files ;
 
     List.iter (fun (name,sel) ->
@@ -77,7 +78,7 @@ let init_tables pkglist =
 
   List.iter (fun pkg ->
     List.iter (fun (name,sel) ->
-      add_files (pkg.name,pkg.version) name;
+      add_files name;
       match CudfAdd.cudfop sel with
       |None -> ()
       |Some(_,version) -> add_versions name version
@@ -85,7 +86,7 @@ let init_tables pkglist =
     ;
     List.iter (fun disjunction ->
       List.iter (fun (name,sel) ->
-        add_files (pkg.name,pkg.version) name;
+        add_files name;
         match CudfAdd.cudfop sel with
         |None -> ()
         |Some(_,version) -> add_versions name version
@@ -139,28 +140,39 @@ let get_version tables (package,version) =
 
 (* ========================================= *)
 
-let expand tables ?(op=`Eq) (name,v) =
-  List.map (fun x -> (CudfAdd.encode name,Some(op,x)))
-  (get_versions tables (name,v))
+let expand tables (package,version) (name,v) =
+  List.filter_map (fun x ->
+    if (package,version) = (name,v) then None
+    else Some(CudfAdd.encode name,Some(`Eq,x))
+  ) (get_versions tables (name,v))
 
-let loadl_plain tables l =
-  List.flatten (
-    List.map (fun (name,sel) ->
-      match CudfAdd.cudfop sel with
-      |None -> [(CudfAdd.encode name, None)]
-      |Some(`Eq,v) -> expand tables (name,v)
-      |Some(op,v) -> [(CudfAdd.encode name, Some(op,get_version tables (name,v)))]
-    ) l
+let loadl tables l =
+  List.unique (
+    List.flatten (
+      List.map (fun (name,sel) ->
+        match CudfAdd.cudfop sel with
+        |None -> [(CudfAdd.encode name, None)]
+        |Some(`Eq,v) -> expand tables ("","") (name,v)
+        |Some(op,v) -> [(CudfAdd.encode name, Some(op,get_version tables (name,v)))]
+      ) l
+    )
   )
 
-let loadlp_plain tables l =
-  List.flatten (
-    List.map (fun (name,sel) ->
-      match CudfAdd.cudfop sel with
-      |None  -> [(CudfAdd.encode name, None)]
-      (* we normalize everything to equality *)
-      |Some(_,v) -> expand tables (name,v)
-    ) l
+(* we filter out provides that provide the package itself *)
+let loadlp tables (package,version) l =
+  List.unique (
+    List.flatten (
+      List.map (fun (name,sel) ->
+        match CudfAdd.cudfop sel with
+        |None  -> [(CudfAdd.encode name, None)]
+        (* we normalize everything to equality *)
+        |Some(`Eq,v) -> expand tables (package,version) (name,v)
+        |Some(_,v) -> (
+            Util.print_warning "%s selector in provides for package %s" "" package;
+            expand tables (package,version) (name,v)
+        )
+      ) l
+    )
   )
 
 let loadp_files tables (name,version) =
@@ -169,7 +181,7 @@ let loadp_files tables (name,version) =
     ) (Hashtbl.find_all tables.files (name,version))
   )
 
-let loadll_plain tables ll = List.map (loadl_plain tables) ll
+let loadll tables ll = List.map (loadl tables) ll
 
 (* ========================================= *)
 
@@ -177,9 +189,11 @@ let tocudf tables ?(inst=false) pkg =
   { Cudf.default_package with
     Cudf.package = CudfAdd.encode pkg.name ;
     Cudf.version = get_version tables (pkg.name,pkg.version) ;
-    Cudf.depends = loadll_plain tables pkg.depends ;
-    Cudf.conflicts = loadl_plain tables pkg.conflicts ;
-    Cudf.provides = (loadp_files tables (pkg.name,pkg.version)) @ (loadlp_plain tables pkg.provides) ;
+    Cudf.depends = loadll tables pkg.depends ;
+    Cudf.conflicts = loadl tables pkg.conflicts ;
+    Cudf.provides =
+      (loadp_files tables (pkg.name,pkg.version)) @ 
+      (loadlp tables (pkg.name,pkg.version) pkg.provides) ;
     Cudf.installed = inst 
   }
 

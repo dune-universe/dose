@@ -11,50 +11,53 @@
 (**************************************************************************************)
 
 open ExtLib
-
-open Cudf
 open Common
 
 let enable_debug () =
-  Common.Util.set_verbosity Common.Util.Summary
+  Util.Progress.enable "Rpm.Parse.Hdlists.parse_822_iter";
+  Util.set_verbosity Common.Util.Summary
 ;;
 
-
 module Options =
-struct
-  let plain = ref false
-  let dump_hdlist = ref false
-  let outdir = ref ""
-end
+  struct
+    open OptParse
+    let debug = StdOpt.store_true ()
+    let dump_hdlist = StdOpt.store_true ()
+    let outdir = StdOpt.str_option ()
 
-let usage = Printf.sprintf "usage: %s [-options] [packages file]" (Sys.argv.(0))
-let options =
-  [
-    ("--plain", Arg.Set Options.plain,
-    "Do not preserve debian semantic.  Creates a (possibly) unconsistent cudf document.");
-    ("--dump", Arg.Set Options.dump_hdlist, "Dump the hdlist contentes in raw format");
-    ("--debug", Arg.Unit enable_debug, "Print debug information");
-    ("--outdir", Arg.String (fun l -> Options.outdir := l), "Specify the results directory");
-  ]
+    let options = OptParser.make ()
+
+    open OptParser
+
+    let g = add_group options ~description:"general options" "general" ;;
+    let o = add_group options ~description:"output options" "output" ;;
+
+    add options ~group:g ~long_name:"dump" ~help:"Dump the raw hdlist contents" dump_hdlist;
+    add options ~group:g ~short_name:'d' ~long_name:"debug" ~help:"Print various aggregate information" debug;
+
+    add options ~group:o ~long_name:"outdir" ~help:"Send output to a file" outdir;
+
+  end
 
 (* ========================================= *)
 
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
-  let uri = ref "" in
-  let _ =
-    try Arg.parse options (fun f -> uri := f ) usage
-    with Arg.Bad s -> failwith s
+  let uri =
+    match OptParse.OptParser.parse_argv Options.options with
+    |[] -> (Printf.eprintf "No input file specified" ; exit 2)
+    |u::_ -> u
   in
-  if !uri == "" then begin
-    Arg.usage options (usage ^ "\nNo input file specified");
-    exit 2
-  end;
+
+  if OptParse.Opt.get Options.debug then
+    enable_debug ()
+  ;
 
   let l =
-     match Input.parse_uri !uri with
+     match Input.parse_uri uri with
      |("hdlist",(_,_,_,_,file),_) -> begin
-       if !Options.dump_hdlist then
+       print_endline file ;
+       if OptParse.Opt.get Options.dump_hdlist then
          (Hdlists.dump Format.std_formatter file ; exit(0))
        else
          Packages.Hdlists.input_raw [file]
@@ -75,8 +78,8 @@ let main () =
   in
 
   let oc =
-    if !Options.outdir <> "" then begin
-      let dirname = !Options.outdir in
+    if OptParse.Opt.is_set Options.outdir then begin
+      let dirname = OptParse.Opt.get Options.outdir in
       if not(Sys.file_exists dirname) then Unix.mkdir dirname 777 ;
       open_out (Filename.concat dirname ("res.cudf"))
     end else stdout

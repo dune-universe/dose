@@ -15,9 +15,12 @@
 open Common
 open ExtLib 
 
-let progressbar = Util.Progress.create "Rpm.Parse.Hdlists.parse_822_iter"
+let progressbar = Util.Progress.create "Rpm.Parse.Hdlists.parse_822_iter" ;;
+Util.Progress.set_total progressbar 7000 (* estimate *) ;;
 
 type t
+
+(* bindings to the librpm *)
 external _open_in : string -> t = "rpm_open_hdlist"
 external _close_in : t -> unit = "rpm_close_hdlist"
 external parse_paragraph : t -> ( string * string ) list option = "rpm_parse_paragraph"
@@ -108,8 +111,6 @@ let rec parse_822_rec parse f acc t =
   with Eof -> acc (* no more paragraphs *)
 
 let parse_822_iter parse f ch =
-  let total = 6000 in (* estimate *)
-  Util.Progress.set_total progressbar total;
   let l = ref [] in
   try
     while true do
@@ -138,6 +139,7 @@ let dump ppf f =
   let t = _open_in f in
   try 
   while true ; do
+    Util.Progress.progress progressbar ;
     match parse_paragraph t with
       |None -> raise Eof
       |Some par -> dump_raw ppf "" par
