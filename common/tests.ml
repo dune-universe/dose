@@ -32,24 +32,24 @@ let test_deb_path =
 let test_hdlist = 
   "hdlist" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
-      Input.parse_uri "hdlist:///path/to/file" 
-    in assert_equal true (protocol = "hdlist" && path = "/path/to/file")
+      Input.parse_uri "hdlist://path/to/file" 
+    in assert_equal true (protocol = "hdlist" && path = "path/to/file")
   )
 ;;
 
 let test_synth =
   "synth" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
-      Input.parse_uri "synth:///path/to/file" 
-    in assert_equal true (protocol = "synth" && path = "/path/to/file")
+      Input.parse_uri "synth://path/to/file" 
+    in assert_equal true (protocol = "synth" && path = "path/to/file")
   )
 ;;
 
 let test_cudf = 
   "cudf" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
-      Input.parse_uri "cudf:///path/to/file" 
-    in assert_equal true (protocol = "cudf" && path = "/path/to/file")
+      Input.parse_uri "cudf://path/to/file" 
+    in assert_equal true (protocol = "cudf" && path = "path/to/file")
   )
 ;;
 

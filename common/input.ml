@@ -73,6 +73,6 @@ let parse_uri s =
     |"pgsql" ->
         if (Str.string_before url.Url.file 1) = "/" then
         Str.string_after url.Url.file 1 else url.Url.file
-    |_ -> url.Url.file
+    |_ -> Printf.sprintf "%s%s" url.Url.server url.Url.file
   in
   (url.Url.proto,(user,pass,host,port,db),query)
