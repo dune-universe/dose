@@ -95,15 +95,30 @@ let init_tables pkglist =
   ) pkglist
   ;
 
-  let initialid = 2 in
-  Hashtbl.iter (fun name l ->
-    let l1 = try Hashtbl.find temp_versions name with Not_found -> [] in
-    let vl = List.unique (List.sort ~cmp:Version.compare (l@l1)) in
-    let (_,m) = 
-      List.fold_left (fun (i,acc) k ->
-        (i+1,Trie.add k i acc)
-      ) (initialid,Trie.empty) vl 
+  (* return an list of version list where each sublist contains semantically 
+   * equal, but different versions and the outer list is ordered with respect
+   * to rpmcmp *)
+  let order l =
+    let ol = List.unique (List.sort ~cmp:Version.compare l) in
+    let rec aux acc l = function
+      |[] -> l :: acc
+      |h::t when l = [] -> aux acc (h::l) t
+      |h::t when Version.compare h (List.hd l) = 0 -> aux acc (h::l) t
+      |h::t -> aux (l::acc) [h] t
     in
+    List.rev (aux [] [] ol)
+  in
+  let initialid = 2 in
+  Hashtbl.iter (fun name l1 ->
+    let l2 = try Hashtbl.find temp_versions name with Not_found -> [] in
+    let vl = order (l1@l2) in
+    let (_,m) =
+      List.fold_left (fun (i,t) l ->
+        (i+1,List.fold_left (fun acc k -> Trie.add k i acc) t l)
+      ) (initialid,Trie.empty) vl
+    in
+    Util.print_info "package %s : %s" name 
+    (Trie.fold (fun k v acc -> Printf.sprintf "%s (%s = %d)" acc k v) m ""); 
     Hashtbl.add tables.units name m ;
   ) temp_units;
 

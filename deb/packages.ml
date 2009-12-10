@@ -49,7 +49,6 @@ let default_package = {
   extras = [];
 }
 
-
 let parse_name = parse_package
 let parse_vpkg = parse_constr
 let parse_veqpkg = parse_constr

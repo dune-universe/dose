@@ -24,7 +24,8 @@ let progressbar_univcheck = Util.Progress.create "Depsolver_int.univcheck"
 module R = struct type reason = Diagnostic_int.reason end
 module S = EdosSolver.M(R)
 
-(** associate a sat solver variable to a package id *)
+(** associate a sat solver variable to a package id
+    if size = 0 then the mapping is the identity function *)
 class intprojection size = object
 
   val vartoint = Hashtbl.create (2 * size)

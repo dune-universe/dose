@@ -16,40 +16,44 @@ IFDEF HASDB THEN
 open Db
 END
 
+let enable_debug () =
+  (* Util.Progress.enable "name of the progress bar"; *)
+  Util.set_verbosity Common.Util.Summary
+;;
+
 module Options = struct
-  let show_successes = ref true
-  let show_failures = ref true
-  let explain_results = ref false
-  let output_xml= ref false
+  open OptParse
+
+  let debug = StdOpt.store_true ()
+  let successes = StdOpt.store_true ()
+  let failures = StdOpt.store_true ()
+  let explain = StdOpt.store_true ()
+  let xml = StdOpt.str_option ()
+
+  let options = OptParser.make ()
+
+  open OptParser
+  add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
+  add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
+  add options ~short_name:'f' ~long_name:"failures" ~help:"Only show failures" failures;
+  add options ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" successes;
+  add options ~long_name:"xml" ~help:"Output results in XML format" xml;
 end
-
-let usage = Printf.sprintf "usage: %s [-options] uri" Sys.argv.(0) ;;
-
-let options = [
-  ("--explain", Arg.Set Options.explain_results, "Explain the results");
-  ("--failures", Arg.Clear Options.show_successes, "Only show failures");
-  ("--successes", Arg.Clear Options.show_failures, "Only show successes");
-  ("--xml", Arg.Set Options.output_xml, "Output results in XML format");
-  ("--debug", Arg.Unit (fun () -> Util.set_verbosity Util.Summary), "Print debug information");
-];;
 
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
-  let uri = ref "" in
-  let _ =
-    try Arg.parse options (fun f -> uri := f ) usage
-    with Arg.Bad s -> failwith s
+  let uri =
+    match OptParse.OptParser.parse_argv Options.options with
+    |[] -> (Printf.eprintf "No input file specified" ; exit 2)
+    |u::_ -> u
   in
-  if !uri == "" then begin
-    Arg.usage options (usage ^ "\nNo input file specified");
-    exit 2
-  end;
+  if OptParse.Opt.get Options.debug then enable_debug () ;
 
   Printf.eprintf "Parsing and normalizing...%!" ;
   let timer = Util.Timer.create "Parsing and normalizing" in
   Util.Timer.start timer;
   let universe =
-    match Input.parse_uri !uri with
+    match Input.parse_uri uri with
     |(("pgsql"|"sqlite") as dbtype,info,(Some query)) ->
 IFDEF HASDB THEN
       begin
@@ -77,11 +81,15 @@ END
   Printf.eprintf "done\n%!" ;
 
   let result_printer = function
-    |{Diagnostic.result = Diagnostic.Failure (_) } when !Options.show_successes -> ()
+    (* suppress failures *)
+    |{Diagnostic.result = Diagnostic.Failure (_) } when (OptParse.Opt.get Options.successes) -> ()
+    (* print failures *)
     |{Diagnostic.result = Diagnostic.Failure (_) } as r ->
-          Diagnostic.print ~explain:!Options.explain_results stdout r
-    |r when !Options.show_failures -> ()
-    |r -> Diagnostic.print ~explain:!Options.explain_results stdout r
+          Diagnostic.print ~explain:(OptParse.Opt.get Options.explain) stdout r
+    (* suppress successes *)
+    |{Diagnostic.result = Diagnostic.Success (_) } when (OptParse.Opt.get Options.failures) -> ()
+    (* print success - nothing to explain *)
+    |{Diagnostic.result = Diagnostic.Success (_) } as r -> Diagnostic.print stdout r
   in
 
   Printf.eprintf "done\n%!" ;

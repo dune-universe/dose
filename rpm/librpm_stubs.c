@@ -337,9 +337,18 @@ value rpm_close_hdlist (value fd) {
   CAMLreturn(Val_unit);
 }
 
-value rpm_compare ( value x, value y ) {
+value rpm_vercmp ( value x, value y ) {
   CAMLparam2 ( x , y );
   CAMLlocal1 ( res );
   res = rpmvercmp ( (char *) x , (char *) y );
   CAMLreturn (Val_int(res));
 }
+
+/*
+value rpm_EVRcmp ( value x, value y ) {
+  CAMLparam2 ( x , y );
+  CAMLlocal1 ( res );
+  res = rpmEVRcmp ( (char *) x , (char *) y );
+  CAMLreturn (Val_int(res));
+}
+*/
