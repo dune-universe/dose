@@ -62,6 +62,7 @@ type solver = {
   map : intprojection;    (** map a package id to a sat solver variable *)
   proxy : int -> int;     (** return the index of a proxy variable. 
                               Proxy variables are numbered from 0 to proxy_size - 1 *)
+  nr_variables : int ;    (** number of non-proxy variables *)
 }
 
 (** low level constraint solver initialization
@@ -170,6 +171,7 @@ let init_solver ?(buffer=false) ?(proxy_size=0) ?idlist index =
     disjunctions = !num_disjunctions ;
     map = map ;
     proxy = proxy ;
+    nr_variables = nvars ;
   }
 ;;
 

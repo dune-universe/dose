@@ -63,6 +63,7 @@ val reverse_dependency_closure : ?maxdepth:int ->
   Cudf.universe -> Cudf.package list -> Cudf.package list
 
 (** [output_clauses c univ] prints the clauses generated from the universe
-    [univ] to output channel [c] *)
+    [univ] to output channel [c]. If [dimacs] is [true], then the output
+    will be in DIMACS format *)
 val output_clauses :
-  out_channel -> Cudf.universe -> unit 
+  ?dimacs:bool -> out_channel -> Cudf.universe -> unit 
