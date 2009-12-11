@@ -67,7 +67,7 @@ IFDEF HASDB THEN
         Debian.Debcudf.load_universe l
       end
 ELSE
-      failwith (dbtype ^ " Not supported")
+      failwith (dbtype^" Not supported")
 END
     |("deb",(_,_,_,_,"-"),_) -> begin
       let l = Debian.Packages.input_raw_ch (IO.input_channel stdin) in
@@ -80,7 +80,26 @@ END
     |("cudf",(_,_,_,_,file),_) -> begin
       let _, u, _ = CudfAdd.load_cudf file in u
     end
-    |_ -> failwith "Not supported"
+    |("hdlist",(_,_,_,_,file),_) ->
+IFDEF HASRPM THEN
+    begin
+      let l = Rpm.Packages.Hdlists.input_raw [file] in
+      Rpm.Rpmcudf.load_universe l
+    end
+ELSE
+    failwith ("hdlist Not supported")
+END
+    |("synth",(_,_,_,_,file),_) ->
+IFDEF HASRPM THEN
+    begin
+      let l = Rpm.Packages.Synthesis.input_raw [file] in
+      Rpm.Rpmcudf.load_universe l
+    end
+ELSE
+    failwith ("synth Not supported")
+END
+    |(s,_,_) -> failwith (s^" Not supported")
+
   in
   ignore(Util.Timer.stop timer ());
   Printf.eprintf "done\n%!" ;

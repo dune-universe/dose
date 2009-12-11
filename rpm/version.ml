@@ -95,8 +95,6 @@ let compare s1 s2 =
   in
   let (e1,v1,r1) = parse s1 in
   let (e2,v2,r2) = parse s2 in
-  let vr1 = Printf.sprintf "%s%s" v1 (get r1) in
-  let vr2 = Printf.sprintf "%s%s" v2 (get r2) in
   match epochcmp e1 e2 with
   |0 ->
       begin match rpmvercmp v1 v2 with
