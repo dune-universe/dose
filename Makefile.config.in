@@ -1,6 +1,10 @@
 VERSION=@PACKAGE_VERSION@
 NAME=@PACKAGE_NAME@
 
+CFLAGS=@CFLAGS@
+CPPFLAGS=@CPPFLAGS@
+LDFLAGS=@LDFLAGS@
+
 DESTDIR =
 LIBDIR = $(DESTDIR)/@OCAMLLIB@
 BINDIR = $(DESTDIR)/usr/bin
@@ -59,7 +63,7 @@ ifeq ("@HAS_OCAMLGRAPH@","yes")
 			  applications/rmat.$(OCAMLBEST) \
 				applications/pref-attach.$(OCAMLBEST) \
 				applications/strong-deps.$(OCAMLBEST) \
-				applications/depgraph.$(OCAMLBEST)
+				applications/ceve.$(OCAMLBEST)
 endif
 
 #rpm support

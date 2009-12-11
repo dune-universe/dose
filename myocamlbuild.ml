@@ -31,6 +31,11 @@ let find_syntaxes () = ["camlp4o"; "camlp4r"]
 (* ocamlfind command *)
 let ocamlfind x = S[A"ocamlfind"; x]
 
+let env_var x =
+  try
+    Sys.getenv x
+  with Not_found -> ""
+
 let _ = dispatch begin function
    | Before_options ->
        (* by using Before_options one let command line options have an higher priority *)
@@ -68,10 +73,11 @@ let _ = dispatch begin function
 
        List.iter begin fun (lib,dir) ->
          flag ["ocaml"; "link"; "c_use_"^lib; "byte"] & S[A"-custom"; A"-cclib"; A("-l"^lib)];
-         flag ["ocaml"; "link"; "c_use_"^lib; "native"] & S[A"-cclib"; A("-l"^lib)];
+         flag ["ocaml"; "link"; "c_use_"^lib; "native"] & S[A"-cclib"; A("-l"^lib); A"-ccopt"; A(env_var "LDFLAGS")];
          dep ["ocaml"; "link"; "c_use_"^lib] & [dir^"/lib"^lib^"_stubs.a"];
          (* Make sure the C pieces and built... *)
          dep ["ocaml"; "compile"; "c_use_"^lib ] & [dir^"/lib"^lib^"_stubs.a"];
+         flag ["c"; "compile"] & S[A"-ccopt"; A(env_var "CPPFLAGS")];
        end clibs ;
 
        (* The default "thread" tag is not compatible with ocamlfind.

@@ -12,7 +12,7 @@ COMSRC = $(filter-out common/myocamlbuild.ml common/edosSolver.ml common/edosSol
 				 $(wildcard common/*.ml common/*.mli))
 
 all:
-	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
+	CPPFLAGS="$(CPPFLAGS)" LDFLAGS="-fstack-protector" $(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
 
 clean:
 	$(OCAMLBUILD) $(OBFLAGS) -clean
