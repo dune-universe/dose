@@ -98,7 +98,7 @@ module Synthesis = struct
     try Scanf.sscanf vpkg "%[^[][%[^]]]" (fun n sel -> (n,parse_op sel))
     with End_of_file -> (vpkg,None)
 
-  let parse_deps l = List.map parse_vpkg l
+  let parse_deps l = List.unique (List.map parse_vpkg l)
 
   let parse_info pkg = function
     |[nvra;epoch;size;group] ->
