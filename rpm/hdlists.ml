@@ -41,6 +41,22 @@ let flags_to_string flag =
   |12 -> ">="
   |_ -> ""
 
+(***************)
+
+(* from rpm-dist-check . Jerome is always right *)
+(* RPMSENSE_RPMLIB | RPMSENSE_MISSINGOK *)
+let requires_to_skip_bitmask = (1 lsl 24) lor (1 lsl 19)
+
+(* Dependencies on rpmlib and "suggests" dependencies are skipped *)
+let skipped_dep name flags i =
+  (int_of_string flags.(i)) land requires_to_skip_bitmask <> 0 ||
+  let nm = name.(i) in
+  (String.length nm > 8 &&
+   nm.[0] = 'r' && nm.[1] = 'p' && nm.[2] = 'm' && nm.[3] = 'l' &&
+   nm.[4] = 'i' && nm.[5] = 'b' && nm.[6] = '(')
+
+(***************)
+
 let split_string p par =
   Array.of_list (Str.split_delim (Str.regexp ",") (List.assoc p par))
 
@@ -54,7 +70,7 @@ let list_deps p par =
   let acc = ref [] in
   begin try 
     for i = 0 to (Array.length name_a) - 1 do
-    if not (Str.string_match (Str.regexp "rpmlib(.*)") name_a.(i) 0) then
+      if not (skipped_dep name_a flags_a i) then
       begin 
         let constr =
           if i < (Array.length version_a) then 

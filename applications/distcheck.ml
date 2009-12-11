@@ -30,7 +30,12 @@ module Options = struct
   let explain = StdOpt.store_true ()
   let xml = StdOpt.str_option ()
 
-  let options = OptParser.make ()
+  let showall () = (Opt.get successes) && (Opt.get failures)
+  let onlyfail () = (Opt.get failures) && not (Opt.get successes)
+  let onlysucc () = (Opt.get successes) && not (Opt.get failures)
+
+  let description = "By default we show only the number of broken packages"
+  let options = OptParser.make ~description:description ()
 
   open OptParser
   add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
@@ -81,15 +86,24 @@ END
   Printf.eprintf "done\n%!" ;
 
   let result_printer = function
-    (* suppress failures *)
-    |{Diagnostic.result = Diagnostic.Failure (_) } when (OptParse.Opt.get Options.successes) -> ()
-    (* print failures *)
-    |{Diagnostic.result = Diagnostic.Failure (_) } as r ->
-          Diagnostic.print ~explain:(OptParse.Opt.get Options.explain) stdout r
-    (* suppress successes *)
-    |{Diagnostic.result = Diagnostic.Success (_) } when (OptParse.Opt.get Options.failures) -> ()
-    (* print success - nothing to explain *)
-    |{Diagnostic.result = Diagnostic.Success (_) } as r -> Diagnostic.print stdout r
+    (* print all *)
+    |{Diagnostic.result = Diagnostic.Success (_) } as r when Options.showall () ->
+       Diagnostic.print stdout r
+    |{Diagnostic.result = Diagnostic.Failure (_) } as r when Options.showall () ->
+        Diagnostic.print ~explain:(OptParse.Opt.get Options.explain) stdout r
+
+    (* print only success - nothing to explain *)
+    |{Diagnostic.result = Diagnostic.Success (_) } as r when Options.onlysucc () ->
+        Diagnostic.print stdout r
+    |{Diagnostic.result = Diagnostic.Failure (_) } when Options.onlysucc () -> ()
+
+    (* print only failures *)
+    |{Diagnostic.result = Diagnostic.Success (_) } when Options.onlyfail () -> ()
+    |{Diagnostic.result = Diagnostic.Failure (_) } as r when Options.onlyfail () -> 
+        Diagnostic.print ~explain:(OptParse.Opt.get Options.explain) stdout r
+
+    (* nothing *)
+    | _ -> ()
   in
 
   Printf.eprintf "done\n%!" ;
