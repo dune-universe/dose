@@ -43,7 +43,7 @@ let open_ch ch = IO.input_channel ch
 let close_ch ch = IO.close_in ch
 
 let open_file file =
-  if Filename.check_suffix file ".gz" then
+  if Filename.check_suffix file ".gz" || Filename.check_suffix file ".cz" then
 IFDEF HASZIP THEN
     gzip_open_file file
 ELSE

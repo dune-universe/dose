@@ -56,7 +56,6 @@ let main () =
   let l =
      match Input.parse_uri uri with
      |("hdlist",(_,_,_,_,file),_) -> begin
-       print_endline file ;
        if OptParse.Opt.get Options.dump_hdlist then
          (Hdlists.dump Format.std_formatter file ; exit(0))
        else

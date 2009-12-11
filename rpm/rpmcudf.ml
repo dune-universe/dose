@@ -117,8 +117,9 @@ let init_tables pkglist =
         (i+1,List.fold_left (fun acc k -> Trie.add k i acc) t l)
       ) (initialid,Trie.empty) vl
     in
-    Util.print_info "package %s : %s" name 
+(*    Util.print_info "package %s : %s" name 
     (Trie.fold (fun k v acc -> Printf.sprintf "%s (%s = %d)" acc k v) m ""); 
+    *)
     Hashtbl.add tables.units name m ;
   ) temp_units;
 
@@ -129,6 +130,8 @@ let init_tables pkglist =
   tables
 ;;
 
+(* ATT: we use version 1 for a version of a non existent package - 
+   neither as a real package or a provide *)
 let get_versions tables (package,prefix) =
   if Hashtbl.mem tables.units package then begin
     let all = Hashtbl.find tables.units package in
@@ -139,7 +142,7 @@ let get_versions tables (package,prefix) =
       Util.print_warning "prefix %s does not match any version for unit %s" prefix package;
       assert false )
   end else (
-    Util.print_warning "unit %s is not mentioned as a provide or real package" package;
+    (* Util.print_warning "unit %s is not mentioned as a provide or real package" package; *)
     [1]
   )
 
@@ -149,7 +152,7 @@ let get_version tables (package,version) =
     try Trie.find version m
     with Not_found -> assert false
   end else (
-    Util.print_warning "!!!!unit %s is not mentioned as a provide or real package" package;
+    (* Util.print_warning "unit %s is not mentioned as a provide or real package" package; *)
     1
   )
 
