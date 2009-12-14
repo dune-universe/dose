@@ -10,6 +10,12 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
+(* XXX
+ * TODO: 
+   - add file conflicts
+   - solve overlapping provides problem in conflicts
+*)
+
 open ExtLib
 open ExtString
 open Common
@@ -18,6 +24,7 @@ open Packages
 type tables = {
   units : (string, int Trie.t) Hashtbl.t;
   files : ((string * string), string) Hashtbl.t;
+  fileconflicts : ((string * string),vpkg)  Hashtbl.t;
 }
 
 let create n = {
@@ -26,12 +33,33 @@ let create n = {
   (* all files associated to a package that are mentioned as a conflict or
    * depends *)
   files = Hashtbl.create (2 * n);
+  fileconflicts = Hashtbl.create (10 * n);
 }
 
 let clear tables =
   Hashtbl.clear tables.units;
   Hashtbl.clear tables.files;
+  Hashtbl.clear tables.fileconflicts;
 ;;
+(*
+let files = Hashtbl.create 300000
+
+let add_file f v =
+  let l =
+    try Hashtbl.find files f with Not_found ->
+    let l = ref [] in Hashtbl.add files f l; l
+  in
+  l := v :: !l
+
+let resolve_file_dep (nm, rel, ver) =
+  if nm = "" || nm.[0] <> '/' then [] else begin
+    let i = String.rindex nm '/' in
+    let d = String.sub nm 0 (i + 1) in
+    let f = String.sub nm (i + 1) (String.length nm - i - 1) in
+    let l = try !(Hashtbl.find files (d, f)) with Not_found -> [] in
+    List.map (fun (_, p) -> p) l
+  end
+*)
 
 let init_tables pkglist =
   let tables = create (List.length pkglist) in
@@ -42,19 +70,16 @@ let init_tables pkglist =
   (* all avalaible files *)
   let temp_files = Hashtbl.create (10 * (List.length pkglist)) in
 
-  let add_units name version =
-    try
-      let l = Hashtbl.find temp_units name in
-      Hashtbl.replace temp_units name (version::l)
-    with Not_found -> Hashtbl.add temp_units name [version] 
+  let add_list t k v =
+    let l =
+      try Hashtbl.find t k with Not_found ->
+      let l = ref [] in Hashtbl.add t k l; l
+    in
+    l := v :: !l
   in
 
-  let add_versions name version =
-    try
-      let l = Hashtbl.find temp_versions name in
-      Hashtbl.replace temp_versions name (version::l)
-    with Not_found -> Hashtbl.add temp_versions name [version] 
-  in
+  let add_units name version = add_list temp_units name version in
+  let add_versions name version = add_list temp_versions name version in
 
   let add_files filename =
     List.iter (fun u -> 
@@ -74,9 +99,19 @@ let init_tables pkglist =
       |None -> add_units name ""
       |Some(_,version) -> add_units name version
     ) pkg.provides
-  ) pkglist;
+  ) pkglist
+  ;
 
   List.iter (fun pkg ->
+
+    List.iter (fun (file,_) ->
+      List.iter (fun (n,v) ->
+        if n <> pkg.Packages.name && v <> pkg.Packages.version then
+          let (pn,pv) = (pkg.Packages.name,pkg.Packages.version) in
+          Hashtbl.add tables.fileconflicts (pn,pv) (n,Some("=",v))
+      ) (Hashtbl.find_all temp_files file)
+    ) pkg.Packages.files ;
+
     List.iter (fun (name,sel) ->
       add_files name;
       match CudfAdd.cudfop sel with
@@ -109,8 +144,8 @@ let init_tables pkglist =
     List.rev (aux [] [] ol)
   in
   let initialid = 2 in
-  Hashtbl.iter (fun name l1 ->
-    let l2 = try Hashtbl.find temp_versions name with Not_found -> [] in
+  Hashtbl.iter (fun name {contents = l1} ->
+    let l2 = try !(Hashtbl.find temp_versions name) with Not_found -> [] in
     let vl = order (l1@l2) in
     let (_,m) =
       List.fold_left (fun (i,t) l ->
@@ -131,7 +166,8 @@ let init_tables pkglist =
 ;;
 
 (* ATT: we use version 1 for a version of a non existent package - 
-   neither as a real package or a provide *)
+   neither as a real package or a provide 
+   strict : match only version with EVR tuples *)
 let get_versions tables (package,prefix) =
   if Hashtbl.mem tables.units package then begin
     let all = Hashtbl.find tables.units package in
@@ -160,6 +196,7 @@ let get_version tables (package,version) =
 
 let expand tables (package,version) (name,v) =
   List.filter_map (fun x ->
+    (* we filter out package that expand to itselves *)
     if (package,version) = (name,v) then None
     else Some(CudfAdd.encode name,Some(`Eq,x))
   ) (get_versions tables (name,v))
@@ -176,7 +213,6 @@ let loadl tables l =
     )
   )
 
-(* we filter out provides that provide the package itself *)
 let loadlp tables (package,version) l =
   List.unique (
     List.flatten (
@@ -204,14 +240,18 @@ let loadll tables ll = List.map (loadl tables) ll
 (* ========================================= *)
 
 let tocudf tables ?(inst=false) pkg =
+  let (n,v) = (pkg.name,pkg.version) in
+  let fileconflicts = Hashtbl.find_all tables.fileconflicts (n,v) in 
+  (* Printf.eprintf "package %s %s has %d potential file conflicts\n" n v
+  (List.length fileconflicts); *)
   { Cudf.default_package with
     Cudf.package = CudfAdd.encode pkg.name ;
-    Cudf.version = get_version tables (pkg.name,pkg.version) ;
+    Cudf.version = get_version tables (n,v) ;
     Cudf.depends = loadll tables pkg.depends ;
-    Cudf.conflicts = loadl tables pkg.conflicts ;
+    Cudf.conflicts = loadl tables pkg.conflicts;
     Cudf.provides =
-      (loadp_files tables (pkg.name,pkg.version)) @ 
-      (loadlp tables (pkg.name,pkg.version) pkg.provides) ;
+      (loadp_files tables (n,v)) @ 
+      (loadlp tables (n,v) pkg.provides) ;
     Cudf.installed = inst 
   }
 

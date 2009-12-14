@@ -107,7 +107,6 @@ let fileprovide par =
 
 let provide_list par = 
   let provide = (try list_deps "provide" par with Not_found -> []) in
-  (* let fileprovide = fileprovide par in *)
   (List.unique provide)
 
 let depend_list par =
