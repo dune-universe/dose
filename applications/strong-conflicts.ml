@@ -33,10 +33,12 @@ let enable_debug () =
 
 let usage = Printf.sprintf "usage: %s [--debug] [--log file] uri" Sys.argv.(0);;
 let logfile = ref (open_out "/dev/null");;
+let use_strong_conflicts = ref false;;
 
 let options = [
   ("--debug", Arg.Unit enable_debug, "Print debug information");
   ("--log", Arg.String (fun s -> close_out !logfile; logfile := open_out s), "Dump log information in file");
+  ("--strong", Arg.Set use_strong_conflicts, "Use strong conflicts");
 ];;
 
 let log s = 
@@ -234,10 +236,15 @@ begin
       let l = Debian.Packages.input_raw [file] in
       Debian.Debcudf.load_universe l
     end
-  | ("rpm", (_,_,_,_,file),_) ->
+  | ("hdlist", (_,_,_,_,file),_) ->
     begin
       let l = Rpm.Packages.Hdlists.input_raw [file] in
-      Rpm.RpmCudf.load_universe l
+      Rpm.Rpmcudf.load_universe l
+    end
+  | ("synth", (_,_,_,_,file),_) ->
+    begin
+      let l = Rpm.Packages.Synthesis.input_raw [file] in
+      Rpm.Rpmcudf.load_universe l
     end
   | (s, _, _) -> failwith (Printf.sprintf "%s: not supported\n" s) in
   (* ignore (Util.Timer.stop timer ()); *)
@@ -250,7 +257,10 @@ begin
 
   Printf.eprintf "Generating dependency graphs...%!";
   let gr = Graph.dependency_graph u in
-  let sd_gr = Strongdeps.strongdeps_univ u in
+  let sd_gr = if !use_strong_conflicts then
+    Strongdeps.strongdeps_univ u
+  else
+    Strongdeps.conjdeps_univ u in
   Printf.eprintf "done\n%!";
   Printf.eprintf "Nodes in sd_graph: %d\n%!" (Defaultgraphs.PackageGraph.G.nb_vertex sd_gr);
 
