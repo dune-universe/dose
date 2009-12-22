@@ -22,6 +22,7 @@ module Graph = Defaultgraphs.SyntacticDependencyGraph
 module G = Graph.G
 module V = Graph.PkgV
 module E = Graph.PkgE
+module SG = Defaultgraphs.PackageGraph.G
 
 let enable_debug () =
     (* enable the progress bars *)
@@ -72,6 +73,7 @@ type conflict_type =
 
 let nr_conj_pairs = ref 0;;
 let nr_other_pairs = ref 0;;
+let nr_tested = ref 0;;
 let pair_ht = Hashtbl.create 8192;;
 
 let add_pair x y ct root =
@@ -121,17 +123,9 @@ let add_predecessors u gr sd_gr c_pred_ht pred_ht c =
     begin
       Hashtbl.add visited p true;
       visit_conj (p::acc)
-        (G.fold_pred_e (fun (_,ct,p) l ->
-          match ct with
-          | E.DirDepends ->
-            begin
-              match p with
-              | V.Pkg p' -> p'::l
-              | _ -> failwith "Inconsistent dependency graph (Or -> DirDepends)"
-            end
-          | _ -> l
-        ) gr (V.Pkg p) r)
+        ((SG.pred sd_gr p) @ r)
     end in
+  (* let visit_conj p = SG.pred sd_gr p in *)
   let rec visit_disj acc = function
     [] -> acc
   | p::r ->
@@ -139,15 +133,12 @@ let add_predecessors u gr sd_gr c_pred_ht pred_ht c =
     else
     begin
       Hashtbl.add visited p true;
-      visit_disj (p::acc) (preceding_packages gr (V.Pkg p)@r)
+      visit_disj (p::acc) ((preceding_packages gr (V.Pkg p)) @ r)
     end in
 begin
-  let c_c_pred = visit_conj [] [c] in
-  let c_s_pred = try
-    Defaultgraphs.PackageGraph.G.pred sd_gr c
-  with
-    Invalid_argument _ -> [] in
-  let c_pred = List.unique (c_c_pred @ c_s_pred) in
+  let c_pred = try
+    visit_conj [] [c] (* visit_conj c *)
+  with Invalid_argument _ -> [] in
     Hashtbl.add c_pred_ht c c_pred;
     Hashtbl.add pred_ht c (visit_disj c_pred 
       (List.fold_left (fun l p -> l@preceding_packages gr (V.Pkg p)) [] c_pred))
@@ -354,17 +345,20 @@ begin
       match ct with
       | Explicit | Strong -> (incr nr_sc; add_strong_conflict sc_ht c1 c2 root ct)
       | Other _ -> 
-        let d = Depsolver.edos_coinstall slv [c1;c2] in
-        begin
-          match d.result with
-          | Failure f ->
-            (incr nr_sc; add_strong_conflict sc_ht c1 c2 root (Other (f ())))
-          | _ -> () 
-        end
+        if not (SG.mem_edge sd_gr c1 c2 || SG.mem_edge sd_gr c2 c1)
+        then let d = Depsolver.edos_coinstall slv [c1;c2] in
+          begin
+            incr nr_tested;
+            match d.result with
+            | Failure f ->
+              (incr nr_sc; add_strong_conflict sc_ht c1 c2 root (Other (f ())))
+            | _ -> () 
+          end
     ) c1_ht
   ) pair_ht;
   ignore (Util.Timer.stop timer ());
 
+  Printf.eprintf "Finally SAT-tested %d pairs.\n" !nr_tested;
   Printf.eprintf "Found %d strong conflicts.\n%!" !nr_sc;
 
   Hashtbl.iter (fun c1 (i, c1_ht) ->
