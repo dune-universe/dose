@@ -21,7 +21,7 @@ module S = Set.Make(struct type t = Cudf.package let compare = compare end)
 let f_legacy = "tests/legacy.cudf"
 let f_legacy_sol = "tests/legacy-sol.cudf"
 let f_dependency = "tests/dependency.cudf"
-let f_conj_dependency = "tests/conj_dependency.cudf"
+(* let f_conj_dependency = "tests/conj_dependency.cudf" *)
 let f_cone = "tests/cone.cudf"
 let f_engine_conflicts = "tests/engine-conflicts.cudf"
 let f_strongdeps_simple = "tests/strongdep-simple.cudf"
@@ -38,7 +38,7 @@ let toset f =
   List.fold_right S.add pl S.empty
 
 let dependency_set = toset f_dependency
-let conj_dependency_set = toset f_conj_dependency
+(* let conj_dependency_set = toset f_conj_dependency *)
 let cone_set = toset f_cone
 let engine_conflicts_set = toset f_engine_conflicts
 
@@ -96,7 +96,7 @@ let test_dependency_closure =
   )
 
 (* blah ... *)
-let test_dependency_closure_graph = 
+(* let test_dependency_closure_graph = 
   "conjunctive dependency closure" >:: (fun _ -> 
     let (_,pkglist,_) = Cudf_parser.parse_from_file f_legacy in
     let mdf = Mdf.load_from_list pkglist in
@@ -109,7 +109,7 @@ let test_dependency_closure_graph =
     (* List.iter (fun pkg -> print_endline (CudfAdd.print_package pkg)) l; *)
     let set = List.fold_right S.add l S.empty in
     assert_equal true (S.equal conj_dependency_set set)
-  )
+  ) *)
 
 let test_reverse_dependencies =
   "direct reverse dependencies" >:: (fun _ ->
@@ -147,7 +147,7 @@ let test_depsolver =
     test_trim ;
     test_distribcheck ;
     test_dependency_closure ;
-    test_dependency_closure_graph ;
+    (* test_dependency_closure_graph ; *)
     test_reverse_dependencies ;
     test_reverse_dependency_closure ;
   ]

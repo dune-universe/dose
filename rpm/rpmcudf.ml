@@ -24,7 +24,7 @@ open Packages
 type tables = {
   units : (string, int Trie.t) Hashtbl.t;
   files : ((string * string), string) Hashtbl.t;
-  fileconflicts : ((string * string),vpkg)  Hashtbl.t;
+  fileconflicts : ((string * string), vpkg)  Hashtbl.t;
 }
 
 let create n = {
@@ -90,8 +90,9 @@ let init_tables pkglist =
   List.iter (fun pkg ->
     add_units pkg.name pkg.version ;
 
-    List.iter (fun (file,_) ->
-      Hashtbl.add temp_files file (pkg.name,pkg.version)
+    List.iter (fun ((file,_),is_dir) ->
+      if not is_dir then
+        Hashtbl.add temp_files file (pkg.name,pkg.version)
     ) pkg.Packages.files ;
 
     List.iter (fun (name,sel) ->
@@ -104,11 +105,14 @@ let init_tables pkglist =
 
   List.iter (fun pkg ->
 
-    List.iter (fun (file,_) ->
+    List.iter (fun ((file,_),_) ->
       List.iter (fun (n,v) ->
         if n <> pkg.Packages.name && v <> pkg.Packages.version then
           let (pn,pv) = (pkg.Packages.name,pkg.Packages.version) in
-          Hashtbl.add tables.fileconflicts (pn,pv) (n,Some("=",v))
+          begin
+            (* Printf.printf "adding %s <-> %s to file conflicts table (file: %s)\n" pn n file; *)
+            Hashtbl.add tables.fileconflicts (pn,pv) (n,Some("=",v))
+          end
       ) (Hashtbl.find_all temp_files file)
     ) pkg.Packages.files ;
 
@@ -242,16 +246,18 @@ let loadll tables ll = List.map (loadl tables) ll
 let tocudf tables ?(inst=false) pkg =
   let (n,v) = (pkg.name,pkg.version) in
   let fileconflicts = Hashtbl.find_all tables.fileconflicts (n,v) in 
-  (* Printf.eprintf "package %s %s has %d potential file conflicts\n" n v
-  (List.length fileconflicts); *)
   { Cudf.default_package with
     Cudf.package = CudfAdd.encode pkg.name ;
     Cudf.version = get_version tables (n,v) ;
     Cudf.depends = loadll tables pkg.depends ;
-    Cudf.conflicts = loadl tables pkg.conflicts;
-    Cudf.provides =
+    Cudf.conflicts = List.unique (
+      (loadl tables fileconflicts) @
+      (loadl tables pkg.conflicts)
+    );
+    Cudf.provides = List.unique (
       (loadp_files tables (n,v)) @ 
-      (loadlp tables (n,v) pkg.provides) ;
+      (loadlp tables (n,v) pkg.provides)
+    );
     Cudf.installed = inst 
   }
 

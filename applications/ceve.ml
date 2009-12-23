@@ -62,7 +62,7 @@ let options =
   ]
 
 let and_sep_re = Str.regexp "\\s*;\\s*"
-let pkg_re = Str.regexp "(\\([a-z][a-z0-9.+-]+\\)\\s*,\\s*\\([a-zA-Z0-9.:-]+\\))"
+let pkg_re = Str.regexp "(\\([a-z][a-z0-9.+-]+\\)\\s*,\\s*\\([a-zA-Z0-9.+:~-]+\\))"
 let parse_pkg s =
   let parse_aux str =
     if Str.string_match pkg_re str 0 then begin

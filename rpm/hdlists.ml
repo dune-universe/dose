@@ -89,16 +89,23 @@ let list_deps p par =
   List.unique !acc
 ;;
 
+let is_directory (mode: string) =
+  try
+    (int_of_string mode) land 0o40000 == 0o40000
+  with Failure _ -> false
+;;
+
 let fileprovide par =
   let basenames_a = split_string "basenames" par in
   let dirindexes_a = split_string "dirindexes" par in
   let dirnames_a = split_string "dirnames" par in
+  let filemodes_a = split_string "filemodes" par in
   let acc = ref [] in
   begin try
     for i = 0 to (Array.length dirindexes_a) - 1 do
       let j = int_of_string dirindexes_a.(i) in
       let elem = Printf.sprintf "%s%s" dirnames_a.(j) basenames_a.(i) in
-      acc := (elem,None) :: !acc
+        acc := ((elem,None),is_directory filemodes_a.(i)) :: !acc
     done
   with Invalid_argument _ -> dump_raw Format.err_formatter "WARNING: ignoring malformed package (fileprovide)" par end
   ;

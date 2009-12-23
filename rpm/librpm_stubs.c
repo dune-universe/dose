@@ -191,6 +191,18 @@ value assoc ( char* str, int32_t tag, int32_t type, rpm_constdata_t data, int32_
     case RPM_STRING_TYPE:
       tmp = strdup((char *) data);
       break;
+    case RPM_INT16_TYPE:
+#if RPM_FORMAT_VERSION >= 5
+    case RPM_UINT16_TYPE:
+#endif
+      stra = (char **) malloc (count * sizeof (char *));
+      for (i = 0; i < count; i++) {
+        asprintf (&stra[i], "%u", (((uint16_t *) data) [i]));
+      }
+      tmp = join_strings (stra, ",", count);
+			for(i = 0 ; i<count ; i++)
+				free(stra[i]);
+      break;
     case RPM_INT32_TYPE:
       stra = (char **) malloc (count * sizeof (char *));
       for (i = 0; i < count; i++) {
@@ -272,6 +284,7 @@ value rpm_parse_paragraph (value fd) {
       case RPMTAG_BASENAMES:
       case RPMTAG_DIRINDEXES:
       case RPMTAG_DIRNAMES:
+      case RPMTAG_FILEMODES:
         hd = assoc(tag_to_string(td.tag),td.tag,td.type,td.data,td.count);
         tl = append(hd,tl);
         break;

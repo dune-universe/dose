@@ -25,7 +25,7 @@ type package = {
   conflicts : vpkg list;
   obsoletes : vpkg list;
   provides : veqpkg list;
-  files : vpkg list;
+  files : (vpkg * bool) list;  (* the file and whether it is a directory *)
 }
 
 let default_package = {
