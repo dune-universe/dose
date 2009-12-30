@@ -12,6 +12,7 @@
 (**************************************************************************************)
 
 open Cudf
+open Cudf_types_pp
 open ExtLib
 open Common
 IFDEF HASDB THEN
@@ -22,7 +23,7 @@ exception Done
 
 module Options =
 struct
-  type output_types = Dot | CNF | Dimacs
+  type output_types = Dot | CNF | Dimacs | PrettyPrint
 
   let confile = ref ""
   let debug = ref 0
@@ -34,13 +35,14 @@ struct
   let cone = ref ""
   let pred_cone = ref ""
   let cone_maxdepth = ref None
-  let output_type = ref Dot
+  let output_type = ref PrettyPrint
   let output_ch = ref stdout
 
   let set_output_type s =
     if s = "dot" then output_type := Dot
     else if s = "cnf" then output_type := CNF
     else if s = "dimacs" then output_type := Dimacs
+    else if s = "pretty-print" then output_type := PrettyPrint
     else failwith (Printf.sprintf "Unknown output type: %s" s)
 end
 
@@ -128,6 +130,14 @@ END
       let l = Debian.Packages.input_raw [file] in
       load_universe l
     end
+    |("hdlist",(_,_,_,_,file),_) -> begin
+      let l = Rpm.Packages.Hdlists.input_raw [file] in
+      Rpm.Rpmcudf.load_universe l
+    end
+    |("synth",(_,_,_,_,file),_) -> begin
+      let l = Rpm.Packages.Synthesis.input_raw [file] in
+      Rpm.Rpmcudf.load_universe l
+    end
     |("cudf",(_,_,_,_,file),_) -> 
         let (_,u,_) = parse_cudf file in u
     |_ -> failwith "Not supported"
@@ -193,11 +203,24 @@ END
     else Cudf.get_packages universe
 
   in
+
+  let pretty_print ch univ =
+  begin
+    Cudf.iter_packages (fun p ->
+      Printf.fprintf ch "Package: %s\n" (string_of_pkgname p.package);
+      Printf.fprintf ch "Version: %s\n" (string_of_version p.version);
+      Printf.fprintf ch "Depends: %s\n" (string_of_vpkgformula p.depends);
+      Printf.fprintf ch "Conflicts: %s\n" (string_of_vpkglist p.conflicts);
+      output_string ch "\n"
+    ) univ
+  end in
+
   let u = Cudf.load_universe plist in
   match !Options.output_type with
   | Options.Dot -> Graph.D.output_graph !Options.output_ch (Graph.dependency_graph u)
   | Options.CNF -> Depsolver.output_clauses !Options.output_ch u
   | Options.Dimacs -> Depsolver.output_clauses ~dimacs:true !Options.output_ch u
+  | Options.PrettyPrint -> pretty_print !Options.output_ch u
 ;;
 
 main ();;
