@@ -1,5 +1,5 @@
 <*.ml> or <*.mli> or <*.byte> or <*.native> or <*.cmxs>: pkg_extlib, pkg_str, pkg_unix, @PKG_CUDF@, @PKG_ZIP@, @PKG_PGSQL@, @PKG_SQLITE@, @PKG_XML@, @PKG_OCAMLGRAPH@
-<rpm-cudf.*> or <strong-deps.*> or <distcheck.*>: c_use_rpm
+<rpm-cudf.*> or <strong-deps.*> or <distcheck.*> or <strong-conflicts.*>: c_use_rpm
 <*.ml> or <*.mli>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_DBBACKEND@ @CONFIG_RPM@)
 <*.ml> or <*.mli>: warn_x
 <db>: include
