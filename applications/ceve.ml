@@ -14,54 +14,44 @@
 open Cudf
 open Cudf_types_pp
 open ExtLib
+open Boilerplate
 open Common
-IFDEF HASDB THEN
-open Db
-END
 
-exception Done
+let enable_debug () =
+  (* Util.Progress.enable "name of the progress bar"; *)
+  Util.set_verbosity Common.Util.Summary
+;;
 
-module Options =
-struct
-  type output_types = Dot | CNF | Dimacs | PrettyPrint
+module Options = struct
+  open OptParse
+  let debug = StdOpt.store_true ()
+  let src = StdOpt.str_option ()
+  let dst = StdOpt.str_option ()
+  let cone = StdOpt.str_option ()
+  let reverse_cone = StdOpt.str_option ()
+  let cone_maxdepth = StdOpt.int_option ()
+  let output_ty = StdOpt.str_option ~default:"cnf" ()
+  let out_ch = StdOpt.str_option ()
 
-  let confile = ref ""
-  let debug = ref 0
-  let boolean = ref false
-  let info = ref false
-  let strong_pred = ref false
-  let src = ref ""
-  let dst = ref ""
-  let cone = ref ""
-  let pred_cone = ref ""
-  let cone_maxdepth = ref None
-  let output_type = ref PrettyPrint
-  let output_ch = ref stdout
+  let output_ch () =
+    if Opt.is_set out_ch then 
+      open_out (Opt.get out_ch)
+    else stdout
 
-  let set_output_type s =
-    if s = "dot" then output_type := Dot
-    else if s = "cnf" then output_type := CNF
-    else if s = "dimacs" then output_type := Dimacs
-    else if s = "pretty-print" then output_type := PrettyPrint
-    else failwith (Printf.sprintf "Unknown output type: %s" s)
+  let description = "Ceve dose3"
+  let options = OptParser.make ~description:description ()
+
+  open OptParser
+  add options                 ~long_name:"debug" ~help:"Print debug information" debug;
+  add options ~short_name:'s' ~long_name:"src" ~help:"root packages" src;
+  add options ~short_name:'d' ~long_name:"dst" ~help:"pivot packages" dst;
+  add options ~short_name:'c' ~long_name:"cone" ~help:"cone" cone;
+  add options ~short_name:'r' ~long_name:"rcone" ~help:"reverse dependency cone" reverse_cone;
+  add options                 ~long_name:"depth" ~help:"max depth - in conjunction with cone" cone_maxdepth;
+  add options ~short_name:'t' ~long_name:"outtype" ~help:"Output type : dot | cnf | dimacs | pp" output_ty;
+  add options ~short_name:'o' ~long_name:"outfile" ~help:"Output file" out_ch;
+
 end
-
-let usage = Printf.sprintf "usage: %s [-options] [cudf doc]" (Sys.argv.(0))
-let options =
-  [
-   ("--confile",  Arg.String (fun l -> Options.confile := l ), "Specify a configuration file" );
-   ("-d", Arg.Int (fun i -> Options.debug := i), "Turn on debugging info level");
-   ("--boolean", Arg.Set Options.boolean, "Output the boolean graph");
-   ("--src",  Arg.String (fun l -> Options.src := l ), "Specify a list of packages to analyze" );
-   ("--dst",  Arg.String (fun l -> Options.dst := l ), "Specify a pivot package" );
-   ("--cone",  Arg.String (fun l -> Options.cone := l ), "Compute the dependency closure" );
-   ("--pred-cone",  Arg.String (fun l -> Options.pred_cone := l ), "Compute the dependency closure" );
-   ("--cone-maxdepth", Arg.Int (fun i -> Options.cone_maxdepth := Some i ), "Maximum depth of dependency cone");
-   ("--info", Arg.Set Options.info, "Print various aggregate information");
-   ("--pred", Arg.Set Options.strong_pred, "Print strong predecessor (not direct)");
-   ("--output-type", Arg.String Options.set_output_type, "Set the output type (dot, cnf)");
-   ("--output-file", Arg.String (fun s -> Options.output_ch := open_out s), "Send output to a file");
-  ]
 
 let and_sep_re = Str.regexp "\\s*;\\s*"
 let pkg_re = Str.regexp "(\\([a-z][a-z0-9.+-]+\\)\\s*,\\s*\\([a-zA-Z0-9.+:~-]+\\))"
@@ -76,84 +66,23 @@ let parse_pkg s =
 
 (* -------------------------------- *)
 
-let parse_cudf doc =
-  try
-    let p = Cudf_parser.from_in_channel (open_in doc) in
-    Cudf_parser.load p
-  with
-    Cudf_parser.Parse_error _
-    | Cudf.Constraint_violation _ as exn ->
-      Printf.eprintf "Error while loading CUDF from %s: %s\n%!"
-      doc (Printexc.to_string exn);
-      exit 1
-;;
-
-(* -------------------------------- *)
-
 let main () =
-  let uri = ref "" in
-  let _ =
-    try Arg.parse options (fun f -> uri := f ) usage
-    with Arg.Bad s -> failwith s
-  in
-  if !uri == "" then begin
-    Arg.usage options (usage ^ "\nNo input file specified");
-    exit 2
-  end;
+  at_exit (fun () -> Util.dump Format.err_formatter);
+  let posargs = OptParse.OptParser.parse_argv Options.options in
+  if OptParse.Opt.get Options.debug then enable_debug () ;
+  let uri = argv1 posargs in
+  let universe = load_universe uri in
 
   let versions = Hashtbl.create 1023 in
-  let load_universe l = 
-    let tables = Debian.Debcudf.init_tables l in
-    Cudf.load_universe (
-      List.map (fun pkg ->
-        let cudfpkg = Debian.Debcudf.tocudf tables pkg in
-        Hashtbl.add versions 
-        (pkg.Debian.Packages.name,pkg.Debian.Packages.version) cudfpkg ;
-        cudfpkg
-      ) l
-    )
-  in
-
-  let universe =
-    match Input.parse_uri !uri with
-    |(("pgsql"|"sqlite") as dbtype,info,(Some query)) ->
-IFDEF HASDB THEN        
-      begin
-        Backend.init_database dbtype info (Idbr.parse_query query) ;
-        let l = Backend.load_selection (`All) in
-        load_universe l
-      end
-ELSE
-      failwith (dbtype ^ " Not supported")
-END
-    |("deb",(_,_,_,_,file),_) -> begin
-      let l = Debian.Packages.input_raw [file] in
-      load_universe l
-    end
-    |("hdlist",(_,_,_,_,file),_) -> begin
-      let l = Rpm.Packages.Hdlists.input_raw [file] in
-      Rpm.Rpmcudf.load_universe l
-    end
-    |("synth",(_,_,_,_,file),_) -> begin
-      let l = Rpm.Packages.Synthesis.input_raw [file] in
-      Rpm.Rpmcudf.load_universe l
-    end
-    |("cudf",(_,_,_,_,file),_) -> 
-        let (_,u,_) = parse_cudf file in u
-    |_ -> failwith "Not supported"
-  in
-
   let get_cudfpkg (p,v) =
     try Hashtbl.find versions (p,v)
     with Not_found -> assert false
   in
 
-  let module Graph = Defaultgraphs.SyntacticDependencyGraph in
-
-  let pkg_src () = List.map get_cudfpkg (parse_pkg !Options.src) in
+  let pkg_src () = List.map get_cudfpkg (parse_pkg (OptParse.Opt.get Options.src)) in
   let pkg_dst () =
     (* all packages q in R s.t. q is in the dependency closure of p *)
-    let (p,v) = List.hd(parse_pkg !Options.dst) in
+    let (p,v) = List.hd(parse_pkg (OptParse.Opt.get Options.dst)) in
     let pid = get_cudfpkg (p,v) in
     List.filter_map (fun pkg ->
       if List.mem pid (Depsolver.dependency_closure universe [pkg]) then
@@ -164,63 +93,62 @@ END
   let pkg_cone () =
     List.unique (List.fold_left (fun acc (p,v) ->
       let pid = get_cudfpkg (p,v) in
-      match !Options.cone_maxdepth with
-      | None -> (Depsolver.dependency_closure universe [pid]) @ acc
-      | Some d -> (Depsolver.dependency_closure ~maxdepth:d universe [pid]) @ acc
-    ) [] (parse_pkg !Options.cone))
+      if OptParse.Opt.is_set Options.cone_maxdepth then
+        let md = OptParse.Opt.get Options.cone_maxdepth in
+        (Depsolver.dependency_closure ~maxdepth:md universe [pid]) @ acc
+      else
+        (Depsolver.dependency_closure universe [pid]) @ acc
+    ) [] (parse_pkg (OptParse.Opt.get Options.cone)))
   in
-  let pkg_pred_cone () =
+  let pkg_reverse_cone () =
     List.unique (List.fold_left (fun acc (p,v) ->
       let pid = get_cudfpkg (p,v) in
-      match !Options.cone_maxdepth with
-      | None -> (Depsolver.reverse_dependency_closure universe [pid]) @ acc
-      | Some d -> (Depsolver.reverse_dependency_closure ~maxdepth:d universe [pid]) @ acc
-    ) [] (parse_pkg !Options.pred_cone))
+      if OptParse.Opt.is_set Options.cone_maxdepth then
+        let md = OptParse.Opt.get Options.cone_maxdepth in
+        (Depsolver.reverse_dependency_closure ~maxdepth:md universe [pid]) @ acc
+      else
+        (Depsolver.reverse_dependency_closure universe [pid]) @ acc
+    ) [] (parse_pkg (OptParse.Opt.get Options.reverse_cone)))
   in
 
   let pkg_src_list = ref [] in
   let pkg_dst_list = ref [] in
   let plist =
-    if !Options.src <> "" && !Options.dst <> "" then begin
-      let (p,v) = List.hd(parse_pkg !Options.dst) in
+    if OptParse.Opt.is_set Options.src && OptParse.Opt.is_set Options.dst then begin
+      let (p,v) = List.hd(parse_pkg (OptParse.Opt.get Options.dst)) in
       let pid = get_cudfpkg (p,v) in
       pkg_src_list := pkg_src ();
       pkg_dst_list := [pid];
       (pid::!pkg_src_list)
     end
-    else if !Options.src <> "" then begin
+    else if OptParse.Opt.is_set Options.src then begin
       pkg_src_list := pkg_src ();
       !pkg_src_list
     end
-    else if !Options.dst <> "" then begin
+    else if OptParse.Opt.is_set Options.dst then begin
       pkg_dst_list := pkg_dst ();
       !pkg_dst_list
     end
-    else if !Options.cone <> "" then 
+    else if OptParse.Opt.is_set Options.cone then 
       pkg_cone ()
-    else if !Options.pred_cone <> "" then
-      pkg_pred_cone ()
+    else if OptParse.Opt.is_set Options.reverse_cone then
+      pkg_reverse_cone ()
     else Cudf.get_packages universe
-
   in
 
-  let pretty_print ch univ =
-  begin
-    Cudf.iter_packages (fun p ->
-      Printf.fprintf ch "Package: %s\n" (string_of_pkgname p.package);
-      Printf.fprintf ch "Version: %s\n" (string_of_version p.version);
-      Printf.fprintf ch "Depends: %s\n" (string_of_vpkgformula p.depends);
-      Printf.fprintf ch "Conflicts: %s\n" (string_of_vpkglist p.conflicts);
-      output_string ch "\n"
-    ) univ
-  end in
-
   let u = Cudf.load_universe plist in
-  match !Options.output_type with
-  | Options.Dot -> Graph.D.output_graph !Options.output_ch (Graph.dependency_graph u)
-  | Options.CNF -> Depsolver.output_clauses !Options.output_ch u
-  | Options.Dimacs -> Depsolver.output_clauses ~dimacs:true !Options.output_ch u
-  | Options.PrettyPrint -> pretty_print !Options.output_ch u
+  match OptParse.Opt.get Options.output_ty with
+  |"dot" -> 
+IFDEF HAS_OCAMLGRAPH THEN
+      let module Graph = Defaultgraphs.SyntacticDependencyGraph in
+      Graph.D.output_graph (Options.output_ch ()) (Graph.dependency_graph u)
+ELSE
+    failwith ("dot Not supported")
+END
+  |"cnf" -> Printf.fprintf (Options.output_ch ()) "%s" (Depsolver.output_clauses u)
+  |"dimacs" -> Printf.fprintf (Options.output_ch ()) "%s" (Depsolver.output_clauses ~enc:Depsolver.Dimacs u)
+  |"pp" -> Printf.fprintf (Options.output_ch ()) "%s" (Cudf_printer.string_of_universe u)
+  |s -> (Printf.eprintf "unknown format : %s" s ; exit 1)
 ;;
 
 main ();;

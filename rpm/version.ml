@@ -99,6 +99,9 @@ let compare s1 s2 =
   |0 ->
       begin match rpmvercmp v1 v2 with
       |0 -> rpmvercmp (get r1) (get r2)
+          (* if r1 <> None && r2 <> None
+          then rpmvercmp (get r1) (get r2)
+          else 0 *)
       |r -> r
       end
   |r -> r

@@ -123,6 +123,7 @@ if test "$HAS_OCAMLGRAPH" = "yes" ; then
   fi
   PKG_OCAMLGRAPH=pkg_ocamlgraph
   MLPACK_OCAMLGRAPH="Defaultgraphs Statistics Dominators Strongdeps Strongdeps_int"
+  CONFIG_OCAMLGRAPH="-DHASOCAMLGRAPH"
 else
   PKG_OCAMLGRAPH=pkg_
 fi
@@ -193,6 +194,7 @@ AC_SUBST(HAS_DB)
 
 AC_SUBST(MLPACK_OCAMLGRAPH)
 AC_SUBST(PKG_OCAMLGRAPH)
+AC_SUBST(CONFIG_OCAMLGRAPH)
 
 AC_SUBST(PKG_XML)
 
@@ -210,6 +212,7 @@ AC_CONFIG_FILES([
   algo/algo.mlpack
   common/_tags
   applications/_tags
+  applications/boilerplates/_tags
   _tags
 ])
 AC_OUTPUT

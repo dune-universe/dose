@@ -217,6 +217,7 @@ let not_allowed = Str.regexp  "[^a-zA-Z0-9@/+().-]"
 let search s =
   try (Str.search_forward not_allowed s 0) >= 0
   with Not_found -> false
+
 let encode s =
   let make_hex chr = Printf.sprintf "%%%x" (Char.code chr) in
   if search s then begin
@@ -252,4 +253,3 @@ let cudfop = function
   |Some("=",v) -> Some(`Eq,v)
   |None -> None
   |_ -> assert false
-

@@ -169,6 +169,12 @@ let init_tables pkglist =
   tables
 ;;
 
+let fix_ref v =
+  match Version.parse_version v with
+  |None -> assert false
+  |Some(_,r,None) -> r^"-"
+  |_ -> v
+
 (* ATT: we use version 1 for a version of a non existent package - 
    neither as a real package or a provide 
    strict : match only version with EVR tuples *)

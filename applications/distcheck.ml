@@ -12,9 +12,7 @@
 
 open Debian
 open Common
-IFDEF HASDB THEN
-open Db
-END
+open Boilerplate
 
 let enable_debug () =
   (* Util.Progress.enable "name of the progress bar"; *)
@@ -47,62 +45,10 @@ end
 
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
-  let uri =
-    match OptParse.OptParser.parse_argv Options.options with
-    |[] -> (Printf.eprintf "No input file specified" ; exit 2)
-    |u::_ -> u
-  in
+  let posargs = OptParse.OptParser.parse_argv Options.options in
   if OptParse.Opt.get Options.debug then enable_debug () ;
-
-  Printf.eprintf "Parsing and normalizing...%!" ;
-  let timer = Util.Timer.create "Parsing and normalizing" in
-  Util.Timer.start timer;
-  let universe =
-    match Input.parse_uri uri with
-    |(("pgsql"|"sqlite") as dbtype,info,(Some query)) ->
-IFDEF HASDB THEN
-      begin
-        let db = Backend.init_database dbtype info (Idbr.parse_query query) in
-        let l = Backend.load_selection db (`All) in
-        Debian.Debcudf.load_universe l
-      end
-ELSE
-      failwith (dbtype^" Not supported")
-END
-    |("deb",(_,_,_,_,"-"),_) -> begin
-      let l = Debian.Packages.input_raw_ch (IO.input_channel stdin) in
-      Debian.Debcudf.load_universe l
-    end
-    |("deb",(_,_,_,_,file),_) -> begin
-      let l = Debian.Packages.input_raw [file] in
-      Debian.Debcudf.load_universe l
-    end
-    |("cudf",(_,_,_,_,file),_) -> begin
-      let _, u, _ = CudfAdd.load_cudf file in u
-    end
-    |("hdlist",(_,_,_,_,file),_) ->
-IFDEF HASRPM THEN
-    begin
-      let l = Rpm.Packages.Hdlists.input_raw [file] in
-      Rpm.Rpmcudf.load_universe l
-    end
-ELSE
-    failwith ("hdlist Not supported")
-END
-    |("synth",(_,_,_,_,file),_) ->
-IFDEF HASRPM THEN
-    begin
-      let l = Rpm.Packages.Synthesis.input_raw [file] in
-      Rpm.Rpmcudf.load_universe l
-    end
-ELSE
-    failwith ("synth Not supported")
-END
-    |(s,_,_) -> failwith (s^" Not supported")
-
-  in
-  ignore(Util.Timer.stop timer ());
-  Printf.eprintf "done\n%!" ;
+  let uri = argv1 posargs in
+  let universe = load_universe uri in
 
   let result_printer = function
     (* print all *)

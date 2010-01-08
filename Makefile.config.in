@@ -27,18 +27,18 @@ else
 endif
 
 TARGETS= \
-        applications/deb-cudf.$(OCAMLBEST) \
-				applications/randcudf.$(OCAMLBEST) \
-				applications/cudf-solver.$(OCAMLBEST) \
-				applications/distcheck.$(OCAMLBEST) \
-				applications/buildcheck.$(OCAMLBEST) \
-				applications/cudf-diff.$(OCAMLBEST) \
-				applications/testingcheck.$(OCAMLBEST)
+		 applications/deb-cudf.$(OCAMLBEST) \
+		 applications/randcudf.$(OCAMLBEST) \
+		 applications/cudf-solver.$(OCAMLBEST) \
+		 applications/distcheck.$(OCAMLBEST) \
+		 applications/buildcheck.$(OCAMLBEST) \
+		 applications/cudf-diff.$(OCAMLBEST) \
+		 applications/testingcheck.$(OCAMLBEST)
 
 LIBS= \
-			common/common.$(OCAMLLIBBEST) \
-			deb/debian.$(OCAMLLIBBEST) \
-			algo/algo.$(OCAMLLIBBEST)
+	  common/common.$(OCAMLLIBBEST) \
+	  deb/debian.$(OCAMLLIBBEST) \
+	  algo/algo.$(OCAMLLIBBEST)
 
 #external libcudf, then we build the check tool in-house
 ifeq ("@HAS_LIBCUDF@","no")
@@ -54,16 +54,16 @@ endif
 
 #xml processing support
 ifeq ("@HAS_XML@","yes")
-  TARGETS += applications/debdudf/deb-dudftocudf.$(OCAMLBEST)
+  TARGETS += applications/dudftocudf/deb-dudftocudf.$(OCAMLBEST)
 endif
 
 #ocamlgraph support
 ifeq ("@HAS_OCAMLGRAPH@","yes")
   TARGETS += \
-			  applications/rmat.$(OCAMLBEST) \
-				applications/pref-attach.$(OCAMLBEST) \
-				applications/strong-deps.$(OCAMLBEST) \
-				applications/ceve.$(OCAMLBEST)
+			 applications/rmat.$(OCAMLBEST) \
+			 applications/pref-attach.$(OCAMLBEST) \
+			 applications/strong-deps.$(OCAMLBEST) \
+			 applications/ceve.$(OCAMLBEST)
 endif
 
 #rpm support

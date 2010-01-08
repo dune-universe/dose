@@ -11,6 +11,7 @@
 (**************************************************************************************)
 
 open ExtLib
+open Boilerplate
 open Common
 
 let enable_debug () =
@@ -43,15 +44,9 @@ module Options =
 
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
-  let uri =
-    match OptParse.OptParser.parse_argv Options.options with
-    |[] -> (Printf.eprintf "No input file specified" ; exit 2)
-    |u::_ -> u
-  in
-
-  if OptParse.Opt.get Options.debug then
-    enable_debug ()
-  ;
+  let posargs = OptParse.OptParser.parse_argv Options.options in
+  if OptParse.Opt.get Options.debug then enable_debug () ;
+  let uri = argv1 posargs in
 
   let l =
      match Input.parse_uri uri with

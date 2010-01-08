@@ -123,7 +123,7 @@ let init_solver ?(buffer=false) ?(proxy_size=0) ?idlist index =
         end
       done
     with Not_found -> ()
-    (* ignore conflicts that are implicately not in the closure.
+    (* ignore conflicts that are not in the closure.
      * This requires a leap of faith in the user ability to build an
      * appropriate closure. If the closure is wrong, you are on your own *)
   in

@@ -13,8 +13,6 @@
 open ExtLib
 open Common
 open CudfAdd
-open Cudf
-open Cudf_types_pp
 
 type solver = {
   mdf : Mdf.universe ;
@@ -118,9 +116,7 @@ let dependency_closure ?maxdepth universe pkglist =
   let mdf = Mdf.load_from_universe universe in
   let maps = mdf.Mdf.maps in
   let idlist = List.map maps.map#vartoint pkglist in
-  let closure = match maxdepth with
-  | None -> Depsolver_int.dependency_closure mdf idlist
-  | Some d -> Depsolver_int.dependency_closure ~maxdepth:d mdf idlist in
+  let closure = Depsolver_int.dependency_closure ?maxdepth mdf idlist in
   List.map maps.map#inttovar closure
 
 let reverse_dependencies universe =
@@ -138,43 +134,39 @@ let reverse_dependency_closure ?maxdepth universe pkglist =
   let maps = mdf.Mdf.maps in
   let idlist = List.map maps.map#vartoint pkglist in
   let reverse = Depsolver_int.reverse_dependencies mdf in
-  let closure = match maxdepth with
-  | None -> Depsolver_int.reverse_dependency_closure reverse idlist
-  | Some d ->
-    Depsolver_int.reverse_dependency_closure ~maxdepth:d reverse idlist in
+  let closure = Depsolver_int.reverse_dependency_closure ?maxdepth reverse idlist in
   List.map maps.map#inttovar closure
 
-let output_clauses ?(dimacs=false) chan universe =
+type enc = Cnf | Dimacs
+
+let output_clauses ?(enc=Cnf) universe =
   let mdf = Mdf.load_from_universe universe in
   let maps = mdf.Mdf.maps in
-  let str v =
-  begin
-    if dimacs then
-      Printf.sprintf "%d" v
-    else if v < 0 then 
-      let p = maps.map#inttovar (-v) in
-      Printf.sprintf "!%s-%s" (string_of_pkgname p.package) (string_of_version p.version)
-    else
-      let p = maps.map#inttovar v in
-      Printf.sprintf "%s-%s" (string_of_pkgname p.package) (string_of_version p.version)
-  end in
   let solver = Depsolver_int.init_solver ~buffer:true mdf.Mdf.index in
   let clauses = Depsolver_int.S.dump solver.Depsolver_int.constraints in
-  if dimacs then
-    Printf.fprintf chan "p cnf %d %d\n" solver.Depsolver_int.nr_variables
-      (List.length clauses);
-  List.iter (fun cl ->
-    match cl with
-    | [] -> (* empty clause *) ()
-    | h::t -> 
-    begin
-      Printf.fprintf chan "%s" (str h);
-      List.iter (fun var ->
-        Printf.fprintf chan " %s" (str var)
-      ) t;
-    end;
-    if dimacs then
-      Printf.fprintf chan " 0\n"
-    else
-      Printf.fprintf chan "\n"
-  ) (Depsolver_int.S.dump solver.Depsolver_int.constraints)
+  let buff = Buffer.create (Cudf.universe_size universe) in
+  let to_cnf dump =
+    let str v = 
+      let pkg = maps.map#inttovar (abs v) in
+      let pol = if v < 0 then "!" else "" in
+      Printf.sprintf "%s%s-%d" pol pkg.Cudf.package pkg.Cudf.version
+    in
+    List.iter (fun l ->
+      List.iter (fun var -> Printf.bprintf buff " %s" (str var)) l;
+      Printf.bprintf buff "\n"
+    ) dump
+  in
+  let to_dimacs dump =
+    let str = Printf.sprintf "%d" in
+    let varnum = solver.Depsolver_int.nr_variables in
+    let closenum = (List.length clauses) in
+    Printf.bprintf buff "p cnf %d %d\n" varnum closenum;
+    List.iter (fun l ->
+      List.iter (fun var -> Printf.bprintf buff " %s" (str var)) l;
+      Printf.bprintf buff " 0\n"
+    ) dump
+  in
+  if enc = Cnf then to_cnf clauses ;
+  if enc = Dimacs then to_dimacs clauses;
+  Buffer.contents buff
+;;
