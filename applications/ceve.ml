@@ -12,15 +12,8 @@
 (**************************************************************************************)
 
 open Cudf
-open Cudf_types_pp
 open ExtLib
-open Boilerplate
 open Common
-
-let enable_debug () =
-  (* Util.Progress.enable "name of the progress bar"; *)
-  Util.set_verbosity Common.Util.Summary
-;;
 
 module Options = struct
   open OptParse
@@ -38,7 +31,7 @@ module Options = struct
       open_out (Opt.get out_ch)
     else stdout
 
-  let description = "Ceve dose3"
+  let description = "Ceve ... what does it mean ?"
   let options = OptParser.make ~description:description ()
 
   open OptParser
@@ -69,14 +62,11 @@ let parse_pkg s =
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  if OptParse.Opt.get Options.debug then enable_debug () ;
-  let uri = argv1 posargs in
-  let universe = load_universe uri in
-
-  let versions = Hashtbl.create 1023 in
+  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
+  let uri = Boilerplate.argv1 posargs in
+  let (universe,from_cudf,to_cudf) = Boilerplate.load_universe uri in
   let get_cudfpkg (p,v) =
-    try Hashtbl.find versions (p,v)
-    with Not_found -> assert false
+    Cudf.lookup_package universe (to_cudf (p,v))
   in
 
   let pkg_src () = List.map get_cudfpkg (parse_pkg (OptParse.Opt.get Options.src)) in

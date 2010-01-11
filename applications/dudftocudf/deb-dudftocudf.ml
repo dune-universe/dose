@@ -393,7 +393,7 @@ let main () =
     let mapver = function
       |`Pkg p -> (p,None)
       |`PkgVer (p,v) -> begin
-          try (p,Some(`Eq,Debcudf.get_version tables (p,v)))
+          try (p,Some(`Eq,Debcudf.get_cudf_version tables (p,v)))
           with Not_found -> failwith (Printf.sprintf "There is no version %s of package %s" p v)
       end
       |`PkgDst (p,d) ->
@@ -406,7 +406,7 @@ let main () =
               ) l
             in
             let number = Cudf.lookup_package_property pkg "number" in
-            (pkg.Cudf.package,Some(`Eq,Debcudf.get_version tables (pkg.Cudf.package,number)))
+            (pkg.Cudf.package,Some(`Eq,Debcudf.get_cudf_version tables (pkg.Cudf.package,number)))
           with Not_found ->
             failwith (Printf.sprintf "There is no package %s in release %s " p d)
     in

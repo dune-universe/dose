@@ -20,7 +20,10 @@ type tables
 val init_tables : Packages.package list -> tables
 
 (** return the cudf version associated to a tuple (name,version) *)
-val get_version : tables -> Format822.name * Format822.version -> int
+val get_cudf_version : tables -> Format822.name * Format822.version -> int
+
+(** return the real version associated to a Cudf package *)
+val get_real_version : tables -> Cudf_types.pkgname * Cudf_types.version -> Format822.version
 
 type extramap = (string * (string * Cudf_types.typedecl1)) list
 

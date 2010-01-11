@@ -32,6 +32,11 @@ let create n = {
   reverse_table = Hashtbl.create n;
 }
 
+type lookup = {
+  from_cudf : Cudf.package -> (string * string);
+  to_cudf : (string * string) -> Cudf.package
+}
+
 let clear tables =
   Hashtbl.clear tables.virtual_table;
   Hashtbl.clear tables.unit_table;
@@ -119,11 +124,17 @@ let init_tables pkglist =
   tables
 
 (* versions start from 1 *)
-let get_version tables (package,version) =
-  let l = Hashtbl.find tables.versions_table package in
-  let i = fst(List.findi (fun i a -> a = version) l) in
-  Hashtbl.add tables.reverse_table (package,i+1) version;
-  i + 1
+let get_cudf_version tables (package,version) =
+  try
+    let l = Hashtbl.find tables.versions_table package in
+    let i = fst(List.findi (fun i a -> a = version) l) in
+    Hashtbl.replace tables.reverse_table (package,i+1) version;
+    i+1
+  with Not_found -> assert false
+
+let get_real_version tables (p,i) =
+  try Hashtbl.find tables.reverse_table (p,i)
+  with Not_found -> assert false
 
 let loadl tables l =
   List.flatten (
@@ -137,7 +148,7 @@ let loadl tables l =
             else
               [(CudfAdd.encode name, None)]
         |Some(op,v) ->
-            [(CudfAdd.encode name,Some(op,get_version tables (name,v)))]
+            [(CudfAdd.encode name,Some(op,get_cudf_version tables (name,v)))]
     ) l
   )
 
@@ -152,8 +163,8 @@ let loadlp tables l =
           else (CudfAdd.encode name, None)
       |Some(`Eq,v) ->
           if (Hashtbl.mem tables.unit_table name) || (Hashtbl.mem tables.versioned_table name)
-          then (CudfAdd.encode (name^"--virtual"),Some(`Eq,get_version tables (name,v)))
-          else (CudfAdd.encode name,Some(`Eq,get_version tables (name,v)))
+          then (CudfAdd.encode (name^"--virtual"),Some(`Eq,get_cudf_version tables (name,v)))
+          else (CudfAdd.encode name,Some(`Eq,get_cudf_version tables (name,v)))
       |_ -> assert false
   ) l
 
@@ -198,7 +209,7 @@ let add_extra extras pkg =
 let tocudf tables ?(extras=[]) ?(inst=false) pkg =
     { Cudf.default_package with
       Cudf.package = CudfAdd.encode pkg.name ;
-      Cudf.version = get_version tables (pkg.name,pkg.version) ;
+      Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;
       Cudf.depends = loadll tables (pkg.pre_depends @ pkg.depends);
       Cudf.conflicts = loadlc tables pkg.name (pkg.breaks @ pkg.conflicts) ;
       Cudf.provides = loadlp tables pkg.provides ;
@@ -214,6 +225,5 @@ let load_universe l =
   Util.Timer.start timer;
   let tables =  init_tables l in
   let univ = Cudf.load_universe (List.map (tocudf tables) l) in
-  let reverse = Hashtbl.copy tables.reverse_table in
   clear tables;
   Util.Timer.stop timer univ

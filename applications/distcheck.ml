@@ -12,12 +12,6 @@
 
 open Debian
 open Common
-open Boilerplate
-
-let enable_debug () =
-  (* Util.Progress.enable "name of the progress bar"; *)
-  Util.set_verbosity Common.Util.Summary
-;;
 
 module Options = struct
   open OptParse
@@ -46,38 +40,42 @@ end
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  if OptParse.Opt.get Options.debug then enable_debug () ;
-  let uri = argv1 posargs in
-  let universe = load_universe uri in
+  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
+  let uri = Boilerplate.argv1 posargs in
+  let (universe,from_cudf,_) = Boilerplate.load_universe uri in
+
+  let print_package ?(short=false) pkg =
+    let (p,v) = from_cudf pkg in
+    Printf.sprintf "(%s,%s)" p v
+  in
 
   let result_printer = function
     (* print all *)
     |{Diagnostic.result = Diagnostic.Success (_) } as r when Options.showall () ->
-       Diagnostic.print stdout r
+       Diagnostic.print ~pp:print_package stdout r
     |{Diagnostic.result = Diagnostic.Failure (_) } as r when Options.showall () ->
-        Diagnostic.print ~explain:(OptParse.Opt.get Options.explain) stdout r
+        Diagnostic.print ~pp:print_package ~explain:(OptParse.Opt.get Options.explain) stdout r
 
     (* print only success - nothing to explain *)
     |{Diagnostic.result = Diagnostic.Success (_) } as r when Options.onlysucc () ->
-        Diagnostic.print stdout r
+        Diagnostic.print ~pp:print_package stdout r
     |{Diagnostic.result = Diagnostic.Failure (_) } when Options.onlysucc () -> ()
 
     (* print only failures *)
     |{Diagnostic.result = Diagnostic.Success (_) } when Options.onlyfail () -> ()
     |{Diagnostic.result = Diagnostic.Failure (_) } as r when Options.onlyfail () -> 
-        Diagnostic.print ~explain:(OptParse.Opt.get Options.explain) stdout r
+        Diagnostic.print ~pp:print_package ~explain:(OptParse.Opt.get Options.explain) stdout r
 
     (* nothing *)
     | _ -> ()
   in
 
-  Printf.eprintf "done\n%!" ;
-  Printf.eprintf "Solving...\n%!" ;
+  Util.print_info "Solving..." ;
   let timer = Util.Timer.create "Solver" in
   Util.Timer.start timer;
   let i = Depsolver.univcheck ~callback:result_printer universe in
   ignore(Util.Timer.stop timer ());
-  Printf.eprintf "Broken Packages: %d\n%!" i
+  Printf.printf "Broken Packages: %d\n%!" i
 ;;
 
 main () ;;
