@@ -1,14 +1,14 @@
-
-required libraries :
- - libextlib-ocaml-dev 
+required libraries deb / rpm :
+ - libextlib-ocaml-dev / ocaml-extlib-devel
 
 additional libraries (enable compilation with --with-<library>) :
- - libpostgresql-ocaml-dev
- - libsqlite3-ocaml-dev
- - libzip-ocaml-dev 
- - libjson-static-camlp4-dev
- - libocamlgraph-ocaml-dev
- - libounit-ocaml-dev
+ - libpostgresql-ocaml-dev / ocaml-postgresql-devel
+ - libsqlite3-ocaml-dev / ocaml-sqlite-devel
+ - libzip-ocaml-dev / ?
+ - libjson-static-camlp4-dev / ?
+ - libocamlgraph-ocaml-dev / ?
+ - libounit-ocaml-dev / ocaml-ounit-devel
+ - ? / librpm-devel
 
 To compile from git :
 aclocal -I m4
