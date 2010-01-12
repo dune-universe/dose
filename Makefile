@@ -73,6 +73,7 @@ dist: ./$(DIST_TARBALL)
 	if [ -d ./$(DIST_TARBALL) ] ; then rm -f ./$(DIST_TARBALL) ; fi
 	svn export . ./$(DIST_DIR)
 	rm -rf ./$(DIST_DIR)/debian
+	rm -rf ./$(DIST_DIR)/libcudf
 	tar cvzf ./$(DIST_TARBALL) ./$(DIST_DIR)
 	rm -rf ./$(DIST_DIR)
 	@echo "Distribution tarball: ./$(DIST_TARBALL)"
@@ -95,6 +96,6 @@ distcheck: ./$(DIST_TARBALL)
 	rm -rf ./$(DIST_DIR)
 
 doc:
-	$(OCAMLBUILD) $(OBFLAGS) libmancoosi.docdir/index.html
+	$(OCAMLBUILD) $(OBFLAGS) dose3.docdir/index.html
 
 .PHONY: all opt clean top-level headers test tags install uninstall dist doc
