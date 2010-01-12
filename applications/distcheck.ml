@@ -41,8 +41,7 @@ let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
   if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
-  let uri = Boilerplate.argv1 posargs in
-  let (universe,from_cudf,_) = Boilerplate.load_universe uri in
+  let (universe,from_cudf,_) = Boilerplate.load_universe posargs in
 
   let print_package ?(short=false) pkg =
     let (p,v) = from_cudf pkg in
@@ -75,7 +74,7 @@ let main () =
   Util.Timer.start timer;
   let i = Depsolver.univcheck ~callback:result_printer universe in
   ignore(Util.Timer.stop timer ());
-  Printf.printf "Broken Packages: %d\n%!" i
+  Printf.eprintf "Broken Packages: %d\n%!" i
 ;;
 
 main () ;;

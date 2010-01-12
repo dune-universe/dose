@@ -63,11 +63,8 @@ let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
   if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
-  let uri = Boilerplate.argv1 posargs in
-  let (universe,from_cudf,to_cudf) = Boilerplate.load_universe uri in
-  let get_cudfpkg (p,v) =
-    Cudf.lookup_package universe (to_cudf (p,v))
-  in
+  let (universe,from_cudf,to_cudf) = Boilerplate.load_universe posargs in
+  let get_cudfpkg (p,v) = Cudf.lookup_package universe (to_cudf (p,v)) in
 
   let pkg_src () = List.map get_cudfpkg (parse_pkg (OptParse.Opt.get Options.src)) in
   let pkg_dst () =

@@ -84,7 +84,7 @@ let list_deps p par =
         acc := vpkg :: !acc
       end 
     done
-  with Invalid_argument _ -> dump_raw Format.err_formatter "WARNING: ignoring malformed package (list_deps)" par end
+  with Invalid_argument _ -> dump_raw Format.err_formatter "Warning: ignoring malformed package (list_deps)" par end
   ;
   List.unique !acc
 ;;
@@ -107,7 +107,7 @@ let fileprovide par =
       let elem = Printf.sprintf "%s%s" dirnames_a.(j) basenames_a.(i) in
         acc := ((elem,None),is_directory filemodes_a.(i)) :: !acc
     done
-  with Invalid_argument _ -> dump_raw Format.err_formatter "WARNING: ignoring malformed package (fileprovide)" par end
+  with Invalid_argument _ -> dump_raw Format.err_formatter "Warning: ignoring malformed package (fileprovide)" par end
   ;
   !acc
 ;;

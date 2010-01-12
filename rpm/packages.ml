@@ -43,12 +43,15 @@ module Set = Set.Make(struct type t = package let compare = compare end)
 let input_raw_priv parse_packages files =
   let timer = Util.Timer.create "Rpm.Packages.input_raw" in
   Util.Timer.start timer;
+  if List.length files > 1 then Util.print_info "Merging input lists" ;
   let s =
     List.fold_left (fun acc f ->
+      Util.print_info "Parsing %s..." f;
       let l = parse_packages (fun x -> x) f in
       List.fold_left (fun s x -> Set.add x s) acc l
     ) Set.empty files
   in
+  Util.print_info "total packages %n" (Set.cardinal s);
   Util.Timer.stop timer (Set.elements s)
 
 module Hdlists = struct
@@ -134,7 +137,7 @@ module Synthesis = struct
       |"filesize"::l -> parse_paragraph pkg ch
       |"suggests"::l -> parse_paragraph pkg ch
       |"info"::l -> parse_info pkg l
-      |s::l -> ((Printf.eprintf "Unknown field %s\n%!" s) ; parse_paragraph pkg ch)
+      |s::l -> ((Util.print_warning "Unknown field %s" s) ; parse_paragraph pkg ch)
       |_ -> assert false
     with End_of_file -> assert false
 

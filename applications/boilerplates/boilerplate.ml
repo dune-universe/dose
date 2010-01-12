@@ -42,13 +42,39 @@ let cudf_load_universe file =
   let to_cudf (p,v) = failwith "Nope ..." in
   (univ,from_cudf,to_cudf)
 
-let load_universe uri =
-  Util.print_info "Parsing and normalizing..." ;
-  let timer = Util.Timer.create "Parsing and normalizing" in
-  Util.Timer.start timer;
-  let u =
-    match Input.parse_uri uri with
-    |(("pgsql"|"sqlite") as dbtype,info,(Some query)) ->
+let rec filter init acc uris =
+  match uris,init with
+  |[],None -> (Printf.eprintf "No input provided\n"; exit 1)
+  |[],Some init -> (init,acc)
+  |uri::tail, _ ->
+    begin match Input.parse_uri uri, init with
+    |("cudf",_,_) as p, None when tail = [] -> ("deb",[p])
+    |("deb",(_,_,_,_,"-"),_) as p, None when tail = [] -> ("debin",[p])
+    |(("pgsql"|"sqlite") as dbtype,_,_) as p, None when tail = [] -> (dbtype,[p])
+    |("cudf",_,_), _ when tail <> [] -> (Printf.eprintf "Only one cudf input allowed\n"; exit 1)
+    |("deb",(_,_,_,_,"-"),_), _ when tail <> [] -> (Printf.eprintf "Only one deb stdin input allowed\n"; exit 1)
+    |(("pgsql"|"sqlite"),_,_), None when tail <> [] -> (Printf.eprintf "Only one db input allowed\n"; exit 1)
+    |(t,_,_) as p, None -> filter (Some t) (p::acc) tail
+    |(t,_,_) as p, Some i when t = i -> filter (Some t) (p::acc) tail
+    |(t,_,_),_ -> (Printf.eprintf "You cannot mix different input types\n"; exit 1)
+    end
+
+let parseinput uris =
+  let filelist typ = function
+    |(t,(_,_,_,_,file),_) when t = typ -> file
+    |_ -> assert false
+  in
+  match filter None [] uris with
+  |("cudf",[("cudf",(_,_,_,_,file),_)]) ->
+      cudf_load_universe file
+  |("debin", [p]) ->
+      let l = Debian.Packages.input_raw_ch (IO.input_channel stdin) in
+      deb_load_universe l
+  |("deb", l) ->
+      let filelist = List.map (filelist "deb") l in
+      let l = Debian.Packages.input_raw filelist in
+      deb_load_universe l
+  |("pgsql"|"sqlite"), [(("pgsql"|"sqlite") as dbtype,info,(Some query))] ->
 IFDEF HASDB THEN
         let db = Db.Backend.init_database dbtype info (Idbr.parse_query query) in
         let l = Db.Backend.load_selection db (`All) in
@@ -56,30 +82,30 @@ IFDEF HASDB THEN
 ELSE
       failwith (dbtype^" Not supported")
 END
-    |("deb",(_,_,_,_,"-"),_) ->
-      let l = Debian.Packages.input_raw_ch (IO.input_channel stdin) in
-      deb_load_universe l
-    |("deb",(_,_,_,_,file),_) ->
-      let l = Debian.Packages.input_raw [file] in
-      deb_load_universe l
-    |("cudf",(_,_,_,_,file),_) ->
-      cudf_load_universe file
-    |("hdlist",(_,_,_,_,file),_) ->
+  |("hdlist", l) -> 
 IFDEF HASRPM THEN
-      let l = Rpm.Packages.Hdlists.input_raw [file] in
+      let filelist = List.map (filelist "hdlist") l in
+      let l = Rpm.Packages.Hdlists.input_raw filelist in
       rpm_load_universe l
 ELSE
     failwith ("hdlist Not supported")
 END
-    |("synth",(_,_,_,_,file),_) ->
+  |("synth", l) -> 
 IFDEF HASRPM THEN
-      let l = Rpm.Packages.Synthesis.input_raw [file] in
+      let filelist = List.map (filelist "synth") l in
+      let l = Rpm.Packages.Synthesis.input_raw filelist in
       rpm_load_universe l
 ELSE
     failwith ("synth Not supported")
 END
-    |(s,_,_) -> failwith (s^" Not supported")
-  in
+    |(s,_) -> failwith (s^" Not supported")
+;;
+
+let load_universe uris =
+  Util.print_info "Parsing and normalizing..." ;
+  let timer = Util.Timer.create "Parsing and normalizing" in
+  Util.Timer.start timer;
+  let u = parseinput uris in
   Util.Timer.stop timer u
 ;;
 

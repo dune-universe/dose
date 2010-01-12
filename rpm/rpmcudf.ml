@@ -232,7 +232,7 @@ let loadlp tables (package,version) l =
         (* we normalize everything to equality *)
         |Some(`Eq,v) -> expand tables (package,version) (name,v)
         |Some(_,v) -> (
-            Util.print_warning "%s selector in provides for package %s" "" package;
+            Util.print_warning "selector in provides for package %s" package;
             expand tables (package,version) (name,v)
         )
       ) l
