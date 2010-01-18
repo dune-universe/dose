@@ -14,6 +14,7 @@
 open Cudf
 open ExtLib
 open Common
+open Sql
 
 module Options =
 struct
@@ -35,14 +36,6 @@ struct
 
   let description = "Ceve ... what does it mean ?"
   let options = OptParser.make ~description:description ()
-
-  (* let set_output_type s =
-    if s = "dot" then output_type := Dot
-    else if s = "cnf" then output_type := CNF
-    else if s = "dimacs" then output_type := Dimacs
-    else if s = "pretty-print" then output_type := PrettyPrint
-    else if s = "sqlite" then output_type := SQLite
-    else failwith (Printf.sprintf "Unknown output type: %s" s) *)
 
   open OptParser
   add options                 ~long_name:"debug" ~help:"Print debug information" debug;
@@ -133,9 +126,84 @@ let main () =
   in
 
   let output_to_sqlite univ =
-  begin
     let db = Backend.open_database "sqlite" (None, None, Some "localhost", None, "cudf") in
-      ()
+    let enr = !Sql.database.exec_no_result db.Backend.connection in
+    let add_package p =
+    begin
+      enr (Printf.sprintf "INSERT INTO version (number, name) VALUES ('%s', '%s')" p.version p.package)
+    end in
+  begin
+      enr
+        "CREATE TABLE IF NOT EXISTS file (
+           sha1sum VARCHAR PRIMARY KEY UNIQUE,
+           timestamp DATESTAMP,
+           path VARCHAR
+         )";
+      enr  
+        "CREATE TABLE IF NOT EXISTS aptlist (
+           id INTEGER PRIMARY KEY,
+           timestamp DATESTAMP,
+           processed BOOLEAN,
+           sha1sum VARCHAR,
+           sha1base VARCHAR,
+           packages_id INTEGER,
+           file_sha1sum INTEGER UNIQUE,
+           FOREIGN KEY (file_sha1sum) REFERENCES file(sha1sum)
+         )";
+      enr
+        "CREATE TABLE IF NOT EXISTS packages (
+           id INTEGER PRIMARY KEY,
+           aptlist_id VARCHAR UNIQUE,
+           mirror VARCHAR,
+           arch VARCHAR,
+           comp VARCHAR,
+           suite VARCHAR,
+           FOREIGN KEY (aptlist_id) REFERENCES aptlist(id)
+         )";
+      enr
+        "CREATE TABLE IF NOT EXISTS info (
+           id INTEGER PRIMARY KEY,
+           essential BOOLEAN,
+           priority VARCHAR,
+           section VARCHAR,
+           installed_size INT,
+           maintainer VARCHAR,
+           architecture VARCHAR,
+           source VARCHAR,
+           package_size INT,
+           build_essential BOOLEAN
+         )";
+      enr
+        "CREATE TABLE IF NOT EXISTS interval (
+           version_id INT,
+           aptlist_id INT,
+           PRIMARY KEY (version_id,aptlist_id),
+           FOREIGN KEY (version_id) REFERENCES version(id),
+           FOREIGN KEY (aptlist_id) REFERENCES aptlist(id),
+           UNIQUE (version_id, aptlist_id)
+         )";
+      enr
+        "CREATE TABLE IF NOT EXISTS version (
+           id INTEGER PRIMARY KEY,
+           number VARCHAR COLLATE DEBIAN,
+           name VARCHAR,
+           unit_id INT,
+           info_id INT,
+           replaces VARCHAR,
+           provides VARCHAR,
+           pre_depends VARCHAR,
+           depends VARCHAR,
+           suggests VARCHAR,
+           enhances VARCHAR,
+           recommends VARCHAR,
+           conflicts VARCHAR,
+           FOREIGN KEY (info_id) REFERENCES info(id),
+           UNIQUE (unit_id, number)
+         )";
+    Cudf.iter_packages (fun p ->
+      add_package p
+    ) univ;
+    !Sql.database.close_db db.Backend.connection;
   end in
 
   let u = Cudf.load_universe plist in
