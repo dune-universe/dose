@@ -130,7 +130,7 @@ let main () =
     let enr = !Sql.database.exec_no_result db.Backend.connection in
     let add_package p =
     begin
-      (* enr (Printf.sprintf "INSERT INTO version (number, name) VALUES ('%s', '%s')" p.version p.package) *)
+      enr (Printf.sprintf "INSERT INTO version (number, name) VALUES ('%s', '%s')" (lookup_package_property p "number") p.package)
     end in
   begin
       enr

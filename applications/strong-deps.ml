@@ -115,7 +115,7 @@ main ();;
 
 (* 
 let version p =
-  try (p.package,Cudf.lookup_package_property p "Number")
+  try (p.package,Cudf.lookup_package_property p "number")
   with Not_found -> (p.package,string_of_int p.version)
 
 

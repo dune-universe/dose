@@ -176,9 +176,9 @@ let main () =
     let srchash = Hashtbl.create 200 in
     List.iter (fun pkg ->
       let binname = pkg.Cudf.package in
-      let binver = Cudf.lookup_package_property pkg "Number" in
-      let srcname = Cudf.lookup_package_property pkg "Source" in
-      let srcver = Cudf.lookup_package_property pkg "Sourceversion" in
+      let binver = Cudf.lookup_package_property pkg "number" in
+      let srcname = Cudf.lookup_package_property pkg "source" in
+      let srcver = Cudf.lookup_package_property pkg "sourceversion" in
       try
         let binlist = Hashtbl.find srchash (srcname,srcver) in
         Hashtbl.replace srchash (srcname,srcver) (List.remove binlist (binname,None))
