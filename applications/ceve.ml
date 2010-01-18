@@ -15,7 +15,8 @@ open Cudf
 open ExtLib
 open Common
 
-module Options = struct
+module Options =
+struct
   open OptParse
   let debug = StdOpt.store_true ()
   let src = StdOpt.str_option ()
@@ -25,6 +26,7 @@ module Options = struct
   let cone_maxdepth = StdOpt.int_option ()
   let output_ty = StdOpt.str_option ~default:"cnf" ()
   let out_ch = StdOpt.str_option ()
+  (* type output_types = Dot | CNF | Dimacs | PrettyPrint | SQLite *)
 
   let output_ch () =
     if Opt.is_set out_ch then 
@@ -33,6 +35,14 @@ module Options = struct
 
   let description = "Ceve ... what does it mean ?"
   let options = OptParser.make ~description:description ()
+
+  (* let set_output_type s =
+    if s = "dot" then output_type := Dot
+    else if s = "cnf" then output_type := CNF
+    else if s = "dimacs" then output_type := Dimacs
+    else if s = "pretty-print" then output_type := PrettyPrint
+    else if s = "sqlite" then output_type := SQLite
+    else failwith (Printf.sprintf "Unknown output type: %s" s) *)
 
   open OptParser
   add options                 ~long_name:"debug" ~help:"Print debug information" debug;
@@ -43,8 +53,7 @@ module Options = struct
   add options                 ~long_name:"depth" ~help:"max depth - in conjunction with cone" cone_maxdepth;
   add options ~short_name:'t' ~long_name:"outtype" ~help:"Output type : dot | cnf | dimacs | pp" output_ty;
   add options ~short_name:'o' ~long_name:"outfile" ~help:"Output file" out_ch;
-
-end
+end;;
 
 let and_sep_re = Str.regexp "\\s*;\\s*"
 let pkg_re = Str.regexp "(\\([a-z][a-z0-9.+-]+\\)\\s*,\\s*\\([a-zA-Z0-9.+:~-]+\\))"
@@ -55,7 +64,7 @@ let parse_pkg s =
     end
     else
       (Printf.eprintf "Parse error %s\n" str ; exit 1)
-  in List.map parse_aux (Str.split and_sep_re s)
+  in List.map parse_aux (Str.split and_sep_re s);;
 
 (* -------------------------------- *)
 
@@ -123,6 +132,12 @@ let main () =
     else Cudf.get_packages universe
   in
 
+  let output_to_sqlite univ =
+  begin
+    let db = Backend.open_database "sqlite" (None, None, Some "localhost", None, "cudf") in
+      ()
+  end in
+
   let u = Cudf.load_universe plist in
   match OptParse.Opt.get Options.output_ty with
   |"dot" -> 
@@ -135,6 +150,7 @@ END
   |"cnf" -> Printf.fprintf (Options.output_ch ()) "%s" (Depsolver.output_clauses u)
   |"dimacs" -> Printf.fprintf (Options.output_ch ()) "%s" (Depsolver.output_clauses ~enc:Depsolver.Dimacs u)
   |"pp" -> Printf.fprintf (Options.output_ch ()) "%s" (Cudf_printer.string_of_universe u)
+  |"sqlite" -> output_to_sqlite u
   |s -> (Printf.eprintf "unknown format : %s" s ; exit 1)
 ;;
 
