@@ -604,6 +604,7 @@ PKG_CUDF
 INCLUDE_CUDF
 INCLUDE_RPM
 CONFIG_RPM
+LINK_RPM
 PKG_BZ2
 CONFIG_BZ2
 PKG_ZIP
@@ -4372,6 +4373,7 @@ done
 
   INCLUDE_RPM="<rpm>: include"
   CONFIG_RPM="-DHASRPM"
+  LINK_RPM="<*.native>: c_use_rpm"
 fi
 
 
@@ -4670,6 +4672,7 @@ $as_echo "not found" >&6; }
 else
   PKG_OUNIT=pkg_
 fi
+
 
 
 
