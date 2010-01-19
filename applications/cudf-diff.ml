@@ -53,16 +53,10 @@ let dummy_solution () = {
 }
 
 let status_to_string pkg = function
-  |Removed ->
-      Printf.sprintf "Package (%s,%d) Removed" pkg.package pkg.version
-  |Upgraded p ->
-      Printf.sprintf "Package %s Upgraded from %d to %d"
-      pkg.package pkg.version p.version
-  |Downgraded p ->
-      Printf.sprintf "Package %s Downgraded from %d to %d"
-      pkg.package pkg.version p.version
-  |Installed -> 
-      Printf.sprintf "Package (%s,%d) New" pkg.package pkg.version
+  |Upgraded p -> Printf.sprintf "Upgraded from %d to %d" pkg.version p.version
+  |Downgraded p -> Printf.sprintf "Downgraded from %d to %d" pkg.version p.version
+  |Installed -> "New"
+  |Removed -> "Removed"
   |Unchanged -> "Unchanged"
 
 let solution_to_string s =
@@ -125,6 +119,7 @@ let diff univ sol =
 ;;
 
 let print_diff universe solutions =
+  let first = ref true in
   Cudf.iter_packages (fun pkg ->
     let pl = 
       List.filter_map (fun (f,(h,_)) ->
@@ -134,11 +129,14 @@ let print_diff universe solutions =
     if pl = [] then () else
     if all_equal (List.map snd pl) then ()
     else begin
-      Printf.printf "%s\n" (CudfAdd.print_package pkg);
-      List.iter (function
-        |f,status -> Printf.printf "%s: %s\n" f (status_to_string pkg status)
-      ) pl;
-      print_newline ()
+      let sl = List.map (fun (f,status) -> status_to_string pkg status) pl in
+      if !first then begin
+        let hl = List.map (fun (f,s) -> f) pl in
+        Printf.printf "Package | %s\n" (String.concat " | " hl) ;
+        first := false
+      end
+      ;
+      Printf.printf "%s %d | %s\n" pkg.package pkg.version (String.concat " | " sl)
     end
   ) universe
 ;;
@@ -179,6 +177,7 @@ let main () =
       in
       let sol_tables = List.map (fun (f,s) -> (f,diff univ s)) sol_list in
       print_diff univ sol_tables;
+      print_newline ();
       List.iter (fun (f,(_,s)) ->
         Printf.printf "%s :\n%s\n" f (solution_to_string s)
       ) sol_tables
