@@ -126,6 +126,7 @@ let main () =
   in
 
   let output_to_sqlite univ =
+IFDEF HASDB THEN
     let db = Backend.open_database "sqlite" (None, None, Some "localhost", None, "cudf") in
     let enr = !Sql.database.exec_no_result db.Backend.connection in
     let add_package p =
@@ -204,7 +205,11 @@ let main () =
       add_package p
     ) univ;
     !Sql.database.close_db db.Backend.connection;
-  end in
+  end 
+ELSE
+  failwith "DB not available"
+END
+  in
 
   let u = Cudf.load_universe plist in
   match OptParse.Opt.get Options.output_ty with

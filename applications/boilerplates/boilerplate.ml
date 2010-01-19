@@ -31,10 +31,14 @@ let deb_load_universe l =
   (univ,from_cudf,to_cudf)
 
 let rpm_load_universe l =
+IFDEF HASRPM THEN
   let univ = Rpm.Rpmcudf.load_universe l in
   let from_cudf pkg = (pkg.Cudf.package,string_of_int pkg.Cudf.version) in
   let to_cudf (p,v) = failwith "Nope ..." in
   (univ,from_cudf,to_cudf)
+ELSE
+  failwith "Rpm input not available"
+END
 
 let cudf_load_universe file =
   let _, univ, _ = CudfAdd.load_cudf file in
