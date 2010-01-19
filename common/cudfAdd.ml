@@ -28,7 +28,7 @@ let add_properties preamble l =
 let print_package ?(short=true) pkg =
   if short then
     let (sp,sv) =
-      try (pkg.package,Cudf.lookup_package_property pkg "Number")
+      try (pkg.package,Cudf.lookup_package_property pkg "number")
       with Not_found -> (pkg.package,string_of_int pkg.version)
     in Printf.sprintf "%s (= %s)" sp sv
   else

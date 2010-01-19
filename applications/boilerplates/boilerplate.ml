@@ -48,14 +48,21 @@ let rec filter init acc uris =
   |[],Some init -> (init,acc)
   |uri::tail, _ ->
     begin match Input.parse_uri uri, init with
-    |("cudf",_,_) as p, None when tail = [] -> ("deb",[p])
-    |("deb",(_,_,_,_,"-"),_) as p, None when tail = [] -> ("debin",[p])
-    |(("pgsql"|"sqlite") as dbtype,_,_) as p, None when tail = [] -> (dbtype,[p])
+    |("cudf",(_,_,_,_,"-"),_) as p, None when tail = [] -> ("cudfstdin",[p])
+    |("cudf",(_,_,_,_,"-"),_), _ when tail <> [] -> (Printf.eprintf "Only one cudf stdin input allowed\n"; exit 1)
+
+    |("cudf",_,_) as p, None when tail = [] -> ("cudf",[p])
     |("cudf",_,_), _ when tail <> [] -> (Printf.eprintf "Only one cudf input allowed\n"; exit 1)
+
+    |("deb",(_,_,_,_,"-"),_) as p, None when tail = [] -> ("debstdin",[p])
     |("deb",(_,_,_,_,"-"),_), _ when tail <> [] -> (Printf.eprintf "Only one deb stdin input allowed\n"; exit 1)
+
+    |(("pgsql"|"sqlite") as dbtype,_,_) as p, None when tail = [] -> (dbtype,[p])
     |(("pgsql"|"sqlite"),_,_), None when tail <> [] -> (Printf.eprintf "Only one db input allowed\n"; exit 1)
+
     |(t,_,_) as p, None -> filter (Some t) (p::acc) tail
     |(t,_,_) as p, Some i when t = i -> filter (Some t) (p::acc) tail
+
     |(t,_,_),_ -> (Printf.eprintf "You cannot mix different input types\n"; exit 1)
     end
 
@@ -67,7 +74,7 @@ let parseinput uris =
   match filter None [] uris with
   |("cudf",[("cudf",(_,_,_,_,file),_)]) ->
       cudf_load_universe file
-  |("debin", [p]) ->
+  |("debstdin", [p]) ->
       let l = Debian.Packages.input_raw_ch (IO.input_channel stdin) in
       deb_load_universe l
   |("deb", l) ->
@@ -101,6 +108,7 @@ END
     |(s,_) -> failwith (s^" Not supported")
 ;;
 
+(* parse and merge a list of files into a cudf universe *)
 let load_universe uris =
   Util.print_info "Parsing and normalizing..." ;
   let timer = Util.Timer.create "Parsing and normalizing" in

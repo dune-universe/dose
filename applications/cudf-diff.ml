@@ -12,218 +12,205 @@
 
 open Cudf
 open ExtLib
+open Common
+open CudfAdd
 
-let conservative = ref true
+module Options = struct
+  open OptParse
 
-let parse_cudf doc =
-  try
-    let p = Cudf_parser.from_in_channel (open_in doc) in
-    (* Printf.eprintf "parsing CUDF ...\n%!"; *)
-    Cudf_parser.load p
-  with
-    Cudf_parser.Parse_error _
-    | Cudf.Constraint_violation _ as exn ->
-      Printf.eprintf "Error while loading CUDF from %s: %s\n%!"
-      doc (Printexc.to_string exn);
-      exit 1
-;;
+  let debug = StdOpt.store_true ()
+  let solution = StdOpt.store_true ()
+  let compare = StdOpt.store_true ()
 
-exception Done
+  let description = "By default we show only the number of broken packages"
+  let options = OptParser.make ~description:description ()
 
-module Options =
-struct
-  let verbose = ref false
-  let solution = ref false
-  let compare = ref false
+  open OptParser
+  add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
+  add options ~short_name:'s' ~long_name:"solution" ~help:"consider file2 as a solution to the cudf problem in file1 and print the complete list of installed packages" solution;
+  add options ~short_name:'c' ~long_name:"compare" ~help:"compare solutions file2 file3 for the cudf problem in file1" compare;
 end
 
-let usage = Printf.sprintf "usage: %s [--options] file1 file2 [file3]" Sys.argv.(0)
-
-let options =
-  [
-   ("--verbose",  Arg.Set  Options.verbose,  "print propositional solver diagnostic");
-   ("--solution",  Arg.Set  Options.solution,  "consider file2 as a solution to the cudf problem in file1 and print the complete list of installed packages");
-   ("--compare", Arg.Set Options.compare, "compare solutions file2 file3")
-  ]
-
 type status = 
-  |Erased
-  |Upgraded of Cudf.package
-  |Downgraded of Cudf.package
-  |Installed
-  |Removed
-  |Unchanged
-  |Replaced of package
+  |Upgraded of Cudf.package (* there exists a newer version in the solution *)
+  |Downgraded of Cudf.package (* there exists an older version in the solution *)
+  |Replaced of Cudf.package list list (* a list of package providing the same functionalities *)
+  |Installed (* this package was not installed before *)
+  |Removed (* this package is not installed anymore *)
+  |Unchanged (* this package was installed before and it is now *)
+
+type solution = {
+  mutable replaced : int ;
+  mutable removed : int ;
+  mutable downgraded : int;
+  mutable updated : int;
+  mutable newinst : int;
+}
+
+let dummy_solution = {
+  replaced = 0;
+  removed = 0 ;
+  downgraded = 0;
+  updated = 0;
+  newinst = 0;
+}
+
+let status_to_string pkg = function
+  |Removed ->
+      Printf.sprintf "Package (%s,%d) Removed" pkg.package pkg.version
+  |Replaced l ->
+      let sl = [] in 
+      Printf.sprintf "Package (%s,%d) Replaced by [%s]"
+      pkg.package pkg.version (* p.package p.version *) ""
+  |Upgraded p ->
+      Printf.sprintf "Package %s Upgraded from %d to %d"
+      pkg.package pkg.version p.version
+  |Downgraded p ->
+      Printf.sprintf "Package %s Downgraded from %d to %d"
+      pkg.package pkg.version p.version
+  |Installed -> 
+      Printf.sprintf "Package (%s,%d) New" pkg.package pkg.version
+  |Unchanged -> "Unchanged"
+
+let solution_to_string s =
+  Printf.sprintf
+  "removed = %d\nreplaced = %d\nupdated = %d\ndowngraded = %d\nnew = %d\n"
+  s.removed s.replaced s.updated s.downgraded s.newinst
+;;
+
+let status_equal = function
+  |(Removed,Removed)
+  |(Installed,Installed)
+  |(Unchanged,Unchanged) -> true
+  |((Upgraded p1,Upgraded p2)|(Downgraded p1,Downgraded p2)) when CudfAdd.equal p1 p2 -> true
+  |_,_ -> false
+
+let all_equal = function
+  |[_] -> true
+  |one::t -> List.for_all (fun sc -> status_equal (sc,one)) t
+  |[] -> failwith "Empty list"
+
+(* a packages matching vpkg in the universe u *)
+let provides u vpkg =
+  List.map (fun (pkg,_) -> pkg) (Cudf.who_provides u vpkg)
+
+(* for each provide of pkg return all concrete package providing the same functionality *)
+let provides_list u pkg =
+  List.map (fun vpkg ->
+    provides u (vpkg :> Cudf_types.vpkg) 
+  ) pkg.provides
+
+let diff univ sol =
+  let h = Cudf_hashtbl.create (Cudf.universe_size univ) in
+  let s = dummy_solution in
+
+  Cudf.iter_packages (fun pkg ->
+    if pkg.installed then
+      let l = Cudf.lookup_packages sol pkg.package in
+      match List.filter (fun pkg -> pkg.installed) l with
+      |[] ->
+(*          let l = provides_list sol pkg in
+          if List.for_all (function [] -> false | _ -> true) l then begin
+            s.replaced<-s.replaced+1;
+            Cudf_hashtbl.add h pkg (Replaced l)
+          end
+          else
+            *)
+            Cudf_hashtbl.add h pkg Removed
+
+      |l ->
+          List.iter (fun p ->
+            if Cudf.version_matches p.version (Some(`Eq,pkg.version))
+            then Cudf_hashtbl.add h pkg Unchanged
+            else if Cudf.version_matches p.version (Some(`Gt,pkg.version))
+            then begin s.updated<-s.updated+1 ; Cudf_hashtbl.add h pkg (Upgraded p) end
+            else if Cudf.version_matches p.version (Some(`Lt,pkg.version))
+            then begin s.downgraded<-s.downgraded+1 ; Cudf_hashtbl.add h pkg (Downgraded p) end
+          ) l
+    else
+      try
+        let p = Cudf.lookup_package sol (pkg.package,pkg.version) in
+        if p.installed then begin
+          s.newinst<-s.newinst+1 ;
+          Cudf_hashtbl.add h pkg Installed
+        end
+      with Not_found -> ()
+  ) univ
+  ;
+  (h,s)
+;;
+
+let print_diff universe solutions =
+  Cudf.iter_packages (fun pkg ->
+    let pl = 
+      List.filter_map (fun (f,(h,_)) ->
+        try Some(f,Cudf_hashtbl.find h pkg) with Not_found -> None
+      ) solutions
+    in
+    if pl = [] then () else
+    if all_equal (List.map snd pl) then ()
+    else begin
+      Printf.printf "%s\n" (CudfAdd.print_package pkg);
+      List.iter (function
+        |f,status -> Printf.printf "%s: %s\n" f (status_to_string pkg status)
+      ) pl;
+      print_newline ()
+    end
+  ) universe
+;;
+
+let parse_univ f1 =
+  match CudfAdd.load_cudf f1 with
+  |_,_,None -> 
+      (Printf.eprintf "file %s is not a valid cudf document\n" f1 ; exit 1)
+  |_,u,Some r -> u,r
+;;
+
+let check_sol u r s =
+  match Cudf_checker.is_solution (u,r) s with
+  |false,reasonlist -> 
+      (List.iter (fun r ->
+        Printf.eprintf "%s\n" (Cudf_checker.explain_reason r)
+      ) reasonlist;
+      false)
+  |true,_ -> true
+;;
 
 let main () =
-  let input_files = ref [] in
+  at_exit (fun () -> Util.dump Format.err_formatter);
+  let posargs = OptParse.OptParser.parse_argv Options.options in
+  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
 
-  let _ =
-    try Arg.parse options (fun f -> input_files := f::!input_files) usage
-    with Arg.Bad s -> failwith s
-  in
+  match posargs with
+  |[] -> (Printf.eprintf "You must specify at least a universe and a solution\n" ; exit 1)
+  |[u] -> (Printf.eprintf "You must specify at least a solution\n" ; exit 1)
+  |u::l ->
+      let (univ,req) = parse_univ u in
+      let sol_list =
+        List.filter_map (fun f ->
+          let (_,s,_) = CudfAdd.load_cudf f in
+          if check_sol univ req s then Some (f,s)
+          else (Printf.eprintf "%s is not a valid solution. Discarded\n" f ; None)
+        ) l
+      in
+      let sol_tables = List.map (fun (f,s) -> (f,diff univ s)) sol_list in
+      print_diff univ sol_tables
 
-  let provides u vpkg =
-    List.map (fun (pkg,v) -> pkg ) (Cudf.who_provides u vpkg)
-  in
-  let diff u1 u2 =
-    let replaced = ref 0 in
-    let removed = ref 0 in
-    let downgraded = ref 0 in
-    let updated = ref 0 in
-    let newinst = ref 0 in
-
-    let h = Hashtbl.create (Cudf.universe_size u1) in
-    let _ =
-      Cudf.iter_packages (fun pkg ->
-        if pkg.installed then
-          let pkgl = Cudf.lookup_packages u2 pkg.package in
-          let prvl = List.flatten (List.map (fun vpkg ->
-            provides u2 (vpkg :> Cudf_types.vpkg) 
-            ) pkg.provides)
-          in
-          match pkgl,prvl with
-          |[],[] -> Hashtbl.add h pkg Erased
-          |[],l ->
-              List.iter (fun p ->
-                if p.installed then
-                  (incr replaced ; Hashtbl.add h pkg (Replaced p))
-              ) l
-          |l,_ ->
-              List.iter (fun p ->
-                if p.installed then
-                  if Cudf.version_matches p.version (Some(`Eq,pkg.version))
-                  then Hashtbl.add h pkg Unchanged
-                  else if Cudf.version_matches p.version (Some(`Gt,pkg.version))
-                  then (incr updated ; Hashtbl.add h pkg (Upgraded p))
-                  else if Cudf.version_matches p.version (Some(`Lt,pkg.version))
-                  then (incr downgraded ; Hashtbl.add h pkg (Downgraded p))
-                else
-                  (incr removed ; Hashtbl.add h pkg Removed)
-            ) l
-      ) u1
-    in
-    let _ =
-      Cudf.iter_packages (fun pkg ->
-        if pkg.installed && ((Cudf.get_installed u1 pkg.package) = []) then
-          (incr newinst ; Hashtbl.add h pkg Installed)
-      ) u2
-    in
-    let number pkg = 
-      try Cudf.lookup_package_property pkg "number"
-      with Not_found -> string_of_int pkg.version
-    in
-    if !Options.solution then begin
-      let a = Hashtbl.create (Hashtbl.length h) in
-      Hashtbl.iter (fun pkg v -> 
-        if Hashtbl.mem a pkg then ()
-        else begin
-          Hashtbl.add a pkg ();
-          match v with
-          |Upgraded p -> print_endline (Cudf_printer.string_of_package p)
-          |Replaced p -> print_endline (Cudf_printer.string_of_package p)
-          |Downgraded p -> print_endline (Cudf_printer.string_of_package p)
-          |Installed -> print_endline (Cudf_printer.string_of_package pkg)
-          |Unchanged -> print_endline (Cudf_printer.string_of_package pkg)
-          |_ -> ()
-        end
-      ) h
-    end
-    ;
-    if !Options.verbose || not !Options.solution then begin
-      Hashtbl.iter (fun pkg -> function
-        |Erased ->
-            Printf.printf "Package %s Erased (not present in u2)\n" pkg.package
-        |Removed ->
-            Printf.printf "Package (%s,%s) Removed\n" pkg.package (number pkg)
-        |Replaced p ->
-            Printf.printf "Package (%s,%s) is replaced by (%s,%s)\n"
-            pkg.package (number pkg) p.package (number p)
-        |Upgraded p ->
-            Printf.printf "Package %s upgraded from %s to %s\n"
-            pkg.package (number pkg) (number p)
-        |Downgraded p ->
-            Printf.printf "Package %s downgraded from %s to %s\n"
-            pkg.package (number pkg) (number p)
-        |Installed -> 
-            Printf.printf "Package (%s,%s) was freshly installed\n" pkg.package
-            (number pkg)
-        |Unchanged -> ()
-      ) h
+      (*
+      let changed1 = replaced1 + updated1 + downgraded1 in
+      let changed2 = replaced2 + updated2 + downgraded2 in
+      let paranoid = [`Min(removed1,removed2);`Min(changed1,changed2)] in
+      let trendy = [`Min(removed1,removed2);`Max(updated1,updated2);`Max(newinst1,newinst2)] in
+      Printf.printf "paranoid profile (install, min removed, min changed)\n" ;
+      if compare paranoid = 1 then Printf.printf "Paranoid : The winner is %s\n" f2
+      else if compare paranoid = -1 then Printf.printf "Paranoid : The winner is %s\n" f3
+      else Printf.printf "Paranoid : Equivalent solutions\n"
       ;
-      Printf.printf
-      "\nremoved = %d\nreplaced = %d\nupdated = %d\ndowngraded = %d\nnew = %d\n"
-      !removed !replaced !updated !downgraded !newinst;
-    end
-    ;
-    (!removed,!replaced,!updated,!downgraded,!newinst)
-  in
-
-  let parse_univ f1 =
-    match parse_cudf f1 with
-    |_,_,None -> 
-        (Printf.eprintf "file %s is not a valid cudf document\n" f1 ; exit 1)
-    |_,u,Some r -> u,r
-  in
-
-  let check_sol u r s =
-    match Cudf_checker.is_solution (u,r) s with
-    |false,reasonlist -> 
-        (List.iter (fun r ->
-          Printf.eprintf "%s\n" (Cudf_checker.explain_reason r)
-        ) reasonlist;
-        false)
-    |true,_ -> true
-  in
-
-  let rec compare = function
-    |[] -> 0
-    |`Min(x,y)::l when x = y -> compare l
-    |`Max(x,y)::l when x = y -> compare l
-    |`Min(x,y)::_ -> if x < y then 1 else -1
-    |`Max(x,y)::_ -> if x > y then 1 else -1
-    |_ -> assert false
-  in
-
-  match !input_files with
-  |[f3;f2;f1] when !Options.compare ->
-      let (univ,req) = parse_univ f1 in
-      let (_,sol1,_) = parse_cudf f2 in
-      let (_,sol2,_) = parse_cudf f3 in
-      begin match check_sol univ req sol1, check_sol univ req sol2 with
-      |true,false -> (Printf.printf "%s is a valid solution but %s is not\n" f2 f3; exit 1)
-      |false,true -> (Printf.printf "%s is a valid solution but %s is not\n" f3 f2; exit 1)
-      |false,false -> (Printf.printf "Neither solutions are valid\n" ; exit 1)
-      |true,true ->
-          begin
-            let (removed1,replaced1,updated1,downgraded1,newinst1) = diff univ sol1 in
-            let (removed2,replaced2,updated2,downgraded2,newinst2) = diff univ sol2 in
-            let changed1 = replaced1 + updated1 + downgraded1 in
-            let changed2 = replaced2 + updated2 + downgraded2 in
-            let paranoid = [`Min(removed1,removed2);`Min(changed1,changed2)] in
-            let trendy = [`Min(removed1,removed2);`Max(updated1,updated2);`Max(newinst1,newinst2)] in
-            Printf.printf "paranoid profile (install, min removed, min changed)\n" ;
-            if compare paranoid = 1 then Printf.printf "Paranoid : The winner is %s\n" f2
-            else if compare paranoid = -1 then Printf.printf "Paranoid : The winner is %s\n" f3
-            else Printf.printf "Paranoid : Equivalent solutions\n"
-            ;
-            Printf.printf "trendy profile (install, min removed, max fresh, min new)\n" ;
-            if compare trendy = 1 then Printf.printf "Trendy : The winner is %s\n" f2
-            else if compare trendy = -1 then Printf.printf "Trendy : The winner is %s\n" f3
-            else Printf.printf "Trendy : Equivalent solutions\n"
-          end
-      end
-  |[f2;f1] when !Options.solution ->
-      let (univ,req) = parse_univ f1 in
-      let (_,sol,_) = parse_cudf f2 in
-      if check_sol univ req sol then
-        ignore(diff univ sol)
-      else exit 1
-  |[f2;f1] ->
-      let (_,univ1,_) = parse_cudf f1 in
-      let (_,univ2,_) = parse_cudf f2 in
-      ignore(diff univ1 univ2)
-  |_ -> (Printf.eprintf "wrong number of parameters\n" ; exit 1)
+      Printf.printf "trendy profile (install, min removed, max fresh, min new)\n" ;
+      if compare trendy = 1 then Printf.printf "Trendy : The winner is %s\n" f2
+      else if compare trendy = -1 then Printf.printf "Trendy : The winner is %s\n" f3
+      else Printf.printf "Trendy : Equivalent solutions\n"
+      *)
 ;;
 
 main ();;
