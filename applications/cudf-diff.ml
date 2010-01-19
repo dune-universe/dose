@@ -34,21 +34,18 @@ end
 type status = 
   |Upgraded of Cudf.package (* there exists a newer version in the solution *)
   |Downgraded of Cudf.package (* there exists an older version in the solution *)
-  |Replaced of Cudf.package list list (* a list of package providing the same functionalities *)
   |Installed (* this package was not installed before *)
   |Removed (* this package is not installed anymore *)
   |Unchanged (* this package was installed before and it is now *)
 
 type solution = {
-  mutable replaced : int ;
   mutable removed : int ;
   mutable downgraded : int;
   mutable updated : int;
   mutable newinst : int;
 }
 
-let dummy_solution = {
-  replaced = 0;
+let dummy_solution () = {
   removed = 0 ;
   downgraded = 0;
   updated = 0;
@@ -58,10 +55,6 @@ let dummy_solution = {
 let status_to_string pkg = function
   |Removed ->
       Printf.sprintf "Package (%s,%d) Removed" pkg.package pkg.version
-  |Replaced l ->
-      let sl = [] in 
-      Printf.sprintf "Package (%s,%d) Replaced by [%s]"
-      pkg.package pkg.version (* p.package p.version *) ""
   |Upgraded p ->
       Printf.sprintf "Package %s Upgraded from %d to %d"
       pkg.package pkg.version p.version
@@ -74,8 +67,8 @@ let status_to_string pkg = function
 
 let solution_to_string s =
   Printf.sprintf
-  "removed = %d\nreplaced = %d\nupdated = %d\ndowngraded = %d\nnew = %d\n"
-  s.removed s.replaced s.updated s.downgraded s.newinst
+  "removed = %d\nupdated = %d\ndowngraded = %d\nnew = %d\n"
+  s.removed s.updated s.downgraded s.newinst
 ;;
 
 let status_equal = function
@@ -102,22 +95,13 @@ let provides_list u pkg =
 
 let diff univ sol =
   let h = Cudf_hashtbl.create (Cudf.universe_size univ) in
-  let s = dummy_solution in
+  let s = dummy_solution () in
 
   Cudf.iter_packages (fun pkg ->
     if pkg.installed then
       let l = Cudf.lookup_packages sol pkg.package in
       match List.filter (fun pkg -> pkg.installed) l with
-      |[] ->
-(*          let l = provides_list sol pkg in
-          if List.for_all (function [] -> false | _ -> true) l then begin
-            s.replaced<-s.replaced+1;
-            Cudf_hashtbl.add h pkg (Replaced l)
-          end
-          else
-            *)
-            Cudf_hashtbl.add h pkg Removed
-
+      |[] -> (s.removed<-s.removed+1 ; Cudf_hashtbl.add h pkg Removed)
       |l ->
           List.iter (fun p ->
             if Cudf.version_matches p.version (Some(`Eq,pkg.version))
@@ -194,23 +178,11 @@ let main () =
         ) l
       in
       let sol_tables = List.map (fun (f,s) -> (f,diff univ s)) sol_list in
-      print_diff univ sol_tables
+      print_diff univ sol_tables;
+      List.iter (fun (f,(_,s)) ->
+        Printf.printf "%s :\n%s\n" f (solution_to_string s)
+      ) sol_tables
 
-      (*
-      let changed1 = replaced1 + updated1 + downgraded1 in
-      let changed2 = replaced2 + updated2 + downgraded2 in
-      let paranoid = [`Min(removed1,removed2);`Min(changed1,changed2)] in
-      let trendy = [`Min(removed1,removed2);`Max(updated1,updated2);`Max(newinst1,newinst2)] in
-      Printf.printf "paranoid profile (install, min removed, min changed)\n" ;
-      if compare paranoid = 1 then Printf.printf "Paranoid : The winner is %s\n" f2
-      else if compare paranoid = -1 then Printf.printf "Paranoid : The winner is %s\n" f3
-      else Printf.printf "Paranoid : Equivalent solutions\n"
-      ;
-      Printf.printf "trendy profile (install, min removed, max fresh, min new)\n" ;
-      if compare trendy = 1 then Printf.printf "Trendy : The winner is %s\n" f2
-      else if compare trendy = -1 then Printf.printf "Trendy : The winner is %s\n" f3
-      else Printf.printf "Trendy : Equivalent solutions\n"
-      *)
 ;;
 
 main ();;
