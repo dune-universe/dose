@@ -263,6 +263,78 @@ let clear_database db =
   !Sql.database.exec_no_result db.connection s3;
 ;;
 
+let create_tables db =
+begin
+  !Sql.database.exec_no_result db.connection
+    "CREATE TABLE IF NOT EXISTS file (
+       sha1sum VARCHAR PRIMARY KEY UNIQUE,
+       timestamp DATESTAMP,
+       path VARCHAR
+     )";
+  !Sql.database.exec_no_result db.connection
+    "CREATE TABLE IF NOT EXISTS aptlist (
+       id INTEGER PRIMARY KEY,
+       timestamp DATESTAMP,
+       processed BOOLEAN,
+       sha1sum VARCHAR,
+       sha1base VARCHAR,
+       packages_id INTEGER,
+       file_sha1sum INTEGER UNIQUE,
+       FOREIGN KEY (file_sha1sum) REFERENCES file(sha1sum)
+     )";
+  !Sql.database.exec_no_result db.connection
+    "CREATE TABLE IF NOT EXISTS packages (
+       id INTEGER PRIMARY KEY,
+       aptlist_id VARCHAR UNIQUE,
+       mirror VARCHAR,
+       arch VARCHAR,
+       comp VARCHAR,
+       suite VARCHAR,
+       FOREIGN KEY (aptlist_id) REFERENCES aptlist(id)
+     )";
+  !Sql.database.exec_no_result db.connection
+    "CREATE TABLE IF NOT EXISTS info (
+       id INTEGER PRIMARY KEY,
+       essential BOOLEAN,
+       priority VARCHAR,
+       section VARCHAR,
+       installed_size INT,
+       maintainer VARCHAR,
+       architecture VARCHAR,
+       source VARCHAR,
+       package_size INT,
+       build_essential BOOLEAN
+     )";
+  !Sql.database.exec_no_result db.connection
+    "CREATE TABLE IF NOT EXISTS interval (
+       version_id INT,
+       aptlist_id INT,
+       PRIMARY KEY (version_id,aptlist_id),
+       FOREIGN KEY (version_id) REFERENCES version(id),
+       FOREIGN KEY (aptlist_id) REFERENCES aptlist(id),
+       UNIQUE (version_id, aptlist_id)
+     )";
+  !Sql.database.exec_no_result db.connection
+    "CREATE TABLE IF NOT EXISTS version (
+       id INTEGER PRIMARY KEY,
+       number VARCHAR COLLATE DEBIAN,
+       name VARCHAR,
+       unit_id INT,
+       info_id INT,
+       replaces VARCHAR,
+       provides VARCHAR,
+       pre_depends VARCHAR,
+       depends VARCHAR,
+       suggests VARCHAR,
+       enhances VARCHAR,
+       recommends VARCHAR,
+       conflicts VARCHAR,
+       FOREIGN KEY (info_id) REFERENCES info(id),
+       UNIQUE (unit_id, number)
+     )";
+end;;
+
+
 (* FIXME : This should be something more explicit *)
 exception Error
 
@@ -383,7 +455,7 @@ let loadl l =
 let loadll = List.map loadl
 
 (* ATM we support only debian *)
-let conv pkg =
+let todebian (pkg: Idbr.package): Debian.Packages.package =
   { Debian.Packages.name = pkg.name;
     version = pkg.number;
     source = ("",None);
@@ -399,11 +471,25 @@ let conv pkg =
     extras = pkg.extra;
   }
 
+(*let from_debian (pkg: Debian.Packages.package): Idbr.package =
+  { name = pkg.Debian.Packages.name;
+    number = pkg.Debian.Packages.version;
+    version_id =
+    cnf_deps =
+    conj_deps = 
+    extra = 
+  };;*)
+
 let load_selection db ?(distribution=`Debian) query =
   let module S = Debian.Packages.Set in
-  let rawl = select_map_packages db conv query in
+  let rawl = select_map_packages db todebian query in
   let s = List.fold_left (fun s x -> S.add x s) S.empty rawl in
   S.elements s
+
+let insert_package db (pkg: Debian.Packages.package) =
+  Printf.eprintf "INSERT INTO version (number, name) VALUES ('%s', '%s')"
+    pkg.Debian.Packages.name
+    pkg.Debian.Packages.version;
 
 (* TODO we should support dynlinking !!! *)
 (*

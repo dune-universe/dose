@@ -61,10 +61,33 @@ let parse_pkg s =
 
 (* -------------------------------- *)
 
+let output_to_sqlite args =
+IFDEF HASDB THEN
+  begin
+    let pl = List.unique (List.flatten (List.map (function u ->
+      match Input.parse_uri u with
+      | ("deb", (_, _, _, _, f), _) -> Debian.Packages.input_raw [f]
+      | _ -> failwith "Other file formats than Debian are not yet supported for SQLite insertion"
+     ) args)) in
+    let db = Backend.open_database "sqlite" (None, None, Some "localhost", None, "cudf") in
+    Backend.create_tables db; 
+    List.iter (fun p ->
+      Backend.insert_package db p
+    ) pl;
+    (* !Sql.database.close_db db.Backend.connection; *)
+  end 
+ELSE
+  failwith "DB not available"
+END;;
+
+
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
   if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
+  if OptParse.Opt.get Options.output_ty = "sqlite" then
+    output_to_sqlite posargs
+  else
   let (universe,from_cudf,to_cudf) = Boilerplate.load_universe posargs in
   let get_cudfpkg (p,v) = Cudf.lookup_package universe (to_cudf (p,v)) in
 
@@ -125,92 +148,6 @@ let main () =
     else Cudf.get_packages universe
   in
 
-  let output_to_sqlite univ =
-IFDEF HASDB THEN
-    let db = Backend.open_database "sqlite" (None, None, Some "localhost", None, "cudf") in
-    let enr = !Sql.database.exec_no_result db.Backend.connection in
-    let add_package p =
-    begin
-      enr (Printf.sprintf "INSERT INTO version (number, name) VALUES ('%s', '%s')" (lookup_package_property p "number") p.package)
-    end in
-  begin
-      enr
-        "CREATE TABLE IF NOT EXISTS file (
-           sha1sum VARCHAR PRIMARY KEY UNIQUE,
-           timestamp DATESTAMP,
-           path VARCHAR
-         )";
-      enr  
-        "CREATE TABLE IF NOT EXISTS aptlist (
-           id INTEGER PRIMARY KEY,
-           timestamp DATESTAMP,
-           processed BOOLEAN,
-           sha1sum VARCHAR,
-           sha1base VARCHAR,
-           packages_id INTEGER,
-           file_sha1sum INTEGER UNIQUE,
-           FOREIGN KEY (file_sha1sum) REFERENCES file(sha1sum)
-         )";
-      enr
-        "CREATE TABLE IF NOT EXISTS packages (
-           id INTEGER PRIMARY KEY,
-           aptlist_id VARCHAR UNIQUE,
-           mirror VARCHAR,
-           arch VARCHAR,
-           comp VARCHAR,
-           suite VARCHAR,
-           FOREIGN KEY (aptlist_id) REFERENCES aptlist(id)
-         )";
-      enr
-        "CREATE TABLE IF NOT EXISTS info (
-           id INTEGER PRIMARY KEY,
-           essential BOOLEAN,
-           priority VARCHAR,
-           section VARCHAR,
-           installed_size INT,
-           maintainer VARCHAR,
-           architecture VARCHAR,
-           source VARCHAR,
-           package_size INT,
-           build_essential BOOLEAN
-         )";
-      enr
-        "CREATE TABLE IF NOT EXISTS interval (
-           version_id INT,
-           aptlist_id INT,
-           PRIMARY KEY (version_id,aptlist_id),
-           FOREIGN KEY (version_id) REFERENCES version(id),
-           FOREIGN KEY (aptlist_id) REFERENCES aptlist(id),
-           UNIQUE (version_id, aptlist_id)
-         )";
-      enr
-        "CREATE TABLE IF NOT EXISTS version (
-           id INTEGER PRIMARY KEY,
-           number VARCHAR COLLATE DEBIAN,
-           name VARCHAR,
-           unit_id INT,
-           info_id INT,
-           replaces VARCHAR,
-           provides VARCHAR,
-           pre_depends VARCHAR,
-           depends VARCHAR,
-           suggests VARCHAR,
-           enhances VARCHAR,
-           recommends VARCHAR,
-           conflicts VARCHAR,
-           FOREIGN KEY (info_id) REFERENCES info(id),
-           UNIQUE (unit_id, number)
-         )";
-    Cudf.iter_packages (fun p ->
-      add_package p
-    ) univ;
-    !Sql.database.close_db db.Backend.connection;
-  end 
-ELSE
-  failwith "DB not available"
-END
-  in
-
   let u = Cudf.load_universe plist in
   match OptParse.Opt.get Options.output_ty with
   |"dot" -> 
@@ -220,10 +157,10 @@ IFDEF HAS_OCAMLGRAPH THEN
 ELSE
     failwith ("dot Not supported")
 END
-  |"cnf" -> Printf.fprintf (Options.output_ch ()) "%s" (Depsolver.output_clauses u)
+  |"cnf" -> Printf.fprintf (Options.output_ch ()) "%s" (Depsolver.output_clauses ~enc:Depsolver.Cnf u)
   |"dimacs" -> Printf.fprintf (Options.output_ch ()) "%s" (Depsolver.output_clauses ~enc:Depsolver.Dimacs u)
   |"pp" -> Printf.fprintf (Options.output_ch ()) "%s" (Cudf_printer.string_of_universe u)
-  |"sqlite" -> output_to_sqlite u
+  |"sqlite" -> assert false; (* this should not be here *) 
   |s -> (Printf.eprintf "unknown format : %s" s ; exit 1)
 ;;
 
