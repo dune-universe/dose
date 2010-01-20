@@ -122,7 +122,7 @@ AC_DEFUN([AC_PROG_CAMLP4],
 
   # checking for companion tools
   AC_CHECK_TOOL([CAMLP4BOOT],[camlp4boot],[no])
-  AC_CHECK_TOOL([CAMLP4O],[camlp4o],[no])
+  AC_CHECK_TOOLS([CAMLP4O],[camlp4o.byte camlp4o],[no])
   AC_CHECK_TOOL([CAMLP4OF],[camlp4of],[no])
   AC_CHECK_TOOL([CAMLP4OOF],[camlp4oof],[no])
   AC_CHECK_TOOL([CAMLP4ORF],[camlp4orf],[no])

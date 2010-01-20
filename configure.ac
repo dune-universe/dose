@@ -1,12 +1,19 @@
 
-AC_INIT(dose3, 0.1, pietro.abate@pps.jussieu.fr)
+AC_INIT(dose3, unstable, pietro.abate@pps.jussieu.fr)
 
 AC_PROG_OCAML
 if test "$OCAMLC" = "no"; then
  AC_MSG_ERROR([You must install the OCaml compiler])
 fi
 
+AC_PROG_CAMLP4
+AC_SUBST(CAMLP4O)
+if test "$CAMLP4" = "no"; then
+ AC_MSG_ERROR([You must install the Camlp4 pre-processor])
+fi
+
 AC_PROG_FINDLIB
+AC_SUBST(OCAMLFIND)
 if test "$OCAMLFIND" = "no"; then
  AC_MSG_ERROR([You must install OCaml findlib (the ocamlfind command)])
 fi
@@ -87,6 +94,7 @@ if test "$HAS_SQLITE" = "yes" ; then
   PKG_SQLITE="pkg_sqlite3, pkg_json-static"
   MLPACK_SQLITE=Sqlite
   CONFIG_DBBACKEND="-DSQLITE"
+  CONFIG_DB="-DHASDB"
 else
   PKG_SQLITE=pkg_
 fi
@@ -108,6 +116,7 @@ if test "$HAS_PGSQL" = "yes" ; then
   PKG_PGSQL="pkg_postgresql, pkg_json-static, pkg_threads"
   MLPACK_PGSQL=Pgsql
   CONFIG_DBBACKEND="$CONFIG_DBBACKEND -DPGSQL"
+  CONFIG_DB="-DHASDB"
 else
   PKG_PGSQL=pkg_
 fi
@@ -174,6 +183,7 @@ AC_SUBST(MLPACK_SQLITE)
 AC_SUBST(PKG_SQLITE)
 
 AC_SUBST(CONFIG_DBBACKEND)
+AC_SUBST(CONFIG_DB)
 
 AC_SUBST(CONFIG_ZIP)
 AC_SUBST(PKG_ZIP)

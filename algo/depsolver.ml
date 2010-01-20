@@ -146,9 +146,9 @@ let output_clauses ?(enc=Cnf) universe =
   let clauses = Depsolver_int.S.dump solver.Depsolver_int.constraints in
   let buff = Buffer.create (Cudf.universe_size universe) in
   let to_cnf dump =
-    let str v = 
+    let str (v, p) = 
       let pkg = maps.map#inttovar (abs v) in
-      let pol = if v < 0 then "!" else "" in
+      let pol = if p then "" else "!" in
       Printf.sprintf "%s%s-%d" pol pkg.Cudf.package pkg.Cudf.version
     in
     List.iter (fun l ->
@@ -157,7 +157,8 @@ let output_clauses ?(enc=Cnf) universe =
     ) dump
   in
   let to_dimacs dump =
-    let str = Printf.sprintf "%d" in
+    let str (v, p) =
+      if p then Printf.sprintf "%d" v else Printf.sprintf "-%d" v in
     let varnum = solver.Depsolver_int.nr_variables in
     let closenum = (List.length clauses) in
     Printf.bprintf buff "p cnf %d %d\n" varnum closenum;

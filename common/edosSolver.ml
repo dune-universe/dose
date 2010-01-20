@@ -40,7 +40,7 @@ module type T = sig
   val solve_lst : state -> var list -> bool
   val collect_reasons : state -> var -> X.reason list
   val collect_reasons_lst : state -> var list -> X.reason list
-  val dump : state -> int list list
+  val dump : state -> (int * bool) list list
   val debug : bool -> unit
 end
 
@@ -89,7 +89,7 @@ module M (X : S) = struct
       mutable st_cost : int; (* Total computational cost so far *)
       st_print_var : Format.formatter -> int -> unit;
       mutable st_coherent : bool;
-      mutable st_buffer : int list list option;
+      mutable st_buffer : (int * bool) list list option;
     }
 
   let copy_clause p =
@@ -233,9 +233,9 @@ module M (X : S) = struct
       let clause = Array.fold_left
         (fun acc p ->
            if pol_of_lit p then
-              (var_of_lit p)::acc
+              (var_of_lit p, true)::acc
            else
-              -(var_of_lit p)::acc) 
+              (var_of_lit p, false)::acc) 
         [] r.lits in
       st.st_buffer <- Some (clause::b)
     end

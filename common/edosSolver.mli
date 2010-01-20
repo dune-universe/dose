@@ -95,7 +95,7 @@ module type T = sig
 
   (** if the solver was initialized with [buffer = true], 
       dump the state of the solver. Return an empty list otherwise *)
-  val dump : state -> int list list
+  val dump : state -> (int * bool) list list
 
   (** enable debug messages *)
   val debug : bool -> unit

@@ -1,3 +1,3 @@
 <*.ml> or <*.mli> or <*.byte> or <*.native> or <*.cmxs>: pkg_extlib, pkg_str, pkg_unix, @PKG_CUDF@, @PKG_ZIP@, @PKG_PGSQL@, @PKG_SQLITE@, @PKG_XML@, @PKG_OCAMLGRAPH@
-<*.ml> or <*.mli>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_DBBACKEND@ @CONFIG_RPM@ @CONFIG_OCAMLGRAPH@)
+<*.ml> or <*.mli>: pp(@CAMLP4O@ Camlp4MacroParser.cmo @CONFIG_DBBACKEND@ @CONFIG_RPM@ @CONFIG_OCAMLGRAPH@)
 <*.ml> or <*.mli>: warn_x
