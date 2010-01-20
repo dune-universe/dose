@@ -278,12 +278,31 @@ let test_defaultgraphs =
     (* test_dependency_graph *)
   ]
 
+let test_cnf =
+  "CNF output" >:: (fun _ ->
+    let s = Depsolver.output_clauses ~enc:Depsolver.Cnf universe in
+    assert_equal (String.length s) 1367
+  )
+
+let test_dimacs = 
+  "DIMACS output" >:: (fun _ ->
+    let s = Depsolver.output_clauses ~enc:Depsolver.Dimacs universe in
+    assert_equal (String.length s) 533
+  )
+
+let test_clause_dump =
+  "cnf/dimacs output" >::: [
+     test_cnf ;
+     test_dimacs ;
+  ]
+
 let all = 
   "all tests" >::: [
     test_depsolver ;
     test_cudfsolver ;
     test_strongdep ;
     test_defaultgraphs ;
+    test_clause_dump ;
   ]
 
 let main () =
