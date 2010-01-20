@@ -43,6 +43,7 @@ type solution = {
   mutable downgraded : int;
   mutable updated : int;
   mutable newinst : int;
+  mutable unchanged : int;
 }
 
 let dummy_solution () = {
@@ -50,6 +51,7 @@ let dummy_solution () = {
   downgraded = 0;
   updated = 0;
   newinst = 0;
+  unchanged = 0;
 }
 
 let status_to_string pkg = function
@@ -61,8 +63,8 @@ let status_to_string pkg = function
 
 let solution_to_string s =
   Printf.sprintf
-  "removed = %d\nupdated = %d\ndowngraded = %d\nnew = %d\n"
-  s.removed s.updated s.downgraded s.newinst
+  "removed = %d\nupdated = %d\ndowngraded = %d\nnew = %d\nunchanged = %d\n"
+  s.removed s.updated s.downgraded s.newinst s.unchanged
 ;;
 
 let status_equal = function
@@ -99,7 +101,7 @@ let diff univ sol =
       |l ->
           List.iter (fun p ->
             if Cudf.version_matches p.version (Some(`Eq,pkg.version))
-            then Cudf_hashtbl.add h pkg Unchanged
+            then begin s.unchanged<-s.unchanged+1 ; Cudf_hashtbl.add h pkg Unchanged end
             else if Cudf.version_matches p.version (Some(`Gt,pkg.version))
             then begin s.updated<-s.updated+1 ; Cudf_hashtbl.add h pkg (Upgraded p) end
             else if Cudf.version_matches p.version (Some(`Lt,pkg.version))
@@ -108,10 +110,7 @@ let diff univ sol =
     else
       try
         let p = Cudf.lookup_package sol (pkg.package,pkg.version) in
-        if p.installed then begin
-          s.newinst<-s.newinst+1 ;
-          Cudf_hashtbl.add h pkg Installed
-        end
+        if p.installed then begin s.newinst<-s.newinst+1 ; Cudf_hashtbl.add h pkg Installed end
       with Not_found -> ()
   ) univ
   ;
@@ -120,6 +119,12 @@ let diff univ sol =
 
 let print_diff universe solutions =
   let first = ref true in
+  let cmp (_,(_,s1)) (_,(_,s2)) =
+    if s1.unchanged = s2.unchanged then
+      s1.updated - s2.updated
+    else s1.unchanged - s2.unchanged 
+  in
+  let solutions = List.sort ~cmp:cmp solutions in
   Cudf.iter_packages (fun pkg ->
     let pl = 
       List.filter_map (fun (f,(h,_)) ->
