@@ -59,32 +59,70 @@ module PkgV = struct
     let equal = (=)
 end
 (* unlabelled indirected graph *)
-module IG = Graph.Imperative.Graph.Concrete(PkgV)
+(* module UG = Persistent.Graph.Concrete(PkgV) *)
+module UG = Imperative.Graph.Concrete(PkgV)
+module N = Oper.Neighbourhood(UG)
+module O = Oper.Make(Builder.I(UG))
+module S = N.Vertex_Set
+
+let rec bronKerbosch2 gr r p x =
+  let n v = N.set_from_vertex gr v in
+  if (S.is_empty p) && (S.is_empty x) then [r]
+  else
+    let u = S.choose (S.union p x) in
+    let (_,_,mxc) =
+      S.fold (fun v (p,x,acc) ->
+        let r' = S.union r (S.singleton v) in
+        let p' = S.inter p (n v) in
+        let x' = S.inter x (n v) in
+        (S.remove v p, S.add v x,(bronKerbosch2 gr r' p' x') @ acc)
+      ) (S.diff p (n u)) (p,x,[])
+    in mxc
+;;
+
+let max_independent_sets gr =
+  let cgr = O.complement gr in
+  let r = S.empty in
+  let p = UG.fold_vertex S.add cgr S.empty in
+  let x = S.empty in
+  bronKerbosch2 cgr r p x
+;;
 
 let conflictgraph mdf =
   let index = mdf.Mdf.index in
-  let g = IG.create () in
+  let g =UG.create () in
   for i=0 to (Array.length index - 1) do
     let pkg = index.(i) in
     let conflicts = Array.map snd pkg.Mdf.conflicts in
     for j=0 to ((Array.length conflicts) - 1) do
-      IG.add_edge g i conflicts.(j)
+      UG.add_edge g i conflicts.(j)
     done
   done;
   g
 ;;
 
+let filter gr cc =
+  let g = UG.create () in
+  List.iter (fun v1 ->
+    UG.iter_succ (fun v2 ->
+      UG.add_edge g v1 v2
+    ) gr v1
+  ) cc
+  ;
+  g
+;;
+
 let connected_components g =
-  let h = Hashtbl.create (IG.nb_vertex g) in
+  let h = Hashtbl.create (UG.nb_vertex g) in
   let l = ref [] in
   let cc graph id =
-    let module Dfs = Traverse.Dfs(IG) in
+    let module Dfs = Traverse.Dfs(UG) in
     let l = ref [] in
     let collect id = l := id :: !l in
     Dfs.prefix_component collect graph id;
     !l
   in
-  IG.iter_vertex (fun v ->
+  UG.iter_vertex (fun v ->
     if not(Hashtbl.mem h v) then begin
       let c = cc g v in
       List.iter (fun x -> Hashtbl.add h x ()) c ;
@@ -108,9 +146,9 @@ let conflict_table cc =
 
 (* associate a list of connected components to each package *)
 let package_table reverse cg ct =
-  let h = Hashtbl.create (IG.nb_vertex cg) in
+  let h = Hashtbl.create (UG.nb_vertex cg) in
   let rev_clo pid = Depsolver_int.reverse_dependency_closure reverse [pid] in
-  IG.iter_vertex (fun v ->
+  UG.iter_vertex (fun v ->
     List.iter (fun p ->
       try
         let l = Hashtbl.find h p in
@@ -136,7 +174,7 @@ let main () =
   let cg = conflictgraph mdf in
   let cc = connected_components cg in
   Printf.eprintf "conflict graph = vertex : %d , edges : %d\n"
-  (IG.nb_vertex cg)(IG.nb_edges cg);
+  (UG.nb_vertex cg)(UG.nb_edges cg);
   Printf.eprintf "connected components = n. %d , largest : %d\n"
   (List.length cc) (List.length (List.hd (List.sort ~cmp:cmp cc)));
   let ct = conflict_table cc in
@@ -147,14 +185,24 @@ let main () =
     let m = (List.length !l) in
     if m > !maxc then maxc := m;
     sumc := m + !sumc;
-    Printf.eprintf "%s : %d\n" (CudfAdd.print_package (maps.CudfAdd.map#inttovar p)) m
+    (* Printf.eprintf "%s : %d\n" (CudfAdd.print_package (maps.CudfAdd.map#inttovar p)) m *)
   ) pt
   ;
-  Printf.eprintf "max = %d , avg = %d\n" !maxc (!sumc / (Hashtbl.length pt))
-  (* conflict graph,
-   * connected components,
-   * ...
-   *)
+  Printf.eprintf "Conflicts in the cone = largest : %d , avg : %d\n" !maxc (!sumc / (Hashtbl.length pt));
+  let maxc = ref 0 in
+  List.iter (fun c ->
+    if List.length c < 30 then begin
+      Printf.eprintf "c = %d%!" (List.length c);
+      let mis = max_independent_sets (filter cg c) in
+      Printf.eprintf "mis = %d\n%!" (List.length mis);
+      let m = (List.length mis) in
+      if m > !maxc then maxc := m;
+    end
+      else
+        Printf.eprintf "Skip %d\n" (List.length c)
+  ) cc
+  ;
+  Printf.eprintf "Maximal independent sets = max : %d\n" !maxc
 ;;
 
-main ();;
+main () ;;
