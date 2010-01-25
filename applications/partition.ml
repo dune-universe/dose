@@ -16,36 +16,19 @@ open Common
 open Algo
 open Graph
 
-let enable_debug () =
-  (* enable the progress bars *)
-  Common.Util.Progress.enable "Algo.Strongdep.main" ;
-  Common.Util.Progress.enable "Algo.Strongdep.conj" ;
-  Common.Util.set_verbosity Common.Util.Summary
-;;
+module Options =
+struct
+  open OptParse
+  let debug = StdOpt.store_true ()
 
-exception Done
+  let description = "Ceve ... what does it mean ?"
+  let options = OptParser.make ~description:description ()
 
-module Options = struct
-  let debug = ref false
+  open OptParser
+  add options ~long_name:"debug" ~help:"Print debug information" debug;
 end
 
-let usage = Printf.sprintf "usage: %s [--options] doc" (Sys.argv.(0))
-let options =
-  [
-   ("--debug", Arg.Unit enable_debug, "Print debug information");
-  ]
-
-(* ----------------------------------- *)
-
-module PkgV = struct
-    type t = int
-    let compare = Pervasives.compare
-    let hash i = i
-    let equal = (=)
-end
-(* unlabelled indirected graph *)
-module IG = Graph.Imperative.Graph.Concrete(PkgV)
-
+(* XXX to refactor in Borilerplate.ml *)
 let parse uri =
   Printf.eprintf "Parsing and normalizing...%!" ;
   let timer = Common.Util.Timer.create "Parsing and normalizing" in
@@ -66,6 +49,17 @@ let parse uri =
   Printf.eprintf "done\n%!" ;
   pkglist
 ;;
+
+(* ----------------------------------- *)
+
+module PkgV = struct
+    type t = int
+    let compare = Pervasives.compare
+    let hash i = i
+    let equal = (=)
+end
+(* unlabelled indirected graph *)
+module IG = Graph.Imperative.Graph.Concrete(PkgV)
 
 let conflictgraph mdf =
   let index = mdf.Mdf.index in
@@ -100,31 +94,67 @@ let connected_components g =
   !l
 ;;
 
+(* associate a connected component to each conflict node *)
+let conflict_table cc =
+  let h = Hashtbl.create (2 * List.length cc) in
+  List.iter (fun l ->
+    List.iter (fun v ->
+      Hashtbl.add h v (ref l)
+    ) l
+  ) cc
+  ;
+  h
+;;
+
+(* associate a list of connected components to each package *)
+let package_table reverse cg ct =
+  let h = Hashtbl.create (IG.nb_vertex cg) in
+  let rev_clo pid = Depsolver_int.reverse_dependency_closure reverse [pid] in
+  IG.iter_vertex (fun v ->
+    List.iter (fun p ->
+      try
+        let l = Hashtbl.find h p in
+        try l := (Hashtbl.find ct v)::!l
+        with Not_found -> assert false
+      with Not_found -> Hashtbl.add h p (ref [])
+    ) (rev_clo v)
+  ) cg
+  ;
+  h
+;;
+
 let cmp l1 l2 = (List.length l2) - (List.length l1)
 
 let main () =
   at_exit (fun () -> Common.Util.dump Format.err_formatter);
-  let files = ref [] in
-  let _ =
-    try Arg.parse options (fun f -> files := f::!files ) usage
-    with Arg.Bad s -> failwith s
-  in
-  match !files with
-  |[f] ->
-      let pkglist = parse f in
-      let mdf = Mdf.load_from_list pkglist in
-      let cg = conflictgraph mdf in
-      let cc = connected_components cg in
-      Printf.eprintf "conflict graph = vertex : %d , edges : %d\n"
-      (IG.nb_vertex cg)(IG.nb_edges cg);
-      Printf.eprintf "connected components = n. %d , largest : %d\n"
-      (List.length cc) (List.length (List.hd (List.sort ~cmp:cmp cc)));
-      ()
-      (* conflict graph,
-       * connected components,
-       * ...
-       *)
-  |_ -> (print_endline usage ; exit 2)
+  let posargs = OptParse.OptParser.parse_argv Options.options in
+  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
+  let pkglist = match posargs with [uri] -> parse uri | _ -> assert false in
+  let mdf = Mdf.load_from_list pkglist in
+  let maps = mdf.Mdf.maps in
+  let reverse = Depsolver_int.reverse_dependencies mdf in
+  let cg = conflictgraph mdf in
+  let cc = connected_components cg in
+  Printf.eprintf "conflict graph = vertex : %d , edges : %d\n"
+  (IG.nb_vertex cg)(IG.nb_edges cg);
+  Printf.eprintf "connected components = n. %d , largest : %d\n"
+  (List.length cc) (List.length (List.hd (List.sort ~cmp:cmp cc)));
+  let ct = conflict_table cc in
+  let pt = package_table reverse cg ct in
+  let maxc = ref 0 in
+  let sumc = ref 0 in
+  Hashtbl.iter (fun p l ->
+    let m = (List.length !l) in
+    if m > !maxc then maxc := m;
+    sumc := m + !sumc;
+    Printf.eprintf "%s : %d\n" (CudfAdd.print_package (maps.CudfAdd.map#inttovar p)) m
+  ) pt
+  ;
+  Printf.eprintf "max = %d , avg = %d\n" !maxc (!sumc / (Hashtbl.length pt))
+  (* conflict graph,
+   * connected components,
+   * ...
+   *)
 ;;
 
 main ();;
