@@ -161,6 +161,74 @@ let package_table reverse cg ct =
   h
 ;;
 
+exception Forall
+let for_all f e = 
+  try Enum.iter (fun a -> if f a then () else raise Forall) e ; true
+  with Forall -> false
+
+let install solver p ll = 
+  for_all (fun s ->
+    let l = S.elements s in
+    Depsolver_int.S.reset solver.Depsolver_int.constraints;
+    match Depsolver_int.solve solver (Diagnostic_int.Lst (p::l)) with
+    |Diagnostic_int.Failure _ -> false
+    |Diagnostic_int.Success _ -> true
+  ) ll
+;;
+
+(*
+let return a = [a]
+let bind m f = List.flatten (List.map f m)
+let mzero = []
+let guard b = if b then return () else mzero
+let card l = (List.length l)
+let mplus = List.append
+*)
+
+let return a = let e = Enum.empty () in Enum.push e a ; e
+let bind m f = Enum.concat (Enum.map f m)
+let mzero = Enum.empty ()
+let guard b = if b then return () else mzero
+let mplus = Enum.append
+let card l = (List.length l)
+
+let rec subsets = function
+  |[] -> return []
+  |h :: t ->
+      bind (subsets t) (fun t1 ->
+        mplus (
+          bind (return t1) (fun t2 -> return (h :: t2))
+        ) (return t1)
+      )
+;;
+
+(* all subsets with cardinality less then k *)
+(* [ x | x <- (subsets X) ; |x| <= k ] *)
+(*
+# subsets_k 1 [1;2];;                      
+- : int list list = [[2]; [1]; []]
+
+*)
+let subsets_k k l =
+  bind (subsets l) (fun x ->
+    bind (guard (card(x) <= k)) (fun _ ->
+      return x
+    )
+  )
+;;
+
+(*
+# cartesian_product [1;2;3] [3;4];;
+- : (int * int) list = [(1, 3); (1, 4); (2, 3); (2, 4); (3, 3); (3, 4)]
+*)
+let cartesian l1 l2 =
+  bind l1 (fun x ->
+    bind l2 (fun y ->
+      return (x,y)
+    )
+  )
+;;
+
 let cmp l1 l2 = (List.length l2) - (List.length l1)
 
 let main () =
@@ -170,6 +238,8 @@ let main () =
   let pkglist = match posargs with [uri] -> parse uri | _ -> assert false in
   let mdf = Mdf.load_from_list pkglist in
   let maps = mdf.Mdf.maps in
+  let index = mdf.Mdf.index in
+  let solver = Depsolver_int.init_solver index in
   let reverse = Depsolver_int.reverse_dependencies mdf in
   let cg = conflictgraph mdf in
   let cc = connected_components cg in
@@ -178,6 +248,7 @@ let main () =
   Printf.eprintf "connected components = n. %d , largest : %d\n"
   (List.length cc) (List.length (List.hd (List.sort ~cmp:cmp cc)));
   let ct = conflict_table cc in
+  (* consider only packages that depends on conflicts *)
   let pt = package_table reverse cg ct in
   let maxc = ref 0 in
   let sumc = ref 0 in
@@ -192,9 +263,9 @@ let main () =
   let maxc = ref 0 in
   List.iter (fun c ->
     if List.length c < 30 then begin
-      Printf.eprintf "c = %d%!" (List.length c);
+      (* Printf.eprintf "c = %d%!" (List.length c); *)
       let mis = max_independent_sets (filter cg c) in
-      Printf.eprintf "mis = %d\n%!" (List.length mis);
+      (* Printf.eprintf "mis = %d\n%!" (List.length mis); *)
       let m = (List.length mis) in
       if m > !maxc then maxc := m;
     end
@@ -202,7 +273,45 @@ let main () =
         Printf.eprintf "Skip %d\n" (List.length c)
   ) cc
   ;
-  Printf.eprintf "Maximal independent sets = max : %d\n" !maxc
+  Printf.eprintf "Maximal independent sets = largest : %d\n%!" !maxc;
+  let ignored = ref 0 in
+  let elim = ref 0 in
+  let notelim = ref 0 in
+  Hashtbl.iter (fun p ll ->
+    Printf.eprintf "package %s %!" (CudfAdd.print_package (maps.CudfAdd.map#inttovar p)) ;
+    if List.for_all (fun xl -> List.length !xl < 30 ) !ll then begin
+      if List.for_all (fun xl ->
+        Printf.eprintf "(vars : %d) %!" (List.length !xl) ;
+        let mis = max_independent_sets (filter cg !xl) in
+        Printf.eprintf "(mis : %d) %!" (List.length mis) ; 
+        install solver p (List.enum mis)
+      ) !ll
+      then begin
+        let l = List.map (fun xl -> max_independent_sets (filter cg !xl)) !ll in 
+        Printf.eprintf "(misl : %d) %!" (List.length l);
+        if (List.length l) < 28 then begin
+          try 
+            Enum.iter (function
+              |[m1;m2] -> 
+                  Printf.eprintf "(cp vars : %d) %!" ((List.length m1) * (List.length m2));
+                  let mis1 = List.enum m1 in
+                  let mis2 = List.enum m2 in
+                  let cp = Enum.map (fun (m1,m2) -> Printf.eprintf ".%!"; (S.union m1 m2)) (cartesian mis1 mis2) in 
+                  if not(install solver p cp) then raise Forall
+              |_ -> ()
+            ) (subsets_k 2 l);
+            (incr notelim ; Printf.eprintf "notelim \n%!")
+          with Forall -> (incr elim ; Printf.eprintf "elim \n%!")
+        end
+        else (incr ignored ; Printf.eprintf "ignored \n%!")
+      end
+      else (incr elim ; Printf.eprintf "elim \n%!")
+    end
+    else (incr ignored ; Printf.eprintf "ignored \n%!")
+  ) pt 
+  ;
+  Printf.eprintf "Coverage : %d , ignored : %d , elim : %d , notelim : %d , total : %d\n" 
+  (!ignored + !elim + !notelim) !ignored !elim !notelim (Hashtbl.length pt)
 ;;
 
 main () ;;
