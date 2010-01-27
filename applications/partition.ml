@@ -277,6 +277,12 @@ let main () =
   let ignored = ref 0 in
   let elim = ref 0 in
   let notelim = ref 0 in
+  (* add an arch between two cc if there is a package that eliminates a cross
+   * model. Problem : if the coverage is not complete I can never be sure that
+   * such package does not exists. The vertex of the resulting graph are the cc
+   * that do not partition the packages space. The complementary graph
+   * represents all the cc that are independent *)
+  let g = UG.create () in
   Hashtbl.iter (fun p ll ->
     Printf.eprintf "package %s %!" (CudfAdd.print_package (maps.CudfAdd.map#inttovar p)) ;
     if List.for_all (fun xl -> List.length !xl < 30 ) !ll then begin

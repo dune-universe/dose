@@ -18,7 +18,7 @@ open Common
 let print_package = CudfAdd.print_package
 let depgraphbar = Util.Progress.create "SyntacticDependencyGraph.dependency_graph"
 
-(** generic operation over graphs *)
+(** generic operation over imperative graphs *)
 module GraphOper (G : Sig.I) = struct
 
   (** transitive reduction.  Uses the transitive reduction algorithm from The
@@ -39,8 +39,44 @@ module GraphOper (G : Sig.I) = struct
     ) graph;
     Util.Timer.stop timer ()
 
+  (** connected components. *)
+  (* XXX : not the most efficient/elegant way, isn't it ? 
+      I should do a visit with marking and remove the hashtbl.
+     XXX : Moreover nodes can be repeated !!!!!! *)
+  let connected_components graph =
+    let h = Hashtbl.create (G.nb_vertex graph) in
+    let l = ref [] in
+    let cc graph id =
+      let module Dfs = Traverse.Dfs(G) in
+      let l = ref [] in
+      let collect id = l := id :: !l in
+      Dfs.prefix_component collect graph id;
+      !l
+    in
+    G.iter_vertex (fun v ->
+      if not(Hashtbl.mem h v) then begin
+        match cc graph v with
+        |[] -> ()
+        |c ->
+            begin
+              List.iter (fun x -> Hashtbl.add h x ()) c ;
+              l := c :: !l
+            end
+      end
+    ) graph ;
+    !l
+
+  (** [filter graph vl] return a subgraph of [graph] that consider only
+      vertex in vl *)
+  let filter graph vl =
+    let g = G.create ~size:(List.length vl) () in
+    List.iter (fun v1 ->
+      G.iter_succ (fun v2 -> G.add_edge g v1 v2) graph v1
+    ) vl
+    ;
+    g
+
   module O = Oper.I (G) 
-  
 end
 
 (** syntactic dependency graph. Vertex are Cudf packages and
@@ -124,9 +160,9 @@ module SyntacticDependencyGraph = struct
   module D = Graph.Graphviz.Dot(Display) 
   module S = Set.Make(PkgV)
 
-  (** Build a Syntactic Dependency Graph graph from the give cudf universe *)
+  (** Build the syntactic dependency graph from the give cudf universe *)
   let dependency_graph universe =
-    let timer = Util.Timer.create "Defaultgraph.GraphOper.transitive_reduction" in
+    let timer = Util.Timer.create "SyntacticDependencyGraph.dependency_graph" in
     Util.Timer.start timer;
     let maps = CudfAdd.build_maps universe in
     Util.Progress.set_total depgraphbar (Cudf.universe_size universe);
@@ -207,6 +243,23 @@ module PackageGraph = struct
       let edge_attributes e = []
     end
   
+  (** Build the dependency graph from the give cudf universe *)
+  let dependency_graph universe =
+    let maps = CudfAdd.build_maps universe in
+    let gr = G.create () in
+    Cudf.iter_packages (fun pkg ->
+      List.iter (function
+        |[(pkgname,constr)] ->
+            List.iter (G.add_edge gr pkg) (maps.CudfAdd.who_provides (pkgname,constr))
+        |l ->
+            match List.flatten (List.map maps.CudfAdd.who_provides l) with 
+            |[p] -> G.add_edge gr pkg p
+            |_ -> ()
+      ) pkg.Cudf.depends
+    ) universe
+    ;
+    gr
+
   module D = Graph.Graphviz.Dot(Display)
   module S = Set.Make(PkgV)
 end
@@ -235,42 +288,88 @@ module MatrixGraph(Pr : sig val pr : int -> string end) = struct
     end
   
   module D = Graph.Graphviz.Dot(Display)
-  module S = Set.Make(struct type t = int let compare = compare end)
+  module S = Set.Make(struct type t = int let compare = Pervasives.compare end)
 end
 
 (******************************************************)
 
 (** Integer Imperative Bidirectional Graph *)
-module IntGraph(Pr : sig val pr : int -> string end) = struct
+module IntPkgGraph = struct
 
   module PkgV = struct
       type t = int
-      let compare = compare
+      let compare = Pervasives.compare
       let hash i = i
       let equal = (=)
   end
 
   module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
 
-  module Display =
-    struct
-      include G
-      let vertex_name v = Printf.sprintf "\"%s\"" (Pr.pr v)
+  (** add to the graph all conjunctive dependencies of package id *)
+  let conjdepgraph_int graph index id =
+    G.add_vertex graph id;
+    Array.iter (function
+      |(_,[|p|],_) -> G.add_edge graph id p
+      | _ -> ()
+    ) index.(id).Mdf.depends
 
-      let graph_attributes = fun _ -> []
-      let get_subgraph = fun _ -> None
+  (** for all if in idlist add to the graph all conjunctive dependencies *)
+  let conjdepgraph index idlist =
+    let graph = G.create ~size:(List.length idlist) () in
+    List.iter (conjdepgraph_int graph index) idlist ;
+    graph
 
-      let default_edge_attributes = fun _ -> []
-      let default_vertex_attributes = fun _ -> []
+  (** given a graph return the conjunctive dependency closure of the package id *)
+  let conjdeps graph id =
+    let module Dfs = Traverse.Dfs(G) in
+    let l = ref [] in
+    let collect id = l := id :: !l in
+    Dfs.prefix_component collect graph id;
+    !l
 
-      let vertex_attributes v = []
-
-      let edge_attributes e = []
-    end
-
-  module D = Graph.Graphviz.Dot(Display)
   module S = Set.Make(PkgV)
+  module SO = GraphOper(G)
 end
+
+(******************************************************)
+
+(** transform an integer graph in a cudf graph *)
+let intcudf index intgraph =
+  let module PG = PackageGraph.G in
+  let module SG = IntPkgGraph.G in
+  let trasformtimer = Util.Timer.create "Defaultgraphs.intcudf" in
+  Util.Timer.start trasformtimer;
+  let cudfgraph = PG.create () in
+  SG.iter_edges (fun x y ->
+    let p = index.(x) in
+    let q = index.(y) in
+    PG.add_edge cudfgraph p.Mdf.pkg q.Mdf.pkg
+  ) intgraph ;
+  SG.iter_vertex (fun v ->
+    let p = index.(v) in
+    PG.add_vertex cudfgraph p.Mdf.pkg
+  ) intgraph ;
+  Common.Util.print_info "cudfgraph: nodes %d , edges %d"
+  (PG.nb_vertex cudfgraph) (PG.nb_edges cudfgraph);
+  Util.Timer.stop trasformtimer cudfgraph
+
+(** transform a cudf graph into a integer graph *)
+let cudfint maps cudfgraph =
+  let module PG = PackageGraph.G in
+  let module SG = IntPkgGraph.G in
+  let trasformtimer = Util.Timer.create "DefaultGraphs.cudfint" in
+  Util.Timer.start trasformtimer;
+  let intgraph = SG.create () in
+  PG.iter_edges (fun x y ->
+    SG.add_edge intgraph
+    (maps.CudfAdd.map#vartoint x) (maps.CudfAdd.map#vartoint y)
+  ) cudfgraph;
+  PG.iter_vertex (fun v ->
+    SG.add_vertex intgraph (maps.CudfAdd.map#vartoint v)
+  ) cudfgraph;
+  Common.Util.print_info "intcudf: nodes %d , edges %d"
+  (SG.nb_vertex intgraph) (SG.nb_edges intgraph);
+  Util.Timer.stop trasformtimer intgraph
 
 (******************************************************)
 

@@ -51,8 +51,10 @@ val univcheck : ?callback:(Diagnostic.diagnosis -> unit) -> Cudf.universe -> int
   ?callback:(Diagnostic.diagnosis -> unit) -> solver -> Cudf.package list -> int *)
 
 (** [dependency_closure universe l] compute the dependencies closure 
-    of the give package list. Invariant : l is a subset of universe *)
-val dependency_closure : ?maxdepth:int -> Cudf.universe -> Cudf.package list -> Cudf.package list
+    of the give package list.
+    Invariant : l must be a subset of universe *)
+val dependency_closure : ?maxdepth:int -> ?conjuntive:bool ->
+  Cudf.universe -> Cudf.package list -> Cudf.package list
 
 (** [reverse_dependencies univ l] compute the reverse dependency list of all
     packages in [l] in the universe [univ] *)
@@ -64,7 +66,5 @@ val reverse_dependency_closure : ?maxdepth:int ->
 
 type enc = Cnf | Dimacs
 
-(** [output_clauses c univ] prints the clauses generated from the universe
-    [univ] to output channel [c]. If [dimacs] is [true], then the output
-    will be in DIMACS format *)
+(** [output_clauses enc univ] return a string encoded accordingly to [enc] *)
 val output_clauses : ?enc:enc -> Cudf.universe -> string

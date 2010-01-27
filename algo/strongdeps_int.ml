@@ -16,45 +16,13 @@ open Graph
 open ExtLib
 open Common
 open CudfAdd
+open Defaultgraphs
 
 let mainbar = Util.Progress.create "Algo.Strongdep.main"
 let conjbar = Util.Progress.create "Algo.Strongdep.conj"
 
-(* I'm not using Defaultgraphs.IntGraph because otherwise I would
- * need to provide a printing function making this code less elegant
- * \methink *)
-(* XXX this is debatable ... need to refactor *)
-module PkgV = struct
-    type t = int
-    let compare = Pervasives.compare
-    let hash i = i
-    let equal = (=)
-end
-module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
-module SO = Defaultgraphs.GraphOper(G)
-
-(** add to the graph all conjunctive dependencies of package id *)
-let conjdepgraph_int graph index id =
-  G.add_vertex graph id;
-  Array.iter (function
-    |(_,[|p|],_) -> G.add_edge graph id p
-    | _ -> ()
-  ) index.(id).Mdf.depends
-
-(** for all if in idlist add to the graph all conjunctive dependencies *)
-let conjdepgraph index idlist =
-  let graph = G.create ~size:(List.length idlist) () in
-  List.iter (conjdepgraph_int graph index) idlist ;
-  graph
-
-(** given a graph return the conjunctive dependency closure of the package id *)
-let conjdeps graph id =
-  let module Dfs = Traverse.Dfs(G) in
-  let l = ref [] in
-  let collect id = l := id :: !l in
-  Dfs.prefix_component collect graph id;
-  !l
-
+module G = IntPkgGraph.G
+module SO = IntPkgGraph.SO
 open Depsolver_int
 open G
 
@@ -126,7 +94,7 @@ let strongdeps mdf idlist =
     List.fold_left (fun acc id ->
       let pkg = mdf.Mdf.index.(id) in
       Util.Progress.progress conjbar;
-      conjdepgraph_int graph mdf.Mdf.index id; 
+      IntPkgGraph.conjdepgraph_int graph mdf.Mdf.index id; 
       let closure = dependency_closure mdf [id] in
       (pkg,List.length closure,closure) :: acc
     ) [] idlist
@@ -146,7 +114,7 @@ let strongdeps_univ mdf =
     let id = ref 0 in
     Array.fold_left (fun acc pkg ->
       Util.Progress.progress conjbar;
-      conjdepgraph_int graph mdf.Mdf.index !id;
+      IntPkgGraph.conjdepgraph_int graph mdf.Mdf.index !id;
       let closure = dependency_closure mdf [!id] in
       incr id ;
       (pkg,List.length closure,closure) :: acc
