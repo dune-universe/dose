@@ -64,6 +64,7 @@ module UG = Imperative.Graph.Concrete(PkgV)
 module N = Oper.Neighbourhood(UG)
 module O = Oper.Make(Builder.I(UG))
 module S = N.Vertex_Set
+module GO = Defaultgraphs.GraphOper(UG)
 
 let rec bronKerbosch2 gr r p x =
   let n v = N.set_from_vertex gr v in
@@ -77,6 +78,21 @@ let rec bronKerbosch2 gr r p x =
         let x' = S.inter x (n v) in
         (S.remove v p, S.add v x,(bronKerbosch2 gr r' p' x') @ acc)
       ) (S.diff p (n u)) (p,x,[])
+    in mxc
+;;
+
+let rec bronKerbosch2_ gr r p x =
+  let n v = N.set_from_vertex gr v in
+  if (S.is_empty p) && (S.is_empty x) then (let e = Enum.empty () in Enum.push e r ; e)
+  else
+    let u = S.choose (S.union p x) in
+    let (_,_,mxc) =
+      S.fold (fun v (p,x,acc) ->
+        let r' = S.union r (S.singleton v) in
+        let p' = S.inter p (n v) in
+        let x' = S.inter x (n v) in
+        (S.remove v p, S.add v x,Enum.append (bronKerbosch2_ gr r' p' x') acc)
+      ) (S.diff p (n u)) (p,x,Enum.empty ())
     in mxc
 ;;
 
@@ -112,11 +128,14 @@ let filter gr cc =
   g
 ;;
 
-let connected_components g =
-  let h = Hashtbl.create (UG.nb_vertex g) in
+(** connected components. *)
+(* XXX : not the most efficient/elegant way, isn't it ? 
+    I should do a visit with marking and remove the hashtbl. *)
+let connected_components graph =
+  let module Dfs = Traverse.Dfs(UG) in
+  let h = Hashtbl.create (UG.nb_vertex graph) in
   let l = ref [] in
   let cc graph id =
-    let module Dfs = Traverse.Dfs(UG) in
     let l = ref [] in
     let collect id = l := id :: !l in
     Dfs.prefix_component collect graph id;
@@ -124,13 +143,17 @@ let connected_components g =
   in
   UG.iter_vertex (fun v ->
     if not(Hashtbl.mem h v) then begin
-      let c = cc g v in
-      List.iter (fun x -> Hashtbl.add h x ()) c ;
-      l := c :: !l
+      Hashtbl.add h v ();
+      match cc graph v with
+      |[] -> ()
+      |c ->
+          begin
+            List.iter (fun x -> Hashtbl.add h x ()) c ;
+            l := c :: !l
+          end
     end
-  ) g ;
+  ) graph ;
   !l
-;;
 
 (* associate a connected component to each conflict node *)
 let conflict_table cc =
@@ -197,7 +220,10 @@ let rec subsets = function
   |h :: t ->
       bind (subsets t) (fun t1 ->
         mplus (
-          bind (return t1) (fun t2 -> return (h :: t2))
+          bind (return t1) (fun t2 -> 
+            let x = (h :: t2) in
+            bind (guard (card(x) <= 2)) (fun _ -> return x)
+          )
         ) (return t1)
       )
 ;;
@@ -208,7 +234,6 @@ let rec subsets = function
 # subsets_k 1 [1;2];;                      
 - : int list list = [[2]; [1]; []]
 
-*)
 let subsets_k k l =
   bind (subsets l) (fun x ->
     bind (guard (card(x) <= k)) (fun _ ->
@@ -217,6 +242,7 @@ let subsets_k k l =
   )
 ;;
 
+*)
 (*
 # cartesian_product [1;2;3] [3;4];;
 - : (int * int) list = [(1, 3); (1, 4); (2, 3); (2, 4); (3, 3); (3, 4)]
@@ -260,6 +286,7 @@ let main () =
   ) pt
   ;
   Printf.eprintf "Conflicts in the cone = largest : %d , avg : %d\n" !maxc (!sumc / (Hashtbl.length pt));
+  (*
   let maxc = ref 0 in
   List.iter (fun c ->
     if List.length c < 30 then begin
@@ -274,6 +301,7 @@ let main () =
   ) cc
   ;
   Printf.eprintf "Maximal independent sets = largest : %d\n%!" !maxc;
+  *)
   let ignored = ref 0 in
   let elim = ref 0 in
   let notelim = ref 0 in
@@ -285,33 +313,31 @@ let main () =
   let g = UG.create () in
   Hashtbl.iter (fun p ll ->
     Printf.eprintf "package %s %!" (CudfAdd.print_package (maps.CudfAdd.map#inttovar p)) ;
-    if List.for_all (fun xl -> List.length !xl < 30 ) !ll then begin
+    if List.for_all (fun xl -> List.length !xl < 100 ) !ll then begin
+      (* if p does not falsify any maximal model of any cc *)
       if List.for_all (fun xl ->
         Printf.eprintf "(vars : %d) %!" (List.length !xl) ;
         let mis = max_independent_sets (filter cg !xl) in
-        Printf.eprintf "(mis : %d) %!" (List.length mis) ; 
-        install solver p (List.enum mis)
+        (* Printf.eprintf "(mis : %d) %!" (List.length mis) ; *)
+        let mis = List.enum mis in
+        install solver p mis
       ) !ll
       then begin
+        (* we create a set of all maximal independent sets, we compute all
+         * subsets of size 2 and we check if p falsify any maximal model that
+         * across any of these subsets *)
         let l = List.map (fun xl -> max_independent_sets (filter cg !xl)) !ll in 
         Printf.eprintf "(misl : %d) %!" (List.length l);
-        if (List.length l) < 28 then begin
-          try 
-            Enum.iter (function
-              |[m1;m2] -> 
-                  Printf.eprintf "(cp vars : %d) %!" ((List.length m1) * (List.length m2));
-                  let mis1 = List.enum m1 in
-                  let mis2 = List.enum m2 in
-                  let cp = Enum.map (fun (m1,m2) -> Printf.eprintf ".%!"; (S.union m1 m2)) (cartesian mis1 mis2) in 
-                  if not(install solver p cp) then raise Forall
-              |_ -> ()
-            ) (subsets_k 2 l);
-            (incr notelim ; Printf.eprintf "notelim \n%!")
-          with Forall -> (incr elim ; Printf.eprintf "elim \n%!")
-        end
-        else (incr ignored ; Printf.eprintf "ignored \n%!")
+        Enum.iter (function
+          |[m1;m2] -> 
+              Printf.eprintf "(cp vars : %d) %!" ((List.length m1) * (List.length m2));
+              let mis1 = List.enum m1 in
+              let mis2 = List.enum m2 in
+              let cp = Enum.map (fun (m1,m2) -> Printf.eprintf ".%!"; (S.union m1 m2)) (cartesian mis1 mis2) in 
+              ignore(install solver p cp)
+          |_ -> ()
+        ) (subsets l)
       end
-      else (incr elim ; Printf.eprintf "elim \n%!")
     end
     else (incr ignored ; Printf.eprintf "ignored \n%!")
   ) pt 

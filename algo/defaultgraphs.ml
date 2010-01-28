@@ -39,44 +39,7 @@ module GraphOper (G : Sig.I) = struct
     ) graph;
     Util.Timer.stop timer ()
 
-  (** connected components. *)
-  (* XXX : not the most efficient/elegant way, isn't it ? 
-      I should do a visit with marking and remove the hashtbl.
-     XXX : Moreover nodes can be repeated !!!!!! *)
-  let connected_components graph =
-    let h = Hashtbl.create (G.nb_vertex graph) in
-    let l = ref [] in
-    let cc graph id =
-      let module Dfs = Traverse.Dfs(G) in
-      let l = ref [] in
-      let collect id = l := id :: !l in
-      Dfs.prefix_component collect graph id;
-      !l
-    in
-    G.iter_vertex (fun v ->
-      if not(Hashtbl.mem h v) then begin
-        match cc graph v with
-        |[] -> ()
-        |c ->
-            begin
-              List.iter (fun x -> Hashtbl.add h x ()) c ;
-              l := c :: !l
-            end
-      end
-    ) graph ;
-    !l
-
-  (** [filter graph vl] return a subgraph of [graph] that consider only
-      vertex in vl *)
-  let filter graph vl =
-    let g = G.create ~size:(List.length vl) () in
-    List.iter (fun v1 ->
-      G.iter_succ (fun v2 -> G.add_edge g v1 v2) graph v1
-    ) vl
-    ;
-    g
-
-  module O = Oper.I (G) 
+  module O = Oper.I(G) 
 end
 
 (** syntactic dependency graph. Vertex are Cudf packages and
