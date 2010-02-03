@@ -19,15 +19,24 @@ open Sql
 module Options =
 struct
   open OptParse
+
+  exception Format
+  let out_option ?default ?(metavar = "<dot|cnf|dimacs|pp>") () =
+    let corce = function
+      |("cnf"|"dimacs"|"pp"|"dot") as s -> s
+      | _ -> raise Format
+    in
+    let error _ s = Printf.sprintf "%s format not supported" s in
+    Opt.value_option metavar default corce error
+
   let debug = StdOpt.store_true ()
   let src = StdOpt.str_option ()
   let dst = StdOpt.str_option ()
   let cone = StdOpt.str_option ()
   let reverse_cone = StdOpt.str_option ()
   let cone_maxdepth = StdOpt.int_option ()
-  let output_ty = StdOpt.str_option ~default:"cnf" ()
+  let output_ty = out_option ~default:"cnf" ()
   let out_ch = StdOpt.str_option ()
-  (* type output_types = Dot | CNF | Dimacs | PrettyPrint | SQLite *)
 
   let output_ch () =
     if Opt.is_set out_ch then 
@@ -44,7 +53,7 @@ struct
   add options ~short_name:'c' ~long_name:"cone" ~help:"cone" cone;
   add options ~short_name:'r' ~long_name:"rcone" ~help:"reverse dependency cone" reverse_cone;
   add options                 ~long_name:"depth" ~help:"max depth - in conjunction with cone" cone_maxdepth;
-  add options ~short_name:'t' ~long_name:"outtype" ~help:"Output type : dot | cnf | dimacs | pp" output_ty;
+  add options ~short_name:'t' ~long_name:"outtype" ~help:"Output type" output_ty;
   add options ~short_name:'o' ~long_name:"outfile" ~help:"Output file" out_ch;
 end;;
 
@@ -160,8 +169,7 @@ END
   |"cnf" -> Printf.fprintf (Options.output_ch ()) "%s" (Depsolver.output_clauses ~enc:Depsolver.Cnf u)
   |"dimacs" -> Printf.fprintf (Options.output_ch ()) "%s" (Depsolver.output_clauses ~enc:Depsolver.Dimacs u)
   |"pp" -> Printf.fprintf (Options.output_ch ()) "%s" (Cudf_printer.string_of_universe u)
-  |"sqlite" -> assert false; (* this should not be here *) 
-  |s -> (Printf.eprintf "unknown format : %s" s ; exit 1)
+  |_ -> assert false
 ;;
 
 main ();;
