@@ -161,9 +161,10 @@ let diff univ sol =
   (h,s)
 ;;
 
-let print_diff_txt universe hl solutions =
-  let cmp (_,(_,s1)) (_,(_,s2)) = compare_lex (OptParse.Opt.get Options.order) s1 s2 in
-  let solutions = List.sort ~cmp:cmp solutions in
+let print_diff_txt universe solutions =
+  let cmp (_,(_,(_,s1))) (_,(_,(_,s2))) = compare_lex (OptParse.Opt.get Options.order) s1 s2 in
+  let solutions = List.sort ~cmp:cmp solutions in 
+  let (hl,solutions) = List.split solutions in
   Printf.printf "Package | %s\n" (String.concat " | " hl) ;
   Cudf.iter_packages (fun pkg ->
     let pl = 
@@ -180,9 +181,10 @@ let print_diff_txt universe hl solutions =
   ) universe
 ;;
 
-let print_diff_html universe hl solutions =
-  let cmp (_,(_,s1)) (_,(_,s2)) = compare_lex (OptParse.Opt.get Options.order) s1 s2 in
-  let solutions = List.sort ~cmp:cmp solutions in
+let print_diff_html universe solutions =
+  let cmp (_,(_,(_,s1))) (_,(_,(_,s2))) = compare_lex (OptParse.Opt.get Options.order) s1 s2 in
+  let solutions = List.sort ~cmp:cmp solutions in 
+  let (hl,solutions) = List.split solutions in
   Printf.printf "<table border=1>\n" ;
   Printf.printf "<tr><tbody><th>Package</th>%s</tr>"
   (String.concat "" (List.map (fun h -> Printf.sprintf "<th>%s</th>" h) hl));
@@ -246,11 +248,10 @@ let main () =
           else (Printf.eprintf "%s is not a valid solution. Discarded\n" f ; None)
         ) l
       in
-      let (hl,sol_list) = List.split hl in
-      let sol_tables = List.map (fun (f,s) -> (f,diff univ s)) sol_list in
+      let sol_tables = List.map (fun (h,(f,s)) -> (h,(f,diff univ s))) hl in
       match OptParse.Opt.get Options.output with
-      |"txt" -> print_diff_txt univ hl sol_tables
-      |"html" -> print_diff_html univ hl sol_tables
+      |"txt" -> print_diff_txt univ sol_tables 
+      |"html" -> print_diff_html univ sol_tables
       |_ -> assert false 
 ;;
 
