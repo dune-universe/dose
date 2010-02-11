@@ -14,7 +14,11 @@
 open Cudf
 open ExtLib
 open Common
-open Sql
+
+IFDEF HASOCAMLGRAPH THEN
+  module DGraph = Defaultgraphs.SyntacticDependencyGraph
+END
+
 
 module Options =
 struct
@@ -59,7 +63,7 @@ struct
   add options ~short_name:'c' ~long_name:"cone" ~help:"cone" cone;
   add options ~short_name:'r' ~long_name:"rcone" ~help:"reverse dependency cone" reverse_cone;
   add options                 ~long_name:"depth" ~help:"max depth - in conjunction with cone" cone_maxdepth;
-  add options                 ~long_name:"cc" ~help:"one output per connected component" conn_comp;
+  (* add options                 ~long_name:"cc" ~help:"one output per connected component" conn_comp; *)
   add options ~short_name:'t' ~long_name:"outtype" ~help:"Output type" output_ty;
   add options ~short_name:'o' ~long_name:"outfile" ~help:"Output file" out_ch;
 end;;
@@ -94,40 +98,6 @@ IFDEF HASDB THEN
   end 
 ELSE
   failwith "DB not available"
-END
-;;
-
-IFDEF HASOCAMLGRAPH THEN
-  module DGraph = Defaultgraphs.SyntacticDependencyGraph
-END
-
-let connected_components graph =
-IFDEF HASOCAMLGRAPH THEN
-  let module G = DGraph.G in
-  let module Dfs = Graph.Traverse.Dfs(G) in
-  let h = Hashtbl.create (G.nb_vertex graph) in
-  let l = ref [] in
-  let cc graph id =
-    let l = ref [] in
-    let collect id = l := id :: !l in
-    Dfs.prefix_component collect graph id;
-    !l
-  in
-  G.iter_vertex (fun v ->
-    if not(Hashtbl.mem h v) then begin
-      Hashtbl.add h v ();
-      match cc graph v with
-      |[] -> ()
-      |c ->
-          begin
-            List.iter (fun x -> Hashtbl.add h x ()) c ;
-            l := c :: !l
-          end
-    end
-  ) graph ;
-  !l
-ELSE
-  failwith "CC not available"
 END
 ;;
 
@@ -198,18 +168,6 @@ let main () =
     else Cudf.get_packages universe
   in
 
-  let pkg_cc plist =
-    if OptParse.Opt.get Options.conn_comp then
-IFDEF HASOCAMLGRAPH THEN
-      let u = Cudf.load_universe plist in
-      let g = DGraph.dependency_graph u in
-      List.map (List.map (function DGraph.PkgV.Pkg p -> p |_ -> assert false)) (connected_components g)
-ELSE
-      failwith ("cc Not supported")
-END
-    else [plist]
-  in
-
   let output ll =
     List.iter (fun l ->
       let u = Cudf.load_universe l in
@@ -228,7 +186,7 @@ END
       end ;
       close_out outch;
     ) ll
-  in output (pkg_cc plist)
+  in output [plist]
 ;;
 
 main ();;
