@@ -110,7 +110,7 @@ let bk gr =
 ;;
 
 let rec bronKerbosch2 gr r p x =
-  (* (n v) return the set of neibourgh of v *)
+  (* (n v) returns the set of neibourgh of v *)
   let n v = N.set_from_vertex gr v in
   if (S.is_empty p) && (S.is_empty x) then [r]
   else
@@ -152,7 +152,7 @@ let rec bronKerbosch2_ gr r p x =
            X := X ⋃ {v}
 *)
 
-let bronKerbosch2 gr r p x =
+let bronKerbosch2__ gr r p x =
   let l = ref [] in
   let n v = N.set_from_vertex gr v in
   let rec aux r p x =
@@ -256,7 +256,7 @@ let package_table reverse cg ct =
         let l = Hashtbl.find h p in
         try l := (Hashtbl.find ct v)::!l
         with Not_found -> assert false
-      with Not_found -> Hashtbl.add h p (ref [])
+      with Not_found -> Hashtbl.add h p (ref [(Hashtbl.find ct v)])
     ) (rev_clo v)
   ) cg
   ;
@@ -271,15 +271,30 @@ let for_all f e =
     try (Enum.iter (fun a -> if f a then () else raise Forall) e ; true)
     with Forall -> false
 
-let install solver _ p ll = 
-  for_all (fun s ->
-    (* Printf.eprintf "--%!"; *)
-    let l = S.elements s in
+let filter_map f e =
+  let rec aux acc f e =
+    match Enum.get e with
+    |None -> acc
+    |Some s ->
+      match f s with
+      |Some s -> aux (s::acc) f e
+      |None -> aux acc f e
+  in
+  match aux [] f e with
+  |[] -> assert false
+  |l -> List.enum l
+
+let install solver _ ll = 
+  let aux l = 
     Depsolver_int.S.reset solver.Depsolver_int.constraints;
-    match Depsolver_int.solve solver (Diagnostic_int.Lst (p::l)) with
+    match Depsolver_int.solve solver (Diagnostic_int.Lst l) with
     |Diagnostic_int.Failure _ -> false
     |Diagnostic_int.Success _ -> true
-  ) ll
+  in
+  let s = List.fold_left S.union S.empty ll in
+  (* Printf.eprintf "--%!"; *)
+  let l = S.elements s in
+  aux l
 ;;
 
 let rec subsetsk k = function
@@ -303,8 +318,6 @@ let rec allsets m l =
   |[] -> return []
   |h::t -> Enum.append (Enum.map (fun g -> h::g) (allsets (m - 1) t)) (allsets m t)
 ;;
-
-
 
 let rec allsubsets = function
   |[] -> [[]]
@@ -352,9 +365,10 @@ let main () =
   let ct = conflict_table cc in
   (* consider only packages that depends on conflicts *)
   let pt = package_table reverse cg ct in
+  (*
   let maxc = ref 0 in
   let sumc = ref 0 in
-(*  Hashtbl.iter (fun p l ->
+  Hashtbl.iter (fun p l ->
     let m = (List.length !l) in
     if m > !maxc then maxc := m;
     sumc := m + !sumc;
@@ -379,20 +393,20 @@ let main () =
   ;
   Printf.eprintf "Maximal independent sets = largest : %d\n%!" !maxc;
   *)
-  let ignored = ref 0 in
-  let elim = ref 0 in
-  let notelim = ref 0 in
   let a = Array.make (Array.length index) false in
   (* add an arch between two cc if there is a package that eliminates a cross
    * model. Problem : if the coverage is not complete I can never be sure that
    * such package does not exists. The vertex of the resulting graph are the cc
    * that do not partition the packages space. The complementary graph
    * represents all the cc that are independent *)
-  let g = UG.create () in
+  (* let g = UG.create () in *)
   let hard = ref [] in
+  let c = ref 0 in
   List.iter (fun (p,ll) ->
+    incr c;
     let size = List.length !ll in
-    Printf.eprintf "package %s (%d) %!" (CudfAdd.print_package (maps.CudfAdd.map#inttovar p)) size ;
+    Printf.printf "(%d or %d) package %s (%d) %!" !c (List.length pt) 
+    (CudfAdd.print_package (maps.CudfAdd.map#inttovar p)) size ;
     let r =
       List.for_all (fun m ->
         for_all (fun l ->
@@ -404,23 +418,28 @@ let main () =
             let sgl =
               List.sort ~cmp:(fun c1 c2 -> (UG.nb_vertex c1) - (UG.nb_vertex c2)) gl
             in
-            let misl = List.map (fun g ->
-              (* Printf.eprintf "@%!"; *)
-              max_independent_sets g
-              ) gl
+            let misl =
+              List.map (fun g ->
+                (* Printf.eprintf "@%!"; *)
+                let e = 
+                  filter_map (fun s ->
+                    if install solver a [s] then Some s else None
+                  ) (max_independent_sets g)
+                in if Enum.is_empty e then assert false else e
+              ) sgl
             in
             (* Printf.eprintf ">>%!"; *)
             for_all (fun e -> 
               (* Printf.eprintf ".%!"; *)
-              install solver a p (List.enum e)
+              install solver a ((S.singleton p)::e)
             ) (permutation misl)
           end
         ) (allsets m !ll)
-      ) (range 1 size)
+      ) (List.rev (range 1 size))
     in
     a.(p) <- r ;
-    (if r then Printf.eprintf "is always installable\n%!"
-    else Printf.eprintf "eliminates at least one mis\n%!")
+    (if r then Printf.printf "is always installable\n%!"
+    else Printf.printf "eliminates at least one mis\n%!")
   ) pt 
   ;
   let elim = Array.fold_left (fun acc v -> if v then acc + 1 else acc) 0 a in
