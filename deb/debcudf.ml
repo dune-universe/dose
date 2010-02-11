@@ -103,7 +103,7 @@ let init_versioned_table table pkg =
   add_iter_cnf pkg.depends
 ;;
 
-let init_tables pkglist =
+let init_tables ?(compare=Version.compare) pkglist =
   let n = 2 * List.length pkglist in
   let tables = create n in 
   let temp_versions_table = Hashtbl.create n in
@@ -117,7 +117,7 @@ let init_tables pkglist =
   (* XXX I guess this could be a bit faster if implemented with Sets *)
   Hashtbl.iter (fun k l ->
     Hashtbl.add tables.versions_table k
-    (List.unique (List.sort ~cmp:Version.compare l))
+    (List.unique (List.sort ~cmp:compare l))
   ) temp_versions_table
   ;
   Hashtbl.clear temp_versions_table ;
