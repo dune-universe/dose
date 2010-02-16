@@ -66,112 +66,130 @@ module O = Oper.Make(Builder.I(UG))
 module S = N.Vertex_Set
 module GO = Defaultgraphs.GraphOper(UG)
 
-(*
-let return a = [a]
-let bind m f = List.flatten (List.map f m)
-let mzero = []
-let guard b = if b then return () else mzero
-let card l = (List.length l)
-let mplus = List.append
-*)
+type 'a llist = 'a cell Lazy.t
+and 'a cell = LList of 'a * 'a llist | Empty
 
-let return a = let e = Enum.empty () in Enum.push e a ; e
-let bind m f = Enum.concat (Enum.map f m)
-let mzero = Enum.empty ()
-let guard b = if b then return () else mzero
-let mplus = Enum.append
-let card l = (List.length l)
+exception LListEmpty
 
+let empty = lazy(Empty)
+let push e l = lazy(LList(e,l))
 
-let bk gr =
-  let n v = N.set_from_vertex gr v in
-  let rec fold f init s =
-    if S.is_empty s then init
-    else
-      let v = S.choose s in
-      fold f (f init v) (S.remove v s)
-  in
-  let rec aux1 acc r p x =
-    if (S.is_empty p) && (S.is_empty x) then ([r] :: acc)
-    else
-      let u = S.choose (S.union p x) in
-      let (_,_,_,mxc) = fold aux2 (r,p,x,[]) (S.diff p (n u))
-      in mxc
-  and aux2 (r,p,x,acc) v =
-    let r' = S.union r (S.singleton v) in
-    let p' = S.inter p (n v) in
-    let x' = S.inter x (n v) in
-    (r,S.remove v p, S.add v x, aux1 acc r' p' x')
-  in
-  let r = S.empty in
-  let p = UG.fold_vertex S.add gr S.empty in
-  let x = S.empty in
-  aux1 [] r p x
+let hd s =
+    match Lazy.force s with
+    | LList (hd, _) -> hd
+    | Empty -> raise LListEmpty
+
+let tl s =
+    match Lazy.force s with
+    | LList (_, tl) -> tl
+    | Empty -> raise LListEmpty
+
+let rec append s1 s2 =
+    lazy begin
+        match Lazy.force s1 with
+        | LList (hd, tl) -> LList (hd, append tl s2)
+        | Empty -> Lazy.force s2
+    end
+
+let rec map f s =
+    lazy begin
+        match Lazy.force s with
+        | LList (hd, tl) -> LList (f hd, map f tl)
+        | Empty -> Empty
+    end
+
+let rec iter f s =
+    begin
+        match Lazy.force s with
+        | LList (hd, tl) -> f hd ; iter f tl
+        | Empty -> ()
+    end
+
+let rec flatten ss =
+    lazy begin
+        match Lazy.force ss with
+        | Empty -> Empty
+        | LList (hd, tl) ->
+            match Lazy.force hd with
+            | LList (hd2, tl2) -> LList (hd2, flatten (lazy (LList (tl2, tl))))
+            | Empty -> Lazy.force (flatten tl)
+    end
+
+let rec filter_map f s =
+    lazy begin
+        match Lazy.force s with
+        | LList (hd, tl) ->
+                begin match f hd with
+                |Some y -> LList (y, filter_map f tl)
+                |None -> Lazy.force(filter_map f tl)
+                end
+        | Empty -> Empty
+    end
+
+let rec of_list = function
+    | [] -> lazy(Empty)
+    | hd :: tl -> lazy (LList (hd, of_list tl))
+
+let reverse =
+    let rec loop stack = function
+        | LList (hd, tl) -> loop (hd :: stack) (Lazy.force tl)
+        | Empty -> stack
+    in
+    fun s ->
+        of_list (loop [] (Lazy.force s))
+
+let is_empty s =
+    match Lazy.force s with
+    |Empty -> true
+    |_ -> false
+
+exception Forall
+let for_all f e = 
+  if is_empty e then true
+  else
+    try (iter (fun a -> if f a then () else raise Forall) e ; true)
+    with Forall -> false
+
+let bind m f = flatten (map f m)
+let return a = push a empty
+
+let rec allsets m l =
+  if m = 0 then return [] else
+  match l with
+    [] -> empty
+  | h::t -> append (map (fun g -> h::g) (allsets (m - 1) t)) (allsets m t)
 ;;
+
+let rec range acc a b =
+  if a > b then acc
+  else range (push a acc) (a+1) b
+;;
+
+let rec permutation = function 
+  |[] -> return []
+  |h::t ->
+      bind (permutation t) (fun t1 ->
+        map (fun h1 -> (h1 :: t1)) h
+      )
 
 let rec bronKerbosch2 gr r p x =
-  (* (n v) returns the set of neibourgh of v *)
-  let n v = N.set_from_vertex gr v in
-  if (S.is_empty p) && (S.is_empty x) then [r]
-  else
-    let u = S.choose (S.union p x) in
-    let (_,_,mxc) =
-      S.fold (fun v (p,x,acc) ->
-        let r' = S.union r (S.singleton v) in
-        let p' = S.inter p (n v) in
-        let x' = S.inter x (n v) in
-        (S.remove v p, S.add v x,(bronKerbosch2 gr r' p' x') @ acc)
-      ) (S.diff p (n u)) (p,x,[])
-    in mxc
-;;
-
-let rec bronKerbosch2_ gr r p x =
-  (* (n v) return the set of neibourgh of v *)
-  let n v = N.set_from_vertex gr v in
-  if (S.is_empty p) && (S.is_empty x) then return r
-  else
-    let u = S.choose (S.union p x) in
-    let (_,_,mxc) =
-      S.fold (fun v (p,x,acc) ->
-        let r' = S.union r (S.singleton v) in
-        let p' = S.inter p (n v) in
-        let x' = S.inter x (n v) in
-        (S.remove v p, S.add v x,mplus acc (bronKerbosch2_ gr r' p' x'))
-      ) (S.diff p (n u)) (p,x,Enum.empty ())
-    in mxc
-;;
-
-(*
-   BronKerbosch2(R,P,X):
-       if P and X are both empty:
-           report R as a maximal clique
-       choose a pivot vertex u in P ⋃ X
-       for each vertex v in P \ N(u):
-           BronKerbosch2(R ⋃ {v}, P ⋂ N(v), X ⋂ N(v))
-           P := P \ {v}
-           X := X ⋃ {v}
-*)
-
-let bronKerbosch2__ gr r p x =
-  let l = ref [] in
-  let n v = N.set_from_vertex gr v in
-  let rec aux r p x =
-    if (S.is_empty p) && (S.is_empty x) then l := r::!l
+    let n v = N.set_from_vertex gr v in
+    if (S.is_empty p) && (S.is_empty x) then (push r empty)
     else
-      let u = S.choose (S.union p x) in
-      let pref = ref p in
-      let xref = ref x in
-      S.iter (fun v ->
-        let r' = S.union r (S.singleton v) in
-        let p' = S.inter !pref (n v) in
-        let x' = S.inter !xref (n v) in
-        aux r' p' x' ;
-        pref := S.remove v !pref;
-        xref := S.add v !xref
-      ) (S.diff p (n u))
-  in
-  aux r p x;
-  !l
+      let s = S.union p x in
+      let u = S.choose s in
+      let rec fold acc (p,x,s) =
+        if S.is_empty s then acc
+        else
+          let v = S.choose s in
+          let rest = S.remove v s in
+          let r' = S.union r (S.singleton v) in
+          let p' = S.inter p (n v) in
+          let x' = S.inter x (n v) in
+          let xx = bronKerbosch2 gr r' p' x' in
+          fold (append xx acc) (S.remove v p, S.add v x, rest)
+      in
+      fold empty (p,x,S.diff p (n u))
 ;;
 
 let max_independent_sets gr =
@@ -179,8 +197,7 @@ let max_independent_sets gr =
   let r = S.empty in
   let p = UG.fold_vertex S.add cgr S.empty in
   let x = S.empty in
-  (* Printf.eprintf "p : %d%!" (S.cardinal p); *)
-  bronKerbosch2_ cgr r p x
+  bronKerbosch2 cgr r p x
 ;;
 
 let conflictgraph mdf =
@@ -260,29 +277,9 @@ let package_table reverse cg ct =
     ) (rev_clo v)
   ) cg
   ;
-  let l = Hashtbl.fold (fun v k acc -> (v,k)::acc ) h [] in
-  List.sort ~cmp:(fun (_,k1) (_,k2) -> (List.length !k1) - (List.length !k2)) l 
+  let l = Hashtbl.fold (fun v k acc -> (v, ref(List.unique !k))::acc ) h [] in
+  List.sort ~cmp:(fun (_,k2) (_,k1) -> (List.length !k1) - (List.length !k2)) l 
 ;;
-
-exception Forall
-let for_all f e = 
-  if Enum.is_empty e then true
-  else
-    try (Enum.iter (fun a -> if f a then () else raise Forall) e ; true)
-    with Forall -> false
-
-let filter_map f e =
-  let rec aux acc f e =
-    match Enum.get e with
-    |None -> acc
-    |Some s ->
-      match f s with
-      |Some s -> aux (s::acc) f e
-      |None -> aux acc f e
-  in
-  match aux [] f e with
-  |[] -> assert false
-  |l -> List.enum l
 
 let install solver _ ll = 
   let aux l = 
@@ -292,57 +289,9 @@ let install solver _ ll =
     |Diagnostic_int.Success _ -> true
   in
   let s = List.fold_left S.union S.empty ll in
-  (* Printf.eprintf "--%!"; *)
   let l = S.elements s in
   aux l
 ;;
-
-let rec subsetsk k = function
-  |[] -> return []
-  |h :: t ->
-      bind (subsetsk k t) (fun t1 ->
-        mplus (
-          bind (return t1) (fun t2 -> 
-            bind (guard (card(t2) = k-1)) (fun _ -> return (h :: t2))
-          )) (return t1)
-      )
-;;
-
-let rec subsets = function
-  |[] -> return []
-  |h1 :: t -> Enum.append (List.enum (List.map (fun h2 -> [h1;h2]) t)) (subsets t)
-
-let rec allsets m l =
-  if m = 0 then return [] else
-  match l with
-  |[] -> return []
-  |h::t -> Enum.append (Enum.map (fun g -> h::g) (allsets (m - 1) t)) (allsets m t)
-;;
-
-let rec allsubsets = function
-  |[] -> [[]]
-  |a::t -> 
-      let res = allsubsets t in
-      List.map (fun b -> a::b) res @ res
-;;
-
-let rec range a b =
-  if a > b then []
-  else a :: range (a+1) b
-
-(*
-# cartesian_product [1;2;3] [3;4];;
-- : (int * int) list = [(1, 3); (1, 4); (2, 3); (2, 4); (3, 3); (3, 4)]
-*)
-let cartesian l1 l2 = bind l1 (fun x -> bind l2 (fun y -> return (x,y))) ;;
-
-(* let map = List.map *)
-let rec permutation = function 
-  |[] -> return []
-  |h::t ->
-      bind (permutation t) (fun t1 ->
-        Enum.map (fun h1 -> h1 :: t1) h
-      )
 
 let cmp l1 l2 = (List.length l2) - (List.length l1)
 
@@ -355,7 +304,7 @@ let main () =
   let maps = mdf.Mdf.maps in
   let index = mdf.Mdf.index in
   let solver = Depsolver_int.init_solver index in
-  let reverse = Depsolver_int.reverse_dependencies mdf in
+  let reverse_t = Depsolver_int.reverse_dependencies mdf in
   let cg = conflictgraph mdf in
   let cc = connected_components cg in
   Printf.eprintf "conflict graph = vertex : %d , edges : %d\n"
@@ -363,56 +312,24 @@ let main () =
   Printf.eprintf "connected components = n. %d , largest : %d\n"
   (List.length cc) (List.length (List.hd (List.sort ~cmp:cmp cc)));
   let ct = conflict_table cc in
-  (* consider only packages that depends on conflicts *)
-  let pt = package_table reverse cg ct in
-  (*
-  let maxc = ref 0 in
-  let sumc = ref 0 in
-  Hashtbl.iter (fun p l ->
-    let m = (List.length !l) in
-    if m > !maxc then maxc := m;
-    sumc := m + !sumc;
-    (* Printf.eprintf "%s : %d\n" (CudfAdd.print_package (maps.CudfAdd.map#inttovar p)) m *)
-  ) pt
-  ;
-  Printf.eprintf "Conflicts in the cone = largest : %d , avg : %d\n" !maxc (!sumc / (Hashtbl.length pt));
-  *)
-  (*
-  let maxc = ref 0 in
-  List.iter (fun c ->
-    if List.length c < 30 then begin
-      (* Printf.eprintf "c = %d%!" (List.length c); *)
-      let mis = max_independent_sets (filter cg c) in
-      (* Printf.eprintf "mis = %d\n%!" (List.length mis); *)
-      let m = (List.length mis) in
-      if m > !maxc then maxc := m;
-    end
-      else
-        Printf.eprintf "Skip %d\n" (List.length c)
-  ) cc
-  ;
-  Printf.eprintf "Maximal independent sets = largest : %d\n%!" !maxc;
-  *)
+  let pt = package_table reverse_t cg ct in
   let a = Array.make (Array.length index) false in
-  (* add an arch between two cc if there is a package that eliminates a cross
-   * model. Problem : if the coverage is not complete I can never be sure that
-   * such package does not exists. The vertex of the resulting graph are the cc
-   * that do not partition the packages space. The complementary graph
-   * represents all the cc that are independent *)
-  (* let g = UG.create () in *)
   let hard = ref [] in
   let c = ref 0 in
   List.iter (fun (p,ll) ->
     incr c;
     let size = List.length !ll in
-    Printf.printf "(%d or %d) package %s (%d) %!" !c (List.length pt) 
+    Printf.printf "(%d or %d) package %s (%d) %!\n" !c (List.length pt) 
     (CudfAdd.print_package (maps.CudfAdd.map#inttovar p)) size ;
     let r =
-      List.for_all (fun m ->
+      for_all (fun m ->
         for_all (fun l ->
-          (* Printf.eprintf "\nAll sets of size %d (%d)%!" m (List.length l); *)
+          Common.Util.print_info "All sets of size %d (%d)%!\n" m (List.length l); 
+          List.iter (fun xl ->
+            Common.Util.print_info "-> %s\n" (String.concat " , " (List.map string_of_int !xl))
+          ) l ;
           let gl = List.map (fun xl -> (filter cg !xl)) l in
-          if List.exists (fun g -> UG.nb_vertex g > 30) gl then
+          if List.exists (fun g -> UG.nb_vertex g > 70) gl then
             (hard := (p,ll) :: !hard ; false)
           else begin
             let sgl =
@@ -420,30 +337,31 @@ let main () =
             in
             let misl =
               List.map (fun g ->
-                (* Printf.eprintf "@%!"; *)
                 let e = 
                   filter_map (fun s ->
+                    let sl = (S.elements s) in
+                    Common.Util.print_info "%s\n" (String.concat " , " (List.map string_of_int sl)); 
                     if install solver a [s] then Some s else None
                   ) (max_independent_sets g)
-                in if Enum.is_empty e then assert false else e
+                in if is_empty e then assert false else e
               ) sgl
             in
-            (* Printf.eprintf ">>%!"; *)
             for_all (fun e -> 
-              (* Printf.eprintf ".%!"; *)
               install solver a ((S.singleton p)::e)
             ) (permutation misl)
           end
         ) (allsets m !ll)
-      ) (List.rev (range 1 size))
+      ) (reverse (range empty 1 size))
     in
     a.(p) <- r ;
-    (if r then Printf.printf "is always installable\n%!"
+    (if r then Printf.printf "%s is always installable\n%!" (CudfAdd.print_package (maps.CudfAdd.map#inttovar p))
     else Printf.printf "eliminates at least one mis\n%!")
   ) pt 
   ;
   let elim = Array.fold_left (fun acc v -> if v then acc + 1 else acc) 0 a in
-  Printf.eprintf "Total : %d , hard : %d , elim : %d , notelim : %d\n" 
+  let all = let l = ref S.empty in Array.iteri (fun i v -> if v then l := S.add i !l) a ; !l  in
+  (if install solver a [all] then print_endline "Success" else print_endline "error" );
+  Printf.printf "Total : %d , hard : %d , elim : %d , notelim : %d\n" 
   (List.length pt) (List.length !hard) elim ((List.length pt) - (List.length !hard) - elim)
  ;;
 
