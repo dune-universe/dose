@@ -62,9 +62,11 @@ struct
   let upgradeR = ref 0
   let removeR = ref 0
   let together = ref 1
+  let keep = ref 0
 
   let universe = ref ""
   let status = ref ""
+  let rstatus = ref 0
 
   let install = ref ""
   let remove = ref ""
@@ -91,11 +93,13 @@ let options =
    ("--removeR",  Arg.Int (fun l -> Options.upgradeR := l ), "Create n Random Cudf with an remove request" );
    ("--upgradeR", Arg.Int (fun l -> Options.removeR := l ), "Create n Random Cudf with an upgrade request" );
    ("--together", Arg.Int (fun l -> Options.together := l ), "Install/remove/upgrade n random packages in groups of m" );
+   ("--keep",     Arg.Int (fun l -> Options.keep := l ), "Add n random keep flags to installed packages" );
 
    ("--upgradeAll", Arg.Set  Options.upgradeAll, "Upgrade all installed packages");
 
-   ("--universe", Arg.String (fun l -> Options.universe := l),  "");
-   ("--status", Arg.String (fun l -> Options.status := l),  "");
+   ("--universe", Arg.String (fun l -> Options.universe := l),  "Package universe");
+   ("--status", Arg.String (fun l -> Options.status := l),  "Installation status");
+   ("--rstatus", Arg.Int (fun l -> Options.rstatus := l ), "Set n random packages as installed");
 
    ("--install", Arg.String (fun l -> Options.install := l),  "Install the specified list of packages");
    ("--upgrade", Arg.String (fun l -> Options.upgrade := l),  "Remove the specified list of packages");
@@ -215,6 +219,41 @@ END
 
   let progressbar = Util.Progress.create ~enabled:true "to cudf" in
 
+  let get_random ?(ver=0.0) pkglist n =
+    let a = Array.of_list pkglist in
+    let max = (Array.length a) in
+    let l = ref [] in
+    for i=0 to n - 1 do
+      let j = Random.int (max - 1) in
+      let pkg = a.(j) in
+      if ver = 0.0 then
+        l := (pkg.package,None)::!l
+      else if ver = 1.0 then
+        l := (pkg.package,Some(`Eq, pkg.version))::!l
+      else if Random.float(1.0) < ver then begin
+        let relop = 
+          let r = Random.float(1.0) in
+          if r < 0.3 then `Eq else
+          if r > 0.3 && r < 0.6 then `Lt else
+          if r > 0.6 && r < 1.0 then `Gt else `Eq
+        in
+        l := (pkg.package,Some(relop,pkg.version))::!l
+      end
+      else
+        l := (pkg.package,None)::!l
+    done;
+    !l
+  in
+
+  let random_packages ?(ver=0.0) pkglist n =
+    let ll = ref [] in
+    for i=0 to n - 1 do
+      let l = get_random ~ver pkglist (!Options.together - 1) in
+      ll := l :: !ll
+    done;
+    !ll
+  in
+
   let (pkglist,universe) =
     match Input.parse_uri !Options.universe with
     |("cudf",(_,_,_,_,file),_) ->
@@ -252,7 +291,29 @@ END
           else CudfAdd.Cudf_set.add pkg acc
         ) u' s
       in
-      let pkglist = CudfAdd.Cudf_set.elements s' in
+      let pkglist =
+        let add_prop f n pkgl =
+          let l = get_random ~ver:1.0 pkgl n in
+          let h = Hashtbl.create (2 * n) in
+          List.iter (fun pkg -> Hashtbl.add h pkg ()) l;
+          List.map (fun pkg ->
+            if Hashtbl.mem h (pkg.package,Some(`Eq, pkg.version)) then f pkg
+            else pkg
+          ) pkgl
+        in
+        let pkgl = CudfAdd.Cudf_set.elements s' in
+        let pkgl =
+          if !Options.rstatus > 0 then
+            add_prop (fun pkg -> {pkg with installed = true}) !Options.rstatus pkgl
+          else pkgl
+        in
+        let pkgl =
+          if !Options.keep > 0 then
+            add_prop (fun pkg -> {pkg with keep = `Keep_version}) !Options.keep pkgl
+          else pkgl
+        in
+        pkgl
+      in
       Printf.eprintf "Creating Cudf universe\n%!";
       (pkglist, Cudf.load_universe pkglist)
   in
@@ -279,35 +340,6 @@ END
     end
   in
 
-  let get_random pkglist n =
-    let a = Array.of_list pkglist in
-    let max = (Array.length a) in
-    let l = ref [] in
-    for i=0 to n - 1 do
-      let j = Random.int (max - 1) in
-      let pkg = a.(j) in
-      l := (pkg.package,None)::!l
-    done;
-    !l
-  in
-
-  let random_packages pkglist n =
-    let a = Array.of_list pkglist in
-    let max = (Array.length a) in
-    let ll = ref [] in
-    for i=0 to n - 1 do
-      let l = ref [] in
-      for j=0 to !Options.together - 1 do
-        let j = Random.int (max - 2) in
-        let pkg = a.(j) in
-        l := (pkg.package,None)::!l
-      done;
-      ll := !l::!ll
-    done
-    ;
-    !ll
-  in
-
   let installed () =
     Cudf.fold_packages (fun l pkg -> 
       if pkg.installed then pkg::l else l
@@ -317,12 +349,13 @@ END
   let to_install_random () =
     if !Options.installR <> 0 then
       if !Options.popcon <> "" then random_packages_popcon ()
-      else random_packages pkglist !Options.installR
+      else random_packages ~ver:0.3 pkglist !Options.installR
     else []
   in
 
+  (* with probability of 30% we remove with version *)
   let to_upgrade_random () = get_random (installed ()) !Options.upgradeR in 
-  let to_remove_random () = get_random (installed ()) !Options.removeR in 
+  let to_remove_random () = get_random ~ver:0.3 (installed ()) !Options.removeR in 
 
   let create_cudf (to_install,to_upgrade,to_remove) =
     let oc = 

@@ -174,11 +174,11 @@ let main () =
       let outch = Options.output_ch () in
       begin match OptParse.Opt.get Options.output_ty with
       |"dot" -> 
-    IFDEF HASOCAMLGRAPH THEN
+IFDEF HASOCAMLGRAPH THEN
           DGraph.D.output_graph outch (DGraph.dependency_graph u)
-    ELSE
+ELSE
         failwith ("dot Not supported")
-    END
+END
       |"cnf" -> Printf.fprintf outch "%s" (Depsolver.output_clauses ~enc:Depsolver.Cnf u)
       |"dimacs" -> Printf.fprintf outch "%s" (Depsolver.output_clauses ~enc:Depsolver.Dimacs u)
       |"pp" -> Printf.fprintf outch "%s" (Cudf_printer.string_of_universe u)
