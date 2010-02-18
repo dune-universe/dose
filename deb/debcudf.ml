@@ -152,6 +152,8 @@ let loadl tables l =
     ) l
   )
 
+(* we add a self conflict here, because in debian each package is in conflict
+   with all other versions of the same package *)
 let loadlc tables name l = (CudfAdd.encode name, None)::(loadl tables l)
 
 let loadlp tables l =
@@ -225,10 +227,17 @@ let tocudf tables ?(extras=[]) ?(inst=false) pkg =
 let lltocudf = loadll
 let ltocudf = loadl
 
-let load_universe l =
-  let timer = Util.Timer.create "Debian.Debcudf.load_universe" in
+let load_list l =
+  let timer = Util.Timer.create "Debian.Debcudf.load_list" in
   Util.Timer.start timer;
   let tables =  init_tables l in
-  let univ = Cudf.load_universe (List.map (tocudf tables) l) in
+  let pkglist = List.map (tocudf tables) l in
   clear tables;
+  Util.Timer.stop timer pkglist
+
+let load_universe l =
+  let pkglist = load_list l in
+  let timer = Util.Timer.create "Debian.Debcudf.load_universe" in
+  Util.Timer.start timer;
+  let univ = Cudf.load_universe pkglist in
   Util.Timer.stop timer univ

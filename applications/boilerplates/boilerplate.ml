@@ -16,9 +16,9 @@ let argv1 l = argv_ (fun a -> a.(0)) l
 let argv2 l = argv_ (fun a -> (a.(0),a.(1))) l
 let argv3 l = argv_ (fun a -> (a.(0),a.(1),a.(2))) l
 
-let deb_load_universe l =
+let deb_load_list l =
   let tables = Debian.Debcudf.init_tables l in
-  let univ = Cudf.load_universe (List.map (Debian.Debcudf.tocudf tables) l) in
+  let pkglist = List.map (Debian.Debcudf.tocudf tables) l in
   let from_cudf pkg =
     let (p,i) = (pkg.Cudf.package,pkg.Cudf.version) in
     let v = Debian.Debcudf.get_real_version tables (p,i) in
@@ -28,23 +28,39 @@ let deb_load_universe l =
     let i = Debian.Debcudf.get_cudf_version tables (p,v) in
     (p,i)
   in
-  (univ,from_cudf,to_cudf)
+  (pkglist,from_cudf,to_cudf)
 
-let rpm_load_universe l =
+let deb_load_universe l =
+  let (l,f,t) = deb_load_list l in
+  (Cudf.load_universe l, f, t)
+
+(* XXX double minded ... this code is kinda similar to the code in rpmcudf 
+ * refactor or not refactor ? *)
+let rpm_load_list l =
 IFDEF HASRPM THEN
-  let univ = Rpm.Rpmcudf.load_universe l in
+  let tables =  Rpm.Rpmcudf.init_tables l in
+  let pkglist = List.map (Rpm.Rpmcudf.tocudf tables) l in
+  Rpm.Rpmcudf.clear tables;
   let from_cudf pkg = (pkg.Cudf.package,string_of_int pkg.Cudf.version) in
   let to_cudf (p,v) = failwith "Nope ..." in
-  (univ,from_cudf,to_cudf)
+  (pkglist,from_cudf,to_cudf)
 ELSE
   failwith "Rpm input not available"
 END
 
-let cudf_load_universe file =
-  let _, univ, _ = CudfAdd.load_cudf file in
+let rpm_load_universe l =
+  let (l,f,t) = rpm_load_list l in
+  (Cudf.load_universe l, f, t)
+
+let cudf_load_list file =
+  let _, pkglist, _ = CudfAdd.parse_cudf file in
   let from_cudf pkg = (pkg.Cudf.package,string_of_int pkg.Cudf.version) in
   let to_cudf (p,v) = failwith "Nope ..." in
-  (univ,from_cudf,to_cudf)
+  (pkglist,from_cudf,to_cudf)
+
+let cudf_load_universe file =
+  let (l,f,t) = cudf_load_list file in
+  (Cudf.load_universe l, f, t)
 
 let rec filter init acc uris =
   match uris,init with
@@ -70,26 +86,26 @@ let rec filter init acc uris =
     |(t,_,_),_ -> (Printf.eprintf "You cannot mix different input types\n"; exit 1)
     end
 
-let parseinput uris =
+let parse_input uris =
   let filelist typ = function
     |(t,(_,_,_,_,file),_) when t = typ -> file
     |_ -> assert false
   in
   match filter None [] uris with
   |("cudf",[("cudf",(_,_,_,_,file),_)]) ->
-      cudf_load_universe file
+      cudf_load_list file
   |("debstdin", [p]) ->
       let l = Debian.Packages.input_raw_ch (IO.input_channel stdin) in
-      deb_load_universe l
+      deb_load_list l
   |("deb", l) ->
       let filelist = List.map (filelist "deb") l in
       let l = Debian.Packages.input_raw filelist in
-      deb_load_universe l
+      deb_load_list l
   |("pgsql"|"sqlite"), [(("pgsql"|"sqlite") as dbtype,info,(Some query))] ->
 IFDEF HASDB THEN
         let db = Db.Backend.init_database dbtype info (Idbr.parse_query query) in
         let l = Db.Backend.load_selection db (`All) in
-        deb_load_universe l
+        deb_load_list l
 ELSE
       failwith (dbtype^" Not supported")
 END
@@ -97,7 +113,7 @@ END
 IFDEF HASRPM THEN
       let filelist = List.map (filelist "hdlist") l in
       let l = Rpm.Packages.Hdlists.input_raw filelist in
-      rpm_load_universe l
+      rpm_load_list l
 ELSE
     failwith ("hdlist Not supported")
 END
@@ -105,11 +121,20 @@ END
 IFDEF HASRPM THEN
       let filelist = List.map (filelist "synth") l in
       let l = Rpm.Packages.Synthesis.input_raw filelist in
-      rpm_load_universe l
+      rpm_load_list l
 ELSE
     failwith ("synth Not supported")
 END
     |(s,_) -> failwith (s^" Not supported")
+;;
+
+(* parse and merge a list of files into a cudf package list *)
+let load_list uris =
+  Util.print_info "Parsing and normalizing..." ;
+  let timer = Util.Timer.create "Parsing and normalizing" in
+  Util.Timer.start timer;
+  let u = parse_input uris in
+  Util.Timer.stop timer u
 ;;
 
 (* parse and merge a list of files into a cudf universe *)
@@ -117,7 +142,8 @@ let load_universe uris =
   Util.print_info "Parsing and normalizing..." ;
   let timer = Util.Timer.create "Parsing and normalizing" in
   Util.Timer.start timer;
-  let u = parseinput uris in
+  let (l,f,t) = parse_input uris in
+  let u = (Cudf.load_universe l, f, t) in
   Util.Timer.stop timer u
 ;;
 

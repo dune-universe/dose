@@ -12,7 +12,7 @@
 
 (** Dependency solver. Low Level API *)
 
-(** Implementation of the EDOS algorithms. this module respect the cudf semantic. *)
+(** Implementation of the EDOS algorithms (and more). This module respect the cudf semantic. *)
 
 open ExtLib
 open Common
@@ -122,7 +122,8 @@ let init_solver ?(buffer=false) ?(proxy_size=0) ?idlist index =
             S.add_bin_rule constraints x y [Diagnostic_int.Conflict(pkg_id1, pkg_id2)]
         end
       done
-    with Not_found -> ()
+    with Not_found ->
+      (Printf.eprintf "Warning ! Error! Disaster ! Conflict not in the closure!"; ())
     (* ignore conflicts that are not in the closure.
      * This requires a leap of faith in the user ability to build an
      * appropriate closure. If the closure is wrong, you are on your own *)
@@ -214,7 +215,7 @@ let solve solver request =
 
 (***********************************************************)
 
-(* [reverse_dependencies index] return an array that associates to a package id
+(** [reverse_dependencies index] return an array that associates to a package id
     [i] the list of all packages ids that have a dependency on [i].
 
     @param index the package universe
