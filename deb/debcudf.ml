@@ -206,10 +206,15 @@ let add_extra extras pkg =
   in
   [number;source;sourceversion] @ l
 
+let add_essential = function
+  |false -> `Keep_none
+  |true -> `Keep_package
+
 let tocudf tables ?(extras=[]) ?(inst=false) pkg =
     { Cudf.default_package with
       Cudf.package = CudfAdd.encode pkg.name ;
       Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;
+      Cudf.keep = add_essential pkg.essential;
       Cudf.depends = loadll tables (pkg.pre_depends @ pkg.depends);
       Cudf.conflicts = loadlc tables pkg.name (pkg.breaks @ pkg.conflicts) ;
       Cudf.provides = loadlp tables pkg.provides ;

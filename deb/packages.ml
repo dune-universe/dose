@@ -20,6 +20,7 @@ open Format822
 type package = {
   name : name ;
   version : version;
+  essential : bool;
   source : (name * version option) ;
   depends : vpkg list list;
   pre_depends : vpkg list list;
@@ -36,6 +37,7 @@ type package = {
 let default_package = {
   name = "";
   version = "";
+  essential = false;
   depends = [];
   source = ("",None);
   pre_depends = [];
@@ -55,6 +57,7 @@ let parse_veqpkg = parse_constr
 let parse_conj s = parse_vpkglist parse_vpkg s
 let parse_cnf s = parse_vpkgformula parse_vpkg s
 let parse_prov s = parse_veqpkglist parse_veqpkg s
+let parse_essential = function ("Yes"|"yes") -> true | _ -> false
 
 let parse_packages_fields extras par =
   let guard_field field s f = 
@@ -77,6 +80,7 @@ let parse_packages_fields extras par =
       {
         name = parse_s parse_name "package";
         version = parse_s parse_version "version";
+        essential = (try parse_s parse_essential "essential" with Not_found -> false);
         source = (try parse_s parse_source "source" with Not_found -> ("",None));
         depends = (try parse_m parse_cnf "depends" with Not_found -> []);
         pre_depends = (try parse_m parse_cnf "pre-depends" with Not_found -> []);
