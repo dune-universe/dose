@@ -16,9 +16,9 @@ let argv1 l = argv_ (fun a -> a.(0)) l
 let argv2 l = argv_ (fun a -> (a.(0),a.(1))) l
 let argv3 l = argv_ (fun a -> (a.(0),a.(1),a.(2))) l
 
-let deb_load_list l =
+let deb_load_list ?(extras=[]) l =
   let tables = Debian.Debcudf.init_tables l in
-  let pkglist = List.map (Debian.Debcudf.tocudf tables) l in
+  let pkglist = List.map (Debian.Debcudf.tocudf ~extras tables) l in
   let from_cudf pkg =
     let (p,i) = (pkg.Cudf.package,pkg.Cudf.version) in
     let v = Debian.Debcudf.get_real_version tables (p,i) in
@@ -30,8 +30,8 @@ let deb_load_list l =
   in
   (pkglist,from_cudf,to_cudf)
 
-let deb_load_universe l =
-  let (l,f,t) = deb_load_list l in
+let deb_load_universe ?(extras=[]) l =
+  let (l,f,t) = deb_load_list ~extras l in
   (Cudf.load_universe l, f, t)
 
 (* XXX double minded ... this code is kinda similar to the code in rpmcudf 
@@ -86,7 +86,7 @@ let rec filter init acc uris =
     |(t,_,_),_ -> (Printf.eprintf "You cannot mix different input types\n"; exit 1)
     end
 
-let parse_input uris =
+let parse_input ?(extras=[]) uris =
   let filelist typ = function
     |(t,(_,_,_,_,file),_) when t = typ -> file
     |_ -> assert false
@@ -96,16 +96,16 @@ let parse_input uris =
       cudf_load_list file
   |("debstdin", [p]) ->
       let l = Debian.Packages.input_raw_ch (IO.input_channel stdin) in
-      deb_load_list l
+      deb_load_list ~extras l
   |("deb", l) ->
       let filelist = List.map (filelist "deb") l in
       let l = Debian.Packages.input_raw filelist in
-      deb_load_list l
+      deb_load_list ~extras l
   |("pgsql"|"sqlite"), [(("pgsql"|"sqlite") as dbtype,info,(Some query))] ->
 IFDEF HASDB THEN
         let db = Db.Backend.init_database dbtype info (Idbr.parse_query query) in
         let l = Db.Backend.load_selection db (`All) in
-        deb_load_list l
+        deb_load_list ~extras l
 ELSE
       failwith (dbtype^" Not supported")
 END
@@ -129,20 +129,20 @@ END
 ;;
 
 (* parse and merge a list of files into a cudf package list *)
-let load_list uris =
+let load_list ?(extras=[]) uris =
   Util.print_info "Parsing and normalizing..." ;
   let timer = Util.Timer.create "Parsing and normalizing" in
   Util.Timer.start timer;
-  let u = parse_input uris in
+  let u = parse_input ~extras uris in
   Util.Timer.stop timer u
 ;;
 
 (* parse and merge a list of files into a cudf universe *)
-let load_universe uris =
+let load_universe ?(extras=[]) uris =
   Util.print_info "Parsing and normalizing..." ;
   let timer = Util.Timer.create "Parsing and normalizing" in
   Util.Timer.start timer;
-  let (l,f,t) = parse_input uris in
+  let (l,f,t) = parse_input ~extras uris in
   let u = (Cudf.load_universe l, f, t) in
   Util.Timer.stop timer u
 ;;
