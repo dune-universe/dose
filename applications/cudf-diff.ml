@@ -107,7 +107,7 @@ let solution_to_string s =
 
 let solution_to_html s =
   Printf.sprintf
-  "<td>removed = %d<br>upgraded = %d<br>downgraded = %d<br>new = %d<br>unchanged = %d</td>"
+  "<p>removed = %d<br>upgraded = %d<br>downgraded = %d<br>new = %d<br>unchanged = %d</p>"
   s.removed s.upgraded s.downgraded s.newinst s.unchanged
 ;;
 
@@ -121,43 +121,58 @@ let status_equal = function
 let all_equal = function
   |[_] -> true
   |one::t -> List.for_all (fun sc -> status_equal (sc,one)) t
-  |[] -> failwith "Empty list"
+  |[] -> assert false
 
-(* a packages matching vpkg in the universe u *)
-let provides u vpkg =
-  List.map (fun (pkg,_) -> pkg) (Cudf.who_provides u vpkg)
-
-(* for each provide of pkg return all concrete package providing the same functionality *)
-let provides_list u pkg =
-  List.map (fun vpkg ->
-    provides u (vpkg :> Cudf_types.vpkg) 
-  ) pkg.provides
+let newest = function
+  |[] -> assert false
+  |l -> List.hd (List.sort ~cmp:CudfAdd.compare l)
 
 let diff univ sol =
   let h = Cudf_hashtbl.create (Cudf.universe_size univ) in
   let s = dummy_solution () in
+  let add h p r =
+    if Cudf_hashtbl.mem h p then assert false
+    else Cudf_hashtbl.add h p r
+  in
 
   Cudf.iter_packages (fun pkg ->
     if pkg.installed then
-      let l = Cudf.lookup_packages sol pkg.package in
-      match List.filter (fun pkg -> pkg.installed) l with
-      |[] -> (s.removed<-s.removed+1 ; Cudf_hashtbl.add h pkg Removed)
-      |l ->
-          List.iter (fun p ->
-            if Cudf.version_matches p.version (Some(`Eq,pkg.version))
-            then begin s.unchanged<-s.unchanged+1 ; Cudf_hashtbl.add h pkg Unchanged end
-            else if Cudf.version_matches p.version (Some(`Gt,pkg.version))
-            then begin s.upgraded<-s.upgraded+1 ; Cudf_hashtbl.add h pkg (Upgraded p) end
-            else if Cudf.version_matches p.version (Some(`Lt,pkg.version))
-            then begin s.downgraded<-s.downgraded+1 ; Cudf_hashtbl.add h pkg (Downgraded p) end
-          ) l
+      let l = Cudf.get_installed sol pkg.package in
+      if Cudf.mem_installed sol (pkg.package, Some(`Eq, pkg.version)) then
+        begin
+          s.unchanged<-s.unchanged+1 ;
+          add h pkg Unchanged
+        end
+      else if Cudf.mem_installed sol (pkg.package, Some(`Gt, pkg.version)) then
+        begin
+          s.upgraded<-s.upgraded+1 ;
+          add h pkg (Upgraded (newest l))
+        end
+      else if Cudf.mem_installed sol (pkg.package, Some(`Lt, pkg.version)) then
+        begin
+          s.downgraded<-s.downgraded+1 ;
+          add h pkg (Downgraded (newest l))
+        end
+      else
+        begin
+          s.removed<-s.removed+1 ;
+          add h pkg Removed
+        end
     else
-      try
-        let p = Cudf.lookup_package sol (pkg.package,pkg.version) in
-        if p.installed then begin s.newinst<-s.newinst+1 ; Cudf_hashtbl.add h pkg Installed end
-      with Not_found -> ()
+      if Cudf.mem_installed sol (pkg.package, Some(`Eq, pkg.version)) then
+        begin
+          s.newinst<-s.newinst+1 ;
+          add h pkg Installed
+        end
+      else
+        begin
+          s.unchanged<-s.unchanged+1 ;
+          add h pkg Unchanged
+        end
   ) univ
   ;
+  assert (Cudf_hashtbl.length h = Cudf.universe_size univ);
+  assert (s.unchanged + s.removed + s.newinst + s.downgraded + s.upgraded = Cudf_hashtbl.length h);
   (h,s)
 ;;
 
@@ -169,10 +184,9 @@ let print_diff_txt universe solutions =
   Cudf.iter_packages (fun pkg ->
     let pl = 
       List.filter_map (fun (f,(h,_)) ->
-        try Some(f,Cudf_hashtbl.find h pkg) with Not_found -> None
+        try Some(f,Cudf_hashtbl.find h pkg) with Not_found -> assert false
       ) solutions
     in
-    if pl = [] then () else
     if all_equal (List.map snd pl) then ()
     else begin
       let sl = List.map (fun (f,status) -> status_to_string pkg status) pl in
@@ -186,15 +200,15 @@ let print_diff_html universe solutions =
   let solutions = List.sort ~cmp:cmp solutions in 
   let (hl,solutions) = List.split solutions in
   Printf.printf "<table border=1>\n" ;
-  Printf.printf "<tr><tbody><th>Package</th>%s</tr>"
+  Printf.printf "<thead><tr><th>Package</th>%s</tr></thead>\n"
   (String.concat "" (List.map (fun h -> Printf.sprintf "<th>%s</th>" h) hl));
+  Printf.printf "<tbody>\n" ;
   Cudf.iter_packages (fun pkg ->
     let pl = 
       List.filter_map (fun (f,(h,_)) ->
-        try Some(f,Cudf_hashtbl.find h pkg) with Not_found -> None
+        try Some(f,Cudf_hashtbl.find h pkg) with Not_found -> assert false
       ) solutions
     in
-    if pl = [] then () else
     if all_equal (List.map snd pl) then ()
     else begin
       let sl = List.map (fun (f,status) -> status_to_string pkg status) pl in
@@ -204,9 +218,9 @@ let print_diff_html universe solutions =
     end
   ) universe
   ;
+  Printf.printf "</tbody>\n" ;
   Printf.printf "</table>\n"
 ;;
-
 
 let parse_univ f1 =
   match CudfAdd.load_cudf f1 with
@@ -234,6 +248,7 @@ let main () =
   |[] -> (Printf.eprintf "You must specify at least a universe and a solution\n" ; exit 1)
   |[u] -> (Printf.eprintf "You must specify at least a solution\n" ; exit 1)
   |u::l ->
+      Common.Util.print_info "%s" u ;
       let (univ,req) = parse_univ u in
       let hl =
         List.filter_map (fun f ->
@@ -250,8 +265,20 @@ let main () =
       in
       let sol_tables = List.map (fun (h,(f,s)) -> (h,(f,diff univ s))) hl in
       match OptParse.Opt.get Options.output with
-      |"txt" -> print_diff_txt univ sol_tables 
-      |"html" -> print_diff_html univ sol_tables
+      |"txt" ->
+          begin
+            List.iter (fun (_,(f,(_,s))) ->
+              Printf.printf "%s\n%s\n" f (solution_to_string s)
+            ) sol_tables;
+            print_diff_txt univ sol_tables 
+          end
+      |"html" ->
+          begin
+            List.iter (fun (_,(f,(_,s))) ->
+              Printf.printf "<p>%s</p>\n%s" f (solution_to_html s)
+            ) sol_tables;
+            print_diff_html univ sol_tables
+          end
       |_ -> assert false 
 ;;
 
