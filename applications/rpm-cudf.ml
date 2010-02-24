@@ -13,6 +13,7 @@
 open ExtLib
 open Boilerplate
 open Common
+open Rpm
 
 let enable_debug () =
   Util.Progress.enable "Rpm.Parse.Hdlists.parse_822_iter";
