@@ -10,12 +10,6 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-(* XXX
- * TODO: 
-   - add file conflicts
-   - solve overlapping provides problem in conflicts
-*)
-
 open ExtLib
 open ExtString
 open Common
@@ -41,25 +35,6 @@ let clear tables =
   Hashtbl.clear tables.files;
   Hashtbl.clear tables.fileconflicts;
 ;;
-(*
-let files = Hashtbl.create 300000
-
-let add_file f v =
-  let l =
-    try Hashtbl.find files f with Not_found ->
-    let l = ref [] in Hashtbl.add files f l; l
-  in
-  l := v :: !l
-
-let resolve_file_dep (nm, rel, ver) =
-  if nm = "" || nm.[0] <> '/' then [] else begin
-    let i = String.rindex nm '/' in
-    let d = String.sub nm 0 (i + 1) in
-    let f = String.sub nm (i + 1) (String.length nm - i - 1) in
-    let l = try !(Hashtbl.find files (d, f)) with Not_found -> [] in
-    List.map (fun (_, p) -> p) l
-  end
-*)
 
 let init_tables pkglist =
   let tables = create (List.length pkglist) in
@@ -75,7 +50,7 @@ let init_tables pkglist =
       try Hashtbl.find t k with Not_found ->
       let l = ref [] in Hashtbl.add t k l; l
     in
-    l := v :: !l
+    if v <> "" then l := v :: !l
   in
 
   let add_units name version = add_list temp_units name version in
@@ -134,29 +109,18 @@ let init_tables pkglist =
   ) pkglist
   ;
 
-  (* return an list of version list where each sublist contains semantically 
-   * equal, but different versions and the outer list is ordered with respect
-   * to rpmcmp *)
-  let order l =
-    let ol = List.unique (List.sort ~cmp:Version.compare l) in
-    let rec aux acc l = function
-      |[] -> l :: acc
-      |h::t when l = [] -> aux acc (h::l) t
-      |h::t when Version.compare h (List.hd l) = 0 -> aux acc (h::l) t
-      |h::t -> aux (l::acc) [h] t
-    in
-    List.rev (aux [] [] ol)
-  in
   let initialid = 2 in
+  let order l = List.unique (List.sort ~cmp:Version.compare l) in
   Hashtbl.iter (fun name {contents = l1} ->
     let l2 = try !(Hashtbl.find temp_versions name) with Not_found -> [] in
     let vl = order (l1@l2) in
     let (_,m) =
-      List.fold_left (fun (i,t) l ->
-        (i+1,List.fold_left (fun acc k -> Trie.add k i acc) t l)
+      List.fold_left (fun (i,t) k ->
+        (i+1,Trie.add k i t)
       ) (initialid,Trie.empty) vl
     in
-(*    Util.print_info "package %s : %s" name 
+    (*
+    Util.print_info "package %s : %s" name 
     (Trie.fold (fun k v acc -> Printf.sprintf "%s (%s = %d)" acc k v) m ""); 
     *)
     Hashtbl.add tables.units name m ;
@@ -169,21 +133,23 @@ let init_tables pkglist =
   tables
 ;;
 
-let fix_ref v =
-  match Version.parse_version v with
-  |None -> assert false
-  |Some(_,r,None) -> r^"-"
-  |_ -> v
-
 (* ATT: we use version 1 for a version of a non existent package - 
    neither as a real package or a provide 
    strict : match only version with EVR tuples *)
 let get_versions tables (package,prefix) =
   if Hashtbl.mem tables.units package then begin
-    let all = Hashtbl.find tables.units package in
+    let all =
+      try Hashtbl.find tables.units package
+      with Not_found -> assert false
+    in
     try
       let t = Trie.restrict prefix all in
-      Trie.fold (fun k v acc -> v::acc) t [] 
+      Trie.fold (fun k v acc -> 
+        match Version.parse_version k with
+        |Some(_,_,Some _) -> v::acc
+        |Some(_,_,None) -> acc
+        |None -> assert false
+      ) t [] 
     with Not_found -> (
       Util.print_warning "prefix %s does not match any version for unit %s" prefix package;
       assert false )
@@ -204,11 +170,19 @@ let get_version tables (package,version) =
 
 (* ========================================= *)
 
+let foldl1 f = function
+  | [] -> assert false
+  | x::xs -> List.fold_left f x xs
+;;
+let max = foldl1 (fun x y -> if x > y then x else y) ;;
+let min = foldl1 (fun x y -> if x < y then x else y) ;;
+
 let expand tables (package,version) (name,v) =
   List.filter_map (fun x ->
-    (* we filter out package that expand to itselves *)
-    if (package,version) = (name,v) then None
-    else Some(CudfAdd.encode name,Some(`Eq,x))
+      (* we filter out package that expand to itselves *)
+      (* XXX *)
+      if (package,version) = (name,v) then None
+      else Some(CudfAdd.encode name,Some(`Eq,x))
   ) (get_versions tables (name,v))
 
 let loadl tables l =
@@ -218,7 +192,14 @@ let loadl tables l =
         match CudfAdd.cudfop sel with
         |None -> [(CudfAdd.encode name, None)]
         |Some(`Eq,v) -> expand tables ("","") (name,v)
-        |Some(op,v) -> [(CudfAdd.encode name, Some(op,get_version tables (name,v)))]
+        |Some((`Gt|`Geq) as op,v) ->
+            begin match get_versions tables (name,v) with
+            |[] -> []
+            |l -> [(CudfAdd.encode name, Some(op,min l))] end
+        |Some((`Lt|`Leq) as op,v) ->
+            begin match get_versions tables (name,v) with
+            |[] -> []
+            |l -> [(CudfAdd.encode name, Some(op,max l))] end
       ) l
     )
   )
@@ -257,12 +238,12 @@ let tocudf tables ?(inst=false) pkg =
     Cudf.version = get_version tables (n,v) ;
     Cudf.depends = loadll tables pkg.depends ;
     Cudf.conflicts = List.unique (
-      (loadl tables fileconflicts) @
-      (loadl tables pkg.conflicts)
+      (loadl tables pkg.conflicts) @
+      (loadl tables fileconflicts)
     );
     Cudf.provides = List.unique (
-      (loadp_files tables (n,v)) @ 
-      (loadlp tables (n,v) pkg.provides)
+      (loadlp tables (n,v) pkg.provides) @
+      (loadp_files tables (n,v)) 
     );
     Cudf.installed = inst 
   }

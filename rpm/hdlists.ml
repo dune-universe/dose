@@ -39,7 +39,8 @@ let flags_to_string flag =
   |8 -> "="
   |10 -> "<="
   |12 -> ">="
-  |_ -> ""
+  |0 -> "ALL"
+  |_ -> assert false
 
 (***************)
 
@@ -76,7 +77,7 @@ let list_deps p par =
           if i < (Array.length version_a) then 
             let c = flags_to_string flags_a.(i) in
             let v = version_a.(i) in
-            if c <> "" && v <> "" then Some(c,v)
+            if c <> "ALL" && v <> "" then Some(c,v)
             else None
           else None
         in

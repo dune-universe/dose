@@ -80,7 +80,6 @@ let parse_version s =
 
 (** default compare EVRcmp *)
 let compare s1 s2 =
-  let get s = if Option.is_none s then "" else ("-"^Option.get s) in
   let epochcmp e1 e2 =
     match (e1,e2) with
     |(None,None)|(None,Some 0)|(Some 0,None) -> 0
@@ -88,20 +87,20 @@ let compare s1 s2 =
     |(Some _,None) -> 1
     |(Some x,Some y) -> Pervasives.compare x y
   in
-  let parse s = 
-    let p = parse_version s in
-    if Option.is_none p then (None,"",None)
-    else Option.get p
+  let relcmp r1 r2 = 
+    match (r1,r2) with
+    |(None,None)|(None,Some _)|(Some _,None) -> 0
+    |(Some x,Some y) -> rpmvercmp x y
+  in
+  let parse s =
+    if s <> "" then Option.get (parse_version s) else assert false
   in
   let (e1,v1,r1) = parse s1 in
   let (e2,v2,r2) = parse s2 in
   match epochcmp e1 e2 with
   |0 ->
       begin match rpmvercmp v1 v2 with
-      |0 -> rpmvercmp (get r1) (get r2)
-          (* if r1 <> None && r2 <> None
-          then rpmvercmp (get r1) (get r2)
-          else 0 *)
+      |0 -> relcmp r1 r2
       |r -> r
       end
   |r -> r
