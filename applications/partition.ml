@@ -278,7 +278,7 @@ let package_table reverse cg ct =
   ) cg
   ;
   let l = Hashtbl.fold (fun v k acc -> (v, ref(List.unique !k))::acc ) h [] in
-  List.sort ~cmp:(fun (_,k2) (_,k1) -> (List.length !k1) - (List.length !k2)) l 
+  List.sort ~cmp:(fun (_,k1) (_,k2) -> (List.length !k1) - (List.length !k2)) l 
 ;;
 
 let install solver _ ll = 
@@ -295,6 +295,11 @@ let install solver _ ll =
 
 let cmp l1 l2 = (List.length l2) - (List.length l1)
 
+let amend_solver solver q =
+  let lit = Depsolver_int.S.lit_of_var (solver.Depsolver_int.map#vartoint q) true in
+  Depsolver_int.S.add_un_rule solver.Depsolver_int.constraints lit []
+;;
+
 let main () =
   at_exit (fun () -> Common.Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
@@ -308,7 +313,7 @@ let main () =
   let cg = conflictgraph mdf in
   let cc = connected_components cg in
   Printf.eprintf "conflict graph = vertex : %d , edges : %d\n"
-  (UG.nb_vertex cg)(UG.nb_edges cg);
+  (UG.nb_vertex cg) (UG.nb_edges cg);
   Printf.eprintf "connected components = n. %d , largest : %d\n"
   (List.length cc) (List.length (List.hd (List.sort ~cmp:cmp cc)));
   let ct = conflict_table cc in
@@ -329,9 +334,9 @@ let main () =
             Common.Util.print_info "-> %s\n" (String.concat " , " (List.map string_of_int !xl))
           ) l ;
           let gl = List.map (fun xl -> (filter cg !xl)) l in
-          if List.exists (fun g -> UG.nb_vertex g > 70) gl then
+(*          if List.exists (fun g -> UG.nb_vertex g > 70) gl then
             (hard := (p,ll) :: !hard ; false)
-          else begin
+          else *) begin
             let sgl =
               List.sort ~cmp:(fun c1 c2 -> (UG.nb_vertex c1) - (UG.nb_vertex c2)) gl
             in
@@ -354,7 +359,10 @@ let main () =
       ) (reverse (range empty 1 size))
     in
     a.(p) <- r ;
-    (if r then Printf.printf "%s is always installable\n%!" (CudfAdd.print_package (maps.CudfAdd.map#inttovar p))
+    (if r then begin
+      amend_solver solver p;
+      Printf.printf "%s is always installable\n%!" (CudfAdd.print_package (maps.CudfAdd.map#inttovar p))
+    end
     else Printf.printf "eliminates at least one mis\n%!")
   ) pt 
   ;

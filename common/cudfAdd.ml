@@ -251,5 +251,6 @@ let cudfop = function
   |Some("<=",v) -> Some(`Leq,v)
   |Some(">=",v) -> Some(`Geq,v)
   |Some("=",v) -> Some(`Eq,v)
+  |Some("ALL",v) -> None
   |None -> None
-  |_ -> assert false
+  |Some(c,v) -> (Printf.eprintf "%s %s" c v ; assert false)

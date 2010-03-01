@@ -16,7 +16,7 @@ open Common
 open Packages
 
 type tables = {
-  units : (string, int Trie.t) Hashtbl.t;
+  units : (string, (int * string) list) Hashtbl.t;
   files : ((string * string), string) Hashtbl.t;
   fileconflicts : ((string * string), vpkg)  Hashtbl.t;
 }
@@ -24,8 +24,7 @@ type tables = {
 let create n = {
   (* all real packages associated with all versions *)
   units = Hashtbl.create (2 * n);
-  (* all files associated to a package that are mentioned as a conflict or
-   * depends *)
+  (* all files associated to a package that are mentioned as a conflict or depends *)
   files = Hashtbl.create (2 * n);
   fileconflicts = Hashtbl.create (10 * n);
 }
@@ -39,8 +38,9 @@ let clear tables =
 let init_tables pkglist =
   let tables = create (List.length pkglist) in
 
-  (* temp_units is the list of all versions associated to a real package or provide *)
+  (* temp_units is the list of all versions in provides or packages *)
   let temp_units = Hashtbl.create (List.length pkglist) in
+  (* temp_versions is the list of all version in requires and conflicts *)
   let temp_versions = Hashtbl.create (List.length pkglist) in
   (* all avalaible files *)
   let temp_files = Hashtbl.create (10 * (List.length pkglist)) in
@@ -71,9 +71,9 @@ let init_tables pkglist =
     ) pkg.Packages.files ;
 
     List.iter (fun (name,sel) ->
-      match CudfAdd.cudfop sel with
+      match sel with
       |None -> add_units name ""
-      |Some(_,version) -> add_units name version
+      |Some(c,v) -> add_units name v
     ) pkg.provides
   ) pkglist
   ;
@@ -93,35 +93,35 @@ let init_tables pkglist =
 
     List.iter (fun (name,sel) ->
       add_files name;
-      match CudfAdd.cudfop sel with
+      match sel with
       |None -> ()
-      |Some(_,version) -> add_versions name version
+      |Some(c,v) -> add_versions name v
     ) pkg.conflicts
     ;
     List.iter (fun disjunction ->
       List.iter (fun (name,sel) ->
         add_files name;
-        match CudfAdd.cudfop sel with
+        match sel with
         |None -> ()
-        |Some(_,version) -> add_versions name version
+        |Some(c,v) -> add_versions name v
       ) disjunction
     ) pkg.depends
   ) pkglist
   ;
 
   let initialid = 2 in
-  let order l = List.unique (List.sort ~cmp:Version.compare l) in
+  let order l = List.unique (List.sort ~cmp:Version.compare (List.rev l)) in
   Hashtbl.iter (fun name {contents = l1} ->
     let l2 = try !(Hashtbl.find temp_versions name) with Not_found -> [] in
     let vl = order (l1@l2) in
     let (_,m) =
-      List.fold_left (fun (i,t) k ->
-        (i+1,Trie.add k i t)
-      ) (initialid,Trie.empty) vl
+      List.fold_left (fun (i,acc) k ->
+        (i+1,(i,k)::acc)
+      ) (initialid,[]) vl
     in
     (*
     Util.print_info "package %s : %s" name 
-    (Trie.fold (fun k v acc -> Printf.sprintf "%s (%s = %d)" acc k v) m ""); 
+    (List.fold_left (fun acc (i,k) -> Printf.sprintf "%s (%s = %d)" acc k i) "" m); 
     *)
     Hashtbl.add tables.units name m ;
   ) temp_units;
@@ -134,39 +134,20 @@ let init_tables pkglist =
 ;;
 
 (* ATT: we use version 1 for a version of a non existent package - 
-   neither as a real package or a provide 
-   strict : match only version with EVR tuples *)
-let get_versions tables (package,prefix) =
-  if Hashtbl.mem tables.units package then begin
-    let all =
-      try Hashtbl.find tables.units package
-      with Not_found -> assert false
-    in
-    try
-      let t = Trie.restrict prefix all in
-      Trie.fold (fun k v acc -> 
-        match Version.parse_version k with
-        |Some(_,_,Some _) -> v::acc
-        |Some(_,_,None) -> acc
-        |None -> assert false
-      ) t [] 
-    with Not_found -> (
-      Util.print_warning "prefix %s does not match any version for unit %s" prefix package;
-      assert false )
-  end else (
-    (* Util.print_warning "unit %s is not mentioned as a provide or real package" package; *)
-    [1]
-  )
+   neither as a real package or a provide *)
+let get_versions tables (n,prefix) =
+  try
+    match
+      List.filter_map (fun (i,k) ->
+        if ExtString.String.starts_with k prefix then Some i else None
+      ) (Hashtbl.find tables.units n)
+    with
+    |[] -> (Printf.eprintf "(%s,%s) does not match any version\n" n prefix ; exit 1)
+    |l -> l
+  with Not_found ->
+    (Printf.eprintf "No such unit matching (%s,%s)\n" n prefix ; [1])
 
-let get_version tables (package,version) =
-  if Hashtbl.mem tables.units package then begin
-    let m = Hashtbl.find tables.units package in
-    try Trie.find version m
-    with Not_found -> assert false
-  end else (
-    (* Util.print_warning "unit %s is not mentioned as a provide or real package" package; *)
-    1
-  )
+let get_version tables (n,v) = List.hd (get_versions tables (n,v))
 
 (* ========================================= *)
 
@@ -177,13 +158,10 @@ let foldl1 f = function
 let max = foldl1 (fun x y -> if x > y then x else y) ;;
 let min = foldl1 (fun x y -> if x < y then x else y) ;;
 
-let expand tables (package,version) (name,v) =
-  List.filter_map (fun x ->
-      (* we filter out package that expand to itselves *)
-      (* XXX *)
-      if (package,version) = (name,v) then None
-      else Some(CudfAdd.encode name,Some(`Eq,x))
-  ) (get_versions tables (name,v))
+let expand tables (name,v) =
+  List.map
+  (fun x -> CudfAdd.encode name,Some(`Eq,x))
+  (get_versions tables (name,v))
 
 let loadl tables l =
   List.unique (
@@ -191,15 +169,17 @@ let loadl tables l =
       List.map (fun (name,sel) ->
         match CudfAdd.cudfop sel with
         |None -> [(CudfAdd.encode name, None)]
-        |Some(`Eq,v) -> expand tables ("","") (name,v)
+        |Some(`Eq,v) -> 
+            List.map
+            (fun x -> CudfAdd.encode name,Some(`Eq,x))
+            (get_versions tables (name,v))
         |Some((`Gt|`Geq) as op,v) ->
-            begin match get_versions tables (name,v) with
-            |[] -> []
-            |l -> [(CudfAdd.encode name, Some(op,min l))] end
+            let l = get_versions tables (name,v) in
+            [(CudfAdd.encode name, Some(op,max l))]
         |Some((`Lt|`Leq) as op,v) ->
-            begin match get_versions tables (name,v) with
-            |[] -> []
-            |l -> [(CudfAdd.encode name, Some(op,max l))] end
+            let l = get_versions tables (name,v) in
+            [(CudfAdd.encode name, Some(op,min l))]
+        |_ -> assert false
       ) l
     )
   )
@@ -211,10 +191,10 @@ let loadlp tables (package,version) l =
         match CudfAdd.cudfop sel with
         |None  -> [(CudfAdd.encode name, None)]
         (* we normalize everything to equality *)
-        |Some(`Eq,v) -> expand tables (package,version) (name,v)
+        |Some(`Eq,v) -> expand tables (name,v)
         |Some(_,v) -> (
             Util.print_warning "selector in provides for package %s" package;
-            expand tables (package,version) (name,v)
+            expand tables (name,v)
         )
       ) l
     )
@@ -228,21 +208,26 @@ let loadp_files tables (name,version) =
 
 let loadll tables ll = List.map (loadl tables) ll
 
+let filter_provide (n,v) =
+  List.filter (fun (nm,c) -> nm <> n && c <> Some(`Eq,v))
+
 (* ========================================= *)
 
 let tocudf tables ?(inst=false) pkg =
   let (n,v) = (pkg.name,pkg.version) in
   let fileconflicts = Hashtbl.find_all tables.fileconflicts (n,v) in 
+  let name = CudfAdd.encode pkg.name in
+  let version = get_version tables (n,v) in
   { Cudf.default_package with
-    Cudf.package = CudfAdd.encode pkg.name ;
-    Cudf.version = get_version tables (n,v) ;
+    Cudf.package = name ;
+    Cudf.version = version ;
     Cudf.depends = loadll tables pkg.depends ;
     Cudf.conflicts = List.unique (
-      (loadl tables pkg.conflicts) @
-      (loadl tables fileconflicts)
+      (loadl tables pkg.conflicts) (* @
+      (loadl tables fileconflicts) *)
     );
     Cudf.provides = List.unique (
-      (loadlp tables (n,v) pkg.provides) @
+      ((*filter_provide (name,version) *)(loadlp tables (n,v) pkg.provides)) @
       (loadp_files tables (n,v)) 
     );
     Cudf.installed = inst 

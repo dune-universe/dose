@@ -32,15 +32,15 @@ let dump_raw ppf s par =
   (List.map (fun (k,v) -> Printf.sprintf "%s: %s" k v ) (List.rev par))
   )
 
-let flags_to_string flag = 
-  match (int_of_string flag) mod 16 with
-  |2 -> "<"
-  |4 -> ">"
-  |8 -> "="
+let decode_flags f =
+  match (int_of_string f) land 15 with
+  | 0 -> "ALL"
+  | 2 -> "<"
   |10 -> "<="
+  | 8 -> "="
   |12 -> ">="
-  |0 -> "ALL"
-  |_ -> assert false
+  | 4 -> ">"
+  | _ -> (Printf.eprintf "Wrong flag %d" ((int_of_string f) land 15) ; exit 1)
 
 (***************)
 
@@ -75,10 +75,9 @@ let list_deps p par =
       begin 
         let constr =
           if i < (Array.length version_a) then 
-            let c = flags_to_string flags_a.(i) in
+            let c = decode_flags flags_a.(i) in
             let v = version_a.(i) in
-            if c <> "ALL" && v <> "" then Some(c,v)
-            else None
+            Some(c,v)
           else None
         in
         let vpkg = (name_a.(i),constr) in

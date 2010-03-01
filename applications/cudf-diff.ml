@@ -16,18 +16,14 @@ open Common
 open CudfAdd
 
 type status = 
-  |Upgraded of Cudf.package (* there exists a newer version in the solution *)
-  |Downgraded of Cudf.package (* there exists an older version in the solution *)
   |Installed (* this package was not installed before *)
   |Removed (* this package is not installed anymore *)
-  |Unchanged (* this package was installed before and it is now *)
+  |Unchanged (* this package did not change its status *)
 
-type cmp_t = Up | Down | Inst | Rem | Un
+type cmp_t = Inst | Rem | Un
 
 type solution = {
   mutable removed : int ;
-  mutable downgraded : int;
-  mutable upgraded : int;
   mutable newinst : int;
   mutable unchanged : int;
 }
@@ -45,15 +41,13 @@ module Options = struct
     let error _ s = Printf.sprintf "%s format not supported" s in
     Opt.value_option metavar default corce error
 
-  let order_option ?default ?(metavar = "<Un:Up:Down:Inst:Rem>") () =
+  let order_option ?default ?(metavar = "<Un:Inst:Rem>") () =
     let corce s =
       let sl = Str.split (Str.regexp ":") s in
       if sl = [] then raise Format
       else
         List.map (function
-          |"Up" -> Up
           |"Un" -> Un
-          |"Down" -> Down
           |"Inst" -> Inst
           |"Rem" -> Rem
           | _ -> raise Format
@@ -64,7 +58,7 @@ module Options = struct
 
   let debug = StdOpt.store_true ()
   let output = out_option ~default:"txt" ()
-  let order = order_option ~default:[Un;Up;Down;Inst;Rem] ()
+  let order = order_option ~default:[Un;Inst;Rem] ()
 
   let description = "Compare two or more solutions. Format : solvername:solutionfile"
   let options = OptParser.make ~description:description ()
@@ -78,44 +72,37 @@ end
 let compare_lex l s1 s2 =
   List.fold_left (fun acc -> function
     |Un -> s1.unchanged - s2.unchanged
-    |Up -> s1.upgraded - s2.upgraded
     |Inst -> s1.newinst - s2.newinst
-    |Down -> s1.downgraded - s2.downgraded
     |Rem -> s1.removed - s2.removed
   ) 0 l
 
 let dummy_solution () = {
   removed = 0 ;
-  downgraded = 0;
-  upgraded = 0;
   newinst = 0;
   unchanged = 0;
 }
 
 let status_to_string pkg = function
-  |Upgraded p -> Printf.sprintf "Upgraded from %d to %d" pkg.version p.version
-  |Downgraded p -> Printf.sprintf "Downgraded from %d to %d" pkg.version p.version
   |Installed -> "New"
   |Removed -> "Removed"
   |Unchanged -> "Unchanged"
 
 let solution_to_string s =
   Printf.sprintf
-  "removed = %d\nupgraded = %d\ndowngraded = %d\nnew = %d\nunchanged = %d\n"
-  s.removed s.upgraded s.downgraded s.newinst s.unchanged
+  "removed = %d\nnew = %d\nunchanged = %d\n"
+  s.removed s.newinst s.unchanged
 ;;
 
 let solution_to_html s =
   Printf.sprintf
-  "<p>removed = %d<br>upgraded = %d<br>downgraded = %d<br>new = %d<br>unchanged = %d</p>"
-  s.removed s.upgraded s.downgraded s.newinst s.unchanged
+  "<p>removed = %d<br>new = %d<br>unchanged = %d</p>"
+  s.removed s.newinst s.unchanged
 ;;
 
 let status_equal = function
   |(Removed,Removed)
   |(Installed,Installed)
   |(Unchanged,Unchanged) -> true
-  |((Upgraded p1,Upgraded p2)|(Downgraded p1,Downgraded p2)) when CudfAdd.equal p1 p2 -> true
   |_,_ -> false
 
 let all_equal = function
@@ -136,43 +123,17 @@ let diff univ sol =
   in
 
   Cudf.iter_packages (fun pkg ->
-    if pkg.installed then
-      let l = Cudf.get_installed sol pkg.package in
-      if Cudf.mem_installed sol (pkg.package, Some(`Eq, pkg.version)) then
-        begin
-          s.unchanged<-s.unchanged+1 ;
-          add h pkg Unchanged
-        end
-      else if Cudf.mem_installed sol (pkg.package, Some(`Gt, pkg.version)) then
-        begin
-          s.upgraded<-s.upgraded+1 ;
-          add h pkg (Upgraded (newest l))
-        end
-      else if Cudf.mem_installed sol (pkg.package, Some(`Lt, pkg.version)) then
-        begin
-          s.downgraded<-s.downgraded+1 ;
-          add h pkg (Downgraded (newest l))
-        end
-      else
-        begin
-          s.removed<-s.removed+1 ;
-          add h pkg Removed
-        end
-    else
-      if Cudf.mem_installed sol (pkg.package, Some(`Eq, pkg.version)) then
-        begin
-          s.newinst<-s.newinst+1 ;
-          add h pkg Installed
-        end
-      else
-        begin
-          s.unchanged<-s.unchanged+1 ;
-          add h pkg Unchanged
-        end
+    let was_installed = pkg.installed in
+    let is_installed = Cudf.mem_installed sol (pkg.package, Some(`Eq, pkg.version)) in
+    match was_installed,is_installed with
+    |(true,true)
+    |(false,false) -> (s.unchanged <- s.unchanged + 1 ;add h pkg Unchanged)
+    |(true,false) -> (s.removed <- s.removed + 1 ; add h pkg Removed)
+    |(false,true) -> (s.newinst <- s.newinst + 1 ; add h pkg Installed)
   ) univ
   ;
   assert (Cudf_hashtbl.length h = Cudf.universe_size univ);
-  assert (s.unchanged + s.removed + s.newinst + s.downgraded + s.upgraded = Cudf_hashtbl.length h);
+  assert (s.unchanged + s.removed + s.newinst = Cudf_hashtbl.length h);
   (h,s)
 ;;
 
@@ -267,17 +228,17 @@ let main () =
       match OptParse.Opt.get Options.output with
       |"txt" ->
           begin
+            print_diff_txt univ sol_tables ;
             List.iter (fun (_,(f,(_,s))) ->
               Printf.printf "%s\n%s\n" f (solution_to_string s)
             ) sol_tables;
-            print_diff_txt univ sol_tables 
           end
       |"html" ->
           begin
+            print_diff_html univ sol_tables ;
             List.iter (fun (_,(f,(_,s))) ->
               Printf.printf "<p>%s</p>\n%s" f (solution_to_html s)
             ) sol_tables;
-            print_diff_html univ sol_tables
           end
       |_ -> assert false 
 ;;

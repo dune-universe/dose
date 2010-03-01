@@ -48,8 +48,7 @@ let version_re_2 =
 let check_version s = s <> "" && not (is_alnum s.[String.length s - 1])
 
 let parse_version s =
-  if s = "" then
-    None
+  if s = "" then assert false
   else if not (Str.string_match version_re_1 s 0 ||
                Str.string_match version_re_2 s 0) then
     failwith ("Bad version " ^ s)
@@ -58,8 +57,7 @@ let parse_version s =
       try
         let s = Str.matched_group 2 s in
         Some (if s = "" then 0 else int_of_string s)
-      with Not_found ->
-        None
+      with Not_found -> None
     in
     let version = Str.matched_group 3 s in
     let release = try Some (Str.matched_group 4 s) with Not_found -> None in
@@ -71,32 +69,40 @@ let parse_version s =
       Format.bprintf b
         "version '%a' not ending with an alphanumeric character@?"
         pr_version (epoch, version, release);
-      (* Util.print_warning (Buffer.contents b) *)
     end;
-    Some (epoch, version, release)
+    (*
+    Printf.eprintf "%s == %d :: %s :: %s\n"
+    s
+    (if Option.is_none epoch then 0 else Option.get epoch)
+    version
+    (if Option.is_none release then "" else Option.get release) ;
+    *)
+    (epoch, version, release)
   end
 
 (********************************************)
 
-(** default compare EVRcmp *)
+let epochcmp e1 e2 =
+  match (e1,e2) with
+  |(None,None)|(None,Some 0)|(Some 0,None) -> 0
+  |(None,Some _) -> -1
+  |(Some _,None) -> 1
+  |(Some x,Some y) -> Pervasives.compare x y
+;;
+
+let relcmp r1 r2 = 
+  match (r1,r2) with
+  |(None,None) -> 0
+  |(None,Some _) -> -1
+  |(Some _,None) -> 1
+  |(Some x,Some y) -> rpmvercmp x y
+;;
+
+(* default compare EVRcmp *)
+(* compare two versions of the form epoch:version-release *)
 let compare s1 s2 =
-  let epochcmp e1 e2 =
-    match (e1,e2) with
-    |(None,None)|(None,Some 0)|(Some 0,None) -> 0
-    |(None,Some _) -> -1
-    |(Some _,None) -> 1
-    |(Some x,Some y) -> Pervasives.compare x y
-  in
-  let relcmp r1 r2 = 
-    match (r1,r2) with
-    |(None,None)|(None,Some _)|(Some _,None) -> 0
-    |(Some x,Some y) -> rpmvercmp x y
-  in
-  let parse s =
-    if s <> "" then Option.get (parse_version s) else assert false
-  in
-  let (e1,v1,r1) = parse s1 in
-  let (e2,v2,r2) = parse s2 in
+  let (e1,v1,r1) = parse_version s1 in
+  let (e2,v2,r2) = parse_version s2 in
   match epochcmp e1 e2 with
   |0 ->
       begin match rpmvercmp v1 v2 with
@@ -104,4 +110,4 @@ let compare s1 s2 =
       |r -> r
       end
   |r -> r
-
+;;
