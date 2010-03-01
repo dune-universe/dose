@@ -188,9 +188,10 @@ module PackageGraph = struct
   end
 
   module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
+  module UG = Imperative.Graph.Concrete(PkgV)
   module O = GraphOper(G)
 
-  module Display =
+  module DisplayF (G : Sig.I) =
     struct
       include G
       let vertex_name v = Printf.sprintf "\"%s\"" (print_package v)
@@ -205,8 +206,9 @@ module PackageGraph = struct
 
       let edge_attributes e = []
     end
+  module Display = DisplayF(G)
   
-  (** Build the dependency graph from the give cudf universe *)
+  (** Build the dependency graph from the given cudf universe *)
   let dependency_graph universe =
     let maps = CudfAdd.build_maps universe in
     let gr = G.create () in
@@ -222,6 +224,48 @@ module PackageGraph = struct
     ) universe
     ;
     gr
+
+  (** Build the conflict graph from the given cudf universe *)
+  let conflict_graph universe =
+    let maps = CudfAdd.build_maps universe in
+    let gr = UG.create () in
+    Cudf.iter_packages (fun pkg ->
+      List.iter (fun (pkgname,constr) ->
+        List.iter (UG.add_edge gr pkg)
+        (maps.CudfAdd.who_provides (pkgname,constr))
+      ) pkg.Cudf.conflicts
+    ) universe
+    ;
+    gr
+
+  let undirect graph =
+    let gr = UG.create () in
+    G.iter_edges (UG.add_edge gr) graph;
+    G.iter_vertex (UG.add_vertex gr) graph;
+    gr
+
+  (** List of connected components of the given graph *)
+  let connected_components graph =
+    let module Dfs = Traverse.Dfs(UG) in
+    let h = Hashtbl.create (UG.nb_vertex graph) in
+    let l = ref [] in
+    let cc graph vp =
+      let g = UG.create () in
+      let collect vc = List.iter (UG.add_edge g vp) (UG.succ graph vc) in
+      Dfs.prefix_component collect graph vp;
+      g
+    in
+    UG.iter_vertex (fun v ->
+      if not(Hashtbl.mem h v) then begin
+        Hashtbl.add h v ();
+        let c = cc graph v in
+        if not (UG.is_empty c) then begin
+          UG.iter_vertex (fun x -> Hashtbl.add h x ()) c ;
+          l := c :: !l
+        end
+      end
+    ) graph ;
+    !l
 
   module D = Graph.Graphviz.Dot(Display)
   module S = Set.Make(PkgV)

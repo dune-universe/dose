@@ -19,7 +19,6 @@ IFDEF HASOCAMLGRAPH THEN
   module DGraph = Defaultgraphs.SyntacticDependencyGraph
 END
 
-
 module Options =
 struct
   open OptParse
