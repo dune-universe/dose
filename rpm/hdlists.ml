@@ -26,12 +26,6 @@ external _close_in : t -> unit = "rpm_close_hdlist"
 external parse_paragraph : t -> ( string * string ) list option = "rpm_parse_paragraph"
 external parse : t -> ( string * string ) list list = "rpm_parse_hdlists"
 
-let dump_raw ppf s par = 
-  Format.fprintf ppf "%s\n%s\n@." s
-  (String.concat "\n" 
-  (List.map (fun (k,v) -> Printf.sprintf "%s: %s" k v ) (List.rev par))
-  )
-
 let decode_flags f =
   match (int_of_string f) land 15 with
   | 0 -> "ALL"
@@ -41,6 +35,19 @@ let decode_flags f =
   |12 -> ">="
   | 4 -> ">"
   | _ -> (Printf.eprintf "Wrong flag %d" ((int_of_string f) land 15) ; exit 1)
+
+let dump_raw ppf s par = 
+  Format.fprintf ppf "%s\n%s\n@." s
+  (String.concat "\n" 
+  (List.map (function
+    |(("requireflags"|"conflictflags"|"provideflags") as k,v)  ->
+        Printf.sprintf "%s: %s" k (
+          String.concat ","
+          (List.map decode_flags (Str.split_delim (Str.regexp ",") v))
+        )
+    |(k,v) -> Printf.sprintf "%s: %s" k v 
+  ) (List.rev par))
+  )
 
 (***************)
 

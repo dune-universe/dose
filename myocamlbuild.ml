@@ -13,6 +13,10 @@
 open Ocamlbuild_plugin
 open Command (* no longer needed for OCaml >= 3.10.2 *)
 
+let version = "0.7"
+let name = "dose3"
+let cwd = "/home/users/abate/Projects/mancoosi-public/trunk/updb/dose3"
+
 let clibs = [("rpm","rpm")]
 
 (* these functions are not really officially exported *)
@@ -74,9 +78,16 @@ let _ = dispatch begin function
        List.iter begin fun (lib,dir) ->
          flag ["ocaml"; "link"; "c_use_"^lib; "byte"] & S[A"-custom"; A"-cclib"; A("-l"^lib)];
          flag ["ocaml"; "link"; "c_use_"^lib; "native"] & S[A"-cclib"; A("-l"^lib); A"-ccopt"; A(env_var "LDFLAGS")];
-         dep ["ocaml"; "link"; "c_use_"^lib] & [dir^"/lib"^lib^"_stubs.a"];
+
+         (* to build in the local directory *)
+         (* dep ["ocaml"; "compile"; "c_use_"^lib ] & ["lib"^lib^"_stubs.a"];
+         dep ["ocaml"; "link"; "c_use_"^lib] & ["lib"^lib^"_stubs.a"];
+         *)
+
+         dep ["ocaml"; "link"; "c_use_"^lib] & [cwd^"/"^dir^"/lib"^lib^"_stubs.a"];
          (* Make sure the C pieces and built... *)
-         dep ["ocaml"; "compile"; "c_use_"^lib ] & [dir^"/lib"^lib^"_stubs.a"];
+         dep ["ocaml"; "compile"; "c_use_"^lib ] & [cwd^"/"^dir^"/lib"^lib^"_stubs.a"];
+
          flag ["c"; "compile"] & S[A"-ccopt"; A(env_var "CPPFLAGS")];
        end clibs ;
 

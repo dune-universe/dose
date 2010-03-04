@@ -112,8 +112,8 @@ let init_tables pkglist =
   let initialid = 2 in
   let order l = List.unique (List.sort ~cmp:Version.compare (List.rev l)) in
   Hashtbl.iter (fun name {contents = l1} ->
-    let l2 = try !(Hashtbl.find temp_versions name) with Not_found -> [] in
-    let vl = order (l1@l2) in
+    (* let l2 = try !(Hashtbl.find temp_versions name) with Not_found -> [] in *)
+    let vl = order l1 in
     let (_,m) =
       List.fold_left (fun (i,acc) k ->
         (i+1,(i,k)::acc)
@@ -133,72 +133,136 @@ let init_tables pkglist =
   tables
 ;;
 
-(* ATT: we use version 1 for a version of a non existent package - 
-   neither as a real package or a provide *)
-let get_versions tables (n,prefix) =
-  try
-    match
-      List.filter_map (fun (i,k) ->
-        if ExtString.String.starts_with k prefix then Some i else None
-      ) (Hashtbl.find tables.units n)
-    with
-    |[] -> (Printf.eprintf "(%s,%s) does not match any version\n" n prefix ; exit 1)
-    |l -> l
-  with Not_found ->
-    (Printf.eprintf "No such unit matching (%s,%s)\n" n prefix ; [1])
+let has_release v =
+  match Version.parse_version v with
+  |(_,_,None) -> false
+  |(_,_,Some(_)) -> true
 
-let get_version tables (n,v) = List.hd (get_versions tables (n,v))
+let get_release v =
+  match Version.parse_version v with
+  |(_,_,Some(r)) -> r
+  |_ -> assert false
 
-(* ========================================= *)
+let get_version v =
+  match Version.parse_version v with
+  |(_,v,_) -> v
+  |_ -> assert false
 
-let foldl1 f = function
-  | [] -> assert false
-  | x::xs -> List.fold_left f x xs
-;;
-let max = foldl1 (fun x y -> if x > y then x else y) ;;
-let min = foldl1 (fun x y -> if x < y then x else y) ;;
+let get_version_id tables (name,v) =
+  try 
+    let l = Hashtbl.find tables.units name in
+    try fst(List.find (fun (i,k) -> k = v) l)
+    with Not_found -> 1
+  with Not_found -> 1
 
-let expand tables (name,v) =
-  List.map
-  (fun x -> CudfAdd.encode name,Some(`Eq,x))
-  (get_versions tables (name,v))
+(* returns a list (i,k) of all k matching prefix *)
+let find_interval prefix vl =
+  fst(List.partition (fun (_,k) -> String.starts_with k prefix) vl)
 
-let loadl tables l =
-  List.unique (
-    List.flatten (
-      List.map (fun (name,sel) ->
-        match CudfAdd.cudfop sel with
-        |None -> [(CudfAdd.encode name, None)]
-        |Some(`Eq,v) -> 
-            List.map
-            (fun x -> CudfAdd.encode name,Some(`Eq,x))
-            (get_versions tables (name,v))
-        |Some((`Gt|`Geq) as op,v) ->
-            let l = get_versions tables (name,v) in
-            [(CudfAdd.encode name, Some(op,max l))]
-        |Some((`Lt|`Leq) as op,v) ->
-            let l = get_versions tables (name,v) in
-            [(CudfAdd.encode name, Some(op,min l))]
-        |_ -> assert false
-      ) l
-    )
+let find_aux f prefix vl =
+  let rec aux acc = function
+    |[] -> raise Not_found
+    |(i,h)::t -> if f acc h then aux h t else i
+  in
+  aux prefix vl
+
+let find_min prefix vl =
+  let f x y = Version.compare x y = -1 in
+  find_aux f prefix vl
+
+let find_max prefix vl =
+  let f x y = Version.compare x y = 1 in
+  find_aux f prefix vl
+
+let build_conflict_constraint tables (name,op,v) =
+  match op with
+  |`Eq ->
+      [(CudfAdd.encode name, Some(`Eq,get_version_id tables (name,v)))]
+  |`Gt |`Geq ->
+      begin try
+        let l = Hashtbl.find tables.units name in
+        begin match find_interval (get_release v) l with
+        |[] -> [(CudfAdd.encode (name^v), None)]
+        |(i,k)::_ when not(has_release k) ->
+            let nm = CudfAdd.encode name in
+            [(nm, Some(`Lt,i));
+             (nm, Some(`Eq, get_version_id tables (name,v)))]
+        |(i,k)::_ ->
+            let nm = CudfAdd.encode name in
+            [(nm, Some(`Eq, get_version_id tables (name,v)))]
+        end 
+      with Not_found -> [(CudfAdd.encode (name^v), None)] end
+  |`Lt |`Leq ->
+        let nm = CudfAdd.encode name in
+        [(nm, Some(op, get_version_id tables (name,v)))]
+  |_ -> assert false
+
+let build_depends_constraint tables (name,op,v) =
+  begin try
+    let l = Hashtbl.find tables.units name in
+    match find_interval v l with
+    |[] ->
+        begin match l with
+        |[] -> [(CudfAdd.encode (name^v), None)]
+        |_ ->
+            begin match op with
+            |`Gt | `Geq -> [(CudfAdd.encode (name), Some(op,find_max v l))]
+            |`Lt | `Leq -> [(CudfAdd.encode (name), Some(op,find_min v l))]
+            |_ -> [(CudfAdd.encode (name), Some(`Eq,1))]
+            end
+        end
+    |l ->
+          let nm = CudfAdd.encode name in
+          List.map (fun (i,_) ->
+            (CudfAdd.encode name, Some(op,i))
+          ) l 
+  with Not_found -> [(CudfAdd.encode (name^v), None)] end
+
+let load_provides tables (nm,vr) l =
+  List.flatten (
+    List.map (fun (name,sel) ->
+      match CudfAdd.cudfop sel with
+      |None  -> [(CudfAdd.encode name, None)]
+      |Some(_,v) ->
+          [(CudfAdd.encode name, Some(`Eq,get_version_id tables (name,v)))]
+    ) l
   )
+;;
 
-let loadlp tables (package,version) l =
-  List.unique (
+let load_conflicts tables l =
+  List.flatten (
+    List.map (fun (name,sel) ->
+      match CudfAdd.cudfop sel with
+      |None  -> [(CudfAdd.encode name, None)]
+      |Some(op,v) ->
+          if has_release v then
+            build_conflict_constraint tables (name,op,v)
+          else
+            [(CudfAdd.encode name, Some(op,get_version_id tables (name,v)))]
+    ) l
+  )
+;;
+
+let load_depends tables ll =
+  List.map (fun l ->
     List.flatten (
       List.map (fun (name,sel) ->
         match CudfAdd.cudfop sel with
         |None  -> [(CudfAdd.encode name, None)]
-        (* we normalize everything to equality *)
-        |Some(`Eq,v) -> expand tables (name,v)
-        |Some(_,v) -> (
-            Util.print_warning "selector in provides for package %s" package;
-            expand tables (name,v)
-        )
+        |Some(`Eq,v) ->
+            let nm = CudfAdd.encode name in
+            if has_release v then
+              let ver = get_version v in
+              [(nm, Some(`Eq,get_version_id tables (name,v)));
+               (nm, Some(`Eq,get_version_id tables (name,ver)))]
+            else
+              build_depends_constraint tables (name,`Eq,v)
+        |Some(op,v) ->
+              build_depends_constraint tables (name,op,v)
       ) l
     )
-  )
+  ) ll
+;;
 
 let loadp_files tables (name,version) =
   List.unique (
@@ -206,28 +270,23 @@ let loadp_files tables (name,version) =
     ) (Hashtbl.find_all tables.files (name,version))
   )
 
-let loadll tables ll = List.map (loadl tables) ll
-
-let filter_provide (n,v) =
-  List.filter (fun (nm,c) -> nm <> n && c <> Some(`Eq,v))
-
 (* ========================================= *)
 
 let tocudf tables ?(inst=false) pkg =
   let (n,v) = (pkg.name,pkg.version) in
   let fileconflicts = Hashtbl.find_all tables.fileconflicts (n,v) in 
   let name = CudfAdd.encode pkg.name in
-  let version = get_version tables (n,v) in
+  let version = get_version_id tables (n,v) in
   { Cudf.default_package with
     Cudf.package = name ;
     Cudf.version = version ;
-    Cudf.depends = loadll tables pkg.depends ;
+    Cudf.depends = load_depends tables pkg.depends ;
     Cudf.conflicts = List.unique (
-      (loadl tables pkg.conflicts) (* @
+      (load_conflicts tables pkg.conflicts) (* @
       (loadl tables fileconflicts) *)
     );
     Cudf.provides = List.unique (
-      ((*filter_provide (name,version) *)(loadlp tables (n,v) pkg.provides)) @
+      (load_provides tables (n,v) pkg.provides) @
       (loadp_files tables (n,v)) 
     );
     Cudf.installed = inst 
