@@ -97,8 +97,7 @@ let list_deps p par =
 ;;
 
 let is_directory (mode: string) =
-  try
-    (int_of_string mode) land 0o40000 == 0o40000
+  try (int_of_string mode) land 0o40000 == 0o40000
   with Failure _ -> false
 ;;
 
@@ -112,7 +111,7 @@ let fileprovide par =
     for i = 0 to (Array.length dirindexes_a) - 1 do
       let j = int_of_string dirindexes_a.(i) in
       let elem = Printf.sprintf "%s%s" dirnames_a.(j) basenames_a.(i) in
-        acc := ((elem,None),is_directory filemodes_a.(i)) :: !acc
+      acc := ((elem,None),is_directory filemodes_a.(i)) :: !acc
     done
   with Invalid_argument _ -> dump_raw Format.err_formatter "Warning: ignoring malformed package (fileprovide)" par end
   ;

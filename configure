@@ -595,7 +595,6 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
-CWD
 PKG_XML
 CONFIG_OCAMLGRAPH
 PKG_OCAMLGRAPH
@@ -5593,10 +5592,7 @@ fi
 
 
 
-CWD=`pwd`
-
-
-ac_config_files="$ac_config_files Makefile.config myocamlbuild.ml db/db.mlpack db/_tags algo/_tags rpm/_tags deb/_tags algo/algo.mlpack common/_tags applications/_tags applications/boilerplates/_tags _tags"
+ac_config_files="$ac_config_files Makefile.config db/db.mlpack db/_tags algo/_tags rpm/_tags deb/_tags algo/algo.mlpack common/_tags applications/_tags applications/boilerplates/_tags _tags"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6297,7 +6293,6 @@ for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
     "Makefile.config") CONFIG_FILES="$CONFIG_FILES Makefile.config" ;;
-    "myocamlbuild.ml") CONFIG_FILES="$CONFIG_FILES myocamlbuild.ml" ;;
     "db/db.mlpack") CONFIG_FILES="$CONFIG_FILES db/db.mlpack" ;;
     "db/_tags") CONFIG_FILES="$CONFIG_FILES db/_tags" ;;
     "algo/_tags") CONFIG_FILES="$CONFIG_FILES algo/_tags" ;;

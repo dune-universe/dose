@@ -40,8 +40,6 @@ let init_tables pkglist =
 
   (* temp_units is the list of all versions in provides or packages *)
   let temp_units = Hashtbl.create (List.length pkglist) in
-  (* temp_versions is the list of all version in requires and conflicts *)
-  let temp_versions = Hashtbl.create (List.length pkglist) in
   (* all avalaible files *)
   let temp_files = Hashtbl.create (10 * (List.length pkglist)) in
 
@@ -54,7 +52,6 @@ let init_tables pkglist =
   in
 
   let add_units name version = add_list temp_units name version in
-  let add_versions name version = add_list temp_versions name version in
 
   let add_files filename =
     List.iter (fun u -> 
@@ -65,21 +62,20 @@ let init_tables pkglist =
   List.iter (fun pkg ->
     add_units pkg.name pkg.version ;
 
-    List.iter (fun ((file,_),is_dir) ->
-      if not is_dir then
-        Hashtbl.add temp_files file (pkg.name,pkg.version)
-    ) pkg.Packages.files ;
-
     List.iter (fun (name,sel) ->
       match sel with
       |None -> add_units name ""
       |Some(c,v) -> add_units name v
     ) pkg.provides
+    ;
+    List.iter (fun ((file,_),_) ->
+        Hashtbl.add temp_files file (pkg.name,pkg.version)
+    ) pkg.Packages.files
+    ;
   ) pkglist
   ;
 
   List.iter (fun pkg ->
-
     List.iter (fun ((file,_),_) ->
       List.iter (fun (n,v) ->
         if n <> pkg.Packages.name && v <> pkg.Packages.version then
@@ -91,28 +87,15 @@ let init_tables pkglist =
       ) (Hashtbl.find_all temp_files file)
     ) pkg.Packages.files ;
 
-    List.iter (fun (name,sel) ->
-      add_files name;
-      match sel with
-      |None -> ()
-      |Some(c,v) -> add_versions name v
-    ) pkg.conflicts
-    ;
-    List.iter (fun disjunction ->
-      List.iter (fun (name,sel) ->
-        add_files name;
-        match sel with
-        |None -> ()
-        |Some(c,v) -> add_versions name v
-      ) disjunction
-    ) pkg.depends
+    List.iter (fun (name,sel) -> add_files name) pkg.conflicts ;
+    List.iter (List.iter (fun (name,sel) -> add_files name)) pkg.depends 
   ) pkglist
   ;
+
 
   let initialid = 2 in
   let order l = List.unique (List.sort ~cmp:Version.compare (List.rev l)) in
   Hashtbl.iter (fun name {contents = l1} ->
-    (* let l2 = try !(Hashtbl.find temp_versions name) with Not_found -> [] in *)
     let vl = order l1 in
     let (_,m) =
       List.fold_left (fun (i,acc) k ->
@@ -128,7 +111,6 @@ let init_tables pkglist =
 
   Hashtbl.clear temp_units;
   Hashtbl.clear temp_files;
-  Hashtbl.clear temp_versions;
 
   tables
 ;;
@@ -144,9 +126,7 @@ let get_release v =
   |_ -> assert false
 
 let get_version v =
-  match Version.parse_version v with
-  |(_,v,_) -> v
-  |_ -> assert false
+  let (_,v,_) = Version.parse_version v in v
 
 let get_version_id tables (name,v) =
   try 
@@ -154,6 +134,11 @@ let get_version_id tables (name,v) =
     try fst(List.find (fun (i,k) -> k = v) l)
     with Not_found -> 1
   with Not_found -> 1
+
+let build_constraint tables (name,op,v) =
+  match get_version_id tables (name,v) with
+  |1 -> (CudfAdd.encode (name^v),None)
+  |i -> (CudfAdd.encode name,Some(op,i))
 
 (* returns a list (i,k) of all k matching prefix *)
 let find_interval prefix vl =
@@ -166,35 +151,43 @@ let find_aux f prefix vl =
   in
   aux prefix vl
 
-let find_min prefix vl =
+let find_min (name,op,prefix) vl =
   let f x y = Version.compare x y = -1 in
-  find_aux f prefix vl
+  match find_aux f prefix vl with
+  |1 -> (CudfAdd.encode (name^prefix), None)
+  |i -> (CudfAdd.encode (name), Some(op,i))
 
-let find_max prefix vl =
+let find_max (name,op,prefix) vl =
   let f x y = Version.compare x y = 1 in
-  find_aux f prefix vl
+  match find_aux f prefix vl with
+  |1 -> (CudfAdd.encode (name^prefix), None)
+  |i -> (CudfAdd.encode (name), Some(op,i))
 
 let build_conflict_constraint tables (name,op,v) =
   match op with
-  |`Eq ->
-      [(CudfAdd.encode name, Some(`Eq,get_version_id tables (name,v)))]
+  |`Eq -> [build_constraint tables (name,op,v)]
   |`Gt |`Geq ->
       begin try
         let l = Hashtbl.find tables.units name in
         begin match find_interval (get_release v) l with
-        |[] -> [(CudfAdd.encode (name^v), None)]
+        |[] -> [build_constraint tables (name,op,v)]
         |(i,k)::_ when not(has_release k) ->
-            let nm = CudfAdd.encode name in
-            [(nm, Some(`Lt,i));
-             (nm, Some(`Eq, get_version_id tables (name,v)))]
-        |(i,k)::_ ->
-            let nm = CudfAdd.encode name in
-            [(nm, Some(`Eq, get_version_id tables (name,v)))]
+            [(CudfAdd.encode name, Some(`Lt,i));
+             build_constraint tables (name,`Eq,v)]
+        |(i,k)::_ -> [build_constraint tables (name,op,v)]
         end 
-      with Not_found -> [(CudfAdd.encode (name^v), None)] end
+      with Not_found -> [build_constraint tables (name,op,v)] end
   |`Lt |`Leq ->
-        let nm = CudfAdd.encode name in
-        [(nm, Some(op, get_version_id tables (name,v)))]
+      begin try
+        let l = Hashtbl.find tables.units name in
+        begin match find_interval (get_release v) l with
+        |[] -> [build_constraint tables (name,op,v)]
+        |(i,k)::_ when not(has_release k) ->
+            [(CudfAdd.encode name, Some(`Gt,i));
+             build_constraint tables (name,`Eq,v)]
+        |(i,k)::_ -> [build_constraint tables (name,`Eq,v)]
+        end 
+      with Not_found -> [build_constraint tables (name,op,v)] end
   |_ -> assert false
 
 let build_depends_constraint tables (name,op,v) =
@@ -203,28 +196,25 @@ let build_depends_constraint tables (name,op,v) =
     match find_interval v l with
     |[] ->
         begin match l with
-        |[] -> [(CudfAdd.encode (name^v), None)]
+        |[] -> [(CudfAdd.encode (name), None)]
         |_ ->
             begin match op with
-            |`Gt | `Geq -> [(CudfAdd.encode (name), Some(op,find_max v l))]
-            |`Lt | `Leq -> [(CudfAdd.encode (name), Some(op,find_min v l))]
-            |_ -> [(CudfAdd.encode (name), Some(`Eq,1))]
+            |`Gt | `Geq -> [find_max (name,`Geq,v) l]
+            |`Lt | `Leq -> [find_min (name,`Leq,v) l]
+            |_ -> [build_constraint tables (name,`Eq,v)]
             end
         end
-    |l ->
-          let nm = CudfAdd.encode name in
-          List.map (fun (i,_) ->
-            (CudfAdd.encode name, Some(op,i))
-          ) l 
-  with Not_found -> [(CudfAdd.encode (name^v), None)] end
+    |l -> let nm = CudfAdd.encode name in
+          List.map (fun (i,_) -> (nm, Some(op,i))) l 
+  with Not_found -> [build_constraint tables (name,`Eq,v)] end
 
 let load_provides tables (nm,vr) l =
   List.flatten (
     List.map (fun (name,sel) ->
       match CudfAdd.cudfop sel with
       |None  -> [(CudfAdd.encode name, None)]
-      |Some(_,v) ->
-          [(CudfAdd.encode name, Some(`Eq,get_version_id tables (name,v)))]
+      |Some(_,v) -> [build_constraint tables (name,`Eq,v)]
+      (* XXX eliminate self provides *)
     ) l
   )
 ;;
@@ -238,7 +228,7 @@ let load_conflicts tables l =
           if has_release v then
             build_conflict_constraint tables (name,op,v)
           else
-            [(CudfAdd.encode name, Some(op,get_version_id tables (name,v)))]
+            [build_constraint tables (name,op,v)]
     ) l
   )
 ;;
@@ -249,15 +239,24 @@ let load_depends tables ll =
       List.map (fun (name,sel) ->
         match CudfAdd.cudfop sel with
         |None  -> [(CudfAdd.encode name, None)]
-        |Some(`Eq,v) ->
-            let nm = CudfAdd.encode name in
+(*        |Some(`Eq,v) ->
             if has_release v then
               let ver = get_version v in
-              [(nm, Some(`Eq,get_version_id tables (name,v)));
-               (nm, Some(`Eq,get_version_id tables (name,ver)))]
+              (build_depends_constraint tables (name,op,v)) @
+              (build_depends_constraint tables (name,op,ver))
+(*
+              [build_constraint tables (name,`Eq,v);
+              build_constraint tables (name,`Eq,ver)]
+*)
             else
               build_depends_constraint tables (name,`Eq,v)
+      *)
         |Some(op,v) ->
+            if has_release v then
+              let ver = get_version v in
+              (build_depends_constraint tables (name,op,v)) @
+              (build_depends_constraint tables (name,op,ver))
+            else
               build_depends_constraint tables (name,op,v)
       ) l
     )
