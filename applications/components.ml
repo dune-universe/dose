@@ -58,7 +58,7 @@ let main () =
     ) g;
     let outch = output_ch (!(snd(!maxv))).package in
     PGraph.D.output_graph outch g;
-    if OptParse.Opt.is_set Options.out  then close_out outch
+    if not(OptParse.Opt.is_set Options.out) then close_out outch
     else Printf.printf "\n\n"
   ) (PGraph.connected_components (PGraph.undirect dg))
 ;;

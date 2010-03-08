@@ -13,6 +13,7 @@
 (** Internal data package data format. Packages dependencies and conflicts are
     all expanded and explicit *)
 
+open ExtLib
 open CudfAdd
 
 type package = {
@@ -49,7 +50,12 @@ let __load maps universe =
       List.map (fun disjunction ->
         List.fold_left (fun (l1,l2,l3) vpkg ->
           let dl = maps.who_provides vpkg in
-          let el = Array.of_list (List.map to_sat dl) in
+          let el = Array.of_list (
+            List.filter_map(fun p ->
+              (* remove self provides *)
+              let i = to_sat p in if i <> id then Some i else None
+            ) dl ) 
+          in
           (vpkg::l1,Array.append el l2, dl @ l3)
         ) ([],[||],[]) disjunction
       ) pkg.Cudf.depends
