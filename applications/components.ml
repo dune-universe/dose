@@ -21,14 +21,14 @@ struct
   open OptParse
 
   let debug = StdOpt.store_true ()
-  let out = StdOpt.store_true ()
+  let quite = StdOpt.store_true ()
 
   let description = "Create one dot file for connected component of the dependecy graph"
   let options = OptParser.make ~description:description ()
 
   open OptParser
   add options                 ~long_name:"debug" ~help:"Print debug information" debug;
-  add options ~short_name:'o' ~long_name:"out" ~help:"Do not print the result on std out" out;
+  add options ~short_name:'q' ~long_name:"quite" ~help:"Do not print additional info" quite;
 end;;
 
 let main () =
@@ -38,12 +38,7 @@ let main () =
   let (universe,from_cudf,to_cudf) = Boilerplate.load_universe posargs in
   let dg = (PGraph.dependency_graph universe) in
 
-  let output_ch p =
-    if OptParse.Opt.get Options.out then begin
-      open_out (Printf.sprintf "%s.dot" p)
-    end
-    else stdout
-  in
+  let output_ch p = open_out (Printf.sprintf "%s.dot" p) in
 
   List.iter (fun cc ->
     let l = ref [] in
@@ -56,10 +51,14 @@ let main () =
       if d > fst(!maxv) then
         maxv := (d, ref v)
     ) g;
+    if OptParse.Opt.get Options.quite then
+      Printf.printf "package:%s\nnumber of nodes:%d\nmax inbound:%d\n\n" 
+      (!(snd(!maxv))).package
+      (PGraph.G.nb_vertex g)
+      (fst(!maxv));
     let outch = output_ch (!(snd(!maxv))).package in
     PGraph.D.output_graph outch g;
-    if not(OptParse.Opt.is_set Options.out) then close_out outch
-    else Printf.printf "\n\n"
+    close_out outch
   ) (PGraph.connected_components (PGraph.undirect dg))
 ;;
 
