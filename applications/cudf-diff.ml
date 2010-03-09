@@ -15,9 +15,10 @@ open ExtLib
 open Common
 open CudfAdd
 
+type others = (Cudf.package list * Cudf.package list)
 type status = 
-  |Installed (* this package was not installed before *)
-  |Removed (* this package is not installed anymore *)
+  |Installed of others (* this package was not installed before *)
+  |Removed of others (* this package is not installed anymore *)
   |Unchanged (* this package did not change its status *)
 
 type cmp_t = Inst | Rem | Un
@@ -83,8 +84,15 @@ let dummy_solution () = {
 }
 
 let status_to_string pkg = function
-  |Installed -> "New"
-  |Removed -> "Removed"
+  |Installed ([],[]) -> "New"
+  |Installed ([p],[]) -> Printf.sprintf "(New) Downgrades from %d to %d" p.version pkg.version
+  |Installed ([],[p]) -> Printf.sprintf "(New) Upgrades from %d to %d" p.version pkg.version
+  |Installed (_,_) -> "New and other installed"
+
+  |Removed ([],[]) -> "Removed"
+  |Removed ([p],[]) -> Printf.sprintf "(Rem) Downgraded from %d to %d" pkg.version p.version
+  |Removed ([],[p]) -> Printf.sprintf "(Rem) Upgraded from %d to %d" pkg.version p.version
+  |Removed (_,_) -> "Removed and other installed"
   |Unchanged -> "Unchanged"
 
 let solution_to_string s =
@@ -100,8 +108,8 @@ let solution_to_html s =
 ;;
 
 let status_equal = function
-  |(Removed,Removed)
-  |(Installed,Installed)
+  |(Removed _,Removed _)
+  |(Installed _,Installed _)
   |(Unchanged,Unchanged) -> true
   |_,_ -> false
 
@@ -110,9 +118,18 @@ let all_equal = function
   |one::t -> List.for_all (fun sc -> status_equal (sc,one)) t
   |[] -> assert false
 
-let newest = function
-  |[] -> assert false
-  |l -> List.hd (List.sort ~cmp:CudfAdd.compare l)
+let is_installed sol pkg = Cudf.mem_installed sol (pkg.package, Some(`Eq, pkg.version))
+
+let others (before,now) pkg =
+  let l = Cudf.get_installed before pkg.package in
+  let l' = List.filter (fun p -> not(is_installed now p) && not(Cudf.(=%) p pkg)) l in
+  List.partition (fun p -> Cudf.(<%) p pkg < 0) l'
+
+(* packages with the same name of pkg that are installed now but not before *) 
+let others_r (univ,sol) pkg = others (sol,univ) pkg
+
+(* packages with the same name of pkg that were installed before, not now *)
+let others_i (univ,sol) pkg = others (univ,sol) pkg
 
 let diff univ sol =
   let h = Cudf_hashtbl.create (Cudf.universe_size univ) in
@@ -124,12 +141,21 @@ let diff univ sol =
 
   Cudf.iter_packages (fun pkg ->
     let was_installed = pkg.installed in
-    let is_installed = Cudf.mem_installed sol (pkg.package, Some(`Eq, pkg.version)) in
+    let is_installed = is_installed sol pkg in
     match was_installed,is_installed with
-    |(true,true)
-    |(false,false) -> (s.unchanged <- s.unchanged + 1 ;add h pkg Unchanged)
-    |(true,false) -> (s.removed <- s.removed + 1 ; add h pkg Removed)
-    |(false,true) -> (s.newinst <- s.newinst + 1 ; add h pkg Installed)
+    |(true,true)|(false,false) ->
+        (s.unchanged <- s.unchanged + 1 ;add h pkg Unchanged)
+    |(true,false) ->
+        (* if a package is not installed anymore, then either has been replace
+         * by a newer package (upgraded) or by an older package (downgraded) or
+         * just removed tout cour *)
+        (s.removed <- s.removed + 1 ; add h pkg (Removed (others_r (univ,sol) pkg)))
+    |(false,true) ->
+        (* is a package is installed, then either replaces an older package
+         * (upgrades) that is not installed anymore or replaces and newer
+         * package that is not installed anymore (downgrades) or it is just
+         * newly installed *)
+        (s.newinst <- s.newinst + 1 ; add h pkg (Installed (others_i (univ,sol) pkg)))
   ) univ
   ;
   assert (Cudf_hashtbl.length h = Cudf.universe_size univ);
@@ -158,7 +184,7 @@ let print_diff_txt universe solutions =
 
 let print_diff_html universe solutions =
   let cmp (_,(_,(_,s1))) (_,(_,(_,s2))) = compare_lex (OptParse.Opt.get Options.order) s1 s2 in
-  let solutions = List.sort ~cmp:cmp solutions in 
+  let solutions = List.sort ~cmp:cmp solutions in
   let (hl,solutions) = List.split solutions in
   Printf.printf "<table border=1>\n" ;
   Printf.printf "<thead><tr><th>Package</th>%s</tr></thead>\n"
@@ -170,8 +196,7 @@ let print_diff_html universe solutions =
         try Some(f,Cudf_hashtbl.find h pkg) with Not_found -> assert false
       ) solutions
     in
-    if all_equal (List.map snd pl) then ()
-    else begin
+    if not (all_equal (List.map snd pl)) then begin
       let sl = List.map (fun (f,status) -> status_to_string pkg status) pl in
       Printf.printf "<tr><td>%s %d</td>%s</tr>"
       pkg.package pkg.version
