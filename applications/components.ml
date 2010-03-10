@@ -22,6 +22,7 @@ struct
 
   let debug = StdOpt.store_true ()
   let quite = StdOpt.store_true ()
+  let outdir = StdOpt.str_option ()
 
   let description = "Create one dot file for connected component of the dependecy graph"
   let options = OptParser.make ~description:description ()
@@ -29,6 +30,7 @@ struct
   open OptParser
   add options                 ~long_name:"debug" ~help:"Print debug information" debug;
   add options ~short_name:'q' ~long_name:"quite" ~help:"Do not print additional info" quite;
+  add options                 ~long_name:"outdir" ~help:"specify the output directory" outdir;
 end;;
 
 let main () =
@@ -38,7 +40,11 @@ let main () =
   let (universe,from_cudf,to_cudf) = Boilerplate.load_universe posargs in
   let dg = (PGraph.dependency_graph universe) in
 
-  let output_ch p = open_out (Printf.sprintf "%s.dot" p) in
+  let output_ch p =
+    match OptParse.Opt.opt Options.outdir with
+    |None -> open_out (Printf.sprintf "%s.dot" p)
+    |Some s -> open_out (Printf.sprintf "%s/%s.dot" s p)
+  in
 
   List.iter (fun cc ->
     let l = ref [] in
