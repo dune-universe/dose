@@ -21,7 +21,7 @@ struct
   open OptParse
 
   let debug = StdOpt.store_true ()
-  let quite = StdOpt.store_true ()
+  let quite = StdOpt.store_false ()
   let outdir = StdOpt.str_option ()
 
   let description = "Create one dot file for connected component of the dependecy graph"
@@ -46,6 +46,10 @@ let main () =
     |Some s -> open_out (Printf.sprintf "%s/%s.dot" s p)
   in
 
+  let l =
+    let cmp g1 g2 = (PGraph.UG.nb_vertex g2) - (PGraph.UG.nb_vertex g1) in
+    List.sort ~cmp:cmp (PGraph.connected_components (PGraph.undirect dg))
+  in
   List.iter (fun cc ->
     let l = ref [] in
     PGraph.UG.iter_vertex (fun v -> l := v :: !l) cc;
@@ -65,7 +69,7 @@ let main () =
     let outch = output_ch (!(snd(!maxv))).package in
     PGraph.D.output_graph outch g;
     close_out outch
-  ) (PGraph.connected_components (PGraph.undirect dg))
+  ) l
 ;;
 
 main ();;
