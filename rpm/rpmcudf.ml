@@ -16,7 +16,7 @@ open Common
 open Packages
 
 type tables = {
-  units : (string, (int * string) list) Hashtbl.t;
+  units : (name, (int * (Packages.rel * string)) list) Hashtbl.t;
   files : ((string * string), string) Hashtbl.t;
   fileconflicts : ((string * string), vpkg)  Hashtbl.t;
 }
@@ -43,35 +43,30 @@ let init_tables pkglist =
   (* all avalaible files *)
   let temp_files = Hashtbl.create (10 * (List.length pkglist)) in
 
-  let add_list t k v =
-    let l =
-      try Hashtbl.find t k with Not_found ->
-      let l = ref [] in Hashtbl.add t k l; l
-    in
-    if v <> "" then l := v :: !l
+  let add_list t k = function
+    |(`ALL,_) -> ()
+    |(sel,v) ->
+      let l =
+        try Hashtbl.find t k with Not_found ->
+        (let l = ref [] in Hashtbl.add t k l; l)
+      in
+      l := (sel,v) :: !l
   in
 
-  let add_units name version = add_list temp_units name version in
+  let add_units (n,s) = add_list temp_units n s in
 
   let add_files filename =
-    List.iter (fun u -> 
-      Hashtbl.add tables.files u filename
+    List.iter (fun (n,v) -> 
+      Hashtbl.add tables.files (n,v) filename
     ) (Hashtbl.find_all temp_files filename)
   in
 
   List.iter (fun pkg ->
-    add_units pkg.name pkg.version ;
-
-    List.iter (fun (name,sel) ->
-      match sel with
-      |None -> add_units name ""
-      |Some(c,v) -> add_units name v
-    ) pkg.provides
-    ;
+    add_units (pkg.name,(`Eq,pkg.version));
+    List.iter add_units pkg.provides ;
     List.iter (fun ((file,_),_) ->
         Hashtbl.add temp_files file (pkg.name,pkg.version)
     ) pkg.Packages.files
-    ;
   ) pkglist
   ;
 
@@ -82,7 +77,7 @@ let init_tables pkglist =
           let (pn,pv) = (pkg.Packages.name,pkg.Packages.version) in
           begin
             (* Printf.printf "adding %s <-> %s to file conflicts table (file: %s)\n" pn n file; *)
-            Hashtbl.add tables.fileconflicts (pn,pv) (n,Some("=",v))
+            Hashtbl.add tables.fileconflicts (pn,pv) (n,(`Eq,v))
           end
       ) (Hashtbl.find_all temp_files file)
     ) pkg.Packages.files ;
@@ -92,9 +87,9 @@ let init_tables pkglist =
   ) pkglist
   ;
 
-
   let initialid = 2 in
-  let order l = List.unique (List.sort ~cmp:Version.compare (List.rev l)) in
+  let cmp (_,v1) (_,v2) = Version.compare v1 v2 in
+  let order l = List.unique (List.sort ~cmp:cmp l) in
   Hashtbl.iter (fun name {contents = l1} ->
     let vl = order l1 in
     let (_,m) =
@@ -115,158 +110,51 @@ let init_tables pkglist =
   tables
 ;;
 
-let has_release v =
-  match Version.parse_version v with
-  |(_,_,None) -> false
-  |(_,_,Some(_)) -> true
+(* rpmdsCompare, rpmds.c *)
+let compare_constr (r1,v1) (r2,v2) = 
+  match r1, r2 with
+  |`ALL, _ | _, `ALL |(`Lt | `Leq), (`Lt | `Leq) | (`Gt | `Geq), (`Gt | `Geq) -> true
+  |(`Eq | `Geq | `Gt), `Lt | `Gt, (`Eq | `Leq) -> Version.compare v1 v2 < 0
+  |`Lt, (`Eq | `Geq | `Gt) | (`Eq | `Leq), `Gt -> Version.compare v1 v2 > 0
+  |`Eq, `Leq | `Geq, `Leq | `Geq, `Eq -> Version.compare v1 v2 <= 0
+  |`Leq, `Eq | `Leq, `Geq | `Eq, `Geq -> Version.compare v1 v2 >= 0
+  |`Eq, `Eq -> Version.compare v1 v2 = 0
 
-let get_release v =
-  match Version.parse_version v with
-  |(_,_,Some(r)) -> r
-  |_ -> assert false
+let f tables (n,s) =
+  try
+    let l = Hashtbl.find tables.units n in
+    List.filter_map (fun (i,s1) -> if compare_constr s1 s then Some i else None) l
+  with Not_found -> [1]
 
-let get_version v =
-  let (_,v,_) = Version.parse_version v in v
-
-let get_version_id tables (name,v) =
-  try 
-    let l = Hashtbl.find tables.units name in
-    try fst(List.find (fun (i,k) -> k = v) l)
-    with Not_found -> 1
+let get_version_id tables (n,v) =
+  try
+    let l = Hashtbl.find tables.units n in
+    fst(List.find (fun (i,(_,v1)) -> v = v1) l)
   with Not_found -> 1
 
-let build_constraint tables (name,op,v) =
-  match get_version_id tables (name,v) with
-  |1 -> (CudfAdd.encode (name^v),None)
-  |i -> (CudfAdd.encode name,Some(op,i))
-
-(* returns a list (i,k) of all k matching prefix *)
-let find_interval prefix vl =
-  fst(List.partition (fun (_,k) -> String.starts_with k prefix) vl)
-
-let find_aux f prefix vl =
-  let rec aux acc = function
-    |[] -> raise Not_found
-    |(i,h)::t -> if f acc h then aux h t else i
-  in
-  aux prefix vl
-
-let find_min (name,op,prefix) vl =
-  let f x y = Version.compare x y = -1 in
-  match find_aux f prefix vl with
-  |1 -> (CudfAdd.encode (name^prefix), None)
-  |i -> (CudfAdd.encode (name), Some(op,i))
-
-let find_max (name,op,prefix) vl =
-  let f x y = Version.compare x y = 1 in
-  match find_aux f prefix vl with
-  |1 -> (CudfAdd.encode (name^prefix), None)
-  |i -> (CudfAdd.encode (name), Some(op,i))
-
-let build_conflict_constraint tables (name,op,v) =
-  match op with
-  |`Eq -> [build_constraint tables (name,op,v)]
-  |`Gt |`Geq ->
-      begin try
-        let l = Hashtbl.find tables.units name in
-        begin match find_interval (get_release v) l with
-        |[] -> [build_constraint tables (name,op,v)]
-        |(i,k)::_ when not(has_release k) ->
-            [(CudfAdd.encode name, Some(`Lt,i));
-             build_constraint tables (name,`Eq,v)]
-        |(i,k)::_ -> [build_constraint tables (name,op,v)]
-        end 
-      with Not_found -> [build_constraint tables (name,op,v)] end
-  |`Lt |`Leq ->
-      begin try
-        let l = Hashtbl.find tables.units name in
-        begin match find_interval (get_release v) l with
-        |[] -> [build_constraint tables (name,op,v)]
-        |(i,k)::_ when not(has_release k) ->
-            [(CudfAdd.encode name, Some(`Gt,i));
-             build_constraint tables (name,`Eq,v)]
-        |(i,k)::_ -> [build_constraint tables (name,`Eq,v)]
-        end 
-      with Not_found -> [build_constraint tables (name,op,v)] end
-  |_ -> assert false
-
-let build_depends_constraint tables (name,op,v) =
-  begin try
-    let l = Hashtbl.find tables.units name in
-    match find_interval v l with
-    |[] ->
-        begin match l with
-        |[] -> [(CudfAdd.encode (name), None)]
-        |_ ->
-            begin match op with
-            |`Gt | `Geq -> [find_max (name,`Geq,v) l]
-            |`Lt | `Leq -> [find_min (name,`Leq,v) l]
-            |_ -> [build_constraint tables (name,`Eq,v)]
-            end
-        end
-    |l -> let nm = CudfAdd.encode name in
-          List.map (fun (i,_) -> (nm, Some(op,i))) l 
-  with Not_found -> [build_constraint tables (name,`Eq,v)] end
-
-let load_provides tables (nm,vr) l =
+let expand tables l =
   List.flatten (
-    List.map (fun (name,sel) ->
-      match CudfAdd.cudfop sel with
-      |None  -> [(CudfAdd.encode name, None)]
-      |Some(_,v) -> [build_constraint tables (name,`Eq,v)]
-      (* XXX eliminate self provides *)
+    List.map (function
+      |(name,(`ALL,_)) -> [CudfAdd.encode name,None]
+      |(name,sel) ->
+        match
+          List.map (fun v ->
+            (CudfAdd.encode name,Some(`Eq,v))
+          ) (f tables (name,sel))
+        with [] -> [CudfAdd.encode name,Some(`Eq,1)] |l -> l
     ) l
   )
-;;
 
-let load_conflicts tables l =
-  List.flatten (
-    List.map (fun (name,sel) ->
-      match CudfAdd.cudfop sel with
-      |None  -> [(CudfAdd.encode name, None)]
-      |Some(op,v) ->
-          if has_release v then
-            build_conflict_constraint tables (name,op,v)
-          else
-            [build_constraint tables (name,op,v)]
-    ) l
-  )
-;;
+(* XXX eliminate self provides *)
+let load_provides (nm,vr) = expand ;;
+let load_conflicts = expand ;;
 
-let load_depends tables ll =
-  List.map (fun l ->
-    List.flatten (
-      List.map (fun (name,sel) ->
-        match CudfAdd.cudfop sel with
-        |None  -> [(CudfAdd.encode name, None)]
-(*        |Some(`Eq,v) ->
-            if has_release v then
-              let ver = get_version v in
-              (build_depends_constraint tables (name,op,v)) @
-              (build_depends_constraint tables (name,op,ver))
-(*
-              [build_constraint tables (name,`Eq,v);
-              build_constraint tables (name,`Eq,ver)]
-*)
-            else
-              build_depends_constraint tables (name,`Eq,v)
-      *)
-        |Some(op,v) ->
-            if has_release v then
-              let ver = get_version v in
-              (build_depends_constraint tables (name,op,v)) @
-              (build_depends_constraint tables (name,op,ver))
-            else
-              build_depends_constraint tables (name,op,v)
-      ) l
-    )
-  ) ll
-;;
+let load_depends tables = List.map (expand tables) ;;
 
 let loadp_files tables (name,version) =
   List.unique (
-    List.map (fun n -> (n,None)
-    ) (Hashtbl.find_all tables.files (name,version))
+    List.map (fun n -> (CudfAdd.encode n,None))
+    (Hashtbl.find_all tables.files (name,version))
   )
 
 (* ========================================= *)
@@ -274,18 +162,28 @@ let loadp_files tables (name,version) =
 let tocudf tables ?(inst=false) pkg =
   let (n,v) = (pkg.name,pkg.version) in
   let fileconflicts = Hashtbl.find_all tables.fileconflicts (n,v) in 
+  let depends = 
+    List.filter_map (fun l -> match 
+    List.filter (fun (n,s) ->
+      not(n = pkg.name) &&
+      not (List.exists(fun (x,_) -> x = n ) pkg.provides) && 
+      not(List.mem n (Hashtbl.find_all tables.files (pkg.name,pkg.version)))
+    ) l with
+    |[] -> None
+    |l -> Some l
+    ) pkg.depends in
   let name = CudfAdd.encode pkg.name in
   let version = get_version_id tables (n,v) in
   { Cudf.default_package with
     Cudf.package = name ;
     Cudf.version = version ;
-    Cudf.depends = load_depends tables pkg.depends ;
+    Cudf.depends = load_depends tables depends ;
     Cudf.conflicts = List.unique (
       (load_conflicts tables pkg.conflicts) (* @
       (loadl tables fileconflicts) *)
     );
     Cudf.provides = List.unique (
-      (load_provides tables (n,v) pkg.provides) @
+      (load_provides (n,v) tables pkg.provides) @
       (loadp_files tables (n,v)) 
     );
     Cudf.installed = inst 

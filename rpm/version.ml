@@ -92,10 +92,11 @@ let epochcmp e1 e2 =
 
 let relcmp r1 r2 = 
   match (r1,r2) with
-  |(None,None) -> 0
+(*  |(None,None) -> 0
   |(None,Some _) -> -1
-  |(Some _,None) -> 1
+  |(Some _,None) -> 1 *)
   |(Some x,Some y) -> rpmvercmp x y
+  |_,_ -> 0
 ;;
 
 (* default compare EVRcmp *)

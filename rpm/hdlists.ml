@@ -27,14 +27,22 @@ external parse_paragraph : t -> ( string * string ) list option = "rpm_parse_par
 external parse : t -> ( string * string ) list list = "rpm_parse_hdlists"
 
 let decode_flags f =
-  match (int_of_string f) land 15 with
-  | 0 -> "ALL"
-  | 2 -> "<"
-  |10 -> "<="
-  | 8 -> "="
-  |12 -> ">="
-  | 4 -> ">"
-  | _ -> (Printf.eprintf "Wrong flag %d" ((int_of_string f) land 15) ; exit 1)
+  match int_of_string f land 15 with
+  | 0 -> `ALL
+  | 2 -> `Lt
+  |10 -> `Leq
+  | 8 -> `Eq
+  |12 -> `Geq
+  | 4 -> `Gt
+  |_ -> (Printf.eprintf "Wrong flag %d" ((int_of_string f) land 15) ; exit 1)
+
+let string_of_rel = function
+  | `Lt -> "<"
+  | `Leq  -> "<="
+  | `Eq -> "="
+  | `Geq  -> ">="
+  | `Gt -> ">"
+  | `ALL -> "ALL"
 
 let dump_raw ppf s par = 
   Format.fprintf ppf "%s\n%s\n@." s
@@ -43,7 +51,7 @@ let dump_raw ppf s par =
     |(("requireflags"|"conflictflags"|"provideflags") as k,v)  ->
         Printf.sprintf "%s: %s" k (
           String.concat ","
-          (List.map decode_flags (Str.split_delim (Str.regexp ",") v))
+          (List.map (fun f -> string_of_rel(decode_flags f)) (Str.split_delim (Str.regexp ",") v))
         )
     |(k,v) -> Printf.sprintf "%s: %s" k v 
   ) (List.rev par))
@@ -80,15 +88,13 @@ let list_deps p par =
     for i = 0 to (Array.length name_a) - 1 do
       if not (skipped_dep name_a flags_a i) then
       begin 
-        let constr =
-          if i < (Array.length version_a) then 
-            let c = decode_flags flags_a.(i) in
-            let v = version_a.(i) in
-            Some(c,v)
-          else None
-        in
-        let vpkg = (name_a.(i),constr) in
-        acc := vpkg :: !acc
+        if i < (Array.length version_a) then begin
+          let n = name_a.(i) in
+          let c = decode_flags flags_a.(i) in
+          let v = version_a.(i) in
+          let vpkg = (n,(c,v)) in
+          acc := vpkg :: !acc
+        end
       end 
     done
   with Invalid_argument _ -> dump_raw Format.err_formatter "Warning: ignoring malformed package (list_deps)" par end
@@ -111,7 +117,7 @@ let fileprovide par =
     for i = 0 to (Array.length dirindexes_a) - 1 do
       let j = int_of_string dirindexes_a.(i) in
       let elem = Printf.sprintf "%s%s" dirnames_a.(j) basenames_a.(i) in
-      acc := ((elem,None),is_directory filemodes_a.(i)) :: !acc
+      acc := ((elem,(`ALL,"")),is_directory filemodes_a.(i)) :: !acc
     done
   with Invalid_argument _ -> dump_raw Format.err_formatter "Warning: ignoring malformed package (fileprovide)" par end
   ;

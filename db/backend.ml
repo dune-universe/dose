@@ -459,6 +459,7 @@ let todebian (pkg: Idbr.package): Debian.Packages.package =
   { Debian.Packages.name = pkg.name;
     version = pkg.number;
     source = ("",None);
+    essential = false;
     depends = loadll (List.assoc (`Depends) pkg.cnf_deps);
     pre_depends = loadll (List.assoc (`Pre_depends) pkg.cnf_deps);
     recommends = [];

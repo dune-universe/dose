@@ -15,8 +15,9 @@ open Common
 
 type name = string
 type version = string
-type vpkg = (string * (string * string) option)
-type veqpkg = (string * (string * string) option)
+type rel = [ `Lt | `Leq | `Eq | `Geq | `Gt | `ALL ]
+type vpkg = (string * (rel * string))
+type veqpkg = (string * (rel * string))
 
 type package = {
   name : name ;
@@ -37,6 +38,14 @@ let default_package = {
   provides = [];
   files = [];
 }
+
+let string_of_rel = function
+  | `Lt -> "<"
+  | `Leq  -> "<="
+  | `Eq -> "="
+  | `Geq  -> ">="
+  | `Gt -> ">"
+  | `ALL -> "ALL"
 
 module Set = Set.Make(struct type t = package let compare = compare end)
 
@@ -88,18 +97,25 @@ module Synthesis = struct
   open ExtLib
   open Common
 
+  let rel_of_string = function
+    |"<<" | "<" -> `Lt
+    |"<=" -> `Leq
+    |"=" | "==" -> `Eq
+    |">=" -> `Geq
+    |">>" | ">" -> `Gt
+    |"ALL" -> `ALL
+    |s -> (Printf.eprintf "Invalid op %s" s ; assert false)
+
   let parse_op = function
-    |"*" -> None
+    |"*" -> (`ALL,"")
+    |"ALL" -> (`ALL,"")
     |sel ->
-        try Scanf.sscanf sel "%s %s" (fun op v ->
-          match op with
-          |"==" -> Some("=",v)
-          |_ -> Some(op,v))
-        with End_of_file -> (print_endline sel ; assert false)
+        try Scanf.sscanf sel "%s %s" (fun op v -> (rel_of_string op,v))
+        with End_of_file -> (Printf.eprintf "Invalid op %s" sel ; assert false)
 
   let parse_vpkg vpkg =
     try Scanf.sscanf vpkg "%[^[][%[^]]]" (fun n sel -> (n,parse_op sel))
-    with End_of_file -> (vpkg,None)
+    with End_of_file -> (vpkg,(`ALL,""))
 
   let parse_deps l = List.unique (List.map parse_vpkg l)
 
