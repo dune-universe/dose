@@ -40,6 +40,7 @@ module GraphOper (G : Sig.I) = struct
     Util.Timer.stop timer ()
 
   module O = Oper.I(G) 
+
 end
 
 (** syntactic dependency graph. Vertex are Cudf packages and
@@ -53,12 +54,19 @@ module SyntacticDependencyGraph = struct
 
   module PkgV = struct
       type t = Pkg of Cudf.package | Or of (Cudf.package * int)
-      let compare = Pervasives.compare 
-      let hash p =
-        match p with
+      let compare x y = match (x,y) with
+        |Or (p1,i1), Or (p2,i2) when (i1 = i2) && (CudfAdd.equal p1 p2) -> 0
+        |Or (p1,i1), Or (p2,i2) -> CudfAdd.compare p1 p2
+        |Pkg p1, Pkg p2 -> CudfAdd.compare p1 p2
+        |Pkg _, Or _ -> 1
+        |Or _, Pkg _ -> -1
+      let hash = function
         |Pkg p -> Hashtbl.hash (p.Cudf.package,p.Cudf.version)
         |Or (p,i) -> Hashtbl.hash (p.Cudf.package,p.Cudf.version,i)
-      let equal x y = ((compare x y) = 0)
+      let equal x y = match (x,y) with
+        |Or (p1,i1), Or (p2,i2) -> (i1 = i2) && (CudfAdd.equal p1 p2)
+        |Pkg p1, Pkg p2 -> CudfAdd.equal p1 p2
+        |_ -> false
   end
 
   module PkgE = struct
