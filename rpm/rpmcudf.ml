@@ -18,7 +18,7 @@ open Packages
 type tables = {
   units : (name, (int * (Packages.rel * string)) list) Hashtbl.t;
   files : ((string * string), string) Hashtbl.t;
-  fileconflicts : ((string * string), vpkg)  Hashtbl.t;
+  fileconflicts : ((string * string), (string * string))  Hashtbl.t;
 }
 
 let create n = {
@@ -71,15 +71,14 @@ let init_tables pkglist =
   ;
 
   List.iter (fun pkg ->
-    List.iter (fun ((file,_),_) ->
-      List.iter (fun (n,v) ->
-        if n <> pkg.Packages.name && v <> pkg.Packages.version then
-          let (pn,pv) = (pkg.Packages.name,pkg.Packages.version) in
-          begin
-            (* Printf.printf "adding %s <-> %s to file conflicts table (file: %s)\n" pn n file; *)
-            Hashtbl.add tables.fileconflicts (pn,pv) (n,(`Eq,v))
-          end
-      ) (Hashtbl.find_all temp_files file)
+    List.iter (function 
+      |(_,false) -> () (* no conflicts with directories *)
+      |((file,_),true) ->
+        List.iter (fun (n,v) ->
+          let (pn,pv) = (pkg.name,pkg.version) in
+          if (n,v) <> (pn,pv) then
+            Hashtbl.add tables.fileconflicts (pn,pv) (n,v)
+        ) (Hashtbl.find_all temp_files file)
     ) pkg.Packages.files ;
 
     List.iter (fun (name,sel) -> add_files name) pkg.conflicts ;
@@ -97,10 +96,6 @@ let init_tables pkglist =
         (i+1,(i,k)::acc)
       ) (initialid,[]) vl
     in
-    (*
-    Util.print_info "package %s : %s" name 
-    (List.fold_left (fun acc (i,k) -> Printf.sprintf "%s (%s = %d)" acc k i) "" m); 
-    *)
     Hashtbl.add tables.units name m ;
   ) temp_units;
 
@@ -120,12 +115,6 @@ let compare_constr (r1,v1) (r2,v2) =
   |`Leq, `Eq | `Leq, `Geq | `Eq, `Geq -> Version.compare v1 v2 >= 0
   |`Eq, `Eq -> Version.compare v1 v2 = 0
 
-let f tables (n,s) =
-  try
-    let l = Hashtbl.find tables.units n in
-    List.filter_map (fun (i,s1) -> if compare_constr s1 s then Some i else None) l
-  with Not_found -> [1]
-
 let get_version_id tables (n,v) =
   try
     let l = Hashtbl.find tables.units n in
@@ -133,6 +122,12 @@ let get_version_id tables (n,v) =
   with Not_found -> 1
 
 let expand tables l =
+  let aux tables (n,s) =
+    try
+      let l = Hashtbl.find tables.units n in
+      List.filter_map (fun (i,s1) -> if compare_constr s1 s then Some i else None) l
+    with Not_found -> [1]
+  in
   List.flatten (
     List.map (function
       |(name,(`ALL,_)) -> [CudfAdd.encode name,None]
@@ -140,7 +135,7 @@ let expand tables l =
         match
           List.map (fun v ->
             (CudfAdd.encode name,Some(`Eq,v))
-          ) (f tables (name,sel))
+          ) (aux tables (name,sel))
         with [] -> [CudfAdd.encode name,Some(`Eq,1)] |l -> l
     ) l
   )
@@ -148,30 +143,36 @@ let expand tables l =
 (* XXX eliminate self provides *)
 let load_provides (nm,vr) = expand ;;
 let load_conflicts = expand ;;
-
 let load_depends tables = List.map (expand tables) ;;
 
-let loadp_files tables (name,version) =
+let load_filesprovides tables (name,version) =
   List.unique (
     List.map (fun n -> (CudfAdd.encode n,None))
     (Hashtbl.find_all tables.files (name,version))
   )
 
+let load_fileconflicts tables (name,version) = 
+  List.map (fun (n,v) -> (CudfAdd.encode n,Some(`Eq,get_version_id tables (n,v)))
+  ) (Hashtbl.find_all tables.fileconflicts (name,version))
+
 (* ========================================= *)
 
 let tocudf tables ?(inst=false) pkg =
   let (n,v) = (pkg.name,pkg.version) in
-  let fileconflicts = Hashtbl.find_all tables.fileconflicts (n,v) in 
+  (* we remove dependencies on files provided by the same package, dependencies
+   * on the package itself and dependencies on packages provided by the same
+   * package *)
   let depends = 
-    List.filter_map (fun l -> match 
-    List.filter (fun (n,s) ->
-      not(n = pkg.name) &&
-      not (List.exists(fun (x,_) -> x = n ) pkg.provides) && 
-      not(List.mem n (Hashtbl.find_all tables.files (pkg.name,pkg.version)))
-    ) l with
-    |[] -> None
-    |l -> Some l
-    ) pkg.depends in
+    List.filter_map (fun l ->
+      match List.filter (fun (n,s) ->
+        not(n = pkg.name) &&
+        not (List.exists(fun (x,_) -> x = n ) pkg.provides) && 
+        not(List.mem n (Hashtbl.find_all tables.files (pkg.name,pkg.version)))
+      ) l with
+      |[] -> None 
+      |l -> Some l
+    ) pkg.depends
+  in
   let name = CudfAdd.encode pkg.name in
   let version = get_version_id tables (n,v) in
   { Cudf.default_package with
@@ -180,11 +181,11 @@ let tocudf tables ?(inst=false) pkg =
     Cudf.depends = load_depends tables depends ;
     Cudf.conflicts = List.unique (
       (load_conflicts tables pkg.conflicts) (* @
-      (loadl tables fileconflicts) *)
+      (load_fileconflicts tables (n,v)) *)
     );
     Cudf.provides = List.unique (
       (load_provides (n,v) tables pkg.provides) @
-      (loadp_files tables (n,v)) 
+      (load_filesprovides tables (n,v)) 
     );
     Cudf.installed = inst 
   }

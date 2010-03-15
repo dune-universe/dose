@@ -134,7 +134,7 @@ let load universe request =
   let closure = Depsolver_int.dependency_closure mdf idlist in
   let solver = Depsolver_int.init_solver
       ~proxy_size:1
-      ~idlist:closure
+      ~closure
       mdf.Mdf.index 
   in
   let solver = __init l_installed solver mdf in

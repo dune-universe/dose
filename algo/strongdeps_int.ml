@@ -72,7 +72,7 @@ let strongdeps_int graph mdf l =
     G.add_vertex graph id;
     Util.Progress.progress mainbar;
     if allconj pkg.Mdf.depends then begin
-      let solver = Depsolver_int.init_solver ~idlist:closure mdf.Mdf.index in
+      let solver = Depsolver_int.init_solver ~closure mdf.Mdf.index in
       match Depsolver_int.solve solver (Diagnostic_int.Sng id) with
       |Diagnostic_int.Failure(_) -> ()
       |Diagnostic_int.Success(f) -> check_strong graph solver id (f ())
@@ -95,7 +95,7 @@ let strongdeps mdf idlist =
       let pkg = mdf.Mdf.index.(id) in
       Util.Progress.progress conjbar;
       IntPkgGraph.conjdepgraph_int graph mdf.Mdf.index id; 
-      let closure = dependency_closure mdf [id] in
+      let closure = Depsolver_int.dependency_closure mdf [id] in
       (pkg,List.length closure,closure) :: acc
     ) [] idlist
   in
@@ -115,7 +115,7 @@ let strongdeps_univ mdf =
     Array.fold_left (fun acc pkg ->
       Util.Progress.progress conjbar;
       IntPkgGraph.conjdepgraph_int graph mdf.Mdf.index !id;
-      let closure = dependency_closure mdf [!id] in
+      let closure = Depsolver_int.dependency_closure mdf [!id] in
       incr id ;
       (pkg,List.length closure,closure) :: acc
     ) [] mdf.Mdf.index

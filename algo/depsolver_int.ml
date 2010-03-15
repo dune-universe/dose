@@ -71,10 +71,11 @@ type solver = {
     @param buffer debug buffer to print out debug messages
     @param proxy_size  proxy variables. These are additional variables 
                        used to encode specific contraint.
-    @param idlist init the solver with a subset of packages id
+    @param closure init the solver with a subset of packages. This must be
+                   the **dependency closure** of the subset of packages.
     @param index package index
  *)
-let init_solver ?(buffer=false) ?(proxy_size=0) ?idlist index =
+let init_solver ?(buffer=false) ?(proxy_size=0) ?closure index =
   let num_conflicts = ref 0 in
   let num_disjunctions = ref 0 in
   let num_dependencies = ref 0 in
@@ -123,15 +124,16 @@ let init_solver ?(buffer=false) ?(proxy_size=0) ?idlist index =
         end
       done
     with Not_found ->
-      (Printf.eprintf "Warning ! Error! Disaster ! Conflict not in the closure!"; ())
-    (* ignore conflicts that are not in the closure.
-     * This requires a leap of faith in the user ability to build an
-     * appropriate closure. If the closure is wrong, you are on your own *)
+      (* ignore conflicts that are not in the closure.
+       * if nobody depends on a conflict package, then it is irrelevant.
+       * This requires a leap of faith in the user ability to build an
+       * appropriate closure. If the closure is wrong, you are on your own *)
+      Util.print_warning "Conflict for package %s not in the universe!\n" pkg.Mdf.pkg.Cudf.package
   in
 
   let nvars = 
-    if Option.is_none idlist then Array.length index
-    else List.length (Option.get idlist)
+    if Option.is_none closure then Array.length index
+    else List.length (Option.get closure)
   in
 
   let size = nvars + proxy_size in
@@ -145,24 +147,25 @@ let init_solver ?(buffer=false) ?(proxy_size=0) ?idlist index =
   in
 
   let map =
-    if Option.is_none idlist then new intprojection 0
+    (* intprojection 0 => identity function *)
+    if Option.is_none closure then new intprojection 0
     else new intprojection size
   in
 
-  if Option.is_none idlist then
+  if Option.is_none closure then
     for i = 0 to (Array.length index) - 1 do
       Util.Progress.progress progressbar_init;
       exec_depends map constraints i index.(i);
       exec_conflicts map constraints i index.(i); 
     done
   else begin
-    let idlist = Option.get idlist in
-    List.iter map#add idlist;
+    let closure = Option.get closure in
+    List.iter map#add closure;
     List.iter (fun i ->
       Util.Progress.progress progressbar_init;
       exec_depends map constraints i index.(i);
       exec_conflicts map constraints i index.(i);
-    ) idlist
+    ) closure
   end;
 
   S.propagate constraints ;
@@ -247,7 +250,7 @@ let reverse_dependencies mdf =
 let dependency_closure ?(maxdepth=max_int) ?(conjuntive=false) mdf idlist =
   let index = mdf.Mdf.index in
   let queue = Queue.create () in
-  let visited = Hashtbl.create (List.length idlist) in
+  let visited = Hashtbl.create (2 * (List.length idlist)) in
   List.iter (fun e -> Queue.add (e,0) queue) (List.unique idlist);
   while (Queue.length queue > 0) do
     let (id,level) = Queue.take queue in
@@ -265,7 +268,7 @@ let dependency_closure ?(maxdepth=max_int) ?(conjuntive=false) mdf idlist =
       ) index.(id).Mdf.depends
     end
   done;
-  Hashtbl.fold (fun k _ l -> k::l) visited []
+  Hashtbl.fold (fun k _ l -> k::l) visited [] 
 
 (*    XXX : elements in idlist should be included only if because
  *    of circular dependencies *)
@@ -332,7 +335,8 @@ let pkgcheck callback solver failed tested id =
     @return the number of packages that cannot be installed
 *)
 let listcheck ?callback mdf idlist =
-  let solver = init_solver ~idlist mdf.Mdf.index in
+  let closure = dependency_closure mdf idlist in
+  let solver = init_solver ~closure mdf.Mdf.index in
   let timer = Util.Timer.create "Algo.Depsolver.listcheck" in
   Util.Timer.start timer;
   let failed = ref 0 in

@@ -26,7 +26,7 @@ module Options = struct
 
   open OptParser
   add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
-  add options ~long_name:"dot" ~help:"Print the graph in dot format" debug;
+  add options ~long_name:"dot" ~help:"Print the graph in dot format" dot;
   add options ~long_name:"dump" ~help:"Dump the transitive reduction of the strong dependency graph" dump;
   add options ~long_name:"detrans" ~help:"Transitive reduction. Used in conjuction with --dot." detrans;
 end

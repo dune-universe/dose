@@ -59,9 +59,14 @@ let explicit mdf =
   (List.unique !l)
 ;;
 
+(* [strongconflicts mdf idlist] return the list of strong conflicts
+   @param mdf
+   @param a subset of the universe
+*)
 let strongconflicts mdf idlist =
   let index = mdf.Mdf.index in
-  let solver = init_solver ~idlist index in
+  let clousure = Depsolver_int.dependency_closure mdf idlist in
+  let solver = Depsolver_int.init_solver ~closure index in
   let coinst = coinst_partial solver in
   let reverse = reverse_dependencies mdf in
   let size = (List.length idlist) in
