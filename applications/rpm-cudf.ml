@@ -31,13 +31,9 @@ module Options =
 
     open OptParser
 
-    let g = add_group options ~description:"general options" "general" ;;
-    let o = add_group options ~description:"output options" "output" ;;
-
-    add options ~group:g ~long_name:"dump" ~help:"Dump the raw hdlist contents" dump_hdlist;
-    add options ~group:g ~short_name:'d' ~long_name:"debug" ~help:"Print various aggregate information" debug;
-
-    add options ~group:o ~long_name:"outdir" ~help:"Send output to a file" outdir;
+    add options ~long_name:"dump" ~help:"Dump the raw hdlist contents" dump_hdlist;
+    add options ~short_name:'d' ~long_name:"debug" ~help:"Print various aggregate information" debug;
+    add options ~long_name:"outdir" ~help:"Send output to a file" outdir;
 
   end
 

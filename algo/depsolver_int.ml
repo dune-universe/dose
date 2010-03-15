@@ -128,7 +128,8 @@ let init_solver ?(buffer=false) ?(proxy_size=0) ?closure index =
        * if nobody depends on a conflict package, then it is irrelevant.
        * This requires a leap of faith in the user ability to build an
        * appropriate closure. If the closure is wrong, you are on your own *)
-      Util.print_warning "Conflict for package %s not in the universe!\n" pkg.Mdf.pkg.Cudf.package
+      (* Util.print_warning "Conflict for package %s not in the universe!\n" pkg.Mdf.pkg.Cudf.package *)
+      ()
   in
 
   let nvars = 

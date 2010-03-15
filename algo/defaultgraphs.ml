@@ -489,7 +489,7 @@ module StrongDepGraph = struct
     Util.Timer.stop timer sg
 
   (* StrongDepGraph.G -> PackageGraph.G *)
-  let out ?(dump=None) ?(dot=false) ?(detrans=false) pkggraph =
+  let out ?(dump=None) ?(dot=None) ?(detrans=false) pkggraph =
     Common.Util.print_info "Dumping Graph : nodes %d , edges %d"
     (PackageGraph.G.nb_vertex pkggraph) (PackageGraph.G.nb_edges pkggraph) ;
     
@@ -503,16 +503,19 @@ module StrongDepGraph = struct
 
     if dump <> None then begin
       let f = Option.get dump in
-      Common.Util.print_info "Dumping graph in %s\n" f ;
+      Common.Util.print_info "Saving marshal graph in %s\n" f ;
       let oc = open_out f in
       Marshal.to_channel oc (cudfgraph :> G.t) [];
       close_out oc
     end ;
 
-    if dot then begin
-      D.output_graph stdout cudfgraph;
-      print_newline ();
-    end
+    if dot <> None then begin
+      let f = Option.get dot in
+      Common.Util.print_info "Saving dot graph in %s\n" f ;
+      let oc = open_out f in
+      D.output_graph oc cudfgraph;
+      close_out oc
+    end 
   ;;
 
   module S = Set.Make(PkgV)

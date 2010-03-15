@@ -17,21 +17,29 @@ module Options = struct
   open OptParse
 
   let debug = StdOpt.store_true ()
-  let dot = StdOpt.store_true ()
+  let dot = StdOpt.str_option ()
   let dump = StdOpt.str_option ()
+  let table =  StdOpt.store_true ()
   let detrans = StdOpt.store_true ()
 
-  let description = ""
+  let description = "Compute the strong dependency graph"
   let options = OptParser.make ~description:description ()
 
   open OptParser
   add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
-  add options ~long_name:"dot" ~help:"Print the graph in dot format" dot;
-  add options ~long_name:"dump" ~help:"Dump the transitive reduction of the strong dependency graph" dump;
-  add options ~long_name:"detrans" ~help:"Transitive reduction. Used in conjuction with --dot." detrans;
+  add options ~long_name:"dot" ~help:"Save the strong dependency graph in dot format" dot;
+  add options ~long_name:"dump" ~help:"Save the strong dependency graph" dump;
+  add options ~long_name:"table" ~help:"Print the table (package,strong,direct,difference)" table;
+  add options ~long_name:"detrans" ~help:"Perform the transitive reduction of the graph" detrans;
 end
 
 (* ----------------------------------- *)
+
+let d_impactlist graph q =
+  Defaultgraphs.SyntacticDependencyGraph.G.fold_pred (fun p acc -> p :: acc ) graph q []
+
+let s_impactlist graph q =
+  Defaultgraphs.PackageGraph.G.fold_pred (fun p acc -> p :: acc ) graph q []
 
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
@@ -40,9 +48,27 @@ let main () =
   if OptParse.Opt.get Options.debug then Boilerplate.enable_debug ~bars:bars () ;
   let (universe,_,_) = Boilerplate.load_universe posargs in
   let sdgraph = Strongdeps.strongdeps_univ universe in
+  if OptParse.Opt.get Options.table then begin
+    let depgraph = Defaultgraphs.SyntacticDependencyGraph.dependency_graph universe in
+    let getp = function
+      |Defaultgraphs.SyntacticDependencyGraph.PkgV.Or(p,_) -> p
+      |Defaultgraphs.SyntacticDependencyGraph.PkgV.Pkg p -> p
+    in
+    let l = 
+      Defaultgraphs.SyntacticDependencyGraph.G.fold_vertex (fun p l ->
+        let strongimpact = List.length (s_impactlist sdgraph (getp p)) in 
+        let directimpact = List.length (d_impactlist depgraph p) in
+        (getp p,strongimpact - directimpact, strongimpact, directimpact) :: l
+      ) depgraph []
+    in
+    List.iter (fun (p,diff,s,d) ->
+      Printf.printf "%s , %d, %d, %d\n" p.Cudf.package s d diff
+    ) (List.sort ~cmp:(fun (_,x,_,_) (_,y,_,_) -> y - x) l)
+  end
+  ;
   Defaultgraphs.StrongDepGraph.out
-  ~dump:(OptParse.Opt.opt Options.dump)
-  ~dot:(OptParse.Opt.get Options.dot)
+  ~dump:(OptParse.Opt.opt Options.dump) 
+  (* ~dot:(OptParse.Opt.get Options.dot) *)
   ~detrans:(OptParse.Opt.get Options.detrans)
   sdgraph
 ;;
