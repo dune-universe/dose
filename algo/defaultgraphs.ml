@@ -221,13 +221,18 @@ module PackageGraph = struct
     let maps = CudfAdd.build_maps universe in
     let gr = G.create () in
     Cudf.iter_packages (fun pkg ->
-      List.iter (function
+      List.iter (fun l ->
+        List.iter (G.add_edge gr pkg) (List.flatten (List.map maps.CudfAdd.who_provides l))
+        (* XXX not 100% sure why I did it the other way ... maybe there is a
+         * reason, but I can't remember now *)
+(*
         |[(pkgname,constr)] ->
             List.iter (G.add_edge gr pkg) (maps.CudfAdd.who_provides (pkgname,constr))
         |l ->
             match List.flatten (List.map maps.CudfAdd.who_provides l) with 
             |[p] -> G.add_edge gr pkg p
             |_ -> ()
+      *)
       ) pkg.Cudf.depends
     ) universe
     ;

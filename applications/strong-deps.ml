@@ -45,7 +45,7 @@ let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
   let bars = ["Algo.Strongdep.main";"Algo.Strongdep.conj"] in
-  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug ~bars:bars () ;
+  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug ~bars () ;
   let (universe,_,_) = Boilerplate.load_universe posargs in
   let sdgraph = Strongdeps.strongdeps_univ universe in
   if OptParse.Opt.get Options.table then begin
@@ -68,7 +68,7 @@ let main () =
   ;
   Defaultgraphs.StrongDepGraph.out
   ~dump:(OptParse.Opt.opt Options.dump) 
-  (* ~dot:(OptParse.Opt.get Options.dot) *)
+  ~dot:(OptParse.Opt.opt Options.dot)
   ~detrans:(OptParse.Opt.get Options.detrans)
   sdgraph
 ;;

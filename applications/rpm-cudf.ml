@@ -15,11 +15,6 @@ open Boilerplate
 open Common
 open Rpm
 
-let enable_debug () =
-  Util.Progress.enable "Rpm.Parse.Hdlists.parse_822_iter";
-  Util.set_verbosity Common.Util.Summary
-;;
-
 module Options =
   struct
     open OptParse
@@ -42,7 +37,8 @@ module Options =
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  if OptParse.Opt.get Options.debug then enable_debug () ;
+  let bars = ["Rpm.Parse.Hdlists.parse_822_iter"] in
+  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug ~bars () ;
   let uri = argv1 posargs in
 
   let l =

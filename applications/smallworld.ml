@@ -21,54 +21,34 @@
  * http://en.wikipedia.org/wiki/Small-world_network
  *)
 
+open Common
 
-open Graph
+module Options =
+  struct
+    open OptParse
+    let debug = StdOpt.store_true ()
+    let generic = StdOpt.store_true ()
+    let scatterplots = StdOpt.store_true ()
+    let connectivity = StdOpt.store_true ()
+    let components = StdOpt.store_true ()
+    let smallworld = StdOpt.store_true ()
+    let centrality = StdOpt.store_true ()
+    let outdir = StdOpt.str_option ()
 
-module Options = struct
-  let debug = ref 0
-  let generic = ref false
-  let scatterplots = ref false
-  let connectivity = ref false 
-  let components = ref false
-  let smallworld = ref false
-  let centrality = ref false
-end
+    let options = OptParser.make ()
+    open OptParser
 
-let usage = Printf.sprintf "usage: %s [-options] [dot graph]" (Sys.argv.(0))
-let options =
-  [
-(*   ("-d", Arg.Int (fun i -> Options.debug := i), "Turn on debugging info level"); *)
-   ("--no-generic", Arg.Set Options.generic, "");
-   ("--no-scatterplots", Arg.Set Options.scatterplots, "");
-   ("--no-connectivity", Arg.Set Options.connectivity, "");
-   ("--no-components", Arg.Set Options.components, "");
-   ("--no-smallworld", Arg.Set Options.smallworld, "");
-   ("--no-centrality", Arg.Set Options.centrality, "");
-  ]
-
-let input_file = ref None 
-let file f = input_file := Some(f)
+    add options ~short_name:'d' ~long_name:"debug" ~help:"Print various aggregate information" debug;
+    add options ~long_name:"outdir" ~help:"Send output to a file" outdir;
+    add options ~short_name:'g' ~long_name:"generic" ~help:"" generic;
+    add options ~short_name:'p' ~long_name:"scatterplots" ~help:"" scatterplots;
+    add options ~short_name:'c' ~long_name:"connectivity" ~help:"" connectivity;
+    add options ~short_name:'m' ~long_name:"components" ~help:"" components;
+    add options ~short_name:'s' ~long_name:"smallworld" ~help:"" smallworld;
+    add options ~short_name:'e' ~long_name:"centrality" ~help:"" centrality;
+  end
 
 (**********************************)
-
-module PkgV = struct
-    type t = string
-    let compare = Pervasives.compare
-    let hash = Hashtbl.hash
-    let equal l1 l2 = (l1 = l2)
-end
-
-module G = Imperative.Digraph.ConcreteBidirectional(PkgV) 
-module B = Builder.I(G)
-module L = struct
-  open Dot_ast
-  let node (id,_) attrs =
-    let str = function | Ident s | Number s | String s | Html s -> s in
-    str id
-  let edge l = ()
-end
-
-module DIn = Dot.Parse (B)(L)
 
 (* ounit anybody :) *)
 type test_fun = unit -> unit
@@ -90,6 +70,7 @@ let rec run = function
 
 (**********************************)
 
+module G = Defaultgraphs.SyntacticDependencyGraph.G
 module S = Statistics.Make(G)
 
 let saveplot h outfile =
@@ -99,16 +80,12 @@ let saveplot h outfile =
   close_out out
 ;;
 
-let main () = 
-  let _ =
-    try Arg.parse options file usage
-    with Arg.Bad s -> failwith s
-  in
-  let gr =
-    match !input_file with
-    |None -> (print_endline usage ; exit 1)
-    |Some f -> DIn.parse f
-  in
+let main () =
+  at_exit (fun () -> Util.dump Format.err_formatter);
+  let posargs = OptParse.OptParser.parse_argv Options.options in
+  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
+  let (universe,_,_) = Boilerplate.load_universe posargs in
+  let gr = Defaultgraphs.SyntacticDependencyGraph.dependency_graph universe in
   let generic = "Generic" >::: [
     "Vertex" >:: (fun _ -> Printf.printf "%d" (G.nb_vertex gr));
     "Edges" >:: (fun _ -> Printf.printf "%d" (G.nb_edges gr));
@@ -154,12 +131,12 @@ let main () =
   ]
   in
   let t = ref [] in
-  if not !Options.scatterplots then t := scatterplots :: !t ;
-  if not !Options.centrality then t := centrality :: !t ;
-  if not !Options.smallworld then t := smallworld :: !t ;
-  if not !Options.components then t := componentsWC :: componentsSC :: !t ;
-  if not !Options.connectivity then t := connectivity :: !t ;
-  if not !Options.generic then t := generic :: !t ;
+  if not (OptParse.Opt.get Options.scatterplots) then t := scatterplots :: !t ;
+  if not (OptParse.Opt.get Options.centrality) then t := centrality :: !t ;
+  if not (OptParse.Opt.get Options.smallworld) then t := smallworld :: !t ;
+  if not (OptParse.Opt.get Options.components) then t := componentsWC :: componentsSC :: !t ;
+  if not (OptParse.Opt.get Options.connectivity) then t := connectivity :: !t ;
+  if not (OptParse.Opt.get Options.generic) then t := generic :: !t ;
   run ("" >::: !t)
 ;;
 

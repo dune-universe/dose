@@ -38,18 +38,12 @@ struct
   let cone = StdOpt.str_option ()
   let reverse_cone = StdOpt.str_option ()
   let cone_maxdepth = StdOpt.int_option ()
-  let conn_comp = StdOpt.store_true ()
   let output_ty = out_option ~default:"cnf" ()
   let out_ch = StdOpt.str_option ()
 
-  let cc_counter = ref 0
   let output_ch () =
     if Opt.is_set out_ch then 
-      if Opt.is_set conn_comp then begin
-        incr cc_counter;
-        open_out (Printf.sprintf "%d-%s" !cc_counter (Opt.get out_ch))
-      end else
-        open_out (Opt.get out_ch)
+      open_out (Opt.get out_ch)
     else stdout
 
   let description = "Ceve ... what does it mean ?"
@@ -62,7 +56,6 @@ struct
   add options ~short_name:'c' ~long_name:"cone" ~help:"cone" cone;
   add options ~short_name:'r' ~long_name:"rcone" ~help:"reverse dependency cone" reverse_cone;
   add options                 ~long_name:"depth" ~help:"max depth - in conjunction with cone" cone_maxdepth;
-  (* add options                 ~long_name:"cc" ~help:"one output per connected component" conn_comp; *)
   add options ~short_name:'t' ~long_name:"outtype" ~help:"Output type" output_ty;
   add options ~short_name:'o' ~long_name:"outfile" ~help:"Output file" out_ch;
 end;;
