@@ -14,7 +14,7 @@ open Cudf
 open ExtLib
 open Common
 open Algo
-open Graph
+(* open Graph *)
 
 module Options =
 struct
@@ -60,9 +60,9 @@ module PkgV = struct
 end
 (* unlabelled indirected graph *)
 (* module UG = Persistent.Graph.Concrete(PkgV) *)
-module UG = Imperative.Graph.Concrete(PkgV)
-module N = Oper.Neighbourhood(UG)
-module O = Oper.Make(Builder.I(UG))
+module UG = Graph.Imperative.Graph.Concrete(PkgV)
+module N = Graph.Oper.Neighbourhood(UG)
+module O = Graph.Oper.Make(Graph.Builder.I(UG))
 module S = N.Vertex_Set
 module GO = Defaultgraphs.GraphOper(UG)
 
@@ -228,7 +228,7 @@ let filter gr cc =
 (* XXX : not the most efficient/elegant way, isn't it ? 
     I should do a visit with marking and remove the hashtbl. *)
 let connected_components graph =
-  let module Dfs = Traverse.Dfs(UG) in
+  let module Dfs = Graph.Traverse.Dfs(UG) in
   let h = Hashtbl.create (UG.nb_vertex graph) in
   let l = ref [] in
   let cc graph id =
@@ -299,6 +299,23 @@ let amend_solver solver q =
   let lit = Depsolver_int.S.lit_of_var (solver.Depsolver_int.map#vartoint q) true in
   Depsolver_int.S.add_un_rule solver.Depsolver_int.constraints lit []
 ;;
+(*
+let check_cc reverse mdf a p cc =
+  let cs =
+    UG.fold_vertex (fun v s ->
+      List.fold_right S.add reverse.(v) s
+    ) cc S.empty
+  in
+  let ds =
+    List.fold_right S.add 
+    (Depsolver_int.dependency_closure mdf [p]) S.empty
+  in
+  let s = S.inter ds cs in
+  try
+    (S.iter (fun v -> if not a.(v) then raise Not_found) s ; true)
+  with Not_found -> false
+;;
+*)
 
 let main () =
   at_exit (fun () -> Common.Util.dump Format.err_formatter);
@@ -333,6 +350,7 @@ let main () =
           List.iter (fun xl ->
             Common.Util.print_info "-> %s\n" (String.concat " , " (List.map string_of_int !xl))
           ) l ;
+          (* l is int list list , gl is int graph list *)
           let gl = List.map (fun xl -> (filter cg !xl)) l in
 (*          if List.exists (fun g -> UG.nb_vertex g > 70) gl then
             (hard := (p,ll) :: !hard ; false)
@@ -340,6 +358,7 @@ let main () =
             let sgl =
               List.sort ~cmp:(fun c1 c2 -> (UG.nb_vertex c1) - (UG.nb_vertex c2)) gl
             in
+            (* let sgl = List.filter (check_cc reverse_t a) sgl in *)
             let misl =
               List.map (fun g ->
                 let e = 
