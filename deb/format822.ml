@@ -22,9 +22,12 @@ type vpkg = (string * (string * string) option)
 type veqpkg = (string * (string * string) option)
 
 type t =
-  { mutable next : unit -> string;
+  { mutable next : unit -> (string * int);
+    mutable line : int;
     mutable cur : string;
     mutable eof : bool }
+
+let dummy_t = { next = (fun _ -> ("",0)); cur = ""; eof = false; line = -1 } 
 
 let eof i = i.eof
 
@@ -32,13 +35,25 @@ let cur i =
   assert (not i.eof);
   i.cur
 
-let parse_error i =
-  failwith (Printf.sprintf "Parse error : %s\n" i.cur)
+let parse_error ?s i =
+  begin match s with
+    |None when i.line > 0 ->
+        Printf.eprintf "Parse error at line %d: \"%s\"\n" i.line i.cur
+    |None ->
+        Printf.eprintf "Parse error : \"%s\"\n" i.cur
+    |Some s when i.line > 0 ->
+        Printf.eprintf "Error: %s at line %d: \"%s\"\n" s i.line i.cur
+    |Some s ->
+        Printf.eprintf "Error: %s : \"%s\"\n" s i.cur
+  end ; exit 1
+;;
 
 let next i =
   assert (not i.eof);
   try
-    i.cur <- i.next ()
+    let s,l = i.next () in
+    i.cur <- s;
+    i.line <- l
   with End_of_file ->
     i.eof <- true
 
@@ -111,20 +126,21 @@ let rec next_token s p =
     with Not_found ->
       next_token s p
   end else
-    failwith (Format.sprintf "Bad token in '%s' at %d" s !p)
+    parse_error ~s:(Printf.sprintf "Bad token in '%s' at %d" s !p) dummy_t
 
 let start_from_fun f =
-  let res = { next = f; cur = ""; eof = false } in
+  let res = { next = f; cur = ""; eof = false; line = 0 } in
   next res; res
 
 let start_token_stream s =
-  let p = ref 0 in start_from_fun (fun () -> next_token s p)
+  let p = ref 0 in start_from_fun (fun () -> (next_token s p,0))
 
-let start_from_channel ch =
-  start_from_fun (fun () ->
-    try IO.read_line ch 
-    with IO.No_more_input -> raise End_of_file
-  )
+let start_from_channel =
+  let i = ref 0 in fun ch ->
+    start_from_fun (fun () ->
+      try incr i ; (IO.read_line ch,!i)
+      with IO.No_more_input -> raise End_of_file
+    )
 
 (*****************************************************)
 
@@ -146,15 +162,15 @@ let version_re_2 =
   Str.regexp
   "^\\(\\([0-9]+\\):\\)?\\([A-Za-z0-9._:+~-]+\\)\\( \\)?$"
 
-let check_version s =
+let check_version i s =
   if not (Str.string_match strict_version_re_1 s 0 || Str.string_match strict_version_re_2 s 0) then begin
-    (Printf.eprintf "Warning : bad version '%s'\n" s);
+    (Util.print_warning "Warning : bad version '%s'" s);
     if not (Str.string_match version_re_1 s 0 || Str.string_match version_re_2 s 0) then 
-      failwith (Format.sprintf "Bad version '%s'@." s)
+      parse_error ~s:(Printf.sprintf "Bad version '%s'" s) i
   end
 
 let parse_version s = 
-  check_version s;
+  check_version dummy_t s;
   s
 ;;
 
@@ -163,15 +179,15 @@ let parse_version s =
 let strict_package_re = Str.regexp "^[a-z0-9][a-z0-9.+-]+$"
 let package_re = Str.regexp "^[A-Za-z0-9][A-Za-z0-9._+-]+$"
 
-let check_package_name s =
+let check_package_name i s =
   if not (Str.string_match strict_package_re s 0) then begin
-    (Printf.eprintf "Warning : bad package name '%s'\n" s);
+    (Util.print_warning "Warning : bad package name '%s'" s);
     if not (Str.string_match package_re s 0) then
-      failwith (Format.sprintf "Bad package name '%s'@." s)
+      parse_error ~s:(Printf.sprintf "Bad package name '%s'" s) i
   end
 
 let parse_package s =
-  check_package_name s;
+  check_package_name dummy_t s;
   s
 ;;
 
@@ -179,16 +195,16 @@ let parse_package s =
 
 let parse_constr_aux vers s =
   let name = cur s in
-  check_package_name name;
+  check_package_name s name;
   next s;
   if not (eof s) && cur s = "(" then begin
     if not vers then
-      failwith (Format.sprintf "Package version not allowed in '%s'" name);
+      parse_error ~s:(Printf.sprintf "Package version not allowed in '%s'" name) s;
     next s;
     let comp = (cur s) in
     next s;
     let version = cur s in
-    check_version version;
+    check_version s version;
     next s;
     expect s ")";
     (name, Some (comp, version))
@@ -235,7 +251,7 @@ let parse_source s =
         Printf.eprintf "Warning : bad source name '%s'\n" s;
         (n,None)
       end
-  |_ -> failwith (Format.sprintf "Malformed source field : '%s'" s)
+  |_ -> parse_error ~s:(Printf.sprintf "Malformed source field : '%s'" s) dummy_t
 
 let list_parser ?(sep = space_re) p s = List.map p (Str.split sep s)
 
