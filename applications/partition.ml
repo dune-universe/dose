@@ -14,7 +14,6 @@ open Cudf
 open ExtLib
 open Common
 open Algo
-(* open Graph *)
 
 module Options =
 struct
@@ -52,15 +51,10 @@ let parse uri =
 
 (* ----------------------------------- *)
 
-module PkgV = struct
-    type t = int
-    let compare = Pervasives.compare
-    let hash i = i
-    let equal = (=)
-end
 (* unlabelled indirected graph *)
 (* module UG = Persistent.Graph.Concrete(PkgV) *)
-module UG = Graph.Imperative.Graph.Concrete(PkgV)
+module IG = Defaultgraphs.IntPkgGraph.G
+module UG = Graph.Imperative.Graph.Concrete(Defaultgraphs.IntPkgGraph.PkgV)
 module N = Graph.Oper.Neighbourhood(UG)
 module O = Graph.Oper.Make(Graph.Builder.I(UG))
 module S = N.Vertex_Set
@@ -173,23 +167,24 @@ let rec permutation = function
       )
 
 let rec bronKerbosch2 gr r p x =
-    let n v = N.set_from_vertex gr v in
-    if (S.is_empty p) && (S.is_empty x) then (push r empty)
+  let n v = N.set_from_vertex gr v in
+  let rec fold acc (p,x,s) =
+    if S.is_empty s then acc
     else
-      let s = S.union p x in
-      let u = S.choose s in
-      let rec fold acc (p,x,s) =
-        if S.is_empty s then acc
-        else
-          let v = S.choose s in
-          let rest = S.remove v s in
-          let r' = S.union r (S.singleton v) in
-          let p' = S.inter p (n v) in
-          let x' = S.inter x (n v) in
-          let xx = bronKerbosch2 gr r' p' x' in
-          fold (append xx acc) (S.remove v p, S.add v x, rest)
-      in
-      fold empty (p,x,S.diff p (n u))
+      let v = S.choose s in
+      let rest = S.remove v s in
+      let r' = S.union r (S.singleton v) in
+      let p' = S.inter p (n v) in
+      let x' = S.inter x (n v) in
+      let acc' = (push (r',p',x') acc) in
+      fold acc' (S.remove v p, S.add v x, rest)
+  in
+  if (S.is_empty p) && (S.is_empty x) then (push r empty)
+  else
+    let s = S.union p x in
+    let u = S.choose s in
+    let l = fold empty (p,x,S.diff p (n u)) in
+    flatten (map (fun (r',p',x') -> bronKerbosch2 gr r' p' x') l)
 ;;
 
 let max_independent_sets gr =
@@ -278,7 +273,7 @@ let package_table reverse cg ct =
   ) cg
   ;
   let l = Hashtbl.fold (fun v k acc -> (v, ref(List.unique !k))::acc ) h [] in
-  List.sort ~cmp:(fun (_,k1) (_,k2) -> (List.length !k1) - (List.length !k2)) l 
+  List.sort ~cmp:(fun (_,k2) (_,k1) -> (List.length !k1) - (List.length !k2)) l 
 ;;
 
 let install solver _ ll = 
@@ -299,23 +294,51 @@ let amend_solver solver q =
   let lit = Depsolver_int.S.lit_of_var (solver.Depsolver_int.map#vartoint q) true in
   Depsolver_int.S.add_un_rule solver.Depsolver_int.constraints lit []
 ;;
-(*
-let check_cc reverse mdf a p cc =
-  let cs =
-    UG.fold_vertex (fun v s ->
-      List.fold_right S.add reverse.(v) s
-    ) cc S.empty
-  in
-  let ds =
-    List.fold_right S.add 
-    (Depsolver_int.dependency_closure mdf [p]) S.empty
-  in
+
+let reverse_table reverse =
+  let h = Hashtbl.create (2000) in
+  fun xl ->
+    try Hashtbl.find h xl
+    with Not_found -> begin
+      let cs =
+        List.fold_left (fun s v ->
+          List.fold_right S.add reverse.(v) s
+        ) S.empty !xl
+      in
+      Hashtbl.add h xl cs ;
+      cs
+    end
+
+let check_cc dt reverse a p xl =
+  let cs = reverse_table reverse xl in
+  let ds = Hashtbl.find dt p in
   let s = S.inter ds cs in
   try
-    (S.iter (fun v -> if not a.(v) then raise Not_found) s ; true)
+    (S.iter (fun v -> if not a.(v) then raise Not_found) s ; 
+    (* Printf.printf "removed !" *) ; true)
   with Not_found -> false
 ;;
-*)
+
+let dependency_table mdf =
+  let size = Array.length mdf.Mdf.index in
+  let h = Hashtbl.create (2 * size) in
+  for i = 0 to size - 1 do
+    let ds =
+      List.fold_right S.add 
+      (Depsolver_int.dependency_closure mdf [i]) S.empty
+    in
+    Hashtbl.add h i ds
+  done;
+  h
+;;
+
+let conjdepgraph mdf = 
+  let g = Defaultgraphs.IntPkgGraph.G.create () in
+  for id=0 to (Array.length mdf.Mdf.index)-1 do
+    Defaultgraphs.IntPkgGraph.conjdepgraph_int g mdf.Mdf.index id
+  done;
+  Defaultgraphs.IntPkgGraph.SO.O.add_transitive_closure g
+;;
 
 let main () =
   at_exit (fun () -> Common.Util.dump Format.err_formatter);
@@ -327,6 +350,8 @@ let main () =
   let index = mdf.Mdf.index in
   let solver = Depsolver_int.init_solver index in
   let reverse_t = Depsolver_int.reverse_dependencies mdf in
+  (* let dependency_table = dependency_table mdf in *)
+  let conjdepgraph = conjdepgraph mdf in
   let cg = conflictgraph mdf in
   let cc = connected_components cg in
   Printf.eprintf "conflict graph = vertex : %d , edges : %d\n"
@@ -338,51 +363,53 @@ let main () =
   let a = Array.make (Array.length index) false in
   let hard = ref [] in
   let c = ref 0 in
-  List.iter (fun (p,ll) ->
-    incr c;
-    let size = List.length !ll in
-    Printf.printf "(%d or %d) package %s (%d) %!\n" !c (List.length pt) 
-    (CudfAdd.print_package (maps.CudfAdd.map#inttovar p)) size ;
-    let r =
-      for_all (fun m ->
-        for_all (fun l ->
-          Common.Util.print_info "All sets of size %d (%d)%!\n" m (List.length l); 
-          List.iter (fun xl ->
-            Common.Util.print_info "-> %s\n" (String.concat " , " (List.map string_of_int !xl))
-          ) l ;
-          (* l is int list list , gl is int graph list *)
-          let gl = List.map (fun xl -> (filter cg !xl)) l in
-(*          if List.exists (fun g -> UG.nb_vertex g > 70) gl then
-            (hard := (p,ll) :: !hard ; false)
-          else *) begin
-            let sgl =
-              List.sort ~cmp:(fun c1 c2 -> (UG.nb_vertex c1) - (UG.nb_vertex c2)) gl
-            in
-            (* let sgl = List.filter (check_cc reverse_t a) sgl in *)
-            let misl =
-              List.map (fun g ->
-                let e = 
-                  filter_map (fun s ->
-                    let sl = (S.elements s) in
-                    Common.Util.print_info "%s\n" (String.concat " , " (List.map string_of_int sl)); 
-                    if install solver a [s] then Some s else None
-                  ) (max_independent_sets g)
-                in if is_empty e then assert false else e
-              ) sgl
-            in
-            for_all (fun e -> 
-              install solver a ((S.singleton p)::e)
-            ) (permutation misl)
-          end
-        ) (allsets m !ll)
-      ) (reverse (range empty 1 size))
-    in
-    a.(p) <- r ;
-    (if r then begin
-      amend_solver solver p;
-      Printf.printf "%s is always installable\n%!" (CudfAdd.print_package (maps.CudfAdd.map#inttovar p))
+  List.iter (function 
+    |(p,_) when a.(p) -> ()
+    |(p,{contents = ll}) -> begin
+      incr c;
+      let size = List.length ll in
+      Printf.printf "(%d or %d) package %s (%d) %!\n" !c (List.length pt) 
+      (CudfAdd.print_package (maps.CudfAdd.map#inttovar p)) size ;
+      let r =
+        for_all (fun m ->
+          for_all (fun l ->
+            Common.Util.print_info "All sets of size %d (%d)%!" m (List.length l); 
+            List.iter (fun xl ->
+              Common.Util.print_info "-> %s" (String.concat " , " (List.map string_of_int !xl))
+            ) l ;
+            (* l is int list list , gl is int graph list *)
+            (* let l = List.filter (check_cc dependency_table reverse_t a p) l in *)
+            let gl = List.map (fun xl -> (filter cg !xl)) l in
+(*            if List.exists (fun g -> UG.nb_vertex g > 70) gl then
+              (hard := (p,ll) :: !hard ; false)
+            else *) begin
+              let sgl = List.sort ~cmp:(fun c1 c2 -> (UG.nb_vertex c1) - (UG.nb_vertex c2)) gl in
+              let misl =
+                List.map (fun g ->
+                  let e = 
+                    filter_map (fun s ->
+                      let sl = (S.elements s) in
+                      Common.Util.print_info "%s" (String.concat " , " (List.map string_of_int sl)); 
+                      if install solver a [s] then Some s else None
+                    ) (max_independent_sets g)
+                  in if is_empty e then assert false else e
+                ) sgl
+              in
+              for_all (fun e -> 
+                install solver a ((S.singleton p)::e)
+              ) (permutation misl)
+            end
+          ) (allsets m ll)
+        ) (reverse (range empty 1 size))
+      in
+      (if r then begin
+        a.(p) <- r ;
+        (* amend_solver solver p; *)
+        List.iter (fun i -> a.(i) <- true) (Defaultgraphs.IntPkgGraph.conjdeps conjdepgraph p);
+        Printf.printf "%s is always installable\n%!" (CudfAdd.print_package (maps.CudfAdd.map#inttovar p))
+      end
+      else Printf.printf "eliminates at least one mis\n%!")
     end
-    else Printf.printf "eliminates at least one mis\n%!")
   ) pt 
   ;
   let elim = Array.fold_left (fun acc v -> if v then acc + 1 else acc) 0 a in
