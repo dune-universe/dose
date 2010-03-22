@@ -39,7 +39,15 @@ end
 
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
-  let posargs = OptParse.OptParser.parse_argv Options.options in
+  let posargs =
+    let args = OptParse.OptParser.parse_argv Options.options in
+    match Filename.basename(Sys.argv.(0)),args with
+    |"debcheck",[] -> ["deb://-"]
+    |"debcheck",l -> List.map ((^) "deb://") l
+    |_,_ -> args
+  in
+  print_endline Sys.argv.(0);
+  List.iter (print_endline) posargs;
   if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
   let (universe,from_cudf,_) = Boilerplate.load_universe posargs in
 
