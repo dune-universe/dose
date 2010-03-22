@@ -46,8 +46,6 @@ let main () =
     |"debcheck",l -> List.map ((^) "deb://") l
     |_,_ -> args
   in
-  print_endline Sys.argv.(0);
-  List.iter (print_endline) posargs;
   if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
   let (universe,from_cudf,_) = Boilerplate.load_universe posargs in
 
