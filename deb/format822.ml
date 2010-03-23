@@ -142,6 +142,7 @@ let start_from_channel =
       with IO.No_more_input -> raise End_of_file
     )
 
+exception ParseError of string * int
 (*****************************************************)
 
 let strict_version_re_1 =
@@ -166,11 +167,13 @@ let check_version i s =
   if not (Str.string_match strict_version_re_1 s 0 || Str.string_match strict_version_re_2 s 0) then begin
     (Util.print_warning "Warning : bad version '%s'" s);
     if not (Str.string_match version_re_1 s 0 || Str.string_match version_re_2 s 0) then 
-      parse_error ~s:(Printf.sprintf "Bad version '%s'" s) i
+      (* parse_error ~s:(Printf.sprintf "Bad version '%s'" s) i *)
+      raise (ParseError ((Printf.sprintf "Bad version '%s'" s), i.line))
   end
 
 let parse_version s = 
-  check_version dummy_t s;
+  begin try check_version dummy_t s
+  with ParseError (s,i) -> parse_error ~s:s dummy_t end;
   s
 ;;
 
@@ -183,11 +186,13 @@ let check_package_name i s =
   if not (Str.string_match strict_package_re s 0) then begin
     (Util.print_warning "Warning : bad package name '%s'" s);
     if not (Str.string_match package_re s 0) then
-      parse_error ~s:(Printf.sprintf "Bad package name '%s'" s) i
+      (* parse_error ~s:(Printf.sprintf "Bad package name '%s'" s) i *)
+      raise (ParseError ((Printf.sprintf "Bad version '%s'" s), i.line))
   end
 
 let parse_package s =
-  check_package_name dummy_t s;
+  begin try check_package_name dummy_t s
+  with ParseError (s,i) -> parse_error ~s:s dummy_t end ;
   s
 ;;
 
@@ -198,16 +203,21 @@ let parse_constr_aux vers s =
   check_package_name s name;
   next s;
   if not (eof s) && cur s = "(" then begin
-    if not vers then
-      parse_error ~s:(Printf.sprintf "Package version not allowed in '%s'" name) s;
-    next s;
-    let comp = (cur s) in
-    next s;
-    let version = cur s in
-    check_version s version;
-    next s;
-    expect s ")";
-    (name, Some (comp, version))
+    try 
+      if not vers then
+        parse_error ~s:(Printf.sprintf "Package version not allowed in '%s'" name) s;
+      next s;
+      let comp = (cur s) in
+      next s;
+      let version = cur s in
+      check_version s version;
+      next s;
+      expect s ")";
+      (name, Some (comp, version))
+    with ParseError (s,_) -> begin
+      (Printf.eprintf "WARNING !!! '%s'\n" s);
+      (name, None)
+    end
   end else
     (name, None)
 
