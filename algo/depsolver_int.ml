@@ -249,9 +249,9 @@ let reverse_dependencies mdf =
     @param l a subset of [index]
 *)
 let dependency_closure ?(maxdepth=max_int) ?(conjuntive=false) mdf =
-  let h = Hashtbl.create 5000 in
+  let h = Hashtbl.create (Array.length mdf.Mdf.index) in
   fun idlist ->
-    try Hashtbl.find h idlist
+    try Hashtbl.find h (idlist,conjuntive,maxdepth)
     with Not_found -> begin
       let index = mdf.Mdf.index in
       let queue = Queue.create () in
@@ -275,7 +275,7 @@ let dependency_closure ?(maxdepth=max_int) ?(conjuntive=false) mdf =
         end
       done;
       let result = Hashtbl.fold (fun k _ l -> k::l) visited [] in
-      Hashtbl.add h idlist result;
+      Hashtbl.add h (idlist,conjuntive,maxdepth) result;
       result
     end
 
@@ -288,21 +288,28 @@ let dependency_closure ?(maxdepth=max_int) ?(conjuntive=false) mdf =
     @param index the package universe
     @param idlist a subset of [index]
 *)
-let reverse_dependency_closure ?(maxdepth=max_int) reverse idlist =
-  let queue = Queue.create () in
-  let visited = Hashtbl.create (List.length idlist) in
-  List.iter (fun e -> Queue.add (e,0) queue) (List.unique idlist);
-  while (Queue.length queue > 0) do
-    let (id,level) = Queue.take queue in
-    if not(Hashtbl.mem visited id) && level < maxdepth then begin
-      Hashtbl.add visited id ();
-      List.iter (fun i ->
-        if not(Hashtbl.mem visited i) then
-          Queue.add (i,level+1) queue
-      ) reverse.(id)
+let reverse_dependency_closure ?(maxdepth=max_int) reverse =
+  let h = Hashtbl.create (Array.length reverse) in
+  fun idlist ->
+    try Hashtbl.find h (idlist,maxdepth)
+    with Not_found -> begin
+      let queue = Queue.create () in
+      let visited = Hashtbl.create (List.length idlist) in
+      List.iter (fun e -> Queue.add (e,0) queue) (List.unique idlist);
+      while (Queue.length queue > 0) do
+        let (id,level) = Queue.take queue in
+        if not(Hashtbl.mem visited id) && level < maxdepth then begin
+          Hashtbl.add visited id ();
+          List.iter (fun i ->
+            if not(Hashtbl.mem visited i) then
+              Queue.add (i,level+1) queue
+          ) reverse.(id)
+        end
+      done;
+      let result = Hashtbl.fold (fun k _ l -> k::l) visited [] in
+      Hashtbl.add h (idlist,maxdepth) result;
+      result
     end
-  done;
-  Hashtbl.fold (fun k _ l -> k::l) visited []
 
 (***********************************************************)
 
