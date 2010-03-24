@@ -95,6 +95,20 @@ let test_dependency_closure =
     assert_equal true (S.equal dependency_set set)
   )
 
+let test_conjunctive_dependency_closure =
+  "conjunctive dependency closure" >:: (fun _ ->
+    List.iter (fun pkg ->
+      print_endline (CudfAdd.print_package pkg);
+      let dcl = Depsolver.dependency_closure ~conjuntive:true universe [pkg] in
+      List.iter (fun pkg -> print_endline (CudfAdd.print_package pkg)) dcl;
+      print_newline ();
+      let d = Depsolver.edos_coinstall solver (dcl) in
+      match d.Diagnostic.result with
+      |Diagnostic.Success _ -> assert_bool "pass" true
+      |Diagnostic.Failure _ -> Diagnostic.print ~explain:true stdout d ; assert_failure "fail"
+    ) (Cudf.get_packages universe)
+  )
+
 (* blah ... *)
 (* let test_dependency_closure_graph = 
   "conjunctive dependency closure" >:: (fun _ -> 
@@ -150,6 +164,7 @@ let test_depsolver =
     (* test_dependency_closure_graph ; *)
     test_reverse_dependencies ;
     test_reverse_dependency_closure ;
+    test_conjunctive_dependency_closure ;
   ]
 
 let solution_set =

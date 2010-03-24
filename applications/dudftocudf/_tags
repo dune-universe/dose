@@ -1,2 +1,2 @@
-<*.ml> or <*.mli> or <*.byte> or <*.native> or <*.cmxs>: use_dynlink, pkg_extlib, pkg_cudf, pkg_str, pkg_postgresql, pkg_sqlite3, pkg_zip, pkg_expat, pkg_xml-light, pkg_ocamlgraph, pkg_json-static
+<*.ml> or <*.mli> or <*.byte> or <*.native> or <*.cmxs>: pkg_extlib, pkg_cudf, pkg_str, pkg_zip, pkg_expat, pkg_xml-light, pkg_json-static
 <*.ml> or <*.mli> : warn_x

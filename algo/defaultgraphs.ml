@@ -340,12 +340,18 @@ module IntPkgGraph = struct
     graph
 
   (** given a graph return the conjunctive dependency closure of the package id *)
-  let conjdeps graph id =
-    let module Dfs = Traverse.Dfs(G) in
-    let l = ref [] in
-    let collect id = l := id :: !l in
-    Dfs.prefix_component collect graph id;
-    !l
+  let conjdeps graph =
+    let h = Hashtbl.create (G.nb_vertex graph) in
+    fun id ->
+      try Hashtbl.find h id
+      with Not_found -> begin
+        let module Dfs = Traverse.Dfs(G) in
+        let l = ref [] in
+        let collect id = l := id :: !l in
+        Dfs.prefix_component collect graph id;
+        Hashtbl.add h id !l;
+        !l
+      end
 
   module S = Set.Make(PkgV)
   module SO = GraphOper(G)

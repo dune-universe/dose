@@ -334,7 +334,8 @@ let main () =
   let infoH = Hashtbl.create 1031 in
   let extras_property = [
     ("Size", ("size", `Nat (Some 0)));
-    ("Installed-Size", ("installedsize", `Nat (Some 0)))] 
+    ("Installed-Size", ("installedsize", `Nat (Some 0)));
+    ("Maintainer", ("maintainer", `String None))]
   in
   let extras = List.map fst extras_property in
 

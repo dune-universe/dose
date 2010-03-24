@@ -248,28 +248,36 @@ let reverse_dependencies mdf =
     @param index the package universe
     @param l a subset of [index]
 *)
-let dependency_closure ?(maxdepth=max_int) ?(conjuntive=false) mdf idlist =
-  let index = mdf.Mdf.index in
-  let queue = Queue.create () in
-  let visited = Hashtbl.create (2 * (List.length idlist)) in
-  List.iter (fun e -> Queue.add (e,0) queue) (List.unique idlist);
-  while (Queue.length queue > 0) do
-    let (id,level) = Queue.take queue in
-    if not(Hashtbl.mem visited id) && level < maxdepth then begin
-      Hashtbl.add visited id ();
-      Array.iter (function
-        |(_,[|i|],_) when conjuntive = true ->
-          if not(Hashtbl.mem visited i) then
-            Queue.add (i,level+1) queue
-        |(_,dsj,_) ->
-          Array.iter (fun i ->
-            if not(Hashtbl.mem visited i) then
-              Queue.add (i,level+1) queue
-          ) dsj
-      ) index.(id).Mdf.depends
+let dependency_closure ?(maxdepth=max_int) ?(conjuntive=false) mdf =
+  let h = Hashtbl.create 5000 in
+  fun idlist ->
+    try Hashtbl.find h idlist
+    with Not_found -> begin
+      let index = mdf.Mdf.index in
+      let queue = Queue.create () in
+      let visited = Hashtbl.create (2 * (List.length idlist)) in
+      List.iter (fun e -> Queue.add (e,0) queue) (List.unique idlist);
+      while (Queue.length queue > 0) do
+        let (id,level) = Queue.take queue in
+        if not(Hashtbl.mem visited id) && level < maxdepth then begin
+          Hashtbl.add visited id ();
+          Array.iter (function
+            |(_,[|i|],_) when conjuntive = true ->
+              if not(Hashtbl.mem visited i) then
+                Queue.add (i,level+1) queue
+            |(_,dsj,_) when conjuntive = false ->
+              Array.iter (fun i ->
+                if not(Hashtbl.mem visited i) then
+                  Queue.add (i,level+1) queue
+              ) dsj
+            |_ -> ()
+          ) index.(id).Mdf.depends
+        end
+      done;
+      let result = Hashtbl.fold (fun k _ l -> k::l) visited [] in
+      Hashtbl.add h idlist result;
+      result
     end
-  done;
-  Hashtbl.fold (fun k _ l -> k::l) visited [] 
 
 (*    XXX : elements in idlist should be included only if because
  *    of circular dependencies *)
