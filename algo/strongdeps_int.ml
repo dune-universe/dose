@@ -49,9 +49,9 @@ let check_strong graph solver p l =
 
 (* true if all dependencies are conjunctive *)
 let allconj depends = 
-  if Array.length depends > 0 then
+  if List.length depends > 0 then
     try
-      Array.iter (function (_,[|_|],_) -> () | _ -> raise Not_found) depends;
+      List.iter (function (_,[_],_) -> () | _ -> raise Not_found) depends;
       false
     with Not_found -> true
   else true

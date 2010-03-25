@@ -84,30 +84,29 @@ let init_solver ?(buffer=false) ?(proxy_size=0) ?closure index =
   let exec_depends map constraints pkg_id pkg =
     let satvar = map#vartoint pkg_id in
     let lit = S.lit_of_var satvar false in
-    for i = 0 to (Array.length pkg.Mdf.depends) - 1 do
+    List.iter (fun (vpkg,disjunction,_) ->
       incr num_dependencies;
-      let (vpkg,disjunction,_) = pkg.Mdf.depends.(i) in
-      if Array.length disjunction = 0 then
+      if List.length disjunction = 0 then
         S.add_un_rule constraints lit [Diagnostic_int.EmptyDependency(pkg_id,vpkg)]
       else begin
-        let lit_array =
+        let lit_list =
           let a =
-            Array.map (fun i -> 
+            List.map (fun i -> 
               incr num_disjunctions;
               S.lit_of_var (map#vartoint i) true
             ) disjunction
           in
-          Array.append [|lit|] a
+          lit::a
         in
-        S.add_rule constraints lit_array
-        [Diagnostic_int.Dependency(pkg_id,Array.to_list disjunction)]
+        S.add_rule constraints (Array.of_list lit_list)
+        [Diagnostic_int.Dependency(pkg_id,disjunction)]
         ;
-        if Array.length disjunction > 1 then
+        if List.length disjunction > 1 then
           S.associate_vars constraints
           (S.lit_of_var satvar true)
-          (List.map map#vartoint (Array.to_list disjunction))
+          (List.map map#vartoint disjunction)
       end
-    done
+    ) pkg.Mdf.depends
   in
 
   (* add conflicts *)
@@ -115,14 +114,13 @@ let init_solver ?(buffer=false) ?(proxy_size=0) ?closure index =
     try
       let conjunction = pkg.Mdf.conflicts in
       let x = S.lit_of_var (map#vartoint pkg_id1) false in 
-      for i = 0 to (Array.length conjunction) - 1 do
-        let (_, pkg_id2) = conjunction.(i) in
+      List.iter (fun (_, pkg_id2) ->
         if pkg_id1 <> pkg_id2 then begin
             let y = S.lit_of_var (map#vartoint pkg_id2) false in
             incr num_conflicts;
             S.add_bin_rule constraints x y [Diagnostic_int.Conflict(pkg_id1, pkg_id2)]
         end
-      done
+      ) conjunction
     with Not_found ->
       (* ignore conflicts that are not in the closure.
        * if nobody depends on a conflict package, then it is irrelevant.
@@ -222,15 +220,15 @@ let solve solver request =
 (** [reverse_dependencies index] return an array that associates to a package id
     [i] the list of all packages ids that have a dependency on [i].
 
-    @param index the package universe
+    @param mdf the package universe
 *)
 let reverse_dependencies mdf =
   let index = mdf.Mdf.index in
   let size = Array.length index in
   let reverse = Array.create size [] in
   let rev i dl = 
-    Array.iter (fun (_,a,_) ->
-      Array.iter (fun j ->
+    List.iter (fun (_,a,_) ->
+      List.iter (fun j ->
         if i <> j then
           if not(List.mem i reverse.(j)) then
             reverse.(j) <- i::reverse.(j)
@@ -247,6 +245,8 @@ let reverse_dependencies mdf =
     @param conjuntive consider only conjuntive dependencies (false by default)
     @param index the package universe
     @param l a subset of [index]
+
+    This function has in a memoization strategy.
 *)
 let dependency_closure ?(maxdepth=max_int) ?(conjuntive=false) mdf =
   let h = Hashtbl.create (Array.length mdf.Mdf.index) in
@@ -261,12 +261,12 @@ let dependency_closure ?(maxdepth=max_int) ?(conjuntive=false) mdf =
         let (id,level) = Queue.take queue in
         if not(Hashtbl.mem visited id) && level < maxdepth then begin
           Hashtbl.add visited id ();
-          Array.iter (function
-            |(_,[|i|],_) when conjuntive = true ->
+          List.iter (function
+            |(_,[i],_) when conjuntive = true ->
               if not(Hashtbl.mem visited i) then
                 Queue.add (i,level+1) queue
             |(_,dsj,_) when conjuntive = false ->
-              Array.iter (fun i ->
+              List.iter (fun i ->
                 if not(Hashtbl.mem visited i) then
                   Queue.add (i,level+1) queue
               ) dsj
@@ -287,6 +287,8 @@ let dependency_closure ?(maxdepth=max_int) ?(conjuntive=false) mdf =
     @param maxdepth the maximum cone depth (infinite by default)
     @param index the package universe
     @param idlist a subset of [index]
+
+    This function has in a memoization strategy.
 *)
 let reverse_dependency_closure ?(maxdepth=max_int) reverse =
   let h = Hashtbl.create (Array.length reverse) in

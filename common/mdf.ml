@@ -19,8 +19,8 @@ open CudfAdd
 type package = {
   id : int ; (** package id relative to the universe *)
   pkg : Cudf.package; (** cudf package *)
-  depends : (Cudf_types.vpkg list * int array * Cudf.package list) array ;
-  conflicts : (Cudf.package * int) array (** cudf package and package id *)
+  depends : (Cudf_types.vpkg list * int list * Cudf.package list) list ;
+  conflicts : (Cudf.package * int) list (** cudf package and package id *)
 }
 
 type universe = {
@@ -32,8 +32,8 @@ type universe = {
 let default_package = {
   id = 0;
   pkg = Cudf.default_package;
-  depends = [||] ;
-  conflicts = [||] 
+  depends = [] ;
+  conflicts = [] 
 }
 
 let __load maps universe =
@@ -50,21 +50,21 @@ let __load maps universe =
       List.map (fun disjunction ->
         List.fold_left (fun (l1,l2,l3) vpkg ->
           let dl = maps.who_provides vpkg in
-          let el = Array.of_list (
+          let el =
             List.filter_map(fun p ->
               (* remove self provides *)
               let i = to_sat p in if i <> id then Some i else None
-            ) dl ) 
+            ) dl 
           in
-          (vpkg::l1,Array.append el l2, dl @ l3)
-        ) ([],[||],[]) disjunction
+          (vpkg::l1,el @ l2, dl @ l3)
+        ) ([],[],[]) disjunction
       ) pkg.Cudf.depends
     in
     let p = {
       id = id;
       pkg = pkg;
-      depends = Array.of_list dll;
-      conflicts = Array.of_list cl
+      depends = dll;
+      conflicts = cl
     }
     in
     a.(id) <- p

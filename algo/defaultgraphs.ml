@@ -328,8 +328,8 @@ module IntPkgGraph = struct
   (** add to the graph all conjunctive dependencies of package id *)
   let conjdepgraph_int graph index id =
     G.add_vertex graph id;
-    Array.iter (function
-      |(_,[|p|],_) -> G.add_edge graph id p
+    List.iter (function
+      |(_,[p],_) -> G.add_edge graph id p
       | _ -> ()
     ) index.(id).Mdf.depends
 
