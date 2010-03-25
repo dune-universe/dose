@@ -61,6 +61,25 @@ begin
   ) (C.scc_list graph) 
 end;;
 
+module S = Set.Make(struct type t = string * string let compare = compare end)
+let do_test sd_graph dom_graph =
+begin
+  G.iter_vertex (fun p ->
+    if (fst p <> "START") then
+    G.iter_pred (fun p' ->
+      if (fst p' <> "START") then
+      begin
+        Printf.printf "-> %s tarjan-dominates %s, testing..." (fst p') (fst p);
+        let isp' = G.fold_pred (fun v s -> S.add v s) sd_graph p' (S.singleton p') in
+        let succp' = List.fold_left (fun s e -> S.add e s) S.empty (G.succ sd_graph p') in
+        let isp = G.fold_pred (fun v s -> S.add v s) sd_graph p (S.singleton p) in
+        if S.subset (S.diff isp succp') isp' then Printf.printf "yes\n"
+        else Printf.printf "no\n"
+      end
+    ) dom_graph p
+  ) dom_graph
+end;;
+
 let tarjan graph =
 
 let start_pkg = ("START", "0") in
@@ -182,7 +201,8 @@ begin
              end
     | _ -> failwith (Printf.sprintf "Vertex %s has multiple dominators" (fst w))
   ) (List.rev !vertex_order);
-  StrongDepGraph.D.output_graph stdout domgr
+  StrongDepGraph.D.output_graph stdout domgr;
+  do_test graph domgr
 end;;
 
 let () =
