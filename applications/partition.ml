@@ -55,6 +55,25 @@ let parse uri =
 (* module UG = Persistent.Graph.Concrete(PkgV) *)
 module IG = Defaultgraphs.IntPkgGraph.G
 module UG = Graph.Imperative.Graph.Concrete(Defaultgraphs.IntPkgGraph.PkgV)
+
+module DisplayF (G : Graph.Sig.I) =
+  struct
+    include G
+    let vertex_name v = Printf.sprintf "\"%d\"" v
+
+    let graph_attributes = fun _ -> []
+    let get_subgraph = fun _ -> None
+
+    let default_edge_attributes = fun _ -> []
+    let default_vertex_attributes = fun _ -> []
+
+    let vertex_attributes v = []
+
+    let edge_attributes e = []
+  end
+module Display = DisplayF(UG)
+module D = Graph.Graphviz.Dot(Display)
+
 module N = Graph.Oper.Neighbourhood(UG)
 module O = Graph.Oper.Make(Graph.Builder.I(UG))
 module S = N.Vertex_Set
@@ -150,8 +169,8 @@ let return a = push a empty
 let rec allsets m l =
   if m = 0 then return [] else
   match l with
-    [] -> empty
-  | h::t -> append (map (fun g -> h::g) (allsets (m - 1) t)) (allsets m t)
+  |[] -> empty
+  |h::t -> append (map (fun g -> h::g) (allsets (m - 1) t)) (allsets m t)
 ;;
 
 let rec range acc a b =
@@ -200,10 +219,8 @@ let conflictgraph mdf =
   let g =UG.create () in
   for i=0 to (Array.length index - 1) do
     let pkg = index.(i) in
-    let conflicts = Array.map snd pkg.Mdf.conflicts in
-    for j=0 to ((Array.length conflicts) - 1) do
-      UG.add_edge g i conflicts.(j)
-    done
+    let conflicts = List.map snd pkg.Mdf.conflicts in
+    List.iter (UG.add_edge g i) conflicts
   done;
   g
 ;;
@@ -259,21 +276,23 @@ let conflict_table cc =
 ;;
 
 (* associate a list of connected components to each package *)
-let package_table reverse cg ct =
+let package_table mdf reverse cg ct =
   let h = Hashtbl.create (UG.nb_vertex cg) in
   let rev_clo pid = Depsolver_int.reverse_dependency_closure reverse [pid] in
   UG.iter_vertex (fun v ->
-    List.iter (fun p ->
-      try
-        let l = Hashtbl.find h p in
-        try l := (Hashtbl.find ct v)::!l
-        with Not_found -> assert false
-      with Not_found -> Hashtbl.add h p (ref [(Hashtbl.find ct v)])
+    List.iter (function
+      |p when (List.length mdf.Mdf.index.(p).Mdf.conflicts > 0) -> ()
+      |p ->
+        try
+          let l = Hashtbl.find h p in
+          try l := (Hashtbl.find ct v)::!l
+          with Not_found -> assert false
+        with Not_found -> Hashtbl.add h p (ref [Hashtbl.find ct v])
     ) (rev_clo v)
   ) cg
   ;
   let l = Hashtbl.fold (fun v k acc -> (v, ref(List.unique !k))::acc ) h [] in
-  List.sort ~cmp:(fun (_,k2) (_,k1) -> (List.length !k1) - (List.length !k2)) l 
+  List.sort ~cmp:(fun (_,k1) (_,k2) -> (List.length !k1) - (List.length !k2)) l 
 ;;
 
 let install solver _ ll = 
@@ -309,35 +328,82 @@ let reverse_table reverse =
       cs
     end
 
-let check_cc dt reverse a p xl =
-  let cs = reverse_table reverse xl in
-  let ds = Hashtbl.find dt p in
-  let s = S.inter ds cs in
-  try
-    (S.iter (fun v -> if not a.(v) then raise Not_found) s ; 
-    (* Printf.printf "removed !" *) ; true)
-  with Not_found -> false
+let build_cc_list mdf pt a p =
+  let dcl = Depsolver_int.dependency_closure mdf [p] in
+  List.fold_left (fun acc i ->
+    try
+      if a.(i) then acc
+      else (!(snd(List.find (fun (j,_) -> i = j) pt))) @ acc
+    with Not_found -> acc
+  ) [] dcl
 ;;
 
-let dependency_table mdf =
-  let size = Array.length mdf.Mdf.index in
-  let h = Hashtbl.create (2 * size) in
-  for i = 0 to size - 1 do
-    let ds =
-      List.fold_right S.add 
-      (Depsolver_int.dependency_closure mdf [i]) S.empty
-    in
-    Hashtbl.add h i ds
-  done;
+let to_set l = List.fold_right S.add l S.empty
+
+let triangles mdf reverse cg = 
+  let h = Hashtbl.create (UG.nb_vertex cg) in
+  UG.iter_edges (fun v1 v2 ->
+    S.iter (fun p ->
+      let ll = mdf.Mdf.index.(p).Mdf.depends in
+      if not(Hashtbl.mem h p) && 
+      List.exists (fun (_,l,_) -> List.mem v1 l && List.mem v2 l) ll then 
+        Hashtbl.add h p ()
+    )
+    (S.inter (to_set reverse.(v1)) (to_set reverse.(v2)))
+  ) cg ;
   h
 ;;
+(*
+let triangles mdf =
+  let index = mdf.Mdf.index in
+  let h = Hashtbl.create (Array.length index) in
+  for i = 0 to (Array.length index) -1 do
+    Array.iter (fun (_,a,_) ->
+      Array.iter (fun i
+    ) index.(i).Mdf.depends
+  done
+*)
+let has_conflict mdf p =
+  (List.length mdf.Mdf.index.(p).Mdf.conflicts > 0)
 
-let conjdepgraph mdf = 
-  let g = Defaultgraphs.IntPkgGraph.G.create () in
-  for id=0 to (Array.length mdf.Mdf.index)-1 do
-    Defaultgraphs.IntPkgGraph.conjdepgraph_int g mdf.Mdf.index id
-  done;
-  Defaultgraphs.IntPkgGraph.SO.O.add_transitive_closure g
+let buddy_check tri solver mdf cg a p ll =
+  let size = List.length ll in
+  let dcl = Depsolver_int.dependency_closure ~conjuntive:true mdf [p] in
+  if List.exists (fun q ->  has_conflict mdf q (* || Hashtbl.mem tri q *)) dcl then false else
+  for_all (fun m ->
+    for_all (fun l ->
+      Common.Util.print_info "All sets of size %d (%d)%!" m (List.length l); 
+      List.iter (fun xl ->
+        Common.Util.print_info "-> %s" (String.concat " , " (List.map string_of_int !xl))
+      ) l ;
+      let gl = List.map (fun xl -> (filter cg !xl)) l in
+      if List.exists (fun g -> UG.nb_vertex g > 70) gl then begin
+        List.iteri (fun i g ->
+          let outch = open_out (Printf.sprintf "%d%d.dot" p i) in
+          D.output_graph outch g ;
+          close_out outch
+        ) gl ; 
+        (* (hard := (p,ll) :: !hard ; *) false
+      end
+      else begin
+        let sgl = List.sort ~cmp:(fun c1 c2 -> (UG.nb_vertex c1) - (UG.nb_vertex c2)) gl in
+        let misl =
+          List.map (fun g ->
+            let e = 
+              filter_map (fun s ->
+                let sl = (S.elements s) in
+                Common.Util.print_info "%s" (String.concat " , " (List.map string_of_int sl)); 
+                if install solver a [s] then Some s else None
+              ) (max_independent_sets g)
+            in if is_empty e then assert false else e
+          ) sgl
+        in
+        for_all (fun e -> 
+          install solver a ((S.singleton p)::e)
+        ) (permutation misl)
+      end
+    ) (allsets m ll)
+  ) (reverse (range empty 1 size))
 ;;
 
 let main () =
@@ -350,73 +416,45 @@ let main () =
   let index = mdf.Mdf.index in
   let solver = Depsolver_int.init_solver index in
   let reverse_t = Depsolver_int.reverse_dependencies mdf in
-  (* let dependency_table = dependency_table mdf in *)
-  let conjdepgraph = conjdepgraph mdf in
   let cg = conflictgraph mdf in
+  let triangles_t = triangles mdf reverse_t cg in
+  Printf.eprintf "Triangles %d\n" (Hashtbl.length triangles_t); 
   let cc = connected_components cg in
   Printf.eprintf "conflict graph = vertex : %d , edges : %d\n"
   (UG.nb_vertex cg) (UG.nb_edges cg);
   Printf.eprintf "connected components = n. %d , largest : %d\n"
   (List.length cc) (List.length (List.hd (List.sort ~cmp:cmp cc)));
   let ct = conflict_table cc in
-  let pt = package_table reverse_t cg ct in
+  let pt = package_table mdf reverse_t cg ct in
   let a = Array.make (Array.length index) false in
   let hard = ref [] in
   let c = ref 0 in
   List.iter (function 
-    |(p,_) when a.(p) -> ()
-    |(p,{contents = ll}) -> begin
+    |(p,_) when a.(p) -> incr c;
+    |(p,{contents=ll}) -> begin
+      let ll = List.unique (build_cc_list mdf pt a p) in 
       incr c;
-      let size = List.length ll in
-      Printf.printf "(%d or %d) package %s (%d) %!\n" !c (List.length pt) 
-      (CudfAdd.print_package (maps.CudfAdd.map#inttovar p)) size ;
-      let r =
-        for_all (fun m ->
-          for_all (fun l ->
-            Common.Util.print_info "All sets of size %d (%d)%!" m (List.length l); 
-            List.iter (fun xl ->
-              Common.Util.print_info "-> %s" (String.concat " , " (List.map string_of_int !xl))
-            ) l ;
-            (* l is int list list , gl is int graph list *)
-            (* let l = List.filter (check_cc dependency_table reverse_t a p) l in *)
-            let gl = List.map (fun xl -> (filter cg !xl)) l in
-(*            if List.exists (fun g -> UG.nb_vertex g > 70) gl then
-              (hard := (p,ll) :: !hard ; false)
-            else *) begin
-              let sgl = List.sort ~cmp:(fun c1 c2 -> (UG.nb_vertex c1) - (UG.nb_vertex c2)) gl in
-              let misl =
-                List.map (fun g ->
-                  let e = 
-                    filter_map (fun s ->
-                      let sl = (S.elements s) in
-                      Common.Util.print_info "%s" (String.concat " , " (List.map string_of_int sl)); 
-                      if install solver a [s] then Some s else None
-                    ) (max_independent_sets g)
-                  in if is_empty e then assert false else e
-                ) sgl
-              in
-              for_all (fun e -> 
-                install solver a ((S.singleton p)::e)
-              ) (permutation misl)
-            end
-          ) (allsets m ll)
-        ) (reverse (range empty 1 size))
-      in
-      (if r then begin
-        a.(p) <- r ;
+      Printf.printf
+        "(%d or %d) package %s (%d) %!\n"
+        !c (List.length pt) 
+        (CudfAdd.print_package (maps.CudfAdd.map#inttovar p)) (List.length ll)
+      ;
+      if buddy_check triangles_t solver mdf cg a p ll then begin
+        a.(p) <- true ;
         (* amend_solver solver p; *)
-        List.iter (fun i -> a.(i) <- true) (Defaultgraphs.IntPkgGraph.conjdeps conjdepgraph p);
+        (* List.iter (fun i -> a.(i) <- true) (Depsolver_int.dependency_closure mdf ~conjuntive:true [p]); *)
         Printf.printf "%s is always installable\n%!" (CudfAdd.print_package (maps.CudfAdd.map#inttovar p))
       end
-      else Printf.printf "eliminates at least one mis\n%!")
+      else
+        Printf.printf "eliminates at least one mis\n%!"
     end
   ) pt 
   ;
-  let elim = Array.fold_left (fun acc v -> if v then acc + 1 else acc) 0 a in
+  let buddy = Array.fold_left (fun acc v -> if v then acc + 1 else acc) 0 a in
   let all = let l = ref S.empty in Array.iteri (fun i v -> if v then l := S.add i !l) a ; !l  in
-  (if install solver a [all] then print_endline "Success" else print_endline "error" );
-  Printf.printf "Total : %d , hard : %d , elim : %d , notelim : %d\n" 
-  (List.length pt) (List.length !hard) elim ((List.length pt) - (List.length !hard) - elim)
- ;;
+  (if install solver a [all] then print_endline "Success" else print_endline "error" ); 
+  Printf.printf "Total : %d , hard : %d , elim : %d , buddy : %d\n%!" 
+  (List.length pt) (List.length !hard) ((List.length pt) - (List.length !hard) - buddy) buddy
+;;
 
 main () ;;
