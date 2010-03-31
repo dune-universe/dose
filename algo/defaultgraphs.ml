@@ -58,10 +58,8 @@ module SyntacticDependencyGraph = struct
       type t = Pkg of Cudf.package | Or of (Cudf.package * int)
       let compare x y = match (x,y) with
         |Or (p1,i1), Or (p2,i2) when (i1 = i2) && (CudfAdd.equal p1 p2) -> 0
-        |Or (p1,i1), Or (p2,i2) -> CudfAdd.compare p1 p2
         |Pkg p1, Pkg p2 -> CudfAdd.compare p1 p2
-        |Pkg _, Or _ -> 1
-        |Or _, Pkg _ -> -1
+        |_, _ -> Pervasives.compare x y
       let hash = function
         |Pkg p -> Hashtbl.hash (p.Cudf.package,p.Cudf.version)
         |Or (p,i) -> Hashtbl.hash (p.Cudf.package,p.Cudf.version,i)
@@ -109,15 +107,15 @@ module SyntacticDependencyGraph = struct
         |PkgV.Pkg i -> Printf.sprintf "\"%s\"" (print_package i)
         |PkgV.Or (i,c) -> Printf.sprintf "\"Or%s-%d\"" (print_package i) c
 
-      let graph_attributes = fun _ -> []
+      let graph_attributes = fun _ -> [`Rankdir `LeftToRight]
       let get_subgraph = fun _ -> None
 
       let default_edge_attributes = fun _ -> []
-      let default_vertex_attributes = fun _ -> []
+      let default_vertex_attributes = fun _ -> [`Shape `Box]
 
       let vertex_attributes v =
         match G.V.label v with
-        |PkgV.Or _ -> [`Label "Or"]
+        |PkgV.Or _ -> [`Label "Or" ; `Shape `Diamond]
         |_ -> []
 
       let edge_attributes e =
@@ -145,32 +143,25 @@ module SyntacticDependencyGraph = struct
       Util.Progress.progress depgraphbar;
       let vpid = G.V.create (PkgV.Pkg pkg) in
       let c = ref 0 in
-      List.iter (function
-        |[(pkgname,constr)] ->
-            List.iter (fun p ->
-              let vp = G.V.create (PkgV.Pkg p) in
-              let edge = G.E.create vpid PkgE.DirDepends vp in
-              G.add_edge_e gr edge
-            ) (maps.CudfAdd.who_provides (pkgname,constr))
+      List.iter (fun l ->
+        match List.flatten (List.map maps.CudfAdd.who_provides l) with 
+        |[] -> ()
+        |[p] ->
+            let vp = G.V.create (PkgV.Pkg p) in
+            let edge = G.E.create vpid PkgE.DirDepends vp in
+            G.add_edge_e gr edge
         |l ->
-            match List.flatten (List.map maps.CudfAdd.who_provides l) with 
-            |[] -> ()
-            |[p] ->
+            begin
+              let vor = G.V.create (PkgV.Or (pkg,!c)) in
+              let edgeor = G.E.create vpid PkgE.OrDepends vor in
+              G.add_edge_e gr edgeor;
+              incr c;
+              List.iter (fun p ->
                 let vp = G.V.create (PkgV.Pkg p) in
-                let edge = G.E.create vpid PkgE.DirDepends vp in
-                G.add_edge_e gr edge
-            |l ->
-                begin
-                  let vor = G.V.create (PkgV.Or (pkg,!c)) in
-                  let edgeor = G.E.create vpid PkgE.OrDepends vor in
-                  G.add_edge_e gr edgeor;
-                  incr c;
-                  List.iter (fun p ->
-                    let vp = G.V.create (PkgV.Pkg p) in
-                    let oredge = G.E.create vor PkgE.OrDepends vp in
-                    G.add_edge_e gr oredge
-                  ) l
-                end
+                let oredge = G.E.create vor PkgE.OrDepends vp in
+                G.add_edge_e gr oredge
+              ) l
+            end
       ) pkg.Cudf.depends
       ;
       List.iter (fun p ->

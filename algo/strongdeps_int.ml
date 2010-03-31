@@ -78,7 +78,7 @@ let strongdeps_int graph mdf l =
       |Diagnostic_int.Success(f) -> check_strong graph solver id (f ())
     end
   ) available ;
-
+  Util.Progress.reset mainbar;
   Util.Timer.stop strongtimer (SO.O.add_transitive_closure graph)
 ;;
 
@@ -99,6 +99,7 @@ let strongdeps mdf idlist =
       (pkg,List.length closure,closure) :: acc
     ) [] idlist
   in
+  Util.Progress.reset conjbar;
   Util.Timer.stop conjtimer ();
   strongdeps_int graph mdf l
 
@@ -120,6 +121,7 @@ let strongdeps_univ mdf =
       (pkg,List.length closure,closure) :: acc
     ) [] mdf.Mdf.index
   in
+  Util.Progress.reset conjbar;
   Util.Timer.stop conjtimer ();
   strongdeps_int graph mdf l
 
