@@ -150,7 +150,7 @@ let create_cudf universe (to_install,to_upgrade,to_remove) =
         req_extra = [] ;
     }
   in
-  Printf.fprintf oc "%s" (Cudf_printer.string_of_cudf (preamble,universe,request)) ;
+  Cudf_printer.pp_cudf (Format.formatter_of_out_channel oc) (preamble,universe,request);
   close_out oc
 ;;
 

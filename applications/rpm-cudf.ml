@@ -71,10 +71,7 @@ let main () =
       open_out (Filename.concat dirname ("res.cudf"))
     end else stdout
   in
-
-  List.iter (fun pkg ->
-    Printf.fprintf oc "%s\n" (Cudf_printer.string_of_package pkg)
-  ) pkglist
+  Cudf_printer.pp_packages (Format.formatter_of_out_channel oc) pkglist
 ;;
 
 main ();;

@@ -227,7 +227,7 @@ let main () =
     with Arg.Bad s -> failwith s
   in
   Util.print_info "parse xml";
-  let xdata = XmlParser.parse_ch ((* IO.read_all *) (Input.open_file !input_file)) in
+  let xdata = XmlParser.parse_ch (Input.open_file !input_file) in
   let content_to_string node = Xml.fold (fun a x -> a^(Xml.to_string x)) "" node in
   let dudfproblem dudfprob node =
     Xml.fold (fun dudf node ->
@@ -421,23 +421,17 @@ let main () =
     |Debian.Apt.DistUpgrade (Some (suite)) -> 
         let il = Deb.Set.fold (fun pkg acc -> `PkgDst (pkg.Deb.name,suite) :: acc) installed_packages [] in
         let l = List.map mapver il in
-        { Cudf.request_id = request_id ; install = l ; remove = [] ; upgrade = [] ;
-	  req_extra = [] ; }
+        { Cudf.request_id = request_id ; install = l ; remove = [] ; upgrade = [] ; req_extra = [] ; }
     |Debian.Apt.Install l ->
         let l = List.map mapver l in
-        { Cudf.request_id = request_id ; install = l ; remove = [] ; upgrade = [] ;
-	  req_extra = [] ; } 
+        { Cudf.request_id = request_id ; install = l ; remove = [] ; upgrade = [] ; req_extra = [] ; } 
     |Debian.Apt.Remove l -> 
         let l = List.map (fun (`Pkg p) -> (p,None) ) l in
-        { Cudf.request_id = request_id ; install = [] ; remove = l ; upgrade = [] ;
-	  req_extra = [] ;}
+        { Cudf.request_id = request_id ; install = [] ; remove = l ; upgrade = [] ; req_extra = [] ;}
     |Debian.Apt.Upgrade None -> 
-        { Cudf.request_id = request_id ; install = [] ; remove = [] ; upgrade = [] ;
-	  req_extra = [] ; }
+        { Cudf.request_id = request_id ; install = [] ; remove = [] ; upgrade = [] ; req_extra = [] ; }
     |Debian.Apt.DistUpgrade None -> 
-        { Cudf.request_id = request_id ; install = [] ; remove = [] ; upgrade = [] ;
-	  req_extra = [] ; }
-
+        { Cudf.request_id = request_id ; install = [] ; remove = [] ; upgrade = [] ; req_extra = [] ; }
   in
 
   let oc =
@@ -456,8 +450,10 @@ let main () =
     let l = List.map snd extras_property in
     CudfAdd.add_properties Debcudf.preamble (p::l)
   in
-  Printf.fprintf oc "%s\n"
-    (Cudf_printer.string_of_cudf (preamble, universe, request)) 
+  Cudf_printer.pp_cudf (Format.formatter_of_out_channel oc) (preamble, universe, request)
+(*  Printf.fprintf oc "%s\n"
+    (Cudf_printer.string_of_cudf (preamble, universe, request))
+*)
 ;;
 
 main ();;

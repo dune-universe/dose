@@ -163,20 +163,20 @@ let main () =
   let output ll =
     List.iter (fun l ->
       let u = Cudf.load_universe l in
-      let outch = Options.output_ch () in
+      let oc = Options.output_ch () in
       begin match OptParse.Opt.get Options.output_ty with
       |"dot" -> 
 IFDEF HASOCAMLGRAPH THEN
-          DGraph.D.output_graph outch (DGraph.dependency_graph u)
+          DGraph.D.output_graph oc (DGraph.dependency_graph u)
 ELSE
         failwith ("dot Not supported")
 END
-      |"cnf" -> Printf.fprintf outch "%s" (Depsolver.output_clauses ~enc:Depsolver.Cnf u)
-      |"dimacs" -> Printf.fprintf outch "%s" (Depsolver.output_clauses ~enc:Depsolver.Dimacs u)
-      |"pp" -> Printf.fprintf outch "%s" (Cudf_printer.string_of_universe u)
+      |"cnf" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~enc:Depsolver.Cnf u)
+      |"dimacs" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~enc:Depsolver.Dimacs u)
+      |"pp" -> Cudf_printer.pp_universe (Format.formatter_of_out_channel oc) universe
       |_ -> assert false
       end ;
-      close_out outch;
+      close_out oc;
     ) ll
   in output [plist]
 ;;

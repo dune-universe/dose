@@ -114,7 +114,7 @@ let fold f v = function
   | Element (_,_,clist) -> LazyList.fold_left f v clist
   | x -> raise (Not_element x)
 
-let tmp = Buffer.create 200
+let tmp = Buffer.create 1024
 
 let buffer_cdata text = Buffer.add_string tmp text
 
@@ -168,11 +168,10 @@ let to_string x =
     | CData text ->
         buffer_cdata text;
         pcdata := false;
-
   in
-  Buffer.reset tmp;
+  Buffer.reset tmp; 
   loop x;
   let s = Buffer.contents tmp in
-  Buffer.reset tmp;
-  s
-
+  Buffer.reset tmp; 
+  s 
+;;

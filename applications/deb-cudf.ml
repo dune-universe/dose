@@ -124,10 +124,9 @@ END
     let l = List.map snd extras_properties in
     CudfAdd.add_properties Debcudf.preamble l
   in
-  Printf.fprintf oc "%s\n" ( Cudf_printer.string_of_preamble preamble) ;
-  List.iter (fun pkg ->
-    Printf.fprintf oc "%s\n" (Cudf_printer.string_of_package pkg)
-  ) pkglist
+  let ofr = Format.formatter_of_out_channel oc in
+  Cudf_printer.pp_preamble ofr preamble;
+  Cudf_printer.pp_packages ofr pkglist;
 ;;
 
 main ();;
