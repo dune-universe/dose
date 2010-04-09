@@ -84,7 +84,7 @@ let end_element_handler _ =
 
 let character_data_handler = add_string txt ;;
 
-let parse_string str =
+let parser_aux f =
   let p = Expat.parser_create None in
   Expat.set_start_element_handler p start_element_handler ;
   Expat.set_end_element_handler p end_element_handler ;
@@ -93,10 +93,25 @@ let parse_string str =
 
   Expat.set_character_data_handler p character_data_handler ;
   ignore (Expat.set_param_entity_parsing p Expat.ALWAYS);
-  Expat.parse p str;
-  Expat.final p;
+  f p;
   match !stack with
   |Element (x,Empty) -> (stack := Empty; x)
   | _ -> assert false
 ;;
 
+let parse_str str =
+  let f p = 
+    Expat.parse p str;
+    Expat.final p;
+  in
+  parser_aux f
+;;
+
+let parse_ch ch =
+  let f p =
+    try while true do 
+      Expat.parse p (IO.nread ch 10240)
+    done with IO.No_more_input -> Expat.final p ;
+  in
+  parser_aux f
+;;

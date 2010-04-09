@@ -227,7 +227,7 @@ let main () =
     with Arg.Bad s -> failwith s
   in
   Util.print_info "parse xml";
-  let xdata = XmlParser.parse_string (IO.read_all (Input.open_file !input_file)) in
+  let xdata = XmlParser.parse_ch ((* IO.read_all *) (Input.open_file !input_file)) in
   let content_to_string node = Xml.fold (fun a x -> a^(Xml.to_string x)) "" node in
   let dudfproblem dudfprob node =
     Xml.fold (fun dudf node ->
