@@ -73,6 +73,7 @@ let init_versions_table table =
     conj_iter pkg.breaks;
     conj_iter pkg.provides;
     conj_iter pkg.conflicts ;
+    conj_iter pkg.replaces;
     cnf_iter pkg.depends;
     cnf_iter pkg.pre_depends;
     cnf_iter pkg.recommends
@@ -179,6 +180,7 @@ type extramap = (string * (string * Cudf_types.typedecl1)) list
 
 let preamble = 
   let l = [
+    ("replaces",(`Vpkglist None));
     ("recommends",(`Vpkgformula None));
     ("number",(`String None));
     ("source",(`String None)) ;
@@ -208,9 +210,15 @@ let add_extra extras tables pkg =
       with Not_found -> None
     ) extras
   in
-  match loadll tables pkg.recommends with
-  |[] -> [number;source;sourceversion] @ l
-  |rl -> [("recommends", `Vpkgformula rl);number;source;sourceversion] @ l
+  let recommends = ("recommends", `Vpkgformula (loadll tables pkg.recommends)) in
+  let replaces = ("replaces", `Vpkglist (loadl tables pkg.replaces)) in
+  List.filter_map (function
+    |(_,`Vpkglist []) -> None
+    |(_,`Vpkgformula []) -> None
+    |e -> Some e
+  )
+  [number; source; sourceversion; recommends; replaces] @ l
+;;
 
 let add_essential = function
   |false -> `Keep_none
