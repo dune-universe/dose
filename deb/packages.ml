@@ -24,7 +24,7 @@ type package = {
   source : (name * version option) ;
   depends : vpkg list list;
   pre_depends : vpkg list list;
-  recommends : vpkg list;
+  recommends : vpkg list list;
   suggests : vpkg list;
   enhances : vpkg list;
   conflicts : vpkg list;
@@ -84,7 +84,7 @@ let parse_packages_fields extras par =
         source = (try parse_s parse_source "source" with Not_found -> ("",None));
         depends = (try parse_m parse_cnf "depends" with Not_found -> []);
         pre_depends = (try parse_m parse_cnf "pre-depends" with Not_found -> []);
-        recommends = (try parse_m parse_conj "recommends" with Not_found -> []);
+        recommends = (try parse_m parse_cnf "recommends" with Not_found -> []);
         suggests = (try parse_m parse_conj "suggests" with Not_found -> []);
         enhances = (try parse_m parse_conj "enhances" with Not_found -> []);
         conflicts = (try parse_m parse_conj "conflicts" with Not_found -> []);

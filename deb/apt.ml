@@ -103,6 +103,8 @@ let parse_pkg_req suite s =
     @return a data structure containing the request *)
 (* XXX upgrade with suite <> None == Install PkgDst ... *)
 let parse_request_apt s =
+  let s = String.slice ~first:((String.find s "apt-get")) s in
+  Printf.eprintf "dddd : %s \n" s;
   let suite = ref None in
   let options = [
     ("-t", Arg.String (fun l -> suite := Some(l)), "");

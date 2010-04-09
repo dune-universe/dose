@@ -392,7 +392,6 @@ let buddy_check solver mdf cg a p ll =
       ) l ;
   *)
       let gl = List.map (fun xl -> (filter cg !xl)) l in
-      (*
       if List.exists (fun g -> UG.nb_vertex g > 70) gl then begin
         (*
         List.iteri (fun i g ->
@@ -402,7 +401,7 @@ let buddy_check solver mdf cg a p ll =
         ) gl ; 
         (* (hard := (p,ll) :: !hard ; *) *) false
       end
-      else *) begin
+      else begin
         let sgl = List.sort ~cmp:(fun c1 c2 -> (UG.nb_vertex c1) - (UG.nb_vertex c2)) gl in
         let misl =
           List.map (fun g ->

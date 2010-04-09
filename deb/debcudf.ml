@@ -74,7 +74,8 @@ let init_versions_table table =
     conj_iter pkg.provides;
     conj_iter pkg.conflicts ;
     cnf_iter pkg.depends;
-    cnf_iter pkg.pre_depends
+    cnf_iter pkg.pre_depends;
+    cnf_iter pkg.recommends
 ;;
 
 let init_virtual_table table pkg =
@@ -178,13 +179,14 @@ type extramap = (string * (string * Cudf_types.typedecl1)) list
 
 let preamble = 
   let l = [
+    ("recommends",(`Vpkgformula None));
     ("number",(`String None));
     ("source",(`String None)) ;
     ("sourceversion",(`String None)) ]
   in
   CudfAdd.add_properties Cudf.default_preamble l
 
-let add_extra extras pkg =
+let add_extra extras tables pkg =
   let number = ("number",`String pkg.version) in
   let (source,sourceversion) =
     let n,v =
@@ -206,7 +208,9 @@ let add_extra extras pkg =
       with Not_found -> None
     ) extras
   in
-  [number;source;sourceversion] @ l
+  match loadll tables pkg.recommends with
+  |[] -> [number;source;sourceversion] @ l
+  |rl -> [("recommends", `Vpkgformula rl);number;source;sourceversion] @ l
 
 let add_essential = function
   |false -> `Keep_none
@@ -221,7 +225,7 @@ let tocudf tables ?(extras=[]) ?(inst=false) pkg =
       Cudf.conflicts = loadlc tables pkg.name (pkg.breaks @ pkg.conflicts) ;
       Cudf.provides = loadlp tables pkg.provides ;
       Cudf.installed = inst ;
-      Cudf.pkg_extra = add_extra extras pkg ;
+      Cudf.pkg_extra = add_extra extras tables pkg ;
     }
 
 let lltocudf = loadll
