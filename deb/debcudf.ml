@@ -232,7 +232,7 @@ let tocudf tables ?(extras=[]) ?(inst=false) pkg =
       Cudf.depends = loadll tables (pkg.pre_depends @ pkg.depends);
       Cudf.conflicts = loadlc tables pkg.name (pkg.breaks @ pkg.conflicts) ;
       Cudf.provides = loadlp tables pkg.provides ;
-      Cudf.installed = inst ;
+      Cudf.installed = inst;
       Cudf.pkg_extra = add_extra extras tables pkg ;
     }
 

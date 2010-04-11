@@ -78,7 +78,7 @@ type apt_req =
 
 let parse_pkg_only s = `Pkg(parse_package s)
 
-let distro_re = Str.regexp "^\\([^/]*\\)*/[ \t]*\\(.*\\)$"
+let distro_re = Str.regexp "^\\([^=/]*\\)*/[ \t]*\\(.*\\)$"
 let version_re = Str.regexp "^\\([^=]*\\)*=[ \t]*\\(.*\\)$"
 let parse_pkg_req suite s =
   try 
@@ -114,16 +114,12 @@ let parse_request_apt s =
   begin
     begin try Arg.parse_argv ~current:(ref 0) (Array.of_list (Str.split space_re s)) options anon ""
     with Arg.Bad s -> failwith s end ;
-    if List.mem "install" !reqlist then
-      Install(List.map (parse_pkg_req !suite) (List.remove !reqlist "install"))
-    else if List.mem "remove" !reqlist then
-      Remove(List.map parse_pkg_only (List.remove !reqlist "remove"))
-    else if List.mem "upgrade" !reqlist then
-      Upgrade(!suite)
-    else if List.mem "dist-upgrade" !reqlist then
-      DistUpgrade(!suite)
-    else 
-      failwith (Format.sprintf "Bad apt request '%s'@." s)
+    match List.rev !reqlist with
+    |"install" :: tl -> Install(List.map (parse_pkg_req !suite) tl)
+    |"remove" :: tl -> Remove(List.map parse_pkg_only tl)
+    |["upgrade"] -> Upgrade(!suite)
+    |["dist-upgrade"] -> DistUpgrade(!suite)
+    |_ -> failwith (Format.sprintf "Bad apt request '%s'@." s)
   end
 ;;
 (*****************************************************)

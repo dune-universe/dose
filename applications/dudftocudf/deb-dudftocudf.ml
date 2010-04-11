@@ -309,6 +309,8 @@ let main () =
               |_ -> assert false
             ) { result = "" ; error = "" } node
           }
+      (* we acknoledge the existence of comments, but we ignore them *)
+      |"comment" -> dudf 
       |s -> (Printf.eprintf "Warning : Unknown element %s\n" s ; dudf)
     ) dudfprob node
   in
