@@ -60,16 +60,16 @@ struct
   add options ~short_name:'o' ~long_name:"outfile" ~help:"Output file" out_ch;
 end;;
 
-let and_sep_re = Str.regexp "\\s*;\\s*"
-let pkg_re = Str.regexp "(\\([a-z][a-z0-9.+-]+\\)\\s*,\\s*\\([a-zA-Z0-9.+:~-]+\\))"
+let and_sep_re = Pcre.regexp "\\s*;\\s*"
+let pkg_re = Pcre.regexp "(\\([a-z][a-z0-9.+-]+\\)\\s*,\\s*\\([a-zA-Z0-9.+:~-]+\\))"
 let parse_pkg s =
   let parse_aux str =
-    if Str.string_match pkg_re str 0 then begin
-      (Str.matched_group 1 str, Str.matched_group 2 str)
-    end
-    else
-      (Printf.eprintf "Parse error %s\n" str ; exit 1)
-  in List.map parse_aux (Str.split and_sep_re s);;
+    try 
+      let s = Pcre.exec ~rex:pkg_re str  in
+      (Pcre.get_substring s 1, Pcre.get_substring s 2)
+    with
+      Not_found -> (Printf.eprintf "Parse error %s\n" str ; exit 1)
+  in List.map parse_aux (Pcre.split ~rex:and_sep_re s);;
 
 (* -------------------------------- *)
 
