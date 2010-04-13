@@ -79,7 +79,7 @@ module SyntacticDependencyGraph = struct
   end
 
   module G = Imperative.Digraph.ConcreteLabeled(PkgV)(PkgE)
-(*module G = Imperative.Digraph.ConcreteBidirectionalLabeled(PkgV)(PkgE) *)
+(*module G = Imperative.Digraph.ConcreteBidirectionalLabeled(PkgV)(PkgE)*)
 
   let string_of_vertex vertex =
     match G.V.label vertex with
@@ -320,7 +320,7 @@ module IntPkgGraph = struct
   let conjdepgraph_int graph index id =
     G.add_vertex graph id;
     List.iter (function
-      |(_,[p],_) -> G.add_edge graph id p
+      |(_,[p],_) -> if p <> id then G.add_edge graph id p
       | _ -> ()
     ) index.(id).Mdf.depends
 

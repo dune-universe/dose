@@ -26,7 +26,7 @@ module SO = IntPkgGraph.SO
 open Depsolver_int
 open G
 
-(** check if p strong dependens on q.
+(** check if p strongly depends on q.
     We check if it is possible to install p without q.  *)
 (* ATT: this function makes a copy of the solver to add a clause to it *)
 let strong_depends solver p q =
