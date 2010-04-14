@@ -44,6 +44,11 @@ if test "$OCAML_PKG_extlib" = "no"; then
  AC_MSG_ERROR([Please install OCaml findlib module 'extlib'.])
 fi
 
+AC_CHECK_OCAML_PKG([pcre])
+if test "$OCAML_PKG_pcre" = "no"; then
+ AC_MSG_ERROR([Please install OCaml findlib module 'pcre'.])
+fi
+
 AC_ARG_WITH(zip,
         [ --with-zip ],
         HAS_ZIP=yes,
