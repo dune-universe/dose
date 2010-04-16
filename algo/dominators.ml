@@ -40,9 +40,9 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
 
   (* to be computed on the strong dependency graph *)
   let _scons graph pkg = 
-    List.fold_left (fun s p -> 
+    G.fold_succ (fun p s ->
       Cudf_set.add p s
-    ) Cudf_set.empty (G.succ graph pkg)
+    ) graph pkg (Cudf_set.singleton pkg)
 
   let impactset = memo _impactset 
   let scons = memo _scons 
@@ -229,7 +229,7 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
                 | [] -> ()
                 | [p] -> G.remove_edge domgr p v
                 | _ -> failwith (Printf.sprintf "Vertex %s has multiple dominators" v.package));
-                if smaller_number (Hashtbl.find semi_ht u) (Hashtbl.find semi_ht u) then
+                if smaller_number (Hashtbl.find semi_ht u) (Hashtbl.find semi_ht v) then
                   G.add_edge domgr u v
                 else
                   G.add_edge domgr parent_w v

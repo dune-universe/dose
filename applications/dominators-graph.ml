@@ -15,6 +15,7 @@ open Common
 open Cudf
 open Graph
 open Defaultgraphs
+open Cudf_types_pp
 
 module Options = struct
   open OptParse
@@ -50,14 +51,14 @@ begin
   let (universe,_,_) = Boilerplate.load_universe posargs in
 
   let sd_graph = Strongdeps.strongdeps_univ universe in
-    (* this should not be necessary, but we'll look at that later on *)
-    SG.iter_vertex (fun v ->
-      SG.remove_edge sd_graph v v
-    ) sd_graph;
   let dom_graph =
     if OptParse.Opt.get Options.tarjan then
       Dom.dominators_tarjan sd_graph
     else
       Dom.dominators sd_graph in
-  D.output_graph stdout dom_graph
+  let old_dom_graph = Defaultgraphs.StrongDepGraph.DIn.parse "dominators-old.dot" in
+    SG.iter_edges (fun a b ->
+      if not (G.mem_edge old_dom_graph (a.package,"") (b.package,"")) then
+        Printf.printf "New edge: %s (pred: %s) -> %s\n" (string_of_pkgname a.package) (String.concat "," (List.map (fun p -> p.package) (SG.pred dom_graph a))) (string_of_pkgname b.package)
+    ) dom_graph 
 end;;
