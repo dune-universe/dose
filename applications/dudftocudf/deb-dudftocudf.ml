@@ -33,6 +33,7 @@ module XmlDudf = struct
     mutable installer : string ;
     mutable metaInstaller : string ;
     mutable problem : dudfproblem ;
+    mutable comment : dudfcomment ;
   }
   and dudfproblem = {
     mutable packageStatus : string;
@@ -48,6 +49,11 @@ module XmlDudf = struct
   and dudfdesiderata = {
     aptpref : string
   }
+  and dudfcomment = {
+    user : string;
+    tags : string list ;
+    hostid : string
+  }
 
   let dummydudf = {
     timestamp = "";
@@ -61,6 +67,7 @@ module XmlDudf = struct
       desiderata = { aptpref = "" } ;
       outcome = { result = "" ; error = "" }
     };
+    comment = { user = "" ; tags = [] ; hostid = "" }
   }
 end
 
@@ -309,10 +316,24 @@ let main () =
               |_ -> assert false
             ) { result = "" ; error = "" } node
           }
-      (* we acknoledge the existence of comments, but we ignore them *)
-      |"comment" -> dudf 
       |s -> (Printf.eprintf "Warning : Unknown element %s\n" s ; dudf)
     ) dudfprob node
+  in
+  let dudfcomment dudfcomm node =
+    Xml.fold (fun dudf node ->
+      match Xml.tag node with
+      |"user" -> { dudf with user = content_to_string node }
+      |"tags" -> 
+          { dudf with tags =
+            Xml.fold (fun acc n ->
+              match Xml.tag n with
+              |"tag" -> (content_to_string n)::acc
+              |s -> (Printf.eprintf "Warning : Unknown element %s\n" s ; acc)
+            ) [] node
+          }
+      |"hostid" -> { dudf with user = content_to_string node }
+      |s -> (Printf.eprintf "Warning : Unknown element %s\n" s ; dudf)
+    ) dudfcomm node
   in
   let dudfdoc dudfdoc node =
     Xml.fold (fun dudf node -> 
@@ -324,6 +345,7 @@ let main () =
       |"installer" -> {dudf with installer = content_to_string node}
       |"meta-installer" -> {dudf with metaInstaller = content_to_string node}
       |"problem" -> {dudf with problem = dudfproblem dudf.problem node }
+      |"comment" -> {dudf with comment = dudfcomment dudf.comment node }
       |s -> (Printf.eprintf "Warning : Unknown elemenet %s\n" s ; dudf)
     ) dudfdoc node 
   in
