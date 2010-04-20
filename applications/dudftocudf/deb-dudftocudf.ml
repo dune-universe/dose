@@ -77,36 +77,50 @@ let _ = Curl.global_init Curl.CURLINIT_GLOBALALL ;;
 
 let curlget buf url =
   let writer buf data = Buffer.add_string buf data ; String.length data in
-  let headerhandler data = 
-    if String.starts_with data "HTTP/1.1 200 OK" then String.length data 
-    else raise (Failure data)
+  let code_from h =
+    let res = Curl.getinfo h Curl.CURLINFO_RESPONSE_CODE in
+    match res with
+    |Curl.CURLINFO_Long(i) -> i
+    |_ -> failwith "Expected long value for HTTP code"
   in
   let errorBuffer = ref "" in
   begin try
     let connection = Curl.init () in
     Curl.set_errorbuffer connection errorBuffer;
     Curl.set_writefunction connection (writer buf);
-    Curl.set_headerfunction connection headerhandler;
     Curl.set_followlocation connection true;
     Curl.set_url connection url;
     Curl.perform connection;
-    Util.print_info "Download %s (time : %f)"
-      (Curl.get_effectiveurl connection)
-      (Curl.get_totaltime connection) ;
-    Curl.cleanup connection
+    begin match code_from connection with
+    |200 -> begin
+        Util.print_info "Download %s (time : %f)"
+          (Curl.get_effectiveurl connection)
+          (Curl.get_totaltime connection) ;
+        Curl.cleanup connection
+      end
+    |code -> raise (Failure (Printf.sprintf "HTTP %d" code))
+    end
   with
     |Curl.CurlException (reason, code, str) ->
-        (Printf.eprintf "Error: while downloading %s\n%s\n" url !errorBuffer ; exit 1)
+        (Printf.eprintf "Error while downloading %s\n%s\n" url !errorBuffer;
+         Curl.global_cleanup ();
+         exit 1)
     |Failure s ->
-        (Printf.eprintf "Caught exception: while downloading %s\n%s\n" url s ; exit 1)
-  end;
-  Curl.global_cleanup ()
+        (Printf.eprintf "Caught exception while downloading %s\n%s\n" url s ;
+         Curl.global_cleanup ();
+         exit 1)
+  end
 
-let pkgget url =
+let pkgget ?(bz=true) url =
   let buf = Buffer.create 10024 in
   curlget buf url;
-  let s = Bz2.uncompress (Buffer.contents buf) 0 (Buffer.length buf) in
-  Buffer.clear buf ; 
+  let s =
+    if bz then
+      Bz2.uncompress (Buffer.contents buf) 0 (Buffer.length buf)
+    else
+      Buffer.contents buf
+  in
+  Buffer.clear buf ;
   s
 ;;
 
@@ -316,7 +330,7 @@ let main () =
                 begin match Xml.LazyList.to_list (Xml.children n) with
                 |inc::_ ->
                   let href = Xml.attrib inc "href" in
-                  let e = (filename, pkgget href) in
+                  let e = (filename, pkgget ~bz:false href) in
                   (universe, e :: release)
                 |[] -> assert false end
             |"package-list" ->
@@ -475,6 +489,7 @@ let main () =
 
   let universe = Cudf.load_universe pl in
 
+  Util.print_info "request";
   let request =
     let mapver = function
       |`Pkg p -> (p,None)
@@ -519,6 +534,7 @@ let main () =
         { Cudf.request_id = request_id ; install = [] ; remove = [] ; upgrade = [] ; req_extra = [] ; }
   in
 
+  Util.print_info "dump";
   let oc =
     if !Options.outdir <> "" then begin
       let dirname = !Options.outdir in
