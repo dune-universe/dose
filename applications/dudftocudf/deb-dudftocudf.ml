@@ -73,6 +73,45 @@ end
 
 (* ========================================= *)
 
+let _ = Curl.global_init Curl.CURLINIT_GLOBALALL ;;
+
+let curlget buf url =
+  let writer buf data = Buffer.add_string buf data ; String.length data in
+  let headerhandler data = 
+    if String.starts_with data "HTTP/1.1 200 OK" then String.length data 
+    else raise (Failure data)
+  in
+  let errorBuffer = ref "" in
+  begin try
+    let connection = Curl.init () in
+    Curl.set_errorbuffer connection errorBuffer;
+    Curl.set_writefunction connection (writer buf);
+    Curl.set_headerfunction connection headerhandler;
+    Curl.set_followlocation connection true;
+    Curl.set_url connection url;
+    Curl.perform connection;
+    Util.print_info "Download %s (time : %f)"
+      (Curl.get_effectiveurl connection)
+      (Curl.get_totaltime connection) ;
+    Curl.cleanup connection
+  with
+    |Curl.CurlException (reason, code, str) ->
+        (Printf.eprintf "Error: while downloading %s\n%s\n" url !errorBuffer ; exit 1)
+    |Failure s ->
+        (Printf.eprintf "Caught exception: while downloading %s\n%s\n" url s ; exit 1)
+  end;
+  Curl.global_cleanup ()
+
+let pkgget url =
+  let buf = Buffer.create 10024 in
+  curlget buf url;
+  let s = Bz2.uncompress (Buffer.contents buf) 0 (Buffer.length buf) in
+  Buffer.clear buf ; 
+  s
+;;
+
+(* ========================================= *)
+
 module AptPref = struct
 
   type criteria = {
@@ -236,6 +275,12 @@ let main () =
   Util.print_info "parse xml";
   let xdata = XmlParser.parse_ch (Input.open_file !input_file) in
   let content_to_string node = Xml.fold (fun a x -> a^(Xml.to_string x)) "" node in
+  let is_include n =
+    try match Xml.LazyList.to_list (Xml.children n) with
+      |inc::_ when (Xml.tag inc) = "include" -> true
+      |_ -> false
+    with Xml.Not_element(_) -> false
+  in
   let dudfproblem dudfprob node =
     Xml.fold (fun dudf node ->
       Util.print_info "  %s" (Xml.tag node);
@@ -257,8 +302,23 @@ let main () =
       |"package-universe" ->
         let (ul, rl) = 
           Xml.fold (fun (universe, release) n ->
+            Util.print_info "   %s" (Xml.tag n);
             let filename = Xml.attrib n "filename" in
             match Xml.tag n with
+            |"package-list" when is_include n ->
+                begin match Xml.LazyList.to_list (Xml.children n) with
+                |inc::_ ->
+                  let href = Xml.attrib inc "href" in
+                  let e = (filename, pkgget href) in
+                  (e :: universe, release)
+                |[] -> assert false end
+            |"package-release" when is_include n ->
+                begin match Xml.LazyList.to_list (Xml.children n) with
+                |inc::_ ->
+                  let href = Xml.attrib inc "href" in
+                  let e = (filename, pkgget href) in
+                  (universe, e :: release)
+                |[] -> assert false end
             |"package-list" ->
                 let e = (filename, Xml.fold (fun a x -> a^(Xml.cdata x)) "" n) in
                 (e :: universe, release)
@@ -321,6 +381,7 @@ let main () =
   in
   let dudfcomment dudfcomm node =
     Xml.fold (fun dudf node ->
+      Util.print_info " %s" (Xml.tag node);
       match Xml.tag node with
       |"user" -> { dudf with user = content_to_string node }
       |"tags" -> 
