@@ -1,3 +1,14 @@
+(**************************************************************************************)
+(*  Copyright (C) 2009 Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
+(*  Copyright (C) 2009 Mancoosi Project                                               *)
+(*                                                                                    *)
+(*  This library is free software: you can redistribute it and/or modify              *)
+(*  it under the terms of the GNU Lesser General Public License as                    *)
+(*  published by the Free Software Foundation, either version 3 of the                *)
+(*  License, or (at your option) any later version.  A special linking                *)
+(*  exception to the GNU Lesser General Public License applies to this                *)
+(*  library, see the COPYING file for more information.                               *)
+(**************************************************************************************)
 
 open ExtLib
 open Common
@@ -5,24 +16,23 @@ open Debian
 
 module Deb = Debian.Packages
 
-module L = Xml.LazyList ;;
+module L = Xml.LazyList 
 
-Random.self_init () ;;
+module Options = struct
+  open OptParse
 
-module Options =
-  struct
-    let outdir = ref ""
-    let problemid = ref ""
-  end
+  let debug = StdOpt.store_true ()
+  let outdir = StdOpt.str_option ()
+  let problemid = StdOpt.str_option ()
 
-let usage = Printf.sprintf "usage: %s [--options] [debian dudf doc]" (Sys.argv.(0))
-let options =
-  [
-    ("--outdir", Arg.String (fun l -> Options.outdir := l), "Specify the results directory");
-    ("--problemid", Arg.String (fun l -> Options.problemid := l), "Specify the problem identifier");
-    ("--debug", Arg.Unit (fun () -> Util.set_verbosity Util.Summary), "Print debug information");
-  ]
-let input_file = ref ""
+  let description = "Convert Debian Dudf files to Cudf format"
+  let options = OptParser.make ~description:description ()
+
+  open OptParser ;;
+  add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
+  add options ~short_name:'o' ~long_name:"outdir" ~help:"Output directory" outdir;
+  add options                 ~long_name:"id" ~help:"Problem id" problemid;
+end
 
 (* ========================================= *)
 
@@ -282,12 +292,15 @@ end
 open XmlDudf
 
 let main () =
-  let _ =
-    try Arg.parse options (fun f -> input_file := f) usage
-    with Arg.Bad s -> failwith s
+  at_exit (fun () -> Util.dump Format.err_formatter);
+  Random.self_init () ;
+  let input_file =
+    match OptParse.OptParser.parse_argv Options.options with
+    |[h] -> h
+    |_ -> (Printf.eprintf "too many arguments" ; exit 1)
   in
   Util.print_info "parse xml";
-  let xdata = XmlParser.parse_ch (Input.open_file !input_file) in
+  let xdata = XmlParser.parse_ch (Input.open_file input_file) in
   let content_to_string node = Xml.fold (fun a x -> a^(Xml.to_string x)) "" node in
   let is_include n =
     try match Xml.LazyList.to_list (Xml.children n) with
@@ -428,6 +441,11 @@ let main () =
   let id x = x in
   Util.print_info "convert to dom ... ";
   let dudf = dudfdoc dummydudf xdata in
+(*  if dudf.metaInstaller <> "apt-get" then begin
+    Printf.eprintf "the meta - installer %s is not supported" dudf.metaInstaller ;
+    exit 1
+  end;
+*)
   let preferences = AptPref.parse dudf.problem.desiderata.aptpref in
 
   let infoH = Hashtbl.create 1031 in
@@ -512,7 +530,7 @@ let main () =
             failwith (Printf.sprintf "There is no package %s in release %s " p d)
     in
     let request_id =
-      if !Options.problemid <> "" then !Options.problemid
+      if OptParse.Opt.is_set Options.problemid then OptParse.Opt.get Options.problemid
       else if dudf.uid <> "" then dudf.uid
       else (string_of_int (Random.bits ()))
     in
@@ -536,10 +554,10 @@ let main () =
 
   Util.print_info "dump";
   let oc =
-    if !Options.outdir <> "" then begin
-      let dirname = !Options.outdir in
+    if OptParse.Opt.is_set Options.outdir then begin
+      let dirname = OptParse.Opt.get Options.outdir in
       let file =
-        let s = Filename.basename !input_file in
+        let s = Filename.basename input_file in
         try Filename.chop_extension s with Invalid_argument _ -> s
       in
       if not(Sys.file_exists dirname) then Unix.mkdir dirname 0o777 ;
@@ -552,9 +570,6 @@ let main () =
     CudfAdd.add_properties Debcudf.preamble (p::l)
   in
   Cudf_printer.pp_cudf (Format.formatter_of_out_channel oc) (preamble, universe, request)
-(*  Printf.fprintf oc "%s\n"
-    (Cudf_printer.string_of_cudf (preamble, universe, request))
-*)
 ;;
 
 main ();;

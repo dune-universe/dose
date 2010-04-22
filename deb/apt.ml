@@ -103,6 +103,7 @@ let parse_pkg_req suite s =
     @return a data structure containing the request *)
 (* XXX upgrade with suite <> None == Install PkgDst ... *)
 let parse_request_apt s =
+  if not (String.exists s "apt-get") then failwith "Not a valid apt-get command" ;
   let s = String.slice ~first:((String.find s "apt-get")) s in
   let suite = ref None in
   let options = [
