@@ -44,6 +44,7 @@ let () =
 let test_format =
   "name mangling" >::: []
 
+(* useless ??? *)
 let test_numbering = 
   "test numbering" >::: [
     "sequence" >:: (fun _ -> 
@@ -80,7 +81,7 @@ let test_conflicts =
 let test_mapping =
   "test deb -> cudf mapping" >::: [
     test_format ;
-    test_numbering ;
+(*    test_numbering ; *)
     test_virtual
   ]
 

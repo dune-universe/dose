@@ -165,7 +165,7 @@ let version_re_2 =
 
 let check_version i s =
   if not (Str.string_match strict_version_re_1 s 0 || Str.string_match strict_version_re_2 s 0) then begin
-    (Util.print_warning "Warning : bad version '%s'" s);
+    (Util.print_warning "bad version '%s'" s);
     if not (Str.string_match version_re_1 s 0 || Str.string_match version_re_2 s 0) then 
       (* parse_error ~s:(Printf.sprintf "Bad version '%s'" s) i *)
       raise (ParseError ((Printf.sprintf "Bad version '%s'" s), i.line))
@@ -184,7 +184,7 @@ let package_re = Str.regexp "^[A-Za-z0-9][A-Za-z0-9._+-]+$"
 
 let check_package_name i s =
   if not (Str.string_match strict_package_re s 0) then begin
-    (Util.print_warning "Warning : bad package name '%s'" s);
+    (Util.print_warning "bad package name '%s'" s);
     if not (Str.string_match package_re s 0) then
       (* parse_error ~s:(Printf.sprintf "Bad package name '%s'" s) i *)
       raise (ParseError ((Printf.sprintf "Bad version '%s'" s), i.line))
@@ -258,7 +258,7 @@ let parse_source s =
       if Str.string_match re s' 0 then 
         (n,Some (Str.matched_group 1 s'))
       else begin
-        Printf.eprintf "Warning : bad source name '%s'\n" s;
+        Util.print_warning "bad source name '%s'\n" s;
         (n,None)
       end
   |_ -> parse_error ~s:(Printf.sprintf "Malformed source field : '%s'" s) dummy_t

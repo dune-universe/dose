@@ -12,10 +12,10 @@
 
 open ExtLib
 
-let wrap f = try f () with End_of_file -> raise IO.No_more_input
 
 IFDEF HASZIP THEN
 let gzip_open_file file =
+  let wrap f = try f () with End_of_file -> raise IO.No_more_input in 
   let ch = Gzip.open_in file in
   IO.create_in
   ~read:(fun () -> wrap (fun _ -> Gzip.input_char ch))
@@ -25,17 +25,19 @@ let gzip_open_file file =
 END
 
 IFDEF HASBZ2 THEN
-(*
- * Almost there , but not quite
-let bzip_open_in file =
-  let ch = Bz2.open_in file in
+let bzip_open_in ch =
+  let ch = Bz2.open_in ch in
+  let wrap f s pos len = match f s pos len with
+    |r when r < len -> raise IO.No_more_input
+    |r -> r
+  in
+  let input_char ch = let s = " " in ignore (Bz2.read ch s 0 1) ; s.[0] in
   IO.create_in
-  ~read:(fun () -> Bz2.input_char ch)
-  ~input:(Gzip.input ch)
+  ~read:(fun () -> input_char ch)
+  ~input:(wrap (Bz2.read ch))
   ~close:(fun () -> Bz2.close_in ch)
-*)
-
-let bzip_open_file file = failwith "Not Yet implemented"
+;;
+let bzip_open_file file = bzip_open_in (open_in file)
 END
 
 let std_open_file file = IO.input_channel (open_in file)

@@ -65,9 +65,22 @@ else
   PKG_ZIP=pkg_
 fi
 
-#AC_CHECK_OCAML_PKG([bz2])
-PKG_BZ2=pkg_
-
+AC_ARG_WITH(bz2,
+        [ --with-bz2 ],
+        HAS_BZ2=yes,
+        HAS_BZ2=no)
+AC_SUBST(HAS_BZ2)
+if test "$HAS_BZ2" = "yes" ; then
+  AC_CHECK_OCAML_PKG([bz2])
+  if test "$OCAML_PKG_BZ2" = "no"; then
+   AC_MSG_ERROR([Please install OCaml findlib module 'bz2'.])
+  fi
+  CONFIG_BZ2="-DHASBZ2"
+  PKG_BZ2=pkg_bz2
+else
+  PKG_BZ2=pkg_
+fi
+                             
 AC_ARG_WITH(rpm,
         [ --with-rpm ],
         HAS_RPM=yes,
