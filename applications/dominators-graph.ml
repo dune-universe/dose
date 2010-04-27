@@ -22,6 +22,7 @@ module Options = struct
 
   let debug = StdOpt.store_true ()
   let tarjan = StdOpt.store_true ()
+  let do_compare = StdOpt.store_true ()
 
   let description = "Compute the dominator graph"
   let options = OptParser.make ~description:description ()
@@ -29,6 +30,7 @@ module Options = struct
   open OptParser
   add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
   add options ~short_name:'t' ~long_name:"tarjan" ~help:"Use Tarjan algorithm" tarjan;
+  add options ~long_name:"compare" ~help:"Compare Tarjan and MANCOOSI graphs" do_compare;
 end
 
 module G = StrongDepGraph.G;;
@@ -51,14 +53,60 @@ begin
   let (universe,_,_) = Boilerplate.load_universe posargs in
 
   let sd_graph = Strongdeps.strongdeps_univ universe in
-  let dom_graph =
-    if OptParse.Opt.get Options.tarjan then
-      Dom.dominators_tarjan sd_graph
-    else
-      Dom.dominators sd_graph in
-  let old_dom_graph = Defaultgraphs.StrongDepGraph.DIn.parse "dominators-old.dot" in
-    SG.iter_edges (fun a b ->
-      if not (G.mem_edge old_dom_graph (a.package,"") (b.package,"")) then
-        Printf.printf "New edge: %s (pred: %s) -> %s\n" (string_of_pkgname a.package) (String.concat "," (List.map (fun p -> p.package) (SG.pred dom_graph a))) (string_of_pkgname b.package)
-    ) dom_graph 
+
+  if OptParse.Opt.get Options.do_compare then
+  begin
+    let tg = Dom.dominators_tarjan sd_graph
+    and mg = Dom.dominators sd_graph in
+    let mt_trad_tbl = Hashtbl.create (SG.nb_vertex mg) in
+    (* let tm_trad_tbl = Hashtbl.create (SG.nb_vertex tg) in *)
+
+    (* compare vertices *)
+    let comma = Pcre.regexp "," in
+    SG.iter_vertex (fun v ->
+      if not (SG.mem_vertex mg v) then
+        List.iter (fun p ->
+          let q = Cudf.lookup_packages universe p in
+          List.iter (fun x -> 
+            if not (SG.mem_vertex mg x) then
+              Printf.eprintf "%s\n" p;
+            Hashtbl.add mt_trad_tbl x v
+          ) q
+        ) (Pcre.split ~rex:comma (string_of_pkgname v.package))
+    ) tg;
+    (* but first & foremost: edges *)
+    SG.iter_edges (fun p q ->
+      if p.package <> "START" && not (SG.mem_edge mg p q) then
+      begin
+        let ps = List.flatten (List.map (lookup_packages universe) (Pcre.split ~rex:comma p.package))
+        and qs = List.flatten (List.map (lookup_packages universe) (Pcre.split ~rex:comma q.package)) in
+        let ex = List.fold_left (fun acc p' ->
+          List.fold_left (fun acc' q' ->
+            SG.mem_edge mg p' q' || acc'
+          ) acc qs
+        ) false ps in
+        if not ex then
+          Printf.eprintf "In T but not in M: %s -> %s\n" p.package q.package;
+      end
+    ) tg;
+    SO.transitive_reduction mg;
+    SG.iter_edges (fun p q ->
+      if not (SG.mem_edge tg p q) then
+      begin
+        let p' = try Hashtbl.find mt_trad_tbl p with Not_found -> p in
+        let q' = try Hashtbl.find mt_trad_tbl q with Not_found -> q in
+        if p' <> q' && not (SG.mem_edge tg p' q') then
+          Printf.eprintf "In M but not in T: %s (%s) (%d) -> %s (%s) (%d)\n" p.package p'.package (SG.in_degree sd_graph p) q.package q'.package (SG.in_degree sd_graph q);
+      end
+    ) mg;
+  end
+  else
+  begin
+    let dom_graph =
+      if OptParse.Opt.get Options.tarjan then
+        Dom.dominators_tarjan sd_graph
+      else
+        Dom.dominators sd_graph in
+    D.output_graph stdout dom_graph
+  end
 end;;
