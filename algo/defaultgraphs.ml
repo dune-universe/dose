@@ -213,17 +213,8 @@ module PackageGraph = struct
     let gr = G.create () in
     Cudf.iter_packages (fun pkg ->
       List.iter (fun l ->
-        List.iter (G.add_edge gr pkg) (List.flatten (List.map maps.CudfAdd.who_provides l))
-        (* XXX not 100% sure why I did it the other way ... maybe there is a
-         * reason, but I can't remember now *)
-(*
-        |[(pkgname,constr)] ->
-            List.iter (G.add_edge gr pkg) (maps.CudfAdd.who_provides (pkgname,constr))
-        |l ->
-            match List.flatten (List.map maps.CudfAdd.who_provides l) with 
-            |[p] -> G.add_edge gr pkg p
-            |_ -> ()
-      *)
+        List.iter (G.add_edge gr pkg) 
+        (List.flatten (List.map maps.CudfAdd.who_provides l))
       ) pkg.Cudf.depends
     ) universe
     ;
@@ -248,28 +239,22 @@ module PackageGraph = struct
     G.iter_vertex (UG.add_vertex gr) graph;
     gr
 
-  (** List of connected components of the given graph *)
+  (** Return the list of connected component graphs *)
   let connected_components graph =
-    let module Dfs = Traverse.Dfs(UG) in
-    let h = Hashtbl.create (UG.nb_vertex graph) in
-    let l = ref [] in
-    let cc graph vp =
+    let module Dfs = Graph.Traverse.Dfs(UG) in
+    let cc graph mark id =
       let g = UG.create () in
-      let collect vc = List.iter (UG.add_edge g vp) (UG.succ graph vc) in
-      Dfs.prefix_component collect graph vp;
+      let collect v1 = 
+        Hashtbl.add mark v1 () ; 
+        UG.iter_succ (fun v2 -> UG.add_edge g v1 v2) graph v1
+      in
+      Dfs.prefix_component collect graph id;
       g
     in
-    UG.iter_vertex (fun v ->
-      if not(Hashtbl.mem h v) then begin
-        Hashtbl.add h v ();
-        let c = cc graph v in
-        if not (UG.is_empty c) then begin
-          UG.iter_vertex (fun x -> Hashtbl.add h x ()) c ;
-          l := c :: !l
-        end
-      end
-    ) graph ;
-    !l
+    let mark = Hashtbl.create (UG.nb_vertex graph) in
+    UG.fold_vertex (fun v acc ->
+      if not(Hashtbl.mem mark v) then (cc graph mark v)::acc else acc
+    ) graph []
 
   module D = Graph.Graphviz.Dot(Display)
   module S = Set.Make(PkgV)
