@@ -36,106 +36,6 @@ end
 
 (* ========================================= *)
 
-module XmlDudf = struct 
-  type dudfxml = {
-    mutable timestamp : string ;
-    mutable uid : string ;
-    mutable installer : string ;
-    mutable metaInstaller : string ;
-    mutable problem : dudfproblem ;
-    mutable comment : dudfcomment ;
-  }
-  and dudfproblem = {
-    mutable packageStatus : string;
-    mutable packageUniverse : (Debian.Release.release * string) list;
-    mutable action : string ;
-    mutable desiderata : dudfdesiderata ;
-    mutable outcome : dudfoutcome
-  }
-  and dudfoutcome = {
-    result : string ;
-    error : string
-  }
-  and dudfdesiderata = {
-    aptpref : string
-  }
-  and dudfcomment = {
-    user : string;
-    tags : string list ;
-    hostid : string
-  }
-
-  let dummydudf = {
-    timestamp = "";
-    uid = "";
-    installer = "";
-    metaInstaller = "";
-    problem = { 
-      packageStatus = "";
-      packageUniverse = [];
-      action = "";
-      desiderata = { aptpref = "" } ;
-      outcome = { result = "" ; error = "" }
-    };
-    comment = { user = "" ; tags = [] ; hostid = "" }
-  }
-end
-
-(* ========================================= *)
-
-let _ = Curl.global_init Curl.CURLINIT_GLOBALALL ;;
-
-let curlget buf url =
-  let writer buf data = Buffer.add_string buf data ; String.length data in
-  let code_from h =
-    let res = Curl.getinfo h Curl.CURLINFO_RESPONSE_CODE in
-    match res with
-    |Curl.CURLINFO_Long(i) -> i
-    |_ -> failwith "Expected long value for HTTP code"
-  in
-  let errorBuffer = ref "" in
-  begin try
-    let connection = Curl.init () in
-    Curl.set_errorbuffer connection errorBuffer;
-    Curl.set_writefunction connection (writer buf);
-    Curl.set_followlocation connection true;
-    Curl.set_url connection url;
-    Curl.perform connection;
-    begin match code_from connection with
-    |200 -> begin
-        Util.print_info "Download %s (time : %f)"
-          (Curl.get_effectiveurl connection)
-          (Curl.get_totaltime connection) ;
-        Curl.cleanup connection
-      end
-    |code -> raise (Failure (Printf.sprintf "HTTP %d" code))
-    end
-  with
-    |Curl.CurlException (reason, code, str) ->
-        (Printf.eprintf "Error while downloading %s\n%s\n" url !errorBuffer;
-         Curl.global_cleanup ();
-         exit 1)
-    |Failure s ->
-        (Printf.eprintf "Caught exception while downloading %s\n%s\n" url s ;
-         Curl.global_cleanup ();
-         exit 1)
-  end
-
-let pkgget ?(bz=true) url =
-  let buf = Buffer.create 10024 in
-  curlget buf url;
-  let s =
-    if bz then
-      Bz2.uncompress (Buffer.contents buf) 0 (Buffer.length buf)
-    else
-      Buffer.contents buf
-  in
-  Buffer.clear buf ;
-  s
-;;
-
-(* ========================================= *)
-
 module AptPref = struct
 
   type criteria = {
@@ -289,7 +189,68 @@ end
 
 (* ========================================= *)
 
-open XmlDudf
+let make_universe pl =
+  let fl = ref [] in
+  let (packagelist,releaselist) =
+    List.partition (function 
+      |("apt",_,_,_) -> true
+      |("apt-release",_,_,_) -> false
+      |_ -> assert false
+    ) pl
+  in
+  let universe = 
+    List.flatten (
+      List.map (fun (_,fname,_,cdata) ->
+        let i = Str.search_backward (Str.regexp "_Release") fname (String.length fname) in
+        let s = Str.string_before fname i in
+        let release = 
+          let ch = IO.input_string cdata in
+          let r = Debian.Release.parse_release_in ch in
+          let _ = IO.close_in ch in
+          r
+        in
+        let cl =
+          List.find_all (fun (_,fname,_,_) ->
+            Str.string_match (Str.regexp ("^"^s^".*_Packages$")) fname 0
+          ) packagelist
+        in
+        List.map (fun (_,fname,_,cdata) -> fl := fname :: !fl ; (release,cdata)) cl
+      ) releaselist
+    )
+  in
+  let without_release = 
+    List.map (fun (_,fname,_,cdata) ->
+      Printf.eprintf "Warning : Package List without Release. %s\n" fname;
+      (Debian.Release.default_release,cdata)
+    ) (List.find_all (fun (_,fname,_,_) -> not(List.mem fname !fl)) packagelist) ;
+  in
+  universe @ without_release
+;;
+
+let has_children nodelist tag =
+  try match nodelist with
+    |t::_ when (Xml.tag t) = tag -> true
+    |_ -> false
+  with Xml.Not_element(_) -> false
+;;
+
+let parsepackagelist = function
+  |(Some "apt",Some fname,url,[inc]) when has_children [inc] "include" ->
+      let href = Xml.attrib inc "href" in
+      ("apt",fname,url, Dudfxml.pkgget ~compression:Dudfxml.Bz2 fname href)
+  |(Some "apt-release",Some fname,url,[inc]) when has_children [inc] "include" ->
+      let href = Xml.attrib inc "href" in
+      ("apt-release",fname,url, Dudfxml.pkgget fname href)
+  |(Some t,Some fname,url,[cdata]) -> (t,fname,url,Xml.cdata cdata)
+  |(Some t,Some fname,url,[]) -> (t,fname,url,"")
+  |(Some t,Some fname,url,_) ->
+      (Printf.eprintf "Warning : Unknown format for package-list element %s %s\n" t fname; exit 1)
+  |_ -> assert false
+;;
+
+(* ========================================= *)
+
+open Dudfxml.XmlDudf
 
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
@@ -299,154 +260,26 @@ let main () =
     |[h] -> h
     |_ -> (Printf.eprintf "too many arguments" ; exit 1)
   in
+  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
   Util.print_info "parse xml";
-  let xdata = XmlParser.parse_ch (Input.open_file input_file) in
-  let content_to_string node = Xml.fold (fun a x -> a^(Xml.to_string x)) "" node in
-  let is_include n =
-    try match Xml.LazyList.to_list (Xml.children n) with
-      |inc::_ when (Xml.tag inc) = "include" -> true
-      |_ -> false
-    with Xml.Not_element(_) -> false
-  in
-  let dudfproblem dudfprob node =
-    Xml.fold (fun dudf node ->
-      Util.print_info "  %s" (Xml.tag node);
-      match Xml.tag node with
-      |"package-status" -> {
-        dudf with packageStatus = 
-          Xml.fold (fun a n ->
-            match Xml.tag n with
-            |"installer" ->
-                Xml.fold (fun _ n ->
-                  match Xml.tag n with
-                  |"status" -> Xml.fold (fun a x -> a^(Xml.cdata x)) "" n
-                  |_ -> assert false
-                ) "" n
-            |"meta-installer" -> a
-            |_ -> assert false
-          ) "" node
-      }
-      |"package-universe" ->
-        let (ul, rl) = 
-          Xml.fold (fun (universe, release) n ->
-            Util.print_info "   %s" (Xml.tag n);
-            let filename = Xml.attrib n "filename" in
-            match Xml.tag n with
-            |"package-list" when is_include n ->
-                begin match Xml.LazyList.to_list (Xml.children n) with
-                |inc::_ ->
-                  let href = Xml.attrib inc "href" in
-                  let e = (filename, pkgget href) in
-                  (e :: universe, release)
-                |[] -> assert false end
-            |"package-release" when is_include n ->
-                begin match Xml.LazyList.to_list (Xml.children n) with
-                |inc::_ ->
-                  let href = Xml.attrib inc "href" in
-                  let e = (filename, pkgget ~bz:false href) in
-                  (universe, e :: release)
-                |[] -> assert false end
-            |"package-list" ->
-                let e = (filename, Xml.fold (fun a x -> a^(Xml.cdata x)) "" n) in
-                (e :: universe, release)
-            |"package-release" ->
-                let e = (filename, Xml.fold (fun a x -> a^(Xml.cdata x)) "" n) in
-                (universe, e :: release)
-            |_ -> assert false
-          ) ([],[]) node
-        in
-        let fl = ref [] in
-        let universe = 
-          List.flatten (
-            List.map (fun (relfn,c) ->
-              let i = Str.search_backward (Str.regexp "_Release") relfn (String.length relfn) in
-              let s = Str.string_before relfn i in
-              let reldata = 
-                let ch = IO.input_string c in
-                let r = Debian.Release.parse_release_in ch in
-                let _ = IO.close_in ch in
-                r
-              in
-              let cl =
-                List.find_all (fun (fn,_) ->
-                  Str.string_match (Str.regexp ("^"^s^".*_Packages$")) fn 0
-                ) ul
-              in
-              List.map (fun (fn,c) -> fl := fn :: !fl ; (reldata,c)) cl
-            ) rl
-          )
-        in
-        let without_release = 
-          List.map (fun (fn,c) ->
-            Printf.eprintf "Warning : Package List without Release. %s\n" fn;
-            (Debian.Release.default_release,c)
-          ) (List.find_all (fun (fn,_) -> not(List.mem fn !fl)) ul) ;
-        in
-        {dudf with packageUniverse = universe @ without_release}
-      |"action" -> {dudf with action = content_to_string node}
-      |"desiderata" -> 
-          {dudf with desiderata = {
-            aptpref =
-              Xml.fold (fun s n ->
-                match Xml.tag n with
-                |"apt_preferences" -> content_to_string n
-                |_ -> assert false
-              ) "" node
-            }
-          }
-      |"outcome" ->
-          {dudf with outcome =
-            Xml.fold (fun t n ->
-              match Xml.tag n with
-              |"result" -> { t with result = content_to_string n }
-              |"error" -> { t with error = content_to_string n }
-              |_ -> assert false
-            ) { result = "" ; error = "" } node
-          }
-      |s -> (Printf.eprintf "Warning : Unknown element %s\n" s ; dudf)
-    ) dudfprob node
-  in
-  let dudfcomment dudfcomm node =
-    Xml.fold (fun dudf node ->
-      Util.print_info " %s" (Xml.tag node);
-      match Xml.tag node with
-      |"user" -> { dudf with user = content_to_string node }
-      |"tags" -> 
-          { dudf with tags =
-            Xml.fold (fun acc n ->
-              match Xml.tag n with
-              |"tag" -> (content_to_string n)::acc
-              |s -> (Printf.eprintf "Warning : Unknown element %s\n" s ; acc)
-            ) [] node
-          }
-      |"hostid" -> { dudf with user = content_to_string node }
-      |s -> (Printf.eprintf "Warning : Unknown element %s\n" s ; dudf)
-    ) dudfcomm node
-  in
-  let dudfdoc dudfdoc node =
-    Xml.fold (fun dudf node -> 
-      Util.print_info " %s" (Xml.tag node);
-      match Xml.tag node with
-      |"distribution" -> dudf
-      |"timestamp" -> {dudf with timestamp = content_to_string node}
-      |"uid" -> {dudf with uid = content_to_string node}
-      |"installer" -> {dudf with installer = content_to_string node}
-      |"meta-installer" -> {dudf with metaInstaller = content_to_string node}
-      |"problem" -> {dudf with problem = dudfproblem dudf.problem node }
-      |"comment" -> {dudf with comment = dudfcomment dudf.comment node }
-      |s -> (Printf.eprintf "Warning : Unknown elemenet %s\n" s ; dudf)
-    ) dudfdoc node 
-  in
 
   let id x = x in
+
+  let dudfdoc = Dudfxml.parse input_file in
+  let uid = dudfdoc.uid in
+  let status =
+    match dudfdoc.problem.packageStatus.st_installer with
+    |[status] -> Xml.fold (fun a x -> a^(Xml.cdata x)) "" status
+    |_ -> Printf.eprintf "Warning: wrong status" ; ""
+  in
+  let packagelist = 
+    let l = List.map (fun pl -> parsepackagelist pl) dudfdoc.problem.packageUniverse in
+    make_universe l
+  in
+  let action = dudfdoc.problem.action in
+  let preferences = AptPref.parse dudfdoc.problem.desiderata in
+
   Util.print_info "convert to dom ... ";
-  let dudf = dudfdoc dummydudf xdata in
-(*  if dudf.metaInstaller <> "apt-get" then begin
-    Printf.eprintf "the meta - installer %s is not supported" dudf.metaInstaller ;
-    exit 1
-  end;
-*)
-  let preferences = AptPref.parse dudf.problem.desiderata.aptpref in
 
   let infoH = Hashtbl.create 1031 in
   let extras_property = [
@@ -458,20 +291,20 @@ let main () =
 
   Util.print_info "parse all packages";
   let all_packages =
-    List.fold_left (fun acc (univinfo,contents) ->
+    List.fold_left (fun acc (release,contents) ->
       let ch = IO.input_string contents in
       let l = Deb.parse_packages_in ~extras:extras id ch in
       let _ = IO.close_in ch in
       List.fold_left (fun s pkg -> 
-        Hashtbl.add infoH (pkg.Deb.name,pkg.Deb.version) univinfo ;
+        Hashtbl.add infoH (pkg.Deb.name,pkg.Deb.version) release ;
         Deb.Set.add pkg s
       ) acc l
-    ) Deb.Set.empty dudf.problem.packageUniverse
+    ) Deb.Set.empty packagelist
   in
 
   Util.print_info "installed packages";
   let installed_packages =
-    let ch = IO.input_string dudf.problem.packageStatus in
+    let ch = IO.input_string status in
     let l = Deb.parse_packages_in ~extras:extras id ch in
     let _ = IO.close_in ch in
     List.fold_left (fun s pkg -> Deb.Set.add pkg s) Deb.Set.empty l
@@ -531,10 +364,10 @@ let main () =
     in
     let request_id =
       if OptParse.Opt.is_set Options.problemid then OptParse.Opt.get Options.problemid
-      else if dudf.uid <> "" then dudf.uid
+      else if uid <> "" then uid
       else (string_of_int (Random.bits ()))
     in
-    match Debian.Apt.parse_request_apt dudf.problem.action with
+    match Debian.Apt.parse_request_apt action with
     |Debian.Apt.Upgrade (Some (suite))
     |Debian.Apt.DistUpgrade (Some (suite)) -> 
         let il = Deb.Set.fold (fun pkg acc -> `PkgDst (pkg.Deb.name,suite) :: acc) installed_packages [] in

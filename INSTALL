@@ -1,14 +1,16 @@
-required libraries deb / rpm :
+
+required libraries ( DEBIAN / RPM ) :
  - libextlib-ocaml-dev / ocaml-extlib-devel
 
 additional libraries (enable compilation with --with-<library>) :
  - libpostgresql-ocaml-dev / ocaml-postgresql-devel
  - libsqlite3-ocaml-dev / ocaml-sqlite-devel
  - libzip-ocaml-dev / ?
+ - libbz2-ocaml-dev / ?
  - libjson-static-camlp4-dev / ?
  - libocamlgraph-ocaml-dev / ?
  - libounit-ocaml-dev / ocaml-ounit-devel
- - ? / librpm-devel
+ - librpm-dev / librpm-devel
 
 To compile from git :
 aclocal -I m4
@@ -22,6 +24,7 @@ make
 --with-sqlite
 --with-postgresql
 --with-zip
+--with-bz2
 --with-oUnit
 
 libcudf is included in the source tree of dose3. 
@@ -31,4 +34,4 @@ To use libcudf as an ocamlfind external library you can specify
 Ex :
 ./configure --with-xml --with-ocamlgraph --with-zip --with-oUnit
 
-In order to compile the applications do a "make all".
+In order to compile the a selection of applications do "make".

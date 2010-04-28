@@ -295,6 +295,7 @@ let connected_components graph =
     end
   ) graph ;
   !l
+;;
 
 (* associate a connected component to each conflict node *)
 let conflict_table cc =
@@ -378,6 +379,25 @@ let build_cc_list mdf pt a p =
 
 let to_set l = List.fold_right S.add l S.empty
 
+let build_bdd g =
+  let vars = Hashtbl.create (UG.nb_vertex g) in
+  let find x =
+    try Hashtbl.find vars x 
+    with Not_found -> begin
+      let v = Buddy.bdd_pos (Buddy.bdd_newvar ()) in
+      Hashtbl.add vars x v ; v
+    end
+  in
+  Buddy.bdd_varblockall ();
+  let bdd = 
+    UG.fold_edges (fun x y b ->
+      Buddy.bdd_and (Buddy.bdd_or (find x) (find y)) b
+    ) g Buddy.bdd_true
+  in
+  Buddy.bdd_reorder ();
+  bdd
+;;
+
 let buddy_check solver mdf cg a p ll =
   let size = List.length ll in
   let dcl = Depsolver_int.dependency_closure ~conjuntive:true mdf [p] in 
@@ -393,13 +413,14 @@ let buddy_check solver mdf cg a p ll =
   *)
       let gl = List.map (fun xl -> (filter cg !xl)) l in
       if List.exists (fun g -> UG.nb_vertex g > 70) gl then begin
-        (*
         List.iteri (fun i g ->
           let outch = open_out (Printf.sprintf "%d%d.dot" p i) in
-          D.output_graph outch g ;
-          close_out outch
+          (* D.output_graph outch g ; *)
+          Buddy.bdd_fprintdot outch (build_bdd g);
+          close_out outch;
+          Printf.eprintf "DOOOOONE\n%!";
         ) gl ; 
-        (* (hard := (p,ll) :: !hard ; *) *) false
+        (* (hard := (p,ll) :: !hard ; *)  false
       end
       else begin
         let sgl = List.sort ~cmp:(fun c1 c2 -> (UG.nb_vertex c1) - (UG.nb_vertex c2)) gl in
@@ -424,11 +445,11 @@ let buddy_check solver mdf cg a p ll =
 
 let cmp l1 l2 = (List.length l2) - (List.length l1)
 
-
 let main () =
   at_exit (fun () -> Common.Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
   if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
+  Buddy.bdd_init ();
   let pkglist = match posargs with [uri] -> parse uri | _ -> assert false in
   let mdf = Mdf.load_from_list pkglist in
   let maps = mdf.Mdf.maps in

@@ -64,14 +64,20 @@ end
 (* code from xml-ligth *)
 
 type xml =
-  | Element of (string * (string * string) list * xml LazyList.list)
+  | Element of (tag * attribute list * children)
   | PCData of string
   | CData of string
+  | Empty
+and children = xml LazyList.list
+and tag = string
+and attribute = (string * string)
 
 exception Not_element of xml
 exception Not_pcdata of xml
 exception Not_cdata of xml
-exception No_attribute of string
+exception Not_attribute of string
+
+let empty = Empty
 
 let tag = function
   | Element (tag,_,_) -> tag
@@ -95,12 +101,12 @@ let attrib x att =
       (try
       let att = String.lowercase att in
       snd (List.find (fun (n,_) -> String.lowercase n = att) attr)
-      with Not_found -> raise (No_attribute att))
+      with Not_found -> raise (Not_attribute att))
   | x -> raise (Not_element x)
 
 let children = function
-  | Element (_,_,clist) -> clist
-  | x -> raise (Not_element x)
+  | Element (_,_,clist) -> LazyList.to_list clist
+  | _ -> []
 
 let iter f = function
   | Element (_,_,clist) -> LazyList.iter f clist
@@ -168,6 +174,7 @@ let to_string x =
     | CData text ->
         buffer_cdata text;
         pcdata := false;
+    | Empty -> ()
   in
   Buffer.reset tmp; 
   loop x;

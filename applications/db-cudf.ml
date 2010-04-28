@@ -61,7 +61,7 @@ let main () =
   let oc =
     if !Options.outdir <> "" then begin
       let dirname = !Options.outdir in
-      if not(Sys.file_exists dirname) then Unix.mkdir dirname 777 ;
+      if not(Sys.file_exists dirname) then Unix.mkdir dirname 0o777 ;
       open_out (Filename.concat dirname ("res.cudf"))
     end else stdout
   in
