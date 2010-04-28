@@ -47,7 +47,10 @@ let string_of_rel = function
   | `Gt -> ">"
   | `ALL -> "ALL"
 
-module Set = Set.Make(struct type t = package let compare = compare end)
+module Set = Set.Make(struct
+  type t = package
+  let compare p1 p2 = compare (p1.name,p1.version) (p2.name,p2.version) 
+end)
 
 let input_raw_priv parse_packages files =
   let timer = Util.Timer.create "Rpm.Packages.input_raw" in
@@ -162,6 +165,9 @@ module Synthesis = struct
       let par = parse_paragraph default_package ch in
       parse_packages_rec (par::acc) ch
     with Eof -> acc
+
+  let parse_packages_in f ch =
+    parse_packages_rec [] ch
 
   let parse_packages f filename =
     let ch = Input.open_file filename in 
