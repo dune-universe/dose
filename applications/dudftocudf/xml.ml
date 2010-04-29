@@ -182,3 +182,16 @@ let to_string x =
   Buffer.reset tmp; 
   s 
 ;;
+
+let decode str =
+  let amp_re = Pcre.regexp "&amp;" in
+  let lt_re = Pcre.regexp "&lt;" in
+  let gt_re = Pcre.regexp "&gt;" in
+  let quot_re = Pcre.regexp "&quot;" in
+  let str = Pcre.replace ~rex:amp_re ~templ:"&" str in
+  let str = Pcre.replace ~rex:lt_re ~templ:"<" str in
+  let str = Pcre.replace ~rex:gt_re ~templ:">" str in
+  let str = Pcre.replace ~rex:quot_re ~templ:"\"" str in
+  str
+;;
+

@@ -147,7 +147,7 @@ module Synthesis = struct
       with IO.No_more_input -> raise Eof | End_of_file -> assert false
     in
     try
-      match Str.split (Str.regexp "@") line with
+      match Pcre.split ~rex:(Pcre.regexp "@") line with
       |"provides"::l -> parse_paragraph {pkg with provides = parse_deps l} ch
       |"requires"::l -> parse_paragraph {pkg with depends = parse_deps_ll l} ch
       |"obsoletes"::l -> parse_paragraph { pkg with obsoletes = parse_deps l} ch

@@ -33,6 +33,19 @@ end
 
 (* ========================================= *)
 
+let amp_re = Pcre.regexp "&amp;" ;;
+let lt_re = Pcre.regexp "&lt;" ;;
+let gt_re = Pcre.regexp "&gt;" ;;
+let quot_re = Pcre.regexp "&quot;" ;;
+
+let decode str =
+  let str = Pcre.replace ~rex:amp_re ~templ:"&" str in
+  let str = Pcre.replace ~rex:lt_re ~templ:"<" str in
+  let str = Pcre.replace ~rex:gt_re ~templ:">" str in
+  let str = Pcre.replace ~rex:quot_re ~templ:"\"" str in
+  str 
+;;
+
 let rel_of_string = function
   |"<<" | "<" -> `Lt
   |"<=" -> `Leq
@@ -42,49 +55,48 @@ let rel_of_string = function
   |"ALL" -> `ALL
   |s -> (Printf.eprintf "Invalid op %s" s ; assert false)
 
-let parse_vpkg vpkg =
-  match Pcre.full_split ~rex:(Pcre.regexp "<=|>=|=|<|>") vpkg with
-  |(Pcre.Text n)::_ when String.starts_with n "rpmlib(" -> None
-  |[Pcre.Text n] -> Some(vpkg,(`ALL,""))
-  |[Pcre.Text n;Pcre.Delim sel;Pcre.Text v] -> Some(n,(rel_of_string sel,v))
-  |_ -> (Printf.eprintf "%s\n%!" vpkg ; assert false)
+let parse_deps s =
+  List.map Rpm.Packages.Synthesis.parse_vpkg (Pcre.split ~rex:(Pcre.regexp "@") s)
 
-let parse_string = function
-  |Json_type.String s -> s
-  |_ -> assert false
-
-let to_list = function
-  |Json_type.Array l ->
-      List.map (function Json_type.String s -> s | _ -> assert false) l
-  |_ -> assert false
-
-let read_status str = 
-  let aux = function
-    |Json_type.Object [("package-status", Json_type.Array packagelist )] ->
-        List.filter_map (function
-          |Json_type.Array l ->
-              let a = Array.of_list l in
-              begin try
-              let v = Printf.sprintf "%s-%s" (parse_string a.(1)) (parse_string a.(2)) in
-              Some 
-              {
-                Rpm.Packages.name = parse_string a.(0);
-                Rpm.Packages.version = v;
-                Rpm.Packages.depends = [List.filter_map parse_vpkg (to_list a.(3))];
-                Rpm.Packages.conflicts = List.filter_map parse_vpkg (to_list a.(7));
-                Rpm.Packages.provides = List.filter_map parse_vpkg (to_list a.(5));
-                Rpm.Packages.obsoletes = [];
-                Rpm.Packages.files = []
-              }
-              with Invalid_argument("index out of bounds") -> (
-                Util.print_warning "%s" (Json_io.string_of_json (Json_type.Array l));
-                None)
-              end
-          |_ -> assert false
-        ) packagelist
+let parse_status l = 
+  List.fold_left (fun acc node ->
+    match Xml.tag node with
+    |"package" ->
+        let version = 
+          Printf.sprintf "%s-%s"
+          (Xml.attrib node "version") (Xml.attrib node "release")
+        in
+        let p = {
+          Rpm.Packages.name = Xml.attrib node "name" ;
+          Rpm.Packages.version = version;
+          Rpm.Packages.depends = [];
+          Rpm.Packages.conflicts = [];
+          Rpm.Packages.provides = [];
+          Rpm.Packages.obsoletes = [];
+          Rpm.Packages.files = [];
+        } 
+        in
+        let pkg = 
+          List.fold_left (fun acc n ->
+            match Xml.tag n with
+            |"provides" ->
+                { acc with Rpm.Packages.provides = 
+                  parse_deps (Xml.decode(Dudfxml.content_to_string n)) }
+            |"requires" -> 
+                { acc with Rpm.Packages.depends = 
+                  [parse_deps (Xml.decode(Dudfxml.content_to_string n))] }
+            |"conflicts" ->
+                { acc with Rpm.Packages.conflicts = 
+                  parse_deps (Xml.decode(Dudfxml.content_to_string n)) }
+            |"obsoletes" ->
+                { acc with Rpm.Packages.obsoletes =
+                  parse_deps (Xml.decode(Dudfxml.content_to_string n)) }
+            |_ -> assert false
+          ) p (Xml.children node)
+        in pkg::acc
     |_ -> assert false
-  in aux (Json_io.json_of_string str)
-
+  ) [] l
+;;
 (* ========================================= *)
 
 let has_children nodelist tag =
@@ -98,7 +110,7 @@ let parsepackagelist = function
   |(Some t,Some fname,url,[inc]) when has_children [inc] "include" ->
       let href = Xml.attrib inc "href" in
       (t,fname,url, Dudfxml.pkgget ~compression:Dudfxml.Cz fname href)
-  |(Some t,Some fname,url,[cdata]) -> (t,fname,url,Xml.cdata cdata)
+  |(Some t,Some fname,url,[data]) -> (t,fname,url,Xml.decode(Dudfxml.content_to_string data))
   |(Some t,Some fname,url,[]) -> (t,fname,url,"")
   |(Some t,Some fname,url,_) ->
       (Printf.eprintf "Warning : Unknown format for package-list element %s %s\n" t fname; exit 1)
@@ -122,12 +134,6 @@ let main () =
 
   let dudfdoc = Dudfxml.parse input_file in
   let uid = dudfdoc.uid in
-  let status =
-    (* XXX here I want cdata !!! *)
-    match dudfdoc.problem.packageStatus.st_installer with
-    |[status] -> Xml.decode(Dudfxml.content_to_string status) (* Xml.fold (fun a x -> a^(Xml.cdata x)) "" status *)
-    |_ -> Printf.eprintf "Warning: wrong status" ; ""
-  in
   let packagelist = 
     List.map (fun pl -> parsepackagelist pl) dudfdoc.problem.packageUniverse
   in
@@ -155,7 +161,7 @@ let main () =
 
   Util.print_info "installed packages";
   let installed_packages =
-    let l = read_status status in
+    let l = parse_status dudfdoc.problem.packageStatus.st_installer in
     List.fold_left (fun s pkg -> Rpm.Packages.Set.add pkg s) Rpm.Packages.Set.empty l
   in
 
