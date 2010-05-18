@@ -133,6 +133,7 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
       let graph = G.copy g in
       clique_reduction graph;
       O.transitive_reduction graph;
+      Common.Util.print_info "sd_graph after reduction: %d vertices, %d edges" (G.nb_vertex graph) (G.nb_edges graph);
       let start_pkg = 
         { package = "START"; version = 0; depends = []; conflicts = [];
           provides = []; installed = false; was_installed = false;

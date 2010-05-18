@@ -23,6 +23,7 @@ module Options = struct
   let debug = StdOpt.store_true ()
   let tarjan = StdOpt.store_true ()
   let do_compare = StdOpt.store_true ()
+  let out_file = StdOpt.str_option ()
 
   let description = "Compute the dominator graph"
   let options = OptParser.make ~description:description ()
@@ -30,6 +31,7 @@ module Options = struct
   open OptParser
   add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
   add options ~short_name:'t' ~long_name:"tarjan" ~help:"Use Tarjan algorithm" tarjan;
+  add options ~short_name:'o' ~long_name:"output" ~help:"Send output to file" out_file;
   add options ~long_name:"compare" ~help:"Compare Tarjan and MANCOOSI graphs" do_compare;
 end
 
@@ -52,10 +54,9 @@ begin
   if OptParse.Opt.get Options.debug then Boilerplate.enable_debug ();
   let (universe,_,_) = Boilerplate.load_universe posargs in
 
-  let sd_graph = Strongdeps.strongdeps_univ universe in
-
   if OptParse.Opt.get Options.do_compare then
   begin
+    let sd_graph = Strongdeps.strongdeps_univ universe in
     let tg = Dom.dominators_tarjan sd_graph
     and mg = Dom.dominators sd_graph in
     let mt_trad_tbl = Hashtbl.create (SG.nb_vertex mg) in
@@ -102,11 +103,18 @@ begin
   end
   else
   begin
+    let sd_graph = Strongdeps.strongdeps_univ universe in
+    Common.Util.print_info "Strong dependency graph: %d vertices, %d edges\n" (SG.nb_vertex sd_graph) (SG.nb_edges sd_graph); 
     let dom_graph =
       if OptParse.Opt.get Options.tarjan then
         Dom.dominators_tarjan sd_graph
       else
         Dom.dominators sd_graph in
-    D.output_graph stdout dom_graph
+    begin
+      if OptParse.Opt.is_set Options.out_file then
+        D.output_graph (open_out (OptParse.Opt.get Options.out_file)) dom_graph
+      else
+        D.output_graph stdout dom_graph
+    end
   end
 end;;
