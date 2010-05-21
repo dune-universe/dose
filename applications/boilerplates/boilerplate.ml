@@ -3,7 +3,7 @@ open Common
 
 let enable_debug ?(bars=[]) () =
   List.iter Util.Progress.enable bars;
-  Util.set_verbosity Common.Util.Summary
+  Util.set_verbosity Common.Util.Details
 ;;
 
 let argv_ f l =
