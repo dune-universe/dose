@@ -27,7 +27,7 @@ let print_warning ?(ppf=Format.err_formatter) fmt =
   print ppf Summary "Warning" fmt
 
 let print_info ?(ppf=Format.err_formatter) fmt =
-  print ppf Summary "Info" fmt
+  print ppf Details "Info" fmt
 
 let gettimeofday = ref (fun _ -> 0.)
 let () = gettimeofday := Unix.gettimeofday

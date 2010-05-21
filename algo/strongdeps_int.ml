@@ -41,25 +41,25 @@ let strong_depends solver p q =
 (** check if [p] strong depends on any packages in [l] *)
 let check_strong graph solver p l =
   List.iter (fun q ->
-    if not(p = q) then
+    if p <> q then
       if not(G.mem_edge graph p q) then
         if strong_depends solver p q then 
           G.add_edge graph p q
   ) l
 
-(* true if all dependencies are conjunctive *)
-let allconj depends = 
+(* true if at least one dependency is disjunctive *)
+let somedisj depends = 
   if List.length depends > 0 then
     try
       List.iter (function (_,[_],_) -> () | _ -> raise Not_found) depends;
       false
     with Not_found -> true
-  else true
+  else false
 
 (** [strongdeps l] build the strong dependency graph of l *)
 (* each package has a node in the graph, even if it does not have  
  * any strong dependencies *)
-let strongdeps_int graph mdf l =
+let strongdeps_int ?(transitive=true) graph mdf l =
   let available = List.sort ~cmp:(fun (_,n,_) (_,m,_) -> m - n) l in
   let size = List.length available in
 
@@ -71,7 +71,7 @@ let strongdeps_int graph mdf l =
     let id = pkg.Mdf.id in
     G.add_vertex graph id;
     Util.Progress.progress mainbar;
-    if allconj pkg.Mdf.depends then begin
+    if somedisj pkg.Mdf.depends then begin
       let solver = Depsolver_int.init_solver ~closure mdf.Mdf.index in
       match Depsolver_int.solve solver (Diagnostic_int.Sng id) with
       |Diagnostic_int.Failure(_) -> ()
@@ -79,7 +79,9 @@ let strongdeps_int graph mdf l =
     end
   ) available ;
   Util.Progress.reset mainbar;
-  Util.Timer.stop strongtimer (SO.O.add_transitive_closure graph)
+  let g = if transitive then SO.O.add_transitive_closure graph else graph in
+  G.iter_vertex (fun p -> G.remove_edge g p p) g;
+  Util.Timer.stop strongtimer g
 ;;
 
 (* XXX this can be refactored in a better way ... *)
@@ -104,7 +106,7 @@ let strongdeps mdf idlist =
   strongdeps_int graph mdf l
 
 (* XXX this can be refactored in a better way ... *)
-let strongdeps_univ mdf =
+let strongdeps_univ ?(transitive=true) mdf =
   let graph = G.create () in
   let size = Array.length mdf.Mdf.index in
   Util.Progress.set_total conjbar size;
@@ -123,7 +125,7 @@ let strongdeps_univ mdf =
   in
   Util.Progress.reset conjbar;
   Util.Timer.stop conjtimer ();
-  strongdeps_int graph mdf l
+  strongdeps_int ~transitive graph mdf l
 
 (** return the impact set (list) of the node [q] in [graph] *)
 (** invariant : we assume the graph is NOT detransitivitized *)

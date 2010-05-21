@@ -16,6 +16,7 @@ open Cudf
 open Graph
 open Defaultgraphs
 open Cudf_types_pp
+open CudfAdd
 
 module Options = struct
   open OptParse
@@ -41,23 +42,35 @@ module C = Components.Make(G);;
 
 (* ----------------------------------- *)
 
-module S = Set.Make(struct type t = string * string let compare = compare end)
+module S = Set.Make(struct type t = string * string let compare = Pervasives.compare end)
 module SG = PackageGraph.G
 module SO = PackageGraph.O;;
 module Dom = Dominators.Make(SG)
 module D = PackageGraph.D;;
 
+let is graph pkg =
+  SG.fold_pred (fun p s -> Cudf_set.add p s) graph pkg (Cudf_set.singleton pkg)
+;;
+
+let scons graph pkg =
+  SG.fold_succ (fun p s -> Cudf_set.add p s) graph pkg (Cudf_set.singleton pkg)
+;;
+
 let () =
 begin
+  Common.Util.set_verbosity Common.Util.Summary;
   at_exit (fun () -> Common.Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
   if OptParse.Opt.get Options.debug then Boilerplate.enable_debug ();
   let (universe,_,_) = Boilerplate.load_universe posargs in
 
+  Common.Util.Progress.enable "Algo.Strongdep.main";
+
   if OptParse.Opt.get Options.do_compare then
   begin
     let sd_graph = Strongdeps.strongdeps_univ universe in
-    let tg = Dom.dominators_tarjan sd_graph
+    let sd_graph_detrans = Strongdeps.strongdeps_univ ~transitive:false universe in
+    let tg = Dom.dominators_tarjan sd_graph_detrans
     and mg = Dom.dominators sd_graph in
     let mt_trad_tbl = Hashtbl.create (SG.nb_vertex mg) in
     (* let tm_trad_tbl = Hashtbl.create (SG.nb_vertex tg) in *)
@@ -76,6 +89,7 @@ begin
         ) (Pcre.split ~rex:comma (string_of_pkgname v.package))
     ) tg;
     (* but first & foremost: edges *)
+    SO.transitive_reduction mg;
     SG.iter_edges (fun p q ->
       if p.package <> "START" && not (SG.mem_edge mg p q) then
       begin
@@ -87,10 +101,25 @@ begin
           ) acc qs
         ) false ps in
         if not ex then
+        begin
           Printf.eprintf "In T but not in M: %s -> %s\n" p.package q.package;
+          if SG.mem_vertex mg p && SG.mem_vertex mg q then
+          begin
+            Printf.eprintf "  ps: %s\n" (String.concat "|" (List.map (fun x -> x.package) ps));
+            Printf.eprintf "  qs: %s\n" (String.concat "|" (List.map (fun x -> x.package) qs));
+            Printf.eprintf "  isp: %s\n" (String.concat "," (List.map (fun x -> x.package) (Cudf_set.elements (is sd_graph p))));        
+            Printf.eprintf "  dfs: %s\n" (String.concat "," (List.map (fun x -> x.package) (Cudf_set.elements (Cudf_set.diff (is sd_graph q) (scons sd_graph p)))));        
+          end
+          else
+          begin
+            if not (SG.mem_vertex mg p) then
+              Printf.eprintf "  %s not in M\n" (string_of_pkgname p.package);
+            if not (SG.mem_vertex mg q) then
+              Printf.eprintf "  %s not in M\n" (string_of_pkgname q.package);
+          end
+        end
       end
     ) tg;
-    SO.transitive_reduction mg;
     SG.iter_edges (fun p q ->
       if not (SG.mem_edge tg p q) then
       begin
@@ -103,13 +132,11 @@ begin
   end
   else
   begin
-    let sd_graph = Strongdeps.strongdeps_univ universe in
-    Common.Util.print_info "Strong dependency graph: %d vertices, %d edges\n" (SG.nb_vertex sd_graph) (SG.nb_edges sd_graph); 
     let dom_graph =
       if OptParse.Opt.get Options.tarjan then
-        Dom.dominators_tarjan sd_graph
+        Dom.dominators_tarjan (Strongdeps.strongdeps_univ ~transitive:false universe)
       else
-        Dom.dominators sd_graph in
+        Dom.dominators (Strongdeps.strongdeps_univ universe) in
     begin
       if OptParse.Opt.is_set Options.out_file then
         D.output_graph (open_out (OptParse.Opt.get Options.out_file)) dom_graph
