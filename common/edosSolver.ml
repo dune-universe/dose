@@ -436,7 +436,7 @@ module M (X : S) = struct
           let level = st.st_level.(x) in
           if level = st.st_cur_level then begin
             incr counter
-          end else (* if level > 0 then*) begin
+          end else (* if level > 0 then *) begin
             learnt := p :: !learnt;
             bt_level := max level !bt_level
           end

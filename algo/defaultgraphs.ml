@@ -15,9 +15,6 @@
 open Graph
 open Common
 
-let print_package = CudfAdd.print_package
-let depgraphbar = Util.Progress.create "SyntacticDependencyGraph.dependency_graph"
-
 (** generic operation over imperative graphs *)
 module GraphOper (G : Sig.I) = struct
 
@@ -54,6 +51,8 @@ end
     *) 
 module SyntacticDependencyGraph = struct
 
+  let depgraphbar = Util.Progress.create "SyntacticDependencyGraph.dependency_graph"
+
   module PkgV = struct
       type t = Pkg of Cudf.package | Or of (Cudf.package * int)
       let compare x y = match (x,y) with
@@ -78,12 +77,12 @@ module SyntacticDependencyGraph = struct
     let default = DirDepends
   end
 
-module G = Imperative.Digraph.ConcreteBidirectionalLabeled(PkgV)(PkgE)
+  module G = Imperative.Digraph.ConcreteBidirectionalLabeled(PkgV)(PkgE)
 
   let string_of_vertex vertex =
     match G.V.label vertex with
-    |PkgV.Pkg p -> Printf.sprintf "Pkg %s" (print_package p)
-    |PkgV.Or (p, _) -> Printf.sprintf "Or %s" (print_package p)
+    |PkgV.Pkg p -> Printf.sprintf "Pkg %s" (CudfAdd.print_package p)
+    |PkgV.Or (p, _) -> Printf.sprintf "Or %s" (CudfAdd.print_package p)
 
   let string_of_edge edge =
     let label =
@@ -103,8 +102,8 @@ module G = Imperative.Digraph.ConcreteBidirectionalLabeled(PkgV)(PkgE)
       include G
       let vertex_name v =
         match G.V.label v with
-        |PkgV.Pkg i -> Printf.sprintf "\"%s\"" (print_package i)
-        |PkgV.Or (i,c) -> Printf.sprintf "\"Or%s-%d\"" (print_package i) c
+        |PkgV.Pkg i -> Printf.sprintf "\"%s\"" (CudfAdd.print_package i)
+        |PkgV.Or (i,c) -> Printf.sprintf "\"Or%s-%d\"" (CudfAdd.print_package i) c
 
       let graph_attributes = fun _ -> [`Rankdir `LeftToRight]
       let get_subgraph = fun _ -> None
@@ -192,7 +191,7 @@ module PackageGraph = struct
   module DisplayF (G : Sig.I) =
     struct
       include G
-      let vertex_name v = Printf.sprintf "\"%s\"" (print_package v)
+      let vertex_name v = Printf.sprintf "\"%s\"" (CudfAdd.print_package v)
 
       let graph_attributes = fun _ -> []
       let get_subgraph = fun _ -> None
@@ -308,7 +307,7 @@ module IntPkgGraph = struct
       | _ -> ()
     ) index.(id).Mdf.depends
 
-  (** for all if in idlist add to the graph all conjunctive dependencies *)
+  (** for all id \in idlist add to the graph all conjunctive dependencies *)
   let conjdepgraph index idlist =
     let graph = G.create ~size:(List.length idlist) () in
     List.iter (conjdepgraph_int graph index) idlist ;
@@ -327,6 +326,19 @@ module IntPkgGraph = struct
         Hashtbl.add h id !l;
         !l
       end
+
+  (** Build the dependency graph from the given index. conjunctive and
+      disjunctive dependencies are considered as equal *)
+  let dependency_graph index =
+    let size = Array.length index in
+    let graph = G.create ~size () in
+    for id = 0 to size -1 do
+      G.add_vertex graph id;
+      List.iter (fun (_,l,_) ->
+        List.iter (fun p -> if p <> id then G.add_edge graph id p) l
+      ) index.(id).Mdf.depends
+    done;
+    graph
 
   module S = Set.Make(PkgV)
   module SO = GraphOper(G)

@@ -45,12 +45,14 @@ let rel_of_string = function
 let parse_vpkg vpkg =
   match Pcre.full_split ~rex:(Pcre.regexp "<=|>=|=|<|>") vpkg with
   |(Pcre.Text n)::_ when String.starts_with n "rpmlib(" -> None
-  |[Pcre.Text n] -> Some(vpkg,(`ALL,""))
-  |[Pcre.Text n;Pcre.Delim sel;Pcre.Text v] -> Some(n,(rel_of_string sel,v))
+  |[Pcre.Text n] -> Some(String.strip n,(`ALL,""))
+  |[Pcre.Text n;Pcre.Delim sel;Pcre.Text v] -> Some(String.strip n,(rel_of_string sel,v))
   |_ -> (Printf.eprintf "%s\n%!" vpkg ; assert false)
 
 let parse_string = function
   |Json_type.String s -> s
+  |Json_type.Int i -> string_of_int i
+  |Json_type.Null -> ""
   |_ -> assert false
 
 let to_list = function
@@ -58,24 +60,44 @@ let to_list = function
       List.map (function Json_type.String s -> s | _ -> assert false) l
   |_ -> assert false
 
+(*
+So in the current version of CM DUDF, it's roughly this:
+
+[[package1], [package2],...]
+
+Each package is an array with this structure:
+["name", epoch, "version", "release", [requires,...], "rpm version",
+[provides, ...], [conflicts, ...], [obsoletes,...], install_timestamp,
+size].
+
+The dependency arrays should really be filled with triples as (NAME,
+FLAG, VERSION) but at the moment they are still in a single string
+separated by spaces.
+
+Any element that's not applicable (usually epoch) is expressed as null,
+apart from the dependency arrays which appear as [].
+*)
 let read_status str = 
   let aux = function
-    |Json_type.Object [("package-status", Json_type.Array packagelist )] ->
+    |Json_type.Array packagelist ->
         List.filter_map (function
           |Json_type.Array l ->
               let a = Array.of_list l in
               begin try
-              let v = Printf.sprintf "%s-%s" (parse_string a.(1)) (parse_string a.(2)) in
-              Some 
-              {
-                Rpm.Packages.name = parse_string a.(0);
-                Rpm.Packages.version = v;
-                Rpm.Packages.depends = [List.filter_map parse_vpkg (to_list a.(3))];
-                Rpm.Packages.conflicts = List.filter_map parse_vpkg (to_list a.(7));
-                Rpm.Packages.provides = List.filter_map parse_vpkg (to_list a.(5));
-                Rpm.Packages.obsoletes = [];
-                Rpm.Packages.files = []
-              }
+                let epoch = let s = parse_string a.(1) in if s = "" then "0" else s in
+                let version = parse_string a.(2) in
+                let release = parse_string a.(3) in
+                Some 
+                {
+                  Rpm.Packages.name = parse_string a.(0);
+                  Rpm.Packages.version = Printf.sprintf "%s:%s-%s" epoch version release;
+                  Rpm.Packages.depends = [List.filter_map parse_vpkg (to_list a.(4))];
+                  Rpm.Packages.conflicts = List.filter_map parse_vpkg (to_list a.(7));
+                  Rpm.Packages.provides = List.filter_map parse_vpkg (to_list a.(6));
+                  Rpm.Packages.obsoletes = List.filter_map parse_vpkg (to_list a.(8));
+                  Rpm.Packages.files = [];
+                  Rpm.Packages.extras = []
+                }
               with Invalid_argument("index out of bounds") -> (
                 Util.print_warning "%s" (Json_io.string_of_json (Json_type.Array l));
                 None)
@@ -94,15 +116,15 @@ let has_children nodelist tag =
   with Xml.Not_element(_) -> false
 ;;
 
+let mem_include l = List.exists (function ("include",_) -> true |_ -> false) l
 let parsepackagelist = function
-  |(Some t,Some fname,url,[inc]) when has_children [inc] "include" ->
-      let href = Xml.attrib inc "href" in
-      (t,fname,url, Dudfxml.pkgget ~compression:Dudfxml.Cz fname href)
-  |(Some t,Some fname,url,[cdata]) -> (t,fname,url,Xml.cdata cdata)
-  |(Some t,Some fname,url,[]) -> (t,fname,url,"")
-  |(Some t,Some fname,url,_) ->
-      (Printf.eprintf "Warning : Unknown format for package-list element %s %s\n" t fname; exit 1)
-  |_ -> assert false
+  |(Some ("synthesis_hdlist" as t),None,None,attrl,[]) when mem_include attrl ->
+      let (_,href) = List.find (function ("include",_) -> true |_ -> false) attrl in
+      (t,"","", Dudfxml.pkgget (* ~compression:Dudfxml.Cz *) href)
+  |(Some ("synthesis_hdlist" as t),_,_,_,[cdata]) -> (t,"","",Xml.cdata cdata)
+  |(Some t,_,_,_,_) ->
+      (Printf.eprintf "Warning : Unknown format for package-list element %s \n" t; exit 1)
+  |(None,_,_,_,_) -> assert false
 ;;
 
 (* ========================================= *)
@@ -123,9 +145,8 @@ let main () =
   let dudfdoc = Dudfxml.parse input_file in
   let uid = dudfdoc.uid in
   let status =
-    (* XXX here I want cdata !!! *)
     match dudfdoc.problem.packageStatus.st_installer with
-    |[status] -> Xml.decode(Dudfxml.content_to_string status) (* Xml.fold (fun a x -> a^(Xml.cdata x)) "" status *)
+    |[status] -> Xml.fold (fun a x -> a^(Xml.cdata x)) "" status
     |_ -> Printf.eprintf "Warning: wrong status" ; ""
   in
   let packagelist = 

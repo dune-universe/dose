@@ -74,6 +74,7 @@ let parse_status l =
           Rpm.Packages.provides = [];
           Rpm.Packages.obsoletes = [];
           Rpm.Packages.files = [];
+          Rpm.Packages.extras = [];
         } 
         in
         let pkg = 

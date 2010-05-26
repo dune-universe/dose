@@ -27,6 +27,7 @@ type package = {
   obsoletes : vpkg list;
   provides : veqpkg list;
   files : (vpkg * bool) list;  (* the file and whether it is a directory *)
+  extras : (string * string) list;
 }
 
 let default_package = {
@@ -37,6 +38,7 @@ let default_package = {
   obsoletes = [];
   provides = [];
   files = [];
+  extras = [];
 }
 
 let string_of_rel = function
@@ -81,6 +83,7 @@ module Hdlists = struct
           obsoletes = (try list_deps "obsolete" par with Not_found -> []);
           provides = (try provide_list par with Not_found -> []);
           files = (try fileprovide par with Not_found -> []);
+          extras = [];
         }
       )
     with Not_found -> None
@@ -92,7 +95,7 @@ module Hdlists = struct
     _close_in t ;
     l
 
-  let input_raw files = input_raw_priv parse_packages files
+  let input_raw ?(extras=[]) files = input_raw_priv parse_packages files
 end
 
 module Synthesis = struct
@@ -116,6 +119,8 @@ module Synthesis = struct
         try Scanf.sscanf sel "%s %s" (fun op v -> (rel_of_string op,v))
         with End_of_file -> (Printf.eprintf "Invalid op %s" sel ; assert false)
 
+        (* XXX this strip is here because I'm lazy to think of a Pcre regexp to
+         * get rid of the sscanf .... *)
   let parse_vpkg vpkg =
     try Scanf.sscanf vpkg "%[^[][%[^]]]" (fun n sel -> (n,parse_op sel))
     with End_of_file -> (vpkg,(`ALL,""))
@@ -147,16 +152,16 @@ module Synthesis = struct
       with IO.No_more_input -> raise Eof | End_of_file -> assert false
     in
     try
-      match Pcre.split ~rex:(Pcre.regexp "@") line with
+      match List.tl (Pcre.split ~rex:(Pcre.regexp "@") line) with
       |"provides"::l -> parse_paragraph {pkg with provides = parse_deps l} ch
       |"requires"::l -> parse_paragraph {pkg with depends = parse_deps_ll l} ch
-      |"obsoletes"::l -> parse_paragraph { pkg with obsoletes = parse_deps l} ch
+      |"obsoletes"::l -> parse_paragraph {pkg with obsoletes = parse_deps l} ch
       |"conflicts"::l -> parse_paragraph {pkg with conflicts = parse_deps l} ch
       |"summary"::l -> parse_paragraph pkg ch
       |"filesize"::l -> parse_paragraph pkg ch
       |"suggests"::l -> parse_paragraph pkg ch
       |"info"::l -> parse_info pkg l
-      |s::l -> ((Util.print_warning "Unknown field %s" s) ; parse_paragraph pkg ch)
+      |s::l -> ((Util.print_warning "Unknown field %s" s); parse_paragraph pkg ch)
       |_ -> assert false
     with End_of_file -> assert false
 
@@ -175,6 +180,6 @@ module Synthesis = struct
     Input.close_ch ch;
     l
 
-  let input_raw files = input_raw_priv parse_packages files
+  let input_raw ?(extras=[]) files = input_raw_priv parse_packages files
 
 end

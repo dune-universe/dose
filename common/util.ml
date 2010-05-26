@@ -82,9 +82,9 @@ module Progress = struct
     c.perc <- 0;
     c.rotation <- 0
 
-  let progress c =
+  let progress ?(i=1) c =
     if c.enabled then begin
-      c.perc <- c.perc + 1;
+      c.perc <- c.perc + i;
       Buffer.clear c.buffer;
       Buffer.add_char c.buffer '\r';
       Buffer.add_string c.buffer c.name;

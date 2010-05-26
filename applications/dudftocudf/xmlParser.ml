@@ -99,6 +99,8 @@ let parser_aux f =
   | _ -> assert false
 ;;
 
+let bar = Common.Util.Progress.create "Dudftocidf.XmlParser"
+
 let parse_str str =
   let f p = 
     Expat.parse p str;
@@ -113,5 +115,7 @@ let parse_ch ch =
       Expat.parse p (IO.nread ch 10240)
     done with IO.No_more_input -> Expat.final p ;
   in
-  parser_aux f
+  let r = parser_aux f in
+  Common.Util.Progress.reset bar;
+  r
 ;;

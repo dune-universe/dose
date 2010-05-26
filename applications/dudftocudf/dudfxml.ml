@@ -40,7 +40,7 @@ module XmlDudf = struct
   }
   and attribute = string option 
   and dudfuniverse =
-    (attribute * attribute * attribute * Xml.xml list) (** any* *)
+    (attribute * attribute * attribute * Xml.attribute list * Xml.xml list) (** any* *)
   and dudfoutcome =
     |Success of dudfstatus
     |Failure of string
@@ -122,9 +122,13 @@ let curlget ch url =
 
 type compression = Bz2 | Cz
 
-let pkgget ?(cachedir=".dudf") ?compression fname url =
+let pkgget ?(cachedir=".dudf") ?compression ?(fname=None) url =
   if not(Sys.file_exists cachedir) then Unix.mkdir cachedir 0o777 ;
   let filename =
+    let fname =
+      if Option.is_none fname then (Digest.to_hex (Digest.string url))
+      else Option.get fname
+    in
     let f = 
       match compression with
       |Some Bz2 when not(Filename.check_suffix fname "bz2") -> (fname^".bz2")
@@ -170,11 +174,17 @@ let parse input_file =
   let dudfuniverse node =
     Xml.fold (fun universe n ->
       Util.print_info "   %s" (Xml.tag n);
-      let fmt = attrib_opt n "format" in
-      let filename = attrib_opt n "filename" in
-      let url = attrib_opt n "url" in
-      if (Xml.tag n) = "package-list" then
-        (fmt,filename,url,Xml.children n)::universe
+      if (Xml.tag n) = "package-list" then begin
+        let (fmt,filename,url,l) = 
+          List.fold_left (fun (fmt,filename,url,l) -> function
+            |("format",v) -> (Some v, filename,url,l)
+            |("filename",v) -> (fmt,Some v,url,l)
+            |("url",v) -> (fmt,filename,Some v,l)
+            |a -> (fmt,filename,url,a::l)
+          ) (None,None,None,[]) (Xml.attribs n)
+        in
+        (fmt,filename,url,l,Xml.children n)::universe
+      end
       else begin
         Printf.eprintf "Warning : Unknown element \"%s\"\n" (Xml.tag n) ;
         exit 1

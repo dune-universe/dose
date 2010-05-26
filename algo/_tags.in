@@ -1,5 +1,5 @@
 <*.ml> or <*.mli> or <*.cma> or <*.cmxa>: pkg_extlib, pkg_ocamlgraph, @PKG_CUDF@
-<tests.*>: pkg_extlib, pkg_ocamlgraph, @PKG_CUDF@, pkg_oUnit, pkg_zip, pkg_str
+<tests.*>: pkg_extlib, pkg_ocamlgraph, @PKG_CUDF@, pkg_oUnit, @PKG_ZIP@, @PKG_BZ2@, pkg_str
 <{defaultgraphs,dominators,statistics,diagnostic,diagnostic_int,depsolver,depsolver_int,cudfsolver,strongdeps,strongdeps_int}.cmx>: for-pack(Algo)
 <common>: include
 @INCLUDE_CUDF@

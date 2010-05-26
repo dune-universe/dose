@@ -27,8 +27,8 @@ module Progress : sig
   (** [set_total bar 10] : set the max width of the progress bar to 10 units *)
   val set_total : t -> int -> unit
   
-  (** increment the progress bar of one unit *)
-  val progress : t -> unit
+  (** increment the progress bar of [i] units *)
+  val progress : ?i:int -> t -> unit
 
   (** reset the progress bar *)
   val reset: t -> unit
