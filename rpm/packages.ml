@@ -100,6 +100,8 @@ end
 
 module Synthesis = struct
 
+(* spec : http://wiki.mandriva.com/en/Format_of_synthesis.hdlist.cz_index *)
+
   open ExtLib
   open Common
 
@@ -129,18 +131,22 @@ module Synthesis = struct
 
   let parse_info pkg = function
     |[nvra;epoch;size;group] ->
-        let ra = String.rindex nvra '.' in
-        let vr = String.rindex_from nvra (ra-1) '-' in
-        let nv = String.rindex_from nvra (vr-1) '-' in
+        let ra = String.rindex nvra '.' in (* arch *)
+        let vr = String.rindex_from nvra (ra-1) '-' in (* release *)
+        let nv = String.rindex_from nvra (vr-1) '-' in (* version *)
         let name = String.sub nvra 0 nv in
         let version = String.sub nvra (nv+1) (vr-nv-1) in
         let release = String.sub nvra (vr+1) (ra-vr-1) in
-        (* let arch = String.sub nvra (ra+1) (String.length nvra-ra-1) in *)
+        let arch = String.sub nvra (ra+1) (String.length nvra-ra-1) in
         let version =
           if epoch <> "0" then Printf.sprintf "%s:%s-%s" epoch version release
           else Printf.sprintf "%s-%s" version release
         in
-        { pkg with name = name ; version = version }
+        { pkg with 
+          name = name ;
+          version = version ;
+          extras = ("arch",arch) :: pkg.extras
+        }
     |_ -> assert false
 
   exception Eof

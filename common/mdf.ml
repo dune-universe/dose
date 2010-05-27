@@ -48,16 +48,18 @@ let __load maps universe =
     in
     let dll =
       List.map (fun disjunction ->
-        List.fold_left (fun (l1,l2,l3) vpkg ->
-          let dl = maps.who_provides vpkg in
-          let el =
-            List.filter_map(fun p ->
-              (* remove self provides *)
-              let i = to_sat p in if i <> id then Some i else None
-            ) dl 
-          in
-          (vpkg::l1,el @ l2, dl @ l3)
-        ) ([],[],[]) disjunction
+        let (l1,l2,l3) =
+          List.fold_left (fun (l1,l2,l3) vpkg ->
+            let dl = maps.who_provides vpkg in
+            let el =
+              List.filter_map(fun p ->
+                (* remove self provides *)
+                let i = to_sat p in if i <> id then Some i else None
+              ) dl 
+            in
+            (vpkg::l1,el @ l2, dl @ l3)
+          ) ([],[],[]) disjunction
+        in (l1,List.unique l2, List.unique l3)
       ) pkg.Cudf.depends
     in
     let p = {
