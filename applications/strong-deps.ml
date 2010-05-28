@@ -17,16 +17,18 @@ module Options = struct
   open OptParse
 
   let debug = StdOpt.store_true ()
-  let dot = StdOpt.str_option ()
-  let dump = StdOpt.str_option ()
+  let dot = StdOpt.store_true ()
+  let dump = StdOpt.store_true ()
   let table =  StdOpt.store_true ()
   let detrans = StdOpt.store_true ()
+  let prefix = StdOpt.str_option ~default:"" ()
 
   let description = "Compute the strong dependency graph"
   let options = OptParser.make ~description:description ()
 
   open OptParser
   add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
+  add options ~long_name:"prefix" ~help:"Prefix output fils with <prefix>" prefix;
   add options ~long_name:"dot" ~help:"Save the strong dependency graph in dot format" dot;
   add options ~long_name:"dump" ~help:"Save the strong dependency graph" dump;
   add options ~long_name:"table" ~help:"Print the table (package,strong,direct,difference)" table;
@@ -35,11 +37,10 @@ end
 
 (* ----------------------------------- *)
 
-let d_impactlist graph q =
-  Defaultgraphs.SyntacticDependencyGraph.G.fold_pred (fun p acc -> p :: acc ) graph q []
-
-let s_impactlist graph q =
+let impactlist graph q =
   Defaultgraphs.PackageGraph.G.fold_pred (fun p acc -> p :: acc ) graph q []
+
+let mk_filename prefix suffix s = if prefix = "" then s^suffix else prefix^suffix
 
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
@@ -47,29 +48,29 @@ let main () =
   let bars = ["Algo.Strongdep.main";"Algo.Strongdep.conj"] in
   if OptParse.Opt.get Options.debug then Boilerplate.enable_debug ~bars () ;
   let (universe,_,_) = Boilerplate.load_universe posargs in
+  let prefix = OptParse.Opt.get Options.prefix in
   let sdgraph = Strongdeps.strongdeps_univ universe in
   if OptParse.Opt.get Options.table then begin
-    let depgraph = Defaultgraphs.SyntacticDependencyGraph.dependency_graph universe in
-    let getp = function
-      |Defaultgraphs.SyntacticDependencyGraph.PkgV.Or(p,_) -> p
-      |Defaultgraphs.SyntacticDependencyGraph.PkgV.Pkg p -> p
-    in
+    let outch = open_out (mk_filename prefix ".table" "data") in
+    let depgraph = Defaultgraphs.PackageGraph.dependency_graph universe in
     let l = 
-      Defaultgraphs.SyntacticDependencyGraph.G.fold_vertex (fun p l ->
-        let strongimpact = List.length (s_impactlist sdgraph (getp p)) in 
-        let directimpact = List.length (d_impactlist depgraph p) in
-        (getp p,strongimpact - directimpact, strongimpact, directimpact) :: l
+      Defaultgraphs.PackageGraph.G.fold_vertex (fun p l ->
+        let strongimpact = List.length (impactlist sdgraph p) in 
+        let directimpact = List.length (impactlist depgraph p) in
+        (p,strongimpact - directimpact, strongimpact, directimpact) :: l
       ) depgraph []
     in
     List.iter (fun (p,diff,s,d) ->
-      Printf.printf "%s , %d, %d, %d\n" p.Cudf.package s d diff
-    ) (List.sort ~cmp:(fun (_,x,_,_) (_,y,_,_) -> y - x) l)
+      let pkg = CudfAdd.print_package p in
+      Printf.fprintf outch "%s , %d, %d, %d\n" pkg s d diff
+    ) (List.sort ~cmp:(fun (_,x,_,_) (_,y,_,_) -> y - x) l);
+    close_out outch
   end
   ;
-  Defaultgraphs.StrongDepGraph.out
-  ~dump:(OptParse.Opt.opt Options.dump) 
-  ~dot:(OptParse.Opt.opt Options.dot)
-  ~detrans:(OptParse.Opt.get Options.detrans)
+  let dump = if OptParse.Opt.get Options.dump then Some (mk_filename prefix ".dump" "data") else None in
+  let dot = if OptParse.Opt.get Options.dot then Some (mk_filename prefix ".dot" "graph") else None in
+  Defaultgraphs.StrongDepGraph.out 
+  ~dump ~dot ~detrans:(OptParse.Opt.get Options.detrans)
   sdgraph
 ;;
 

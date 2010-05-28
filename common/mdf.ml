@@ -59,6 +59,7 @@ let __load maps universe =
             in
             (vpkg::l1,el @ l2, dl @ l3)
           ) ([],[],[]) disjunction
+        (* XXX Maybe here we can gain something if we use a set instead of a list *)
         in (l1,List.unique l2, List.unique l3)
       ) pkg.Cudf.depends
     in

@@ -1,5 +1,5 @@
 <*.ml> or <*.mli> or <*.byte> or <*.native>: pkg_extlib, @PKG_CUDF@
 <{packages,sources,apt,release,version,format822,debcudf}.cmx>: for-pack(Debian)
-<tests.*>: pkg_extlib, pkg_cudf, pkg_oUnit, pkg_zip, pkg_str
+<tests.*>: pkg_extlib, pkg_str, pkg_oUnit, @PKG_CUDF@, @PKG_ZIP@, @PKG_BZ2@
 <common>: include
 @INCLUDE_CUDF@

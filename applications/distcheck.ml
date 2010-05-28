@@ -26,8 +26,8 @@ module Options = struct
   let onlyfail () = (Opt.get failures) && not (Opt.get successes)
   let onlysucc () = (Opt.get successes) && not (Opt.get failures)
 
-  let description = "By default we show only the number of broken packages"
-  let options = OptParser.make ~description:description ()
+  let description = "Report the broken packages in a package list"
+  let options = OptParser.make ~description ()
 
   open OptParser
   add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;

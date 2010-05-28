@@ -157,7 +157,17 @@ let load_fileconflicts tables (name,version) =
 
 (* ========================================= *)
 
-let tocudf tables ?(inst=false) pkg =
+type extramap = (string * (string * Cudf_types.typedecl1)) list
+
+let preamble =
+  let l = [ ("number",(`String None)) ] in
+  CudfAdd.add_properties Cudf.default_preamble l
+
+let add_extra extras tables pkg =
+  let number = ("number",`String pkg.version) in
+  number :: extras
+
+let tocudf tables ?(extras=[]) ?(inst=false) pkg =
   let (n,v) = (pkg.name,pkg.version) in
   (* we remove dependencies on files provided by the same package, dependencies
    * on the package itself and dependencies on packages provided by the same
@@ -187,7 +197,8 @@ let tocudf tables ?(inst=false) pkg =
       (load_provides (n,v) tables pkg.provides) @
       (load_filesprovides tables (n,v)) 
     );
-    Cudf.installed = inst 
+    Cudf.installed = inst;
+    Cudf.pkg_extra = add_extra extras tables pkg ;
   }
 
 let load_list l =
