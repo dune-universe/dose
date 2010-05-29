@@ -27,7 +27,7 @@ module Options = struct
   let do_clean = StdOpt.store_true ()
   let do_cr = StdOpt.store_true ()
   let c_only = StdOpt.str_option ()
-  let c_but = StdOut.str_option ()
+  let c_but = StdOpt.str_option ()
 
   let description = "Compute the dominator graph"
   let options = OptParser.make ~description:description ()
@@ -105,11 +105,11 @@ begin
     else
     begin
       let g = Strongdeps.strongdeps_univ universe in
-      SO.clique_reduction g;
+      if OptParse.Opt.is_set Options.do_cr then Dom.clique_reduction g;
       Dom.dominators g
     end in
   SO.transitive_reduction dom_graph;
-  match OptParse.Opt.get Options.c_only with
+  match OptParse.Opt.opt Options.c_only with
   | None -> ();
   | Some _ -> ();
   if OptParse.Opt.get Options.do_clean then clean_graph dom_graph;
