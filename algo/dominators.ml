@@ -62,9 +62,12 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
    * with transitive archs *)
   let dominators graph = 
   begin
-    Util.print_info "N. of vertex graph %d" (G.nb_vertex graph);
-    Util.print_info "N. of edges graph %d" (G.nb_edges graph);
-    Util.print_info "start dominators";
+    Printf.eprintf "N. of vertex graph %d\n" (G.nb_vertex graph);
+    Printf.eprintf "N. of edges graph %d\n" (G.nb_edges graph);
+    
+    let domtimer = Util.Timer.create "Algo.Dominators.dominators" in
+
+    Util.Timer.start domtimer;
     let i = ref 0 in
     let stats = stats (G.nb_vertex graph) in
     let domgraph = G.create () in
@@ -88,7 +91,7 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
         end
       ) graph p
     ) graph;
-    domgraph
+    Util.Timer.stop domtimer domgraph
   end
 
     (** clique reduction: replace any clique by a fresh node.
@@ -102,7 +105,7 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
       | n ->
         begin 
           let nv = {
-            package = String.concat "," (List.sort (List.map (fun p -> p.package) n));
+            package = String.concat "/" (List.sort (List.map (fun p -> p.package) n));
             version = 0;
             depends = [];
             conflicts = [];
@@ -128,12 +131,85 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
       ) (C.scc_list graph)
     end
 
+    (* inspired by has_cycle from ocamlgraph; not in hashtbl: not visited,
+     * false in hashtbl: visited in another component, true in hashtbl:
+     * visited here *)
+    let cycle_reduction g =
+      let visited = Hashtbl.create (G.nb_vertex g) in
+      let rec get_cycle res path v' =
+        match path with
+        | [] -> failwith "No cycle in path!"
+        | h::t -> if h = v' then (t, res) else get_cycle (h::res) t v' in
+      let reduce_cycle path v' =
+      begin
+        (* Somewhere, v' should be in path. This is the cycle. *)
+        let (other, c) = get_cycle [] path v' in
+        (* Printf.eprintf "Replacing cycle: %s %s\n" v'.package
+          (String.concat "," (List.map (fun p -> p.package) c)); *)
+        let nv = {
+          package = String.concat "/" (List.sort (List.map (fun p -> p.package) (v'::c)));
+          version = 0;
+          depends = [];
+          conflicts = [];
+          provides = [];
+          installed = false;
+          was_installed = false;
+          keep = `Keep_none;
+          pkg_extra = []
+        } in
+        G.add_vertex g nv;
+        List.iter (fun p ->
+          G.iter_pred (fun p' ->
+            if not (List.mem p' c) then
+              G.add_edge g p' nv
+          ) g p;
+          G.iter_succ (fun p' ->
+            if not (List.mem p' c) then
+              G.add_edge g nv p'
+          ) g p;
+          G.remove_vertex g p;
+          Hashtbl.remove visited p
+        ) (v'::c);
+        (other, nv)
+      end in
+      let rec visit path v =
+      begin
+        if G.mem_vertex g v then
+        begin
+          (* Printf.eprintf "- visiting [%s] %s\n" (String.concat "," (List.map (fun p -> p.package) path)) v.package; *)
+          Hashtbl.add visited v true;
+          G.iter_succ (fun v' ->
+            try
+              if Hashtbl.find visited v' then
+              begin
+                let (other, nv) = reduce_cycle (v::path) v' in
+                visit other nv
+              end
+            with Not_found ->
+              visit (v::path) v'
+          ) g v;
+          (* Printf.eprintf "- done visiting %s\n" v.package; *)
+          Hashtbl.replace visited v false
+        end
+        (* else
+          Printf.eprintf "- visiting %s, but it's already been removed!\n" v.package *)
+      end in
+    begin
+      G.iter_vertex (fun v ->
+        if not (Hashtbl.mem visited v) then visit [] v
+      ) g 
+    end
+
+
+    module T = Traverse.Dfs(G)
+
     let dominators_tarjan g =
     begin
       let graph = G.copy g in
-      clique_reduction graph;
+      Printf.eprintf "sd_graph before reduction: %d vertices, %d edges\n" (G.nb_vertex graph) (G.nb_edges graph);
+      cycle_reduction graph;
       O.transitive_reduction graph;
-      Common.Util.print_info "sd_graph after reduction: %d vertices, %d edges" (G.nb_vertex graph) (G.nb_edges graph);
+      Printf.eprintf "sd_graph after reduction: %d vertices, %d edges\n" (G.nb_vertex graph) (G.nb_edges graph);
       let start_pkg = 
         { package = "START"; version = 0; depends = []; conflicts = [];
           provides = []; installed = false; was_installed = false;
@@ -196,6 +272,8 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
       end in
       
       begin
+        let tjntimer = Util.Timer.create "Algo.Dominators.tarjan" in
+        Util.Timer.start tjntimer;
         (* add a start vertex, and connect it to all packages without
          * incoming edges *)
         G.add_vertex graph start_pkg;
@@ -256,7 +334,7 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
                   end
           | _ -> failwith (Printf.sprintf "Vertex %s has multiple dominators" w.package)
         ) (List.rev !vertex_order);
-        domgr
+        Util.Timer.stop tjntimer domgr
       end
   end
 

@@ -61,7 +61,7 @@ struct
 end;;
 
 let and_sep_re = Pcre.regexp "\\s*;\\s*"
-let pkg_re = Pcre.regexp "(\\([a-z][a-z0-9.+-]+\\)\\s*,\\s*\\([a-zA-Z0-9.+:~-]+\\))"
+let pkg_re = Pcre.regexp "\\(([a-z][a-z0-9.+-]*)\\s*,\\s*([a-zA-Z0-9.+:~-]+)\\)"
 let parse_pkg s =
   let parse_aux str =
     try 

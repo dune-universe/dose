@@ -75,7 +75,18 @@ let strongdeps_int ?(transitive=true) graph mdf l =
       let solver = Depsolver_int.init_solver ~closure mdf.Mdf.index in
       match Depsolver_int.solve solver (Diagnostic_int.Sng id) with
       |Diagnostic_int.Failure(_) -> ()
-      |Diagnostic_int.Success(f) -> check_strong graph solver id (f ())
+      |Diagnostic_int.Success(f) -> 
+        if transitive then
+          check_strong graph solver id (f ())
+        else
+        begin
+          let deps = List.filter (fun x -> 
+            List.exists (fun (_,alt,_) -> List.exists (fun y -> y = x) alt) pkg.Mdf.depends) (f ()) in
+          Util.print_info "Package %s: closure %d, install_set %d, of which deps %d%!"
+            (Cudf_types_pp.string_of_pkgname pkg.Mdf.pkg.Cudf.package)
+            (List.length closure) (List.length (f ())) (List.length deps);
+          check_strong graph solver id deps
+        end
     end
   ) available ;
   Util.Progress.reset mainbar;

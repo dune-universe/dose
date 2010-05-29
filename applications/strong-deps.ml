@@ -21,6 +21,7 @@ module Options = struct
   let dump = StdOpt.store_true ()
   let table =  StdOpt.store_true ()
   let detrans = StdOpt.store_true ()
+  let restrain = StdOpt.str_option ()
   let prefix = StdOpt.str_option ~default:"" ()
 
   let description = "Compute the strong dependency graph"
@@ -33,6 +34,7 @@ module Options = struct
   add options ~long_name:"dump" ~help:"Save the strong dependency graph" dump;
   add options ~long_name:"table" ~help:"Print the table (package,strong,direct,difference)" table;
   add options ~long_name:"detrans" ~help:"Perform the transitive reduction of the graph" detrans;
+  add options ~long_name:"restrain" ~help:"Restrain only to the given packages (;-separated)" restrain;
 end
 
 (* ----------------------------------- *)
@@ -67,11 +69,18 @@ let main () =
     close_out outch
   end
   ;
+  let pkg_sep = Pcre.regexp ";" in
+  let g =
+    if OptParse.Opt.is_set Options.restrain then
+      Strongdeps.strongdeps universe (List.flatten (List.map (Cudf.lookup_packages universe) (Pcre.split ~rex:pkg_sep (OptParse.Opt.get Options.restrain))))
+    else
+      sdgraph
+    in
   let dump = if OptParse.Opt.get Options.dump then Some (mk_filename prefix ".dump" "data") else None in
   let dot = if OptParse.Opt.get Options.dot then Some (mk_filename prefix ".dot" "graph") else None in
   Defaultgraphs.StrongDepGraph.out 
   ~dump ~dot ~detrans:(OptParse.Opt.get Options.detrans)
-  sdgraph
+  g
 ;;
 
 (*  |[newl;oldl;oldg] when !Options.incr = true ->
