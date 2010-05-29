@@ -107,7 +107,7 @@ begin
       let g = Strongdeps.strongdeps_univ universe in
       SO.clique_reduction g;
       Dom.dominators g
-    end
+    end in
   SO.transitive_reduction dom_graph;
   match OptParse.Opt.get Options.c_only with
   | None -> ();
