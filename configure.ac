@@ -156,6 +156,21 @@ else
   PKG_OCAMLGRAPH=pkg_
 fi
 
+AC_ARG_WITH(curl,
+        [ --with-curl ],
+        HAS_CURL=yes,
+        HAS_CURL=no)
+AC_SUBST(HAS_CURL)
+if test "$HAS_CURL" = "yes" ; then
+  AC_CHECK_OCAML_PKG([curl])
+  if test "$OCAML_PKG_curl" = "no"; then
+   AC_MSG_ERROR([Please install OCaml findlib module 'curl'.])
+  fi
+  PKG_CURL=pkg_curl
+else
+  PKG_CURL=pkg_
+fi
+
 AC_ARG_WITH(xml,
         [ --with-xml ],
         HAS_XML=yes,
@@ -225,6 +240,8 @@ AC_SUBST(HAS_DB)
 AC_SUBST(MLPACK_OCAMLGRAPH)
 AC_SUBST(PKG_OCAMLGRAPH)
 AC_SUBST(CONFIG_OCAMLGRAPH)
+
+AC_SUBST(PKG_CURL)
 
 AC_SUBST(PKG_XML)
 

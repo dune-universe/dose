@@ -235,15 +235,15 @@ let has_children nodelist tag =
 ;;
 
 let parsepackagelist = function
-  |(Some "apt",Some fname,url,[inc]) when has_children [inc] "include" ->
+  |(Some "apt",Some fname,url,_,[inc]) when has_children [inc] "include" ->
       let href = Xml.attrib inc "href" in
-      ("apt",fname,url, Dudfxml.pkgget ~compression:Dudfxml.Bz2 ~fname href)
-  |(Some "apt-release",Some fname,url,[inc]) when has_children [inc] "include" ->
+      ("apt",fname,url,Dudfxml.pkgget ~compression:Dudfxml.Bz2 ~fname:(Some fname) href)
+  |(Some "apt-release",Some fname,url,_,[inc]) when has_children [inc] "include" ->
       let href = Xml.attrib inc "href" in
-      ("apt-release",fname,url, Dudfxml.pkgget fname href)
-  |(Some t,Some fname,url,[cdata]) -> (t,fname,url,Xml.cdata cdata)
-  |(Some t,Some fname,url,[]) -> (t,fname,url,"")
-  |(Some t,Some fname,url,_) ->
+      ("apt-release",fname,url,Dudfxml.pkgget ~fname:(Some fname) href)
+  |(Some t,Some fname,url,_,[cdata]) -> (t,fname,url,Xml.cdata cdata)
+  |(Some t,Some fname,url,_,[]) -> (t,fname,url,"")
+  |(Some t,Some fname,url,_,_) ->
       (Printf.eprintf "Warning : Unknown format for package-list element %s %s\n" t fname; exit 1)
   |_ -> assert false
 ;;

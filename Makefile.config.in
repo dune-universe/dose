@@ -33,8 +33,7 @@ TARGETS= \
 		 applications/cudf-solver.$(OCAMLBEST) \
 		 applications/distcheck.$(OCAMLBEST) \
 		 applications/buildcheck.$(OCAMLBEST) \
-		 applications/cudf-diff.$(OCAMLBEST) \
-		 applications/testingcheck.$(OCAMLBEST)
+		 applications/cudf-diff.$(OCAMLBEST)
 
 LIBS= \
 	  common/common.$(OCAMLLIBBEST) \
@@ -53,9 +52,10 @@ ifeq ("@HAS_DB@","yes")
 #  TEST_DB=db
 endif
 
-#xml processing support
 ifeq ("@HAS_XML@","yes")
+ifeq ("@HAS_CURL@","yes")
   TARGETS += applications/dudftocudf/deb-dudftocudf.$(OCAMLBEST)
+endif
 endif
 
 #ocamlgraph support
