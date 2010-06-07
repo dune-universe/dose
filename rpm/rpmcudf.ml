@@ -140,7 +140,6 @@ let expand tables l =
     ) l
   )
 
-(* XXX eliminate self provides *)
 let load_provides (nm,vr) = expand ;;
 let load_conflicts = expand ;;
 let load_depends tables = List.map (expand tables) ;;

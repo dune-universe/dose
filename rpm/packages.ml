@@ -121,8 +121,6 @@ module Synthesis = struct
         try Scanf.sscanf sel "%s %s" (fun op v -> (rel_of_string op,v))
         with End_of_file -> (Printf.eprintf "Invalid op %s" sel ; assert false)
 
-        (* XXX this strip is here because I'm lazy to think of a Pcre regexp to
-         * get rid of the sscanf .... *)
   let parse_vpkg vpkg =
     try Scanf.sscanf vpkg "%[^[][%[^]]]" (fun n sel -> (n,parse_op sel))
     with End_of_file -> (vpkg,(`ALL,""))
