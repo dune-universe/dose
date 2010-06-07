@@ -51,7 +51,17 @@ let main () =
   if OptParse.Opt.get Options.debug then Boilerplate.enable_debug ~bars () ;
   let (universe,_,_) = Boilerplate.load_universe posargs in
   let prefix = OptParse.Opt.get Options.prefix in
-  let sdgraph = Strongdeps.strongdeps_univ universe in
+  let sdgraph = 
+    if OptParse.Opt.is_set Options.restrain then
+      let s = OptParse.Opt.get Options.restrain in
+      let pkglist =
+        let l = Pcre.split ~rex:(Pcre.regexp ";") s in
+        List.flatten (List.map (Cudf.lookup_packages universe) l)
+      in
+      Strongdeps.strongdeps universe pkglist
+    else
+    Strongdeps.strongdeps_univ universe
+  in
   if OptParse.Opt.get Options.table then begin
     let outch = open_out (mk_filename prefix ".table" "data") in
     let depgraph = Defaultgraphs.PackageGraph.dependency_graph universe in
@@ -69,18 +79,11 @@ let main () =
     close_out outch
   end
   ;
-  let pkg_sep = Pcre.regexp ";" in
-  let g =
-    if OptParse.Opt.is_set Options.restrain then
-      Strongdeps.strongdeps universe (List.flatten (List.map (Cudf.lookup_packages universe) (Pcre.split ~rex:pkg_sep (OptParse.Opt.get Options.restrain))))
-    else
-      sdgraph
-    in
   let dump = if OptParse.Opt.get Options.dump then Some (mk_filename prefix ".dump" "data") else None in
   let dot = if OptParse.Opt.get Options.dot then Some (mk_filename prefix ".dot" "graph") else None in
   Defaultgraphs.StrongDepGraph.out 
   ~dump ~dot ~detrans:(OptParse.Opt.get Options.detrans)
-  g
+  sdgraph
 ;;
 
 (*  |[newl;oldl;oldg] when !Options.incr = true ->
