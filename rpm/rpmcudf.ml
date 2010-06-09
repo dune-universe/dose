@@ -45,11 +45,18 @@ let init_tables pkglist =
 
   let add_list t k = function
     |(`ALL,_) -> ()
+    |(`Eq,v) ->
+      let l =
+        try Hashtbl.find t k with Not_found ->
+        (let l = ref [] in Hashtbl.add t k l; l)
+      in
+      l := (`Eq,v) :: !l
     |(sel,v) ->
       let l =
         try Hashtbl.find t k with Not_found ->
         (let l = ref [] in Hashtbl.add t k l; l)
       in
+      Util.print_warning "provide with disequality for package %s" k; 
       l := (sel,v) :: !l
   in
 
@@ -106,6 +113,8 @@ let init_tables pkglist =
 ;;
 
 (* rpmdsCompare, rpmds.c *)
+(* The order here is important: the comparison is not symmetric! *)
+(* return true if the first constraint overlap the second, false otherwise *)
 let compare_constr (r1,v1) (r2,v2) = 
   match r1, r2 with
   |`ALL, _ | _, `ALL |(`Lt | `Leq), (`Lt | `Leq) | (`Gt | `Geq), (`Gt | `Geq) -> true

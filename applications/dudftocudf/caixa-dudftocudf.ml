@@ -46,7 +46,8 @@ let parse_vpkg vpkg =
   match Pcre.full_split ~rex:(Pcre.regexp "<=|>=|=|<|>") vpkg with
   |(Pcre.Text n)::_ when String.starts_with n "rpmlib(" -> None
   |[Pcre.Text n] -> Some(String.strip n,(`ALL,""))
-  |[Pcre.Text n;Pcre.Delim sel;Pcre.Text v] -> Some(String.strip n,(rel_of_string sel,v))
+  |[Pcre.Text n;Pcre.Delim sel;Pcre.Text v] ->
+      Some(String.strip n,(rel_of_string (String.strip sel), String.strip v))
   |_ -> (Printf.eprintf "%s\n%!" vpkg ; assert false)
 
 let parse_string = function
@@ -84,13 +85,17 @@ let read_status str =
           |Json_type.Array l ->
               let a = Array.of_list l in
               begin try
-                let epoch = let s = parse_string a.(1) in if s = "" then "0" else s in
+                (* let epoch = let s = parse_string a.(1) in if s = "" then "0" else s in
                 let version = parse_string a.(2) in
-                let release = parse_string a.(3) in
+                let release = parse_string a.(3) in *)
+                let epoch = match parse_string a.(1) with "" -> "" |s -> s^":" in
+                let version = parse_string a.(2) in
+                let release = match parse_string a.(3) with "" -> ""|s -> "-"^s in
                 Some 
                 {
                   Rpm.Packages.name = parse_string a.(0);
-                  Rpm.Packages.version = Printf.sprintf "%s:%s-%s" epoch version release;
+                  (* Rpm.Packages.version = Printf.sprintf "%s:%s-%s" epoch version release; *)
+                  Rpm.Packages.version = epoch^version^release;
                   Rpm.Packages.depends = [List.filter_map parse_vpkg (to_list a.(4))];
                   Rpm.Packages.conflicts = List.filter_map parse_vpkg (to_list a.(7));
                   Rpm.Packages.provides = List.filter_map parse_vpkg (to_list a.(6));

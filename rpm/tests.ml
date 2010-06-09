@@ -100,6 +100,27 @@ let test_scenario11 =
     )
 
 
+let test_compare = 
+  let test_epoch =
+    "epoch" >:: (fun _ ->
+      assert_equal 1 (Rpm.Version.compare "1:2.0-0.20100203-1xcm14" "20031225")
+    )
+  in
+  let test_overlap =
+    "overlap" >:: (fun _ ->
+      assert_equal false (
+        Rpm.Rpmcudf.compare_constr
+        (`Eq, "1:2.0-0.20100203-1xcm14") 
+        (`Lt, "20031225")
+      )
+    )
+  in
+  "compare" >::: [
+    test_epoch;
+    test_overlap
+  ]
+;;
+
 let test_install =
   "install test" >::: [
     test_scenario01;
@@ -112,6 +133,7 @@ let test_install =
     test_scenario09;
     test_scenario10;
     test_scenario11;
+    test_compare;
   ]
 
 let all = 
