@@ -84,10 +84,9 @@ let curlget ch url =
   in
   let errorBuffer = ref "" in
   let print_info connection =
-    Util.print_info "Download %s (time : %f) %.0f"
+    Util.print_info "Download %s (time : %f)"
       (Curl.get_effectiveurl connection)
       (Curl.get_totaltime connection)
-      (Curl.get_contentlengthdownload connection)
   in
   begin try
     let connection = Curl.init () in

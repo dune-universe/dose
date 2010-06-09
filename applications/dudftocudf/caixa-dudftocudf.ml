@@ -153,9 +153,7 @@ let main () =
     List.map (fun pl -> parsepackagelist pl) dudfdoc.problem.packageUniverse
   in
   let action = dudfdoc.problem.action in
-  let preferences = dudfdoc.problem.desiderata in
-
-  Util.print_info "convert to dom ... ";
+  (* let preferences = dudfdoc.problem.desiderata in
 
   let extras_property = [
     ("Size", ("size", `Nat (Some 0)));
@@ -163,8 +161,9 @@ let main () =
     ("Maintainer", ("maintainer", `String None))]
   in
   let extras = List.map fst extras_property in
+  *)
 
-  Util.print_info "parse all packages";
+  Util.print_info "parse universe";
   let all_packages =
     List.fold_left (fun acc (_,_,_,contents) ->
       let ch = IO.input_string contents in
@@ -173,15 +172,17 @@ let main () =
       List.fold_right Rpm.Packages.Set.add l acc
     ) Rpm.Packages.Set.empty packagelist
   in
+  Util.print_info "universe : %d" (Rpm.Packages.Set.cardinal all_packages);
 
-  Util.print_info "installed packages";
+  Util.print_info "parse package status";
   let installed_packages =
     let l = read_status status in
     List.fold_left (fun s pkg -> Rpm.Packages.Set.add pkg s) Rpm.Packages.Set.empty l
   in
+  Util.print_info "status : %d" (Rpm.Packages.Set.cardinal installed_packages);
 
-  Util.print_info "union";
   let l = Rpm.Packages.Set.elements (Rpm.Packages.Set.union all_packages installed_packages) in
+  Util.print_info "union : %d" (List.length l);
   let tables = Rpm.Rpmcudf.init_tables l in
 
   let installed =
@@ -200,6 +201,7 @@ let main () =
       Rpm.Rpmcudf.tocudf tables ~inst:inst pkg
     ) l
   in
+  Util.print_info "cudf packages %d" (List.length pl);
 
   let universe = Cudf.load_universe pl in
 
@@ -218,7 +220,7 @@ let main () =
       open_out (Filename.concat dirname (file^".cudf"))
     end else stdout
   in
-  let preamble = Cudf.default_preamble in
+  let preamble = Rpm.Rpmcudf.preamble in
   Cudf_printer.pp_cudf (Format.formatter_of_out_channel oc) (preamble, universe, request)
 ;;
 
