@@ -124,7 +124,7 @@ let compare_constr (r1,v1) (r2,v2) =
   |`Leq, `Eq | `Leq, `Geq | `Eq, `Geq -> Version.compare v1 v2 >= 0
   |`Eq, `Eq -> Version.compare v1 v2 = 0
 
-let get_version_id tables (n,v) =
+let get_cudf_version tables (n,v) =
   try
     let l = Hashtbl.find tables.units n in
     fst(List.find (fun (i,(_,v1)) -> v = v1) l)
@@ -160,7 +160,7 @@ let load_filesprovides tables (name,version) =
   )
 
 let load_fileconflicts tables (name,version) = 
-  List.map (fun (n,v) -> (CudfAdd.encode n,Some(`Eq,get_version_id tables (n,v)))
+  List.map (fun (n,v) -> (CudfAdd.encode n,Some(`Eq,get_cudf_version tables (n,v)))
   ) (Hashtbl.find_all tables.fileconflicts (name,version))
 
 (* ========================================= *)
@@ -192,7 +192,7 @@ let tocudf tables ?(extras=[]) ?(inst=false) pkg =
     ) pkg.depends
   in
   let name = CudfAdd.encode pkg.name in
-  let version = get_version_id tables (n,v) in
+  let version = get_cudf_version tables (n,v) in
   { Cudf.default_package with
     Cudf.package = name ;
     Cudf.version = version ;
