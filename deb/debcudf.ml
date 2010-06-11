@@ -142,34 +142,44 @@ let loadl tables l =
   List.flatten (
     List.map (fun (name,sel) ->
       match CudfAdd.cudfop sel with
-        |None ->
-            if (Hashtbl.mem tables.virtual_table name) &&
-            (Hashtbl.mem tables.versioned_table name) then
-              [(CudfAdd.encode (name^"--virtual"), None);
-               (CudfAdd.encode name, None)]
-            else
-              [(CudfAdd.encode name, None)]
-        |Some(op,v) ->
-            [(CudfAdd.encode name,Some(op,get_cudf_version tables (name,v)))]
+      |None ->
+          if (Hashtbl.mem tables.virtual_table name) &&
+          (Hashtbl.mem tables.versioned_table name) then
+            [(CudfAdd.encode (name^"--virtual"), None);
+             (CudfAdd.encode name, None)]
+          else
+            [(CudfAdd.encode name, None)]
+      |Some(op,v) ->
+          [(CudfAdd.encode name,Some(op,get_cudf_version tables (name,v)))]
     ) l
   )
 
 (* we add a self conflict here, because in debian each package is in conflict
    with all other versions of the same package *)
-let loadlc tables name l = (CudfAdd.encode name, None)::(loadl tables l)
+let loadlc tables name l =
+  let l' = 
+    List.flatten (
+      List.map (fun (name,sel) ->
+        match CudfAdd.cudfop sel with
+        |None -> []
+        |Some(op,v) ->
+            [(CudfAdd.encode name,Some(op,get_cudf_version tables (name,v)))]
+      ) l
+    )
+  in (CudfAdd.encode name, None)::l'
 
 let loadlp tables l =
   List.map (fun (name,sel) ->
     match CudfAdd.cudfop sel with
-      |None  ->
-          if (Hashtbl.mem tables.unit_table name) || (Hashtbl.mem tables.versioned_table name)
-          then (CudfAdd.encode (name^"--virtual"),None)
-          else (CudfAdd.encode name, None)
-      |Some(`Eq,v) ->
-          if (Hashtbl.mem tables.unit_table name) || (Hashtbl.mem tables.versioned_table name)
-          then (CudfAdd.encode (name^"--virtual"),Some(`Eq,get_cudf_version tables (name,v)))
-          else (CudfAdd.encode name,Some(`Eq,get_cudf_version tables (name,v)))
-      |_ -> assert false
+    |None  ->
+        if (Hashtbl.mem tables.unit_table name) || (Hashtbl.mem tables.versioned_table name)
+        then (CudfAdd.encode (name^"--virtual"),None)
+        else (CudfAdd.encode name, None)
+    |Some(`Eq,v) ->
+        if (Hashtbl.mem tables.unit_table name) || (Hashtbl.mem tables.versioned_table name)
+        then (CudfAdd.encode (name^"--virtual"),Some(`Eq,get_cudf_version tables (name,v)))
+        else (CudfAdd.encode name,Some(`Eq,get_cudf_version tables (name,v)))
+    |_ -> assert false
   ) l
 
 let loadll tables ll = List.map (loadl tables) ll
@@ -179,12 +189,13 @@ let loadll tables ll = List.map (loadl tables) ll
 type extramap = (string * (string * Cudf_types.typedecl1)) list
 
 let preamble = 
+  (* number is a mandatory property -- no default *)
   let l = [
-    ("replaces",(`Vpkglist None));
-    ("recommends",(`Vpkgformula None));
+    ("replaces",(`Vpkglist (Some [])));
+    ("recommends",(`Vpkgformula (Some [])));
     ("number",(`String None));
-    ("source",(`String None)) ;
-    ("sourceversion",(`String None)) ]
+    ("source",(`String (Some ""))) ;
+    ("sourceversion",(`String (Some ""))) ]
   in
   CudfAdd.add_properties Cudf.default_preamble l
 
