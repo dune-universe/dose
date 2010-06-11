@@ -19,20 +19,34 @@ end
 let convert universe =
   let vr_RE = Pcre.regexp "(.*)--virtual" in
   let f1 (pkgname,constr) =
-    if Pcre.pmatch ~rex: vr_RE pkgname then begin 
+    if Pcre.pmatch ~rex:vr_RE pkgname then begin 
       let s = Pcre.exec ~rex: vr_RE pkgname in
       (Pcre.get_substring s 1, constr) 
     end
     else (pkgname,constr)
   in
-  let f2 (pkgname,_) = not(Pcre.pmatch ~rex: vr_RE pkgname) in
+  let f2 name (pkgname,constr) =
+    not(Pcre.pmatch ~rex:vr_RE pkgname) && 
+    not (name = pkgname && constr = None)
+  in
   Cudf.fold_packages (fun (status,pkglist) p ->
     let p' = 
       {p with
       provides = List.map f1 p.provides;
-      conflicts = List.filter f2 p.conflicts;
-      depends = List.map (List.filter f2) p.depends;
-      pkg_extra = [] }
+      conflicts = List.filter (f2 p.package) p.conflicts;
+      depends = List.map (List.filter (f2 p.package)) p.depends;
+      pkg_extra =
+        List.filter_map (function 
+          |("recommends",`Vpkgformula l) ->
+              begin match (List.map (List.filter (f2 p.package)) l) with
+              |[] -> None
+              |l -> Some ("recommends", `Vpkgformula l) end
+          |("replaces",`Vpkglist l) ->
+              begin match (List.filter (f2 p.package) l) with
+              |[] -> None
+              |l -> Some ("replaces", `Vpkglist l) end
+          |(s,v) -> None
+        ) p.pkg_extra }
     in
     if p.installed then (p'::status,pkglist) else (status,p'::pkglist)
   ) ([],[]) universe
@@ -52,7 +66,6 @@ let main () =
         (s,l,req)
     |_ -> (Printf.eprintf "You must specify one cudf document\n" ; exit 1)
   in
-  let preamble = Cudf.default_preamble in
 
   let status_oc = open_out "status" in
   let packages_oc = open_out "Packages" in
@@ -61,16 +74,13 @@ let main () =
   let packages_ofr = Format.formatter_of_out_channel packages_oc in
   let request_ofr = Format.formatter_of_out_channel request_oc in
 
-  Cudf_printer.pp_preamble packages_ofr preamble;
-  Format.pp_print_newline packages_ofr ();
   Cudf_printer.pp_packages packages_ofr pkglist;
 
-  Cudf_printer.pp_preamble status_ofr preamble;
-  Format.pp_print_newline status_ofr ();
   Cudf_printer.pp_packages status_ofr status;
 
   if request <> None then
     Cudf_printer.pp_request request_ofr (Option.get request);
+
   close_out status_oc ; close_out packages_oc ; close_out request_oc
 ;;
 

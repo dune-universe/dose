@@ -168,6 +168,7 @@ let load_fileconflicts tables (name,version) =
 type extramap = (string * (string * Cudf_types.typedecl1)) list
 
 let preamble =
+  (* number is a mandatory property -- no default *)
   let l = [ ("number",(`String None)) ] in
   CudfAdd.add_properties Cudf.default_preamble l
 

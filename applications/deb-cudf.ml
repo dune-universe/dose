@@ -20,7 +20,23 @@ END
 open Common
 
 module Deb = Debian.Packages
+(*
+module Options = struct
+  open OptParse
 
+  let debug = StdOpt.store_true ()
+  let installed = StdOpt.store_true ()
+  let status_file = StdOpt.str_option ()
+
+  let description = "Report the broken packages in a package list"
+  let options = OptParser.make ~description ()
+
+  open OptParser
+  add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
+  add options ~long_name:"get-selection" ~help:"Get the installed packages via 'dpkg -l'" installed;
+  add options ~long_name:"status" ~help:"Get the installed packages from a file" status_file;
+end
+*)
 module Options =
 struct
   let installed = ref false
@@ -126,6 +142,7 @@ END
   in
   let ofr = Format.formatter_of_out_channel oc in
   Cudf_printer.pp_preamble ofr preamble;
+  Format.pp_print_newline ofr ();
   Cudf_printer.pp_packages ofr pkglist;
 ;;
 
