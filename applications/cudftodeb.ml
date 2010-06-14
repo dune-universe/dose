@@ -102,6 +102,23 @@ let pp_package fmt pkg =
 
 let pp_packages fmt =
   List.iter (fun pkg -> Format.fprintf fmt "%a@\n" pp_package pkg)
+;;
+
+let pp_request fmt req =
+  let inst = List.map (fun (name,constr) -> ("+"^name,constr)) req.install in
+  let rem = List.map (fun (name,constr) -> ("-"^name,constr)) req.install in
+  let all = (inst @ rem @ req.upgrade) in
+  let pp_vpkg fmt (c : Cudf_types.vpkg) = match c with
+    |(name, None) -> pp_pkgname fmt name
+    |(name, Some (relop, v)) ->
+        Format.fprintf fmt "%a%s%a"
+        pp_pkgname name (string_of_relop relop) pp_version v
+  in
+  let pp_vpkglist fmt = pp_list fmt ~pp_item:pp_vpkg ~sep:" " in
+  let string_of_vpkglist = string_of pp_vpkglist in
+  let s = string_of_vpkglist all in
+  Format.fprintf fmt "install %s@\n" s 
+;;
 
 let convert universe =
   let vr_RE = Pcre.regexp "(.*)--virtual" in
@@ -169,7 +186,7 @@ let main () =
   pp_packages status_ofr status;
 
   if request <> None then
-    Cudf_printer.pp_request request_ofr (Option.get request);
+    pp_request request_ofr (Option.get request);
 
   close_out status_oc ; close_out packages_oc ; close_out request_oc
 ;;
