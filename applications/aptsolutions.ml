@@ -16,28 +16,19 @@ open ExtLib
 open ExtString
 open Common
 
-let enable_debug () =
-  Util.Progress.enable "Rpm.Parse.Hdlists.parse_822_iter";
-  Util.set_verbosity Common.Util.Summary
-;;
-
 module Options =
   struct
     open OptParse
     let debug = StdOpt.store_true ()
-    let dump_hdlist = StdOpt.store_true ()
+    let source = StdOpt.store_false ()
     let outdir = StdOpt.str_option ()
 
     let options = OptParser.make ()
     open OptParser
 
-    let g = add_group options ~description:"general options" "general" ;;
-    let o = add_group options ~description:"output options" "output" ;;
-
-    add options ~group:g ~long_name:"dump" ~help:"Dump the raw hdlist contents" dump_hdlist;
-    add options ~group:g ~short_name:'d' ~long_name:"debug" ~help:"Print various aggregate information" debug;
-
-    add options ~group:o ~long_name:"outdir" ~help:"Send output to a file" outdir;
+    add options ~short_name:'d' ~long_name:"debug" ~help:"Print various aggregate information" debug;
+    add options ~long_name:"outdir" ~help:"Send output to a file" outdir;
+    add options ~long_name:"from-cudf" ~help:"do no consider \"number\" property" debug;
 
   end
 
@@ -52,9 +43,7 @@ let main () =
     |doc::apt::_ -> (doc,apt)
   in
 
-  if OptParse.Opt.get Options.debug then
-    enable_debug ()
-  ;
+  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
 
   let (preamble,universe) =
     match Input.parse_uri doc with
@@ -64,6 +53,7 @@ let main () =
     |(s,_,_) -> failwith (s^" Not supported")
   in
 
+  Util.print_info "aaA0";
   let (install,remove) =
     let ch = Input.open_file apt in
     let (install,remove) = (ref [] , ref []) in
@@ -77,20 +67,20 @@ let main () =
       if Str.string_match re_rem line 0 then begin
           let n = Str.matched_group 1 line in
           let v = Str.matched_group 2 line in
-          (* Printf.eprintf "remove %s %s\n" n v; *)
+          Util.print_info "remove %s %s" n v;
           remove := (n,v) :: !remove
       end
       else if Str.string_match re_inst line 0 then begin
           let n = Str.matched_group 1 line in
           let v = Str.matched_group 2 line in
-          (* Printf.eprintf "install %s %s\n" n v; *)
+          Util.print_info "install %s %s" n v;
           install := (n,v) :: !install
       end
       else if Str.string_match re_up line 0 then begin
           let n = Str.matched_group 1 line in
           let vold = Str.matched_group 2 line in
           let vnew = Str.matched_group 3 line in
-          (* Printf.eprintf "upgrade %s %s -> %s \n" n vold vnew; *)
+          Util.print_info "upgrade %s %s -> %s" n vold vnew;
           install := (n,vnew) :: !install ;
           remove := (n,vold) :: !remove
       end
@@ -98,23 +88,36 @@ let main () =
     (!install,!remove)
   in
 
+  Util.print_info "aaA1";
   let t = Hashtbl.create (List.length universe) in
   List.iter (fun pkg ->
     let n = pkg.Cudf.package in
-    let v = Cudf.lookup_package_property pkg "number" in
+    let v = 
+      if OptParse.Opt.get Options.source then
+        string_of_int pkg.Cudf.version
+      else
+        Cudf.lookup_package_property pkg "number" 
+    in
     Hashtbl.add t (n,v) pkg
   ) universe;
 
+  Util.print_info "aaA2";
   List.iter (fun (n,v) ->
-    let pkg = Hashtbl.find t (n,v) in
+    let pkg = try Hashtbl.find t (n,v) with Not_found -> (Printf.eprintf "%s
+    %s\n%!" n v ; assert false ) in
     Hashtbl.replace t (n,v) {pkg with Cudf.installed = false }
   ) remove ;
 
+  Util.print_info "aaA3";
   List.iter (fun (n,v) ->
-    let pkg = Hashtbl.find t (n,v) in
+    Util.print_info "aaA4";
+    let pkg = try Hashtbl.find t (n,v) with Not_found -> (Printf.eprintf "%s
+    %s\n%!" n v ; assert false )in
+    Util.print_info "aaA4";
     Hashtbl.replace t (n,v) {pkg with Cudf.installed = true }
   ) install ;
 
+  Util.print_info "aaA4";
   let l = Hashtbl.fold (fun k v acc -> if v.Cudf.installed then v::acc else acc) t [] in
   if not (Option.is_none preamble) then
       print_endline (Cudf_printer.string_of_preamble (Option.get preamble));
