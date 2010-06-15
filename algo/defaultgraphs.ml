@@ -303,9 +303,8 @@ module IntPkgGraph = struct
   let do_add_edge tr graph i j =
     let rec adapt k red =
     begin
-      (* Printf.eprintf "- adapt (%d) (%s)\n" k (String.concat "," (List.map (fun x -> string_of_int x) (S.elements red))); *)
       let new_red = S.fold (fun l acc ->
-        if k <> l then ((*Printf.eprintf "    also adding %d -> %d\n" k l; *) G.add_edge graph k l);
+        if k <> l then G.add_edge graph k l;
         G.fold_succ (fun m acc' ->
           if not (G.mem_edge graph k m) 
           then S.add m acc'
@@ -316,7 +315,6 @@ module IntPkgGraph = struct
         else adapt k new_red
     end in
   begin
-    (*Printf.eprintf "adding edge %d -> %d (pred: %s)\n" i j (String.concat "," (List.map string_of_int (G.pred graph i)));*)
     G.add_edge graph i j;
     if tr then
     begin
