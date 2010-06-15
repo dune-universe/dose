@@ -23,6 +23,7 @@ module Options = struct
   let detrans = StdOpt.store_true ()
   let restrain = StdOpt.str_option ()
   let prefix = StdOpt.str_option ~default:"" ()
+  let conj_only = StdOpt.store_true ()
 
   let description = "Compute the strong dependency graph"
   let options = OptParser.make ~description:description ()
@@ -35,6 +36,7 @@ module Options = struct
   add options ~long_name:"table" ~help:"Print the table (package,strong,direct,difference)" table;
   add options ~long_name:"detrans" ~help:"Perform the transitive reduction of the graph" detrans;
   add options ~long_name:"restrain" ~help:"Restrain only to the given packages (;-separated)" restrain;
+  add options ~long_name:"conj-only" ~help:"Use the conjunctive graph only" conj_only;
 end
 
 (* ----------------------------------- *)
@@ -58,9 +60,13 @@ let main () =
         let l = Pcre.split ~rex:(Pcre.regexp ";") s in
         List.flatten (List.map (Cudf.lookup_packages universe) l)
       in
-      Strongdeps.strongdeps universe pkglist
+      (if OptParse.Opt.get Options.conj_only
+      then Strongdeps.conjdeps universe pkglist
+      else Strongdeps.strongdeps universe pkglist)
     else
-    Strongdeps.strongdeps_univ universe
+    (if OptParse.Opt.get Options.conj_only
+    then Strongdeps.conjdeps_univ universe
+    else Strongdeps.strongdeps_univ universe)
   in
   if OptParse.Opt.get Options.table then begin
     let outch = open_out (mk_filename prefix ".table" "data") in
