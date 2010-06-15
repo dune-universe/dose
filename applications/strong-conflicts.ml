@@ -78,8 +78,8 @@ type conflict_type =
 let nr_conj_pairs = ref 0;;
 let nr_other_pairs = ref 0;;
 let nr_tested = ref 0;;
-(* let pair_ht = Hashtbl.create 32768;; *)
-module PGV = Defaultgraphs.PackageGraph.PkgV
+let pair_ht = Hashtbl.create 32768;;
+(* module PGV = Defaultgraphs.PackageGraph.PkgV
 module PGE = struct
   type t = (conflict_type * (package * package)) option
 
@@ -89,24 +89,24 @@ module PGE = struct
   let default = None
 end
 module PG = Graph.Imperative.Graph.Concrete(PGV);;
-let pair_graph = PG.create ();;
+let pair_graph = PG.create ();; *)
 
 let add_pair (c1: package) (c2: package) (ct: conflict_type) (root: package * package) =
 begin
-  if not (PG.mem_edge pair_graph c1 c2) then
+  (* if not (PG.mem_edge pair_graph c1 c2) then
   begin
-  PG.add_edge pair_graph c1 c2;
-  (* try
+  PG.add_edge pair_graph c1 c2; *)
+  try
     let c1_ht = Hashtbl.find pair_ht c1 in
     if not (Hashtbl.mem c1_ht c2) then
     begin
-      Hashtbl.add c1_ht c2 (ct,root); *)
+      Hashtbl.add c1_ht c2 (ct,root);
       match ct with
       | Explicit -> incr nr_conj_pairs
       | Strong -> incr nr_conj_pairs
       | Other _ -> incr nr_other_pairs
   end
-  (* with Not_found ->
+  with Not_found ->
   begin
     let c1_ht = Hashtbl.create 1024 in
     Hashtbl.add c1_ht c2 (ct,root);
@@ -115,7 +115,7 @@ begin
     | Explicit -> incr nr_conj_pairs
     | Strong -> incr nr_conj_pairs
     | Other _ -> incr nr_other_pairs
-  end *)
+  end
 end;;
 
 let add_strong_conflict sc_ht c1 c2 root ct =
@@ -368,7 +368,7 @@ begin
   let sc_ht = Hashtbl.create 8192 in
   let nr_sc = ref 0 in
   Util.Progress.enable "Checking pairs...";
-  (* Hashtbl.iter (fun c1 c1_ht ->
+  Hashtbl.iter (fun c1 c1_ht ->
     Hashtbl.iter (fun c2 (ct, root) ->
       Util.Progress.progress p;
       match ct with
@@ -384,7 +384,7 @@ begin
             | _ -> () 
           end
     ) c1_ht
-  ) pair_ht; *)
+  ) pair_ht;
   ignore (Util.Timer.stop timer ());
 
   Printf.eprintf "Finally SAT-tested %d pairs.\n" !nr_tested;

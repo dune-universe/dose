@@ -17,6 +17,8 @@ open Common
 open CudfAdd
 open Cudf
 
+let dombar = Util.Progress.create "Algo.dominators";;
+
 module Make (G: Sig.I with type V.t = Cudf.package) = struct
 
   module C = Components.Make(G)
@@ -60,19 +62,21 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
 
   (* the dominators are computed on the strong dependency graph
    * with transitive archs *)
-  let dominators graph = 
+  let dominators ?relative graph = 
   begin
-    Printf.eprintf "N. of vertex graph %d\n" (G.nb_vertex graph);
-    Printf.eprintf "N. of edges graph %d\n" (G.nb_edges graph);
+    Util.print_info "N. of vertex graph %d\n" (G.nb_vertex graph);
+    Util.print_info "N. of edges graph %d\n" (G.nb_edges graph);
     
     let domtimer = Util.Timer.create "Algo.Dominators.dominators" in
 
+    Util.Progress.set_total dombar (G.nb_vertex graph);
     Util.Timer.start domtimer;
     let i = ref 0 in
     let stats = stats (G.nb_vertex graph) in
     let domgraph = G.create () in
     G.iter_vertex (fun p ->
       G.add_vertex domgraph p;
+      Util.Progress.progress dombar;
       let isp = impactset graph p in
       let sconsp = scons graph p in
       stats !i; incr i;
@@ -82,12 +86,22 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
           G.add_vertex domgraph q;
           let isq = impactset graph q in
           let dfs = Cudf_set.diff isq sconsp in
-          if Cudf_set.subset dfs isp then begin
-            G.add_edge domgraph p q;
-            Util.print_info "Dominator %s -D-> %s !"
-            (CudfAdd.print_package p)
-            (CudfAdd.print_package q);
-          end
+          match relative with
+          | None -> 
+            if Cudf_set.subset dfs isp then begin
+              G.add_edge domgraph p q;
+              Util.print_info "Dominator %s -D-> %s !"
+              (CudfAdd.print_package p)
+              (CudfAdd.print_package q);
+            end
+          | Some f -> 
+            let fv = (float (Cudf_set.cardinal (Cudf_set.diff dfs isp)) *. 100.) /. (float (Cudf_set.cardinal isp)) in
+            if fv <= f then begin
+              G.add_edge domgraph p q;
+              Util.print_info "Dominator %s -D-> %s !"
+              (CudfAdd.print_package p)
+              (CudfAdd.print_package q);
+            end
         end
       ) graph p
     ) graph;

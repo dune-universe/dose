@@ -39,24 +39,24 @@ let impactset graph q =
   G.fold_pred (fun p acc -> p :: acc ) graph q []
 
 (** compute the conjunctive dependency graph *)
-let conjdeps_univ universe =
+let conjdeps_univ ?(transitive=false) universe =
   let mdf = Mdf.load_from_universe universe in
   let g = Defaultgraphs.IntPkgGraph.G.create () in
   for id=0 to (Array.length mdf.Mdf.index)-1 do
-    Defaultgraphs.IntPkgGraph.conjdepgraph_int g mdf.Mdf.index id
+    Defaultgraphs.IntPkgGraph.conjdepgraph_int ~transitive g mdf.Mdf.index id
   done;
-  let clousure = Defaultgraphs.IntPkgGraph.SO.O.add_transitive_closure g in
-  Defaultgraphs.intcudf mdf.Mdf.index clousure
+  (* let closure = Defaultgraphs.IntPkgGraph.SO.O.add_transitive_closure g in *)
+  Defaultgraphs.intcudf mdf.Mdf.index (* closure *) g
 
 (** compute the conjunctive dependency graph considering only packages in
     [pkglist] *)
-let conjdeps universe pkglist =
+let conjdeps ?(transitive=false) universe pkglist =
   let mdf = Mdf.load_from_universe universe in
   let maps = mdf.Mdf.maps in
   let idlist = List.map maps.map#vartoint pkglist in
   let g = Defaultgraphs.IntPkgGraph.G.create () in
   List.iter (fun id ->
-    Defaultgraphs.IntPkgGraph.conjdepgraph_int g mdf.Mdf.index id
+    Defaultgraphs.IntPkgGraph.conjdepgraph_int ~transitive g mdf.Mdf.index id
   ) idlist ;
   let clousure = Defaultgraphs.IntPkgGraph.SO.O.add_transitive_closure g in
   Defaultgraphs.intcudf mdf.Mdf.index clousure

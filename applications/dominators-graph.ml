@@ -28,6 +28,7 @@ module Options = struct
   let do_cr = StdOpt.store_true ()
   let c_only = StdOpt.str_option ()
   let c_but = StdOpt.str_option ()
+  let relative = StdOpt.float_option ()
 
   let description = "Compute the dominator graph"
   let options = OptParser.make ~description:description ()
@@ -38,6 +39,7 @@ module Options = struct
   add options ~short_name:'o' ~long_name:"output" ~help:"Send output to file" out_file;
   add options ~long_name:"clean" ~help:"Clean up the dominator graph" do_clean;
   add options ~long_name:"clique-reduction" ~help:"(If not-Tarjan) Do clique reduction" do_cr;
+  add options ~short_name:'r' ~long_name:"relative" ~help:"Use relative strong dominance (with percentage)" relative;
   add options ~long_name:"only" ~help:"Output only the cluster(s) containing these packages (comma-separated)" c_only;
   add options ~long_name:"all-but" ~help:"Do not output the cluster(s) containing these packages (comma-separated)" c_but;
 end
@@ -98,6 +100,7 @@ begin
   let (universe,_,_) = Boilerplate.load_universe posargs in
 
   Common.Util.Progress.enable "Algo.Strongdep.main";
+  Common.Util.Progress.enable "Algo.dominators";
 
   let dom_graph =
     if OptParse.Opt.get Options.tarjan then
@@ -105,18 +108,18 @@ begin
     else
     begin
       let g = Strongdeps.strongdeps_univ universe in
-      if OptParse.Opt.is_set Options.do_cr then Dom.clique_reduction g;
-      Dom.dominators g
+      if OptParse.Opt.get Options.do_cr then Dom.clique_reduction g;
+      match OptParse.Opt.opt Options.relative with
+      | None -> Dom.dominators g
+      | Some f -> Dom.dominators ~relative:f g
     end in
-  SO.transitive_reduction dom_graph;
-  match OptParse.Opt.opt Options.c_only with
+  (* SO.transitive_reduction dom_graph; *)
+  (match OptParse.Opt.opt Options.c_only with
   | None -> ();
-  | Some _ -> ();
+  | Some _ -> ());
   if OptParse.Opt.get Options.do_clean then clean_graph dom_graph;
-  begin
-    if OptParse.Opt.is_set Options.out_file then
-      D.output_graph (open_out (OptParse.Opt.get Options.out_file)) dom_graph
-    else
-      D.output_graph stdout dom_graph
-  end
+  if OptParse.Opt.is_set Options.out_file then
+    D.output_graph (open_out (OptParse.Opt.get Options.out_file)) dom_graph
+  else
+    D.output_graph stdout dom_graph
 end;;

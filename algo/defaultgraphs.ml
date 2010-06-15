@@ -298,12 +298,41 @@ module IntPkgGraph = struct
   end
 
   module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
+  module S = Set.Make(PkgV)
+
+  let do_add_edge tr graph i j =
+    let rec adapt k red =
+    begin
+      (* Printf.eprintf "- adapt (%d) (%s)\n" k (String.concat "," (List.map (fun x -> string_of_int x) (S.elements red))); *)
+      let new_red = S.fold (fun l acc ->
+        if k <> l then ((*Printf.eprintf "    also adding %d -> %d\n" k l; *) G.add_edge graph k l);
+        G.fold_succ (fun m acc' ->
+          if not (G.mem_edge graph k m) 
+          then S.add m acc'
+          else acc'
+        ) graph l acc
+      ) red S.empty in
+        if S.is_empty new_red then ()
+        else adapt k new_red
+    end in
+  begin
+    (*Printf.eprintf "adding edge %d -> %d (pred: %s)\n" i j (String.concat "," (List.map string_of_int (G.pred graph i)));*)
+    G.add_edge graph i j;
+    if tr then
+    begin
+      adapt i (S.singleton j);
+      G.iter_pred (fun k ->
+        if not (G.mem_edge graph k j) then
+          adapt k (S.singleton j)
+      ) graph i
+    end
+  end;;
 
   (** add to the graph all conjunctive dependencies of package id *)
-  let conjdepgraph_int graph index id =
+  let conjdepgraph_int ?(transitive=false) graph index id =
     G.add_vertex graph id;
     List.iter (function
-      |(_,[p],_) -> if p <> id then G.add_edge graph id p
+      |(_,[p],_) -> if p <> id then do_add_edge transitive graph id p
       | _ -> ()
     ) index.(id).Mdf.depends
 
@@ -340,7 +369,6 @@ module IntPkgGraph = struct
     done;
     graph
 
-  module S = Set.Make(PkgV)
   module SO = GraphOper(G)
 end
 
