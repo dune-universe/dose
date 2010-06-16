@@ -185,6 +185,16 @@ module AptPref = struct
       end
     |Some p -> p
 
+  let max_priority = function
+    |[] -> failwith ("max_priority")
+    |l ->
+        let (i,p) =
+          List.fold_left (fun (a,p) pkg ->
+            let b = int_of_string (Cudf.lookup_package_property pkg "priority") in
+            if a >= b then (a,p) else (b,pkg)
+          ) (min_int,Cudf.default_package) l
+        in if i = min_int then failwith ("max_priority") else p
+
 end
 
 (* ========================================= *)
@@ -214,15 +224,23 @@ let make_universe pl =
             Str.string_match (Str.regexp ("^"^s^".*_Packages$")) fname 0
           ) packagelist
         in
-        List.map (fun (_,fname,_,cdata) -> fl := fname :: !fl ; (release,cdata)) cl
+        List.map (fun (_,fname,_,cdata) ->
+          fl := fname :: !fl ;
+          (release,cdata)
+        ) cl
       ) releaselist
     )
   in
   let without_release = 
+    let l = 
+      List.find_all (fun (_,fname,_,_) ->
+        not(List.mem fname !fl)
+      ) packagelist
+    in 
     List.map (fun (_,fname,_,cdata) ->
       Printf.eprintf "Warning : Package List without Release. %s\n" fname;
       (Debian.Release.default_release,cdata)
-    ) (List.find_all (fun (_,fname,_,_) -> not(List.mem fname !fl)) packagelist) ;
+    ) l
   in
   universe @ without_release
 ;;
@@ -273,7 +291,10 @@ let main () =
     |_ -> Printf.eprintf "Warning: wrong status" ; ""
   in
   let packagelist = 
-    let l = List.map (fun pl -> parsepackagelist pl) dudfdoc.problem.packageUniverse in
+    let l = 
+      List.map (fun pl -> parsepackagelist pl) 
+      dudfdoc.problem.packageUniverse
+    in
     make_universe l
   in
   let action = dudfdoc.problem.action in
@@ -349,18 +370,21 @@ let main () =
           with Not_found -> failwith (Printf.sprintf "There is no version %s of package %s" p v)
       end
       |`PkgDst (p,d) ->
-          try
-            let l = Cudf.lookup_packages universe p in
-            let pkg = List.find (fun pkg ->
+          let l = Cudf.lookup_packages universe p in
+          let pkg = 
+            try
+              List.find (fun pkg ->
                 let number = Cudf.lookup_package_property pkg "number" in
                 let info = Hashtbl.find infoH (pkg.Cudf.package,number) in
                 info.Debian.Release.suite = d
               ) l
-            in
-            let number = Cudf.lookup_package_property pkg "number" in
-            (pkg.Cudf.package,Some(`Eq,Debcudf.get_cudf_version tables (pkg.Cudf.package,number)))
-          with Not_found ->
-            failwith (Printf.sprintf "There is no package %s in release %s " p d)
+            with Not_found -> begin
+              Util.print_warning "There is no package %s in release %s " p d;
+              AptPref.max_priority l
+            end
+          in
+          let number = Cudf.lookup_package_property pkg "number" in
+          (pkg.Cudf.package,Some(`Eq,Debcudf.get_cudf_version tables (pkg.Cudf.package,number)))
     in
     let request_id =
       if OptParse.Opt.is_set Options.problemid then OptParse.Opt.get Options.problemid
