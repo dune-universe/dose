@@ -391,7 +391,13 @@ let main () =
       else if uid <> "" then uid
       else (string_of_int (Random.bits ()))
     in
-    match Debian.Apt.parse_request_apt action with
+    let parsed_action =
+      match dudfdoc.metaInstaller.name with
+      |"apt-get" -> Debian.Apt.parse_request_apt action
+      |"aptitude" -> Debian.Apt.parse_request_aptitude action
+      |s -> failwith("Unsupported meta installer "^s)
+    in
+    match parsed_action with
     |Debian.Apt.Upgrade (Some (suite))
     |Debian.Apt.DistUpgrade (Some (suite)) -> 
         let il = Deb.Set.fold (fun pkg acc -> `PkgDst (pkg.Deb.name,suite) :: acc) installed_packages [] in

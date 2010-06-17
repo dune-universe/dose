@@ -22,11 +22,15 @@ module XmlDudf = struct
   type dudfxml = {
     timestamp : string ;
     uid : string ;
-    installer : string ;
-    metaInstaller : string ;
+    installer : dudfinstaller ;
+    metaInstaller : dudfinstaller ;
     problem : dudfproblem ;
     outcome : dudfoutcome ;
     comment : Xml.xml list; (** any* *)
+  }
+  and dudfinstaller = {
+    name : string ;
+    version : string ;
   }
   and dudfproblem = {
     packageStatus : dudfstatus;
@@ -55,11 +59,13 @@ module XmlDudf = struct
     desiderata = "";
   }
 
+  let dummydudfinst = {name = ""; version = ""}
+
   let dummydudf = {
     timestamp = "";
     uid = "";
-    installer = "";
-    metaInstaller = "";
+    installer = dummydudfinst ;
+    metaInstaller = dummydudfinst ;
     problem = dummydudfprob ;
     outcome = Failure "" ;
     comment = []
@@ -124,9 +130,11 @@ type compression = Bz2 | Cz
 let pkgget ?(cachedir=".dudf") ?compression ?(fname=None) url =
   if not(Sys.file_exists cachedir) then Unix.mkdir cachedir 0o777 ;
   let filename =
-    let fname =
+    let fname = Digest.to_hex (Digest.string url)
+    (*
       if Option.is_none fname then (Digest.to_hex (Digest.string url))
       else Option.get fname
+      *)
     in
     let f = 
       match compression with
@@ -209,14 +217,23 @@ let parse input_file =
       |s -> (Printf.eprintf "Warning : Unknown element \"%s\"\n" s ; dudf)
     ) dummydudfprob node
   in
+  let dudfinstaller node =
+    Xml.fold (fun i node ->
+      Util.print_info "  %s" (Xml.tag node);
+      match Xml.tag node with
+      |"name" -> {i  with name = content_to_string node }
+      |"version" -> { i with version = content_to_string node }
+      |s -> (Printf.eprintf "Warning : Unknown element \"%s\"\n" s ; i)
+    ) dummydudfinst node
+  in
   Xml.fold (fun dudf node -> 
     Util.print_info " %s" (Xml.tag node);
     match Xml.tag node with
     |"distribution" -> dudf
     |"timestamp" -> {dudf with timestamp = content_to_string node}
     |"uid" -> {dudf with uid = content_to_string node}
-    |"installer" -> {dudf with installer = content_to_string node}
-    |"meta-installer" -> {dudf with metaInstaller = content_to_string node}
+    |"installer" -> {dudf with installer = dudfinstaller node}
+    |"meta-installer" -> {dudf with metaInstaller = dudfinstaller node}
     |"problem" -> {dudf with problem = dudfproblem node }
     |"outcome" -> {dudf with outcome = dudfoutcome node }
     |"comment" -> {dudf with comment = Xml.children node }

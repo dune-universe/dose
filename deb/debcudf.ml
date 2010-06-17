@@ -159,11 +159,15 @@ let loadl tables l =
 let loadlc tables name l =
   let l' = 
     List.flatten (
-      List.map (fun (name,sel) ->
+      List.map (fun (name',sel) ->
         match CudfAdd.cudfop sel with
-        |None -> []
+        |None ->
+            if (Hashtbl.mem tables.virtual_table name') then
+              [(CudfAdd.encode (name'^"--virtual"), None)]
+            else
+              [CudfAdd.encode name', None]
         |Some(op,v) ->
-            [(CudfAdd.encode name,Some(op,get_cudf_version tables (name,v)))]
+            [(CudfAdd.encode name',Some(op,get_cudf_version tables (name',v)))]
       ) l
     )
   in (CudfAdd.encode name, None)::l'

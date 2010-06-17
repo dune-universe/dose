@@ -106,9 +106,16 @@ let parse_request_apt s =
   if not (String.exists s "apt-get") then failwith "Not a valid apt-get command" ;
   let s = String.slice ~first:((String.find s "apt-get")) s in
   let suite = ref None in
+  (* XXX we parse a log of options, but we do not handle them ... *)
   let options = [
     ("-t", Arg.String (fun l -> suite := Some(l)), "");
-    ("-s", Arg.Unit (fun _ -> ()), "") ] 
+    ("-s", Arg.Unit (fun _ -> ()), "");
+    ("-f", Arg.Unit (fun _ -> ()), "");
+    ("--no-install-recommends", Arg.Unit (fun _ -> ()), "");
+    ("--install-recommends", Arg.Unit (fun _ -> ()), "");
+    ("--no-upgrade", Arg.Unit (fun _ -> ()), "");
+    ("--no-remove", Arg.Unit (fun _ -> ()), "");
+    ] 
   in
   let reqlist = ref [] in
   let anon s = reqlist := s :: !reqlist in
@@ -123,6 +130,38 @@ let parse_request_apt s =
     |_ -> failwith (Format.sprintf "Bad apt request '%s'@." s)
   end
 ;;
+
+let parse_request_aptitude s =
+  if not (String.exists s "aptitude") then failwith "Not a valid aptitude command" ;
+  let s = String.slice ~first:((String.find s "aptitude")) s in
+  let suite = ref None in
+  (* XXX we parse a log of options, but we do not handle them ... *)
+  let options = [
+    ("-t", Arg.String (fun l -> suite := Some(l)), ""); (* default suite *)
+    ("-s", Arg.Unit (fun _ -> ()), "");
+    ("--full-resolver", Arg.Unit (fun _ -> ()), "");
+    ("--safe-resolver", Arg.Unit (fun _ -> ()), "");
+    ("-f", Arg.Unit (fun _ -> ()), ""); (* fix-broken *)
+    ("-r", Arg.Unit (fun _ -> ()), ""); (* with-reccomends *)
+    ("--with-recommends", Arg.Unit (fun _ -> ()), "");
+    ("-R", Arg.Unit (fun _ -> ()), ""); (* without-reccomends *)
+    ("--without-recommends", Arg.Unit (fun _ -> ()), "");
+    ] 
+  in
+  let reqlist = ref [] in
+  let anon s = reqlist := s :: !reqlist in
+  begin
+    begin try Arg.parse_argv ~current:(ref 0) (Array.of_list (Str.split space_re s)) options anon ""
+    with Arg.Bad s -> failwith s end ;
+    match List.rev !reqlist with
+    |"install" :: tl -> Install(List.map (parse_pkg_req !suite) tl)
+    |"remove" :: tl -> Remove(List.map parse_pkg_only tl)
+    |["upgrade"] | ["safe-upgrade"] | ["dist-upgrade"] -> Upgrade(!suite)
+    |["full-upgrade"] -> DistUpgrade(!suite)
+    |_ -> failwith (Format.sprintf "Bad apt request '%s'@." s)
+  end
+;;
+
 (*****************************************************)
 
 (** for details on the apt_preferences format :

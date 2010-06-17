@@ -218,8 +218,10 @@ let parse_constr_aux vers s =
       (Printf.eprintf "WARNING !!! '%s'\n" s);
       (name, None)
     end
-  end else
+  end else begin
+    (* XXX if the constraint if malformed I should print a warning !!! *)
     (name, None)
+  end
 
 let parse_constr s =
   let s = start_token_stream s in

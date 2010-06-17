@@ -69,5 +69,3 @@ let parse_release_in ch =
   match parse_paragraph (start_from_channel ch) with
   |None -> default_release
   |Some par -> parse_release_fields par
-
-
