@@ -22,6 +22,7 @@ module XmlDudf = struct
   type dudfxml = {
     timestamp : string ;
     uid : string ;
+    distribution : string ;
     installer : dudfinstaller ;
     metaInstaller : dudfinstaller ;
     problem : dudfproblem ;
@@ -64,6 +65,7 @@ module XmlDudf = struct
   let dummydudf = {
     timestamp = "";
     uid = "";
+    distribution = "";
     installer = dummydudfinst ;
     metaInstaller = dummydudfinst ;
     problem = dummydudfprob ;
@@ -229,7 +231,7 @@ let parse input_file =
   Xml.fold (fun dudf node -> 
     Util.print_info " %s" (Xml.tag node);
     match Xml.tag node with
-    |"distribution" -> dudf
+    |"distribution" -> { dudf with distribution = content_to_string node }
     |"timestamp" -> {dudf with timestamp = content_to_string node}
     |"uid" -> {dudf with uid = content_to_string node}
     |"installer" -> {dudf with installer = dudfinstaller node}

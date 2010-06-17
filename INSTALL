@@ -32,6 +32,6 @@ To use libcudf as an ocamlfind external library you can specify
 --with-libcudf as configure option.
 
 Ex :
-./configure --with-xml --with-ocamlgraph --with-zip --with-oUnit
+./configure --with-xml --with-ocamlgraph --with-zip --with-oUnit --with-bz2 --with-rpm
 
 In order to compile the a selection of applications do "make".

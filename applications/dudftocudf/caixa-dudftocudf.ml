@@ -148,6 +148,13 @@ let main () =
   Util.print_info "parse xml";
 
   let dudfdoc = Dudfxml.parse input_file in
+
+  if not(Pcre.pmatch ~rex:(Pcre.regexp "[Cc]aixa") dudfdoc.distribution) then begin
+    Printf.eprintf
+    "Input dudf document not in Caixa's dudf format (but %s)\n" dudfdoc.distribution;
+    exit 1
+  end;
+
   let uid = dudfdoc.uid in
   let status =
     match dudfdoc.problem.packageStatus.st_installer with
@@ -227,7 +234,12 @@ let main () =
       else if uid <> "" then uid
       else (string_of_int (Random.bits ()))
     in
-    match Debian.Apt.parse_request_apt action with
+    let parsed_action =
+      match dudfdoc.metaInstaller.name with
+      |"apt" -> Debian.Apt.parse_request_apt action
+      |s -> failwith("Unsupported meta installer "^s)
+    in
+    match parsed_action with
     |Debian.Apt.Upgrade (Some (suite))
     |Debian.Apt.DistUpgrade (Some (suite)) ->
         let il = Rpm.Packages.Set.fold (fun pkg acc -> `PkgDst (pkg.Rpm.Packages.name,suite) :: acc) installed_packages [] in

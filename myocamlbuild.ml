@@ -11,7 +11,7 @@
 (**************************************************************************)
 
 open Ocamlbuild_plugin
-open Command (* no longer needed for OCaml >= 3.10.2 *)
+(* open Command *) (* no longer needed for OCaml >= 3.10.2 *)
 
 let clibs = [("rpm","rpm")]
 
@@ -31,10 +31,7 @@ let find_syntaxes () = ["camlp4o"; "camlp4r"]
 (* ocamlfind command *)
 let ocamlfind x = S[A"ocamlfind"; x]
 
-let env_var x =
-  try
-    Sys.getenv x
-  with Not_found -> ""
+let env_var x = try Sys.getenv x with Not_found -> ""
 
 let _ = dispatch begin function
    | Before_options ->

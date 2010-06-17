@@ -284,6 +284,13 @@ let main () =
   let id x = x in
 
   let dudfdoc = Dudfxml.parse input_file in
+
+  if not(Pcre.pmatch ~rex:(Pcre.regexp "[Dd]ebian") dudfdoc.distribution) then begin
+    Printf.eprintf
+    "Input dudf document not in debian's dudf format (but %s)\n" dudfdoc.distribution;
+    exit 1
+  end;
+
   let uid = dudfdoc.uid in
   let status =
     match dudfdoc.problem.packageStatus.st_installer with
