@@ -272,13 +272,14 @@ open Dudfxml.XmlDudf
 
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
+  let progressbar = Util.Progress.create "debdudf" in
   Random.self_init () ;
   let input_file =
     match OptParse.OptParser.parse_argv Options.options with
     |[h] -> h
     |_ -> (Printf.eprintf "too many arguments" ; exit 1)
   in
-  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
+  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug ~bars:["debdudf"] () ;
   Util.print_info "parse xml";
 
   let id x = x in
@@ -290,6 +291,8 @@ let main () =
     "Input dudf document not in debian's dudf format (but %s)\n" dudfdoc.distribution;
     exit 1
   end;
+
+  Util.print_info "convert to dom ... ";
 
   let uid = dudfdoc.uid in
   let status =
@@ -307,8 +310,6 @@ let main () =
   let action = dudfdoc.problem.action in
   let preferences = AptPref.parse dudfdoc.problem.desiderata in
 
-  Util.print_info "convert to dom ... ";
-
   let infoH = Hashtbl.create 1031 in
   let extras_property = [
     ("Size", ("size", `Nat (Some 0)));
@@ -318,8 +319,10 @@ let main () =
   let extras = List.map fst extras_property in
 
   Util.print_info "parse all packages";
+  Util.Progress.set_total progressbar (List.length packagelist);
   let all_packages =
     List.fold_left (fun acc (release,contents) ->
+      Util.Progress.progress progressbar ;
       let ch = IO.input_string contents in
       let l = Deb.parse_packages_in ~extras:extras id ch in
       let _ = IO.close_in ch in
@@ -329,6 +332,7 @@ let main () =
       ) acc l
     ) Deb.Set.empty packagelist
   in
+  Util.Progress.reset progressbar;
 
   Util.print_info "installed packages";
   let installed_packages =
@@ -355,8 +359,10 @@ let main () =
     { pkg with Cudf.pkg_extra = (k,v) :: pkg.Cudf.pkg_extra } in
 
   Util.print_info "convert";
+  Util.Progress.set_total progressbar (List.length l); 
   let pl =
     List.map (fun pkg ->
+      Util.Progress.progress progressbar ;
       let inst = Hashtbl.mem installed (pkg.Deb.name,pkg.Deb.version) in
       let info = try Some(Hashtbl.find infoH (pkg.Deb.name,pkg.Deb.version)) with Not_found -> None in
       let cudfpkg = Debcudf.tocudf tables ~extras:extras_property ~inst:inst pkg in
@@ -365,6 +371,7 @@ let main () =
       cudfpkg
     ) l
   in
+  Util.Progress.reset progressbar;
 
   let universe = Cudf.load_universe pl in
 
