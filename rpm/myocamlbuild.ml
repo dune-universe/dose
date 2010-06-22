@@ -31,6 +31,18 @@ let find_syntaxes () = ["camlp4o"; "camlp4r"]
 (* ocamlfind command *)
 let ocamlfind x = S[A"ocamlfind"; x]
 
+let split s ch =
+  let x = ref [] in
+  let rec go s =
+    try
+      let pos = String.index s ch in
+        x := (String.before s pos)::!x;
+        go (String.after s (pos + 1))
+    with
+      Not_found -> s::!x
+  in
+  go s;;
+
 let env_var x =
   try
     Sys.getenv x
@@ -71,12 +83,14 @@ let _ = dispatch begin function
          flag ["ocaml"; "doc";      "syntax_"^syntax] & S[A"-syntax"; A syntax];
        end (find_syntaxes ());
 
+       let cppfl = split (env_var "CPPFLAGS") ' ' in
+
        List.iter begin fun (lib,dir) ->
          flag ["ocaml"; "link"; "c_use_"^lib; "byte"] & S[A"-custom"; A"-cclib"; A("-l"^lib)];
          flag ["ocaml"; "link"; "c_use_"^lib; "native"] & S[A"-cclib"; A("-l"^lib); A"-ccopt"; A(env_var "LDFLAGS")];
          dep ["ocaml"; "compile"; "c_use_"^lib ] & ["lib"^lib^"_stubs.a"];
          dep ["ocaml"; "link"; "c_use_"^lib] & ["lib"^lib^"_stubs.a"];
-         flag ["c"; "compile"] & S[A"-ccopt"; A(env_var "CPPFLAGS")];
+         flag ["c"; "compile"] & S(List.flatten (List.map (fun v -> [A"-ccopt"; A(v)]) cppfl));
        end clibs ;
 
        (* The default "thread" tag is not compatible with ocamlfind.

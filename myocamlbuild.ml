@@ -11,7 +11,7 @@
 (**************************************************************************)
 
 open Ocamlbuild_plugin
-(* open Command *) (* no longer needed for OCaml >= 3.10.2 *)
+open Command (* no longer needed for OCaml >= 3.10.2 *)
 
 let clibs = [("rpm","rpm")]
 
@@ -31,7 +31,22 @@ let find_syntaxes () = ["camlp4o"; "camlp4r"]
 (* ocamlfind command *)
 let ocamlfind x = S[A"ocamlfind"; x]
 
-let env_var x = try Sys.getenv x with Not_found -> ""
+let split s ch =
+  let x = ref [] in
+  let rec go s =
+    try
+      let pos = String.index s ch in
+       x := (String.before s pos)::!x;
+      go (String.after s (pos + 1))
+    with
+      Not_found -> s::!x
+  in
+  go s
+
+let env_var x =
+  try
+    Sys.getenv x
+  with Not_found -> ""
 
 let _ = dispatch begin function
    | Before_options ->
@@ -67,6 +82,8 @@ let _ = dispatch begin function
          flag ["ocaml"; "ocamldep"; "syntax_"^syntax] & S[A"-syntax"; A syntax];
          flag ["ocaml"; "doc";      "syntax_"^syntax] & S[A"-syntax"; A syntax];
        end (find_syntaxes ());
+  
+       let cppfl = split (env_var "CPPFLAGS") ' ' in
 
        List.iter begin fun (lib,dir) ->
          flag ["ocaml"; "link"; "c_use_"^lib; "byte"] & S[A"-custom"; A"-cclib"; A("-l"^lib)];
@@ -76,7 +93,7 @@ let _ = dispatch begin function
          (* Make sure the C pieces and built... *)
          dep ["ocaml"; "compile"; "c_use_"^lib ] & [dir^"/lib"^lib^"_stubs.a"];
 
-         flag ["c"; "compile"] & S[A"-ccopt"; A(env_var "CPPFLAGS")];
+         flag ["c"; "compile"] & S(List.flatten (List.map (fun v -> [A"-ccopt"; A(v)]) cppfl));
        end clibs ;
 
        (* The default "thread" tag is not compatible with ocamlfind.
