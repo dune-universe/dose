@@ -1,3 +1,22 @@
+- fix ocamlbuild to imply -DHASRPM only when using c_use_rpm in _tags
+  and remove -I rpm when building debian binaries / -I deb when building
+  rpm binaries
+  Thu Jun 17 2010 Pietro Abate <pietro.abate@pps.jussieu.fr>
+
+- fix common/EdosSolver documentation. For some reason only part of it is
+  actually generated
+  Thu Jun 17 2010 Pietro Abate <pietro.abate@pps.jussieu.fr>
+
+- add minisat backend to the depsolver
+** minisat ocaml bindings are now avalaible
+  Thu Jun 17 2010 Pietro Abate <pietro.abate@pps.jussieu.fr>
+
+- add picosat backend to the depsolver
+** picosat ocaml bindings are now avalaible
+  Thu Jun 17 2010 Pietro Abate <pietro.abate@pps.jussieu.fr>
+
+-------------------
+
 - make reason in depsolver lazy. This way we can save a bit of time 
   when building the sat problem
 
@@ -12,15 +31,10 @@
   a problem with distcheck.
 ** DONE !
 
-- add minisat backend to the depsolver
-
 - when init the depsolver, create a new data structure where all dependencies
   and conflicts are explicit. Then use this data structure when iterate
   over packages. This way we can perform all lookups once and forall.
 ** DONE
-
-- fix common/EdosSolver documentation. For some reason only part of it is
-  actually generated
 
 - implement a debdistcheck that builds the sat problem directly from 
   debian Packages without passing through cudf and friends
