@@ -52,6 +52,7 @@ let rpm_load_universe l =
   let (l,f,t) = rpm_load_list l in
   (Cudf.load_universe l, f, t)
 
+(* XXX when parsing a cudf, I should also remember the preamble !! *)
 let cudf_load_list file =
   let _, pkglist, _ = CudfAdd.parse_cudf file in
   let from_cudf pkg = (pkg.Cudf.package,string_of_int pkg.Cudf.version) in

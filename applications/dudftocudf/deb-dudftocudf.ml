@@ -314,7 +314,7 @@ let main () =
   let extras_property = [
     ("Size", ("size", `Nat (Some 0)));
     ("Installed-Size", ("installedsize", `Nat (Some 0)));
-    ("Maintainer", ("maintainer", `String None))]
+    ("Maintainer", ("maintainer", `String (Some "")))]
   in
   let extras = List.map fst extras_property in
 
