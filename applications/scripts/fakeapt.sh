@@ -15,28 +15,43 @@ fakeapt() {
       -o Dir::State::status=$aptroot/status \
       -o Dir::Etc::SourceList=$aptroot/sources.list \
       -o APT::Install-Recommends="false" \
-      -o APT::Architecture=amd64 \
+      -o APT::Architecture="amd64" \
       -o APT::Immediate-Configure="false" \
-      $action \"$request\"
+      $action $request
 }
+
+      #-o Aptitude::CmdLine::Fix-Broken="true" \
 
 fakeaptitude() {
   action=$1
-  shift 1
-  request=$@
   aptitude -s \
       -o APT::Get::List-Cleanup="false" \
       -o Dir::Cache=$aptroot \
       -o Dir::State=$aptroot \
       -o Dir::State::status=$aptroot/status \
       -o Dir::Etc::SourceList=$aptroot/sources.list \
-      -o APT::Architecture=amd64 \
+      -o APT::Architecture="amd64" \
+      -o APT::Install-Recommends="false" \
+      -o APT::Immediate-Configure="false" \
+      -o Aptitude::CmdLine::Assume-Yes="true" \
+      --allow-untrusted -v -y --full-resolver $action `cat Request`
+}
+
+fixfakeaptitude() {
+  aptitude -s \
+      -o APT::Get::List-Cleanup="false" \
+      -o Dir::Cache=$aptroot \
+      -o Dir::State=$aptroot \
+      -o Dir::State::status=$aptroot/status \
+      -o Dir::Etc::SourceList=$aptroot/sources.list \
+      -o APT::Architecture="amd64" \
       -o APT::Install-Recommends="false" \
       -o APT::Immediate-Configure="false" \
       -o Aptitude::CmdLine::Fix-Broken="true" \
       -o Aptitude::CmdLine::Assume-Yes="true" \
-      $action \"$request\"
+      --allow-untrusted -v -f -y --full-resolver install
 }
+
 
 initapt() {
   packages=$1
@@ -48,7 +63,7 @@ initapt() {
 cat<<EOF > $aptroot/sources.list
 deb file:$aptroot/lists/ ./
 EOF
-apt-get -s \
+apt-get \
     -o APT::Get::List-Cleanup="false" \
     -o Dir::Cache=$aptroot \
     -o Dir::State=$aptroot \
@@ -69,7 +84,8 @@ status=$2
 shift 2
 action=$1
 shift 1
-request=$@
+#request=$@
+#request=`cat Request`
 
 mkdir -p $aptroot
 mkdir -p $aptroot/lists
@@ -79,5 +95,6 @@ mkdir -p $aptroot/lists/partial
 
 initapt $packages $status
 #fakeapt $action $request
-fakeaptitude $action $request
-#cleanup
+#fixfakeaptitude
+fakeaptitude $action
+cleanup
