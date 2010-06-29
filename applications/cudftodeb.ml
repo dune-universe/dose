@@ -98,6 +98,10 @@ let pp_package fmt pkg =
     pp ("Provides", string_of_vpkglist (pkg.provides :> Cudf_types.vpkg list));
   if pkg.installed <> Cudf.default_package.installed then
     pp ("Status", "install ok installed");
+  pp ("Architecture", "amd64");
+  let p = Cudf_types_pp.string_of_pkgname pkg.package in
+  let v = Cudf_types_pp.string_of_version pkg.version in
+  pp ("Filename", "/var/fake"^p^v);
   List.iter (fun (k, v) -> pp (k, string_of_value v)) pkg.pkg_extra
 
 let pp_packages fmt =
@@ -105,8 +109,8 @@ let pp_packages fmt =
 ;;
 
 let pp_request fmt req =
-  let inst = List.map (fun (name,constr) -> ("+"^name,constr)) req.install in
-  let rem = List.map (fun (name,constr) -> ("-"^name,constr)) req.install in
+  let inst = List.map (fun (name,constr) -> (""^name,constr)) req.install in
+  let rem = List.map (fun (name,constr) -> ("-"^name,constr)) req.remove in
   let all = (inst @ rem @ req.upgrade) in
   let pp_vpkg fmt (c : Cudf_types.vpkg) = match c with
     |(name, None) -> pp_pkgname fmt name
@@ -117,7 +121,7 @@ let pp_request fmt req =
   let pp_vpkglist fmt = pp_list fmt ~pp_item:pp_vpkg ~sep:" " in
   let string_of_vpkglist = string_of pp_vpkglist in
   let s = string_of_vpkglist all in
-  Format.fprintf fmt "install %s@\n" s 
+  Format.fprintf fmt "%s@\n" s
 ;;
 
 let convert universe =
