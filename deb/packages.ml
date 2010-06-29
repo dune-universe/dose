@@ -67,6 +67,7 @@ let parse_packages_fields extras par =
       if l = s then Some(f) else None 
     with Not_found -> Some(f) (* this package doesn't have a status field *)
   in
+  let extras = "status"::extras in
   let parse_s f field = f (single_line field (List.assoc field par)) in
   let parse_m f field = f (String.concat " " (List.assoc field par)) in
   let parse_e extras =
@@ -94,7 +95,7 @@ let parse_packages_fields extras par =
         extras = parse_e extras;
       }
   in
-  try guard_field "status" "install ok installed" (exec ())
+  try (* guard_field "status" "install ok installed" *) Some(exec ())
   with Not_found -> None (* this package doesn't either have version or name *)
 
 (** parse a debian Packages file from the channel [ch] *)

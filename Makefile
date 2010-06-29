@@ -74,6 +74,10 @@ dist: ./$(DIST_TARBALL)
 	svn export . ./$(DIST_DIR)
 	rm -rf ./$(DIST_DIR)/debian
 	rm -rf ./$(DIST_DIR)/libcudf
+	rm -rf ./$(DIST_DIR)/deb/tests
+	rm -rf ./$(DIST_DIR)/rpm/tests
+	rm -rf ./$(DIST_DIR)/common/tests
+	rm -rf ./$(DIST_DIR)/algo/tests
 	tar cvzf ./$(DIST_TARBALL) ./$(DIST_DIR)
 	rm -rf ./$(DIST_DIR)
 	@echo "Distribution tarball: ./$(DIST_TARBALL)"
