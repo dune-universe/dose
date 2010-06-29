@@ -54,6 +54,7 @@ let parse_string = function
   |Json_type.String s -> s
   |Json_type.Int i -> string_of_int i
   |Json_type.Null -> ""
+  |Json_type.Bool s -> string_of_bool s
   |_ -> assert false
 
 let to_list = function
@@ -67,9 +68,8 @@ So in the current version of CM DUDF, it's roughly this:
 [[package1], [package2],...]
 
 Each package is an array with this structure:
-["name", epoch, "version", "release", [requires,...], "rpm version",
-[provides, ...], [conflicts, ...], [obsoletes,...], install_timestamp,
-size].
+["name", epoch, "version", "release", [requires,...],
+[provides, ...], [conflicts, ...], [obsoletes,...], size, essential].
 
 The dependency arrays should really be filled with triples as (NAME,
 FLAG, VERSION) but at the moment they are still in a single string
@@ -77,6 +77,21 @@ separated by spaces.
 
 Any element that's not applicable (usually epoch) is expressed as null,
 apart from the dependency arrays which appear as [].
+
+Ex :
+[
+  "x11-font-bh-75dpi",
+  null,
+  "1.0.0",
+  "7mdv2009.1",
+  ["/bin/sh","mkfontscale","mkfontdir"],
+  ["x11-font-bh-75dpi = 1.0.0-7mdv2009.1"],
+  ["xorg-x11-75dpi-fonts <= 6.9.0"],
+  [],
+  3335361,
+  false
+]
+
 *)
 let read_status str = 
   let aux = function
@@ -97,11 +112,14 @@ let read_status str =
                   (* Rpm.Packages.version = Printf.sprintf "%s:%s-%s" epoch version release; *)
                   Rpm.Packages.version = epoch^version^release;
                   Rpm.Packages.depends = [List.filter_map parse_vpkg (to_list a.(4))];
-                  Rpm.Packages.conflicts = List.filter_map parse_vpkg (to_list a.(7));
-                  Rpm.Packages.provides = List.filter_map parse_vpkg (to_list a.(6));
-                  Rpm.Packages.obsoletes = List.filter_map parse_vpkg (to_list a.(8));
+                  Rpm.Packages.conflicts = List.filter_map parse_vpkg (to_list a.(6));
+                  Rpm.Packages.provides = List.filter_map parse_vpkg (to_list a.(5));
+                  Rpm.Packages.obsoletes = List.filter_map parse_vpkg (to_list a.(7));
                   Rpm.Packages.files = [];
-                  Rpm.Packages.extras = []
+                  Rpm.Packages.extras = [
+                    ("size", parse_string a.(8));
+                    ("essential", parse_string a.(9))
+                  ]
                 }
               with Invalid_argument("index out of bounds") -> (
                 Util.print_warning "%s" (Json_io.string_of_json (Json_type.Array l));

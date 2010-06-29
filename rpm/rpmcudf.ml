@@ -176,6 +176,12 @@ let add_extra extras tables pkg =
   let number = ("number",`String pkg.version) in
   number :: extras
 
+let add_keep pkg =
+  try
+    if List.assoc "essential" pkg.extras = "true" then `Keep_package
+    else `Keep_none
+  with Not_found -> `Keep_none
+
 let tocudf tables ?(extras=[]) ?(inst=false) pkg =
   let (n,v) = (pkg.name,pkg.version) in
   (* we remove dependencies on files provided by the same package, dependencies
@@ -197,6 +203,7 @@ let tocudf tables ?(extras=[]) ?(inst=false) pkg =
   { Cudf.default_package with
     Cudf.package = name ;
     Cudf.version = version ;
+    Cudf.keep = add_keep pkg;
     Cudf.depends = load_depends tables depends ;
     Cudf.conflicts = List.unique (
       (load_conflicts tables pkg.conflicts) (* @
