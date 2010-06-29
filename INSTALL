@@ -27,11 +27,14 @@ make
 --with-bz2
 --with-oUnit
 
-libcudf is included in the source tree of dose3. 
-To use libcudf as an ocamlfind external library you can specify
---with-libcudf as configure option.
+libcudf is included in the source tree of dose3 (but not in the dose3 release tarball). 
+To use the version of libcudf in the source tree you can specify
+--without-libcudf as configure option. By default dose3 uses the system wide version
+of libcudf.
 
 Ex :
-./configure --with-xml --with-ocamlgraph --with-zip --with-oUnit --with-bz2 --with-rpm
+./configure --without-libcudf --with-xml --with-ocamlgraph --with-zip --with-oUnit --with-bz2 --with-rpm
 
-In order to compile the a selection of applications do "make".
+In order to compile the a selection of applications do "make". To compile specific application
+cd applications/
+ocamlbuild $app.native

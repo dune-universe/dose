@@ -81,7 +81,7 @@ let extras_properties =
 ;;
 let extras = List.map fst extras_properties ;;
 
-let create_pkglist pkglist status =
+let create_pkglist pkglist status_hash =
   let (>>) f g = g f in
   let build_hash n =
     let l = get_random ~ver:1.0 pkglist n in
@@ -91,35 +91,26 @@ let create_pkglist pkglist status =
   in
   let keep_hash = build_hash (OptParse.Opt.get Options.keep) in
   let rstatus_hash = build_hash (OptParse.Opt.get Options.rstatus) in
-  let status_hash =
-    let h = Hashtbl.create (List.length status) in
-    List.iter (fun pkg ->
-      try
-        if (List.assoc "status" pkg.Debian.Packages.extras) = "install ok installed" then
-          Hashtbl.add h (pkg.Debian.Packages.name,pkg.Debian.Packages.version) ()
-      with Not_found -> ()
-    ) status;
-    h
-  in
   let app h f pkg =
     if Hashtbl.mem h (pkg.package,Some(`Eq, pkg.version)) then f pkg else pkg
   in
+  let installed = ref [] in
   let l =
-      List.map (fun pkg ->
-        pkg >>
-        app rstatus_hash (fun p -> { p with installed = true }) >>
-        app keep_hash (fun p -> {p with keep = `Keep_version}) >>
-        (fun pkg ->
-          try
-            let number = Cudf.lookup_package_property pkg "number" in
-            if Hashtbl.mem status_hash (pkg.package,number) then
-              { pkg with installed = true }
-            else pkg
-          with Not_found -> pkg
-        )
-      ) pkglist 
+    List.map (fun pkg ->
+      pkg >>
+      app rstatus_hash (fun p -> { p with installed = true }) >>
+      app keep_hash (fun p -> {p with keep = `Keep_version}) >>
+      (fun pkg ->
+        try
+          let number = Cudf.lookup_package_property pkg "number" in
+          if Hashtbl.mem status_hash (pkg.package,number) then
+            { pkg with installed = true }
+          else pkg
+        with Not_found -> pkg) >>
+      (fun pkg -> if pkg.installed then installed := pkg::!installed ; pkg)
+    ) pkglist 
   in
-  (l, Cudf.load_universe l)
+  (!installed, l, Cudf.load_universe l)
 ;;
 
 let to_install_random p l =
@@ -177,10 +168,20 @@ let main () =
 
   (* we assume the status file is alwasy in dpkg format ! *)
   let status =
-    if statusfile = "" then []
+    if statusfile = "" then Hashtbl.create 0
     else 
       match Input.parse_uri statusfile with
-      |("deb",(_,_,_,_,f),_) -> Debian.Packages.input_raw [f]
+      |("deb",(_,_,_,_,f),_) -> begin
+          let status = (Debian.Packages.input_raw [f]) in
+          let h = Hashtbl.create (List.length status) in
+          List.iter (fun pkg ->
+            try
+              if (List.assoc "status" pkg.Debian.Packages.extras) = "install ok installed" then
+                Hashtbl.add h (pkg.Debian.Packages.name,pkg.Debian.Packages.version) ()
+            with Not_found -> ()
+          ) status;
+          h
+          end
       |_ -> assert false
   in
   (* raw -> cudf *)
@@ -207,27 +208,29 @@ let main () =
   Printf.printf "and %d upgrade all document\n%!" (if (OptParse.Opt.get Options.upgradeAll) then 1 else 0);
 
   for j = 0 to (OptParse.Opt.get Options.documents) do
-    let (pkglist,universe) = create_pkglist pkglist status in
-    let installed =
+    let (installed, pkglist,universe) = create_pkglist pkglist status in
+(*    let installed =
       Cudf.fold_packages (fun l pkg -> 
         if pkg.installed then pkg::l else l
       ) [] universe
     in
+      *)
     let p = OptParse.Opt.get Options.relop in
     let i = to_install_random p pkglist in
     let u = to_upgrade_random installed in
     let r = to_remove_random p installed in
-    Printf.printf "%d %!" j;
+    Printf.printf "#%d (installed %d) %!" j (List.length installed);
     create_cudf preamble universe (i,u,r)
   done
   ;
   if (OptParse.Opt.get Options.upgradeAll) then begin
-    let (pkglist,universe) = create_pkglist pkglist status in
-    let installed =
+    let (installed,pkglist,universe) = create_pkglist pkglist status in
+(*    let installed =
       Cudf.fold_packages (fun l pkg -> 
         if pkg.installed then pkg::l else l
       ) [] universe
     in
+    *)
     create_cudf preamble universe ([],List.map (fun pkg -> (pkg.package,None)) installed,[])
   end
 ;;

@@ -19,9 +19,9 @@ if test "$OCAMLFIND" = "no"; then
 fi
 
 AC_ARG_WITH(libcudf,
-        [ --with-libcudf ],
-        HAS_LIBCUDF=yes,
-        HAS_LIBCUDF=no)
+        [ --without-libcudf ],
+        HAS_LIBCUDF=no,
+        HAS_LIBCUDF=yes)
 AC_SUBST(HAS_LIBCUDF)
 if test "$HAS_LIBCUDF" = "yes" ; then
   AC_CHECK_OCAML_PKG([cudf])
