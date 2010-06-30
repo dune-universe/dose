@@ -156,6 +156,8 @@ let loadl tables l =
 
 (* we add a self conflict here, because in debian each package is in conflict
    with all other versions of the same package *)
+let loadlc tables name l = (CudfAdd.encode name, None)::(loadl tables l)
+(*
 let loadlc tables name l =
   let l' = 
     List.flatten (
@@ -171,6 +173,7 @@ let loadlc tables name l =
       ) l
     )
   in (CudfAdd.encode name, None)::l'
+*)
 
 let loadlp tables l =
   List.map (fun (name,sel) ->
