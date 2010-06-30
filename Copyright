@@ -1,8 +1,8 @@
+All files are copyright Pietro Abate, with the following exceptions:
+
 deb/version.ml : Jaap Boender
 deb/format822.ml Jerome Vouillion, Stefano Zacchiroli, Pietro Abate
 algo/statistics.ml Jaap Boender, Stefano Zacchiroli, Pietro Abate
 common/edosSolver.ml common/edosSolver.mli : Jerome Vouillion
 common/util.ml : Alain Frish, Pietro Abate
 common/url.ml : b8_bavard, b8_fee_carabine, INRIA
-libcudf/* : Stefano Zacchiroli
-everything else : Pietro Abate
