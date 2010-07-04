@@ -242,6 +242,12 @@ let add_essential = function
   |false -> `Keep_none
   |true -> `Keep_package
 
+let add_inst inst pkg =
+  if inst then true 
+  else
+    try ((List.assoc "status" pkg.extras) = "install ok installed")
+    with Not_found -> false
+
 let tocudf tables ?(extras=[]) ?(inst=false) pkg =
     { Cudf.default_package with
       Cudf.package = CudfAdd.encode pkg.name ;
@@ -250,7 +256,7 @@ let tocudf tables ?(extras=[]) ?(inst=false) pkg =
       Cudf.depends = loadll tables (pkg.pre_depends @ pkg.depends);
       Cudf.conflicts = loadlc tables pkg.name (pkg.breaks @ pkg.conflicts) ;
       Cudf.provides = loadlp tables pkg.provides ;
-      Cudf.installed = inst;
+      Cudf.installed = add_inst inst pkg;
       Cudf.pkg_extra = add_extra extras tables pkg ;
     }
 

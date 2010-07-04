@@ -1,6 +1,7 @@
 
 required libraries ( DEBIAN / RPM ) :
  - libextlib-ocaml-dev / ocaml-extlib-devel
+ - libpcre-ocaml-dev / ??
 
 additional libraries (enable compilation with --with-<library>) :
  - libpostgresql-ocaml-dev / ocaml-postgresql-devel
