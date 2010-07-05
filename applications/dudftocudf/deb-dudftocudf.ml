@@ -339,16 +339,16 @@ let main () =
     let ch = IO.input_string status in
     let l = Deb.parse_packages_in ~extras:extras id ch in
     let _ = IO.close_in ch in
-    List.fold_left (fun s pkg -> Deb.Set.add pkg s) Deb.Set.empty l
+    l
   in
 
   Util.print_info "union";
-  let l = Deb.Set.elements (Deb.Set.union all_packages installed_packages) in
+  let l = Deb.merge installed_packages (Deb.Set.elements all_packages) in
   let tables = Debian.Debcudf.init_tables l in
 
   let installed =
     let h = Hashtbl.create 1031 in
-    Deb.Set.iter (fun pkg ->
+    List.iter (fun pkg ->
       Hashtbl.add h (pkg.Deb.name,pkg.Deb.version) ()
     ) installed_packages
     ;
@@ -414,7 +414,7 @@ let main () =
     match parsed_action with
     |Debian.Apt.Upgrade (Some (suite))
     |Debian.Apt.DistUpgrade (Some (suite)) -> 
-        let il = Deb.Set.fold (fun pkg acc -> `PkgDst (pkg.Deb.name,suite) :: acc) installed_packages [] in
+        let il = List.fold_left (fun acc pkg -> `PkgDst (pkg.Deb.name,suite) :: acc) [] installed_packages in
         let l = List.map mapver il in
         { Cudf.request_id = request_id ; install = l ; remove = [] ; upgrade = [] ; req_extra = [] ; }
     |Debian.Apt.Install l ->

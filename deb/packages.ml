@@ -57,16 +57,12 @@ let parse_veqpkg = parse_constr
 let parse_conj s = parse_vpkglist parse_vpkg s
 let parse_cnf s = parse_vpkgformula parse_vpkg s
 let parse_prov s = parse_veqpkglist parse_veqpkg s
-let parse_essential = function ("Yes"|"yes") -> true | _ -> false
+let parse_essential = function
+  |("Yes"|"yes") -> true
+  |("No" | "no") -> false (* this one usually is not there *)
+  |_ -> assert false (* unreachable ?? *)
 
 let parse_packages_fields extras par =
-  let guard_field field s f = 
-    try
-      let l = (single_line field (List.assoc field par)) in
-      (* it has a status field and we ignore it if not correctly set *)
-      if l = s then Some(f) else None 
-    with Not_found -> Some(f) (* this package doesn't have a status field *)
-  in
   let extras = "status"::extras in
   let parse_s f field = f (single_line field (List.assoc field par)) in
   let parse_m f field = f (String.concat " " (List.assoc field par)) in
@@ -75,7 +71,7 @@ let parse_packages_fields extras par =
       let prop = String.lowercase prop in
       try Some (prop,single_line prop (List.assoc prop par))
       with Not_found -> None
-      ) extras
+    ) extras
   in
   let exec () = 
       {
@@ -95,8 +91,8 @@ let parse_packages_fields extras par =
         extras = parse_e extras;
       }
   in
-  try (* guard_field "status" "install ok installed" *) Some(exec ())
-  with Not_found -> None (* this package doesn't either have version or name *)
+  (* this package doesn't either have version or name *)
+  try Some(exec ()) with Not_found -> None 
 
 (** parse a debian Packages file from the channel [ch] *)
 let parse_packages_in ?(extras=[]) f ch =
@@ -104,11 +100,39 @@ let parse_packages_in ?(extras=[]) f ch =
   parse_packages f (start_from_channel ch)
 
 (**/**)
-module Set = Set.Make(struct 
-  type t = package
-  let compare p1 p2 = compare (p1.name,p1.version) (p2.name,p2.version)
-end) 
+module Set = struct
+  let pkgcompare p1 p2 = compare (p1.name,p1.version) (p2.name,p2.version)
+  include Set.Make(struct 
+    type t = package
+    let compare = pkgcompare
+  end)
+end
 (**/**)
+
+let merge status packages =
+  let merge_aux p1 p2 =
+    if (p1.name,p1.version) = (p2.name,p2.version) then begin
+      {p1 with
+        essential = p1.essential || p2.essential;
+        extras = List.unique (p1.extras @ p2.extras)
+      }
+    end else assert false
+  in
+  let h = Hashtbl.create (List.length status) in
+  List.iter (fun p ->
+    try
+      if (List.assoc "status" p.extras) = "install ok installed" then
+        Hashtbl.add h (p.name,p.version) p
+    with Not_found -> ()
+  ) status
+  ;
+  let ps = 
+    List.fold_left (fun acc p ->
+      try Set.add (merge_aux p (Hashtbl.find h (p.name,p.version))) acc
+      with Not_found -> Set.add p acc
+    ) Set.empty (status @ packages)
+  in
+  Set.elements ps
 
 (** input_raw [file] : parse a debian Packages file from [file] *)
 let input_raw ?(extras=[]) = 
