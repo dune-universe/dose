@@ -45,8 +45,11 @@ let main () =
         if OptParse.Opt.get Options.cudf then
           Diagnostic.print stdout ~explain:true r
         end
-      else
-        Diagnostic.print stdout r
+      ;
+      if not(Diagnostic.is_solution r && OptParse.Opt.get Options.cudf) then begin
+        Printf.printf "Check %s\n" f;
+        Diagnostic.print stdout ~explain:true r
+      end
   |_ -> (Printf.eprintf "Too many arguments\n" ; exit 1)
 ;;
 

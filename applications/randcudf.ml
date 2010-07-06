@@ -136,7 +136,7 @@ let to_remove_random p l =
   get_random ~ver:p l (OptParse.Opt.get Options.remove)
 ;; 
 
-let create_cudf preamble universe (to_install,to_upgrade,to_remove) =
+let create_cudf (preamble,universe,request)  =
   let oc = 
     if (OptParse.Opt.is_set Options.outdir) then begin
       let tmpfile = Filename.temp_file "rand" ".cudf" in
@@ -146,15 +146,6 @@ let create_cudf preamble universe (to_install,to_upgrade,to_remove) =
       Printf.printf "%s\n%!" file ;
       open_out file
     end else stdout
-  in
-  let request =
-    (* XXX request_id should be a unique identifier *)
-    { request_id = "RAND-CUDF-GENERATOR" ;
-        install = to_install ;
-        upgrade = to_upgrade ;
-        remove = to_remove ;
-        req_extra = [] ;
-    }
   in
   Cudf_printer.pp_cudf (Format.formatter_of_out_channel oc) (preamble,universe,request);
   close_out oc
@@ -172,18 +163,10 @@ let check_request (pkglist,keeplist) (i,r,u) =
   Printf.printf "checking (hard deps %d) (conflicts %d) (# %d)...\n%!"
   (List.length deps) (List.length r) (List.length pkglist);
   let universe = Cudf.load_universe (dummy::pkglist) in
-  let (b,r) = Cudf_checker.is_consistent universe in
-  if b then begin 
-    let solver = Depsolver.load universe in 
-    match Depsolver.edos_install solver dummy with
-    |{Diagnostic.result = Diagnostic.Success _ } -> true
-    |{Diagnostic.result = Diagnostic.Failure _ } -> false
-  end else begin
-    Printf.printf "%s\n%!" 
-    (Cudf_checker.explain_reason ((Option.get r) :> Cudf_checker.bad_solution_reason)) ;
-    Printf.printf "universe inconsistent... assume it's good\n%!";
-    true
-  end
+  let solver = Depsolver.load ~check:false universe in 
+  match Depsolver.edos_install solver dummy with
+  |{Diagnostic.result = Diagnostic.Success _ } -> true
+  |{Diagnostic.result = Diagnostic.Failure _ } -> false
 
 let read_deb ?(extras=[]) s =
   let ch = IO.input_channel (open_in s) in
@@ -241,34 +224,36 @@ let main () =
   
   let rp = OptParse.Opt.get Options.rem_relop in
   let ip = OptParse.Opt.get Options.inst_relop in
-
-  let keeplist =
-    List.filter_map (fun pkg ->
-      if (pkg.keep = `Keep_package) && pkg.installed then begin
-        Some (pkg.package,None)
-      end
-      else None
-    ) pkglist
-  in
-
   for j = 0 to (OptParse.Opt.get Options.documents) do
-    let (installed,pkglist,universe) = create_pkglist pkglist in
     let rec one () = 
       (* we install with 20% probability to add a relop to the request
        * and we remove with 10% probability to add a relop to the request *)
-      let r = to_remove_random rp installed in
-      let i = to_install_random r ip pkglist in
-      let u = to_upgrade_random r installed in
-      if check_request (pkglist,keeplist) (i,r,u) then begin 
+      let (installed,pkglist,universe) = create_pkglist pkglist in
+      let request =
+        let r = to_remove_random rp installed in
+        { request_id = "RAND-CUDF-GENERATOR" ;
+          install = to_install_random r ip pkglist ;
+          upgrade = to_upgrade_random r installed ;
+          remove =  r ;
+          req_extra = [] ; }
+      in
+      if Diagnostic.is_solution (Depsolver.check_request (None,pkglist,request)) then begin 
         Printf.printf "#%d (installed %d) %!" j (List.length installed);
-        create_cudf preamble universe (i,u,r)
-      end else (Printf.printf "unsat, trying again\n" ; one () )
+        create_cudf (preamble,universe,request)
+      end else (Printf.printf ".%!" ; one () )
     in one ()
   done
   ;
   if (OptParse.Opt.get Options.upgradeAll) then begin
     let (installed,pkglist,universe) = create_pkglist pkglist in
-    create_cudf preamble universe ([],List.map (fun pkg -> (pkg.package,None)) installed,[])
+    let request =
+      { request_id = "RAND-CUDF-GENERATOR" ;
+        install = [] ;
+        upgrade = List.map (fun pkg -> (pkg.package,None)) installed ;
+        remove =  [] ;
+        req_extra = [] ; }
+    in
+    create_cudf (preamble,universe,request)
   end
 ;;
 

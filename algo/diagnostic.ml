@@ -54,7 +54,7 @@ let print ?(pp=CudfAdd.print_package) ?(explain=false) oc result =
       Printf.fprintf oc "%s: SUCCESS\n" (print_request ~pp r)
   |{ result = Success (f); request = r },true ->
       begin
-        Printf.fprintf oc "%s: SUCCESS\n" (print_request ~pp r) ;
+        (* Printf.fprintf oc "%s: SUCCESS\n" (print_request ~pp r) ; *)
         List.iter (fun p ->
           Printf.fprintf oc "%s\n" (pp ~short:false p)
         ) (f ())
