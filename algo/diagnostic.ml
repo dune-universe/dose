@@ -14,7 +14,7 @@ open ExtLib
 open Common
 
 type reason =
-  |Dependency of (Cudf.package * Cudf.package list)
+  |Dependency of (Cudf.package * Cudf_types.vpkg list * Cudf.package list)
   |EmptyDependency of (Cudf.package * Cudf_types.vpkg list)
   |Conflict of (Cudf.package * Cudf.package)
 
@@ -59,11 +59,14 @@ let print ?(pp=CudfAdd.print_package) ?(explain=false) oc result =
      begin
        Printf.fprintf oc "%s: FAILED\n" (print_request ~pp r) ;
        List.iter (function
-         |Dependency(i,l) ->
+         |Dependency(i,vpkgs,l) ->
             let l = List.map (pp ~short:true) l in
             Printf.fprintf oc
-            "Dependency Problem. Package %s has an unfulfilled dependency on %s\n"
+            "Dependency Problem. Package %s has an unfulfilled dependency on\n %s\n Expanded as %s\n\n"
             (pp ~short:true i)
+            (String.concat " | " (
+              List.map (fun vpkg -> (Cudf_types_pp.string_of_vpkg vpkg)) vpkgs)
+            )
             (String.concat " , " l)
          |Conflict (i,j) ->
             Printf.fprintf oc

@@ -99,7 +99,7 @@ let init_solver ?(buffer=false) ?(proxy_size=0) ?closure index =
           lit::a
         in
         S.add_rule constraints (Array.of_list lit_list)
-        [Diagnostic_int.Dependency(pkg_id,disjunction)]
+        [Diagnostic_int.Dependency(pkg_id,vpkg,disjunction)]
         ;
         if List.length disjunction > 1 then
           S.associate_vars constraints

@@ -15,8 +15,9 @@
 (** the solver is an abstract data type associated to a universe *)
 type solver
 
-(** initialize the solver *)
-val load : Cudf.universe -> solver
+(** initialize the solver. If [check] is true (default), then check 
+    for universe consistency (cf. Cudf_checker.is_consistent) *)
+val load : ?check : bool -> Cudf.universe -> solver
 
 (** check if the given package can be installed in the universe *)
 val edos_install : solver -> Cudf.package -> Diagnostic.diagnosis

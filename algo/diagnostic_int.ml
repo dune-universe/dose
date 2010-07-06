@@ -17,7 +17,7 @@ open Common
 open Mdf
 
 type reason =
-  |Dependency of (int * int list)
+  |Dependency of (int * Cudf_types.vpkg list * int list)
   |EmptyDependency of (int * Cudf_types.vpkg list)
   |Conflict of (int * int)
 

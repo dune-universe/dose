@@ -14,7 +14,7 @@
 
 (** Failures reasons for sat solver *)
 type reason =
-  |Dependency of (Cudf.package * Cudf.package list)
+  |Dependency of (Cudf.package * Cudf_types.vpkg list * Cudf.package list)
   (** Package [p] has an unfulfilled dependency on [pl]. None of [pl] safisfy
    * the dependency of [p] *)
   |EmptyDependency of (Cudf.package * Cudf_types.vpkg list)
