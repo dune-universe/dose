@@ -55,7 +55,10 @@ type request =
 (** The result of the prover *)
 type diagnosis = { result : result ; request : request }
 
-(** print the result of the solver.
+(** True is the result is Success, False otherwise *)
+val is_solution : diagnosis -> bool
+
+(** Print the result of the solver.
  
     @param explain : add a more verbose explanation of the failure or
     print the list of installed packages. 

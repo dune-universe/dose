@@ -178,7 +178,7 @@ let output_clauses ?(enc=Cnf) universe =
 
 (** check if a cudf request is satisfiable. we do not care about
  * universe consistency . We try to installa dummy package *)
-let check_request (pkglist,request) =
+let check_request (_,pkglist,request) =
   let deps = 
     let k = 
       List.filter_map (fun pkg ->
@@ -208,7 +208,5 @@ let check_request (pkglist,request) =
   in
   let universe = Cudf.load_universe (dummy::pkglist) in
   let solver = load ~check:false universe in
-  match edos_install solver dummy with
-  |{Diagnostic.result = Diagnostic.Success _ } -> true
-  |{Diagnostic.result = Diagnostic.Failure _ } -> false
+  edos_install solver dummy
 

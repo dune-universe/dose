@@ -171,36 +171,6 @@ let solution_set =
   let (_,pl,_) = Cudf_parser.parse_from_file f_legacy_sol in
   List.fold_right S.add pl S.empty
 
-let solve_same_legacy =
-  "solve legacy (same solution)" >:: (fun _ ->
-    let solver = Cudfsolver.load universe request in
-    let d = Cudfsolver.solve solver in
-    match d.Diagnostic.result with
-    |Diagnostic.Success f ->
-        let set = List.fold_right S.add (f ()) S.empty in
-        assert_equal true (S.equal solution_set set)
-    |Diagnostic.Failure f -> assert_failure "fail"
-  )
-
-let solve_any_legacy =
-  "solve legacy (any solution)" >:: (fun _ ->
-    let solver = Cudfsolver.load universe request in
-    let d = Cudfsolver.solve solver in
-    match d.Diagnostic.result with
-    |Diagnostic.Success f ->
-        let sol = Cudf.load_universe (f ()) in
-        let cudf = (universe,request) in
-        assert_equal (true,[]) (Cudf_checker.is_solution cudf sol) 
-    |Diagnostic.Failure f -> assert_failure "fail"
-  )
-
-let test_cudfsolver = 
-  "cudf solver" >::: [
-    solve_any_legacy ;
-    solve_same_legacy ;
-  ]
-;;
-
 let test_strong file l =
   let module G = Defaultgraphs.PackageGraph.G in
   let (_,universe,_) = Cudf_parser.load_from_file file in
@@ -314,7 +284,6 @@ let test_clause_dump =
 let all = 
   "all tests" >::: [
     test_depsolver ;
-    test_cudfsolver ;
     test_strongdep ;
     test_defaultgraphs ;
     test_clause_dump ;

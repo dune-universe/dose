@@ -13,88 +13,41 @@
 open ExtLib 
 open Common
 
-exception Done
+module Options = struct
+  open OptParse
 
-module Options =
-struct
-  let cudf = ref false
-  let verbose = ref false
-  let dump = ref false
-  let out = ref ""
+  let debug = StdOpt.store_true ()
+  let cudf = StdOpt.store_true ()
+  let out = StdOpt.str_option ()
+
+  let description = "Check if there exists a solution for a cudf problem"
+  let options = OptParser.make ~description ()
+
+  open OptParser
+  add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
+  add options                 ~long_name:"out"   ~help:"Output file" out;
+  add options ~short_name:'c' ~long_name:"cudf"  ~help:"print the cudf solution (if any)" cudf;
 end
 
-let usage = Printf.sprintf "usage: %s [-options] [cudf doc]" Sys.argv.(0)
-
-let options =
-  [
-   ("--verbose", Arg.Set Options.verbose, "");
-   ("--dump", Arg.Set Options.dump, "propositional solver dump");
-   ("--cudf", Arg.Set  Options.cudf, "print the cudf solution (if any)");
-   ("--out", Arg.String (fun l -> Options.out := l),  "Specify the output file");
-   ("--debug", Arg.Unit (fun () -> Util.set_verbosity Util.Summary), "Print debug information");
-  ]
-
 let main () =
-  let input_file = ref "" in
-
-  let _ =
-    try Arg.parse options (fun f -> input_file := f) usage
-    with Arg.Bad s -> failwith s
-  in
-
-  Printf.eprintf "parsing CUDF ...%!"; 
-  let timer = Util.Timer.create "Parse" in
-  Util.Timer.start timer;
-  let (universe,request) = 
-    match CudfAdd.load_cudf !input_file with
-    |_,u,None -> 
-        (Printf.eprintf "This cudf document does not contain a valid request\n" ; exit 1)
-    |_,u,Some(r) -> u,r
-  in
-  Util.Timer.stop timer ();
-  Printf.eprintf "done.\n%!"; 
-
-  Printf.eprintf "Prepare ...%!";
-  let timer = Util.Timer.create "Prepare" in
-  Util.Timer.start timer;
-  let problem = Cudfsolver.load universe request in
-  Util.Timer.stop timer ();
-  Printf.eprintf "done.\n%!"; 
-
-  Printf.eprintf "Solve ...%!";
-  let timer = Util.Timer.create "Solve" in
-  Util.Timer.start timer;
-  let result = Cudfsolver.solve problem in
-  Util.Timer.stop timer ();
-  Printf.eprintf "done.\n%!"; 
-
-  match result with
-  |{Diagnostic.result = Diagnostic.Success f } ->
-      begin 
-        if !Options.cudf then begin
-          let oc = 
-            if !Options.out <> "" then begin
-              let fname = !Options.out in
-              Printf.printf "cudf solution saved in %s\n" fname;
-              open_out fname
-            end else stdout
-          in
-          List.iter (fun pkg ->
-            Printf.fprintf oc "%s\n" 
-            (Cudf_printer.string_of_package 
-            { pkg with Cudf.installed = true })
-          ) (f ())
+  at_exit (fun () -> Util.dump Format.err_formatter);
+  let posargs = OptParse.OptParser.parse_argv Options.options in
+  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
+  match posargs with
+  |[f] ->
+      let (p,l,r) = 
+        match CudfAdd.parse_cudf f with
+        |(p,l,Some r) -> (p,l,r)
+        |_ ->  (Printf.eprintf "Not a void cudf document (missing request)\n" ; exit 1)
+      in 
+      let r = Depsolver.check_request (p,l,r) in
+      if Diagnostic.is_solution r then begin
+        if OptParse.Opt.get Options.cudf then
+          Diagnostic.print stdout ~explain:true r
         end
-        else
-          Diagnostic.print stdout result
-        ;
-        exit(0)
-      end
-  |_ ->
-      begin
-        Diagnostic.print ~explain:true stdout result;
-        exit(1)
-      end
+      else
+        Diagnostic.print stdout r
+  |_ -> (Printf.eprintf "Too many arguments\n" ; exit 1)
 ;;
 
 main () ;;

@@ -69,3 +69,6 @@ type enc = Cnf | Dimacs
 
 (** [output_clauses enc univ] return a string encoded accordingly to [enc] *)
 val output_clauses : ?enc:enc -> Cudf.universe -> string
+
+(* check if there exists a solution for the give cudf document *)
+val check_request : Cudf.cudf_doc -> Diagnostic.diagnosis

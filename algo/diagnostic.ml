@@ -42,6 +42,10 @@ let print_request ?(pp=CudfAdd.print_package) = function
   |PackageList pl -> String.concat "," (List.map (pp ~short:true) pl)
   |Proxy -> ""
 
+let is_solution = function
+  |{result = Success _ } -> true
+  |{result = Failure _ } -> false
+
 let print ?(pp=CudfAdd.print_package) ?(explain=false) oc result =
   match result,explain with
   |{ result = Failure (_) ; request = r },false ->
