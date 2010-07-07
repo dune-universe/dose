@@ -10,7 +10,6 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-
 open ExtLib
 open Debian
 open Common
@@ -18,71 +17,79 @@ module Src = Debian.Sources
 module Deb = Debian.Packages
 
 module Options = struct
-  let show_successes = ref true
-  let show_failures = ref true
-  let explain_results = ref false
-  let output_xml= ref false
-  let arch = ref ""
+  open OptParse
+
+  let debug = StdOpt.store_true ()
+  let successes = StdOpt.store_true ()
+  let failures = StdOpt.store_true ()
+  let explain = StdOpt.store_true ()
+  let xml = StdOpt.str_option ()
+  let architecture = StdOpt.str_option ()
+
+  let showall () = (Opt.get successes) && (Opt.get failures)
+  let onlyfail () = (Opt.get failures) && not (Opt.get successes)
+  let onlysucc () = (Opt.get successes) && not (Opt.get failures)
+
+  let description = "Report the broken packages in a package list"
+  let options = OptParser.make ~description ()
+
+  open OptParser
+  add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
+  add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
+  add options ~short_name:'f' ~long_name:"failures" ~help:"Only show failures" failures;
+  add options ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" successes;
+  add options ~short_name:'a' ~long_name:"architecture" ~help:"" architecture;
+  add options ~long_name:"xml" ~help:"Output results in XML format" xml;
 end
-
-let usage = Printf.sprintf "usage: %s [-options] uri" Sys.argv.(0) ;;
-
-let options = [
-  ("--arch", Arg.String (fun s -> Options.arch := s), "Specify the architecture.");
-  ("--explain", Arg.Set Options.explain_results, "Explain the results");
-  ("--failures", Arg.Clear Options.show_successes, "Only show failures");
-  ("--successes", Arg.Clear Options.show_failures, "Only show successes");
-  ("--xml", Arg.Set Options.output_xml, "Output results in XML format");
-  ("--debug", Arg.Unit (fun () -> Util.set_verbosity Util.Summary), "Print debug information");
-];;
-
+                          
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
-  let files = ref [] in
-  let _ =
-    try Arg.parse options (fun f -> files := !files @ [f] ) usage
-    with Arg.Bad s -> failwith s
-  in
-  if List.length !files < 2 then begin
-    Arg.usage options (usage ^ "\nNo input file specified");
-    exit 2
-  end;
+  let posargs = OptParse.OptParser.parse_argv Options.options in
+  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
+  if not(OptParse.Opt.is_set Options.architecture) then begin
+    Printf.eprintf "--architecture must be specified\n";
+    exit 1;
+  end ;
 
-  Printf.eprintf "Parsing and normalizing...%!" ;
-  let pkglist = Deb.input_raw [List.hd !files] in
+  let pkglist = Deb.input_raw [List.hd posargs] in
   let srclist = 
-    let l = Src.input_raw (List.tl !files) in
-    Src.sources2packages !Options.arch l 
+    let l = Src.input_raw (List.tl posargs) in
+    Src.sources2packages (OptParse.Opt.get Options.architecture) l 
   in
   let tables = Debcudf.init_tables (srclist @ pkglist) in
  
   let sl = List.map (fun pkg -> Debcudf.tocudf tables pkg) srclist in
   let l = List.fold_left (fun acc pkg -> (Debcudf.tocudf tables pkg)::acc) sl pkglist in
   let universe = Cudf.load_universe l in
-  Printf.eprintf "done\n%!" ;
 
-  Printf.eprintf "Init solver...%!" ;
-  let solver = Depsolver.load universe in
-  Printf.eprintf "done\n%!" ;
-
-  let i = ref 0 in
-  let result_printer = function
-    |{Diagnostic.result = Diagnostic.Failure (_) } when !Options.show_successes -> incr i
-    |{Diagnostic.result = Diagnostic.Failure (_) } as r -> (
-        incr i;
-        Diagnostic.print ~explain:!Options.explain_results stdout r )
-    |r when !Options.show_failures -> ()
-    |r -> Diagnostic.print ~explain:!Options.explain_results stdout r
+  let from_cudf pkg =
+    let (p,i) = (pkg.Cudf.package,pkg.Cudf.version) in
+    let v = Debian.Debcudf.get_real_version tables (p,i) in
+    (p,v)
   in
 
-  Printf.eprintf "Solving...\n%!" ;
+  let print_package ?(short=false) pkg =
+    let (p,v) = from_cudf pkg in
+    let (_,psource) = String.replace ~str:p ~sub:"source---" ~by:"" in
+    Printf.sprintf "(%s,%s)" psource v
+  in
 
-  List.iter (fun pkg ->
-      let d = Depsolver.edos_install solver pkg in
-      result_printer d
-  ) sl
-  ;
-  Printf.eprintf "Broken Packages: %d\n" !i
+  let result_printer r = 
+    match Diagnostic.is_solution r with
+    |true when Options.onlyfail () -> ()
+    |false when Options.onlysucc () -> ()
+    |_ when Options.showall () ->
+        Diagnostic.print ~pp:print_package ~explain:(OptParse.Opt.get Options.explain) stdout r
+    |true when Options.onlysucc () ->
+        Diagnostic.print ~pp:print_package ~explain:(OptParse.Opt.get Options.explain) stdout r
+    |false when Options.onlyfail () ->
+        Diagnostic.print ~pp:print_package ~explain:(OptParse.Opt.get Options.explain) stdout r
+    |_ -> ()
+  in
+
+  Util.print_info "Solving..." ;
+  let i = Depsolver.listcheck ~callback:result_printer universe sl in
+  Printf.eprintf "Broken Packages: %d\n" i
 ;;
 
 main () ;;

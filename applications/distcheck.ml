@@ -56,6 +56,13 @@ let main () =
     Printf.sprintf "(%s,%s)" p v
   in
 
+(*
+  let print_package_xml ?(short=false) pkg =
+    let (p,v) = from_cudf pkg in
+    Printf.sprintf "<package package=\"%s\" architecture=\"%s\" version=\"%s\" result=\"success\"/>" p a v r
+  in
+*)
+
   let result_printer = function
     (* print all *)
     |{Diagnostic.result = Diagnostic.Success (_) } as r when Options.showall () ->
