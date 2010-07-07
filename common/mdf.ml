@@ -52,9 +52,10 @@ let __load maps universe =
           List.fold_left (fun (l1,l2,l3) vpkg ->
             let dl = maps.who_provides vpkg in
             let el =
-              List.filter_map(fun p ->
+              List.map(fun p ->
                 (* remove self provides *)
-                let i = to_sat p in if i <> id then Some i else None
+                (* let i = to_sat p in if i <> id then Some i else None *)
+                to_sat p
               ) dl 
             in
             (vpkg::l1,el @ l2, dl @ l3)

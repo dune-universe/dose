@@ -28,6 +28,7 @@ let f_strongdeps_simple = "tests/strongdep-simple.cudf"
 let f_strongdeps_conflict = "tests/strongdep-conflict.cudf"
 let f_strongdeps_cycle = "tests/strongdep-cycle.cudf"
 let f_strongdeps_conj = "tests/strongdep-conj.cudf"
+let f_selfprovide = "tests/selfprovide.cudf"
 
 let (universe,request) =
   let (_,univ,request) = Cudf_parser.parse_from_file f_legacy in
@@ -73,6 +74,16 @@ let test_distribcheck =
     in
     let i = Depsolver.univcheck universe in
     assert_equal 20 i
+  ) 
+
+let test_selfprovide =
+  "distribcheck" >:: (fun _ -> 
+    let universe =
+      let (_,pl,_) = Cudf_parser.parse_from_file f_selfprovide in
+      Cudf.load_universe pl
+    in
+    let i = Depsolver.univcheck universe in
+    assert_equal 0 i
   ) 
 
 let test_trim =
@@ -160,6 +171,7 @@ let test_depsolver =
     test_coinstall ;
     test_trim ;
     test_distribcheck ;
+    test_selfprovide ;
     test_dependency_closure ;
     (* test_dependency_closure_graph ; *)
     test_reverse_dependencies ;
