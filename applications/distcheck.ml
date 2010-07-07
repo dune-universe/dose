@@ -21,6 +21,7 @@ module Options = struct
   let failures = StdOpt.store_true ()
   let explain = StdOpt.store_true ()
   let xml = StdOpt.str_option ()
+  let checkonly = StdOpt.str_option ()
 
   let showall () = (Opt.get successes) && (Opt.get failures)
   let onlyfail () = (Opt.get failures) && not (Opt.get successes)
@@ -34,6 +35,7 @@ module Options = struct
   add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
   add options ~short_name:'f' ~long_name:"failures" ~help:"Only show failures" failures;
   add options ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" successes;
+  add options ~long_name:"checkonly" ~help:"Check only these package" checkonly;
   add options ~long_name:"xml" ~help:"Output results in XML format" xml;
 end
 
@@ -78,7 +80,18 @@ let main () =
   Util.print_info "Solving..." ;
   let timer = Util.Timer.create "Solver" in
   Util.Timer.start timer;
-  let i = Depsolver.univcheck ~callback:result_printer universe in
+  let i =
+    if OptParse.Opt.is_set Options.checkonly then 
+      let pkglist = 
+        List.flatten (
+          List.map (Cudf.lookup_packages universe)
+          (Str.split (Str.regexp ",") (OptParse.Opt.get Options.checkonly))
+        )
+      in
+      Depsolver.listcheck ~callback:result_printer universe pkglist
+    else
+      Depsolver.univcheck ~callback:result_printer universe 
+  in
   ignore(Util.Timer.stop timer ());
   Printf.eprintf "Broken Packages: %d\n%!" i
 ;;

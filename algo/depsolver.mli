@@ -48,8 +48,8 @@ val univcheck : ?callback:(Diagnostic.diagnosis -> unit) -> Cudf.universe -> int
   @return the number of broken packages
  *)
 
-(* val listcheck :
-  ?callback:(Diagnostic.diagnosis -> unit) -> solver -> Cudf.package list -> int *)
+val listcheck : ?callback:(Diagnostic.diagnosis -> unit) -> 
+  Cudf.universe -> Cudf.package list -> int 
 
 (** [dependency_closure universe l] compute the dependencies closure 
     of the give package list.

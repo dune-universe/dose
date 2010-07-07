@@ -89,6 +89,16 @@ let univcheck ?callback universe =
       let callback_int (res,req) = f (diagnosis maps res req) in
       Depsolver_int.univcheck ~callback:callback_int (s.mdf,s.solver)
 
+let listcheck ?callback universe pkglist =
+  let mdf = Mdf.load_from_universe universe in
+  let maps = mdf.Mdf.maps in
+  let idlist = List.map maps.map#vartoint pkglist in
+  match callback with
+  |None -> Depsolver_int.listcheck mdf idlist
+  |Some f ->
+      let callback_int (res,req) = f (diagnosis maps res req) in
+      Depsolver_int.listcheck ~callback:callback_int mdf idlist
+
 let edos_install s pkg =
   let maps = s.mdf.Mdf.maps in
   let req = Diagnostic_int.Sng (maps.map#vartoint pkg) in
