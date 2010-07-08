@@ -12,6 +12,7 @@
 
 open Debian
 open Common
+open Diagnostic
 
 module Options = struct
   open OptParse
@@ -53,32 +54,25 @@ let main () =
 
   let print_package ?(short=false) pkg =
     let (p,v) = from_cudf pkg in
-    Printf.sprintf "(%s,%s)" p v
+    Printf.sprintf "%s (= %s)" p v
   in
 
-(*
-  let print_package_xml ?(short=false) pkg =
-    let (p,v) = from_cudf pkg in
-    Printf.sprintf "<package package=\"%s\" architecture=\"%s\" version=\"%s\" result=\"success\"/>" p a v r
-  in
-*)
-
-  let result_printer = function
+  let result_printer pp (printer : Distchecklib.print_t) = function
     (* print all *)
-    |{Diagnostic.result = Diagnostic.Success (_) } as r when Options.showall () ->
-       Diagnostic.print ~pp:print_package stdout r
-    |{Diagnostic.result = Diagnostic.Failure (_) } as r when Options.showall () ->
-        Diagnostic.print ~pp:print_package ~explain:(OptParse.Opt.get Options.explain) stdout r
+    |{result = Success (_) } as r when Options.showall () ->
+        printer ~pp stdout r
+    |{result = Failure (_) } as r when Options.showall () ->
+        printer ~pp ~explain:(OptParse.Opt.get Options.explain) stdout r
 
     (* print only success - nothing to explain *)
-    |{Diagnostic.result = Diagnostic.Success (_) } as r when Options.onlysucc () ->
-        Diagnostic.print ~pp:print_package stdout r
-    |{Diagnostic.result = Diagnostic.Failure (_) } when Options.onlysucc () -> ()
+    |{result = Success (_) } as r when Options.onlysucc () ->
+        printer ~pp stdout r
+    |{result = Failure (_) } when Options.onlysucc () -> ()
 
     (* print only failures *)
-    |{Diagnostic.result = Diagnostic.Success (_) } when Options.onlyfail () -> ()
-    |{Diagnostic.result = Diagnostic.Failure (_) } as r when Options.onlyfail () -> 
-        Diagnostic.print ~pp:print_package ~explain:(OptParse.Opt.get Options.explain) stdout r
+    |{result = Success (_) } when Options.onlyfail () -> ()
+    |{result = Failure (_) } as r when Options.onlyfail () ->
+        printer ~pp ~explain:(OptParse.Opt.get Options.explain) stdout r
 
     (* nothing *)
     | _ -> ()
@@ -87,6 +81,10 @@ let main () =
   Util.print_info "Solving..." ;
   let timer = Util.Timer.create "Solver" in
   Util.Timer.start timer;
+  let callback =
+    result_printer print_package
+    (if OptParse.Opt.is_set Options.xml then Distchecklib.xml_print else Diagnostic.print)
+  in
   let i =
     if OptParse.Opt.is_set Options.checkonly then 
       let pkglist = 
@@ -95,9 +93,9 @@ let main () =
           (Str.split (Str.regexp ",") (OptParse.Opt.get Options.checkonly))
         )
       in
-      Depsolver.listcheck ~callback:result_printer universe pkglist
+      Depsolver.listcheck ~callback universe pkglist
     else
-      Depsolver.univcheck ~callback:result_printer universe 
+      Depsolver.univcheck ~callback universe 
   in
   ignore(Util.Timer.stop timer ());
   Printf.eprintf "Broken Packages: %d\n%!" i

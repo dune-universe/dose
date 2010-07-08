@@ -41,7 +41,9 @@ module Options = struct
   add options ~short_name:'a' ~long_name:"architecture" ~help:"" architecture;
   add options ~long_name:"xml" ~help:"Output results in XML format" xml;
 end
-                          
+
+open Diagnostic
+
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
@@ -71,24 +73,36 @@ let main () =
   let print_package ?(short=false) pkg =
     let (p,v) = from_cudf pkg in
     let (_,psource) = String.replace ~str:p ~sub:"source---" ~by:"" in
-    Printf.sprintf "(%s,%s)" psource v
+    Printf.sprintf "%s (= %s)" psource v
   in
 
-  let result_printer r = 
-    match Diagnostic.is_solution r with
-    |true when Options.onlyfail () -> ()
-    |false when Options.onlysucc () -> ()
-    |_ when Options.showall () ->
-        Diagnostic.print ~pp:print_package ~explain:(OptParse.Opt.get Options.explain) stdout r
-    |true when Options.onlysucc () ->
-        Diagnostic.print ~pp:print_package ~explain:(OptParse.Opt.get Options.explain) stdout r
-    |false when Options.onlyfail () ->
-        Diagnostic.print ~pp:print_package ~explain:(OptParse.Opt.get Options.explain) stdout r
-    |_ -> ()
+  let result_printer pp (printer : Distchecklib.print_t) = function
+    (* print all *)
+    |{result = Success (_) } as r when Options.showall () ->
+        printer ~pp stdout r
+    |{result = Failure (_) } as r when Options.showall () ->
+        printer ~pp ~explain:(OptParse.Opt.get Options.explain) stdout r
+
+    (* print only success - nothing to explain *)
+    |{result = Success (_) } as r when Options.onlysucc () ->
+        printer ~pp stdout r
+    |{result = Failure (_) } when Options.onlysucc () -> ()
+
+    (* print only failures *)
+    |{result = Success (_) } when Options.onlyfail () -> ()
+    |{result = Failure (_) } as r when Options.onlyfail () ->
+        printer ~pp ~explain:(OptParse.Opt.get Options.explain) stdout r
+
+    (* nothing *)
+    | _ -> ()
   in
 
   Util.print_info "Solving..." ;
-  let i = Depsolver.listcheck ~callback:result_printer universe sl in
+  let callback =
+    result_printer print_package 
+    (if OptParse.Opt.is_set Options.xml then Distchecklib.xml_print else Diagnostic.print)
+  in
+  let i = Depsolver.listcheck ~callback universe sl in
   Printf.eprintf "Broken Packages: %d\n" i
 ;;
 
