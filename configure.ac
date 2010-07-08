@@ -1,5 +1,5 @@
 
-AC_INIT(dose3, 0.7, pietro.abate@pps.jussieu.fr)
+AC_INIT(dose3, 0.7.1, pietro.abate@pps.jussieu.fr)
 
 AC_PROG_OCAML
 if test "$OCAMLC" = "no"; then
@@ -89,7 +89,8 @@ AC_SUBST(HAS_RPM)
 if test "$HAS_RPM" = "yes" ; then
   AC_MSG_NOTICE([RPM support enabled])
   AC_CHECK_HEADERS([rpm/rpmlib.h],,AC_MSG_ERROR([missing rpmlib.h]))
-  AC_CHECK_HEADERS([rpm/rpmio.h],,AC_MSG_ERROR([missing rpmlib.h]))
+  AC_CHECK_HEADERS([rpm/rpmio.h],,AC_MSG_ERROR([missing rpmio.h]))
+  AC_CHECK_HEADERS([rpm/rpmtypes.h],,AC_MSG_ERROR([missing rpmtypes.h]))
   INCLUDE_RPM="<rpm>: include"
   CONFIG_RPM="-DHASRPM"
   LINK_RPM="<*.native>: c_use_rpm"
