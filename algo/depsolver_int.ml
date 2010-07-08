@@ -206,9 +206,6 @@ let solve solver request =
   in
 
   match request with
-  |Diagnostic_int.Req i ->
-      let proxy_var = solver.proxy i in
-      result S.solve S.collect_reasons ~proxies:[proxy_var] proxy_var
   |Diagnostic_int.Sng i ->
       result S.solve S.collect_reasons (solver.map#vartoint i)
   |Diagnostic_int.Lst il ->

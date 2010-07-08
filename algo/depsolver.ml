@@ -45,16 +45,6 @@ let reason maps =
         Diagnostic.EmptyDependency(from_sat i,vl)
     |Diagnostic_int.Conflict(i,j) ->
         Diagnostic.Conflict(from_sat i,from_sat j)
-    |Diagnostic_int.Installed_alternatives(il) ->
-        Diagnostic.Installed_alternatives(List.map from_sat il)
-    |Diagnostic_int.To_install(v,il) ->
-        Diagnostic.To_install(v,List.map from_sat il)
-    |Diagnostic_int.To_remove(v,i) ->
-        Diagnostic.To_remove(v,from_sat i) 
-    |Diagnostic_int.To_upgrade(v,il) ->
-        Diagnostic.To_upgrade(v,List.map from_sat il)
-    |Diagnostic_int.To_upgrade_singleton(v,il) ->
-        Diagnostic.To_upgrade_singleton(v,List.map from_sat il)
   )
 
 let result maps result = 
@@ -73,7 +63,6 @@ let request maps result =
   match result with
   |Diagnostic_int.Sng i -> Diagnostic.Package (from_sat i)
   |Diagnostic_int.Lst il -> Diagnostic.PackageList (List.map from_sat il)
-  |Diagnostic_int.Req i -> Diagnostic.Proxy
 
 let diagnosis maps res req =
   let result = result maps res in

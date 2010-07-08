@@ -21,12 +21,6 @@ type reason =
   |EmptyDependency of (int * Cudf_types.vpkg list)
   |Conflict of (int * int)
 
-  |Installed_alternatives of int list
-  |To_install of (Cudf_types.vpkg * int list)
-  |To_remove of (Cudf_types.vpkg * int)
-  |To_upgrade of (Cudf_types.vpkg * int list)
-  |To_upgrade_singleton of (Cudf_types.vpkg * int list)
-
 type result =
   |Success of (unit -> int list)
   |Failure of (unit -> reason list)
@@ -34,4 +28,3 @@ type result =
 type request =
   |Sng of int
   |Lst of int list
-  |Req of int
