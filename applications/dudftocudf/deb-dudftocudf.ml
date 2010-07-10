@@ -345,16 +345,6 @@ let main () =
   Util.print_info "union";
   let l = Deb.merge installed_packages (Deb.Set.elements all_packages) in
   let tables = Debian.Debcudf.init_tables l in
-
-  let installed =
-    let h = Hashtbl.create 1031 in
-    List.iter (fun pkg ->
-      Hashtbl.add h (pkg.Deb.name,pkg.Deb.version) ()
-    ) installed_packages
-    ;
-    h
-  in
-  
   let add_extra (k,v) pkg =
     { pkg with Cudf.pkg_extra = (k,v) :: pkg.Cudf.pkg_extra } in
 
@@ -363,9 +353,8 @@ let main () =
   let pl =
     List.map (fun pkg ->
       Util.Progress.progress progressbar ;
-      let inst = Hashtbl.mem installed (pkg.Deb.name,pkg.Deb.version) in
       let info = try Some(Hashtbl.find infoH (pkg.Deb.name,pkg.Deb.version)) with Not_found -> None in
-      let cudfpkg = Debcudf.tocudf tables ~extras:extras_property ~inst:inst pkg in
+      let cudfpkg = Debcudf.tocudf tables ~extras:extras_property pkg in
       let priority = AptPref.assign_priority preferences info cudfpkg in
       let cudfpkg = add_extra ("priority", `Int priority) cudfpkg in
       cudfpkg

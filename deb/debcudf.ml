@@ -245,7 +245,10 @@ let add_essential = function
 let add_inst inst pkg =
   if inst then true 
   else
-    try ((List.assoc "status" pkg.extras) = "install ok installed")
+    try
+      match String.nsplit (List.assoc "status" pkg.extras) " " with
+      |[_;_;"installed"] -> true
+      | _ -> false
     with Not_found -> false
 
 let tocudf tables ?(extras=[]) ?(inst=false) pkg =

@@ -121,8 +121,9 @@ let merge status packages =
   let h = Hashtbl.create (List.length status) in
   List.iter (fun p ->
     try
-      if (List.assoc "status" p.extras) = "install ok installed" then
-        Hashtbl.add h (p.name,p.version) p
+      match String.nsplit (List.assoc "status" p.extras) " " with
+      |[_;_;"installed"] -> Hashtbl.add h (p.name,p.version) p
+      |_ -> ()
     with Not_found -> ()
   ) status
   ;

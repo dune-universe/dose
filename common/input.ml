@@ -52,14 +52,14 @@ let open_file file =
 IFDEF HASZIP THEN
     gzip_open_file file
 ELSE
-    failwith "gzip not supported"
+    failwith "gzip not supported. re-configure with --with-zip"
 END
   else 
   if Filename.check_suffix file ".bz2" then
 IFDEF HASBZ2 THEN
     bzip_open_file file
 ELSE
-    failwith "bzip not supported"
+    failwith "bzip not supported. re-configure with --with-bz2"
 END
   else 
     std_open_file file

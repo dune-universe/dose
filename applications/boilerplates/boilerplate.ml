@@ -16,7 +16,14 @@ let argv1 l = argv_ (fun a -> a.(0)) l
 let argv2 l = argv_ (fun a -> (a.(0),a.(1))) l
 let argv3 l = argv_ (fun a -> (a.(0),a.(1),a.(2))) l
 
-let deb_load_list ?(extras=[]) l =
+let read_deb ?(extras=[]) s =
+  let ch = IO.input_channel (open_in s) in
+  let l = Debian.Packages.parse_packages_in ~extras (fun x->x) ch in
+  let _ = IO.close_in ch in
+  l
+
+let deb_load_list ?(extras=[]) ?(status=[]) l =
+  let l = Debian.Packages.merge status l in
   let tables = Debian.Debcudf.init_tables l in
   let pkglist = List.map (Debian.Debcudf.tocudf ~extras tables) l in
   let from_cudf pkg =
@@ -45,7 +52,7 @@ IFDEF HASRPM THEN
   let to_cudf (p,v) = failwith "Nope ..." in
   (pkglist,from_cudf,to_cudf)
 ELSE
-  failwith "Rpm input not available"
+  failwith "librpm not available. re-configure with --with-rpm"
 END
 
 let rpm_load_universe l =
@@ -87,11 +94,10 @@ let rec filter init acc uris =
     |(t,_,_),_ -> (Printf.eprintf "You cannot mix different input types\n"; exit 1)
     end
 
+(* return the name of the file *)
+let unpack (_,(_,_,_,_,file),_) = file
+
 let parse_input ?(extras=[]) uris =
-  let filelist typ = function
-    |(t,(_,_,_,_,file),_) when t = typ -> file
-    |_ -> assert false
-  in
   match filter None [] uris with
   |("cudf",[("cudf",(_,_,_,_,file),_)]) ->
       cudf_load_list file
@@ -99,7 +105,7 @@ let parse_input ?(extras=[]) uris =
       let l = Debian.Packages.input_raw_ch (IO.input_channel stdin) in
       deb_load_list ~extras l
   |("deb", l) ->
-      let filelist = List.map (filelist "deb") l in
+      let filelist = List.map unpack l in
       let l = Debian.Packages.input_raw filelist in
       deb_load_list ~extras l
   |("pgsql"|"sqlite"), [(("pgsql"|"sqlite") as dbtype,info,(Some query))] ->
@@ -108,23 +114,23 @@ IFDEF HASDB THEN
         let l = Db.Backend.load_selection db (`All) in
         deb_load_list ~extras l
 ELSE
-      failwith (dbtype^" Not supported")
+      failwith (dbtype^" Not supported. re-configure with --with-??")
 END
   |("hdlist", l) -> 
 IFDEF HASRPM THEN
-      let filelist = List.map (filelist "hdlist") l in
+      let filelist = List.map unpack l in
       let l = Rpm.Packages.Hdlists.input_raw filelist in
       rpm_load_list l
 ELSE
-    failwith ("hdlist Not supported")
+    failwith ("hdlist Not supported. re-configure with --with-rpm")
 END
   |("synth", l) -> 
 IFDEF HASRPM THEN
-      let filelist = List.map (filelist "synth") l in
+      let filelist = List.map unpack l in
       let l = Rpm.Packages.Synthesis.input_raw filelist in
       rpm_load_list l
 ELSE
-    failwith ("synth Not supported")
+    failwith ("synth Not supported. re-configure with --with-rpm")
 END
     |(s,_) -> failwith (s^" Not supported")
 ;;

@@ -13,6 +13,8 @@ additional libraries (enable compilation with --with-<library>) :
  - libounit-ocaml-dev / ocaml-ounit-devel
  - librpm-dev / librpm-devel
 
+To use rpm support, dose3 needs librpm > 4.6
+
 To compile from git :
 aclocal -I m4
 autoconf
@@ -37,5 +39,6 @@ Ex :
 ./configure --without-libcudf --with-xml --with-ocamlgraph --with-zip --with-oUnit --with-bz2 --with-rpm
 
 In order to compile the a selection of applications do "make". To compile specific application
-cd applications/
-ocamlbuild $app.native
+
+$cd applications/
+$ocamlbuild $app.native

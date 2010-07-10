@@ -144,6 +144,8 @@ END
   Cudf_printer.pp_preamble ofr preamble;
   Format.pp_print_newline ofr ();
   Cudf_printer.pp_packages ofr pkglist;
+  Cudf_printer.pp_request ofr Cudf.default_request;
+  close_out oc
 ;;
 
 main ();;

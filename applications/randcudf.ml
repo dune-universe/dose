@@ -29,7 +29,7 @@ module Options = struct
   let inst_relop = StdOpt.float_option ~default:0.2 ()
   let upgradeAll = StdOpt.store_true ()
 
-  let outdir = StdOpt.str_option ()
+  let outdir = StdOpt.str_option ~default:"./" ()
   let seed = StdOpt.int_option ~default:0 ()
 
   let description = "Generate random cudf instance"
@@ -42,7 +42,7 @@ module Options = struct
   add options ~short_name:'r' ~long_name:"remove" ~help:"remove n random package" remove;
   add options ~short_name:'u' ~long_name:"upgrade" ~help:"upgrade n random package" upgrade;
   add options ~short_name:'k' ~long_name:"keep" ~help:"add keep version to n random packages" keep;
-  add options                 ~long_name:"status" ~help:"package status" status;
+  add options                 ~long_name:"status" ~help:"package status (822)" status;
   add options                 ~long_name:"upgradeAll" ~help:"generate one upgrade all cudf document" upgradeAll;
   add options                 ~long_name:"rstatus" ~help:"add installed to n random packages" rstatus;
   add options                 ~long_name:"instrelop" ~help:"relop probability for install requests" inst_relop;
@@ -80,12 +80,6 @@ let get_random ?(ver=0.0) pkglist n =
   done;
   !l
 ;;
-
-let extras_properties =
-  [("Size", ("size", `Nat (Some 0)));
-   ("Installed-Size", ("installedsize", `Nat (Some 0)))]
-;;
-let extras = List.map fst extras_properties ;;
 
 let create_pkglist pkglist =
   let (>>) f g = g f in
@@ -138,41 +132,19 @@ let to_remove_random p l =
 
 let create_cudf (preamble,universe,request)  =
   let oc = 
-    if (OptParse.Opt.is_set Options.outdir) then begin
-      let tmpfile = Filename.temp_file "rand" ".cudf" in
+    if (OptParse.Opt.get Options.documents) > 1 then begin
+      let tmpfile = Printf.sprintf "rand%d.cudf" (Random.int 1000) in
       let dirname = OptParse.Opt.get Options.outdir in
       if not(Sys.file_exists dirname) then Unix.mkdir dirname 0o777 ;
       let file = (Filename.concat dirname (Filename.basename tmpfile)) in
       Printf.printf "%s\n%!" file ;
       open_out file
-    end else stdout
+    end 
+    else stdout
   in
   Cudf_printer.pp_cudf (Format.formatter_of_out_channel oc) (preamble,universe,request);
   close_out oc
 ;;
-
-let check_request (pkglist,keeplist) (i,r,u) =
-  let deps = List.map (fun j -> [j]) (i @ u @ keeplist) in
-  let dummy = {
-    Cudf.default_package with
-    package = "dummy";
-    version = 1;
-    depends = deps;
-    conflicts = r} 
-  in
-  Printf.printf "checking (hard deps %d) (conflicts %d) (# %d)...\n%!"
-  (List.length deps) (List.length r) (List.length pkglist);
-  let universe = Cudf.load_universe (dummy::pkglist) in
-  let solver = Depsolver.load ~check:false universe in 
-  match Depsolver.edos_install solver dummy with
-  |{Diagnostic.result = Diagnostic.Success _ } -> true
-  |{Diagnostic.result = Diagnostic.Failure _ } -> false
-
-let read_deb ?(extras=[]) s =
-  let ch = IO.input_channel (open_in s) in
-  let l = Debian.Packages.parse_packages_in ~extras (fun x->x) ch in
-  let _ = IO.close_in ch in
-  l
 
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
@@ -181,37 +153,41 @@ let main () =
   if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
   Random.init (OptParse.Opt.get Options.seed);
 
-  (* we assume the status file is alwasy in dpkg format ! *)
-  let status =
-    if OptParse.Opt.is_set Options.status then 
-      read_deb (OptParse.Opt.get Options.status)
-    else []
-  in
-  let uris = posargs in
   (* raw -> cudf *)
   let (preamble,pkglist) = 
     let default_preamble =
+      let extras_properties =
+        [("Size", ("size", `Nat (Some 0)));
+         ("Installed-Size", ("installedsize", `Nat (Some 0)))]
+      in
       let l = List.map snd extras_properties in
       CudfAdd.add_properties Debian.Debcudf.preamble l
     in
-    if not(OptParse.Opt.is_set Options.status) then
-      let preamble, pkglist, _ = CudfAdd.parse_cudf (List.hd uris) in
+    if not(OptParse.Opt.is_set Options.status) && (List.length posargs) > 0 then
+      let f = 
+        match Boilerplate.filter None [] posargs with
+        |("cudf",[f]) -> Boilerplate.unpack f
+        |_ -> (Printf.eprintf "No status provided. I expect a cudf\n" ; exit 1)
+      in
+      let preamble, pkglist, _ = CudfAdd.parse_cudf f in
       match preamble with
       |None -> (default_preamble,pkglist)
       |Some preamble -> (preamble,pkglist)
     else 
-      let l = 
-        let filelist typ = function
-          |(t,(_,_,_,_,file),_) when t = typ -> file
-          |_ -> assert false
-        in
-        match Boilerplate.filter None [] uris with
-        |("deb", l) ->
-            let filelist = List.map (filelist "deb") l in
-            Debian.Packages.input_raw filelist
-        |_ -> assert false
+      (* we assume the status file is alwasy in dpkg format ! *)
+      let status =
+        if OptParse.Opt.is_set Options.status then 
+          Boilerplate.read_deb (OptParse.Opt.get Options.status)
+        else []
       in
-      let (pkglist,_,_) = Boilerplate.deb_load_list ( Debian.Packages.merge status l ) in
+      let l = 
+        match Boilerplate.filter None [] posargs with
+        |("deb", l) ->
+            let filelist = List.map Boilerplate.unpack l in
+            Debian.Packages.input_raw filelist
+        |_ -> (Printf.eprintf "Only deb files are supported\n" ; exit 1)
+      in
+      let (pkglist,_,_) = Boilerplate.deb_load_list ~status l in
       (default_preamble, pkglist)
   in
 
