@@ -18,10 +18,10 @@ open Cudf
 open Cudf_types_pp
 open Diagnostic
 
-module DGraph = Defaultgraphs.SyntacticDependencyGraph
-module G = DGraph.G
-module V = DGraph.PkgV
-module E = DGraph.PkgE
+module Graph = Defaultgraphs.SyntacticDependencyGraph
+module G = Graph.G
+module V = Graph.PkgV
+module E = Graph.PkgE
 module SG = Defaultgraphs.PackageGraph.G
 
 let enable_debug () =
@@ -43,7 +43,7 @@ let options = [
   ("--log", Arg.String (fun s -> close_out !logfile; logfile := open_out s), "Dump log information in file");
   ("--strong", Arg.Set use_strong_conflicts, "Use strong conflicts");
   ("--no-triangles", Arg.Clear remove_triangles, "Do not remove triangles");
-  ("--output", Arg.String (fun s -> oc := open_out s), "Use this file for output")
+  ("--output", Arg.String (fun s -> oc := open_out s), "Use this file for output");
 ];;
 
 let log s = 
@@ -108,7 +108,7 @@ begin
   end
   with Not_found ->
   begin
-    let c1_ht = Hashtbl.create 1024 in
+    let c1_ht = Hashtbl.create 128 in
     Hashtbl.add c1_ht c2 (ct,root);
     Hashtbl.add pair_ht c1 c1_ht;
     match ct with
@@ -131,7 +131,7 @@ begin
 end;;
 
 let add_predecessors u gr sd_gr c_pred_ht pred_ht c =
-  let visited = Hashtbl.create 128 in
+  let visited = Hashtbl.create 64 in
   let rec visit_conj acc = function
     [] -> acc
   | p::r ->
@@ -157,8 +157,8 @@ begin
     visit_conj [] [c] (* visit_conj c *)
   with Invalid_argument _ -> [] in
     Hashtbl.add c_pred_ht c c_pred;
-    Hashtbl.add pred_ht c (visit_disj c_pred (List.fold_left
-      (fun l p -> l@preceding_packages gr (V.Pkg p)) [] c_pred))
+    Hashtbl.add pred_ht c (visit_disj c_pred 
+      (List.fold_left (fun l p -> l@preceding_packages gr (V.Pkg p)) [] c_pred))
 end;;
 
 (* Yes, the debconf-i18n | debconf-english conflict has its very own special
@@ -185,7 +185,7 @@ begin
   | _ -> begin
   let c1_rest = List.filter (fun z -> not (List.mem z c2preds)) c1preds
   and c2_rest = List.filter (fun z -> not (List.mem z c1preds)) c2preds in
-  (* if c1_rest = [] && c2_rest = [] then (* all preds are common *)
+  if c1_rest = [] && c2_rest = [] then (* all preds are common *)
   begin
     log (Printf.sprintf "packages %s and %s have all-common predecessors (%s), ignoring..." (string_of_pkgname c1.package) (string_of_pkgname c2.package)
     (String.concat "," (List.map (fun c -> string_of_pkgname c.package) common)));
@@ -196,7 +196,7 @@ begin
     ) common;
     false
   end
-  else *) if List.fold_left (fun acc pred ->
+  else if List.fold_left (fun acc pred ->
     (* pred_pred: predecessors of common packages *)
     let pred_pred = preceding_packages gr (V.Pkg pred) in
       if (List.mem c1 pred_pred) && (List.mem c2 pred_pred)
@@ -244,7 +244,7 @@ begin
       let l = Debian.Packages.input_raw [file] in
       Debian.Debcudf.load_universe l
     end
-  | ("hdlist", (_,_,_,_,file),_) ->
+  (*| ("hdlist", (_,_,_,_,file),_) ->
     begin
       let l = Rpm.Packages.Hdlists.input_raw [file] in
       Rpm.Rpmcudf.load_universe l
@@ -253,7 +253,7 @@ begin
     begin
       let l = Rpm.Packages.Synthesis.input_raw [file] in
       Rpm.Rpmcudf.load_universe l
-    end
+    end *)
   | (s, _, _) -> failwith (Printf.sprintf "%s: not supported\n" s) in
   (* ignore (Util.Timer.stop timer ()); *)
   Printf.eprintf "done\n%!";
@@ -264,7 +264,7 @@ begin
   Printf.eprintf "Trimmed: %d\n" (universe_size u);
 
   Printf.eprintf "Generating dependency graphs...%!";
-  let gr = DGraph.dependency_graph u in
+  let gr = Graph.dependency_graph u in
   let sd_gr = if !use_strong_conflicts then
     Strongdeps.strongdeps_univ u
   else
@@ -329,7 +329,6 @@ begin
   else
     cl in
 
-
   Printf.eprintf "Exploding direct dependencies...%!";
   let timer = Util.Timer.create "Exploding direct dependencies" in
   Util.Timer.start timer;
@@ -338,23 +337,27 @@ begin
   List.iter (fun (c1, c2) ->
     add_predecessors u gr sd_gr c_pred_ht pred_ht c1;
     add_predecessors u gr sd_gr c_pred_ht pred_ht c2;
-      List.iter (fun c1p ->
-        List.iter (fun c2p ->
-          if c1p <> c2p then add_pair c1p c2p Strong (c1,c2)
-        ) (Hashtbl.find c_pred_ht c2)
-      ) (Hashtbl.find c_pred_ht c1);
-    ) clf;
+    List.iter (fun c1p ->
+      List.iter (fun c2p ->
+        if c1p <> c2p then add_pair c1p c2p Strong (c1,c2)
+      ) (Hashtbl.find c_pred_ht c2)
+    ) (Hashtbl.find c_pred_ht c1);
+  ) clf;
   Printf.eprintf "done\n%!";
 
-  Printf.eprintf "Adding disjunctive candidates...\n%!";
+  let x = List.length clf 
+  and i = ref 1 in
   List.iter (fun (c1, c2) ->
     let c1l = Hashtbl.find pred_ht c1
     and c2l = Hashtbl.find pred_ht c2 in
+    Printf.eprintf "[%d/%d] (%s, %s) (%d pairs): %!" !i x (string_of_pkgname c1.package) (string_of_pkgname c2.package) (List.length c1l * List.length c2l);
     List.iter (fun c1p ->
       List.iter (fun c2p ->
         if c1p <> c2p then add_pair c1p c2p (Other []) (c1,c2)
       ) c2l
     ) c1l;
+    Printf.eprintf "\n%!";
+    incr i
   ) clf;
   Printf.eprintf "done\n%!";
   ignore (Util.Timer.stop timer ());
@@ -391,24 +394,19 @@ begin
   Printf.eprintf "Found %d strong conflicts.\n%!" !nr_sc;
 
   Hashtbl.iter (fun c1 (i, c1_ht) ->
-    Printf.fprintf !oc "%d %s-%s :\n" i (string_of_pkgname c1.package) (string_of_version c1.version);
+    Printf.printf "%d %s-%s :\n" i (string_of_pkgname c1.package) (string_of_version c1.version);
     Hashtbl.iter (fun (r1, r2) cl ->
-      Printf.fprintf !oc "  %d (%s-%s <-> %s-%s)\n" (List.length cl)
+      Printf.printf "  %d (%s-%s <-> %s-%s)\n" (List.length cl)
         (string_of_pkgname r1.package) (string_of_version r1.version)
         (string_of_pkgname r2.package) (string_of_version r2.version);
       List.iter (fun (c2, ct) ->
         match ct with
-        | Explicit -> Printf.fprintf !oc "    * %s-%s (explicit)\n"
-            (string_of_pkgname c2.package) (string_of_version c2.version)
-        | Strong -> Printf.fprintf !oc "    * %s-%s (strong-dep)\n"
-            (string_of_pkgname c2.package) (string_of_version c2.version)
-        | Other f -> Printf.fprintf !oc "    * %s-%s (other-dep)\n%s\n"
-            (string_of_pkgname c2.package) (string_of_version c2.version)
+        | Explicit -> Printf.printf "    * %s-%s (explicit)\n" (string_of_pkgname c2.package) (string_of_version c2.version)
+        | Strong -> Printf.printf "    * %s-%s (strong-dep)\n" (string_of_pkgname c2.package) (string_of_version c2.version)
+        | Other f -> Printf.printf "    * %s-%s (other-dep)\n%s\n" (string_of_pkgname c2.package) (string_of_version c2.version)
           (String.concat "\n" 
             (List.map (function 
-              | Dependency (d, l) -> Printf.sprintf
-                  "      - dependency: %s-%s -> %s"
-                  (string_of_pkgname d.package) (string_of_version c2.version) 
+              | Dependency (d, _, l) -> Printf.sprintf "      - dependency: %s-%s -> %s" (string_of_pkgname d.package) (string_of_version c2.version) 
                 (String.concat " | " (List.map (fun d' -> Printf.sprintf "%s-%s" (string_of_pkgname d'.package) (string_of_version d'.version)) l))
               | EmptyDependency (d, l) -> Printf.sprintf "     - empty dependency: %s-%s -> %s" (string_of_pkgname d.package) (string_of_version d.version)
                 (String.concat " | " (List.map string_of_vpkg l))
