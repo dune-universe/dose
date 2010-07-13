@@ -21,13 +21,22 @@ module Options = struct
   let debug = StdOpt.store_true ()
   let outdir = StdOpt.str_option ()
   let problemid = StdOpt.str_option ()
+  let distribution = StdOpt.str_option () ;;
 
-  let description = "Convert Caixa Magica Dudf files to Cudf format"
+  let () = 
+    match Filename.basename(Sys.argv.(0)) with
+    |"caixa-dudftocudf" -> Opt.set distribution "caixa"
+    |"mandriva-dudftocudf" -> Opt.set distribution "mandriva"
+    |_ -> ()
+  ;;
+
+  let description = "Convert Rpm-based Dudf files to Cudf format"
   let options = OptParser.make ~description:description ()
 
   open OptParser ;;
   add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
   add options ~short_name:'o' ~long_name:"outdir" ~help:"Output directory" outdir;
+  add options                 ~long_name:"distr" ~help:"[caixa | mandriva]" distribution;
   add options                 ~long_name:"id" ~help:"Problem id" problemid;
 end
 
@@ -167,11 +176,16 @@ let main () =
 
   let dudfdoc = Dudfxml.parse input_file in
 
-  if not(Pcre.pmatch ~rex:(Pcre.regexp "[Cc]aixa") dudfdoc.distribution) then begin
-    Printf.eprintf
-    "Input dudf document not in Caixa's dudf format (but %s)\n" dudfdoc.distribution;
-    exit 1
-  end;
+  if not(OptParse.Opt.is_set Options.distribution) then
+    if Pcre.pmatch ~rex:(Pcre.regexp "[Cc]aixa") dudfdoc.distribution then 
+      OptParse.Opt.set Options.distribution "caixa"
+    else if Pcre.pmatch ~rex:(Pcre.regexp "[Mm]andriva") dudfdoc.distribution then
+      OptParse.Opt.set Options.distribution "mandriva"
+    else begin
+      Printf.eprintf
+      "Unsupported dudf format (%s)\n" dudfdoc.distribution;
+      exit 1
+    end;
 
   let uid = dudfdoc.uid in
   let status =
@@ -238,41 +252,47 @@ let main () =
   (* duplicated code from deb-dudfcudf *)
   Util.print_info "request";
   let request =
-    let mapver = function
-      |`Pkg p -> (p,None)
-      |`PkgVer (p,v) -> begin
-          try (p,Some(`Eq,Rpm.Rpmcudf.get_cudf_version tables (p,v)))
-          with Not_found -> failwith (Printf.sprintf "There is no version %s of package %s" p v)
-      end
-      |`PkgDst (p,d) ->
-            failwith (Printf.sprintf "There is no package %s in release %s " p d)
-    in
-    let request_id =
-      if OptParse.Opt.is_set Options.problemid then OptParse.Opt.get Options.problemid
-      else if uid <> "" then uid
-      else (string_of_int (Random.bits ()))
-    in
-    let parsed_action =
-      match dudfdoc.metaInstaller.name with
-      |"apt" -> Debian.Apt.parse_request_apt action
-      |s -> failwith("Unsupported meta installer "^s)
-    in
-    match parsed_action with
-    |Debian.Apt.Upgrade (Some (suite))
-    |Debian.Apt.DistUpgrade (Some (suite)) ->
-        let il = Rpm.Packages.Set.fold (fun pkg acc -> `PkgDst (pkg.Rpm.Packages.name,suite) :: acc) installed_packages [] in
-        let l = List.map mapver il in
-        { Cudf.request_id = request_id ; install = l ; remove = [] ; upgrade = [] ; req_extra = [] ; }
-    |Debian.Apt.Install l ->
-        let l = List.map mapver l in
-        { Cudf.request_id = request_id ; install = l ; remove = [] ; upgrade = [] ; req_extra = [] ; }
-    |Debian.Apt.Remove l ->
-        let l = List.map (fun (`Pkg p) -> (p,None) ) l in
-        { Cudf.request_id = request_id ; install = [] ; remove = l ; upgrade = [] ; req_extra = [] ;}
-    |Debian.Apt.Upgrade None ->
-        { Cudf.request_id = request_id ; install = [] ; remove = [] ; upgrade = [] ; req_extra = [] ; }
-    |Debian.Apt.DistUpgrade None ->
-        { Cudf.request_id = request_id ; install = [] ; remove = [] ; upgrade = [] ; req_extra = [] ; }
+    match OptParse.Opt.get Options.distribution with
+    |"caixa" ->
+        begin
+          let mapver = function
+            |`Pkg p -> (p,None)
+            |`PkgVer (p,v) -> begin
+                try (p,Some(`Eq,Rpm.Rpmcudf.get_cudf_version tables (p,v)))
+                with Not_found -> failwith (Printf.sprintf "There is no version %s of package %s" p v)
+            end
+            |`PkgDst (p,d) ->
+                  failwith (Printf.sprintf "There is no package %s in release %s " p d)
+          in
+          let request_id =
+            if OptParse.Opt.is_set Options.problemid then OptParse.Opt.get Options.problemid
+            else if uid <> "" then uid
+            else (string_of_int (Random.bits ()))
+          in
+          let parsed_action =
+            match dudfdoc.metaInstaller.name with
+            |"apt" -> Debian.Apt.parse_request_apt action
+            |s -> failwith("Unsupported meta installer "^s)
+          in
+          match parsed_action with
+          |Debian.Apt.Upgrade (Some (suite))
+          |Debian.Apt.DistUpgrade (Some (suite)) ->
+              let il = Rpm.Packages.Set.fold (fun pkg acc -> `PkgDst (pkg.Rpm.Packages.name,suite) :: acc) installed_packages [] in
+              let l = List.map mapver il in
+              { Cudf.request_id = request_id ; install = l ; remove = [] ; upgrade = [] ; req_extra = [] ; }
+          |Debian.Apt.Install l ->
+              let l = List.map mapver l in
+              { Cudf.request_id = request_id ; install = l ; remove = [] ; upgrade = [] ; req_extra = [] ; }
+          |Debian.Apt.Remove l ->
+              let l = List.map (fun (`Pkg p) -> (p,None) ) l in
+              { Cudf.request_id = request_id ; install = [] ; remove = l ; upgrade = [] ; req_extra = [] ;}
+          |Debian.Apt.Upgrade None ->
+              { Cudf.request_id = request_id ; install = [] ; remove = [] ; upgrade = [] ; req_extra = [] ; }
+          |Debian.Apt.DistUpgrade None ->
+              { Cudf.request_id = request_id ; install = [] ; remove = [] ; upgrade = [] ; req_extra = [] ; }
+        end
+    |"mandriva" -> Cudf.default_request
+    |_ -> assert false
   in
 
   Util.print_info "dump";

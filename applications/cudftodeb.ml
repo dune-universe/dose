@@ -189,7 +189,7 @@ let main () =
 
   pp_packages status_ofr status;
 
-  if request <> None then
+  if not(Option.is_none request) then
     pp_request request_ofr (Option.get request);
 
   close_out status_oc ; close_out packages_oc ; close_out request_oc
