@@ -244,7 +244,7 @@ begin
       let l = Debian.Packages.input_raw [file] in
       Debian.Debcudf.load_universe l
     end
-  (*| ("hdlist", (_,_,_,_,file),_) ->
+  | ("hdlist", (_,_,_,_,file),_) ->
     begin
       let l = Rpm.Packages.Hdlists.input_raw [file] in
       Rpm.Rpmcudf.load_universe l
@@ -253,7 +253,22 @@ begin
     begin
       let l = Rpm.Packages.Synthesis.input_raw [file] in
       Rpm.Rpmcudf.load_universe l
-    end *)
+    end
+  | ("cudf",  (_,_,_,_,file),_) ->
+      begin
+	let cudf_load_list file =
+	  let _, pkglist, _ = CudfAdd.parse_cudf file in
+	  let from_cudf pkg = (pkg.Cudf.package,string_of_int pkg.Cudf.version) in
+	  let to_cudf (p,v) = (p,int_of_string v) in
+	  (pkglist,from_cudf,to_cudf)
+	in
+
+	let cudf_load_universe file =
+	  let (l,f,t) = cudf_load_list file in
+	  (Cudf.load_universe l, f, t)
+	in
+	let (u,_,_) = cudf_load_universe file in u
+      end
   | (s, _, _) -> failwith (Printf.sprintf "%s: not supported\n" s) in
   (* ignore (Util.Timer.stop timer ()); *)
   Printf.eprintf "done\n%!";
