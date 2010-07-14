@@ -52,7 +52,7 @@ let rel_of_string = function
   |s -> (Printf.eprintf "Invalid op %s" s ; assert false)
 
 let parse_vpkg vpkg =
-  match Pcre.full_split ~rex:(Pcre.regexp "<=|>=|=|<|>") vpkg with
+  match Pcre.full_split ~rex:(Pcre.regexp " <=| >=| =| <| >") vpkg with
   |(Pcre.Text n)::_ when String.starts_with n "rpmlib(" -> None
   |[Pcre.Text n] -> Some(String.strip n,(`ALL,""))
   |[Pcre.Text n;Pcre.Delim sel;Pcre.Text v] ->
@@ -64,7 +64,7 @@ let parse_string = function
   |Json_type.Int i -> string_of_int i
   |Json_type.Null -> ""
   |Json_type.Bool s -> string_of_bool s
-  |_ -> assert false
+  |_ as s -> (Printf.eprintf "%s\n%!" (Json_io.string_of_json s) ; assert false)
 
 let to_list = function
   |Json_type.Array l ->
