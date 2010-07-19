@@ -103,6 +103,8 @@ let create_pkglist pkglist =
       (fun pkg -> if pkg.installed then installed := pkg::!installed ; pkg)
     ) pkglist 
   in
+  if (List.length !installed) = 0 then
+    Util.print_warning "No installed packages in this universe";
   (!installed, l, Cudf.load_universe l)
 ;;
 
@@ -143,7 +145,7 @@ let create_cudf (preamble,universe,request)  =
     else stdout
   in
   Cudf_printer.pp_cudf (Format.formatter_of_out_channel oc) (preamble,universe,request);
-  close_out oc
+  if oc <> stdout then close_out oc
 ;;
 
 let main () =
@@ -200,7 +202,7 @@ let main () =
   
   let rp = OptParse.Opt.get Options.rem_relop in
   let ip = OptParse.Opt.get Options.inst_relop in
-  for j = 0 to (OptParse.Opt.get Options.documents) do
+  for j = 0 to (OptParse.Opt.get Options.documents) - 1 do
     let rec one () = 
       (* we install with 20% probability to add a relop to the request
        * and we remove with 10% probability to add a relop to the request *)

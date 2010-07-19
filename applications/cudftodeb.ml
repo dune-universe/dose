@@ -109,8 +109,8 @@ let pp_packages fmt =
 ;;
 
 let pp_request fmt req =
-  let inst = List.map (fun (name,constr) -> (""^name,constr)) req.install in
-  let rem = List.map (fun (name,constr) -> ("-"^name,constr)) req.remove in
+  let inst = List.map (fun (name,constr) -> (name^"+",constr)) req.install in
+  let rem = List.map (fun (name,constr) -> (name^"-",constr)) req.remove in
   let all = (inst @ rem @ req.upgrade) in
   let pp_vpkg fmt (c : Cudf_types.vpkg) = match c with
     |(name, None) -> pp_pkgname fmt name

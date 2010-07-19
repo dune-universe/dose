@@ -6,8 +6,6 @@ aptroot='/var/tmp/fakeapt'
 
 fakeapt() {
   action=$1
-  shift 1
-  request=$@
   apt-get -s \
       -o APT::Get::List-Cleanup="false" \
       -o Dir::Cache=$aptroot \
@@ -17,7 +15,7 @@ fakeapt() {
       -o APT::Install-Recommends="false" \
       -o APT::Architecture="amd64" \
       -o APT::Immediate-Configure="false" \
-      $action $request
+      $action `cat Request`
 }
 
       #-o Aptitude::CmdLine::Fix-Broken="true" \
@@ -94,7 +92,7 @@ mkdir -p $aptroot/archives/partial
 mkdir -p $aptroot/lists/partial
 
 initapt $packages $status
-#fakeapt $action $request
+fakeapt $action
 #fixfakeaptitude
-fakeaptitude $action
+#fakeaptitude $action
 cleanup
