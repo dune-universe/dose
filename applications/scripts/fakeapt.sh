@@ -22,7 +22,7 @@ fakeapt() {
 
 fakeaptitude() {
   action=$1
-  aptitude -s \
+  echo "\n" | aptitude -s \
       -o APT::Get::List-Cleanup="false" \
       -o Dir::Cache=$aptroot \
       -o Dir::State=$aptroot \
@@ -32,6 +32,8 @@ fakeaptitude() {
       -o APT::Install-Recommends="false" \
       -o APT::Immediate-Configure="false" \
       -o Aptitude::CmdLine::Assume-Yes="true" \
+      -o Aptitude::Auto-Fix-Broken="true" \
+      -o Aptitude::ProblemResolver::Discard-Null-Solution="false" \
       --allow-untrusted -v -y --full-resolver $action `cat Request`
 }
 
@@ -92,7 +94,17 @@ mkdir -p $aptroot/archives/partial
 mkdir -p $aptroot/lists/partial
 
 initapt $packages $status
-fakeapt $action
+case "$1" in
+  apt-get)
+    fakeapt $action;
+    ;;
+  aptitude)
+    fakeaptitude $action;
+    ;;
+  *)
+    echo "solver not specified";
+    ;;
+esac
 #fixfakeaptitude
 #fakeaptitude $action
 cleanup

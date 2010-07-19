@@ -98,6 +98,8 @@ let pp_package fmt pkg =
     pp ("Provides", string_of_vpkglist (pkg.provides :> Cudf_types.vpkg list));
   if pkg.installed <> Cudf.default_package.installed then
     pp ("Status", "install ok installed");
+  if pkg.keep = `Keep_package then
+    pp ("Essential", "yes");
   pp ("Architecture", "amd64");
   let p = Cudf_types_pp.string_of_pkgname pkg.package in
   let v = Cudf_types_pp.string_of_version pkg.version in
