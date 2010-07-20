@@ -8,12 +8,14 @@ module Options = struct
   open OptParse
 
   let debug = StdOpt.store_true ()
+  let architecture = StdOpt.str_option ~default:"amd64" ()
 
   let description = "Report the broken packages in a package list"
   let options = OptParser.make ~description ()
 
   open OptParser
   add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
+  add options ~short_name:'a' ~long_name:"arch" ~help:"Set architecture" architecture;
 end
 
 let pp_pkgname fmt name = Format.fprintf fmt "%s" name
@@ -100,7 +102,7 @@ let pp_package fmt pkg =
     pp ("Status", "install ok installed");
   if pkg.keep = `Keep_package then
     pp ("Essential", "yes");
-  pp ("Architecture", "amd64");
+  pp ("Architecture", OptParse.Opt.get Options.architecture);
   let p = Cudf_types_pp.string_of_pkgname pkg.package in
   let v = Cudf_types_pp.string_of_version pkg.version in
   pp ("Filename", "/var/fake"^p^v);

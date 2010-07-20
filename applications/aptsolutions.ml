@@ -53,7 +53,6 @@ let main () =
     |(s,_,_) -> failwith (s^" Not supported")
   in
 
-  Util.print_info "aaA0";
   let (install,remove) =
     let ch = Input.open_file apt in
     let (install,remove) = (ref [] , ref []) in
@@ -88,7 +87,11 @@ let main () =
     (!install,!remove)
   in
 
-  Util.print_info "aaA1";
+  if (List.length install) = 0 && (List.length remove) = 0 then begin
+    Printf.eprintf "Empty solution or not a solution\n";
+    exit 0
+  end;
+
   let t = Hashtbl.create (List.length universe) in
   List.iter (fun pkg ->
     let n = pkg.Cudf.package in
@@ -101,23 +104,18 @@ let main () =
     Hashtbl.add t (n,v) pkg
   ) universe;
 
-  Util.print_info "aaA2";
   List.iter (fun (n,v) ->
     let pkg = try Hashtbl.find t (n,v) with Not_found -> (Printf.eprintf "%s
     %s\n%!" n v ; assert false ) in
     Hashtbl.replace t (n,v) {pkg with Cudf.installed = false }
   ) remove ;
 
-  Util.print_info "aaA3";
   List.iter (fun (n,v) ->
-    Util.print_info "aaA4";
     let pkg = try Hashtbl.find t (n,v) with Not_found -> (Printf.eprintf "%s
     %s\n%!" n v ; assert false )in
-    Util.print_info "aaA4";
     Hashtbl.replace t (n,v) {pkg with Cudf.installed = true }
   ) install ;
 
-  Util.print_info "aaA4";
   let l = Hashtbl.fold (fun k v acc -> if v.Cudf.installed then v::acc else acc) t [] in
   if not (Option.is_none preamble) then
       print_endline (Cudf_printer.string_of_preamble (Option.get preamble));

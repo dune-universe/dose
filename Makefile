@@ -23,6 +23,14 @@ clean:
 
 distclean: clean
 	rm -Rf Makefile.config aclocal.m4 config.log config.status autom4te.cache/
+	rm _tags
+	rm algo/_tags algo/algo.mlpack
+	rm applications/_tags
+	rm applications/boilerplates/_tags
+	rm common/_tags
+	rm db/_tags db/db.mlpack
+	rm deb/_tags
+	rm rpm/_tags
 
 _build/%:
 	$(OCAMLBUILD) $(OBFLAGS) $*

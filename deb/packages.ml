@@ -20,6 +20,7 @@ open Format822
 type package = {
   name : name ;
   version : version;
+  architecture : string;
   essential : bool;
   source : (name * version option) ;
   depends : vpkg list list;
@@ -37,6 +38,7 @@ type package = {
 let default_package = {
   name = "";
   version = "";
+  architecture = "";
   essential = false;
   depends = [];
   source = ("",None);
@@ -77,6 +79,7 @@ let parse_packages_fields extras par =
       {
         name = parse_s parse_name "package";
         version = parse_s parse_version "version";
+        architecture = parse_s (fun x -> String.lowercase x) "architecture";
         essential = (try parse_s parse_essential "essential" with Not_found -> false);
         source = (try parse_s parse_source "source" with Not_found -> ("",None));
         depends = (try parse_m parse_cnf "depends" with Not_found -> []);
@@ -91,12 +94,18 @@ let parse_packages_fields extras par =
         extras = parse_e extras;
       }
   in
-  (* this package doesn't either have version or name *)
-  try Some(exec ()) with Not_found -> None 
+  (* this package doesn't either have version or name or architecture *)
+  try Some(exec ()) with Not_found -> begin
+    let p = try parse_s (fun x -> x) "package" with Not_found -> "" in
+    let v = try parse_s (fun x -> x) "version" with Not_found -> "" in
+    let a = try parse_s (fun x -> x) "architecture" with Not_found -> "" in
+    Util.print_warning "Broken Package %s-%s.%s" p v a  ;
+    None 
+  end
 
 (** parse a debian Packages file from the channel [ch] *)
 let parse_packages_in ?(extras=[]) f ch =
-  let parse_packages = parse_822_iter (parse_packages_fields extras) in
+  let parse_packages = Format822.parse_822_iter (parse_packages_fields extras) in
   parse_packages f (start_from_channel ch)
 
 (**/**)
@@ -127,8 +136,17 @@ let merge status packages =
     with Not_found -> ()
   ) status
   ;
+  let default_arch = ref "" in
   let ps = 
     List.fold_left (fun acc p ->
+      (* XXX not sure if this check for architectures should be here or
+       * somewhere else *)
+      if !default_arch = "" && p.architecture <> "all" then
+        default_arch := p.architecture
+      else if !default_arch <> p.architecture && p.architecture <> "all" then begin
+        Printf.eprintf "Mixing different architectures ! Bailing out\n";
+        exit 1
+      end;
       try Set.add (merge_aux p (Hashtbl.find h (p.name,p.version))) acc
       with Not_found -> Set.add p acc
     ) Set.empty (status @ packages)
