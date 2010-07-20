@@ -19,9 +19,9 @@ open CudfAdd
     Depsolver.trim.
 *)
 let strongconflicts universe =
-  let mdf = Mdf.load_from_universe universe in
+  let mdf = Mdf.load_from_universe (Depsolver.trim universe) in
   let maps = mdf.Mdf.maps in
-  let idlist = Cudf.fold_packages (fun l p -> (maps.map#vartoint p)::l) [] universe in
-  let l = Strongconflicts_int.strongconflicts mdf idlist in
+  (* let idlist = Cudf.fold_packages (fun l p -> (maps.map#vartoint p)::l) [] (Depsolver.trim universe) in *)
+  let l = Strongconflicts_int.strongconflicts mdf (* idlist *) in
   List.map (fun (x,y) -> (maps.map#inttovar x,maps.map#inttovar y)) l
 
