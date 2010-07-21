@@ -53,15 +53,18 @@ INSTALL_STUFF += $(TARGETS)
 INSTALL_STUFF += $(LIBS)
 
 install:
+	# install libraries
 	test -d $(LIBDIR) || mkdir -p $(LIBDIR)
 	$(INSTALL) -patch-version $(VERSION) $(NAME) $(INSTALL_STUFF)
+
+	# install applications
 	test -d $(BINDIR) || mkdir -p $(BINDIR)
-	if [ "$(OCAMLBEST)" = "native" ] ; then \
-		cp _build/applications/*.native $(BINDIR)/ ; \
-	else \
-		cp _build/applications/*.byte $(BINDIR)/ ; \
-	fi
-	@echo "Installed binaries in $(BINDIR)"
+	cd _build/applications ; \
+	for f in $$(ls *.$(OCAMLBEST)) ; do \
+		cp $$f $(BINDIR)/$${f%.$(OCAMLBEST)}; \
+	done
+
+	@echo "Installed binaries into $(BINDIR)"
 
 uninstall:
 	$(UNINSTALL) $(NAME)
