@@ -7,7 +7,7 @@ additional libraries (enable compilation with --with-<library>) :
  - libpostgresql-ocaml-dev / ocaml-postgresql-devel
  - libsqlite3-ocaml-dev / ocaml-sqlite-devel
  - libzip-ocaml-dev / ?
- - libbz2-ocaml-dev / ?
+ - libbz2-ocaml-dev and libbz2-dev / ?
  - libjson-static-camlp4-dev / ?
  - libocamlgraph-ocaml-dev / ?
  - libounit-ocaml-dev / ocaml-ounit-devel
