@@ -1,0 +1,17 @@
+description = "Dose3 libraries"
+version = "placeholder"
+
+package "common" (
+archive(byte) = "common.cma"
+requires = "extlib"
+)
+
+package "algo" (
+archive(byte) = "algo.cma"
+requires = "extlib"
+)
+
+package "debian" (
+archive(byte) = "debian.cma"
+requires = "extlib"
+)
