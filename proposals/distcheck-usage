@@ -1,0 +1,87 @@
+Proposal for usage of dose3-distcheck (for debian packages)
+===========================================================
+
+edos-debcheck [option] ...
+
+Given an input set of package stanzas, each of which in deb-control(5)
+format, checks installability of packages from the point of view of
+inter-package relations expressed in the package stanzas (depends,
+conflicts, and provides). The test set comprises the set of packages
+that are checked for installability. The test set is always a subset of
+the inputs set, it may be the same as the input set or may be further
+restricted (see the options below concerning input and test set).
+
+By default, only the number of non-installable packages in the test
+set is displayed (see "output options" for how to change this).
+
+Options
+=======
+
+Input and test set
+------------------
+
+-i, --input <file>
+  add package stanzas from <file> to the input set and the test set,
+  where '-' denotes standard input. These packages will be checked for
+  installability.
+
+-I, --input-dontcheck <file> 
+  add package stanzas from <file> to the input set only, where '-' denotes
+  standard input. These files will not be checked themselves for
+  installability but will only be used to resolve dependencies.
+
+  Options -i and -I may be repeated, however standard input may be used
+  at most once.
+
+-co, --checkonly <packagenames>
+  where <packagenames> is a comma-separated list of package names. Restrict
+  the test-set to packages whose name is in <packagenames>. The notion
+  'src:<sp>' in <packagenames> denotes the list of all packages that have
+  Source <sp>.
+
+-col, --checkonly-latest
+  restrict the test-set to packages that are in the most recent version among
+  all packages of the same name in the input set.
+
+Output
+------
+
+-f, --failures
+  print the list of non-installable packages in the test-set
+
+-s, --successes
+  print the list of installable packages in the test-set
+
+  It is possible to specify -f and -s together in order to obtain
+  installablity information for all packages in the test-set.
+
+-e, --explain
+  print an explanation in case of non-installability (only useful when
+  used in combination with -f).
+
+-q, --quit
+  be less verbose, don't show timing or progress meters.
+
+-d, --debug
+  print debugging information
+
+Info
+----
+-h, --help
+  Summary of command usage
+
+-v, --version
+  Print version
+
+
+Note: the -xml option will be dropped since we will move to an output
+format that is both human readable and machine parsable (YAML?)
+
+===========================================================================
+
+
+edos-builddebcheck:
+
+the same as for edos-debcheck, except that -i would be used for source
+packages (which go into the test set) and -I for binary packages
+(which do not go into the test set).
