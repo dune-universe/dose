@@ -18,11 +18,12 @@ lib:
 
 clean:
 	$(OCAMLBUILD) $(OBFLAGS) -clean
-	@cd deb ; $(OCAMLBUILD) $(OBFLAGS) -clean ; cd ..
-	@cd rpm ; $(OCAMLBUILD) $(OBFLAGS) -clean ; cd ..
-	@cd db ; $(OCAMLBUILD) $(OBFLAGS) -clean ; cd ..
-	@cd algo ; $(OCAMLBUILD) $(OBFLAGS) -clean ; cd ..
-	@cd applications ; $(OCAMLBUILD) $(OBFLAGS) -clean ; cd ..
+	@cd deb ; $(OCAMLBUILD) $(OBFLAGS) -clean 
+	@cd rpm ; $(OCAMLBUILD) $(OBFLAGS) -clean
+	@cd db ; $(OCAMLBUILD) $(OBFLAGS) -clean
+	@cd algo ; $(OCAMLBUILD) $(OBFLAGS) -clean
+	@cd applications ; $(OCAMLBUILD) $(OBFLAGS) -clean
+	@echo ""
 
 distclean: clean
 	rm -Rf Makefile.config aclocal.m4 config.log config.status autom4te.cache/
