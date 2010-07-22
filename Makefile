@@ -13,6 +13,9 @@ COMSRC = $(filter-out common/myocamlbuild.ml common/edosSolver.ml common/edosSol
 all:
 	CPPFLAGS="$(CPPFLAGS)" LDFLAGS="-fstack-protector" $(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
 
+lib:
+	CPPFLAGS="$(CPPFLAGS)" LDFLAGS="-fstack-protector" $(OCAMLBUILD) $(OBFLAGS) $(LIBS)
+
 clean:
 	$(OCAMLBUILD) $(OBFLAGS) -clean
 	@cd deb ; $(OCAMLBUILD) $(OBFLAGS) -clean ; cd ..

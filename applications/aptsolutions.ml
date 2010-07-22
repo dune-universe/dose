@@ -105,15 +105,28 @@ let main () =
   ) universe;
 
   List.iter (fun (n,v) ->
-    let pkg = try Hashtbl.find t (n,v) with Not_found -> (Printf.eprintf "%s
-    %s\n%!" n v ; assert false ) in
+    try let pkg = Hashtbl.find t (n,v) in
     Hashtbl.replace t (n,v) {pkg with Cudf.installed = false }
+    with Not_found -> begin
+      Printf.eprintf 
+"Something wrong in the remove request.
+Package in the solution is not present in the universe (%s,%s)" n v;
+      exit 1
+    end
   ) remove ;
 
   List.iter (fun (n,v) ->
-    let pkg = try Hashtbl.find t (n,v) with Not_found -> (Printf.eprintf "%s
-    %s\n%!" n v ; assert false )in
+    try let pkg = Hashtbl.find t (n,v) in
     Hashtbl.replace t (n,v) {pkg with Cudf.installed = true }
+    with Not_found -> begin
+      if String.starts_with n "dummy_" then ()
+      else begin
+        Printf.eprintf
+"Something wrong in the remove request. Package in the
+solution is not present in the universe (%s,%s)" n v;
+        exit 1
+      end
+    end
   ) install ;
 
   let l = Hashtbl.fold (fun k v acc -> if v.Cudf.installed then v::acc else acc) t [] in

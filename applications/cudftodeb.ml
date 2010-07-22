@@ -92,6 +92,7 @@ let pp_package fmt pkg =
   let pp = pp_property fmt in
   pp ("Package", Cudf_types_pp.string_of_pkgname pkg.package);
   pp ("Version", Cudf_types_pp.string_of_version pkg.version);
+  pp ("Architecture", OptParse.Opt.get Options.architecture);
   if pkg.depends <> Cudf.default_package.depends then
     pp ("Depends", string_of_vpkgformula pkg.depends);
   if pkg.conflicts <> Cudf.default_package.conflicts then
@@ -102,7 +103,6 @@ let pp_package fmt pkg =
     pp ("Status", "install ok installed");
   if pkg.keep = `Keep_package then
     pp ("Essential", "yes");
-  pp ("Architecture", OptParse.Opt.get Options.architecture);
   let p = Cudf_types_pp.string_of_pkgname pkg.package in
   let v = Cudf_types_pp.string_of_version pkg.version in
   pp ("Filename", "/var/fake"^p^v);
@@ -113,9 +113,21 @@ let pp_packages fmt =
 ;;
 
 let pp_request fmt req =
-  let inst = List.map (fun (name,constr) -> (name^"+",constr)) req.install in
-  let rem = List.map (fun (name,constr) -> (name^"-",constr)) req.remove in
-  let all = (inst @ rem @ req.upgrade) in
+  let inst = 
+    List.map (function
+      |(name,None) -> (name,None)
+      |(name,Some(`Eq,v)) -> (name,Some(`Eq,v))
+      |_ -> assert false
+    ) (req.install)
+  in
+  let rem = 
+    List.map (function 
+      |(name,None) -> (name^"-",None)
+      |(name,Some(`Eq,v)) -> (name^"-",Some(`Eq,v))
+      |_ -> assert false
+    ) req.remove
+  in
+  let all = inst @ rem in
   let pp_vpkg fmt (c : Cudf_types.vpkg) = match c with
     |(name, None) -> pp_pkgname fmt name
     |(name, Some (relop, v)) ->
@@ -124,11 +136,11 @@ let pp_request fmt req =
   in
   let pp_vpkglist fmt = pp_list fmt ~pp_item:pp_vpkg ~sep:" " in
   let string_of_vpkglist = string_of pp_vpkglist in
-  let s = string_of_vpkglist all in
-  Format.fprintf fmt "%s@\n" s
+  (* Printf.fprintf (open_out "Request") "%s\n" (string_of_vpkglist all) *)
+  Format.fprintf fmt "%s\n" (string_of_vpkglist all)
 ;;
 
-let convert universe =
+let convert universe req =
   let vr_RE = Pcre.regexp "(.*)--virtual" in
   let f1 (pkgname,constr) =
     if Pcre.pmatch ~rex:vr_RE pkgname then begin 
@@ -141,30 +153,67 @@ let convert universe =
     not(Pcre.pmatch ~rex:vr_RE pkgname) && 
     not (name = pkgname && constr = None)
   in
-  Cudf.fold_packages (fun (status,pkglist) p ->
-    let p' = 
-      {p with
-      provides = List.map f1 p.provides;
-      conflicts = List.filter (f2 p.package) p.conflicts;
-      depends = 
-        List.filter_map (fun l' ->
-          match List.filter (f2 p.package) l' with |[] -> None |l -> Some l
-        ) p.depends;
-      pkg_extra =
+  let (status,pkglist)  = 
+    Cudf.fold_packages (fun (status,pkglist) p ->
+      let p' = 
+        {p with
+        provides = List.map f1 p.provides;
+        conflicts = List.filter (f2 p.package) p.conflicts;
+        depends = 
+          List.filter_map (fun l' ->
+            match List.filter (f2 p.package) l' with |[] -> None |l -> Some l
+          ) p.depends;
+        pkg_extra =
+          List.filter_map (function 
+            |("recommends",`Vpkgformula l) ->
+                begin match (List.map (List.filter (f2 p.package)) l) with
+                |[] -> None
+                |l -> Some ("Recommends", `Vpkgformula l) end
+            |("replaces",`Vpkglist l) ->
+                begin match (List.filter (f2 p.package) l) with
+                |[] -> None
+                |l -> Some ("Replaces", `Vpkglist l) end
+            |(s,v) -> None
+          ) p.pkg_extra }
+      in
+      if p.installed then (p'::status,pkglist) else (status,p'::pkglist)
+    ) ([],[]) universe
+  in
+  let reqlist = ref [] in
+  let newreq = 
+    { Cudf.default_request with
+      Cudf.install = 
         List.filter_map (function 
-          |("recommends",`Vpkgformula l) ->
-              begin match (List.map (List.filter (f2 p.package)) l) with
-              |[] -> None
-              |l -> Some ("Recommends", `Vpkgformula l) end
-          |("replaces",`Vpkglist l) ->
-              begin match (List.filter (f2 p.package) l) with
-              |[] -> None
-              |l -> Some ("Replaces", `Vpkglist l) end
-          |(s,v) -> None
-        ) p.pkg_extra }
-    in
-    if p.installed then (p'::status,pkglist) else (status,p'::pkglist)
-  ) ([],[]) universe
+          |(name,None) -> Some(name,None)
+          |(name,Some(`Eq,ver)) -> Some(name,Some(`Eq,ver))
+          |(name,constr) ->
+            let l = 
+                List.map (fun p -> 
+                  (p.Cudf.package,Some(`Eq,p.Cudf.version))
+                ) (Cudf.lookup_packages ~filter:constr universe name) 
+            in
+            let p = {
+              Cudf.default_package with 
+              Cudf.package = "dummy_"^name ; 
+              Cudf.version = 1;
+              Cudf.depends = [l]} 
+            in
+            reqlist := p::!reqlist ; 
+            Some("dummy_"^name,None)
+        ) (req.install @ req.upgrade);
+      Cudf.remove =
+        List.flatten (
+            List.map (function 
+            |(name,None) -> [(name,None)]
+            |(name,Some(`Eq,ver)) -> [(name,Some(`Eq,ver))]
+            |(name,constr) ->
+              List.map (fun p -> (p.Cudf.package,Some(`Eq,p.Cudf.version))
+              ) (Cudf.lookup_packages ~filter:constr universe name)
+          ) (req.remove)
+        )
+    }
+  in
+  (status,!reqlist @ pkglist,newreq)
 ;;
 
 let main () =
@@ -175,10 +224,17 @@ let main () =
   let (status,pkglist,request) =
     match posargs with
     |[u] ->
-        Common.Util.print_info "%s" u ;
-        let (_,univ,req) = CudfAdd.load_cudf u in
-        let (s,l) = convert univ in
-        (s,l,req)
+        begin
+          Common.Util.print_info "Converting file %s" u ;
+          match CudfAdd.load_cudf u with
+          |(_,univ,None) -> begin
+              Printf.eprintf "This is Cudf universe, not a Cudf document. Request missing\n" ; 
+              exit 1
+            end
+          |(_,univ,Some(req)) ->
+            let (s,l,r) = convert univ req in
+            (s,l,r)
+        end
     |_ -> (Printf.eprintf "You must specify one cudf document\n" ; exit 1)
   in
 
@@ -189,14 +245,16 @@ let main () =
   let packages_ofr = Format.formatter_of_out_channel packages_oc in
   let request_ofr = Format.formatter_of_out_channel request_oc in
 
+  pp_request request_ofr request;
+  close_out request_oc;
+
   pp_packages packages_ofr pkglist;
+  close_out packages_oc ;
 
   pp_packages status_ofr status;
+  close_out status_oc ;
 
-  if not(Option.is_none request) then
-    pp_request request_ofr (Option.get request);
-
-  close_out status_oc ; close_out packages_oc ; close_out request_oc
+  exit 0
 ;;
 
 main ();;
