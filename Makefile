@@ -35,6 +35,7 @@ distclean: clean
 	rm db/_tags db/db.mlpack
 	rm deb/_tags
 	rm rpm/_tags
+	rm META
 
 _build/%:
 	$(OCAMLBUILD) $(OBFLAGS) $*

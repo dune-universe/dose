@@ -6,8 +6,8 @@ v2 (23/07/2010)
 edos-debcheck [option] ... [filename] ... 
 
 Checks whether all members of a set of packages, each of which is
-described by deb-control(5) stanza, are installable from the point of
-view of inter-package relations expressed in the package stanzas
+described by a deb-control(5) stanza, are installable from the point
+of view of inter-package relations expressed in the package stanzas
 (depends, conflicts, and provides). Packages may be in the foreground
 (in which case the tool checks installability of that package, and may
 also use it to satisfy the dependencies of other packages) or in the
@@ -17,7 +17,7 @@ packages).
 
 The contents of the files listed on the command line constitutes the
 set of foreground packages, "-" indicates that in addition foreground
-package stanzas are to be read form standard input. Without any
+package stanzas are to be read from standard input. Without any
 additional options, the set of background packages is empty. Packages
 may be pushed from the foreground into the background by using filter
 options (see "input options" below).
