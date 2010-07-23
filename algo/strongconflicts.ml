@@ -13,15 +13,56 @@
 open Common
 open CudfAdd
 
+module ICG = Strongconflicts_int.CG
+module PkgV = struct
+  type t = Cudf.package
+  let compare = Pervasives.compare
+  let hash = Hashtbl.hash
+  let equal = (=)
+end
+type cfl_type = Explicit | Conjunctive | Other of Diagnostic.reason list
+module CflE = struct
+  type t = Cudf.package * Cudf.package * cfl_type
+  let compare = Pervasives.compare
+  let default = (Cudf.default_package, Cudf.default_package, Other [])
+end
+module CG = Graph.Imperative.Graph.ConcreteLabeled(PkgV)(CflE)
+
+(* tempy. *)
+let reason maps =
+  let from_sat = maps.map#inttovar in
+  List.map (function
+    |Diagnostic_int.Dependency(i,vl,il) ->
+      Diagnostic.Dependency(from_sat i,vl,List.map from_sat il)
+    |Diagnostic_int.EmptyDependency(i,vl) ->
+      Diagnostic.EmptyDependency(from_sat i,vl)
+    |Diagnostic_int.Conflict(i,j) ->
+      Diagnostic.Conflict(from_sat i,from_sat j)
+  );;
+
+let cvt maps =
+  function
+  | Strongconflicts_int.Explicit -> Explicit
+  | Strongconflicts_int.Conjunctive -> Conjunctive
+  | Strongconflicts_int.Other l -> Other (reason maps l);;
+
 (** strongconflicts return the list of all strong conflicts in universe.
     
     invariant: the universe must contain only edos-installable packages : see
     Depsolver.trim.
 *)
 let strongconflicts universe =
+  let g = CG.create () in
   let mdf = Mdf.load_from_universe (Depsolver.trim universe) in
   let maps = mdf.Mdf.maps in
   (* let idlist = Cudf.fold_packages (fun l p -> (maps.map#vartoint p)::l) [] (Depsolver.trim universe) in *)
-  let l = Strongconflicts_int.strongconflicts mdf (* idlist *) in
-  List.map (fun (x,y) -> (maps.map#inttovar x,maps.map#inttovar y)) l
+  let ig = Strongconflicts_int.strongconflicts mdf (* idlist *) in
+  (* convert output graph *)
+  ICG.iter_vertex (fun v -> CG.add_vertex g (maps.map#inttovar v)) ig;
+  ICG.iter_edges_e (fun (x, (x', y', l), y) ->
+    CG.add_edge_e g (maps.map#inttovar x,
+      (maps.map#inttovar x', maps.map#inttovar y', cvt maps l),
+      maps.map#inttovar y)
+  ) ig;
+  g
 
