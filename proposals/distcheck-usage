@@ -1,19 +1,18 @@
 Proposal for usage of dose3-distcheck (for debian packages)
 ===========================================================
 
-v2 (23/07/2010)
+v3 (23/07/2010)
 
 edos-debcheck [option] ... [filename] ... 
 
 Checks whether all members of a set of packages, each of which is
 described by a deb-control(5) stanza, are installable from the point
-of view of inter-package relations expressed in the package stanzas
-(depends, conflicts, and provides). Packages may be in the foreground
-(in which case the tool checks installability of that package, and may
-also use it to satisfy the dependencies of other packages) or in the
-background (in which case the tool does not check installability of
-that package but may use it to satisfy dependencies of other
-packages).
+of view of inter-package relations expressed in the package stanzas.
+A package may be either in the foreground (in which case the tool
+checks installability of that package, and may also use it to satisfy
+the dependencies of other packages), or in the background (in which
+case the tool does not check installability of that package but may
+use it to satisfy dependencies of other packages).
 
 The contents of the files listed on the command line constitutes the
 set of foreground packages, "-" indicates that in addition foreground
@@ -39,7 +38,7 @@ input options
   will not be checked themselves for installability but will only be
   used to resolve dependencies. May be used multiple times.
 
--f, --filter <filterexpression>
+-m, --match <filterexpression>
   push all packages that are not matched by <filterexpression> from the
   foreground into the background.
 
@@ -78,7 +77,7 @@ output options
 
   Useful only in combination with at least one of the options -f and -s.
 
--q, --quit
+-q, --quiet
   be less verbose. May be iterated.
 
 -v, --verbose
