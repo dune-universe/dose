@@ -1,0 +1,20 @@
+description = "Dose3 libraries"
+version = "@PACKAGE_VERSION@"
+
+package "common" (
+archive(byte) = "common.cma"
+archive(native) = "common.cmxa"
+requires = "extlib, pcre"
+)
+
+package "algo" (
+archive(byte) = "algo.cma"
+archive(native) = "algo.cmxa"
+requires = "extlib, pcre"
+)
+
+package "debian" (
+archive(byte) = "debian.cma"
+archive(native) = "debian.cmxa"
+requires = "extlib, pcre"
+)

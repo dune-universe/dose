@@ -40,6 +40,10 @@ LIBS= \
 	  deb/debian.$(OCAMLLIBBEST) \
 	  algo/algo.$(OCAMLLIBBEST)
 
+ifeq ("@OCAMLBEST@","opt")
+	LIBS += common/common.cma deb/debian.cma algo/algo.cma
+endif
+
 #external libcudf, then we build the check tool in-house
 ifeq ("@HAS_LIBCUDF@","no")
   TARGETS += libcudf/main_cudf_check.$(OCAMLBEST)
