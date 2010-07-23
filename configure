@@ -4177,7 +4177,7 @@ $as_echo "not found" >&6; }
 
 
 
-  if test "$OCAML_PKG_BZ2" = "no"; then
+  if test "$OCAML_PKG_bz2" = "no"; then
    as_fn_error "Please install OCaml findlib module 'bz2'." "$LINENO" 5
   fi
   CONFIG_BZ2="-DHASBZ2"

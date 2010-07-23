@@ -72,7 +72,7 @@ AC_ARG_WITH(bz2,
 AC_SUBST(HAS_BZ2)
 if test "$HAS_BZ2" = "yes" ; then
   AC_CHECK_OCAML_PKG([bz2])
-  if test "$OCAML_PKG_BZ2" = "no"; then
+  if test "$OCAML_PKG_bz2" = "no"; then
    AC_MSG_ERROR([Please install OCaml findlib module 'bz2'.])
   fi
   CONFIG_BZ2="-DHASBZ2"
