@@ -1,0 +1,26 @@
+-
+ package: x
+ version: 1
+ status: success
+ reason:
+  -
+   type: missing
+   vpkg: a
+  -
+   type: dependency
+   vpkg: b
+   packages:
+    -
+     name: b
+     version: 1
+    -
+     name: b
+     version: 2
+  -
+   type: conflict
+   vpkg: c
+   packages:
+    -
+     name: c
+     version: 1
+
