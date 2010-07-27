@@ -1,26 +1,56 @@
 -
  package: x
  version: 1
- status: success
- reason:
-  -
-   type: missing
-   vpkg: a
-  -
-   type: dependency
-   vpkg: b
-   packages:
+ status: failure
+ conflict:
+   pkg1:
+    name: v
+    version: 1
+    vpkg: v < 2
+   pkg2:
+    name: r
+    version: 1
+    vpkg: r = 1
+   path1:
     -
-     name: b
+     name: o
      version: 1
+     vpkg: o
     -
-     name: b
+     name: v
+     version: 1
+     vpkg: v < 2
+   path2:
+    -
+     name: o
      version: 2
-  -
-   type: conflict
-   vpkg: c
-   packages:
+     vpkg: o = 2
     -
-     name: c
+     name: r
      version: 1
-
+     vpkg: r = 1
+-
+ package: y
+ version: 1
+ status: install
+ installationset:
+  -
+   name: o
+   version: 2
+  -
+   name: r
+   version: 1
+-
+ package: z
+ version: 1
+ status: failure
+ missing:
+  pkg:
+   name: a
+   version: 1
+   vpkg: a < 1
+  path:
+   -
+    name: z
+    version: 1
+    vpkg: a < 1
