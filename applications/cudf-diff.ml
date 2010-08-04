@@ -151,7 +151,7 @@ let diff univ sol =
          * just removed tout cour *)
         (s.removed <- s.removed + 1 ; add h pkg (Removed (others_r (univ,sol) pkg)))
     |(false,true) ->
-        (* is a package is installed, then either replaces an older package
+        (* if a package is installed, then either replaces an older package
          * (upgrades) that is not installed anymore or replaces and newer
          * package that is not installed anymore (downgrades) or it is just
          * newly installed *)
@@ -209,7 +209,7 @@ let print_diff_html universe solutions =
 ;;
 
 let parse_univ f1 =
-  match CudfAdd.load_cudf f1 with
+  match Boilerplate.load_cudf f1 with
   |_,_,None -> 
       (Printf.eprintf "file %s is not a valid cudf document\n" f1 ; exit 1)
   |_,u,Some r -> u,r
@@ -244,7 +244,7 @@ let main () =
             |[h;f] -> (h,f)
             |_ -> assert false
           in
-          let (_,s,_) = CudfAdd.load_cudf f in
+          let (_,s,_) = Boilerplate.load_cudf f in
           if check_sol univ req s then Some (h,(f,s))
           else (Printf.eprintf "%s is not a valid solution. Discarded\n" f ; None)
         ) l

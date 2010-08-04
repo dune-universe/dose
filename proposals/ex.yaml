@@ -685,12 +685,6 @@
         package: gnash-tools
         version: 0.8.7-2+b1
         vpkg: gnash-common-opengl (= 0.8.7-2+b1) | gnash-common (= 0.8.7-2+b1)
-     -
-      path:
-       -
-        package: gnash-tools
-        version: 0.8.7-2+b1
-        vpkg: gnash-common-opengl (= 0.8.7-2+b1) | gnash-common (= 0.8.7-2+b1)
        -
         package: gnash-common
         version: 0.8.7-2+b1
@@ -712,12 +706,6 @@
         package: gnash-common-opengl
         version: 0.8.7-2+b1
         vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
-     -
-      path:
-       -
-        package: gnash-tools
-        version: 0.8.7-2+b1
-        vpkg: gnash-common-opengl (= 0.8.7-2+b1) | gnash-common (= 0.8.7-2+b1)
 -
  package: libusrp0
  version: 3.2.2.dfsg-1+b1

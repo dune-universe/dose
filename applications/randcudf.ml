@@ -171,7 +171,7 @@ let main () =
         |("cudf",[f]) -> Boilerplate.unpack f
         |_ -> (Printf.eprintf "No status provided. I expect a cudf\n" ; exit 1)
       in
-      let preamble, pkglist, _ = CudfAdd.parse_cudf f in
+      let preamble, pkglist, _ = Boilerplate.parse_cudf f in
       match preamble with
       |None -> (default_preamble,pkglist)
       |Some preamble -> (preamble,pkglist)

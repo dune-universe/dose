@@ -20,7 +20,7 @@ module Options = struct
   let cudf = StdOpt.store_true ()
   let out = StdOpt.str_option ()
 
-  let description = "Check if there exists a solution for a cudf problem"
+  let description = "Check if there exists a (non optimal) solution for a cudf problem"
   let options = OptParser.make ~description ()
 
   open OptParser
@@ -36,7 +36,7 @@ let main () =
   match posargs with
   |[f] ->
       let (p,l,r) = 
-        match CudfAdd.parse_cudf f with
+        match Boilerplate.parse_cudf f with
         |(p,l,Some r) -> (p,l,r)
         |_ ->  (Printf.eprintf "Not a void cudf document (missing request)\n" ; exit 1)
       in 

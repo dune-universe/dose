@@ -87,7 +87,7 @@ let init_solver ?(buffer=false) ?(proxy_size=0) ?closure index =
     List.iter (fun (vpkgs,disjunction,_) ->
       incr num_dependencies;
       if List.length disjunction = 0 then
-        S.add_un_rule constraints lit [Diagnostic_int.EmptyDependency(pkg_id,vpkgs)]
+        S.add_rule constraints [|lit|] [Diagnostic_int.EmptyDependency(pkg_id,vpkgs)]
       else begin
         let lit_list =
           let a =
@@ -118,7 +118,7 @@ let init_solver ?(buffer=false) ?(proxy_size=0) ?closure index =
         if pkg_id1 <> pkg_id2 then begin
             let y = S.lit_of_var (map#vartoint pkg_id2) false in
             incr num_conflicts;
-            S.add_bin_rule constraints x y [Diagnostic_int.Conflict(pkg_id1, pkg_id2)]
+            S.add_rule constraints [|x; y|] [Diagnostic_int.Conflict(pkg_id1, pkg_id2)]
         end
       ) conjunction
     with Not_found ->

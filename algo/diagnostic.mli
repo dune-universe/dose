@@ -43,10 +43,16 @@ type diagnosis = { result : result ; request : request }
 (** True is the result is Success, False otherwise *)
 val is_solution : diagnosis -> bool
 
+(* val print : ?pp:(?short:bool -> Cudf.package -> string) -> ?explain:bool -> out_channel -> diagnosis -> unit
+*)
+
 (** Print the result of the solver.
  
     @param explain : add a more verbose explanation of the failure or
     print the list of installed packages. 
     @param pp : print a cudf package
 *)
-val print : ?pp:(?short:bool -> Cudf.package -> string) -> ?explain:bool -> out_channel -> diagnosis -> unit
+val print :
+  ?pp:(Cudf.package -> (string * string)) -> 
+    ?failure:bool -> ?success:bool -> ?explain:bool -> 
+      Format.formatter -> diagnosis -> unit

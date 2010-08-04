@@ -21,7 +21,6 @@ module Options = struct
   let successes = StdOpt.store_true ()
   let failures = StdOpt.store_true ()
   let explain = StdOpt.store_true ()
-  let xml = StdOpt.str_option ()
   let checkonly = StdOpt.str_option ()
 
   let showall () = (Opt.get successes) && (Opt.get failures)
@@ -32,12 +31,11 @@ module Options = struct
   let options = OptParser.make ~description ()
 
   open OptParser
-  add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
+  add options ~short_name:'v' ~long_name:"verbose" ~help:"Print debug information" debug;
   add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
   add options ~short_name:'f' ~long_name:"failures" ~help:"Only show failures" failures;
   add options ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" successes;
   add options ~long_name:"checkonly" ~help:"Check only these package" checkonly;
-  add options ~long_name:"xml" ~help:"Output results in XML format" xml;
 end
 
 let main () =
@@ -57,34 +55,13 @@ let main () =
     Printf.sprintf "%s (= %s)" p v
   in
 
-  let result_printer pp (printer : Distchecklib.print_t) = function
-    (* print all *)
-    |{result = Success (_) } as r when Options.showall () ->
-        printer ~pp stdout r
-    |{result = Failure (_) } as r when Options.showall () ->
-        printer ~pp ~explain:(OptParse.Opt.get Options.explain) stdout r
-
-    (* print only success - nothing to explain *)
-    |{result = Success (_) } as r when Options.onlysucc () ->
-        printer ~pp stdout r
-    |{result = Failure (_) } when Options.onlysucc () -> ()
-
-    (* print only failures *)
-    |{result = Success (_) } when Options.onlyfail () -> ()
-    |{result = Failure (_) } as r when Options.onlyfail () ->
-        printer ~pp ~explain:(OptParse.Opt.get Options.explain) stdout r
-
-    (* nothing *)
-    | _ -> ()
-  in
-
   Util.print_info "Solving..." ;
   let timer = Util.Timer.create "Solver" in
   Util.Timer.start timer;
-  let callback =
-    result_printer print_package
-    (if OptParse.Opt.is_set Options.xml then Distchecklib.xml_print else Diagnostic.print)
-  in
+  let failure = OptParse.Opt.get Options.failures in
+  let success = OptParse.Opt.get Options.successes in
+  let explain = OptParse.Opt.get Options.explain in
+  let callback = Diagnostic.print ~pp:from_cudf ~failure ~success ~explain Format.std_formatter in
   let i =
     if OptParse.Opt.is_set Options.checkonly then 
       let pkglist = 

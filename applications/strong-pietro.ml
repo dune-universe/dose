@@ -59,7 +59,7 @@ let parse uri =
       List.map (Debian.Debcudf.tocudf tables) l
     end
     |("cudf",(_,_,_,_,file),_) -> begin
-      let _, l, _ = CudfAdd.parse_cudf file in l
+      let _, l, _ = Boilerplate.parse_cudf file in l
     end
     |_ -> failwith "Not supported"
   in

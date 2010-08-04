@@ -48,7 +48,7 @@ let main () =
   let (preamble,universe) =
     match Input.parse_uri doc with
     |("cudf",(_,_,_,_,file),_) -> begin
-      let p, u, _ = CudfAdd.parse_cudf file in (p,u)
+      let p, u, _ = Boilerplate.parse_cudf file in (p,u)
     end
     |(s,_,_) -> failwith (s^" Not supported")
   in

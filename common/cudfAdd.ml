@@ -20,6 +20,10 @@ let add_properties preamble l =
     {pre with Cudf.property = prop :: pre.Cudf.property}
   ) preamble l
 
+let string_of_version pkg =
+  try Cudf.lookup_package_property pkg "number"
+  with Not_found -> string_of_int pkg.version
+
 (** print a cudf package.
     @param short : only name and version are printed (default true). If the
     cudf package has an extra attribute "Number" then, this is used instead of
@@ -27,10 +31,7 @@ let add_properties preamble l =
     *)
 let print_package ?(short=true) pkg =
   if short then
-    let (sp,sv) =
-      try (pkg.package,Cudf.lookup_package_property pkg "number")
-      with Not_found -> (pkg.package,string_of_int pkg.version)
-    in Printf.sprintf "%s (= %s)" sp sv
+    Printf.sprintf "%s (= %s)" pkg.package (string_of_version pkg)
   else
     Cudf_printer.string_of_package pkg
 

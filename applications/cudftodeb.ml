@@ -226,7 +226,7 @@ let main () =
     |[u] ->
         begin
           Common.Util.print_info "Converting file %s" u ;
-          match CudfAdd.load_cudf u with
+          match Boilerplate.load_cudf u with
           |(_,univ,None) -> begin
               Printf.eprintf "This is Cudf universe, not a Cudf document. Request missing\n" ; 
               exit 1

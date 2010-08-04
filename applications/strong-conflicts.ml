@@ -88,7 +88,7 @@ begin
   | ("cudf",  (_,_,_,_,file),_) ->
       begin
 	let cudf_load_list file =
-	  let _, pkglist, _ = CudfAdd.parse_cudf file in
+	  let _, pkglist, _ = Boilerplate.parse_cudf file in
 	  let from_cudf pkg = (pkg.Cudf.package,string_of_int pkg.Cudf.version) in
 	  let to_cudf (p,v) = (p,int_of_string v) in
 	  (pkglist,from_cudf,to_cudf)

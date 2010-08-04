@@ -33,7 +33,7 @@ let strong_depends solver p q =
   Depsolver_int.S.reset solver.constraints; 
   let solver = Depsolver_int.copy_solver solver in 
   let lit = Depsolver_int.S.lit_of_var (solver.map#vartoint q) false in
-  Depsolver_int.S.add_un_rule solver.constraints lit [];
+  Depsolver_int.S.add_rule solver.constraints [|lit|] [];
   match Depsolver_int.solve solver (Diagnostic_int.Sng p) with
   |Diagnostic_int.Failure _ -> true
   |Diagnostic_int.Success _ -> false

@@ -77,7 +77,7 @@ let test_distribcheck =
   ) 
 
 let test_selfprovide =
-  "distribcheck" >:: (fun _ -> 
+  "self provide" >:: (fun _ -> 
     let universe =
       let (_,pl,_) = Cudf_parser.parse_from_file f_selfprovide in
       Cudf.load_universe pl
