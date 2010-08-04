@@ -32,8 +32,6 @@ module type T = sig
   val reset : state -> unit
   type value = True | False | Unknown
   val assignment : state -> value array
-  val add_un_rule : state -> lit -> X.reason list -> unit
-  val add_bin_rule : state -> lit -> lit -> X.reason list -> unit
   val add_rule : state -> lit array -> X.reason list -> unit
   val associate_vars : state -> lit -> var list -> unit
   val solve : state -> var -> bool
@@ -60,9 +58,13 @@ module M (X : S) = struct
   (* A clause is an array of literals *)
   type clause =
     { lits : lit array;
+      all_lits : lit array;
       reasons : X.reason list }
 
   type value = True | False | Unknown
+
+  module LitMap =
+    Map.Make (struct type t = int let compare (x : int) y = compare x y end)
 
   type state =
     { (* Indexed by var *)
@@ -73,7 +75,7 @@ module M (X : S) = struct
       st_refs : int array;
       st_pinned : bool array;
       (* Indexed by lit *)
-      st_simpl_prop : (lit * clause) list array;
+      st_simpl_prop : clause LitMap.t array;
       st_watched : clause list array;
       st_associated_vars : var list array;
       (* Queues *)
@@ -107,10 +109,10 @@ module M (X : S) = struct
 
   let copy_simpl_prop p =
       let n = Array.length p in
-      let a = Array.make n [] in
+      let a = Array.make n LitMap.empty in
       Array.iteri (fun i l ->
           let copy cl = { cl with lits = Array.copy cl.lits } in
-          let l' =  List.map (fun (lit,clause) -> (lit,copy clause)) l in
+          let l' =  LitMap.map (fun clause -> copy clause) l in
           Array.set a i l'
       ) p
       ;
@@ -322,7 +324,7 @@ module M (X : S) = struct
       while not (Queue.is_empty st.st_prop_queue) do
         charge st 1;
         let p = Queue.take st.st_prop_queue in
-        List.iter (fun (p, r) -> enqueue st p (Some r)) st.st_simpl_prop.(p);
+        LitMap.iter (fun p r -> enqueue st p (Some r)) st.st_simpl_prop.(p);
         let l = ref (st.st_watched.(p)) in
         st.st_watched.(p) <- [];
         begin try
@@ -495,7 +497,7 @@ module M (X : S) = struct
         let level = max st.st_min_level level in
         while st.st_cur_level > level do cancel st done;
         assert (val_of_lit st learnt.(0) = Unknown);
-        let rule = { lits = learnt; reasons = reasons } in
+        let rule = { lits = learnt; all_lits = learnt; reasons = reasons } in
         if !debug then Format.eprintf "Learning %a@." (print_rule st) rule;
         if Array.length learnt > 1 then begin
           let i = find_highest_level st learnt in
@@ -553,7 +555,7 @@ module M (X : S) = struct
       st_pinned = Array.make n false;
       (* to each literal, positive or negative, 
        * we associate the list of rules where it appears *)
-      st_simpl_prop = Array.make (2 * n) [];
+      st_simpl_prop = Array.make (2 * n) LitMap.empty;
       st_watched = Array.make (2 * n) [];
       (* to each literal we associate the list of assiciated variables *)
       st_associated_vars = Array.make (2 * n) [];
@@ -573,22 +575,23 @@ module M (X : S) = struct
 
   let insert_simpl_prop st r p p' =
     let p = lit_neg p in
-    if not (List.mem_assoc p' st.st_simpl_prop.(p)) then
-      st.st_simpl_prop.(p) <- (p', r) :: st.st_simpl_prop.(p)
+    if not (LitMap.mem p' st.st_simpl_prop.(p)) then
+      st.st_simpl_prop.(p) <- LitMap.add p' r st.st_simpl_prop.(p)
 
-  let add_bin_rule st p p' reasons =
-    let r = { lits = [|p; p'|]; reasons = reasons } in
+  let add_bin_rule st lits p p' reasons =
+    let r = { lits = [|p; p'|]; all_lits = lits; reasons = reasons } in
     store st r ;
     insert_simpl_prop st r p p';
     insert_simpl_prop st r p' p
 
-  let add_un_rule st p reasons =
-    let r = { lits = [|p|]; reasons = reasons } in
+  let add_un_rule st lits p reasons =
+    let r = { lits = [|p|]; all_lits = lits; reasons = reasons } in
     store st r ;
     enqueue st p (Some r)
 
   let add_rule st lits reasons =
     let is_true = ref false in
+    let all_lits = Array.copy lits in
     let j = ref 0 in
     for i = 0 to Array.length lits - 1 do
       match val_of_lit st lits.(i) with
@@ -600,9 +603,10 @@ module M (X : S) = struct
     if not !is_true then
     match Array.length lits with
       0 -> assert false
-    | 1 -> add_un_rule st lits.(0) reasons
-    | 2 -> add_bin_rule st lits.(0) lits.(1) reasons
-    | _ -> let rule = { lits = lits; reasons = reasons } in
+    | 1 -> add_un_rule st all_lits lits.(0) reasons
+    | 2 -> add_bin_rule st all_lits lits.(0) lits.(1) reasons
+    | _ -> let rule =
+             { lits = lits; all_lits = all_lits; reasons = reasons } in
            let p = lit_neg rule.lits.(0) in let p' = lit_neg rule.lits.(1) in
            store st rule ;
            assert (val_of_lit st p <> False);
@@ -621,7 +625,8 @@ module M (X : S) = struct
           l
       | Some r ->
           r.reasons @
-          Array.fold_left (fun l p -> collect_rec st (var_of_lit p) l) l r.lits
+          Array.fold_left
+            (fun l p -> collect_rec st (var_of_lit p) l) l r.all_lits
     end
 
   let collect_reasons st x =

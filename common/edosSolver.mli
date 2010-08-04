@@ -67,14 +67,7 @@ module type T = sig
   (* [assignment st] return the array of values associated to every variable.*)
   val assignment : state -> value array
 
-  (** [add_un_rule st lit l ] add a literal to the solver associated to a reason
-      list. *)
-  val add_un_rule : state -> lit -> X.reason list -> unit
-
-  (** [add_bin_rule st a b] add a binary clause to the solver {v a v b v} *)
-  val add_bin_rule : state -> lit -> lit -> X.reason list -> unit
-
-  (** [add_bin_rule st l] add a disjuction to the solver of type {% \Bigvee l %} *)
+  (** [add_rule st l] add a disjuction to the solver of type {% \Bigvee l %} *)
   val add_rule : state -> lit array -> X.reason list -> unit
 
   (** [associate_vars st lit vl] associate a variable to a list of variables. The solver
