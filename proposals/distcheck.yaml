@@ -4,59 +4,68 @@ sequence:
     mapping:
       "package": { type: str, required: true }
       "version": { type: text, required: true }
-      "status":  { type: str, enum: [ failure, install ], required: true }
+      "status":  { type: str, enum: [ broken, ok ], required: true }
       "installationset":
          type: seq
          sequence:
            - type: map
              mapping:
-               "name": { type: str, required: true }
+               "package": { type: str, required: true }
                "version": { type: text, required: true }
-      "conflict":
-         type: map
-         mapping:
-           "pkg1": 
-             type: map
+      "reasons":
+         type: seq
+         sequence:
+           - type: map
              mapping:
-               "name": { type: str, required: true }
-               "version": { type: text, required: true }
-               "vpkg": { type: str, required: true}
-           "pkg2": 
-             type: map
-             mapping:
-               "name": { type: str, required: true }
-               "version": { type: text, required: true }
-               "vpkg": { type: str, required: true}
-           "path1":
-             type: seq
-             sequence:
-               - type: map
-                 mapping:
-                   "name": { type: str, required: true }
-                   "version": { type: text, required: true }
-                   "vpkg": { type: str, required: true}
-           "path2":
-             type: seq
-             sequence:
-               - type: map
-                 mapping:
-                   "name": { type: str, required: true }
-                   "version": { type: text, required: true }
-                   "vpkg": { type: str, required: true}
-      "missing":
-         type: map
-         mapping:
-           "pkg": 
-             type: map
-             mapping:
-               "name": { type: str, required: true }
-               "version": { type: text, required: true }
-               "vpkg": { type: str, required: true}
-           "path":
-             type: seq
-             sequence:
-               - type: map
-                 mapping:
-                   "name": { type: str, required: true }
-                   "version": { type: text, required: true }
-                   "vpkg": { type: str, required: true}
+               "conflict":
+                  type: map
+                  mapping:
+                    "pkg1": 
+                      type: map
+                      required: true
+                      mapping:
+                        "package": { type: str, required: true }
+                        "version": { type: text, required: true }
+                    "pkg2": 
+                      type: map
+                      required: true
+                      mapping:
+                        "package": { type: str, required: true }
+                        "version": { type: text, required: true }
+                    "paths":
+                      type: seq
+                      sequence:
+                        - type: map
+                          mapping:
+                            "path":
+                              type: seq
+                              sequence:
+                                - type: map
+                                  mapping:
+                                    "package": { type: str, required: true }
+                                    "version": { type: text, required: true }
+                                    "vpkg": { type: str, required: false}
+               "missing":
+                  type: map
+                  mapping:
+                    "pkg": 
+                      type: map
+                      required: true
+                      mapping:
+                        "package": { type: str, required: true }
+                        "version": { type: text, required: true }
+                        "vpkg": { type: str, required: false}
+                    "paths":
+                      type: seq
+                      sequence:
+                        - type: map
+                          mapping:
+                            "path":
+                              type: seq
+                              sequence:
+                                - type: map
+                                  mapping:
+                                    "package": { type: str, required: true }
+                                    "version": { type: text, required: true }
+                                    "vpkg": { type: str, required: false}
+

@@ -1,56 +1,3086 @@
 -
- package: x
- version: 1
- status: failure
- conflict:
-   pkg1:
-    name: v
-    version: 1
-    vpkg: v < 2
-   pkg2:
-    name: r
-    version: 1
-    vpkg: r = 1
-   path1:
-    -
-     name: o
-     version: 1
-     vpkg: o
-    -
-     name: v
-     version: 1
-     vpkg: v < 2
-   path2:
-    -
-     name: o
-     version: 2
-     vpkg: o = 2
-    -
-     name: r
-     version: 1
-     vpkg: r = 1
--
- package: y
- version: 1
- status: install
- installationset:
+ package: jabber-irc
+ version: 0.4cvs20080505-1
+ status: broken
+ reasons:
   -
-   name: o
-   version: 2
-  -
-   name: r
-   version: 1
+   missing:
+    pkg:
+     package: jabber-irc
+     version: 0.4cvs20080505-1
+     vpkg: jabber-common
 -
- package: z
- version: 1
- status: failure
- missing:
-  pkg:
-   name: a
-   version: 1
-   vpkg: a < 1
-  path:
-   -
-    name: z
-    version: 1
-    vpkg: a < 1
+ package: opensync-plugin-irmc
+ version: 0.22-3.1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: opensync-plugin-irmc
+     version: 0.22-3.1
+     vpkg: libopensync0 (>= 0.22)
+-
+ package: python-gnuradio-core
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-gnuradio-core
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: magic-haskell-doc
+ version: 1:2
+ status: broken
+ reasons:
+  -
+   conflict:
+    pkg1:
+     package: magic-haskell-doc
+     version: 1:2
+    pkg2:
+     package: libghc6-magic-doc
+     version: 1.0.8-4
+    paths:
+     -
+      path:
+       -
+        package: magic-haskell-doc
+        version: 1:2
+     -
+      path:
+       -
+        package: magic-haskell-doc
+        version: 1:2
+        vpkg: libghc6-magic-doc
+       -
+        package: libghc6-magic-doc
+        version: 1.0.8-4
+-
+ package: libgnuradio-usrp0
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libgnuradio-usrp0
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: pixbros
+ version: 0.6.3-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: pixbros
+     version: 0.6.3-1
+     vpkg: fenix
+-
+ package: libmrpt-topography0.9
+ version: 1:0.9.0-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libmrpt-topography0.9
+     version: 1:0.9.0-2
+     vpkg: libcv4
+-
+ package: git-cvs
+ version: 1:1.7.0.4-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: git-cvs
+     version: 1:1.7.0.4-1
+     vpkg: git-core (< 1:1.7.0.4-.)
+-
+ package: python-gnuradio
+ version: 3.2.2.dfsg-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-gnuradio-core
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: python-gnuradio
+        version: 3.2.2.dfsg-1
+        vpkg: python-gnuradio-core
+       -
+        package: python-gnuradio-core
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: openchangeserver-dev
+ version: 1:0.8.2+svn1524-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-samba
+     version: 4.0.0~alpha8+git20090912-1
+     vpkg: python (< 2.6)
+    paths:
+     -
+      path:
+       -
+        package: openchangeserver-dev
+        version: 1:0.8.2+svn1524-1
+        vpkg: openchangeserver (= 1:0.8.2+svn1524-1)
+       -
+        package: openchangeserver
+        version: 1:0.8.2+svn1524-1
+        vpkg: samba4 (>= 4.0.0~)
+       -
+        package: samba4
+        version: 4.0.0~alpha8+git20090912-1
+        vpkg: python-samba
+       -
+        package: python-samba
+        version: 4.0.0~alpha8+git20090912-1
+        vpkg: python (< 2.6)
+-
+ package: mseide-msegui
+ version: 1.8-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: mseide-msegui
+     version: 1.8-1
+     vpkg: msegui
+-
+ package: python-gi-dbg
+ version: 0.6.0-1
+ status: broken
+ reasons:
+  -
+   conflict:
+    pkg1:
+     package: python-gobject
+     version: 2.21.4-1
+    pkg2:
+     package: python-gi
+     version: 0.6.0-1
+    paths:
+     -
+      path:
+       -
+        package: python-gi-dbg
+        version: 0.6.0-1
+        vpkg: python-gi (= 0.6.0-1)
+       -
+        package: python-gi
+        version: 0.6.0-1
+     -
+      path:
+       -
+        package: python-gi-dbg
+        version: 0.6.0-1
+        vpkg: python-gi (= 0.6.0-1)
+       -
+        package: python-gi
+        version: 0.6.0-1
+        vpkg: python-gobject (>= 2.20)
+       -
+        package: python-gobject
+        version: 2.21.4-1
+-
+ package: gitweb
+ version: 1:1.7.0.4-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: gitweb
+     version: 1:1.7.0.4-1
+     vpkg: git-core (< 1:1.7.0.4-.)
+-
+ package: gnuradio-gpio
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-gnuradio-usrp
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: gnuradio-gpio
+        version: 3.2.2.dfsg-1+b1
+        vpkg: python-gnuradio-usrp
+       -
+        package: python-gnuradio-usrp
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: zope-scriptablefields
+ version: 1.1.3-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: zope-scriptablefields
+     version: 1.1.3-1
+     vpkg: zope2.6 | zope2.7 | zope2.8 | zope2.9 | zope2.10 | zope3
+-
+ package: evolution-mapi
+ version: 0.28.3-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: evolution-mapi
+     version: 0.28.3-2
+     vpkg: libcamel1.2-14 (< 2.29)
+-
+ package: libgnuradio-audio-alsa-dev
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libgnuradio-core0
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: libgnuradio-audio-alsa-dev
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libgnuradio-core-dev (= 3.2.2.dfsg-1+b1)
+       -
+        package: libgnuradio-core-dev
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libgnuradio-core0 (= 3.2.2.dfsg-1+b1)
+       -
+        package: libgnuradio-core0
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: openchangeserver
+ version: 1:0.8.2+svn1524-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-samba
+     version: 4.0.0~alpha8+git20090912-1
+     vpkg: python (< 2.6)
+    paths:
+     -
+      path:
+       -
+        package: openchangeserver
+        version: 1:0.8.2+svn1524-1
+        vpkg: samba4 (>= 4.0.0~)
+       -
+        package: samba4
+        version: 4.0.0~alpha8+git20090912-1
+        vpkg: python-samba
+       -
+        package: python-samba
+        version: 4.0.0~alpha8+git20090912-1
+        vpkg: python (< 2.6)
+-
+ package: opensync-plugin-sunbird
+ version: 0.22-3
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: opensync-plugin-iceowl
+     version: 0.22-3
+     vpkg: libopensync0 (>= 0.22)
+    paths:
+     -
+      path:
+       -
+        package: opensync-plugin-sunbird
+        version: 0.22-3
+        vpkg: opensync-plugin-iceowl
+       -
+        package: opensync-plugin-iceowl
+        version: 0.22-3
+        vpkg: libopensync0 (>= 0.22)
+-
+ package: plywood
+ version: 0.5.11
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: plywood
+     version: 0.5.11
+     vpkg: tetex-extra (>= 1.0.2)
+-
+ package: apt-rpm-repository
+ version: 0.5.15lorg3.2-6
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: apt-rpm-repository
+     version: 0.5.15lorg3.2-6
+     vpkg: librpm4.4 (>= 4.4)
+-
+ package: python-gnuradio-audio-portaudio
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-gnuradio-audio-portaudio
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: git-gui
+ version: 1:1.7.0.4-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: git-gui
+     version: 1:1.7.0.4-1
+     vpkg: git-core (< 1:1.7.0.4-.)
+-
+ package: knights
+ version: 0.6-8.2+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: knights
+     version: 0.6-8.2+b1
+     vpkg: kdebase-kio-plugins
+-
+ package: libmesh-dev
+ version: 0.6.4.dfsg-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libmesh-dev
+     version: 0.6.4.dfsg-1
+     vpkg: libpetsc3.0.0-dev
+-
+ package: opensync-module-python
+ version: 0.22-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: opensync-module-python
+     version: 0.22-2
+     vpkg: libopensync0 (>= 0.22)
+-
+ package: flightgear
+ version: 1.9.1-1.1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: flightgear
+     version: 1.9.1-1.1
+     vpkg: libopenscenegraph56 (>= 2.8.2)
+-
+ package: libgnuradio-core0
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libgnuradio-core0
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: librheolef-dev
+ version: 5.89-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: librheolef-dev
+     version: 5.89-1
+     vpkg: rheolef-runtime
+-
+ package: xserver-xorg-input-fpit
+ version: 1:1.3.0-2
+ status: broken
+ reasons:
+  -
+   conflict:
+    pkg1:
+     package: xserver-xorg-input-fpit
+     version: 1:1.3.0-2
+    pkg2:
+     package: xserver-xorg-core
+     version: 2:1.7.7-3
+    paths:
+     -
+      path:
+       -
+        package: xserver-xorg-input-fpit
+        version: 1:1.3.0-2
+     -
+      path:
+       -
+        package: xserver-xorg-input-fpit
+        version: 1:1.3.0-2
+        vpkg: xserver-xorg-core (>= 2:1.5.99.901)
+       -
+        package: xserver-xorg-core
+        version: 2:1.7.7-3
+-
+ package: cyrus-sasl2-heimdal-dbg
+ version: 2.1.23.dfsg1-5
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: cyrus-sasl2-heimdal-dbg
+     version: 2.1.23.dfsg1-5
+     vpkg: cyrus-sasl2-dbg (< 2.1.23.dfsg1-5.)
+-
+ package: libsasl2-modules-gssapi-heimdal
+ version: 2.1.23.dfsg1-5
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libsasl2-modules-gssapi-heimdal
+     version: 2.1.23.dfsg1-5
+     vpkg: libsasl2-modules (< 2.1.23.dfsg1-5.)
+-
+ package: xtrkcad
+ version: 1:4.0.2-1.1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: xtrkcad
+     version: 1:4.0.2-1.1
+     vpkg: libgtkhtml2-0 (>= 2.11.1)
+-
+ package: python-gnuradio-audio-alsa
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-gnuradio-audio-alsa
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: eucalyptus-sc
+ version: 1.6.2-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: eucalyptus-java-common
+     version: 1.6.2-2
+     vpkg: libhibernate-entitymanager-java
+    paths:
+     -
+      path:
+       -
+        package: eucalyptus-sc
+        version: 1.6.2-2
+        vpkg: eucalyptus-java-common (>= 1.6.2~bzr1160~1.6.2-0euca1)
+       -
+        package: eucalyptus-java-common
+        version: 1.6.2-2
+        vpkg: libhibernate-entitymanager-java
+-
+ package: opensync-plugin-barry-dbg
+ version: 0.15-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: opensync-plugin-barry-dbg
+     version: 0.15-1
+     vpkg: libopensync0 (>= 0.22)
+-
+ package: libgnuradio-qtgui0
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libgnuradio-core0
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: libgnuradio-qtgui0
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libgnuradio-core0 (= 3.2.2.dfsg-1+b1)
+       -
+        package: libgnuradio-core0
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: git-daemon-run
+ version: 1:1.7.0.4-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: git-daemon-run
+     version: 1:1.7.0.4-1
+     vpkg: git-core (< 1:1.7.0.4-.)
+-
+ package: opensync-plugin-kdepim
+ version: 0.22-4
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: opensync-plugin-kdepim
+     version: 0.22-4
+     vpkg: libopensync0 (>= 0.22)
+-
+ package: libapt-rpm-pkg-dev
+ version: 0.5.15lorg3.2-6
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libapt-rpm-pkg2
+     version: 0.5.15lorg3.2-6
+     vpkg: librpm4.4 (>= 4.4)
+    paths:
+     -
+      path:
+       -
+        package: libapt-rpm-pkg-dev
+        version: 0.5.15lorg3.2-6
+        vpkg: libapt-rpm-pkg2
+       -
+        package: libapt-rpm-pkg2
+        version: 0.5.15lorg3.2-6
+        vpkg: librpm4.4 (>= 4.4)
+-
+ package: dhcp3-server-ldap
+ version: 3.1.3-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: dhcp3-server-ldap
+     version: 3.1.3-2
+     vpkg: dhcp3-common (= 3.1.3-2)
+-
+ package: eucalyptus-java-common
+ version: 1.6.2-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: eucalyptus-java-common
+     version: 1.6.2-2
+     vpkg: libhibernate-entitymanager-java
+-
+ package: opensync-plugin-google-calendar
+ version: 0.22-7
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: opensync-plugin-google-calendar
+     version: 0.22-7
+     vpkg: libopensync0 (>= 0.22)
+-
+ package: openttd
+ version: 1.0.3-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: openttd
+     version: 1.0.3-1
+     vpkg: libicu42 (>= 4.2-1)
+-
+ package: ibus-pinyin
+ version: 1.3.9-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: ibus-pinyin
+     version: 1.3.9-1
+     vpkg: libopencc0 (>= 0.0.2)
+-
+ package: gnash-tools
+ version: 0.8.7-2+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: gnash-common
+     version: 0.8.7-2+b1
+     vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: gnash-tools
+        version: 0.8.7-2+b1
+        vpkg: gnash-common-opengl (= 0.8.7-2+b1) | gnash-common (= 0.8.7-2+b1)
+     -
+      path:
+       -
+        package: gnash-tools
+        version: 0.8.7-2+b1
+        vpkg: gnash-common-opengl (= 0.8.7-2+b1) | gnash-common (= 0.8.7-2+b1)
+       -
+        package: gnash-common
+        version: 0.8.7-2+b1
+        vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+  -
+   missing:
+    pkg:
+     package: gnash-common-opengl
+     version: 0.8.7-2+b1
+     vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: gnash-tools
+        version: 0.8.7-2+b1
+        vpkg: gnash-common-opengl (= 0.8.7-2+b1) | gnash-common (= 0.8.7-2+b1)
+       -
+        package: gnash-common-opengl
+        version: 0.8.7-2+b1
+        vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+     -
+      path:
+       -
+        package: gnash-tools
+        version: 0.8.7-2+b1
+        vpkg: gnash-common-opengl (= 0.8.7-2+b1) | gnash-common (= 0.8.7-2+b1)
+-
+ package: libusrp0
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libusrp0
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: gnuradio-sounder
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-gnuradio-usrp
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: gnuradio-sounder
+        version: 3.2.2.dfsg-1+b1
+        vpkg: python-gnuradio-usrp
+       -
+        package: python-gnuradio-usrp
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: libusrp2-dev
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libusrp2-0
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: libusrp2-dev
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libusrp2-0 (= 3.2.2.dfsg-1+b1)
+       -
+        package: libusrp2-0
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: sagemath
+ version: 3.0.5dfsg-5.1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: sagemath
+     version: 3.0.5dfsg-5.1
+     vpkg: python (< 2.6)
+-
+ package: gnash-common
+ version: 0.8.7-2+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: gnash-common
+     version: 0.8.7-2+b1
+     vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+-
+ package: opensync-plugin-gnokii
+ version: 0.22-1+b2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: opensync-plugin-gnokii
+     version: 0.22-1+b2
+     vpkg: libgnokii5
+-
+ package: eprover-doc-html
+ version: 1.0.004-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: eprover-doc-html
+     version: 1.0.004-1
+     vpkg: eprover
+-
+ package: libgnuradio-usrp-dev
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libgnuradio-usrp0
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: libgnuradio-usrp-dev
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libgnuradio-usrp0 (= 3.2.2.dfsg-1+b1)
+       -
+        package: libgnuradio-usrp0
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: samba4
+ version: 4.0.0~alpha8+git20090912-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-samba
+     version: 4.0.0~alpha8+git20090912-1
+     vpkg: python (< 2.6)
+    paths:
+     -
+      path:
+       -
+        package: samba4
+        version: 4.0.0~alpha8+git20090912-1
+        vpkg: python-samba
+       -
+        package: python-samba
+        version: 4.0.0~alpha8+git20090912-1
+        vpkg: python (< 2.6)
+-
+ package: gnash-cygnal
+ version: 0.8.7-2+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: gnash-cygnal
+     version: 0.8.7-2+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: kipi-plugins
+ version: 1.2.0-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: kipi-plugins
+     version: 1.2.0-2
+     vpkg: libcv4
+-
+ package: python-gnuradio-qtgui
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-gnuradio-qtgui
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: eclipse-pydev-gcj
+ version: 1.2.5-4
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: eclipse-pydev-gcj
+     version: 1.2.5-4
+     vpkg: eclipse-platform-gcj
+-
+ package: xserver-xorg-input-hyperpen
+ version: 1:1.3.0-1
+ status: broken
+ reasons:
+  -
+   conflict:
+    pkg1:
+     package: xserver-xorg-input-hyperpen
+     version: 1:1.3.0-1
+    pkg2:
+     package: xserver-xorg-core
+     version: 2:1.7.7-3
+    paths:
+     -
+      path:
+       -
+        package: xserver-xorg-input-hyperpen
+        version: 1:1.3.0-1
+     -
+      path:
+       -
+        package: xserver-xorg-input-hyperpen
+        version: 1:1.3.0-1
+        vpkg: xserver-xorg-core (>= 2:1.5.99.901)
+       -
+        package: xserver-xorg-core
+        version: 2:1.7.7-3
+-
+ package: knights-themepack
+ version: 0.5.9-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: knights
+     version: 0.6-8.2+b1
+     vpkg: kdebase-kio-plugins
+    paths:
+     -
+      path:
+       -
+        package: knights-themepack
+        version: 0.5.9-1
+        vpkg: knights
+       -
+        package: knights
+        version: 0.6-8.2+b1
+        vpkg: kdebase-kio-plugins
+-
+ package: libmrpt-vision0.9
+ version: 1:0.9.0-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libmrpt-vision0.9
+     version: 1:0.9.0-2
+     vpkg: libcv4
+-
+ package: eucalyptus-cloud
+ version: 1.6.2-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: eucalyptus-java-common
+     version: 1.6.2-2
+     vpkg: libhibernate-entitymanager-java
+    paths:
+     -
+      path:
+       -
+        package: eucalyptus-cloud
+        version: 1.6.2-2
+        vpkg: eucalyptus-java-common (>= 1.6.2-2)
+       -
+        package: eucalyptus-java-common
+        version: 1.6.2-2
+        vpkg: libhibernate-entitymanager-java
+-
+ package: libmrpt-dev
+ version: 1:0.9.0-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libmrpt-base0.9
+     version: 1:0.9.0-2
+     vpkg: libcv4
+    paths:
+     -
+      path:
+       -
+        package: libmrpt-dev
+        version: 1:0.9.0-2
+        vpkg: mrpt-libs
+       -
+        package: mrpt-libs
+        version: 1:0.9.0-2
+        vpkg: libmrpt-base0.9
+       -
+        package: libmrpt-base0.9
+        version: 1:0.9.0-2
+        vpkg: libcv4
+-
+ package: python-usrp
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libusrp0
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: python-usrp
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libusrp0 (= 3.2.2.dfsg-1+b1)
+       -
+        package: libusrp0
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: libnewlib-dev
+ version: 1.18.0-4
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libnewlib-dev
+     version: 1.18.0-4
+     vpkg: libnewlib0 (= 1.18.0-4)
+-
+ package: opensync-plugin-barry
+ version: 0.15-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: opensync-plugin-barry
+     version: 0.15-1
+     vpkg: libopensync0 (>= 0.22)
+-
+ package: calendarserver
+ version: 1.2.dfsg-9
+ status: broken
+ reasons:
+  -
+   conflict:
+    pkg1:
+     package: python-vobject
+     version: 0.8.1c-3
+    pkg2:
+     package: calendarserver
+     version: 1.2.dfsg-9
+    paths:
+     -
+      path:
+       -
+        package: calendarserver
+        version: 1.2.dfsg-9
+     -
+      path:
+       -
+        package: calendarserver
+        version: 1.2.dfsg-9
+        vpkg: python-vobject (>= 0.4.8)
+       -
+        package: python-vobject
+        version: 0.8.1c-3
+-
+ package: robot-player-dev
+ version: 3.0.1+dfsg-1.1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libplayerdrivers3.0
+     version: 3.0.1+dfsg-1.1
+     vpkg: libcv4
+    paths:
+     -
+      path:
+       -
+        package: robot-player-dev
+        version: 3.0.1+dfsg-1.1
+        vpkg: libplayerdrivers3.0-dev (>= 3.0.1+dfsg-1.1)
+       -
+        package: libplayerdrivers3.0-dev
+        version: 3.0.1+dfsg-1.1
+        vpkg: libplayerdrivers3.0 (= 3.0.1+dfsg-1.1)
+       -
+        package: libplayerdrivers3.0
+        version: 3.0.1+dfsg-1.1
+        vpkg: libcv4
+-
+ package: mrpt-apps
+ version: 1:0.9.0-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: mrpt-apps
+     version: 1:0.9.0-2
+     vpkg: libcv4
+-
+ package: libgruel-dev
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libgruel0
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: libgruel-dev
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libgruel0 (= 3.2.2.dfsg-1+b1)
+       -
+        package: libgruel0
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: libgnuradio-usrp2-0
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libgnuradio-core0
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: libgnuradio-usrp2-0
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libgnuradio-core0 (= 3.2.2.dfsg-1+b1)
+       -
+        package: libgnuradio-core0
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: scsh
+ version: 0.6.6.3
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: scsh
+     version: 0.6.6.3
+     vpkg: scsh-0.6
+-
+ package: robot-player
+ version: 3.0.1+dfsg-1.1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: robot-player
+     version: 3.0.1+dfsg-1.1
+     vpkg: libcv4
+-
+ package: libdc1394-examples
+ version: 1.1.0-5
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libdc1394-examples
+     version: 1.1.0-5
+     vpkg: libraw1394-8
+-
+ package: gnuradio-utils
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-gnuradio-usrp
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: gnuradio-utils
+        version: 3.2.2.dfsg-1+b1
+        vpkg: python-gnuradio-usrp
+       -
+        package: python-gnuradio-usrp
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: git-svn
+ version: 1:1.7.0.4-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: git-svn
+     version: 1:1.7.0.4-1
+     vpkg: git-core (< 1:1.7.0.4-.)
+-
+ package: zope-cookiecrumbler
+ version: 1.2-7
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: zope-cookiecrumbler
+     version: 1.2-7
+     vpkg: zope2.9 | zope2.10
+-
+ package: libmrpt-reactivenav0.9
+ version: 1:0.9.0-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libmrpt-reactivenav0.9
+     version: 1:0.9.0-2
+     vpkg: libcv4
+-
+ package: libgnuradio-usrp2-dev
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libgnuradio-core0
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: libgnuradio-usrp2-dev
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libgnuradio-usrp2-0 (= 3.2.2.dfsg-1+b1)
+       -
+        package: libgnuradio-usrp2-0
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libgnuradio-core0 (= 3.2.2.dfsg-1+b1)
+       -
+        package: libgnuradio-core0
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: xserver-xorg-input-citron
+ version: 1:2.2.2-1
+ status: broken
+ reasons:
+  -
+   conflict:
+    pkg1:
+     package: xserver-xorg-input-citron
+     version: 1:2.2.2-1
+    pkg2:
+     package: xserver-xorg-core
+     version: 2:1.7.7-3
+    paths:
+     -
+      path:
+       -
+        package: xserver-xorg-input-citron
+        version: 1:2.2.2-1
+     -
+      path:
+       -
+        package: xserver-xorg-input-citron
+        version: 1:2.2.2-1
+        vpkg: xserver-xorg-core (>= 2:1.5.99.901)
+       -
+        package: xserver-xorg-core
+        version: 2:1.7.7-3
+-
+ package: crawl-tiles
+ version: 2:0.7.1-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: crawl-tiles
+     version: 2:0.7.1-1
+     vpkg: nvidia-glx (>= 1.0.4349)
+-
+ package: libqt-perl
+ version: 3.008-4
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libqt-perl
+     version: 3.008-4
+     vpkg: libsmokeqt1 (>= 4:3.5.10)
+-
+ package: libmrpt-opengl0.9
+ version: 1:0.9.0-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libmrpt-opengl0.9
+     version: 1:0.9.0-2
+     vpkg: libcv4
+-
+ package: gnuradio-radio-astronomy
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-gnuradio-usrp
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: gnuradio-radio-astronomy
+        version: 3.2.2.dfsg-1+b1
+        vpkg: python-gnuradio-usrp
+       -
+        package: python-gnuradio-usrp
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: eucalyptus-walrus
+ version: 1.6.2-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: eucalyptus-java-common
+     version: 1.6.2-2
+     vpkg: libhibernate-entitymanager-java
+    paths:
+     -
+      path:
+       -
+        package: eucalyptus-walrus
+        version: 1.6.2-2
+        vpkg: eucalyptus-java-common (>= 1.6.2-2)
+       -
+        package: eucalyptus-java-common
+        version: 1.6.2-2
+        vpkg: libhibernate-entitymanager-java
+-
+ package: opensync-plugin-gpe
+ version: 0.22-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: opensync-plugin-gpe
+     version: 0.22-1
+     vpkg: libopensync0 (>= 0.22)
+-
+ package: epiphany-extension-gwget
+ version: 1.0.4-1.1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: epiphany-extension-gwget
+     version: 1.0.4-1.1
+     vpkg: epiphany-browser (< 2.30)
+-
+ package: postgresql-8.3-plruby
+ version: 0.5.3-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: postgresql-8.3-plruby
+     version: 0.5.3-1
+     vpkg: postgresql-8.3
+-
+ package: klash-opengl
+ version: 0.8.7-2+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: gnash-common-opengl
+     version: 0.8.7-2+b1
+     vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: klash-opengl
+        version: 0.8.7-2+b1
+        vpkg: gnash-common-opengl (= 0.8.7-2+b1)
+       -
+        package: gnash-common-opengl
+        version: 0.8.7-2+b1
+        vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+-
+ package: libmrpt-maps0.9
+ version: 1:0.9.0-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libmrpt-maps0.9
+     version: 1:0.9.0-2
+     vpkg: libcv4
+-
+ package: libusrp2-0
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libusrp2-0
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: opensync-plugin-opie
+ version: 0.22-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: opensync-plugin-opie
+     version: 0.22-2
+     vpkg: libopensync0 (>= 0.22)
+-
+ package: frei0r-plugins
+ version: 1.1.22git20091109-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: frei0r-plugins
+     version: 1.1.22git20091109-1
+     vpkg: libcv4
+-
+ package: genesis
+ version: 2.2.1-12+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: genesis
+     version: 2.2.1-12+b1
+     vpkg: libnetcdf4
+-
+ package: python-gnuradio-video-sdl
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-gnuradio-video-sdl
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: libosgal-dev
+ version: 0.6.1-2+b3
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libosgal1
+     version: 0.6.1-2+b3
+     vpkg: libopenscenegraph56 (>= 2.8.1)
+    paths:
+     -
+      path:
+       -
+        package: libosgal-dev
+        version: 0.6.1-2+b3
+        vpkg: libosgal1 (= 0.6.1-2+b3)
+       -
+        package: libosgal1
+        version: 0.6.1-2+b3
+        vpkg: libopenscenegraph56 (>= 2.8.1)
+-
+ package: mozart-stdlib
+ version: 20060615-6
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: mozart-stdlib
+     version: 20060615-6
+     vpkg: mozart (>= 1.4.0)
+-
+ package: libexchangemapi-1.0-0
+ version: 0.28.3-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libexchangemapi-1.0-0
+     version: 0.28.3-2
+     vpkg: libedataserver1.2-11 (>= 2.28.3.1)
+-
+ package: php-imlib
+ version: 0.7-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: php-imlib
+     version: 0.7-1
+     vpkg: phpapi-20060613
+-
+ package: libplayerdrivers3.0
+ version: 3.0.1+dfsg-1.1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libplayerdrivers3.0
+     version: 3.0.1+dfsg-1.1
+     vpkg: libcv4
+-
+ package: opensync-plugin-synce
+ version: 0.15-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: opensync-module-python
+     version: 0.22-2
+     vpkg: libopensync0 (>= 0.22)
+    paths:
+     -
+      path:
+       -
+        package: opensync-plugin-synce
+        version: 0.15-2
+        vpkg: opensync-module-python
+       -
+        package: opensync-module-python
+        version: 0.22-2
+        vpkg: libopensync0 (>= 0.22)
+-
+ package: multisync0.90
+ version: 0.92.0~svn355-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: multisync0.90
+     version: 0.92.0~svn355-2
+     vpkg: libopensync0 (>= 0.22)
+-
+ package: zope-maildrophost
+ version: 2.2-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: zope-maildrophost
+     version: 2.2-1
+     vpkg: zope2.8 | zope2.9 | zope2.10
+-
+ package: libgnuradio-core-dev
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libgnuradio-core0
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: libgnuradio-core-dev
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libgnuradio-core0 (= 3.2.2.dfsg-1+b1)
+       -
+        package: libgnuradio-core0
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: gitk
+ version: 1:1.7.0.4-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: gitk
+     version: 1:1.7.0.4-1
+     vpkg: git-core (< 1:1.7.0.4-.)
+-
+ package: libdiagnostics-dev
+ version: 0.3.1-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libdiagnostics0
+     version: 0.3.1-2
+     vpkg: libace-5.6.3 (>= 5.6.3)
+    paths:
+     -
+      path:
+       -
+        package: libdiagnostics-dev
+        version: 0.3.1-2
+        vpkg: libdiagnostics0 (= 0.3.1-2)
+       -
+        package: libdiagnostics0
+        version: 0.3.1-2
+        vpkg: libace-5.6.3 (>= 5.6.3)
+-
+ package: libmrpt-base0.9
+ version: 1:0.9.0-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libmrpt-base0.9
+     version: 1:0.9.0-2
+     vpkg: libcv4
+-
+ package: libdiagnostics0
+ version: 0.3.1-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libdiagnostics0
+     version: 0.3.1-2
+     vpkg: libace-5.6.3 (>= 5.6.3)
+-
+ package: gnash-opengl
+ version: 0.8.7-2+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: gnash-common-opengl
+     version: 0.8.7-2+b1
+     vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: gnash-opengl
+        version: 0.8.7-2+b1
+        vpkg: gnash-common-opengl (= 0.8.7-2+b1)
+       -
+        package: gnash-common-opengl
+        version: 0.8.7-2+b1
+        vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+-
+ package: opensync-plugin-palm
+ version: 0.22-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: opensync-plugin-palm
+     version: 0.22-2
+     vpkg: libopensync0 (>= 0.22)
+-
+ package: gnuradio-apps
+ version: 3.2.2.dfsg-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: gnuradio-pager
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: gnuradio-apps
+        version: 3.2.2.dfsg-1
+        vpkg: gnuradio-pager
+       -
+        package: gnuradio-pager
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: libexchangemapi-1.0-dev
+ version: 0.28.3-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libexchangemapi-1.0-0
+     version: 0.28.3-2
+     vpkg: libedataserver1.2-11 (>= 2.28.3.1)
+    paths:
+     -
+      path:
+       -
+        package: libexchangemapi-1.0-dev
+        version: 0.28.3-2
+        vpkg: libexchangemapi-1.0-0 (= 0.28.3-2)
+       -
+        package: libexchangemapi-1.0-0
+        version: 0.28.3-2
+        vpkg: libedataserver1.2-11 (>= 2.28.3.1)
+-
+ package: zope-zms
+ version: 1:2.11.1-03-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: zope-zms
+     version: 1:2.11.1-03-1
+     vpkg: zope2.9 | zope2.10
+-
+ package: libcipux-cat-web-perl
+ version: 3.4.0.3-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libcipux-cat-web-perl
+     version: 3.4.0.3-1
+     vpkg: libscalar-util-numeric
+-
+ package: strongswan-dbg
+ version: 4.4.0-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: strongswan-dbg
+     version: 4.4.0-2
+     vpkg: strongswan
+-
+ package: python-gnuradio-audio-oss
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-gnuradio-audio-oss
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: zope-replacesupport
+ version: 1.0.3-4
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: zope-replacesupport
+     version: 1.0.3-4
+     vpkg: zope2.9 | zope2.10
+-
+ package: python-gnuradio-cvsd-vocoder
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-gnuradio-cvsd-vocoder
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: zope-quotafolder
+ version: 0.1.1+0-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: zope-quotafolder
+     version: 0.1.1+0-1
+     vpkg: zope2.6 | zope2.7 | zope2.8 | zope2.9 | zope2.10 | zope3
+-
+ package: libplayerdrivers3.0-dev
+ version: 3.0.1+dfsg-1.1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libplayerdrivers3.0
+     version: 3.0.1+dfsg-1.1
+     vpkg: libcv4
+    paths:
+     -
+      path:
+       -
+        package: libplayerdrivers3.0-dev
+        version: 3.0.1+dfsg-1.1
+        vpkg: libplayerdrivers3.0 (= 3.0.1+dfsg-1.1)
+       -
+        package: libplayerdrivers3.0
+        version: 3.0.1+dfsg-1.1
+        vpkg: libcv4
+-
+ package: zope-sqlrelayda
+ version: 1:0.39.4-10
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: zope-sqlrelayda
+     version: 1:0.39.4-10
+     vpkg: zope | zope2.8 | zope2.9
+-
+ package: gnuradio-pager
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: gnuradio-pager
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: opensync-plugin-moto
+ version: 0.22-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: opensync-module-python
+     version: 0.22-2
+     vpkg: libopensync0 (>= 0.22)
+    paths:
+     -
+      path:
+       -
+        package: opensync-plugin-moto
+        version: 0.22-2
+        vpkg: opensync-module-python (>= 0.22)
+       -
+        package: opensync-module-python
+        version: 0.22-2
+        vpkg: libopensync0 (>= 0.22)
+-
+ package: cipux-cat-web
+ version: 3.4.0.3-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libcipux-cat-web-perl
+     version: 3.4.0.3-1
+     vpkg: libscalar-util-numeric
+    paths:
+     -
+      path:
+       -
+        package: cipux-cat-web
+        version: 3.4.0.3-1
+        vpkg: libcipux-cat-web-perl
+       -
+        package: libcipux-cat-web-perl
+        version: 3.4.0.3-1
+        vpkg: libscalar-util-numeric
+-
+ package: pixfrogger
+ version: 1.0-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: pixfrogger
+     version: 1.0-2
+     vpkg: fenix
+-
+ package: libmesh0.6.4
+ version: 0.6.4.dfsg-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libmesh0.6.4
+     version: 0.6.4.dfsg-1
+     vpkg: libpetsc3.0.0
+-
+ package: python-gnuradio-usrp
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-gnuradio-usrp
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: holotz-castle-milanb
+ version: 0.0.20050210-1
+ status: broken
+ reasons:
+  -
+   conflict:
+    pkg1:
+     package: holotz-castle-milanb
+     version: 0.0.20050210-1
+    pkg2:
+     package: holotz-castle-data
+     version: 1.3.14-2
+    paths:
+     -
+      path:
+       -
+        package: holotz-castle-milanb
+        version: 0.0.20050210-1
+     -
+      path:
+       -
+        package: holotz-castle-milanb
+        version: 0.0.20050210-1
+        vpkg: holotz-castle
+       -
+        package: holotz-castle
+        version: 1.3.14-2
+        vpkg: holotz-castle-data (= 1.3.14-2)
+       -
+        package: holotz-castle-data
+        version: 1.3.14-2
+-
+ package: gnuradio-examples
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-gnuradio-core
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: gnuradio-examples
+        version: 3.2.2.dfsg-1+b1
+        vpkg: python-gnuradio-core
+       -
+        package: python-gnuradio-core
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: phoneuid
+ version: 0.1+git20100502-1
+ status: broken
+ reasons:
+  -
+   conflict:
+    pkg1:
+     package: fso-frameworkd
+     version: 0.8.5.1-1
+    pkg2:
+     package: libphone-utils0
+     version: 0.1+git20100630-1
+    paths:
+     -
+      path:
+       -
+        package: phoneuid
+        version: 0.1+git20100502-1
+        vpkg: libphone-ui-20100517 (>= 0.1+git20100517)
+       -
+        package: libphone-ui-20100517
+        version: 0.1+git20100517-1
+        vpkg: libphone-utils0 (>= 0.1+git20091114)
+       -
+        package: libphone-utils0
+        version: 0.1+git20100630-1
+     -
+      path:
+       -
+        package: phoneuid
+        version: 0.1+git20100502-1
+        vpkg: phonefsod (>= 0.1+git20100515)
+       -
+        package: phonefsod
+        version: 0.1+git20100515-1
+        vpkg: fso-frameworkd
+       -
+        package: fso-frameworkd
+        version: 0.8.5.1-1
+-
+ package: git-email
+ version: 1:1.7.0.4-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: git-email
+     version: 1:1.7.0.4-1
+     vpkg: git-core (< 1:1.7.0.4-.)
+-
+ package: libstageplugin1
+ version: 2.1.1-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libstageplugin1
+     version: 2.1.1-1
+     vpkg: libplayercore2
+-
+ package: libgnuradio-dev
+ version: 3.2.2.dfsg-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libgnuradio-core0
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: libgnuradio-dev
+        version: 3.2.2.dfsg-1
+        vpkg: libgnuradio-core-dev
+       -
+        package: libgnuradio-core-dev
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libgnuradio-core0 (= 3.2.2.dfsg-1+b1)
+       -
+        package: libgnuradio-core0
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: libdc1394-13
+ version: 1.1.0-5
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libdc1394-13
+     version: 1.1.0-5
+     vpkg: libraw1394-8
+-
+ package: libmrpt-hmtslam0.9
+ version: 1:0.9.0-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libmrpt-hmtslam0.9
+     version: 1:0.9.0-2
+     vpkg: libcv4
+-
+ package: libgruel0
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libgruel0
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: libdc1394-13-dev
+ version: 1.1.0-5
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libdc1394-13
+     version: 1.1.0-5
+     vpkg: libraw1394-8
+    paths:
+     -
+      path:
+       -
+        package: libdc1394-13-dev
+        version: 1.1.0-5
+        vpkg: libdc1394-13 (= 1.1.0-5)
+       -
+        package: libdc1394-13
+        version: 1.1.0-5
+        vpkg: libraw1394-8
+-
+ package: squishdot
+ version: 1.5.0-6.1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: squishdot
+     version: 1.5.0-6.1
+     vpkg: zope2.7 | zope2.8 | zope2.9 | zope2.10 | zope2.11 | zope2.12
+-
+ package: python-gnuradio-audio-jack
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-gnuradio-audio-jack
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: xserver-xorg-input-mutouch
+ version: 1:1.2.1-2
+ status: broken
+ reasons:
+  -
+   conflict:
+    pkg1:
+     package: xserver-xorg-core
+     version: 2:1.7.7-3
+    pkg2:
+     package: xserver-xorg-input-mutouch
+     version: 1:1.2.1-2
+    paths:
+     -
+      path:
+       -
+        package: xserver-xorg-input-mutouch
+        version: 1:1.2.1-2
+     -
+      path:
+       -
+        package: xserver-xorg-input-mutouch
+        version: 1:1.2.1-2
+        vpkg: xserver-xorg-core (>= 2:1.5.99.901)
+       -
+        package: xserver-xorg-core
+        version: 2:1.7.7-3
+-
+ package: winbind4
+ version: 4.0.0~alpha8+git20090912-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-samba
+     version: 4.0.0~alpha8+git20090912-1
+     vpkg: python (< 2.6)
+    paths:
+     -
+      path:
+       -
+        package: winbind4
+        version: 4.0.0~alpha8+git20090912-1
+        vpkg: samba4 (= 4.0.0~alpha8+git20090912-1)
+       -
+        package: samba4
+        version: 4.0.0~alpha8+git20090912-1
+        vpkg: python-samba
+       -
+        package: python-samba
+        version: 4.0.0~alpha8+git20090912-1
+        vpkg: python (< 2.6)
+-
+ package: zope-atextensions
+ version: 0.9.2-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: zope-atextensions
+     version: 0.9.2-2
+     vpkg: zope3.0 | zope2.10 | zope2.9 | zope2.8 | zope2.7
+-
+ package: python-gnuradio-wxgui
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-gnuradio-core
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: python-gnuradio-wxgui
+        version: 3.2.2.dfsg-1+b1
+        vpkg: python-gnuradio-core (= 3.2.2.dfsg-1+b1)
+       -
+        package: python-gnuradio-core
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: libmrpt-hwdrivers0.9
+ version: 1:0.9.0-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libmrpt-hwdrivers0.9
+     version: 1:0.9.0-2
+     vpkg: libcv4
+-
+ package: gnash-common-opengl
+ version: 0.8.7-2+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: gnash-common-opengl
+     version: 0.8.7-2+b1
+     vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+-
+ package: postgresql-8.3-pljava-gcj
+ version: 1.4.0-1.1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: postgresql-8.3-pljava-gcj
+     version: 1.4.0-1.1
+     vpkg: libgcj9-0 (>= 4.3)
+-
+ package: libjffi-java
+ version: 1.0.2-3
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libjffi-java
+     version: 1.0.2-3
+     vpkg: libjffi-jni
+-
+ package: stage
+ version: 2.1.1-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libstageplugin1
+     version: 2.1.1-1
+     vpkg: libplayercore2
+    paths:
+     -
+      path:
+       -
+        package: stage
+        version: 2.1.1-1
+        vpkg: libstageplugin1
+       -
+        package: libstageplugin1
+        version: 2.1.1-1
+        vpkg: libplayercore2
+-
+ package: evolution-mapi-dbg
+ version: 0.28.3-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: evolution-mapi
+     version: 0.28.3-2
+     vpkg: libcamel1.2-14 (< 2.29)
+    paths:
+     -
+      path:
+       -
+        package: evolution-mapi-dbg
+        version: 0.28.3-2
+        vpkg: evolution-mapi (= 0.28.3-2)
+       -
+        package: evolution-mapi
+        version: 0.28.3-2
+        vpkg: libcamel1.2-14 (< 2.29)
+-
+ package: python-gnuradio-trellis
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-gnuradio-trellis
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: python-gi
+ version: 0.6.0-1
+ status: broken
+ reasons:
+  -
+   conflict:
+    pkg1:
+     package: python-gobject
+     version: 2.21.4-1
+    pkg2:
+     package: python-gi
+     version: 0.6.0-1
+    paths:
+     -
+      path:
+       -
+        package: python-gi
+        version: 0.6.0-1
+     -
+      path:
+       -
+        package: python-gi
+        version: 0.6.0-1
+        vpkg: python-gobject (>= 2.20)
+       -
+        package: python-gobject
+        version: 2.21.4-1
+-
+ package: klash
+ version: 0.8.7-2+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: gnash-common
+     version: 0.8.7-2+b1
+     vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: klash
+        version: 0.8.7-2+b1
+        vpkg: gnash-common (= 0.8.7-2+b1)
+       -
+        package: gnash-common
+        version: 0.8.7-2+b1
+        vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+-
+ package: multisync-tools
+ version: 0.92.0~svn355-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: multisync-tools
+     version: 0.92.0~svn355-2
+     vpkg: libopensync0 (>= 0.22)
+-
+ package: git-arch
+ version: 1:1.7.0.4-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: git-arch
+     version: 1:1.7.0.4-1
+     vpkg: git-core (< 1:1.7.0.4-.)
+-
+ package: mrpt-libs
+ version: 1:0.9.0-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libmrpt-base0.9
+     version: 1:0.9.0-2
+     vpkg: libcv4
+    paths:
+     -
+      path:
+       -
+        package: mrpt-libs
+        version: 1:0.9.0-2
+        vpkg: libmrpt-base0.9
+       -
+        package: libmrpt-base0.9
+        version: 1:0.9.0-2
+        vpkg: libcv4
+-
+ package: python-gnuradio-gsm-fr-vocoder
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-gnuradio-gsm-fr-vocoder
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: libgnuradio
+ version: 3.2.2.dfsg-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libgnuradio-core0
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: libgnuradio
+        version: 3.2.2.dfsg-1
+        vpkg: libgnuradio-core0
+       -
+        package: libgnuradio-core0
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: enna-dbg
+ version: 0.4.0-4
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: enna
+     version: 0.4.0-4
+     vpkg: libevas-svn-05-engines-x (>= 0.9.9.063)
+    paths:
+     -
+      path:
+       -
+        package: enna-dbg
+        version: 0.4.0-4
+        vpkg: enna (= 0.4.0-4)
+       -
+        package: enna
+        version: 0.4.0-4
+        vpkg: libevas-svn-05-engines-x (>= 0.9.9.063)
+-
+ package: enna
+ version: 0.4.0-4
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: enna
+     version: 0.4.0-4
+     vpkg: libevas-svn-05-engines-x (>= 0.9.9.063)
+-
+ package: libosgal1
+ version: 0.6.1-2+b3
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libosgal1
+     version: 0.6.1-2+b3
+     vpkg: libopenscenegraph56 (>= 2.8.1)
+-
+ package: zope-tinytableplus
+ version: 0.9-19
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: zope-tinytableplus
+     version: 0.9-19
+     vpkg: zope2.9 | zope2.10 | zope2.11
+-
+ package: geg
+ version: 1.0.2-6+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: geg
+     version: 1.0.2-6+b1
+     vpkg: libglib1.2ldbl (>= 1.2.10-18)
+-
+ package: zope-ploneformgen
+ version: 1.2.7-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: zope-ploneformgen
+     version: 1.2.7-1
+     vpkg: zope3.0 | zope2.10 | zope2.9 | zope2.8 | zope2.7
+-
+ package: gnuradio-radar-mono
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-gnuradio-usrp
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: gnuradio-radar-mono
+        version: 3.2.2.dfsg-1+b1
+        vpkg: python-gnuradio-usrp
+       -
+        package: python-gnuradio-usrp
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: libmrpt-gui0.9
+ version: 1:0.9.0-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libmrpt-gui0.9
+     version: 1:0.9.0-2
+     vpkg: libcv4
+-
+ package: xpdf-utils
+ version: 3.02-9
+ status: broken
+ reasons:
+  -
+   conflict:
+    pkg1:
+     package: poppler-utils
+     version: 0.12.4-1
+    pkg2:
+     package: xpdf-utils
+     version: 3.02-9
+    paths:
+     -
+      path:
+       -
+        package: xpdf-utils
+        version: 3.02-9
+     -
+      path:
+       -
+        package: xpdf-utils
+        version: 3.02-9
+        vpkg: poppler-utils
+       -
+        package: poppler-utils
+        version: 0.12.4-1
+-
+ package: libghc6-pandoc-dev
+ version: 1.5.1.1-5
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libghc6-pandoc-dev
+     version: 1.5.1.1-5
+     vpkg: libghc6-highlighting-kate-dev-0.2.6.2-8bd10
+-
+ package: eprover-examples
+ version: 1.0.004-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: eprover-examples
+     version: 1.0.004-1
+     vpkg: eprover
+-
+ package: libgnuradio-qtgui-dev
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libgnuradio-core0
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: libgnuradio-qtgui-dev
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libgnuradio-qtgui0 (= 3.2.2.dfsg-1+b1)
+       -
+        package: libgnuradio-qtgui0
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libgnuradio-core0 (= 3.2.2.dfsg-1+b1)
+       -
+        package: libgnuradio-core0
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: mozilla-plugin-gnash
+ version: 0.8.7-2+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: gnash-common
+     version: 0.8.7-2+b1
+     vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: mozilla-plugin-gnash
+        version: 0.8.7-2+b1
+        vpkg: gnash-opengl (= 0.8.7-2+b1) | gnash (= 0.8.7-2+b1)
+       -
+        package: gnash-opengl
+        version: 0.8.7-2+b1
+        vpkg: gnash-common-opengl (= 0.8.7-2+b1)
+     -
+      path:
+       -
+        package: mozilla-plugin-gnash
+        version: 0.8.7-2+b1
+        vpkg: gnash-opengl (= 0.8.7-2+b1) | gnash (= 0.8.7-2+b1)
+       -
+        package: gnash
+        version: 0.8.7-2+b1
+        vpkg: gnash-common (= 0.8.7-2+b1)
+       -
+        package: gnash-common
+        version: 0.8.7-2+b1
+        vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+  -
+   missing:
+    pkg:
+     package: gnash-common-opengl
+     version: 0.8.7-2+b1
+     vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: mozilla-plugin-gnash
+        version: 0.8.7-2+b1
+        vpkg: gnash-opengl (= 0.8.7-2+b1) | gnash (= 0.8.7-2+b1)
+       -
+        package: gnash-opengl
+        version: 0.8.7-2+b1
+        vpkg: gnash-common-opengl (= 0.8.7-2+b1)
+       -
+        package: gnash-common-opengl
+        version: 0.8.7-2+b1
+        vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+     -
+      path:
+       -
+        package: mozilla-plugin-gnash
+        version: 0.8.7-2+b1
+        vpkg: gnash-opengl (= 0.8.7-2+b1) | gnash (= 0.8.7-2+b1)
+       -
+        package: gnash
+        version: 0.8.7-2+b1
+        vpkg: gnash-common (= 0.8.7-2+b1)
+-
+ package: libusrp-dev
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libusrp0
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: libusrp-dev
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libusrp0 (= 3.2.2.dfsg-1+b1)
+       -
+        package: libusrp0
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: libmrpt-slam0.9
+ version: 1:0.9.0-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libmrpt-slam0.9
+     version: 1:0.9.0-2
+     vpkg: libcv4
+-
+ package: konqueror-plugin-gnash
+ version: 0.8.7-2+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: gnash-common
+     version: 0.8.7-2+b1
+     vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: konqueror-plugin-gnash
+        version: 0.8.7-2+b1
+        vpkg: klash-opengl (= 0.8.7-2+b1) | klash (= 0.8.7-2+b1)
+       -
+        package: klash-opengl
+        version: 0.8.7-2+b1
+        vpkg: gnash-common-opengl (= 0.8.7-2+b1)
+     -
+      path:
+       -
+        package: konqueror-plugin-gnash
+        version: 0.8.7-2+b1
+        vpkg: klash-opengl (= 0.8.7-2+b1) | klash (= 0.8.7-2+b1)
+       -
+        package: klash
+        version: 0.8.7-2+b1
+        vpkg: gnash-common (= 0.8.7-2+b1)
+       -
+        package: gnash-common
+        version: 0.8.7-2+b1
+        vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+  -
+   missing:
+    pkg:
+     package: gnash-common-opengl
+     version: 0.8.7-2+b1
+     vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: konqueror-plugin-gnash
+        version: 0.8.7-2+b1
+        vpkg: klash-opengl (= 0.8.7-2+b1) | klash (= 0.8.7-2+b1)
+       -
+        package: klash-opengl
+        version: 0.8.7-2+b1
+        vpkg: gnash-common-opengl (= 0.8.7-2+b1)
+       -
+        package: gnash-common-opengl
+        version: 0.8.7-2+b1
+        vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+     -
+      path:
+       -
+        package: konqueror-plugin-gnash
+        version: 0.8.7-2+b1
+        vpkg: klash-opengl (= 0.8.7-2+b1) | klash (= 0.8.7-2+b1)
+       -
+        package: klash
+        version: 0.8.7-2+b1
+        vpkg: gnash-common (= 0.8.7-2+b1)
+-
+ package: lives
+ version: 1.3.4-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: frei0r-plugins
+     version: 1.1.22git20091109-1
+     vpkg: libcv4
+    paths:
+     -
+      path:
+       -
+        package: lives
+        version: 1.3.4-1
+        vpkg: frei0r-plugins
+       -
+        package: frei0r-plugins
+        version: 1.1.22git20091109-1
+        vpkg: libcv4
+-
+ package: libemail-simple-creator-perl
+ version: 1.424-2
+ status: broken
+ reasons:
+  -
+   conflict:
+    pkg1:
+     package: libemail-simple-perl
+     version: 2.100-1
+    pkg2:
+     package: libemail-simple-creator-perl
+     version: 1.424-2
+    paths:
+     -
+      path:
+       -
+        package: libemail-simple-creator-perl
+        version: 1.424-2
+     -
+      path:
+       -
+        package: libemail-simple-creator-perl
+        version: 1.424-2
+        vpkg: libemail-simple-perl (>= 2.003)
+       -
+        package: libemail-simple-perl
+        version: 2.100-1
+-
+ package: salome
+ version: 5.1.3-9
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: salome
+     version: 5.1.3-9
+     vpkg: python (< 2.6)
+-
+ package: scsh-install-lib
+ version: 1.3.0-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: scsh-install-lib
+     version: 1.3.0-1
+     vpkg: scsh-0.6 (>= 0.6.6)
+-
+ package: gnash
+ version: 0.8.7-2+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: gnash-common
+     version: 0.8.7-2+b1
+     vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: gnash
+        version: 0.8.7-2+b1
+        vpkg: gnash-common (= 0.8.7-2+b1)
+       -
+        package: gnash-common
+        version: 0.8.7-2+b1
+        vpkg: libboost-date-time1.40.0 (>= 1.40.0-1)
+-
+ package: openchangeproxy
+ version: 1:0.8.2+svn1524-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-samba
+     version: 4.0.0~alpha8+git20090912-1
+     vpkg: python (< 2.6)
+    paths:
+     -
+      path:
+       -
+        package: openchangeproxy
+        version: 1:0.8.2+svn1524-1
+        vpkg: samba4 (>= 4.0.0~)
+       -
+        package: samba4
+        version: 4.0.0~alpha8+git20090912-1
+        vpkg: python-samba
+       -
+        package: python-samba
+        version: 4.0.0~alpha8+git20090912-1
+        vpkg: python (< 2.6)
+-
+ package: python-gnuradio-usrp2
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-gnuradio-usrp2
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: libapt-rpm-pkg2
+ version: 0.5.15lorg3.2-6
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libapt-rpm-pkg2
+     version: 0.5.15lorg3.2-6
+     vpkg: librpm4.4 (>= 4.4)
+-
+ package: libluminate-dev
+ version: 0.11.0-5
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libluminate-dev
+     version: 0.11.0-5
+     vpkg: libpetsc3.1.0-dev
+-
+ package: opensync-plugin-iceowl
+ version: 0.22-3
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: opensync-plugin-iceowl
+     version: 0.22-3
+     vpkg: libopensync0 (>= 0.22)
+-
+ package: libmrpt-obs0.9
+ version: 1:0.9.0-2
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libmrpt-obs0.9
+     version: 1:0.9.0-2
+     vpkg: libcv4
+-
+ package: libgnuradio-audio-alsa0
+ version: 3.2.2.dfsg-1+b1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: libgnuradio-core0
+     version: 3.2.2.dfsg-1+b1
+     vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+    paths:
+     -
+      path:
+       -
+        package: libgnuradio-audio-alsa0
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libgnuradio-core0 (= 3.2.2.dfsg-1+b1)
+       -
+        package: libgnuradio-core0
+        version: 3.2.2.dfsg-1+b1
+        vpkg: libboost-thread1.40.0 (>= 1.40.0-1)
+-
+ package: python-samba
+ version: 4.0.0~alpha8+git20090912-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: python-samba
+     version: 4.0.0~alpha8+git20090912-1
+     vpkg: python (< 2.6)
+-
+ package: zope-cmfbibliographyat
+ version: 0.8.0-3
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: zope-cmfbibliographyat
+     version: 0.8.0-3
+     vpkg: zope3.0 | zope2.10 | zope2.9 | zope2.8 | zope2.7
+-
+ package: zope-mysqlda
+ version: 3.1-1
+ status: broken
+ reasons:
+  -
+   missing:
+    pkg:
+     package: zope-mysqlda
+     version: 3.1-1
+     vpkg: zope2.8 | zope2.9 | zope2.10 | zope2.11
