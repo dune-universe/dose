@@ -24,7 +24,7 @@ module Options = struct
   let options = OptParser.make ~description ()
 
   open OptParser
-  add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
+  add options ~short_name:'v' ~long_name:"verbose" ~help:"Verbose" debug;
   add options                 ~long_name:"out"   ~help:"Output file" out;
   add options ~short_name:'c' ~long_name:"cudf"  ~help:"print the cudf solution (if any)" cudf;
 end
@@ -43,12 +43,12 @@ let main () =
       let r = Depsolver.check_request (p,l,r) in
       if Diagnostic.is_solution r then begin
         if OptParse.Opt.get Options.cudf then
-          Diagnostic.print stdout ~explain:true r
+          Diagnostic.print ~success:true ~explain:true Format.std_formatter r
         end
       ;
       if not(Diagnostic.is_solution r && OptParse.Opt.get Options.cudf) then begin
         Printf.printf "Check %s\n" f;
-        Diagnostic.print stdout ~explain:true r
+        Diagnostic.print ~failure:true ~explain:true Format.std_formatter r
       end
   |_ -> (Printf.eprintf "Too many arguments\n" ; exit 1)
 ;;

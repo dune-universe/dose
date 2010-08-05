@@ -70,38 +70,11 @@ let main () =
     (p,v)
   in
 
-  let print_package ?(short=false) pkg =
-    let (p,v) = from_cudf pkg in
-    let (_,psource) = String.replace ~str:p ~sub:"source---" ~by:"" in
-    Printf.sprintf "%s (= %s)" psource v
-  in
-
-  let result_printer pp (printer : Distchecklib.print_t) = function
-    (* print all *)
-    |{result = Success (_) } as r when Options.showall () ->
-        printer ~pp stdout r
-    |{result = Failure (_) } as r when Options.showall () ->
-        printer ~pp ~explain:(OptParse.Opt.get Options.explain) stdout r
-
-    (* print only success - nothing to explain *)
-    |{result = Success (_) } as r when Options.onlysucc () ->
-        printer ~pp stdout r
-    |{result = Failure (_) } when Options.onlysucc () -> ()
-
-    (* print only failures *)
-    |{result = Success (_) } when Options.onlyfail () -> ()
-    |{result = Failure (_) } as r when Options.onlyfail () ->
-        printer ~pp ~explain:(OptParse.Opt.get Options.explain) stdout r
-
-    (* nothing *)
-    | _ -> ()
-  in
-
   Util.print_info "Solving..." ;
-  let callback =
-    result_printer print_package 
-    (if OptParse.Opt.is_set Options.xml then Distchecklib.xml_print else Diagnostic.print)
-  in
+  let failure = OptParse.Opt.get Options.failures in
+  let success = OptParse.Opt.get Options.successes in
+  let explain = OptParse.Opt.get Options.explain in
+  let callback = Diagnostic.print ~pp:from_cudf ~failure ~success ~explain Format.std_formatter in
   let i = Depsolver.listcheck ~callback universe sl in
   Printf.eprintf "Broken Packages: %d\n" i
 ;;

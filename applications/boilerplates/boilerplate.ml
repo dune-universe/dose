@@ -16,12 +16,14 @@ let argv1 l = argv_ (fun a -> a.(0)) l
 let argv2 l = argv_ (fun a -> (a.(0),a.(1))) l
 let argv3 l = argv_ (fun a -> (a.(0),a.(1),a.(2))) l
 
+(** read a debian Packages file - compressed or not *)
 let read_deb ?(extras=[]) s =
-  let ch = IO.input_channel (open_in s) in
+  let ch = Input.open_file s in
   let l = Debian.Packages.parse_packages_in ~extras (fun x->x) ch in
-  let _ = IO.close_in ch in
+  let _ = (* IO.close_in ch *) Input.close_ch ch in
   l
 
+(** transform a list of debian control stanza into a cudf packages list *)
 let deb_load_list ?(extras=[]) ?(status=[]) l =
   let l = Debian.Packages.merge status l in
   let tables = Debian.Debcudf.init_tables l in
@@ -37,12 +39,14 @@ let deb_load_list ?(extras=[]) ?(status=[]) l =
   in
   (pkglist,from_cudf,to_cudf)
 
+(** transform a list of debian control stanza into a cudf universe *)
 let deb_load_universe ?(extras=[]) l =
   let (l,f,t) = deb_load_list ~extras l in
   (Cudf.load_universe l, f, t)
 
 (* XXX double minded ... this code is kinda similar to the code in rpmcudf 
  * refactor or not refactor ? *)
+(** transform a list of rpm control stanza into a cudf packages list *)
 let rpm_load_list l =
 IFDEF HASRPM THEN
   let tables =  Rpm.Rpmcudf.init_tables l in
@@ -55,13 +59,48 @@ ELSE
   failwith "librpm not available. re-configure with --with-rpm"
 END
 
+(** transform a list of rpm control stanza into a cudf universe *)
 let rpm_load_universe l =
   let (l,f,t) = rpm_load_list l in
   (Cudf.load_universe l, f, t)
 
+(** parse a cudf file and return a triple (preamble,package list,request
+    option). If the package is not valid fails and exit *)
+let parse_cudf doc =
+  try
+    let p = Cudf_parser.from_IO_in_channel (*open_in doc*) (Input.open_file doc) in
+    Cudf_parser.parse p
+  with
+  |Cudf_parser.Parse_error _
+  | Cudf.Constraint_violation _ as exn -> begin
+    Printf.eprintf "Error while loading CUDF from %s: %s\n%!"
+    doc (Printexc.to_string exn);
+    exit (-1)
+  end
+
+let load_cudf_ch ch =
+  try
+    let p = Cudf_parser.from_IO_in_channel ch in
+    Cudf_parser.load p
+  with
+  |Cudf_parser.Parse_error _
+  | Cudf.Constraint_violation _ as exn -> begin
+    Printf.eprintf "Error while loading CUDF: %s\n%!"
+    (Printexc.to_string exn);
+    exit (-1)
+  end
+
+(** parse a cudf file and return a triple (preamble,universe,request option).
+    If the package is not valid fails and exit *)
+let load_cudf doc = 
+  let ch = Input.open_file doc in
+  let l = load_cudf_ch ch in
+  Input.close_ch ch;
+  l
+
 (* XXX when parsing a cudf, I should also remember the preamble !! *)
 let cudf_load_list file =
-  let _, pkglist, _ = CudfAdd.parse_cudf file in
+  let _, pkglist, _ = parse_cudf file in
   let from_cudf pkg = (pkg.Cudf.package,string_of_int pkg.Cudf.version) in
   let to_cudf (p,v) = (p,int_of_string v) in
   (pkglist,from_cudf,to_cudf)
@@ -70,6 +109,7 @@ let cudf_load_universe file =
   let (l,f,t) = cudf_load_list file in
   (Cudf.load_universe l, f, t)
 
+(* return a list of file of the same type *)
 let rec filter init acc uris =
   match uris,init with
   |[],None -> (Printf.eprintf "No input provided\n"; exit 1)
@@ -94,9 +134,10 @@ let rec filter init acc uris =
     |(t,_,_),_ -> (Printf.eprintf "You cannot mix different input types\n"; exit 1)
     end
 
-(* return the name of the file *)
+(** return the name of the file *)
 let unpack (_,(_,_,_,_,file),_) = file
 
+(** parse a list of uris of the same type and return a cudf packages list *)
 let parse_input ?(extras=[]) uris =
   match filter None [] uris with
   |("cudf",[("cudf",(_,_,_,_,file),_)]) ->
@@ -135,7 +176,7 @@ END
     |(s,_) -> failwith (s^" Not supported")
 ;;
 
-(* parse and merge a list of files into a cudf package list *)
+(** parse and merge a list of files into a cudf package list *)
 let load_list ?(extras=[]) uris =
   Util.print_info "Parsing and normalizing..." ;
   let timer = Util.Timer.create "Parsing and normalizing" in
@@ -144,7 +185,7 @@ let load_list ?(extras=[]) uris =
   Util.Timer.stop timer u
 ;;
 
-(* parse and merge a list of files into a cudf universe *)
+(** parse and merge a list of files into a cudf universe *)
 let load_universe ?(extras=[]) uris =
   Util.print_info "Parsing and normalizing..." ;
   let timer = Util.Timer.create "Parsing and normalizing" in
@@ -154,3 +195,26 @@ let load_universe ?(extras=[]) uris =
   Util.Timer.stop timer u
 ;;
 
+(*
+(* XXX to refactor in Borilerplate.ml *)
+let parse uri =
+  Printf.eprintf "Parsing and normalizing...%!" ;
+  let timer = Common.Util.Timer.create "Parsing and normalizing" in
+  Common.Util.Timer.start timer;
+  let pkglist =
+    match Input.parse_uri uri with
+    |("deb",(_,_,_,_,file),_) -> begin
+      let l = Debian.Packages.input_raw [file] in
+      let tables = Debian.Debcudf.init_tables l in
+      List.map (Debian.Debcudf.tocudf tables) l
+    end
+    |("cudf",(_,_,_,_,file),_) -> begin
+      let _, l, _ = Boilerplate.parse_cudf file in l
+    end
+    |_ -> failwith "Not supported"
+  in
+  ignore(Common.Util.Timer.stop timer ());
+  Printf.eprintf "done\n%!" ;
+  pkglist
+;;
+*)

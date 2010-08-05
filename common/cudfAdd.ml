@@ -67,36 +67,6 @@ module Cudf_set =
 
 open ExtLib
 
-(** parse a cudf file and return a triple (preamble,package list,request
-    option). If the package is not valid fails and exit *)
-let parse_cudf doc =
-  try
-    let p = Cudf_parser.from_in_channel (open_in doc) in
-    Cudf_parser.parse p
-  with
-  |Cudf_parser.Parse_error _
-  | Cudf.Constraint_violation _ as exn -> begin
-    Printf.eprintf "Error while loading CUDF from %s: %s\n%!"
-    doc (Printexc.to_string exn);
-    exit (-1)
-  end
-
-let load_cudf_ch ch =
-  try
-    let p = Cudf_parser.from_in_channel ch in
-    Cudf_parser.load p
-  with
-  |Cudf_parser.Parse_error _
-  | Cudf.Constraint_violation _ as exn -> begin
-    Printf.eprintf "Error while loading CUDF: %s\n%!"
-    (Printexc.to_string exn);
-    exit (-1)
-  end
-
-(** parse a cudf file and return a triple (preamble,universe,request option).
-    If the package is not valid fails and exit *)
-let load_cudf doc = load_cudf_ch (open_in doc)
-
 (** maps one to one cudf packages to integers *)
 class projection = object(self)
 
