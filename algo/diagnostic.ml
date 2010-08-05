@@ -34,6 +34,7 @@ let build_paths deps root =
   let bind m f = List.flatten (List.map f m) in
   let rec aux acc deps root =
     match List.partition (fun (i,_,_) -> CudfAdd.equal i root) deps with
+    |([],_) when (List.length acc) = 1 -> [] 
     |([],_) -> [List.rev acc]
     |(rootlist,rest) ->
         bind rootlist (function
@@ -132,7 +133,7 @@ let print_error pp root fmt l =
   pp_list pp_reason fmt res;
 ;;
 
-let default_pp pkg = (pkg.Cudf.package, string_of_int pkg.Cudf.version)
+let default_pp pkg = (pkg.Cudf.package, CudfAdd.string_of_version pkg)
 
 let print ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) fmt = function
   |{result = Success (f); request = Package r } when success ->

@@ -49,12 +49,6 @@ let main () =
   in
   if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
   let (universe,from_cudf,_) = Boilerplate.load_universe posargs in
-
-  let print_package ?(short=false) pkg =
-    let (p,v) = from_cudf pkg in
-    Printf.sprintf "%s (= %s)" p v
-  in
-
   Util.print_info "Solving..." ;
   let timer = Util.Timer.create "Solver" in
   Util.Timer.start timer;
