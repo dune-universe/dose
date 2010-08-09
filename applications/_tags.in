@@ -3,6 +3,7 @@
 <*.ml> or <*.mli>: warn_x
 <db>: include
 <deb>: include
+<eclipse>: include
 <algo>: include
 <common>: include
 <boilerplates>: include
