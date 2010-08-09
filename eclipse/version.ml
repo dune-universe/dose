@@ -10,6 +10,7 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
+open Common
 (*
  version ::= major('.'minor('.'micro('.'qualifier)?)?)?
  major ::= digit+
@@ -20,7 +21,12 @@
  alpha ::= [a..zA..Z]
 *)
 
-(* let parse_version = *)
+let rex = Pcre.regexp "^\\d+(\\.\\d+(\\.\\d+(\\.[\\w_-]+)?)?)?$" ;;
+let parse_version s =
+  if not(Pcre.pmatch ~rex s) then 
+    Util.print_warning "bad version '%s'" s;
+  s
+;;
 
 (*
 http://www.osgi.org/javadoc/r4v42/org/osgi/framework/Version.html
@@ -36,4 +42,5 @@ equal to another version if the major, minor and micro components are equal and
 the qualifier component is equal (using String.compareTo).
 
 *)
+(* for the moment we use the debian comparison function *)
 let compare = Debian.Version.compare

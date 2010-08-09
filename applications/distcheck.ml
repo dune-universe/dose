@@ -55,7 +55,8 @@ let main () =
   let failure = OptParse.Opt.get Options.failures in
   let success = OptParse.Opt.get Options.successes in
   let explain = OptParse.Opt.get Options.explain in
-  let callback = Diagnostic.print ~pp:from_cudf ~failure ~success ~explain Format.std_formatter in
+  let fmt = Format.std_formatter in
+  let callback = Diagnostic.print ~pp:from_cudf ~failure ~success ~explain fmt in
   let i =
     if OptParse.Opt.is_set Options.checkonly then 
       let pkglist = 
@@ -69,7 +70,8 @@ let main () =
       Depsolver.univcheck ~callback universe 
   in
   ignore(Util.Timer.stop timer ());
-  Printf.eprintf "Broken Packages: %d\n%!" i
+  Printf.eprintf "total packages: %d\n" (Cudf.universe_size universe);
+  Printf.eprintf "broken packages: %d\n" i
 ;;
 
 main () ;;

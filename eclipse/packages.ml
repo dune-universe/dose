@@ -36,7 +36,7 @@ let default_package = {
 }
 
 let parse_name s = s
-let parse_version s = s
+let parse_version s = Version.parse_version s
 let parse_constr s =
   let s = start_token_stream s in
   parse_constr_aux ~check:false true s

@@ -1,4 +1,4 @@
-<*.ml> or <*.mli> or <*.byte> or <*.native>: pkg_extlib, @PKG_CUDF@
+<*.ml> or <*.mli> or <*.byte> or <*.native>: pkg_extlib, pkg_pcre, @PKG_CUDF@
 <{eclipsecudf,version,packages}.cmx>: for-pack(Eclipse)
 <tests.*>: pkg_extlib, pkg_str, pkg_oUnit, @PKG_CUDF@, @PKG_ZIP@, @PKG_BZ2@
 <common>: include
