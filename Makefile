@@ -20,6 +20,7 @@ clean:
 	$(OCAMLBUILD) $(OBFLAGS) -clean
 	@cd deb ; $(OCAMLBUILD) $(OBFLAGS) -clean 
 	@cd rpm ; $(OCAMLBUILD) $(OBFLAGS) -clean
+	@cd eclipse ; $(OCAMLBUILD) $(OBFLAGS) -clean
 	@cd db ; $(OCAMLBUILD) $(OBFLAGS) -clean
 	@cd algo ; $(OCAMLBUILD) $(OBFLAGS) -clean
 	@cd applications ; $(OCAMLBUILD) $(OBFLAGS) -clean
@@ -35,6 +36,7 @@ distclean: clean
 	rm db/_tags db/db.mlpack
 	rm deb/_tags
 	rm rpm/_tags
+	rm eclipse/_tags
 	rm META
 
 _build/%:
@@ -91,6 +93,7 @@ dist: ./$(DIST_TARBALL)
 	rm -rf ./$(DIST_DIR)/algo/tests
 	rm -rf ./$(DIST_DIR)/deb/libcudf
 	rm -rf ./$(DIST_DIR)/rpm/libcudf
+	rm -rf ./$(DIST_DIR)/eclipse/libcudf
 	rm -rf ./$(DIST_DIR)/algo/libcudf
 	rm -rf ./$(DIST_DIR)/common/libcudf
 	rm -rf ./$(DIST_DIR)/applications/libcudf

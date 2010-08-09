@@ -262,6 +262,7 @@ AC_CONFIG_FILES([
   algo/_tags
   rpm/_tags
   deb/_tags
+  eclipse/_tags
   algo/algo.mlpack
   common/_tags
   applications/_tags

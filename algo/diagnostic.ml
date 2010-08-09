@@ -47,7 +47,7 @@ let build_paths deps root =
 
 let pp_package pp fmt pkg =
   let (p,v) = pp pkg in
-  Format.fprintf fmt "package: %s@," p;
+  Format.fprintf fmt "package: %s@," (CudfAdd.decode p);
   Format.fprintf fmt "version: %s" v
 ;;
 
@@ -77,10 +77,10 @@ let pp_dependency pp fmt (i,vpkgs) =
       | `Lt -> "<"
     in
     let pp_item fmt = function
-      |(p,None) -> Format.fprintf fmt "%s" p
+      |(p,None) -> Format.fprintf fmt "%s" (CudfAdd.decode p)
       |(p,Some(c,v)) ->
           let (p,v) = pp {Cudf.default_package with Cudf.package = p ; version = v} in
-          Format.fprintf fmt "%s (%s %s)" p (string_of_relop c) v
+          Format.fprintf fmt "%s (%s %s)" (CudfAdd.decode p) (string_of_relop c) v
     in
     pp_list fmt ~pp_item ~sep:" | "
   in

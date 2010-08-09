@@ -15,6 +15,8 @@ open ExtLib
 open Common
 open CudfAdd
 
+(* others contains the list of packages in the cudf and the list of packages in
+ * the solution *)
 type others = (Cudf.package list * Cudf.package list)
 type status = 
   |Installed of others (* this package was not installed before *)
@@ -83,15 +85,15 @@ let dummy_solution () = {
   unchanged = 0;
 }
 
-let status_to_string pkg = function
+let status_to_string ?(oneversion=false) pkg = function
   |Installed ([],[]) -> "New"
-  |Installed ([p],[]) -> Printf.sprintf "(New) Downgrades from %d to %d" p.version pkg.version
-  |Installed ([],[p]) -> Printf.sprintf "(New) Upgrades from %d to %d" p.version pkg.version
+  |Installed ([p],[]) when oneversion -> Printf.sprintf "(New) Downgrades from %d to %d" p.version pkg.version
+  |Installed ([],[p]) when oneversion -> Printf.sprintf "(New) Upgrades from %d to %d" p.version pkg.version
   |Installed (_,_) -> "New and other installed"
 
   |Removed ([],[]) -> "Removed"
-  |Removed ([p],[]) -> Printf.sprintf "(Rem) Downgraded from %d to %d" pkg.version p.version
-  |Removed ([],[p]) -> Printf.sprintf "(Rem) Upgraded from %d to %d" pkg.version p.version
+  |Removed ([p],[]) when oneversion -> Printf.sprintf "(Rem) Downgraded from %d to %d" pkg.version p.version
+  |Removed ([],[p]) when oneversion -> Printf.sprintf "(Rem) Upgraded from %d to %d" pkg.version p.version
   |Removed (_,_) -> "Removed and other installed"
   |Unchanged -> "Unchanged"
 
@@ -163,23 +165,43 @@ let diff univ sol =
   (h,s)
 ;;
 
+let by_package_name univ =
+  let h = Hashtbl.create (Cudf.universe_size univ) in
+  let add =
+    try
+      let l = Hashtbl.find pkg.Cudf.package in
+      l := pkg::!l
+    with Not_found ->
+      Hashtbl.add pkg.Cudf.package (ref [pkg])
+  in
+  Cudf.iter_packages add univ
+;;
+
 let print_diff_txt universe solutions =
   let cmp (_,(_,(_,s1))) (_,(_,(_,s2))) = compare_lex (OptParse.Opt.get Options.order) s1 s2 in
   let solutions = List.sort ~cmp:cmp solutions in 
   let (hl,solutions) = List.split solutions in
   Printf.printf "Package | %s\n" (String.concat " | " hl) ;
-  Cudf.iter_packages (fun pkg ->
+  let h = by_package_name universe in
+  Hashtbl.iter (fun name { contents = pkglist } ->
+    let allversions = 
+      List.map (fun pkg -> Cudf.pkg.version) 
+      Cudf.lookup_packages universe name 
+    in
     let pl = 
-      List.filter_map (fun (f,(h,_)) ->
-        try Some(f,Cudf_hashtbl.find h pkg) with Not_found -> assert false
-      ) solutions
+      List.map (fun pkg ->
+        List.filter_map (fun (f,(h,_)) ->
+          try Some(f,Cudf_hashtbl.find h pkg) with Not_found -> assert false
+        ) solutions
+      ) pkglist
     in
     if all_equal (List.map snd pl) then ()
     else begin
       let sl = List.map (fun (f,status) -> status_to_string pkg status) pl in
-      Printf.printf "%s %d | %s\n" pkg.package pkg.version (String.concat " | " sl)
+      Printf.printf "%s { %a } | %a\n" 
+      pkg.package pp_list allversions pp_solutions solutions
     end
-  ) universe
+  ) h
 ;;
 
 let print_diff_html universe solutions =
@@ -227,6 +249,11 @@ let check_sol u r s =
 
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
+(*
+  mathc Filename.basename(Sys.argv.(0)) with
+  |"debdiff" -> OptParse.Opt.set 
+  |"cudfcheck" -> OptParse.Opt.set
+*)
   let posargs = OptParse.OptParser.parse_argv Options.options in
   if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
 

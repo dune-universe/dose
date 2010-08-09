@@ -39,6 +39,21 @@ let deb_load_list ?(extras=[]) ?(status=[]) l =
   in
   (pkglist,from_cudf,to_cudf)
 
+(** transform a list of debian control stanza into a cudf packages list *)
+let eclipse_load_list ?(extras=[]) ?(status=[]) l =
+  let tables = Eclipse.Eclipsecudf.init_tables l in
+  let pkglist = List.map (Eclipse.Eclipsecudf.tocudf ~extras tables) l in
+  let from_cudf pkg =
+    let (p,i) = (pkg.Cudf.package,pkg.Cudf.version) in
+    let v = Eclipse.Eclipsecudf.get_real_version tables (p,i) in
+    (p,v)
+  in
+  let to_cudf (p,v) =
+    let i = Eclipse.Eclipsecudf.get_cudf_version tables (p,v) in
+    (p,i)
+  in
+  (pkglist,from_cudf,to_cudf)
+
 (** transform a list of debian control stanza into a cudf universe *)
 let deb_load_universe ?(extras=[]) l =
   let (l,f,t) = deb_load_list ~extras l in
@@ -149,6 +164,10 @@ let parse_input ?(extras=[]) uris =
       let filelist = List.map unpack l in
       let l = Debian.Packages.input_raw filelist in
       deb_load_list ~extras l
+  |("eclipse", l) ->
+      let filelist = List.map unpack l in
+      let l = Eclipse.Packages.input_raw filelist in
+      eclipse_load_list ~extras l
   |("pgsql"|"sqlite"), [(("pgsql"|"sqlite") as dbtype,info,(Some query))] ->
 IFDEF HASDB THEN
         let db = Db.Backend.init_database dbtype info (Idbr.parse_query query) in

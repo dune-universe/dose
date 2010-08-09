@@ -218,7 +218,7 @@ let tocudf tables ?(extras=[]) ?(inst=false) pkg =
   }
 
 let load_list l =
-  let timer = Util.Timer.create "Rpm.load_list" in
+  let timer = Util.Timer.create "load_list" in
   Util.Timer.start timer;
   let tables =  init_tables l in
   let pkglist = List.map (tocudf tables) l in
@@ -227,7 +227,7 @@ let load_list l =
 
 let load_universe l =
   let pkglist = load_list l in
-  let timer = Util.Timer.create "Rpm.load_universe" in
+  let timer = Util.Timer.create "load_universe" in
   Util.Timer.start timer;
   let univ = Cudf.load_universe pkglist in
   Util.Timer.stop timer univ

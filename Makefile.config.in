@@ -40,6 +40,7 @@ LIBS= \
 	  deb/debian.$(OCAMLLIBBEST) \
 	  algo/algo.$(OCAMLLIBBEST)
 
+#we always compile bytecode libraries
 ifeq ("@OCAMLBEST@","opt")
 	LIBS += common/common.cma deb/debian.cma algo/algo.cma
 endif
