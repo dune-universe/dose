@@ -2,5 +2,6 @@
 <algo>: include
 <db>: include
 <deb>: include
+<eclipse>: include
 @INCLUDE_RPM@
 @INCLUDE_CUDF@

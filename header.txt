@@ -2,7 +2,7 @@ This file is part of a library developed with the support of the
 Mancoosi Project. http://www.mancoosi.org
 
 Main author(s):
-  Copyright (C) 2009 Pietro Abate <pietro.abate@pps.jussieu.fr>
+  Copyright (C) 2009,2010 Pietro Abate <pietro.abate@pps.jussieu.fr>
 
 Contributor(s):
                                                                     
