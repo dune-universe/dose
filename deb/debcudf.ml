@@ -130,7 +130,7 @@ let get_cudf_version tables (package,version) =
   try
     let l = Hashtbl.find tables.versions_table package in
     let i = fst(List.findi (fun i a -> a = version) l) in
-    Hashtbl.replace tables.reverse_table (package,i+1) version;
+    Hashtbl.replace tables.reverse_table (CudfAdd.encode package,i+1) version;
     i+1
   with Not_found -> assert false
 
@@ -157,23 +157,6 @@ let loadl tables l =
 (* we add a self conflict here, because in debian each package is in conflict
    with all other versions of the same package *)
 let loadlc tables name l = (CudfAdd.encode name, None)::(loadl tables l)
-(*
-let loadlc tables name l =
-  let l' = 
-    List.flatten (
-      List.map (fun (name',sel) ->
-        match CudfAdd.cudfop sel with
-        |None ->
-            if (Hashtbl.mem tables.virtual_table name') then
-              [(CudfAdd.encode (name'^"--virtual"), None)]
-            else
-              [CudfAdd.encode name', None]
-        |Some(op,v) ->
-            [(CudfAdd.encode name',Some(op,get_cudf_version tables (name',v)))]
-      ) l
-    )
-  in (CudfAdd.encode name, None)::l'
-*)
 
 let loadlp tables l =
   List.map (fun (name,sel) ->

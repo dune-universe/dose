@@ -204,9 +204,9 @@ let encode s =
     Buffer.contents b
   end else s
 
-let rec decode s =
+let decode s =
   let hex_re = Str.regexp "%[0-9a-f][0-9a-f]" in
-  if Str.string_match hex_re s 0 then begin
+  (* if Str.string_match hex_re s 0 then begin *)
     let un s =
       let s = Str.matched_string s in
       let hex = String.sub s 1 2 in
@@ -214,7 +214,7 @@ let rec decode s =
       String.make 1 (Char.chr n)
     in
     Str.global_substitute hex_re un s
-  end else s
+  (* end else s *)
 
 let cudfop = function
   |Some(("<<" | "<"),v) -> Some(`Lt,v)

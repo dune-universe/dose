@@ -211,9 +211,9 @@ let parse_package s =
 
 (*****************************************************)
 
-let parse_constr_aux vers s =
+let parse_constr_aux ?(check=true) vers s =
   let name = cur s in
-  check_package_name s name;
+  if check then check_package_name s name;
   next s;
   if not (eof s) && cur s = "(" then begin
     try 
@@ -223,7 +223,7 @@ let parse_constr_aux vers s =
       let comp = (cur s) in
       next s;
       let version = cur s in
-      check_version s version;
+      if check then check_version s version;
       next s;
       expect s ")";
       (name, Some (comp, version))
@@ -238,7 +238,7 @@ let parse_constr_aux vers s =
 
 let parse_constr s =
   let s = start_token_stream s in
-  parse_constr_aux true s
+  parse_constr_aux ~check:true true s
 
 let parse_builddeps s =
   let s = start_token_stream s in
