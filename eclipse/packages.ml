@@ -23,6 +23,8 @@ type package = {
   depends : vpkg list list;
   conflicts : vpkg list;
   provides : veqpkg list;
+  recommends : vpkg list list;
+  suggests : vpkg list;
   extras : (string * string) list;
 }
 
@@ -32,6 +34,8 @@ let default_package = {
   depends = [];
   conflicts = [];
   provides = [];
+  recommends = [];
+  suggests = [];
   extras = [];
 }
 
@@ -65,6 +69,8 @@ let parse_packages_fields extras par =
         depends = (try parse_m parse_cnf "depends" with Not_found -> []);
         conflicts = (try parse_m parse_conj "conflicts" with Not_found -> []);
         provides = (try parse_m parse_prov "provides" with Not_found -> []);
+        recommends = (try parse_m parse_cnf "recommends" with Not_found -> []);
+        suggests = (try parse_m parse_conj "suggests" with Not_found -> []);
         extras = parse_e extras;
       }
   in

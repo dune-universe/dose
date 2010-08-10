@@ -64,6 +64,8 @@ let init_versions_table table =
     conj_iter pkg.provides;
     conj_iter pkg.conflicts ;
     cnf_iter pkg.depends;
+    cnf_iter pkg.recommends;
+    conj_iter pkg.suggests
 ;;
 
 let init_virtual_table table pkg =
@@ -149,7 +151,7 @@ type extramap = (string * (string * Cudf_types.typedecl1)) list
 let preamble = 
   (* number is a mandatory property -- no default *)
   let l = [
-    ("replaces",(`Vpkglist (Some [])));
+    ("suggests",(`Vpkglist (Some [])));
     ("recommends",(`Vpkgformula (Some [])));
     ("number",(`String None)) ]
   in
@@ -168,12 +170,15 @@ let add_extra extras tables pkg =
       with Not_found -> None
     ) extras
   in
+  let recommends = ("recommends", `Vpkgformula (loadll tables pkg.recommends)) in
+  let suggests = ("suggests", `Vpkglist (loadl tables pkg.suggests)) in
+
   List.filter_map (function
     |(_,`Vpkglist []) -> None
     |(_,`Vpkgformula []) -> None
     |e -> Some e
   )
-  [number] @ l
+  [number; recommends ; suggests] @ l
 ;;
 
 let tocudf tables ?(extras=[]) ?(inst=false) pkg =
