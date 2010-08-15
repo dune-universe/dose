@@ -1,0 +1,75 @@
+#!/bin/bash
+
+#set -x
+set -e
+
+# Usage: $0 <apt-get command line, without apt-get>
+# we should be able to parse special arguments indicating the optimization criteria
+# at least paranoid and trendy
+
+BASE=`pwd`
+DUDFSAVE=/usr/bin/dudf-save
+DUDFCUDF=$BASE/bin/deb-dudftocudf.native
+SOLVERP=$BASE/solvers/inescp-1.0/inescp-1.0
+SOLVERT=$BASE/solvers/inesct-1.0/inesct-1.0
+SOLCHECK=$BASE/bin/cudf_sol_check.native
+SOLTOAPT=$BASE/bin/cudf_sol_diff.native
+
+criteria=${1:="paranoid trendy"}
+shift
+args="$@"
+
+TEMPDIR=`mktemp -d`
+cd $TEMPDIR
+TIMEFILE=$TEMPDIR/time.log
+TIME="/usr/bin/time -f %Ereal,%Uuser,%Ssys -o $TIMEFILE -a "
+
+echo "Creating dudf"
+echo "DUDFSAVE" > $TIMEFILE
+dudf=`$TIME $DUDFSAVE -n -C apt-get -s $args 2>&1 | grep "INFO:root:DUDF report" | awk '{print $5}'`
+
+echo "dudf to cudf"
+echo "DEBDUDF" >> $TIMEFILE
+$TIME $DUDFCUDF --outdir . $dudf 
+cudf=$TEMPDIR/${dudf/.xml/.cudf}
+
+# compute several solutions
+for crit in $criteria; do
+ mkdir $crit
+ cd $crit
+ here=`pwd`
+ echo "Solving and Scoring in $here with criterion $crit ..."
+ case $crit in
+  paranoid)
+    cd `dirname $SOLVERP`
+    echo "`basename $SOLVERP`" >> $TIMEFILE
+    $TIME $SOLVERP $cudf $here/solution.cudf >& $here/solver.log
+    #echo "(min #removed, min #changed)" > $TEMPDIR/score
+    cd -
+  ;;
+  trendy)
+    cd `dirname $SOLVERT`
+    echo "`basename $SOLVERT`" >> $TIMEFILE
+    $TIME $SOLVERT $cudf $here/solution.cudf >& $here/solver.log
+    #echo "(min #removed, min #notuptodate, min #unsatrecomm, min #new)" > $TEMPDIR/score
+    cd -
+  ;;
+ esac
+
+ #time $SOLCHECK -cudf $cudf -sol solution.cudf -crit $crit >> $TEMPDIR/score
+ 
+ echo "Building apt-args in $here with criterion $crit ..."
+ echo "CUDF_CHECK_SOL" >> $TIMEFILE
+ $TIME $SOLTOAPT -verbose -cudf $cudf -sol solution.cudf > apt-score-args
+ tail -n 1 apt-score-args > apt-args
+ 
+ echo "apt-get -s install `cat apt-args`"
+ 
+ cd ..
+done
+echo "Time information"
+cat $TIMEFILE
+echo 
+
+rm -Rf $TEMPDIR
+exit 0

@@ -36,13 +36,9 @@ let print_package ?(short=true) pkg =
     Cudf_printer.string_of_package pkg
 
 (* I want to hash packages by name/version without considering
-   other fields like Installed / keep / etc.
-*)
+   other fields like Installed / keep / etc.  *)
 (** compare two cudf packages only using name and version *)
-let compare x y =
-  Pervasives.compare
-  (x.Cudf.package,x.Cudf.version)
-  (y.Cudf.package,y.Cudf.version)
+let compare = Cudf.(<%)
 
 (** has a cudf package only using name and version *)
 let hash p = Hashtbl.hash (p.Cudf.package,p.Cudf.version)

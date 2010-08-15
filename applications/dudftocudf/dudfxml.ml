@@ -204,7 +204,10 @@ let parse input_file =
     match Xml.attrib node "result" with
     |"success" ->
         begin try Success (dudfstatus (get_children node "package-status"))
-        with Not_found -> assert false end
+        with Not_found -> (
+          Printf.eprintf "Warning : Missing installer status on success \n"; 
+          Success { st_installer = [] ; st_metaInstaller = [] }
+        ) end
     |"failure" -> Failure (content_to_string node)
     |s -> (Printf.eprintf "Warning : Unknown result \"%s\"\n" s ; exit 1)
   in
