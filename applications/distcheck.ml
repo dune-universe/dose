@@ -17,25 +17,30 @@ open Diagnostic
 module Options = struct
   open OptParse
 
-  let debug = StdOpt.store_true ()
+  let verbose = StdOpt.store_true ()
   let successes = StdOpt.store_true ()
   let failures = StdOpt.store_true ()
   let explain = StdOpt.store_true ()
   let checkonly = StdOpt.str_option ()
-
-  let showall () = (Opt.get successes) && (Opt.get failures)
-  let onlyfail () = (Opt.get failures) && not (Opt.get successes)
-  let onlysucc () = (Opt.get successes) && not (Opt.get failures)
+  let architecture = StdOpt.str_option ()
+  let distribution = StdOpt.str_option ()
+  let release = StdOpt.str_option ()
+  let docuid = StdOpt.str_option ()
 
   let description = "Report the broken packages in a package list"
   let options = OptParser.make ~description ()
 
   open OptParser
-  add options ~short_name:'v' ~long_name:"verbose" ~help:"Print debug information" debug;
+  add options ~short_name:'v' ~long_name:"verbose" ~help:"Print progress and timing information" verbose;
   add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
   add options ~short_name:'f' ~long_name:"failures" ~help:"Only show failures" failures;
   add options ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" successes;
+
   add options ~long_name:"checkonly" ~help:"Check only these package" checkonly;
+
+  add options ~short_name:'a' ~long_name:"architecture" ~help:"Set the default architecture" architecture;
+  add options ~short_name:'r' ~long_name:"release" ~help:"Set the release name" release;
+  add options ~short_name:'d' ~long_name:"distribution" ~help:"Set the distribution" distribution;
 end
 
 let main () =
@@ -45,9 +50,11 @@ let main () =
     match Filename.basename(Sys.argv.(0)),args with
     |"debcheck",[] -> ["deb://-"]
     |"debcheck",l -> List.map ((^) "deb://") l
+    |"eclipsecheck",l -> List.map ((^) "eclipse://") l
+    |"rpmcheck",l -> List.map ((^) "synthesis://") l
     |_,_ -> args
   in
-  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
+  if OptParse.Opt.get Options.verbose then Boilerplate.enable_debug () ;
   let (universe,from_cudf,_) = Boilerplate.load_universe posargs in
   Util.print_info "Solving..." ;
   let timer = Util.Timer.create "Solver" in
@@ -56,6 +63,7 @@ let main () =
   let success = OptParse.Opt.get Options.successes in
   let explain = OptParse.Opt.get Options.explain in
   let fmt = Format.std_formatter in
+  if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
   let callback = Diagnostic.print ~pp:from_cudf ~failure ~success ~explain fmt in
   let i =
     if OptParse.Opt.is_set Options.checkonly then 
@@ -70,8 +78,17 @@ let main () =
       Depsolver.univcheck ~callback universe 
   in
   ignore(Util.Timer.stop timer ());
-  Printf.eprintf "total packages: %d\n" (Cudf.universe_size universe);
-  Printf.eprintf "broken packages: %d\n" i
+  if failure || success then Format.fprintf fmt "@]@.";
+  Format.fprintf fmt "total-packages: %d\n" (Cudf.universe_size universe);
+  Format.fprintf fmt "broken-packages: %d\n" i;
+  if OptParse.Opt.is_set Options.docuid then
+    Format.fprintf fmt "uid: %s\n" (OptParse.Opt.get Options.docuid);
+  if OptParse.Opt.is_set Options.distribution then
+    Format.fprintf fmt "distribution: %s\n" (OptParse.Opt.get Options.distribution);
+  if OptParse.Opt.is_set Options.release then
+    Format.fprintf fmt "release: %s\n" (OptParse.Opt.get Options.release);
+  if OptParse.Opt.is_set Options.architecture then
+    Format.fprintf fmt "architecture: %s\n" (OptParse.Opt.get Options.architecture)
 ;;
 
 main () ;;

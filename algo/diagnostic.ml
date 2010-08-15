@@ -138,24 +138,24 @@ let default_pp pkg = (pkg.Cudf.package, CudfAdd.string_of_version pkg)
 let print ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) fmt = function
   |{result = Success (f); request = Package r } when success ->
        Format.fprintf fmt "@[<v 1>-@,";
-       Format.fprintf fmt "%a@," (pp_package pp) r;
+       Format.fprintf fmt "@[<v>%a@]@," (pp_package pp) r;
        Format.fprintf fmt "status: ok";
        if explain then begin
          let is = f () in
          if is <> [] then
            Format.fprintf fmt "@,installationset:@,%a" (pp_list (pp_package pp)) is;
        end;
-       Format.fprintf fmt "@]@."
+       Format.fprintf fmt "@]@,"
   |{result = Failure (f) ; request = Package r } when failure -> 
        Format.fprintf fmt "@[<v 1>-@,";
-       Format.fprintf fmt "%a@," (pp_package pp) r;
+       Format.fprintf fmt "@[<v>%a@]@," (pp_package pp) r;
        Format.fprintf fmt "status: broken@,";
        if explain then begin
          Format.fprintf fmt "@[<v 1>reasons:@,";
-         Format.fprintf fmt "%a" (print_error pp r) (f ());
+         Format.fprintf fmt "@[<v>%a@]" (print_error pp r) (f ());
          Format.fprintf fmt "@]"
        end;
-       Format.fprintf fmt "@]@."
+       Format.fprintf fmt "@]@,"
   |_ -> ()
 ;;
 
