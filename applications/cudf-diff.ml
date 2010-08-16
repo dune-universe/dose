@@ -64,39 +64,112 @@ let diff univ sol =
   ) pkgnames ;
   h
 
-let pp_set fmt s =
-  let rec aux fmt s = 
+let pp_set ~inst fmt s =
+  let install pkg = if pkg.Cudf.installed && inst then "*" else "" in
+  let rec aux fmt s =
     if (Cudf_set.cardinal s) = 1 then
-      Format.fprintf fmt "@,%d" (Cudf_set.min_elt s).Cudf.version
+      let v = Cudf_set.min_elt s in
+      Format.fprintf fmt "@,%d%s" 
+      v.Cudf.version (install v)
     else begin
       let v = Cudf_set.min_elt s in
-      Format.fprintf fmt "@,%d," v.Cudf.version;
-      aux fmt (Cudf_set.remove v s)
+      Format.fprintf fmt "@,%d%s," v.Cudf.version (install v);
+      aux fmt (Cudf_set.remove v s) 
     end
   in
   if Cudf_set.is_empty s then ()
-  else Format.fprintf fmt "@[<hv>%a@]" aux s
+  else Format.fprintf fmt "@[%a@]" aux s
+
+let rec pp_list ?(sep="") pp_element fmt = function
+  |[h] -> Format.fprintf fmt "%a" pp_element h
+  |h::t ->
+      Format.fprintf fmt "%a%s@,%a"
+      pp_element h sep (pp_list ~sep pp_element) t
+  |[] -> ()
+;;
+
+let pp_cell fmt cell = Format.fprintf fmt "%s" cell
+
+let pp_header widths fmt header =
+  let first_row = Array.map (fun x -> String.make (x + 1) ' ') widths in
+  Array.iteri (fun j cell ->
+    Format.pp_set_tab fmt ();
+    for z=0 to (Buffer.length header.(j)) - 1 do cell.[z] <- Buffer.nth header.(j) z  done;
+    Format.fprintf fmt "%s" cell
+  ) first_row
+;;
+
+let pp_row pp_cell fmt row =
+  Array.iteri (fun j cell ->
+    Format.pp_print_tab fmt ();
+    Format.fprintf fmt "%a" pp_cell cell
+  ) row
+;;
+
+let pp_tables pp_row fmt (header,table) =
+  (* we build with the largest length of each column of the 
+   * table and header *)
+  let widths = Array.create (Array.length table.(0)) 0 in
+  Array.iter (fun row ->
+    Array.iteri (fun j cell ->
+      widths.(j) <- max (Buffer.length cell) widths.(j)
+    ) row
+  ) table;
+  Array.iteri (fun j cell ->
+    widths.(j) <- max (Buffer.length cell) widths.(j)
+  ) header;
+
+  (* open the table box *)
+  Format.pp_open_tbox fmt ();
+
+  (* print the header *)
+  Format.fprintf fmt "%a" (pp_header widths) header;
+  (* print the table *)
+  Array.iter (pp_row fmt) table;
+
+  (* close the box *)
+  Format.pp_close_tbox fmt ();
+;;
+
+type t = U of Cudf_set.t | R of Cudf_set.t | I of Cudf_set.t
 
 let pp_diff fmt (univ,hl) =
+  let header = Array.init ((List.length hl) + 1) (fun _ -> Buffer.create 50) in
+  let a_hl = Array.of_list hl in
+  Format.bprintf header.(0) "package names";
+  Array.iteri (fun i (solname,_) -> Format.bprintf header.(i+1) "%s" solname) a_hl;
+  let names = pkg_names univ in
+  let table = 
+    Array.init (StringSet.cardinal names) (fun _ ->
+      Array.init ((List.length hl) + 1) (fun _ -> Buffer.create 50)
+    )
+  in
+  let i = ref 0 in
   StringSet.iter (fun pkgname ->
     let all = makeset (Cudf.lookup_packages univ pkgname) in
-    Format.fprintf fmt "package | ";
-    List.iter (fun (solname,_) ->
-      Format.fprintf fmt " %s " solname
-    ) hl ;
-    Format.fprintf fmt "@]@.";
-    Format.fprintf fmt "@[<hv>%s {%a} |" pkgname pp_set all;
-    List.iter (fun (solname,(filename,h)) ->
+    Format.bprintf table.(!i).(0) "%s{%a}" pkgname (pp_set ~inst:true) all;
+    for j = 0 to (List.length hl) - 1 do
+      let (solname,(filename,h)) = a_hl.(j) in
       let s = Hashtbl.find h pkgname in
-      if not (Cudf_set.is_empty s.installed) then
-        Format.fprintf fmt "Installed{%a}@," pp_set s.installed;
-      if not (Cudf_set.is_empty s.removed) then
-        Format.fprintf fmt "Removed{%a}@," pp_set s.removed;
-      if not (Cudf_set.is_empty s.unchanged) then
-        Format.fprintf fmt "Unchanged{%a}@," pp_set s.unchanged;
-    ) hl;
-    Format.fprintf fmt "@]@.";
-  ) (pkg_names univ)
+      let l =
+        let l = ref [] in
+        if not (Cudf_set.is_empty s.unchanged) then l := U(s.unchanged)::!l;
+        if not (Cudf_set.is_empty s.removed) then l := R(s.removed)::!l ;
+        if not (Cudf_set.is_empty s.installed) then l := I(s.installed)::!l ;
+        !l
+      in
+      let pp_elem fmt = function
+        |I s -> Format.fprintf fmt "I{%a}" (pp_set ~inst:false) s
+        |U s -> Format.fprintf fmt "U{%a}" (pp_set ~inst:false) s
+        |R s -> Format.fprintf fmt "R{%a}" (pp_set ~inst:false) s
+      in
+      Format.bprintf (table.(!i).(j+1)) "@[<h>%a@]" (pp_list ~sep:"," pp_elem) l  
+    done;
+    incr i;
+  ) names;
+  let pp_buffer fmt t = Format.fprintf fmt "%s" (Buffer.contents t) in 
+  Format.fprintf fmt "@[%a@]" (pp_tables (pp_row pp_buffer)) (header,table)
+;;
 
 let parse_univ f1 =
   match Boilerplate.load_cudf f1 with
@@ -140,7 +213,7 @@ let main () =
       in
       let sollist = List.map (fun (h,(f,s)) -> (h,(f,diff univ s))) hl in
       let fmt = Format.std_formatter in
-      Format.fprintf fmt "%a" pp_diff (univ,sollist);
+      Format.fprintf fmt "@[%a@]@." pp_diff (univ,sollist);
 ;;
 
 
