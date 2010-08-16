@@ -52,7 +52,7 @@ val ltocudf  : tables -> Format822.vpkg list -> Cudf_types.vpkglist
 val preamble : Cudf.preamble
 
 (** create a Cudf universe from a debian package representation list. *)
-val load_universe : ?default_arch:string ->  Packages.package list -> Cudf.universe
+val load_universe : Packages.package list -> Cudf.universe
 
 (** create a Cudf package list from a debian package representation list. *)
-val load_list : ?default_arch:string -> Packages.package list -> Cudf.package list
+val load_list : Packages.package list -> Cudf.package list

@@ -64,10 +64,17 @@ let parse_essential = function
   |("No" | "no") -> false (* this one usually is not there *)
   |_ -> assert false (* unreachable ?? *)
 
-let parse_packages_fields extras par =
+let parse_packages_fields default_arch extras par =
   let extras = "status"::extras in
   let parse_s f field = f (single_line field (List.assoc field par)) in
   let parse_m f field = f (String.concat " " (List.assoc field par)) in
+  let guard =
+    match default_arch with
+    |None -> fun _ -> true (* no filter *)
+    |Some default_arch ->
+        let default_arch = String.lowercase default_arch in
+        fun arch -> (default_arch = arch || arch = "all")
+  in
   let parse_e extras =
     List.filter_map (fun prop -> 
       let prop = String.lowercase prop in
@@ -95,7 +102,8 @@ let parse_packages_fields extras par =
       }
   in
   (* this package doesn't either have version or name or architecture *)
-  try Some(exec ()) with Not_found -> begin
+  try if guard (parse_s (fun x -> x) "architecture") then Some(exec ()) else None 
+  with Not_found -> begin
     let p = try parse_s (fun x -> x) "package" with Not_found -> "" in
     let v = try parse_s (fun x -> x) "version" with Not_found -> "" in
     let a = try parse_s (fun x -> x) "architecture" with Not_found -> "" in
@@ -104,8 +112,8 @@ let parse_packages_fields extras par =
   end
 
 (** parse a debian Packages file from the channel [ch] *)
-let parse_packages_in ?(extras=[]) f ch =
-  let parse_packages = Format822.parse_822_iter (parse_packages_fields extras) in
+let parse_packages_in ?(default_arch=None) ?(extras=[]) f ch =
+  let parse_packages = Format822.parse_822_iter (parse_packages_fields default_arch extras) in
   parse_packages f (start_from_channel ch)
 
 (**/**)
@@ -146,12 +154,12 @@ let merge status packages =
   Set.elements ps
 
 (** input_raw [file] : parse a debian Packages file from [file] *)
-let input_raw ?(extras=[]) = 
+let input_raw ?(default_arch=None) ?(extras=[]) = 
   let module M = Format822.RawInput(Set) in
-  M.input_raw (parse_packages_in ~extras)
+  M.input_raw (parse_packages_in ~default_arch ~extras)
 
 (** input_raw_ch ch : parse a debian Packages file from channel [ch] *)
-let input_raw_ch ?(extras=[]) = 
+let input_raw_ch ?(default_arch=None) ?(extras=[]) = 
   let module M = Format822.RawInput(Set) in
-  M.input_raw_ch (parse_packages_in ~extras)
+  M.input_raw_ch (parse_packages_in ~default_arch ~extras)
 
