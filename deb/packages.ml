@@ -109,18 +109,19 @@ let parse_packages_in ?(extras=[]) f ch =
   parse_packages f (start_from_channel ch)
 
 (**/**)
+let id p = (p.name,p.version,p.architecture)
+let (>%) p1 p2 = Pervasives.compare (id p1) (id p2)
 module Set = struct
-  let pkgcompare p1 p2 = compare (p1.name,p1.version) (p2.name,p2.version)
   include Set.Make(struct 
     type t = package
-    let compare = pkgcompare
+    let compare = (>%)
   end)
 end
 (**/**)
 
 let merge status packages =
   let merge_aux p1 p2 =
-    if (p1.name,p1.version) = (p2.name,p2.version) then begin
+    if (p1 >% p2) = 0 then begin
       {p1 with
         essential = p1.essential || p2.essential;
         extras = List.unique (p1.extras @ p2.extras)
@@ -131,23 +132,14 @@ let merge status packages =
   List.iter (fun p ->
     try
       match String.nsplit (List.assoc "status" p.extras) " " with
-      |[_;_;"installed"] -> Hashtbl.add h (p.name,p.version) p
+      |[_;_;"installed"] -> Hashtbl.add h (id p) p
       |_ -> ()
     with Not_found -> ()
   ) status
   ;
-  let default_arch = ref "" in
   let ps = 
     List.fold_left (fun acc p ->
-      (* XXX not sure if this check for architectures should be here or
-       * somewhere else *)
-      if !default_arch = "" && p.architecture <> "all" then
-        default_arch := p.architecture
-      else if !default_arch <> p.architecture && p.architecture <> "all" then begin
-        Printf.eprintf "Mixing different architectures ! Bailing out\n";
-        exit 1
-      end;
-      try Set.add (merge_aux p (Hashtbl.find h (p.name,p.version))) acc
+      try Set.add (merge_aux p (Hashtbl.find h (id p))) acc
       with Not_found -> Set.add p acc
     ) Set.empty (status @ packages)
   in

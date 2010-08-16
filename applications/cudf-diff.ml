@@ -1,245 +1,113 @@
-(**************************************************************************************)
-(*  Copyright (C) 2009 Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
-(*  Copyright (C) 2009 Mancoosi Project                                               *)
-(*                                                                                    *)
-(*  This library is free software: you can redistribute it and/or modify              *)
-(*  it under the terms of the GNU Lesser General Public License as                    *)
-(*  published by the Free Software Foundation, either version 3 of the                *)
-(*  License, or (at your option) any later version.  A special linking                *)
-(*  exception to the GNU Lesser General Public License applies to this                *)
-(*  library, see the COPYING file for more information.                               *)
-(**************************************************************************************)
 
-open Cudf
+module StringSet = Set.Make (String)
+
 open ExtLib
 open Common
-open CudfAdd
 
-(* others contains the list of packages in the cudf and the list of packages in
- * the solution *)
-type others = (Cudf.package list * Cudf.package list)
-type status = 
-  |Installed of others (* this package was not installed before *)
-  |Removed of others (* this package is not installed anymore *)
-  |Unchanged (* this package did not change its status *)
-
-type cmp_t = Inst | Rem | Un
+module Cudf_set = CudfAdd.Cudf_set
 
 type solution = {
-  mutable removed : int ;
-  mutable newinst : int;
-  mutable unchanged : int;
+  installed : Cudf_set.t ;
+  removed : Cudf_set.t ;
+  unchanged : Cudf_set.t
 }
 
 module Options = struct
   open OptParse
-
-  exception Format
-  let out_option ?default ?(metavar = "<txt|html>") () =
-    let corce = function
-      |"txt" -> "txt"
-      |"html" -> "html"
-      | _ -> raise Format
-    in
-    let error _ s = Printf.sprintf "%s format not supported" s in
-    Opt.value_option metavar default corce error
-
-  let order_option ?default ?(metavar = "<Un:Inst:Rem>") () =
-    let corce s =
-      let sl = Str.split (Str.regexp ":") s in
-      if sl = [] then raise Format
-      else
-        List.map (function
-          |"Un" -> Un
-          |"Inst" -> Inst
-          |"Rem" -> Rem
-          | _ -> raise Format
-        ) sl
-    in
-    let error _ s = Printf.sprintf "%s ordering not supported" s in
-    Opt.value_option metavar default corce error
-
-  let debug = StdOpt.store_true ()
-  let output = out_option ~default:"txt" ()
-  let order = order_option ~default:[Un;Inst;Rem] ()
+  let verbose = StdOpt.store_true ()
 
   let description = "Compare two or more solutions. Format : solvername:solutionfile"
   let options = OptParser.make ~description:description ()
 
   open OptParser
-  add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
-  add options ~short_name:'t' ~long_name:"output" ~help:"Output type" output;
-  add options ~short_name:'o' ~long_name:"order" ~help:"Order" order;
+  add options ~short_name:'v' ~long_name:"verbose" ~help:"Verbose information" verbose;
 end
 
-let compare_lex l s1 s2 =
-  List.fold_left (fun acc -> function
-    |Un -> s1.unchanged - s2.unchanged
-    |Inst -> s1.newinst - s2.newinst
-    |Rem -> s1.removed - s2.removed
-  ) 0 l
 
-let dummy_solution () = {
-  removed = 0 ;
-  newinst = 0;
-  unchanged = 0;
-}
+let pkg_names univ =
+  Cudf.fold_packages (fun names pkg ->
+    StringSet.add pkg.Cudf.package names
+  ) StringSet.empty univ
 
-let status_to_string ?(oneversion=false) pkg = function
-  |Installed ([],[]) -> "New"
-  |Installed ([p],[]) when oneversion -> Printf.sprintf "(New) Downgrades from %d to %d" p.version pkg.version
-  |Installed ([],[p]) when oneversion -> Printf.sprintf "(New) Upgrades from %d to %d" p.version pkg.version
-  |Installed (_,_) -> "New and other installed"
+let makeset l = List.fold_right Cudf_set.add l Cudf_set.empty
 
-  |Removed ([],[]) -> "Removed"
-  |Removed ([p],[]) when oneversion -> Printf.sprintf "(Rem) Downgraded from %d to %d" pkg.version p.version
-  |Removed ([],[p]) when oneversion -> Printf.sprintf "(Rem) Upgraded from %d to %d" pkg.version p.version
-  |Removed (_,_) -> "Removed and other installed"
-  |Unchanged -> "Unchanged"
+(* the list of all packages (versions) that were installed before
+ * but not now *)
+let removed univ sol pkgname =
+  let is_installed pkgname = Cudf.get_installed sol pkgname <> [] in
+  let oldversions = Cudf.get_installed univ pkgname in
+  if not (is_installed pkgname) && oldversions <> []
+  then makeset oldversions
+  else Cudf_set.empty
 
-let solution_to_string s =
-  Printf.sprintf
-  "removed = %d\nnew = %d\nunchanged = %d\n"
-  s.removed s.newinst s.unchanged
-;;
+(* the list of all packages (versions) that were not installed before
+ * but are installed now *)
+let installed univ sol pkgname =
+  let was_installed pkgname = Cudf.get_installed univ pkgname <> [] in
+  let newversions = Cudf.get_installed sol pkgname in
+  if not (was_installed pkgname) && newversions <> []
+  then makeset newversions
+  else Cudf_set.empty
 
-let solution_to_html s =
-  Printf.sprintf
-  "<p>removed = %d<br>new = %d<br>unchanged = %d</p>"
-  s.removed s.newinst s.unchanged
-;;
-
-let status_equal = function
-  |(Removed _,Removed _)
-  |(Installed _,Installed _)
-  |(Unchanged,Unchanged) -> true
-  |_,_ -> false
-
-let all_equal = function
-  |[_] -> true
-  |one::t -> List.for_all (fun sc -> status_equal (sc,one)) t
-  |[] -> assert false
-
-let is_installed sol pkg = Cudf.mem_installed sol (pkg.package, Some(`Eq, pkg.version))
-
-let others (before,now) pkg =
-  let l = Cudf.get_installed before pkg.package in
-  let l' = List.filter (fun p -> not(is_installed now p) && not(Cudf.(=%) p pkg)) l in
-  List.partition (fun p -> Cudf.(<%) p pkg < 0) l'
-
-(* packages with the same name of pkg that are installed now but not before *) 
-let others_r (univ,sol) pkg = others (sol,univ) pkg
-
-(* packages with the same name of pkg that were installed before, not now *)
-let others_i (univ,sol) pkg = others (univ,sol) pkg
-
+(* for each pkgname I've the list of all versions that were installed, removed
+ * or left unchanged *)
 let diff univ sol =
-  let h = Cudf_hashtbl.create (Cudf.universe_size univ) in
-  let s = dummy_solution () in
-  let add h p r =
-    if Cudf_hashtbl.mem h p then assert false
-    else Cudf_hashtbl.add h p r
-  in
+  let pkgnames = pkg_names univ in
+  let h = Hashtbl.create (StringSet.cardinal pkgnames) in
+  StringSet.iter (fun pkgname ->
+    let a = makeset (Cudf.lookup_packages univ pkgname) in
+    let r = removed univ sol pkgname in
+    let i = installed univ sol pkgname in
+    let u = Cudf_set.diff a (Cudf_set.union r i) in
+    let s = { removed = r ; installed = i ; unchanged = u } in
+    Hashtbl.add h pkgname s
+  ) pkgnames ;
+  h
 
-  Cudf.iter_packages (fun pkg ->
-    let was_installed = pkg.installed in
-    let is_installed = is_installed sol pkg in
-    match was_installed,is_installed with
-    |(true,true)|(false,false) ->
-        (s.unchanged <- s.unchanged + 1 ;add h pkg Unchanged)
-    |(true,false) ->
-        (* if a package is not installed anymore, then either has been replace
-         * by a newer package (upgraded) or by an older package (downgraded) or
-         * just removed tout cour *)
-        (s.removed <- s.removed + 1 ; add h pkg (Removed (others_r (univ,sol) pkg)))
-    |(false,true) ->
-        (* if a package is installed, then either replaces an older package
-         * (upgrades) that is not installed anymore or replaces and newer
-         * package that is not installed anymore (downgrades) or it is just
-         * newly installed *)
-        (s.newinst <- s.newinst + 1 ; add h pkg (Installed (others_i (univ,sol) pkg)))
-  ) univ
-  ;
-  assert (Cudf_hashtbl.length h = Cudf.universe_size univ);
-  assert (s.unchanged + s.removed + s.newinst = Cudf_hashtbl.length h);
-  (h,s)
-;;
-
-let by_package_name univ =
-  let h = Hashtbl.create (Cudf.universe_size univ) in
-  let add =
-    try
-      let l = Hashtbl.find pkg.Cudf.package in
-      l := pkg::!l
-    with Not_found ->
-      Hashtbl.add pkg.Cudf.package (ref [pkg])
-  in
-  Cudf.iter_packages add univ
-;;
-
-let print_diff_txt universe solutions =
-  let cmp (_,(_,(_,s1))) (_,(_,(_,s2))) = compare_lex (OptParse.Opt.get Options.order) s1 s2 in
-  let solutions = List.sort ~cmp:cmp solutions in 
-  let (hl,solutions) = List.split solutions in
-  Printf.printf "Package | %s\n" (String.concat " | " hl) ;
-  let h = by_package_name universe in
-  Hashtbl.iter (fun name { contents = pkglist } ->
-    let allversions = 
-      List.map (fun pkg -> Cudf.pkg.version) 
-      Cudf.lookup_packages universe name 
-    in
-    let pl = 
-      List.map (fun pkg ->
-        List.filter_map (fun (f,(h,_)) ->
-          try Some(f,Cudf_hashtbl.find h pkg) with Not_found -> assert false
-        ) solutions
-      ) pkglist
-    in
-    if all_equal (List.map snd pl) then ()
+let pp_set fmt s =
+  let rec aux fmt s = 
+    if (Cudf_set.cardinal s) = 1 then
+      Format.fprintf fmt "@,%d" (Cudf_set.min_elt s).Cudf.version
     else begin
-      let sl = List.map (fun (f,status) -> status_to_string pkg status) pl in
-      Printf.printf "%s { %a } | %a\n" 
-      pkg.package pp_list allversions pp_solutions solutions
+      let v = Cudf_set.min_elt s in
+      Format.fprintf fmt "@,%d," v.Cudf.version;
+      aux fmt (Cudf_set.remove v s)
     end
-  ) h
-;;
+  in
+  if Cudf_set.is_empty s then ()
+  else Format.fprintf fmt "@[<hv>%a@]" aux s
 
-let print_diff_html universe solutions =
-  let cmp (_,(_,(_,s1))) (_,(_,(_,s2))) = compare_lex (OptParse.Opt.get Options.order) s1 s2 in
-  let solutions = List.sort ~cmp:cmp solutions in
-  let (hl,solutions) = List.split solutions in
-  Printf.printf "<table border=1>\n" ;
-  Printf.printf "<thead><tr><th>Package</th>%s</tr></thead>\n"
-  (String.concat "" (List.map (fun h -> Printf.sprintf "<th>%s</th>" h) hl));
-  Printf.printf "<tbody>\n" ;
-  Cudf.iter_packages (fun pkg ->
-    let pl = 
-      List.filter_map (fun (f,(h,_)) ->
-        try Some(f,Cudf_hashtbl.find h pkg) with Not_found -> assert false
-      ) solutions
-    in
-    if not (all_equal (List.map snd pl)) then begin
-      let sl = List.map (fun (f,status) -> status_to_string pkg status) pl in
-      Printf.printf "<tr><td>%s %d</td>%s</tr>"
-      pkg.package pkg.version
-      (String.concat "" (List.map (fun s -> Printf.sprintf "<td>%s</td>" s) sl))
-    end
-  ) universe
-  ;
-  Printf.printf "</tbody>\n" ;
-  Printf.printf "</table>\n"
-;;
+let pp_diff fmt (univ,hl) =
+  StringSet.iter (fun pkgname ->
+    let all = makeset (Cudf.lookup_packages univ pkgname) in
+    Format.fprintf fmt "package | ";
+    List.iter (fun (solname,_) ->
+      Format.fprintf fmt " %s " solname
+    ) hl ;
+    Format.fprintf fmt "@]@.";
+    Format.fprintf fmt "@[<hv>%s {%a} |" pkgname pp_set all;
+    List.iter (fun (solname,(filename,h)) ->
+      let s = Hashtbl.find h pkgname in
+      if not (Cudf_set.is_empty s.installed) then
+        Format.fprintf fmt "Installed{%a}@," pp_set s.installed;
+      if not (Cudf_set.is_empty s.removed) then
+        Format.fprintf fmt "Removed{%a}@," pp_set s.removed;
+      if not (Cudf_set.is_empty s.unchanged) then
+        Format.fprintf fmt "Unchanged{%a}@," pp_set s.unchanged;
+    ) hl;
+    Format.fprintf fmt "@]@.";
+  ) (pkg_names univ)
 
 let parse_univ f1 =
   match Boilerplate.load_cudf f1 with
-  |_,_,None -> 
+  |_,_,None ->
       (Printf.eprintf "file %s is not a valid cudf document\n" f1 ; exit 1)
   |_,u,Some r -> u,r
 ;;
 
 let check_sol u r s =
   match Cudf_checker.is_solution (u,r) s with
-  |false,reasonlist -> 
+  |false,reasonlist ->
       (List.iter (fun r ->
         Printf.eprintf "%s\n" (Cudf_checker.explain_reason r)
       ) reasonlist;
@@ -249,19 +117,13 @@ let check_sol u r s =
 
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
-(*
-  mathc Filename.basename(Sys.argv.(0)) with
-  |"debdiff" -> OptParse.Opt.set 
-  |"cudfcheck" -> OptParse.Opt.set
-*)
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
+  if OptParse.Opt.get Options.verbose then Boilerplate.enable_debug () ;
 
   match posargs with
   |[] -> (Printf.eprintf "You must specify at least a universe and a solution\n" ; exit 1)
   |[u] -> (Printf.eprintf "You must specify at least a solution\n" ; exit 1)
   |u::l ->
-      Common.Util.print_info "%s" u ;
       let (univ,req) = parse_univ u in
       let hl =
         List.filter_map (fun f ->
@@ -276,23 +138,10 @@ let main () =
           else (Printf.eprintf "%s is not a valid solution. Discarded\n" f ; None)
         ) l
       in
-      let sol_tables = List.map (fun (h,(f,s)) -> (h,(f,diff univ s))) hl in
-      match OptParse.Opt.get Options.output with
-      |"txt" ->
-          begin
-            print_diff_txt univ sol_tables ;
-            List.iter (fun (_,(f,(_,s))) ->
-              Printf.printf "%s\n%s\n" f (solution_to_string s)
-            ) sol_tables;
-          end
-      |"html" ->
-          begin
-            print_diff_html univ sol_tables ;
-            List.iter (fun (_,(f,(_,s))) ->
-              Printf.printf "<p>%s</p>\n%s" f (solution_to_html s)
-            ) sol_tables;
-          end
-      |_ -> assert false 
+      let sollist = List.map (fun (h,(f,s)) -> (h,(f,diff univ s))) hl in
+      let fmt = Format.std_formatter in
+      Format.fprintf fmt "%a" pp_diff (univ,sollist);
 ;;
+
 
 main ();;

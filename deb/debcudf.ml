@@ -249,16 +249,28 @@ let tocudf tables ?(extras=[]) ?(inst=false) pkg =
 let lltocudf = loadll
 let ltocudf = loadl
 
-let load_list l =
+let load_list ?default_arch l =
   let timer = Util.Timer.create "Debian.Debcudf.load_list" in
   Util.Timer.start timer;
   let tables =  init_tables l in
-  let pkglist = List.map (tocudf tables) l in
+  let guard =
+    match default_arch with
+    |None -> fun _ -> true (* no filter *)
+    |Some a ->
+        let a = String.lowercase a in
+        fun arch -> (a = arch || a = "all")
+  in
+  let pkglist =
+    List.filter_map (fun pkg ->
+      if guard pkg.architecture then Some (tocudf tables pkg)
+      else None
+    ) l
+  in
   clear tables;
   Util.Timer.stop timer pkglist
 
-let load_universe l =
-  let pkglist = load_list l in
+let load_universe ?default_arch l =
+  let pkglist = load_list ?default_arch l in
   let timer = Util.Timer.create "Debian.Debcudf.load_universe" in
   Util.Timer.start timer;
   let univ = Cudf.load_universe pkglist in

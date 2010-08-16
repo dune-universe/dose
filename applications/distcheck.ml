@@ -55,7 +55,8 @@ let main () =
     |_,_ -> args
   in
   if OptParse.Opt.get Options.verbose then Boilerplate.enable_debug () ;
-  let (universe,from_cudf,_) = Boilerplate.load_universe posargs in
+  let default_arch = OptParse.Opt.opt Options.architecture in
+  let (universe,from_cudf,_) = Boilerplate.load_universe ~default_arch posargs in
   Util.print_info "Solving..." ;
   let timer = Util.Timer.create "Solver" in
   Util.Timer.start timer;
