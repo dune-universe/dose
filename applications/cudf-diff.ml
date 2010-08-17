@@ -34,20 +34,16 @@ let makeset l = List.fold_right Cudf_set.add l Cudf_set.empty
 (* the list of all packages (versions) that were installed before
  * but not now *)
 let removed univ sol pkgname =
-  let is_installed pkgname = Cudf.get_installed sol pkgname <> [] in
-  let oldversions = Cudf.get_installed univ pkgname in
-  if not (is_installed pkgname) && oldversions <> []
-  then makeset oldversions
-  else Cudf_set.empty
+  let were_installed = makeset (Cudf.get_installed univ pkgname) in
+  let are_installed = makeset (Cudf.get_installed sol pkgname) in
+  Cudf_set.diff were_installed are_installed
 
 (* the list of all packages (versions) that were not installed before
  * but are installed now *)
 let installed univ sol pkgname =
-  let was_installed pkgname = Cudf.get_installed univ pkgname <> [] in
-  let newversions = Cudf.get_installed sol pkgname in
-  if not (was_installed pkgname) && newversions <> []
-  then makeset newversions
-  else Cudf_set.empty
+  let were_installed = makeset (Cudf.get_installed univ pkgname) in
+  let are_installed = makeset (Cudf.get_installed sol pkgname) in
+  Cudf_set.diff are_installed were_installed
 
 (* for each pkgname I've the list of all versions that were installed, removed
  * or left unchanged *)
@@ -131,7 +127,57 @@ let pp_tables pp_row fmt (header,table) =
   Format.pp_close_tbox fmt ();
 ;;
 
-type t = U of Cudf_set.t | R of Cudf_set.t | I of Cudf_set.t
+type t =
+  |Un of Cudf_set.t (* unchanged *)
+  |Rm of Cudf_set.t (* removed *)
+  |In of Cudf_set.t (* installed *)
+  |Up of Cudf_set.t (* upgraded *)
+  |Dw of Cudf_set.t (* downgraded *)
+
+let uniqueversion all s =
+  let l = ref [] in
+  let i = Cudf_set.filter (fun pkg -> pkg.Cudf.installed) all in
+  if (Cudf_set.cardinal i <= 1) && ((Cudf_set.cardinal s.installed) <= 1) then
+    begin
+      if (Cudf_set.cardinal s.installed) = 1 then begin
+        if (Cudf_set.cardinal i) = 1 then begin
+          let np = Cudf_set.choose i in
+          let op = Cudf_set.choose s.installed in
+          if np.Cudf.version < op.Cudf.version
+          then l := Up(s.installed)::!l 
+          else l := Dw(s.installed)::!l
+        end
+        else
+          l := In(s.installed)::!l
+      end;
+      if not (Cudf_set.is_empty s.unchanged) then l := Un(s.unchanged)::!l;
+      if not (Cudf_set.is_empty s.removed) then l := Rm(s.removed)::!l ;
+    end
+  else begin
+    if not (Cudf_set.is_empty s.unchanged) then l := Un(s.unchanged)::!l;
+    if not (Cudf_set.is_empty s.removed) then l := Rm(s.removed)::!l ;
+    if not (Cudf_set.is_empty s.installed) then l := In(s.installed)::!l ;
+  end;
+  !l
+;;
+
+let unchanged sols all pkgname =
+  Array.exists (fun (solname,(filename,h)) ->
+    let s = Hashtbl.find h pkgname in
+    not(Cudf_set.equal all s.unchanged)
+  ) sols
+
+let allequal sols pkgname =
+  let (solname,(filename,h)) = sols.(0) in
+  let ss = Hashtbl.find h pkgname in
+  Array.exists (fun (solname,(filename,h)) ->
+    let s = Hashtbl.find h pkgname in
+    not(
+      (Cudf_set.equal s.installed ss.installed) &&
+      (Cudf_set.equal s.removed ss.removed) &&
+      (Cudf_set.equal s.unchanged ss.unchanged)
+    )
+  ) sols
 
 let pp_diff fmt (univ,hl) =
   let header = Array.init ((List.length hl) + 1) (fun _ -> Buffer.create 50) in
@@ -147,24 +193,22 @@ let pp_diff fmt (univ,hl) =
   let i = ref 0 in
   StringSet.iter (fun pkgname ->
     let all = makeset (Cudf.lookup_packages univ pkgname) in
-    Format.bprintf table.(!i).(0) "%s{%a}" pkgname (pp_set ~inst:true) all;
-    for j = 0 to (List.length hl) - 1 do
-      let (solname,(filename,h)) = a_hl.(j) in
-      let s = Hashtbl.find h pkgname in
-      let l =
-        let l = ref [] in
-        if not (Cudf_set.is_empty s.unchanged) then l := U(s.unchanged)::!l;
-        if not (Cudf_set.is_empty s.removed) then l := R(s.removed)::!l ;
-        if not (Cudf_set.is_empty s.installed) then l := I(s.installed)::!l ;
-        !l
-      in
-      let pp_elem fmt = function
-        |I s -> Format.fprintf fmt "I{%a}" (pp_set ~inst:false) s
-        |U s -> Format.fprintf fmt "U{%a}" (pp_set ~inst:false) s
-        |R s -> Format.fprintf fmt "R{%a}" (pp_set ~inst:false) s
-      in
-      Format.bprintf (table.(!i).(j+1)) "@[<h>%a@]" (pp_list ~sep:"," pp_elem) l  
-    done;
+    if allequal a_hl pkgname then begin
+      Format.bprintf table.(!i).(0) "%s{%a}" pkgname (pp_set ~inst:true) all;
+      for j = 0 to (List.length hl) - 1 do
+        let (solname,(filename,h)) = a_hl.(j) in
+        let s = Hashtbl.find h pkgname in
+        let pp_elem fmt = function
+          |In s -> Format.fprintf fmt "In{%a}" (pp_set ~inst:true) s
+          |Un s -> Format.fprintf fmt "Un{%a}" (pp_set ~inst:true) s
+          |Rm s -> Format.fprintf fmt "Rm{%a}" (pp_set ~inst:false) s
+          |Dw s -> Format.fprintf fmt "Dw{%a}" (pp_set ~inst:true) s
+          |Up s -> Format.fprintf fmt "Up{%a}" (pp_set ~inst:true) s
+        in
+        let l = uniqueversion all s in
+        Format.bprintf (table.(!i).(j+1)) "@[<h>%a@]" (pp_list ~sep:"," pp_elem) l  
+      done;
+    end;
     incr i;
   ) names;
   let pp_buffer fmt t = Format.fprintf fmt "%s" (Buffer.contents t) in 
