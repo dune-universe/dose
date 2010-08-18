@@ -1,75 +1,107 @@
 #!/bin/bash
+# Wed Aug 18 2010 Pietro Abate <pietro.abate@pps.jussieu.fr>
 
-#set -x
-set -e
+usage()
+{
+cat << EOF
+usage: $0 options
 
-# Usage: $0 <apt-get command line, without apt-get>
-# we should be able to parse special arguments indicating the optimization criteria
-# at least paranoid and trendy
+Run a MISC solver and returns an apt-get command line
+
+OPTIONS:
+   -h      Show this message
+   -s      Solvers :
+               aspcud-paranoid-1.0
+               aspcud-trendy-1.2
+               inescp-1.0 (paranoid)
+               inesct-1.0 (trendy)
+               p2cudf-paranoid-1.6 (default)
+               p2cudf-trendy-1.6
+
+   -f      Dudf file (format xml not compressed)
+   -v      Verbose
+   -d      Debug
+EOF
+}
+
+SOLVER="p2cudf-paranoid-1.6"
+DUDFFILE=
+APTCMD=
+DEBUG=
+VERBOSE=
+
+while getopts  "vf:hs:d" flag
+do
+  case "$flag" in
+    s) SOLVER=$OPTARG ;;
+    f) DUDFFILE=$OPTARG ;;
+    d) set -x ; DEBUG=true ;;
+    v) VERBOSE=true ;; 
+    h) usage ; exit 0;;
+  esac
+#  echo "$flag" $OPTIND $OPTARG
+done
+
+if [ -z $DUDFFILE ]; then
+  shift $((OPTIND-1))
+  APTCMD="$@"
+  if [ -z "$APTCMD" ]; then
+    echo "you must specify an apt-get command line or a dudf file"
+    usage
+    exit 1
+  fi
+fi
 
 BASE=`pwd`
-DUDFSAVE=/usr/bin/dudf-save
+DUDFSAVE=$BASE/bin/dudf-save
 DUDFCUDF=$BASE/bin/deb-dudftocudf.native
-SOLVERP=$BASE/solvers/inescp-1.0/inescp-1.0
-SOLVERT=$BASE/solvers/inesct-1.0/inesct-1.0
+SOLVERHOME=$BASE/solvers/$SOLVER
 SOLCHECK=$BASE/bin/cudf_sol_check.native
 SOLTOAPT=$BASE/bin/cudf_sol_diff.native
 
-criteria=${1:="paranoid trendy"}
-shift
-args="$@"
-
 TEMPDIR=`mktemp -d`
-cd $TEMPDIR
 TIMEFILE=$TEMPDIR/time.log
 TIME="/usr/bin/time -f %Ereal,%Uuser,%Ssys -o $TIMEFILE -a "
 
-echo "Creating dudf"
-echo "DUDFSAVE" > $TIMEFILE
-dudf=`$TIME $DUDFSAVE -n -C apt-get -s $args 2>&1 | grep "INFO:root:DUDF report" | awk '{print $5}'`
+if [ ! -z "$DUDFFILE" ]; then
+    cp $DUDFFILE $TEMPDIR
+    cd $TEMPDIR
+else
+    echo "Creating dudf (dudf-save)"
+    cd $TEMPDIR
+    echo "dudf-save" > $TIMEFILE
+    DUDFFILE=`$TIME $DUDFSAVE -n -C apt-get -s $APTCMD 2>&1 | grep "INFO:root:DUDF report" | awk '{print $5}'`
+fi
 
-echo "dudf to cudf"
-echo "DEBDUDF" >> $TIMEFILE
-$TIME $DUDFCUDF --outdir . $dudf 
-cudf=$TEMPDIR/${dudf/.xml/.cudf}
+echo "dudf to cudf (deb-dudftocudf)"
+echo "deb-dudftocudf" >> $TIMEFILE
+$TIME $DUDFCUDF --outdir . $DUDFFILE
+CUDFFILE=$TEMPDIR/${DUDFFILE/.xml/.cudf}
 
-# compute several solutions
-for crit in $criteria; do
- mkdir $crit
- cd $crit
- here=`pwd`
- echo "Solving and Scoring in $here with criterion $crit ..."
- case $crit in
-  paranoid)
-    cd `dirname $SOLVERP`
-    echo "`basename $SOLVERP`" >> $TIMEFILE
-    $TIME $SOLVERP $cudf $here/solution.cudf >& $here/solver.log
-    #echo "(min #removed, min #changed)" > $TEMPDIR/score
-    cd -
-  ;;
-  trendy)
-    cd `dirname $SOLVERT`
-    echo "`basename $SOLVERT`" >> $TIMEFILE
-    $TIME $SOLVERT $cudf $here/solution.cudf >& $here/solver.log
-    #echo "(min #removed, min #notuptodate, min #unsatrecomm, min #new)" > $TEMPDIR/score
-    cd -
-  ;;
- esac
+echo "solving ($SOLVER)"
+echo "$SOLVER" >> $TIMEFILE
+cd $SOLVERHOME
+$TIME ./$SOLVER $CUDFFILE $TEMPDIR/solution.cudf >& $TEMPDIR/solver.log
+cd -
 
- #time $SOLCHECK -cudf $cudf -sol solution.cudf -crit $crit >> $TEMPDIR/score
- 
- echo "Building apt-args in $here with criterion $crit ..."
- echo "CUDF_CHECK_SOL" >> $TIMEFILE
- $TIME $SOLTOAPT -verbose -cudf $cudf -sol solution.cudf > apt-score-args
- tail -n 1 apt-score-args > apt-args
- 
- echo "apt-get -s install `cat apt-args`"
- 
- cd ..
-done
-echo "Time information"
-cat $TIMEFILE
-echo 
+echo "Building apt-args"
+echo "cudf_sol_check" >> $TIMEFILE
+$TIME $SOLTOAPT -verbose -cudf $CUDFFILE -sol solution.cudf > apt-score-args
+tail -n 1 apt-score-args > apt-args
 
-rm -Rf $TEMPDIR
+echo
+echo "apt-get -s install `cat apt-args`"
+cd ..
+
+if [ -n "$VERBOSE" ]; then
+  echo
+  echo "Time information"
+  cat $TIMEFILE
+  echo
+fi
+
+if [ -z "$DEBUG" ]; then
+  rm -Rf $TEMPDIR
+fi
+
 exit 0
