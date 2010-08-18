@@ -1,7 +1,7 @@
 type: map
 mapping:
-  "total-packages": { type: str, required: true }
-  "broken-packages": { type: str, required: true }
+  "total-packages": { type: int, required: true }
+  "broken-packages": { type: int, required: true }
   "distribution": { type: text }
   "release": { type: text }
   "architecture": { type: text }

@@ -117,17 +117,22 @@ let print_error pp root fmt l =
         Format.fprintf fmt "@[<v 1>conflict:@,";
         Format.fprintf fmt "@[<v 1>pkg1:@,%a@]@," (pp_package pp) i;
         Format.fprintf fmt "@[<v 1>pkg2:@,%a@]" (pp_package pp) j;
-        if deps <> [] then
+        if deps <> [] then begin
           let dl = Dependency(i,[],[])::Dependency(j,[],[])::deps in
           Format.fprintf fmt "@,@[<v 1>paths:@,%a@]" (pp_dependencies pp root) dl;
-        Format.fprintf fmt "@]"
+          Format.fprintf fmt "@]"
+        end else
+          Format.fprintf fmt "@,@]"
     |EmptyDependency (i,vpkgs) ->
         Format.fprintf fmt "@[<v 1>missing:@,";
         Format.fprintf fmt "@[<v 1>pkg:@,%a@]" (pp_dependency pp) (i,vpkgs);
-        if deps <> [] then
+        if deps <> [] then begin
           let dl = Dependency(i,vpkgs,[])::deps in
           Format.fprintf fmt "@,@[<v 1>paths:@,%a@]" (pp_dependencies pp root) dl;
-        Format.fprintf fmt "@]"
+          Format.fprintf fmt "@]"
+        end else
+          Format.fprintf fmt "@,@]"
+
     |_ -> assert false
   in
   pp_list pp_reason fmt res;
