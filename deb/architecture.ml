@@ -31,7 +31,7 @@ let os_of_string s =
   if s="linux" then OS_Linux
   else if s="kfreebsd" then OS_Kfreebsd
   else if s="hurd" then OS_Hurd
-  else failwith ("Unknown OS specififier:"^s)
+  else failwith ("Unknown OS specififier :"^s)
 ;;
 
 let string_of_os = function
@@ -49,10 +49,8 @@ let architecture_of_string s =
       in let os=sub s 0 i
 	 and cpu= sub s (i+1) ((length s)-i-1)
       in
-	if os="any"
-	then DAanyos(cpu)
-	else if cpu="any"
-	then DAanycpu(os_of_string os)
+	if os="any" then DAanyos(cpu)
+	else if cpu="any" then DAanycpu(os_of_string os)
 	else DApair(os_of_string os, cpu)
     with Not_found -> DApair(OS_Linux,s)
 ;;  
@@ -98,7 +96,8 @@ let arch_unify al ar = match al with
 	  | DAall | DAany -> al
 	  | DAanyos(cpur) -> if cpul=cpur then al else error(al,ar)
 	  | DAanycpu(osr) -> if osl=osr then al else error(al,ar)
-	  | DApair(osr,cpur) -> if osl=osr && cpul=cpur then al else error(al,ar)
+	  | DApair(osr,cpur) -> if osl=osr && cpul=cpur then al
+	    else error(al,ar)
       end
     
     
