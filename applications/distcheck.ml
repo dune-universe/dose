@@ -25,7 +25,6 @@ module Options = struct
   let architecture = StdOpt.str_option ()
   let distribution = StdOpt.str_option ()
   let release = StdOpt.str_option ()
-  let docuid = StdOpt.str_option ()
 
   let description = "Report the broken packages in a package list"
   let options = OptParser.make ~description ()
@@ -42,6 +41,13 @@ module Options = struct
   add options ~short_name:'r' ~long_name:"release" ~help:"Set the release name" release;
   add options ~short_name:'d' ~long_name:"distribution" ~help:"Set the distribution" distribution;
 end
+    
+let uuid () = 
+  let rand =
+    let s = Random.State.make_self_init () in 
+    fun () -> Random.State.bits s        
+  in
+  Digest.to_hex (Digest.string (string_of_int (rand ())))
 
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
@@ -65,7 +71,7 @@ let main () =
   let explain = OptParse.Opt.get Options.explain in
   let fmt = Format.std_formatter in
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
-  let callback = Diagnostic.print ~pp:from_cudf ~failure ~success ~explain fmt in
+  let callback = Diagnostic.fprintf ~pp:from_cudf ~failure ~success ~explain fmt in
   let i =
     if OptParse.Opt.is_set Options.checkonly then 
       let pkglist = 
@@ -82,8 +88,7 @@ let main () =
   if failure || success then Format.fprintf fmt "@]@.";
   Format.fprintf fmt "total-packages: %d\n" (Cudf.universe_size universe);
   Format.fprintf fmt "broken-packages: %d\n" i;
-  if OptParse.Opt.is_set Options.docuid then
-    Format.fprintf fmt "uid: %s\n" (OptParse.Opt.get Options.docuid);
+  Format.fprintf fmt "uid: %s\n" (uuid ());
   if OptParse.Opt.is_set Options.distribution then
     Format.fprintf fmt "distribution: %s\n" (OptParse.Opt.get Options.distribution);
   if OptParse.Opt.is_set Options.release then
