@@ -140,7 +140,7 @@ let print_error pp root fmt l =
 
 let default_pp pkg = (pkg.Cudf.package, CudfAdd.string_of_version pkg)
 
-let print ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) fmt = function
+let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) fmt = function
   |{result = Success (f); request = Package r } when success ->
        Format.fprintf fmt "@[<v 1>-@,";
        Format.fprintf fmt "@[<v>%a@]@," (pp_package pp) r;
@@ -163,6 +163,9 @@ let print ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) fm
        Format.fprintf fmt "@]@,"
   |_ -> ()
 ;;
+
+let printf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) d =
+  fprintf ~pp ~failure ~success ~explain Format.std_formatter d
 
 let is_solution = function
   |{result = Success _ } -> true

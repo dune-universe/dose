@@ -52,7 +52,11 @@ val is_solution : diagnosis -> bool
     print the list of installed packages. 
     @param pp : print a cudf package
 *)
-val print :
+val printf :
+  ?pp:(Cudf.package -> (string * string)) -> 
+    ?failure:bool -> ?success:bool -> ?explain:bool -> diagnosis -> unit
+
+val fprintf :
   ?pp:(Cudf.package -> (string * string)) -> 
     ?failure:bool -> ?success:bool -> ?explain:bool -> 
       Format.formatter -> diagnosis -> unit

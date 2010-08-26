@@ -91,12 +91,6 @@ let parse_paragraph i =
       let p = ref (p + 1) in
       while !p < n && let c = l.[!p] in c = ' ' || c = '\t' do incr p done;
       let data1 = remove_ws (String.sub l !p (n - !p)) in
-(*
-      if not (Str.string_match field_re l 0) then
-        parse_error i;
-      let name = Str.matched_group 1 l in
-      let data1 = remove_ws (Str.matched_group 2 l) in
-*)
       let data = ref [data1] in
       next i;
       while
@@ -180,7 +174,6 @@ let check_version i s =
   if not (Str.string_match strict_version_re_1 s 0 || Str.string_match strict_version_re_2 s 0) then begin
     (Util.print_warning "bad version '%s'" s);
     if not (Str.string_match version_re_1 s 0 || Str.string_match version_re_2 s 0) then 
-      (* parse_error ~s:(Printf.sprintf "Bad version '%s'" s) i *)
       raise (ParseError ((Printf.sprintf "Bad version '%s'" s), i.line))
   end
 
@@ -199,7 +192,6 @@ let check_package_name i s =
   if not (Str.string_match strict_package_re s 0) then begin
     (Util.print_warning "bad package name '%s'" s);
     if not (Str.string_match package_re s 0) then
-      (* parse_error ~s:(Printf.sprintf "Bad package name '%s'" s) i *)
       raise (ParseError ((Printf.sprintf "Bad version '%s'" s), i.line))
   end
 

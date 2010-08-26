@@ -116,7 +116,7 @@ let test_conjunctive_dependency_closure =
       let d = Depsolver.edos_coinstall solver (dcl) in
       match d.Diagnostic.result with
       |Diagnostic.Success _ -> assert_bool "pass" true
-      |Diagnostic.Failure _ -> Diagnostic.print ~explain:true stdout d ; assert_failure "fail"
+      |Diagnostic.Failure _ -> Diagnostic.printf ~explain:true d; assert_failure "fail"
     ) (Cudf.get_packages universe)
   )
 

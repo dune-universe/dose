@@ -23,17 +23,15 @@ let conjbar = Util.Progress.create "Algo.Strongdep.conj"
 
 module G = IntPkgGraph.G
 module SO = IntPkgGraph.SO
-open Depsolver_int
-open G
 
 (** check if p strongly depends on q.
     We check if it is possible to install p without q.  *)
 (* ATT: this function makes a copy of the solver to add a clause to it *)
 let strong_depends solver p q =
-  Depsolver_int.S.reset solver.constraints; 
+  Depsolver_int.S.reset solver.Depsolver_int.constraints; 
   let solver = Depsolver_int.copy_solver solver in 
-  let lit = Depsolver_int.S.lit_of_var (solver.map#vartoint q) false in
-  Depsolver_int.S.add_rule solver.constraints [|lit|] [];
+  let lit = Depsolver_int.S.lit_of_var (solver.Depsolver_int.map#vartoint q) false in
+  Depsolver_int.S.add_rule solver.Depsolver_int.constraints [|lit|] [];
   match Depsolver_int.solve solver (Diagnostic_int.Sng p) with
   |Diagnostic_int.Failure _ -> true
   |Diagnostic_int.Success _ -> false
