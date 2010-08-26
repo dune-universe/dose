@@ -167,3 +167,9 @@ let print_process_time ppf =
 (* XXX this does not work for some reason ... *)
 register Summary (fun ppf -> print_process_time ppf) ;;
 
+let uuid () =
+  let rand =
+    let s = Random.State.make_self_init () in
+    fun () -> Random.State.bits s
+  in
+  Digest.to_hex (Digest.string (string_of_int (rand ())))

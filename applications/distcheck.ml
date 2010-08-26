@@ -42,13 +42,6 @@ module Options = struct
   add options ~short_name:'d' ~long_name:"distribution" ~help:"Set the distribution" distribution;
 end
     
-let uuid () = 
-  let rand =
-    let s = Random.State.make_self_init () in 
-    fun () -> Random.State.bits s        
-  in
-  Digest.to_hex (Digest.string (string_of_int (rand ())))
-
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs =
@@ -88,7 +81,7 @@ let main () =
   if failure || success then Format.fprintf fmt "@]@.";
   Format.fprintf fmt "total-packages: %d\n" (Cudf.universe_size universe);
   Format.fprintf fmt "broken-packages: %d\n" i;
-  Format.fprintf fmt "uid: %s\n" (uuid ());
+  Format.fprintf fmt "uid: %s\n" (Util.uuid ());
   if OptParse.Opt.is_set Options.distribution then
     Format.fprintf fmt "distribution: %s\n" (OptParse.Opt.get Options.distribution);
   if OptParse.Opt.is_set Options.release then

@@ -75,3 +75,5 @@ module Counter : sig
   val add: t -> int -> unit
   val print: Format.formatter -> t -> unit
 end
+
+val uuid: unit -> string
