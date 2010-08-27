@@ -12,28 +12,39 @@
 
 (** additional functions on Cudf data type.  *)
 
-open Cudf
-open Cudf_types
-
 let add_properties preamble l =
   List.fold_left (fun pre prop ->
     {pre with Cudf.property = prop :: pre.Cudf.property}
   ) preamble l
 
-let string_of_version pkg =
-  try Cudf.lookup_package_property pkg "number"
-  with Not_found -> string_of_int pkg.version
+let buf = Buffer.create 1024
+let buf_formatter =
+  let fmt = Format.formatter_of_buffer buf in
+    Format.pp_set_margin fmt max_int;
+    fmt
+
+let string_of pp arg =
+  Buffer.clear buf;
+  ignore(pp buf_formatter arg);
+  Format.pp_print_flush buf_formatter ();
+  Buffer.contents buf
+
+let pp_version fmt pkg =
+  try Format.fprintf fmt "%s" (Cudf.lookup_package_property pkg "number")
+  with Not_found -> Format.fprintf fmt "%d" pkg.Cudf.version
+
+let pp_package fmt pkg =
+  Format.fprintf fmt "%s (= %a)" pkg.Cudf.package pp_version pkg
+
+let string_of_version = string_of pp_version
+let string_of_package = string_of pp_package
 
 (** print a cudf package.
     @param short : only name and version are printed (default true). If the
     cudf package has an extra attribute "Number" then, this is used instead of
     Cudf.version
     *)
-let print_package ?(short=true) pkg =
-  if short then
-    Printf.sprintf "%s (= %s)" pkg.package (string_of_version pkg)
-  else
-    Cudf_printer.string_of_package pkg
+let print_package pkg = string_of_package pkg
 
 (* I want to hash packages by name/version without considering
    other fields like Installed / keep / etc.  *)
@@ -95,11 +106,7 @@ end
 let realversionmap pkglist =
   let h = Hashtbl.create (2 * (List.length pkglist)) in
   List.iter (fun pkg ->
-    let version =
-      try Cudf.lookup_package_property pkg "Number" 
-      with Not_found -> string_of_int pkg.version
-    in
-    Hashtbl.add h (pkg.package,version) pkg
+    Hashtbl.add h (pkg.Cudf.package,string_of_version pkg) pkg
   ) pkglist ;
   h
 
@@ -138,7 +145,7 @@ let build_maps universe =
     List.iter (function
       |name, None -> Hashtbl.add provides name (pkg, None)
       |name, Some (_, ver) -> Hashtbl.add provides name (pkg, (Some ver))
-    ) pkg.provides
+    ) pkg.Cudf.provides
   ) universe
   ;
 
@@ -166,7 +173,7 @@ let build_maps universe =
           Cudf_hashtbl.add conflicts p pkg
         end
       ) (who_provides (name,constr))
-    ) pkg.conflicts
+    ) pkg.Cudf.conflicts
   ) universe
   ;
 
