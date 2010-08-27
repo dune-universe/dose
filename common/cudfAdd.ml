@@ -39,12 +39,10 @@ let pp_package fmt pkg =
 let string_of_version = string_of pp_version
 let string_of_package = string_of pp_package
 
-(** print a cudf package.
-    @param short : only name and version are printed (default true). If the
-    cudf package has an extra attribute "Number" then, this is used instead of
-    Cudf.version
-    *)
+(**/*)
+(* XXX legacy function to be removed *)
 let print_package pkg = string_of_package pkg
+(**/*)
 
 (* I want to hash packages by name/version without considering
    other fields like Installed / keep / etc.  *)

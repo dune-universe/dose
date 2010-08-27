@@ -31,25 +31,15 @@ let cudf_list = List.map (Debcudf.tocudf ~extras:extras_properties tables) ipr_l
 let universe = Cudf.load_universe cudf_list ;;
 let maps = CudfAdd.build_maps universe ;;
 
-(*
-let () = 
-  let preamble = List.map snd extras_preamble in
-  Printf.printf "%s\n" (Cudf_printer.string_of_preamble (Debcudf.preamble @ preamble)) ;
-  List.iter (fun pkg ->
-    Printf.printf "%s\n" (Cudf_printer.string_of_package pkg)
-  ) cudf_list
-;;
-*)
-
 let test_format =
   "name mangling" >::: []
 
-(* useless ??? *)
 let test_numbering = 
   "test numbering" >::: [
     "sequence" >:: (fun _ -> 
       try
         let debconf = Cudf.lookup_package universe ("debconf",32) in
+        Printf.eprintf "debconf : %s\n" (CudfAdd.string_of_package debconf);
         assert_equal debconf.version 32
       with Not_found -> assert_failure "debconf version mismatch"
     );
@@ -86,15 +76,10 @@ let test_mapping =
   ]
 
 let all = 
-  "all tests" >::: [ test_mapping ]
+  "all tests" >::: [ test_mapping ; test_conflicts ]
 
 let main () =
   OUnit.run_test_tt_main all
 ;;
 
 main ()
-
-(*
-let _ = Printf.eprintf "%s\n%!" (Cudf_printer.string_of_package ssmtp) in
-let _ = List.iter (fun (pkg,Some(1)) -> Printf.eprintf "%s\n%!" (Cudf_printer.string_of_package pkg)) provides in
-*)

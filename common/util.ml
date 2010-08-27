@@ -50,14 +50,14 @@ module MakeMessages(X : sig val label : string end) = struct
     if not (Hashtbl.mem messages label) then
       { label = label ; enabled = enabled }
     else begin
-      Printf.eprintf "The label (%s) %s already exists\n" X.label label;
+      Format.eprintf "The label (%s) %s already exists@." X.label label;
       exit 1
     end
 
   let eprintf t fmt =
     Printf.kprintf (
       if (t.enabled || !allenabled) && !verbose then begin
-        (fun s -> Printf.eprintf "%s : %s\n%!" t.label s)
+        (fun s -> Format.eprintf "%s : %s@." t.label s)
       end else ignore
     ) fmt
 
@@ -148,7 +148,7 @@ module Progress = struct
         c.rotation <- (1 + c.rotation) land 3;
         Printf.bprintf c.buffer "%c %%%4.1f" rotate.[c.rotation] f
       end ;
-      Format.fprintf Format.err_formatter "%s%!" (Buffer.contents c.buffer)
+      Format.eprintf "%s@." (Buffer.contents c.buffer)
     end
 
 end
@@ -177,14 +177,14 @@ module Timer = struct
       Format.fprintf fmt "Timer %s. Total time: %f. Count: %i@."
         c.name c.total c.count
 
-  let create s =
+  let create ?(enabled=true) s =
     let c = { 
       name = s;
       count = 0;
       total = 0.;
       last = 0.;
       is_in = false ;
-      enabled = false 
+      enabled = enabled
     } 
     in
     register (fun fmt -> pp fmt c);
@@ -216,8 +216,8 @@ module Counter = struct
     if c.enabled && !verbose then
       Format.fprintf fmt "Counter %s: %i@." c.name c.count
 
-  let create s =
-    let c = { name = s; count = 0; enabled = false } in
+  let create ?(enabled=false) s =
+    let c = { name = s; count = 0; enabled = enabled } in
     register (fun fmt -> pp fmt c);
     c
 
@@ -229,8 +229,10 @@ module Counter = struct
 end
 
 (* we always print user / sys timers if the user ask to print Summary info *)
-let print_process_time ppf =
-  let pt = Unix.times() in
-  Format.fprintf ppf "Process time (user):  %5.2f\n" pt.Unix.tms_utime;
-  Format.fprintf ppf "Process time (sys):   %5.2f\n" pt.Unix.tms_stime
+let pp_process_time fmt () =
+  let pt = Unix.times () in
+  Format.fprintf fmt "Process time (user):  %5.2f@." pt.Unix.tms_utime;
+  Format.fprintf fmt "Process time (sys):   %5.2f@." pt.Unix.tms_stime
 ;;
+
+register (fun fmt -> pp_process_time fmt ());;

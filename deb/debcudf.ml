@@ -47,10 +47,8 @@ let clear tables =
 
 let init_versions_table table =
   let add name version =
-    try
-      let l = Hashtbl.find table name in
-      Hashtbl.replace table name (version::l)
-    with Not_found -> Hashtbl.add table name [version]
+    try let l = Hashtbl.find table name in l := version::!l
+    with Not_found -> Hashtbl.add table name (ref [version])
   in
   let conj_iter =
     List.iter (fun (name,sel) ->
@@ -81,18 +79,18 @@ let init_versions_table table =
 
 let init_virtual_table table pkg =
   let add name =
-    if not(Hashtbl.mem table name) then
+    (* if not(Hashtbl.mem table name) then *)
       Hashtbl.add table name ()
   in
   List.iter (fun (name,_) -> add name) pkg.provides
 
 let init_unit_table table pkg =
-  if not(Hashtbl.mem table pkg.name) then
+  (* if not(Hashtbl.mem table pkg.name) then *)
     Hashtbl.add table pkg.name ()
 
 let init_versioned_table table pkg =
   let add name =
-    if not(Hashtbl.mem table name) then
+    (* if not(Hashtbl.mem table name) then *)
       Hashtbl.add table name ()
   in
   let add_iter_cnf =
@@ -116,8 +114,7 @@ let init_tables ?(compare=Version.compare) pkglist =
 
   List.iter (fun pkg -> ivt pkg ; ivrt pkg ; ivdt pkg ; iut pkg) pkglist ;
 
-  (* XXX I guess this could be a bit faster if implemented with Sets *)
-  Hashtbl.iter (fun k l ->
+  Hashtbl.iter (fun k {contents = l} ->
     Hashtbl.add tables.versions_table k
     (List.unique (List.sort ~cmp:compare l))
   ) temp_versions_table
@@ -125,13 +122,14 @@ let init_tables ?(compare=Version.compare) pkglist =
   Hashtbl.clear temp_versions_table ;
   tables
 
-(* versions start from 1 *)
+(* versions start from 1 and are even numbers *)
 let get_cudf_version tables (package,version) =
   try
+    let step = 1 in
     let l = Hashtbl.find tables.versions_table package in
     let i = fst(List.findi (fun i a -> a = version) l) in
-    Hashtbl.replace tables.reverse_table (CudfAdd.encode package,i+1) version;
-    i+1
+    Hashtbl.add tables.reverse_table (CudfAdd.encode package,step*(i+1)) version;
+    step*(i+1)
   with Not_found -> assert false
 
 let get_real_version tables (p,i) =

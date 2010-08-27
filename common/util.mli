@@ -119,7 +119,7 @@ module Timer : sig
   type t
     
   (** [create s] create and register a new logger named [s] *)
-  val create: string -> t
+  val create: ?enabled:bool -> string -> t
   val start: t -> unit
   val stop: t -> 'a -> 'a
 end
@@ -130,7 +130,7 @@ module Counter : sig
   type t
     
   (** [create s] create and register a new logger named [s] *)
-  val create: string -> t
+  val create: ?enabled:bool -> string -> t
 
   val incr: t -> unit
   val add: t -> int -> unit

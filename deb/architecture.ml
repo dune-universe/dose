@@ -99,6 +99,3 @@ let arch_unify al ar = match al with
 	  | DApair(osr,cpur) -> if osl=osr && cpul=cpur then al
 	    else error(al,ar)
       end
-    
-    
-
