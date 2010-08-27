@@ -23,27 +23,64 @@ val make_quite: unit -> unit
 
 type label = string
 
-(** Messages are printed immediately on stderr. 
- * To be used, the **must** be created outside the functions where
- * they are used.
- * They can enabled or disabled (default) *)
 module type Messages = sig
   type t
+  (** create a new message handle with label [t] . 
+   * Printing is disabled per default *)
   val create: ?enabled:bool -> label -> t
+
+  (** Print the message on [stderr] if the Util module has been
+   * set to verbose using the function [make_verbose] and
+   * either the handle [t] is enable or all handles were enabled with
+   * the function [all_enabled] *)
   val eprintf: t -> ('a, unit, string, unit) format4 -> 'a
+
+  (** [enable l] the handle with label [l] *)
   val enable : label -> unit
+
+  (** [disable l] the handle with label [l] *)
   val disable : label -> unit
+
+  (** disable all handles in the module *)
   val all_disabled : unit -> unit
+
+  (** enable all handles in the module *)
   val all_enabled : unit -> unit
+
+  (** return the list of all labels known to the module *)
   val avalaible : unit -> label list
 end
 
+(** Debug, Info and Warning messages are printed immediately on stderr. 
+ * Info messages are enabled per default. Debug and Warning messages
+ * must be enabled explicitely *)
 module Debug : Messages
 module Warning : Messages
 module Info : Messages
 
+(** Ex : To use the Message framework, you should declare three functions
+ * at the begin of each module as:
+
+  let debug fmt = Util.make_debug "MyModuleLabel" fmt
+  let info fmt = Util.make_info "MyModuleLabel" fmt
+  let warning fmt = Util.make_warning "MyModuleLabel" fmt
+
+  and then use these function as
+
+  debug "this is a message string %s" "a string"
+
+  To enable this handle, from the main program use the function
+  
+  Debug.enable "MyModuleLabel"
+*)
+
+(** [make_debug l] create a new printing functions with label [l] *)
 val make_debug : string -> ('a, unit, string, unit) format4 -> 'a
+
+(** [make_info l] create a new printing functions with label [l] *)
 val make_info : string -> ('a, unit, string, unit) format4 -> 'a
+
+(** [make_warning l] create a new printing functions with label [l] *)
 val make_warning : string -> ('a, unit, string, unit) format4 -> 'a
 
 (** ProgressBars are printed immediately on stderr. 
