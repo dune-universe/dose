@@ -43,12 +43,12 @@ let main () =
       let r = Depsolver.check_request (p,l,r) in
       if Diagnostic.is_solution r then begin
         if OptParse.Opt.get Options.cudf then
-          Diagnostic.print ~success:true ~explain:true Format.std_formatter r
+          Diagnostic.printf ~success:true ~explain:true r
         end
       ;
       if not(Diagnostic.is_solution r && OptParse.Opt.get Options.cudf) then begin
         Printf.printf "Check %s\n" f;
-        Diagnostic.print ~failure:true ~explain:true Format.std_formatter r
+        Diagnostic.printf ~failure:true ~explain:true r
       end
   |_ -> (Printf.eprintf "Too many arguments\n" ; exit 1)
 ;;

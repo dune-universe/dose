@@ -16,6 +16,9 @@
 open ExtLib
 open Common
 
+let debug fmt = Util.make_debug "Debian.Format822" fmt
+let info fmt = Util.make_info "Debian.Format822" fmt
+
 type name = string
 type version = string
 type vpkg = (string * (string * string) option)
@@ -172,7 +175,7 @@ let version_re_2 =
 
 let check_version i s =
   if not (Str.string_match strict_version_re_1 s 0 || Str.string_match strict_version_re_2 s 0) then begin
-    (Util.print_warning "bad version '%s'" s);
+    (debug "bad version '%s'" s);
     if not (Str.string_match version_re_1 s 0 || Str.string_match version_re_2 s 0) then 
       raise (ParseError ((Printf.sprintf "Bad version '%s'" s), i.line))
   end
@@ -190,7 +193,7 @@ let package_re = Str.regexp "^[A-Za-z0-9][A-Za-z0-9._+-]+$"
 
 let check_package_name i s =
   if not (Str.string_match strict_package_re s 0) then begin
-    (Util.print_warning "bad package name '%s'" s);
+    (debug "bad package name '%s'" s);
     if not (Str.string_match package_re s 0) then
       raise (ParseError ((Printf.sprintf "Bad version '%s'" s), i.line))
   end
@@ -265,7 +268,7 @@ let parse_source s =
       if Str.string_match re s' 0 then 
         (n,Some (Str.matched_group 1 s'))
       else begin
-        Util.print_warning "bad source name '%s'\n" s;
+        debug "bad source name '%s'\n" s;
         (n,None)
       end
   |_ -> parse_error ~s:(Printf.sprintf "Malformed source field : '%s'" s) dummy_t
@@ -313,28 +316,28 @@ module RawInput ( Set : Set.S ) = struct
   let input_raw f files =
     let timer = Util.Timer.create "Debian.Format822.input_raw" in
     Util.Timer.start timer;
-    if List.length files > 1 then Util.print_info "Merging input lists" ;
+    if List.length files > 1 then info "Merging input lists" ;
     let s =
       List.fold_left (fun acc file ->
-        Util.print_info "Parsing %s..." file;
+        info "Parsing %s..." file;
         let ch = (Input.open_file file) in
         let l = f (fun x -> x) ch in
         let _ = Input.close_ch ch in
         List.fold_left (fun s x -> Set.add x s) acc l
       ) Set.empty files
     in
-    Util.print_info "total Packages %n" (Set.cardinal s);
+    info "total Packages %n" (Set.cardinal s);
     Util.Timer.stop timer (Set.elements s)
 
   let input_raw_ch f ch =
     let timer = Util.Timer.create "Debian.Format822.input_raw_ch" in
     Util.Timer.start timer;
     let s =
-      Util.print_info "Parsing...";
+      info "Parsing...";
       let l = f (fun x -> x) ch in
       let _ = Input.close_ch ch in
       List.fold_left (fun s x -> Set.add x s) Set.empty l
     in
-    Util.print_info "total Packages %n" (Set.cardinal s);
+    info "total Packages %n" (Set.cardinal s);
     Util.Timer.stop timer (Set.elements s)
 end

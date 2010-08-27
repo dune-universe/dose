@@ -16,6 +16,10 @@ open ExtLib
 open Common
 open Format822
 
+let debug fmt = Util.make_debug "Debian.Packages" fmt
+let info fmt = Util.make_info "Debian.Packages" fmt
+let warning fmt = Util.make_warning "Debian.Packages" fmt
+
 (** debian package format *)
 type package = {
   name : name ;
@@ -107,7 +111,7 @@ let parse_packages_fields default_arch extras par =
     let p = try parse_s (fun x -> x) "package" with Not_found -> "" in
     let v = try parse_s (fun x -> x) "version" with Not_found -> "" in
     let a = try parse_s (fun x -> x) "architecture" with Not_found -> "" in
-    Util.print_warning "Broken Package %s-%s.%s" p v a  ;
+    warning "Broken Package %s-%s.%s" p v a  ;
     None 
   end
 

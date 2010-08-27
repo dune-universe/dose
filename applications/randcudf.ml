@@ -53,6 +53,10 @@ end
 
 (* -------------------------------- *)
 
+let debug fmt = Util.make_debug "RandCudf" fmt
+let info fmt = Util.make_info "RandCudf" fmt
+let warning fmt = Util.make_warning "RandCudf" fmt
+
 let get_random ?(ver=0.0) pkglist n =
   let a = Array.of_list pkglist in
   let max = (Array.length a) in
@@ -104,7 +108,7 @@ let create_pkglist pkglist =
     ) pkglist 
   in
   if (List.length !installed) = 0 then
-    Util.print_warning "No installed packages in this universe";
+    warning "No installed packages in this universe";
   (!installed, l, Cudf.load_universe l)
 ;;
 

@@ -3,8 +3,12 @@ open Common
 
 let enable_debug ?(bars=[]) () =
   List.iter Util.Progress.enable bars;
-  Util.set_verbosity Common.Util.Details
+  Util.make_verbose ()
 ;;
+
+let debug fmt = Util.make_debug "Boilerplate" fmt
+let info fmt = Util.make_info "Boilerplate" fmt
+let warning fmt = Util.make_warning "Boilerplate" fmt
 
 let argv_ f l =
   let a = Array.of_list l in
@@ -197,7 +201,7 @@ END
 
 (** parse and merge a list of files into a cudf package list *)
 let load_list ?(default_arch=None) ?(extras=[]) uris =
-  Util.print_info "Parsing and normalizing..." ;
+  info "Parsing and normalizing..." ;
   let timer = Util.Timer.create "Parsing and normalizing" in
   Util.Timer.start timer;
   let u = parse_input ~default_arch ~extras uris in
@@ -206,7 +210,7 @@ let load_list ?(default_arch=None) ?(extras=[]) uris =
 
 (** parse and merge a list of files into a cudf universe *)
 let load_universe ?(default_arch=None) ?(extras=[]) uris =
-  Util.print_info "Parsing and normalizing..." ;
+  info "Parsing and normalizing..." ;
   let timer = Util.Timer.create "Parsing and normalizing" in
   Util.Timer.start timer;
   let (l,f,t) = parse_input ~default_arch ~extras uris in

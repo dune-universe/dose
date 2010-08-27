@@ -16,6 +16,10 @@ open ExtLib
 open Common
 open Debian.Format822
 
+let debug fmt = Util.make_debug "Eclipse.Packages" fmt
+let info fmt = Util.make_info "Eclipse.Packages" fmt
+let warning fmt = Util.make_warning "Eclipse.Packages" fmt
+
 (** strip down version of the debian package format *)
 type package = {
   name : name ;
@@ -78,7 +82,7 @@ let parse_packages_fields extras par =
   try Some(exec ()) with Not_found -> begin
     let p = try parse_s (fun x -> x) "package" with Not_found -> "" in
     let v = try parse_s (fun x -> x) "version" with Not_found -> "" in
-    Util.print_warning "Broken Package %s-%s" p v ;
+    warning "Broken Package %s-%s" p v ;
     None 
   end
 

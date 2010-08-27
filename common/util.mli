@@ -10,11 +10,47 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-(** Progress bar Timer and Logger *)
+(** return a unique identifier based on random numbers *)
+val uuid: unit -> string
 
-(** progress bar *)
+(** Debug, ProgressBars, Timers and Loggers *)
+
+(** When verbose the logger will print all enabled loggers *)
+val make_verbose: unit -> unit
+
+(** (quite by default) *)
+val make_quite: unit -> unit
+
+type label = string
+
+(** Messages are printed immediately on stderr. 
+ * To be used, the **must** be created outside the functions where
+ * they are used.
+ * They can enabled or disabled (default) *)
+module type Messages = sig
+  type t
+  val create: ?enabled:bool -> label -> t
+  val eprintf: t -> ('a, unit, string, unit) format4 -> 'a
+  val enable : label -> unit
+  val disable : label -> unit
+  val all_disabled : unit -> unit
+  val all_enabled : unit -> unit
+  val avalaible : unit -> label list
+end
+
+module Debug : Messages
+module Warning : Messages
+module Info : Messages
+
+val make_debug : string -> ('a, unit, string, unit) format4 -> 'a
+val make_info : string -> ('a, unit, string, unit) format4 -> 'a
+val make_warning : string -> ('a, unit, string, unit) format4 -> 'a
+
+(** ProgressBars are printed immediately on stderr. 
+ * To be used, the **must** be created outside the functions where
+ * they are used.
+ * They can enabled or disabled (default) *)
 module Progress : sig
-  type label = string
   type t
     
   (** [create "barname"] : create new a progress bar labelled "barname". 
@@ -37,7 +73,11 @@ module Progress : sig
   val avalaible : unit -> label list
 end
 
-(** timer logger *)
+(** dump the content of all counters and timers that are enabled*)
+val dump: Format.formatter -> unit
+
+(** Timers are printed all at once by the [dump] function on stderr. 
+ * They can enabled or disabled (default) *)
 module Timer : sig
   type t
     
@@ -45,26 +85,10 @@ module Timer : sig
   val create: string -> t
   val start: t -> unit
   val stop: t -> 'a -> 'a
-  val print: Format.formatter -> t -> unit
 end
 
-type verbosity = Quiet | Summary | Details
-val set_verbosity: verbosity -> unit
-
-val print_warning :
-  ?ppf:Format.formatter -> ('a, unit, string, unit) format4 -> 'a
-val print_info :
-  ?ppf:Format.formatter -> ('a, unit, string, unit) format4 -> 'a
-
-val gettimeofday: (unit -> float) ref
-
-(** register a logger *)
-val register: verbosity -> (Format.formatter -> unit) -> unit
-
-(** dump the content of all registered loggers to the given formatter *)
-val dump: Format.formatter -> unit
-
-(** counter logger *)
+(** Counters are printed all at once by the [dump] function on stderr. 
+ * They can enabled or disabled (default) *)
 module Counter : sig
   type t
     
@@ -73,7 +97,4 @@ module Counter : sig
 
   val incr: t -> unit
   val add: t -> int -> unit
-  val print: Format.formatter -> t -> unit
 end
-
-val uuid: unit -> string

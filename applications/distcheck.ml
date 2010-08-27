@@ -41,7 +41,11 @@ module Options = struct
   add options ~short_name:'r' ~long_name:"release" ~help:"Set the release name" release;
   add options ~short_name:'d' ~long_name:"distribution" ~help:"Set the distribution" distribution;
 end
-    
+
+let debug fmt = Util.make_debug "Distcheck" fmt
+let info fmt = Util.make_info "Distcheck" fmt
+let warning fmt = Util.make_warning "Distcheck" fmt
+
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs =
@@ -56,7 +60,7 @@ let main () =
   if OptParse.Opt.get Options.verbose then Boilerplate.enable_debug () ;
   let default_arch = OptParse.Opt.opt Options.architecture in
   let (universe,from_cudf,_) = Boilerplate.load_universe ~default_arch posargs in
-  Util.print_info "Solving..." ;
+  info "Solving..." ;
   let timer = Util.Timer.create "Solver" in
   Util.Timer.start timer;
   let failure = OptParse.Opt.get Options.failures in

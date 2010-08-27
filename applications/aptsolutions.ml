@@ -34,6 +34,10 @@ module Options =
 
 (* ========================================= *)
 
+let debug fmt = Util.make_debug "Aptsoltuions" fmt
+let info fmt = Util.make_info "Aptsolutions" fmt
+let warning fmt = Util.make_warning "Aptsolutions" fmt
+
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let (doc,apt) =
@@ -66,20 +70,20 @@ let main () =
       if Str.string_match re_rem line 0 then begin
           let n = Str.matched_group 1 line in
           let v = Str.matched_group 2 line in
-          Util.print_info "remove %s %s" n v;
+          info "remove %s %s" n v;
           remove := (n,v) :: !remove
       end
       else if Str.string_match re_inst line 0 then begin
           let n = Str.matched_group 1 line in
           let v = Str.matched_group 2 line in
-          Util.print_info "install %s %s" n v;
+          info "install %s %s" n v;
           install := (n,v) :: !install
       end
       else if Str.string_match re_up line 0 then begin
           let n = Str.matched_group 1 line in
           let vold = Str.matched_group 2 line in
           let vnew = Str.matched_group 3 line in
-          Util.print_info "upgrade %s %s -> %s" n vold vnew;
+          info "upgrade %s %s -> %s" n vold vnew;
           install := (n,vnew) :: !install ;
           remove := (n,vold) :: !remove
       end

@@ -20,6 +20,9 @@ open Common
 (** progress bar *)
 let progressbar_init = Util.Progress.create "Depsolver_int.init_solver"
 let progressbar_univcheck = Util.Progress.create "Depsolver_int.univcheck"
+let debug fmt = 
+  let t = Util.Debug.create "Depsolver_int" in
+  Util.Debug.eprintf t fmt
 
 module R = struct type reason = Diagnostic_int.reason end
 module S = EdosSolver.M(R)
@@ -121,13 +124,14 @@ let init_solver ?(buffer=false) ?(proxy_size=0) ?closure index =
             S.add_rule constraints [|x; y|] [Diagnostic_int.Conflict(pkg_id1, pkg_id2)]
         end
       ) conjunction
-    with Not_found ->
+    with Not_found -> begin
       (* ignore conflicts that are not in the closure.
        * if nobody depends on a conflict package, then it is irrelevant.
        * This requires a leap of faith in the user ability to build an
        * appropriate closure. If the closure is wrong, you are on your own *)
-      (* Util.print_warning "Conflict for package %s not in the universe!\n" pkg.Mdf.pkg.Cudf.package *)
+      debug "Conflict for package %s not in the universe!\n" pkg.Mdf.pkg.Cudf.package;
       ()
+    end
   in
 
   let nvars = 

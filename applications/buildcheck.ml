@@ -42,6 +42,10 @@ module Options = struct
   add options ~long_name:"xml" ~help:"Output results in XML format" xml;
 end
 
+let debug fmt = Util.make_debug "Buildcheck" fmt
+let info fmt = Util.make_info "Buildcheck" fmt
+let warning fmt = Util.make_warning "Buildcheck" fmt
+
 open Diagnostic
 
 let main () =
@@ -70,11 +74,11 @@ let main () =
     (p,v)
   in
 
-  Util.print_info "Solving..." ;
+  info "Solving..." ;
   let failure = OptParse.Opt.get Options.failures in
   let success = OptParse.Opt.get Options.successes in
   let explain = OptParse.Opt.get Options.explain in
-  let callback = Diagnostic.print ~pp:from_cudf ~failure ~success ~explain Format.std_formatter in
+  let callback = Diagnostic.printf ~pp:from_cudf ~failure ~success ~explain in
   let i = Depsolver.listcheck ~callback universe sl in
   Printf.eprintf "Broken Packages: %d\n" i
 ;;

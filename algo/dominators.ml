@@ -17,7 +17,8 @@ open Common
 open CudfAdd
 open Cudf
 
-let dombar = Util.Progress.create "Algo.dominators";;
+let dombar = Util.Progress.create "Algo.dominators"
+let debug = Util.make_debug "Dominators"
 
 module Make (G: Sig.I with type V.t = Cudf.package) = struct
 
@@ -55,7 +56,7 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
     fun i ->
       incr curr;
       if !curr >= step then begin
-        Util.print_info "Done %d out of %d%!" i max;
+        debug "Done %d out of %d%!" i max;
         curr := 0
       end
   ;;
@@ -64,8 +65,8 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
    * with transitive archs *)
   let dominators ?relative graph = 
   begin
-    Util.print_info "N. of vertex graph %d\n" (G.nb_vertex graph);
-    Util.print_info "N. of edges graph %d\n" (G.nb_edges graph);
+    debug "N. of vertex graph %d\n" (G.nb_vertex graph);
+    debug "N. of edges graph %d\n" (G.nb_edges graph);
     
     let domtimer = Util.Timer.create "Algo.Dominators.dominators" in
 
@@ -90,7 +91,7 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
           | None -> 
             if Cudf_set.subset dfs isp then begin
               G.add_edge domgraph p q;
-              Util.print_info "Dominator %s -D-> %s !"
+              debug "Dominator %s -D-> %s !"
               (CudfAdd.print_package p)
               (CudfAdd.print_package q);
             end
@@ -98,7 +99,7 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
             let fv = (float (Cudf_set.cardinal (Cudf_set.diff dfs isp)) *. 100.) /. (float (Cudf_set.cardinal isp)) in
             if fv <= f then begin
               G.add_edge domgraph p q;
-              Util.print_info "Dominator %s -D-> %s !"
+              debug "Dominator %s -D-> %s !"
               (CudfAdd.print_package p)
               (CudfAdd.print_package q);
             end
@@ -302,7 +303,7 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
         let bucket_ht = Hashtbl.create (G.nb_vertex graph) in
         (* step 2 and 3 *)
         List.iter (fun w ->
-          Common.Util.print_info "step 2 for vertex %s...%!" w.package;
+          debug "step 2 for vertex %s...%!" w.package;
           G.iter_pred (fun v ->
             let u = eval v in
             let semi_u = Hashtbl.find semi_ht u in
@@ -316,7 +317,7 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
             begin
               link parent_w w;
               List.iter (fun v ->
-                Common.Util.print_info "step 3 for vertex %s...%!" w.package;
+                debug "step 3 for vertex %s...%!" w.package;
                 let u = eval v in
                 (match (try G.pred domgr v with Invalid_argument _ -> []) with
                 | [] -> ()
@@ -336,7 +337,7 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
         ) !vertex_order;
         (* step 4 *)
         List.iter (fun w ->
-          Common.Util.print_info "step 4 for %s...%!" w.package;
+          debug "step 4 for %s...%!" w.package;
           match (try G.pred domgr w with Invalid_argument _ -> []) with
           | [] -> ()
           | [p] -> if compare p (Hashtbl.find semi_ht w) <> 0 then

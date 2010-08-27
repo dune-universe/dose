@@ -21,10 +21,12 @@ open Common
  alpha ::= [a..zA..Z]
 *)
 
+let warning fmt = Util.make_warning "Eclipse.Version" fmt
+
 let rex = Pcre.regexp "^\\d+(\\.\\d+(\\.\\d+(\\.[\\w_-]+)?)?)?$" ;;
 let parse_version s =
   if not(Pcre.pmatch ~rex s) then 
-    Util.print_warning "bad version '%s'" s;
+    warning "bad version '%s'" s;
   s
 ;;
 

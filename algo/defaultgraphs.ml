@@ -23,7 +23,6 @@ module GraphOper (G : Sig.I) = struct
       with the proviso that we know that our graph already is a transitive 
       closure *)
   let transitive_reduction graph =
-  begin
     let timer = Util.Timer.create "Defaultgraph.GraphOper.transitive_reduction" in
     Util.Timer.start timer;
     G.iter_vertex (fun v ->
@@ -36,7 +35,6 @@ module GraphOper (G : Sig.I) = struct
       ) (G.succ graph v);
     ) graph;
     Util.Timer.stop timer ()
-  end
 
   module O = Oper.I(G) 
 
@@ -50,8 +48,6 @@ end
     - [Conflict] : conflict
     *) 
 module SyntacticDependencyGraph = struct
-
-  let depgraphbar = Util.Progress.create "SyntacticDependencyGraph.dependency_graph"
 
   module PkgV = struct
       type t = Pkg of Cudf.package | Or of (Cudf.package * int)
@@ -126,6 +122,8 @@ module SyntacticDependencyGraph = struct
   (** Graphviz outoput module *)
   module D = Graph.Graphviz.Dot(Display) 
   module S = Set.Make(PkgV)
+
+  let depgraphbar = Util.Progress.create "SyntacticDependencyGraph.dependency_graph"
 
   (** Build the syntactic dependency graph from the give cudf universe *)
   let dependency_graph universe =
@@ -372,6 +370,8 @@ end
 
 (******************************************************)
 
+let debug = Util.make_debug "DefaultGraphs"
+
 (** transform an integer graph in a cudf graph *)
 let intcudf index intgraph =
   let module PG = PackageGraph.G in
@@ -388,7 +388,7 @@ let intcudf index intgraph =
     let p = index.(v) in
     PG.add_vertex cudfgraph p.Mdf.pkg
   ) intgraph ;
-  Common.Util.print_info "cudfgraph: nodes %d , edges %d"
+  debug "cudfgraph: nodes %d , edges %d"
   (PG.nb_vertex cudfgraph) (PG.nb_edges cudfgraph);
   Util.Timer.stop trasformtimer cudfgraph
 
@@ -406,7 +406,7 @@ let cudfint maps cudfgraph =
   PG.iter_vertex (fun v ->
     SG.add_vertex intgraph (maps.CudfAdd.map#vartoint v)
   ) cudfgraph;
-  Common.Util.print_info "intcudf: nodes %d , edges %d"
+  debug "intcudf: nodes %d , edges %d"
   (SG.nb_vertex intgraph) (SG.nb_edges intgraph);
   Util.Timer.stop trasformtimer intgraph
 
@@ -416,6 +416,8 @@ let cudfint maps cudfgraph =
     is represented as a graph with (package name, package version)
     nodes *)
 module StrongDepGraph = struct
+
+  let debug fmt = Util.make_debug "StrongDepGraph" fmt
 
   module PkgV = struct
       type t = (string * string)
@@ -505,29 +507,29 @@ module StrongDepGraph = struct
     let ic = open_in filename in
     let graph = ((Marshal.from_channel ic) :> G.t) in
     close_in ic ;
-    Common.Util.print_info "Load Strong Dependencies graph";
+    debug "Load Strong Dependencies graph";
     let tg = transform_in pkglist graph in
     (* we assume the graph is detransitivitized *)
     let sg = PackageGraph.O.O.add_transitive_closure tg in
-    Common.Util.print_info "done";
+    debug "done";
     Util.Timer.stop timer sg
 
   (* StrongDepGraph.G -> PackageGraph.G *)
   let out ?(dump=None) ?(dot=None) ?(detrans=false) pkggraph =
-    Common.Util.print_info "Dumping Graph : nodes %d , edges %d"
+    debug "Dumping Graph : nodes %d , edges %d"
     (PackageGraph.G.nb_vertex pkggraph) (PackageGraph.G.nb_edges pkggraph) ;
     
     let cudfgraph = transform_out pkggraph in
 
     if detrans then begin
       O.transitive_reduction cudfgraph;
-      Common.Util.print_info "After transitive reduction : nodes %d , edges %d"
+      debug "After transitive reduction : nodes %d , edges %d"
       (G.nb_vertex cudfgraph) (G.nb_edges cudfgraph)
     end ;
 
     if dump <> None then begin
       let f = Option.get dump in
-      Common.Util.print_info "Saving marshal graph in %s\n" f ;
+      debug "Saving marshal graph in %s\n" f ;
       let oc = open_out f in
       Marshal.to_channel oc (cudfgraph :> G.t) [];
       close_out oc
@@ -535,7 +537,7 @@ module StrongDepGraph = struct
 
     if dot <> None then begin
       let f = Option.get dot in
-      Common.Util.print_info "Saving dot graph in %s\n" f ;
+      debug "Saving dot graph in %s\n" f ;
       let oc = open_out f in
       D.output_graph oc cudfgraph;
       close_out oc

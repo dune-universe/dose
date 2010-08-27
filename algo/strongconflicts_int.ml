@@ -17,6 +17,8 @@ open ExtLib
 open Common
 open CudfAdd
 
+let debug = Util.make_debug "Strongconflicts_int"
+
 module SG = Strongdeps_int.G
 module PkgV = struct
   type t = int
@@ -73,7 +75,7 @@ let strongconflicts mdf =
   let cl_dummy = {rdc = S.empty ; rd = S.empty} in
   let closures = Array.create size cl_dummy in
 
-  Util.print_info "Pre-seeding ...";
+  debug "Pre-seeding ...";
 
   Util.Progress.set_total seedingbar (Array.length mdf.Mdf.index);
 
@@ -88,12 +90,12 @@ let strongconflicts mdf =
   done;
   let cg = Strongdeps_int.SO.O.add_transitive_closure cg in
 
-  Util.print_info "dependency graph : nodes %d , edges %d" 
+  debug "dependency graph : nodes %d , edges %d" 
   (SG.nb_vertex cg) (SG.nb_edges cg);
 
   SG.iter_edges (IG.add_edge cache) cg;
 
-  Util.print_info " done";
+  debug " done";
 
   let i = ref 0 in
   let ex = explicit mdf in
@@ -146,7 +148,7 @@ let strongconflicts mdf =
       IG.add_edge cache x y;
       CG.add_edge_e stronglist (x, (x, y, Explicit), y);
 
-      Util.print_info "(%d of %d) %s # %s ; Strong conflicts %d Tuples %d"
+      debug "(%d of %d) %s # %s ; Strong conflicts %d Tuples %d"
       !i conflict_size
       (pkg_x.Mdf.pkg.Cudf.package) 
       (pkg_y.Mdf.pkg.Cudf.package)
@@ -174,13 +176,13 @@ let strongconflicts mdf =
       begin
         let p = S.choose xpred in
         begin
-          Util.print_info "triangle %s - %s (%s)" (CudfAdd.print_package pkg_x.Mdf.pkg) (CudfAdd.print_package pkg_y.Mdf.pkg) (CudfAdd.print_package index.(p).Mdf.pkg);
+          debug "triangle %s - %s (%s)" (CudfAdd.print_package pkg_x.Mdf.pkg) (CudfAdd.print_package pkg_y.Mdf.pkg) (CudfAdd.print_package index.(p).Mdf.pkg);
           try_add_edge donei stronglist p x x y;
           try_add_edge donei stronglist p y x y;
         end
       end
       else if debconf_triangle xpred ypred common then
-        Util.print_info "debconf triangle %s - %s" (CudfAdd.print_package pkg_x.Mdf.pkg) (CudfAdd.print_package pkg_y.Mdf.pkg)
+        debug "debconf triangle %s - %s" (CudfAdd.print_package pkg_x.Mdf.pkg) (CudfAdd.print_package pkg_y.Mdf.pkg)
       else
       begin
         S.iter (fun p ->
@@ -193,10 +195,10 @@ let strongconflicts mdf =
 
       Util.Progress.reset localbar;
 
-      Util.print_info " | tuple examined %d" !donei;
+      debug " | tuple examined %d" !donei;
       total := !total + !donei
     end
   ) ex ;
-  Util.print_info " total tuple examined %d" !total;
+  debug " total tuple examined %d" !total;
   stronglist
 ;;

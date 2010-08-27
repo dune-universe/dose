@@ -11,41 +11,93 @@
 (*  library, see the COPYING file for more information.                      *)
 (*****************************************************************************)
 
-type verbosity = Quiet | Summary | Details
-let verbosity = ref Quiet
-let set_verbosity = (:=) verbosity
+(** return a unique identifier *)
+let uuid () =
+  let rand =
+    let s = Random.State.make_self_init () in
+    fun () -> Random.State.bits s
+  in
+  Digest.to_hex (Digest.string (string_of_int (rand ())))
 
-let print ppf v label fmt =
-  Printf.kprintf (
-    if v <= !verbosity then 
-      (fun s -> Format.fprintf ppf "%s: %s\n%!" label s)
-    else ignore
-  ) fmt
-;;
+type label = string
 
-let print_warning ?(ppf=Format.err_formatter) fmt =
-  print ppf Summary "Warning" fmt
+let verbose = ref false
+let make_verbose () = verbose := true
+let make_quite () = verbose := false
 
-let print_info ?(ppf=Format.err_formatter) fmt =
-  print ppf Details "Info" fmt
+module type Messages = sig
+  type t
+  val create: ?enabled:bool -> label -> t
+  val eprintf: t -> ('a, unit, string, unit) format4 -> 'a
+  val enable : label -> unit
+  val disable : label -> unit
+  val all_disabled : unit -> unit
+  val all_enabled : unit -> unit
+  val avalaible : unit -> label list
+end
 
-let gettimeofday = ref (fun _ -> 0.)
-let () = gettimeofday := Unix.gettimeofday
-
-let loggers = ref []
-let register level f = loggers := (level,f) :: !loggers
-
-let dump ppf =
-  List.iter (function
-    |(level,f) when level <= !verbosity -> f ppf
-    |_ -> ()
-  ) !loggers
-
-module Progress = struct
-  type label = string
-
+(** Debug messages are printed immediately on stderr. 
+ * They can enabled or disabled (default) *)
+module MakeMessages(X : sig val label : string end) = struct
   type t = {
-    name : label ;
+    label : string;
+    mutable enabled : bool
+  } 
+  let messages = Hashtbl.create 10
+  let allenabled = ref false
+
+  let create ?(enabled=false) label =
+    if not (Hashtbl.mem messages label) then
+      { label = label ; enabled = enabled }
+    else begin
+      Printf.eprintf "The label (%s) %s already exists\n" X.label label;
+      exit 1
+    end
+
+  let eprintf t fmt =
+    Printf.kprintf (
+      if (t.enabled || !allenabled) && !verbose then begin
+        (fun s -> Printf.eprintf "%s : %s\n%!" t.label s)
+      end else ignore
+    ) fmt
+
+  let onoff s b =
+    try let t = Hashtbl.find messages s in t.enabled <- b
+    with Not_found ->
+      Printf.eprintf "Warning: debug label %s not found\n" s
+
+  let all_enabled () = allenabled := true
+  let all_disabled () = allenabled := false
+  let enable s = onoff s true
+  let disable s = onoff s false
+
+  let avalaible () = Hashtbl.fold (fun k _ acc -> k::acc) messages []
+  let all_enabled () = allenabled := true
+  let all_disabled () = allenabled := false
+end
+
+(* this way we can have the same label for different messages *)
+module Debug = MakeMessages(struct let label = "Debug" end)
+module Info = MakeMessages(struct let label = "Info" end)
+module Warning = MakeMessages(struct let label = "Warning" end)
+
+let make_info label =
+  let t = Info.create ~enabled:true label in
+  fun fmt -> Info.eprintf t fmt
+
+let make_warning label =
+  let t = Warning.create ~enabled:true label in
+  fun fmt -> Warning.eprintf t fmt
+
+let make_debug label =
+  let t = Debug.create label in
+  fun fmt -> Debug.eprintf t fmt
+
+(** Printf bars are printed immediately on stderr.
+ * they can be enabled or disabled (default) *)
+module Progress = struct
+  type t = {
+    name : string ;
     buffer : Buffer.t ;
     mutable total : int ;
     mutable perc : int ;
@@ -56,7 +108,7 @@ module Progress = struct
   let columns = 75 
   let full = " %100.0\n" 
   let rotate = "|/-\\"
-  let bars = ref []
+  let bars = Hashtbl.create 10
 
   let create ?(enabled=false) ?(total=0) s =
     let c = {
@@ -67,14 +119,15 @@ module Progress = struct
       rotation = 0 ;
       enabled = enabled }
     in
-    bars := (s,c)::!bars ;
+    Hashtbl.add bars s c;
     c
 
   let enable s =
-    try
-      let (_,c) = List.find (fun (n,_) -> s = n) !bars in
-      c.enabled <- true
-    with Not_found -> Printf.eprintf "Warning: Progress bar %s not found\n" s
+    try let t = Hashtbl.find bars s in t.enabled <- true
+    with Not_found ->
+      Printf.eprintf "Warning: Progress Bar %s not found\n" s
+
+  let avalaible () = Hashtbl.fold (fun k _ acc -> k::acc) bars []
 
   let set_total c total = c.total <- total
   let reset c =
@@ -83,7 +136,7 @@ module Progress = struct
     c.rotation <- 0
 
   let progress ?(i=1) c =
-    if c.enabled then begin
+    if c.enabled && !verbose then begin
       c.perc <- c.perc + i;
       Buffer.clear c.buffer;
       Buffer.add_char c.buffer '\r';
@@ -98,10 +151,14 @@ module Progress = struct
       Format.fprintf Format.err_formatter "%s%!" (Buffer.contents c.buffer)
     end
 
-  let avalaible () = List.map (fun (n,_) -> n) !bars
-
 end
 
+let loggers = ref []
+let register f = loggers := f :: !loggers
+let dump fmt = List.iter (fun pp -> pp fmt) !loggers
+
+(** Timers are printed all together when the function dump is called.
+ * they can be enabled or disabled (default) *)
 module Timer = struct
   type t = {
     name: string;
@@ -109,18 +166,29 @@ module Timer = struct
     mutable total : float;
     mutable last  : float;
     mutable is_in : bool;
+    mutable enabled : bool;
   }
 
-  let print ppf c =
-    Format.fprintf ppf "Timer %s. Total time: %f. Count: %i@."
-      c.name c.total c.count
+  let gettimeofday = ref (fun _ -> 0.)
+  let () = gettimeofday := Unix.gettimeofday
 
-  let create_verbose verbosity s =
-    let c = { name = s; count = 0; total = 0.; last = 0.; is_in = false } in
-    register verbosity (fun ppf -> print ppf c);
+  let pp fmt c =
+    if c.enabled && !verbose then
+      Format.fprintf fmt "Timer %s. Total time: %f. Count: %i@."
+        c.name c.total c.count
+
+  let create s =
+    let c = { 
+      name = s;
+      count = 0;
+      total = 0.;
+      last = 0.;
+      is_in = false ;
+      enabled = false 
+    } 
+    in
+    register (fun fmt -> pp fmt c);
     c
-
-  let create s = create_verbose Summary s
 
   let start c =
     assert(not c.is_in);
@@ -135,19 +203,22 @@ module Timer = struct
     x
 end
 
+(** Counters are printed all together when the function dump is called.
+ * they can be enabled or disabled (default) *)
 module Counter = struct
   type t = {
     name: string;
     mutable count : int;
+    mutable enabled : bool;
   }
 
-  let print ppf c =
-    Format.fprintf ppf "Counter %s: %i@."
-      c.name c.count
+  let pp fmt c =
+    if c.enabled && !verbose then
+      Format.fprintf fmt "Counter %s: %i@." c.name c.count
 
   let create s =
-    let c = { name = s; count = 0 } in
-    register Summary (fun ppf -> print ppf c);
+    let c = { name = s; count = 0; enabled = false } in
+    register (fun fmt -> pp fmt c);
     c
 
   let incr c =
@@ -163,13 +234,3 @@ let print_process_time ppf =
   Format.fprintf ppf "Process time (user):  %5.2f\n" pt.Unix.tms_utime;
   Format.fprintf ppf "Process time (sys):   %5.2f\n" pt.Unix.tms_stime
 ;;
-
-(* XXX this does not work for some reason ... *)
-register Summary (fun ppf -> print_process_time ppf) ;;
-
-let uuid () =
-  let rand =
-    let s = Random.State.make_self_init () in
-    fun () -> Random.State.bits s
-  in
-  Digest.to_hex (Digest.string (string_of_int (rand ())))

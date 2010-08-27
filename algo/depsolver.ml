@@ -14,6 +14,8 @@ open ExtLib
 open Common
 open CudfAdd
 
+let debug = Util.make_debug "Depsolver"
+
 type solver = {
   mdf : Mdf.universe ;
   solver : Depsolver_int.solver
@@ -190,8 +192,7 @@ let check_request (_,pkglist,request) =
       ) pkglist
     in
     let l = request.Cudf.install @ request.Cudf.upgrade in
-    Util.print_info
-    "request consistency (keep %d) (install %d) (upgrade %d) (remove %d) (# %d)"
+    debug "request consistency (keep %d) (install %d) (upgrade %d) (remove %d) (# %d)"
     (List.length k) (List.length request.Cudf.install) 
     (List.length request.Cudf.upgrade)
     (List.length request.Cudf.remove)
