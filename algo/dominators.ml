@@ -18,7 +18,10 @@ open CudfAdd
 open Cudf
 
 let dombar = Util.Progress.create "Algo.dominators"
-let debug = Util.make_debug "Dominators"
+
+let debug fmt = Util.make_debug "Dominators" fmt
+let info fmt = Util.make_info "Dominators" fmt
+let warning fmt = Util.make_warning "Dominators" fmt
 
 module Make (G: Sig.I with type V.t = Cudf.package) = struct
 

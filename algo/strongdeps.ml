@@ -16,6 +16,10 @@ open ExtLib
 open Common
 open CudfAdd
 
+let debug fmt = Util.make_debug "StrongDeps" fmt
+let info fmt = Util.make_info "StrongDeps" fmt
+let warning fmt = Util.make_warning "StrongDeps" fmt
+
 (** [strongdeps u l] build the strong dependency graph of all packages in 
     [l] wrt the universe [u] *)
 let strongdeps universe pkglist =
@@ -35,7 +39,7 @@ let strongdeps_univ ?(transitive=true) universe =
 (** compute the impact set of the node [q], that is the list of all 
     packages [p] that strong depends on [q] *)
 let impactset graph q =
-  let module G = Defaultgraphs.StrongDepGraph.G in
+  let module G = Defaultgraphs.PackageGraph.G in
   G.fold_pred (fun p acc -> p :: acc ) graph q []
 
 (** compute the conjunctive dependency graph *)

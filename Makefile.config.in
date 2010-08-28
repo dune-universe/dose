@@ -33,6 +33,7 @@ TARGETS= \
 		 applications/cudf-solver.$(OCAMLBEST) \
 		 applications/distcheck.$(OCAMLBEST) \
 		 applications/buildcheck.$(OCAMLBEST) \
+		 applications/ceve.$(OCAMLBEST) \
 		 applications/cudf-diff.$(OCAMLBEST)
 
 LIBS= \

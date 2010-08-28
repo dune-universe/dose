@@ -15,6 +15,11 @@
 open Graph
 open Common
 
+let debug fmt = Util.make_debug "Defaultgraphs" fmt
+let info fmt = Util.make_info "Defaultgraphs" fmt
+let warning fmt = Util.make_warning "Defaultgraphs" fmt
+
+
 (** generic operation over imperative graphs *)
 module GraphOper (G : Sig.I) = struct
 
@@ -369,8 +374,6 @@ module IntPkgGraph = struct
 end
 
 (******************************************************)
-
-let debug = Util.make_debug "DefaultGraphs"
 
 (** transform an integer graph in a cudf graph *)
 let intcudf index intgraph =

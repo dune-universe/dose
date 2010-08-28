@@ -18,8 +18,12 @@ open Common
 open CudfAdd
 open Defaultgraphs
 
-let mainbar = Util.Progress.create "Algo.Strongdep.main"
-let conjbar = Util.Progress.create "Algo.Strongdep.conj"
+let mainbar = Util.Progress.create "Strongdeps_int.main"
+let conjbar = Util.Progress.create "Strongdeps_int.conj"
+
+let debug fmt = Util.make_debug "Strongdeps_int" fmt
+let info fmt = Util.make_info "Strongdeps_int" fmt
+let warning fmt = Util.make_warning "Strongdeps_int" fmt
 
 module G = IntPkgGraph.G
 module SO = IntPkgGraph.SO
@@ -62,7 +66,7 @@ let strongdeps_int ?(transitive=true) graph mdf l =
   let size = List.length available in
 
   Util.Progress.set_total mainbar size;
-  let strongtimer = Util.Timer.create "Algo.Strongdep.strong" in
+  let strongtimer = Util.Timer.create "Strongdeps_int.strong" in
 
   Util.Timer.start strongtimer;
   List.iter (fun (pkg,_,closure) ->
@@ -93,7 +97,7 @@ let strongdeps mdf idlist =
   let graph = G.create () in
   let size = List.length idlist in
   Util.Progress.set_total conjbar size;
-  let conjtimer = Util.Timer.create "Algo.Strongdep.conjdep" in
+  let conjtimer = Util.Timer.create "Strongdeps_int.conjdep" in
 
   Util.Timer.start conjtimer;
   let l = 
@@ -114,7 +118,7 @@ let strongdeps_univ ?(transitive=true) mdf =
   let graph = G.create () in
   let size = Array.length mdf.Mdf.index in
   Util.Progress.set_total conjbar size;
-  let conjtimer = Util.Timer.create "Algo.Strongdep.conjdep" in
+  let conjtimer = Util.Timer.create "Strongdeps_int.conjdep" in
 
   Util.Timer.start conjtimer;
   let l = 

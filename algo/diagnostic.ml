@@ -13,6 +13,10 @@
 open ExtLib
 open Common
 
+let debug fmt = Util.make_debug "Diagnostic" fmt
+let info fmt = Util.make_info "Diagnostic" fmt
+let warning fmt = Util.make_warning "Diagnostic" fmt
+
 type reason =
   |Dependency of (Cudf.package * Cudf_types.vpkg list * Cudf.package list)
   |EmptyDependency of (Cudf.package * Cudf_types.vpkg list)

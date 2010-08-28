@@ -14,7 +14,9 @@ open ExtLib
 open Common
 open CudfAdd
 
-let debug = Util.make_debug "Depsolver"
+let debug fmt = Util.make_debug "Depsolver" fmt
+let info fmt = Util.make_info "Depsolver" fmt
+let warning fmt = Util.make_warning "Depsolver" fmt
 
 type solver = {
   mdf : Mdf.universe ;

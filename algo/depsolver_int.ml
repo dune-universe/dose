@@ -20,9 +20,11 @@ open Common
 (** progress bar *)
 let progressbar_init = Util.Progress.create "Depsolver_int.init_solver"
 let progressbar_univcheck = Util.Progress.create "Depsolver_int.univcheck"
-let debug fmt = 
-  let t = Util.Debug.create "Depsolver_int" in
-  Util.Debug.eprintf t fmt
+
+(** Message printers *)
+let debug fmt = Util.make_debug "Depsolver_int" fmt
+let info fmt = Util.make_info "Depsolver_int" fmt
+let warning fmt = Util.make_warning "Depsolver_int" fmt
 
 module R = struct type reason = Diagnostic_int.reason end
 module S = EdosSolver.M(R)
@@ -39,7 +41,7 @@ class intprojection size = object
   method add v =
     if (size = 0) then assert false ;
     if (counter > size - 1) then assert false;
-    (* Printf.eprintf "var %d -> int %d\n%!" v counter; *)
+    debug "intprojection : var %d -> int %d" v counter;
     Hashtbl.add vartoint v counter;
     inttovar.(counter) <- v;
     counter <- counter + 1
@@ -129,7 +131,7 @@ let init_solver ?(buffer=false) ?(proxy_size=0) ?closure index =
        * if nobody depends on a conflict package, then it is irrelevant.
        * This requires a leap of faith in the user ability to build an
        * appropriate closure. If the closure is wrong, you are on your own *)
-      debug "Conflict for package %s not in the universe!\n" pkg.Mdf.pkg.Cudf.package;
+      warning "init_solver : Conflict for package %s not in the universe" pkg.Mdf.pkg.Cudf.package;
       ()
     end
   in
