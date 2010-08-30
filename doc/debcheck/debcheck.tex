@@ -1,0 +1,122 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{hevea}
+\newcommand{\debcheck}{edos-debcheck}
+
+\title{The EDOS-Debcheck Primer}
+\author{Pietro Abate and Ralf Treinen and ...}
+
+\begin{document}
+
+\maketitle
+
+The \debcheck{} tool determines, for a set of package control stanzas,
+called \emph{the repository}, whether packages of the repository can
+be installed relative to the repository. Typically, the repository is
+a \texttt{Packages} file of a debian suite. The installability check
+is by default performed for all package stanzas in the repository, but
+may be also be restricted to subset.
+
+\tableofcontents
+
+\section{Packages and Repositories}
+\label{sec:packages}
+\subsection{Packages}
+Debian control stanzas are defined in \texttt{deb-control (5)}. For
+\debcheck{} only the following fields are relevant, all others are
+ignored:
+\begin{description}
+\item[Package] giving the package name.
+\item[Version] giving the version of the package.
+\item[Architecture] specifying the architectures on which the package
+  may be installed. Optional, defaults to \texttt{all}.
+\item[Depends] is a list of items required for the installation of
+  this package. Each item is a package name optionally with a version
+  constraint, or a disjunction of these. Optional, defaults to the
+  empty list.
+\item[Pre-Depends] are by \debcheck{} treated like Depends.
+\item[Conflicts] is a list of package names, possibly with a version
+  constraint, that cannot be installed together with the package. Optional,
+  defaults to the empty list.
+\item[Breaks] are by \debcheck{} treated like Conflicts
+\item[Provides] is a list of names symbolizing functionalities realized by the
+  package. They have to be taken into account for dependencies and conflicts
+  of other packages, see Section~\ref{sec:installability}.
+\end{description}
+
+In particular, \texttt{Recommends} and \texttt{Suggests} are ignored
+by \debcheck.
+
+** What is with Essential ??
+
+\subsection{Repositories}
+A \emph{repository} is a set of package stanzas. This set may be given
+to \debcheck{} in form of a single file, or as several files (in the
+latter case the repository is the set of all stanzas in all input
+files). \debcheck{} makes two important assumptions on the
+repositories; if any of these is not satisfied then it exits with an
+error:
+
+\begin{itemize}
+\item
+  We assume that there are no two package stanzas in the set that have
+  both the same value of \texttt{Package} and the same value of
+  \texttt{Version}. Having different versions for the same package
+  name is OK, as it is of course OK to have two stanzas with different
+  package names and the same version.
+
+  As a consequence, the pair of package name and package version is a
+  unique identifier of a package stanza inside a given repository. In
+  the following, when we speak of \emph{a package}, we mean a precise
+  package stanza that is identified by a name and a version, like the
+  package of name \texttt{gcc} in version \texttt{4:4.3.2-2}; the
+  stanza with name \texttt{gcc} and version \texttt{4:4.4.4-2} would
+  constitute a different package.
+\item
+  We assume that the values of the \texttt{Architecture} fields are
+  consistent, that is that there exists a single architecture that
+  matches all these architecture values. Currently (policy version
+  3.9.1), this means that all architecture values are either
+  \texttt{all}, or the same specific architecture.
+
+  When using the \texttt{-a \textit{<architecture>}} option, the
+  repository is build from the input file(s) by filtering out all
+  stanzas whose architecture value is not consistent with
+  \textit{<architecture>} (see Section~\ref{sec:invocation}).
+\end{itemize}
+
+\section{Installability}
+\label{sec:installability}
+
+** explain peace, abundance, flatness, but in terms of debian packages and
+relations with version constraints.
+
+\subsection{What Installability does Not Mean}
+
+** that the package installs cleanly (file overwrites, maintainer scripts,...)
+
+** that any given tool like apt actually finds the solution 
+
+
+\section{Invocation}
+\label{sec:invocation}
+
+\section{Output}
+\label{sec:output}
+
+\subsection{Understanding Explanations of Non-installability}
+
+\subsection{Understanding Explanations of installability} 
+
+\section{Credits}
+\label{sec:credits}
+
+** Jérôme as author of the solving machine, and of the first version
+of the tool
+
+** EDOS, Mancoosi projects 
+
+\section{Further Reading}
+** Relation to CUDF
+ 
+\end{document}
