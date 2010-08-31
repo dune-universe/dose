@@ -5,10 +5,14 @@ Debian control stanzas are defined in \texttt{deb-control (5)}. For
 \debcheck{} only the following fields are relevant, all others are
 ignored:
 \begin{description}
-\item[Package] giving the package name.
+\item[Package] giving the package name. \debcheck{} is more liberal as
+  to which package names are acceptable, but issues a warning when a
+  package name does not conform to Debian Policy.
 \item[Version] giving the version of the package.
 \item[Architecture] specifying the architectures on which the package
-  may be installed.
+  may be installed. If this field is missing a warning will be issued
+  (since the field is mandatory according to Debian Policy), and the
+  default value \texttt{all} is assumed.
 \item[Depends] is a list of items required for the installation of
   this package. Each item is a package name optionally with a version
   constraint, or a disjunction of these. Optional, defaults to the
@@ -17,7 +21,7 @@ ignored:
 \item[Conflicts] is a list of package names, possibly with a version
   constraint, that cannot be installed together with the package. Optional,
   defaults to the empty list.
-\item[Breaks] are by \debcheck{} treated like Conflicts
+\item[Breaks] are by \debcheck{} treated like Conflicts.
 \item[Provides] is a list of names symbolizing functionalities realized by the
   package. They have to be taken into account for dependencies and conflicts
   of other packages, see Section~\ref{sec:installability}.
