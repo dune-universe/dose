@@ -21,9 +21,12 @@ let uuid () =
 
 type label = string
 
-let verbose = ref false
-let make_verbose () = verbose := true
-let make_quite () = verbose := false
+let msg_verbose = ref false
+let time_verbose = ref false
+let make_verbose ?(msg=true) ?(time=false) () =
+  time_verbose := time ; msg_verbose := msg
+let make_quite () = 
+  time_verbose := false ; msg_verbose := false
 
 module type Messages = sig
   type t
@@ -56,7 +59,7 @@ module MakeMessages(X : sig val label : string end) = struct
 
   let eprintf t fmt =
     Printf.kprintf (
-      if (t.enabled || !allenabled) && !verbose then begin
+      if (t.enabled || !allenabled) && !msg_verbose then begin
         (fun s -> Format.eprintf "%s : %s@." t.label s)
       end else ignore
     ) fmt
@@ -136,7 +139,7 @@ module Progress = struct
     c.rotation <- 0
 
   let progress ?(i=1) c =
-    if c.enabled && !verbose then begin
+    if c.enabled && !msg_verbose then begin
       c.perc <- c.perc + i;
       Buffer.clear c.buffer;
       Buffer.add_char c.buffer '\r';
@@ -173,7 +176,7 @@ module Timer = struct
   let () = gettimeofday := Unix.gettimeofday
 
   let pp fmt c =
-    if c.enabled && !verbose then
+    if c.enabled && !time_verbose then
       Format.fprintf fmt "Timer %s. Total time: %f. Count: %i@."
         c.name c.total c.count
 
@@ -213,7 +216,7 @@ module Counter = struct
   }
 
   let pp fmt c =
-    if c.enabled && !verbose then
+    if c.enabled && !time_verbose then
       Format.fprintf fmt "Counter %s: %i@." c.name c.count
 
   let create ?(enabled=false) s =
@@ -235,4 +238,4 @@ let pp_process_time fmt () =
   Format.fprintf fmt "Process time (sys):   %5.2f@." pt.Unix.tms_stime
 ;;
 
-register (fun fmt -> pp_process_time fmt ());;
+register (fun fmt -> if !time_verbose then pp_process_time fmt ());;

@@ -108,10 +108,10 @@ let parse_packages_fields default_arch extras par =
   (* this package doesn't either have version or name or architecture *)
   try if guard (parse_s (fun x -> x) "architecture") then Some(exec ()) else None 
   with Not_found -> begin
-    let p = try parse_s (fun x -> x) "package" with Not_found -> "" in
-    let v = try parse_s (fun x -> x) "version" with Not_found -> "" in
-    let a = try parse_s (fun x -> x) "architecture" with Not_found -> "" in
-    warning "Broken Package %s-%s.%s" p v a  ;
+    let p = try parse_s (fun x -> x) "package" with Not_found -> "(MISSING NAME)" in
+    let v = try parse_s (fun x -> x) "version" with Not_found -> "(MISSING VERSION)" in
+    let a = try parse_s (fun x -> x) "architecture" with Not_found -> "(MISSING ARCH)" in
+    warning "Ignoring broken package %s-%s.%s" p v a  ;
     None 
   end
 

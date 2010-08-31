@@ -16,7 +16,7 @@ val uuid: unit -> string
 (** Debug, ProgressBars, Timers and Loggers *)
 
 (** When verbose the logger will print all enabled loggers *)
-val make_verbose: unit -> unit
+val make_verbose: ?msg:bool -> ?time:bool -> unit -> unit
 
 (** (quite by default) *)
 val make_quite: unit -> unit

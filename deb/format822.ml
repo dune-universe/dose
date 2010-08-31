@@ -18,6 +18,7 @@ open Common
 
 let debug fmt = Util.make_debug "Debian.Format822" fmt
 let info fmt = Util.make_info "Debian.Format822" fmt
+let warning fmt = Util.make_warning "Debian.Format822" fmt
 
 type name = string
 type version = string
@@ -83,12 +84,7 @@ let parse_paragraph i =
     let fields = ref [] in
     while
       let l = cur i in
-      let p =
-        try
-          String.index l ':'
-        with Not_found ->
-          parse_error i
-      in
+      let p = try String.index l ':' with Not_found -> parse_error i in
       let name = String.sub l 0 p in
       let n = String.length l in
       let p = ref (p + 1) in
@@ -131,10 +127,7 @@ let rec next_token s p =
   if !p = String.length s then raise End_of_file else
   if Str.string_match token_re s !p then begin
     p := Str.match_end ();
-    try
-      Str.matched_group 1 s
-    with Not_found ->
-      next_token s p
+    try Str.matched_group 1 s with Not_found -> next_token s p
   end else
     parse_error ~s:(Printf.sprintf "Bad token in '%s' at %d" s !p) dummy_t
 
@@ -175,7 +168,7 @@ let version_re_2 =
 
 let check_version i s =
   if not (Str.string_match strict_version_re_1 s 0 || Str.string_match strict_version_re_2 s 0) then begin
-    (debug "bad version '%s'" s);
+    (warning "Bad version '%s'" s);
     if not (Str.string_match version_re_1 s 0 || Str.string_match version_re_2 s 0) then 
       raise (ParseError ((Printf.sprintf "Bad version '%s'" s), i.line))
   end
@@ -193,9 +186,9 @@ let package_re = Str.regexp "^[A-Za-z0-9][A-Za-z0-9._+-]+$"
 
 let check_package_name i s =
   if not (Str.string_match strict_package_re s 0) then begin
-    (debug "bad package name '%s'" s);
+    (warning "Bad package name '%s'" s);
     if not (Str.string_match package_re s 0) then
-      raise (ParseError ((Printf.sprintf "Bad version '%s'" s), i.line))
+      raise (ParseError ((Printf.sprintf "Bad package name '%s'" s), i.line))
   end
 
 let parse_package s =
@@ -222,12 +215,12 @@ let parse_constr_aux ?(check=true) vers s =
       next s;
       expect s ")";
       (name, Some (comp, version))
-    with ParseError (s,_) -> begin
-      (Printf.eprintf "WARNING !!! '%s'\n" s);
+    with ParseError (msg,_) -> begin
+      (warning "line %d : %s" s.line msg);
       (name, None)
     end
   end else begin
-    (* XXX if the constraint if malformed I should print a warning !!! *)
+    (* XXX we do not reall check if a contraint syntactically correct *)
     (name, None)
   end
 
@@ -268,7 +261,7 @@ let parse_source s =
       if Str.string_match re s' 0 then 
         (n,Some (Str.matched_group 1 s'))
       else begin
-        debug "bad source name '%s'\n" s;
+        warning "Bad source name '%s'\n" s;
         (n,None)
       end
   |_ -> parse_error ~s:(Printf.sprintf "Malformed source field : '%s'" s) dummy_t
@@ -316,28 +309,28 @@ module RawInput ( Set : Set.S ) = struct
   let input_raw f files =
     let timer = Util.Timer.create "Debian.Format822.input_raw" in
     Util.Timer.start timer;
-    if List.length files > 1 then info "Merging input lists" ;
+    if List.length files > 1 then info "Merging debian packages lists" ;
     let s =
       List.fold_left (fun acc file ->
-        info "Parsing %s..." file;
+        info "Parsing debian file %s..." file;
         let ch = (Input.open_file file) in
         let l = f (fun x -> x) ch in
         let _ = Input.close_ch ch in
         List.fold_left (fun s x -> Set.add x s) acc l
       ) Set.empty files
     in
-    info "total Packages %n" (Set.cardinal s);
+    info "total Debian packages %n" (Set.cardinal s);
     Util.Timer.stop timer (Set.elements s)
 
   let input_raw_ch f ch =
     let timer = Util.Timer.create "Debian.Format822.input_raw_ch" in
     Util.Timer.start timer;
     let s =
-      info "Parsing...";
+      info "Parsing debian packages...";
       let l = f (fun x -> x) ch in
       let _ = Input.close_ch ch in
       List.fold_left (fun s x -> Set.add x s) Set.empty l
     in
-    info "total Packages %n" (Set.cardinal s);
+    info "total debian packages %n" (Set.cardinal s);
     Util.Timer.stop timer (Set.elements s)
 end
