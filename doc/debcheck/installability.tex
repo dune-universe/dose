@@ -1,0 +1,97 @@
+\section{Installability}
+\label{sec:installability}
+
+Given a repository (see Section~\ref{sec:data}) $R$, we define an
+$R$-installation set a subset $I$ of $R$ that has the following three
+properties:
+\begin{description}
+  \item[flatness:] $I$ does not contain two different packages with the same
+    name (which then would have different versions).
+  \item[abundance:] For each package in $I$, every of its dependencies
+    is satisfied by some package in $I$, either directly or through a
+    virtual package in case the dependency does not carry a version
+    constraint.
+  \item[peace:] For each package in $I$ and for each item in its list
+    of conflicts, no package in $I$ satisfies the description of that
+    item.  As an exception, it is allowed that a package in $I$ both
+    provides a virtual package and at the same time conflicts with it.
+\end{description}
+Hence, the notion of an installation captures the idea that a certain
+set of packages may be installed together on a machine, following the
+semantics of binary package relations according to the Debian Policy.
+
+** What is with Essential ??
+
+\begin{example}
+  Let $R$ be the following repository:
+\begin{verbatim}
+    Package: a
+    Version: 1
+    Depends: b (>= 2) | v
+
+    Package: a 
+    Version: 2
+    Depends: c (> 1)
+
+    Package: b
+    Version: 1
+    Conflicts: d
+
+    Package: c
+    Version: 3
+    Depends: d
+    Conflicts: v
+
+    Package: d
+    Version: 5
+    Provides: v
+    Conflicts: v
+\end{verbatim}
+
+The following subsets of $R$ are not $R$-installation sets:
+\begin{itemize}
+\item The set complete $R$ since it is not flat (it contains two
+  different packages with name $a$)
+\item The set $\{(a,1), (c,3)\}$ since it not abundant (the dependency
+  of $(a,1)$ is not satisfied, nor is the dependency of $(c,3)$).
+\item The set $\{(a,2), (c,3), (d,5)\}$ since it is not in peace
+  (there is conflict between $(c,3)$ and $(d,5)$ via the virtual package $v$)
+\end{itemize}
+Examples of $R$-installation sets are
+\begin{itemize}
+\item The set $\{(d,5)\}$ (self conflicts via virtual packages are ignored)
+\item The set $\{(a,1), (b,1) \}$
+\item The set $\{(a,1), (d,5) \}$
+\end{itemize}
+\end{example}
+
+A package $(p,n)$ is said to be \emph{installable} in a repository $R$
+if there exists an $R$-installation set $I$ that contains $(p,n)$.
+
+\begin{example}
+  In the above example, $(a,1)$ is installable, while $(a,2)$ is not.
+\end{example}
+
+\subsection{What Installability does Not Mean}
+
+\begin{itemize}
+\item Installability in the sense of \debcheck{} only concerns the
+  relations between different binary packages expressed in their
+  respective control files. It does not mean that a package indeed
+  installs cleanly in a particular environment since an installation
+  attempt may still fail for different reasons, like failure of a
+  maintainer script or attempting to hijack a file owned by another
+  already installed package.
+\item Installability means theoretical existence of a solution. It
+  does not mean that a package manager (like \texttt{aptitude},
+  \texttt{apt-get}) actually finds a way to the install that package.
+  This failure to find a solution may be due to an inherent
+  incompleteness of the dependency resolution algorithm employed by
+  the package manager, or may be due to user-defined preferences that
+  exclude certain solutions.
+\end{itemize}
+
+One also should keep in mind that, even when two packages are
+$R$-installable, this does not necessarily mean that both packages can
+be installed \emph{together}. See Section~\ref{sec:tricks}.
+

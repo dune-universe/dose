@@ -3,7 +3,7 @@ SHELL=/bin/bash
 DEPS = $(wildcard *.tex)
 
 $(MAIN).html: $(DEPS)	
-	hevea -fix $<
+	hevea -fix $(MAIN).tex
 
 $(MAIN).ps: $(MAIN).dvi
 	dvips $<
