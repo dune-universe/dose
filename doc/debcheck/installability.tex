@@ -50,7 +50,7 @@ semantics of binary package relations according to the Debian Policy.
 
 The following subsets of $R$ are not $R$-installation sets:
 \begin{itemize}
-\item The set complete $R$ since it is not flat (it contains two
+\item The complete set $R$ since it is not flat (it contains two
   different packages with name $a$)
 \item The set $\{(a,1), (c,3)\}$ since it not abundant (the dependency
   of $(a,1)$ is not satisfied, nor is the dependency of $(c,3)$).
@@ -60,8 +60,8 @@ The following subsets of $R$ are not $R$-installation sets:
 Examples of $R$-installation sets are
 \begin{itemize}
 \item The set $\{(d,5)\}$ (self conflicts via virtual packages are ignored)
-\item The set $\{(a,1), (b,1) \}$
-\item The set $\{(a,1), (d,5) \}$
+\item The set $\{(a,1), (b,1)\}$
+\item The set $\{(a,1), (d,5)\}$
 \end{itemize}
 \end{example}
 
@@ -69,7 +69,15 @@ A package $(p,n)$ is said to be \emph{installable} in a repository $R$
 if there exists an $R$-installation set $I$ that contains $(p,n)$.
 
 \begin{example}
-  In the above example, $(a,1)$ is installable, while $(a,2)$ is not.
+  In the above example, $(a,1)$ is $R$-installable since it is contained
+  in the $R$-installation set $\{(a,1), (d,5) \}$.
+
+  However, $(a,2)$ is not $R$-installable: Any $R$-installation set
+  containing $(a,2)$ must also contain $(c,3)$ (since it is the only
+  package in $R$ that can satisfy the dependency of $(a,2)$ on $c
+  (>1)$, and in the same way it must also contain $(d,5)$. However, this
+  destroys the peace as $(c,3)$ and $(d,5)$ are in conflict. Hence, no such
+  $R$-installation set can exist.
 \end{example}
 
 \subsection{What Installability does Not Mean}
@@ -84,7 +92,7 @@ if there exists an $R$-installation set $I$ that contains $(p,n)$.
   already installed package.
 \item Installability means theoretical existence of a solution. It
   does not mean that a package manager (like \texttt{aptitude},
-  \texttt{apt-get}) actually finds a way to the install that package.
+  \texttt{apt-get}) actually finds a way to install that package.
   This failure to find a solution may be due to an inherent
   incompleteness of the dependency resolution algorithm employed by
   the package manager, or may be due to user-defined preferences that
@@ -93,5 +101,13 @@ if there exists an $R$-installation set $I$ that contains $(p,n)$.
 
 One also should keep in mind that, even when two packages are
 $R$-installable, this does not necessarily mean that both packages can
-be installed \emph{together}. See Section~\ref{sec:tricks}.
+be installed \emph{together}. A set $P$ of packages is called
+$R$-\emph{co-installable} when there exists a single $R$-installation
+set extending $P$.
 
+\begin{example}
+  Again in the above example, both $(b,1)$ and $(d,5)$ are
+  $R$-installable; however they are not $R$-co-installable.
+\end{example}
+
+See Section~\ref{sec:tricks} on how co-installability can be encoded.

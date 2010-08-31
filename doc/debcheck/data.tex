@@ -24,7 +24,10 @@ ignored:
 \end{description}
 
 In particular, \texttt{Recommends} and \texttt{Suggests} are ignored
-by \debcheck.
+by \debcheck. Also, \debcheck{} does not check for the existance of
+fields that are required by Debian policy but that are not relevant
+for the task of \debcheck, like \texttt{Maintainer} or
+\texttt{Description}. *** Is this true?
 
 ** What is with the Essential field ??
 

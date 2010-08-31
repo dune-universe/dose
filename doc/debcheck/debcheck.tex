@@ -2,7 +2,10 @@
 \usepackage[utf8]{inputenc}
 \usepackage{hevea}
 \newcommand{\debcheck}{edos-debcheck}
-\newenvironment{example}{\par\textbf{Example:}}{\par}
+\newenvironment{example}%
+  {\par\begin{divstyle}{example}\par\textbf{Example:}}%
+  {\end{divstyle}\par}
+\newstyle{.example}{border:solid black;background:\#eeddbb;padding:lex}
 
 \title{The EDOS-Debcheck Primer}
 \author{Pietro Abate and Ralf Treinen and ...}
@@ -22,33 +25,10 @@ may be also be restricted to a subset of these.
 
 \input{data}
 \input{installability}
+\input{invocation}
+\input{output}
+\input{tricks}
+\input{credits}
+\input{reading}
 
-\section{Invocation}
-\label{sec:invocation}
-
-\section{Output}
-\label{sec:output}
-
-\subsection{Understanding Explanations of Non-installability}
-
-\subsection{Understanding Explanations of installability} 
-
-** We should fix teh error codes (also for inconsistent input data)
-
-\section{Tips and Tricks}
-\label{sec:tricks}
-** Explain how to encode a complicated query (installing several
-packages togther) by creating a pseudo-package
-
-\section{Credits}
-\label{sec:credits}
-
-** Jérôme as author of the solving machine, and of the first version
-of the tool
-
-** EDOS, Mancoosi projects 
-
-\section{Further Reading}
-** Relation to CUDF
- 
 \end{document}
