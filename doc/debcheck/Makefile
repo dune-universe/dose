@@ -12,7 +12,7 @@ $(MAIN).dvi: $(DEPS)
 	latex $(MAIN)
 
 clean:
-	-rm -f $(MAIN).{dvi,aux,toc,haux,htoc}
+	-rm -f $(MAIN).{dvi,aux,toc,haux,htoc,log}
 
 veryclean: clean
 	-rm -f $(MAIN).{html,ps}	
