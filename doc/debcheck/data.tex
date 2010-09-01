@@ -1,6 +1,7 @@
 \section{Input Data: Packages and Repositories}
 \label{sec:data}
 \subsection{Packages}
+\label{sec:packages}
 Debian control stanzas are defined in \texttt{deb-control (5)}. For
 \debcheck{} only the following fields are relevant, all others are
 ignored:
@@ -8,7 +9,8 @@ ignored:
 \item[Package] giving the package name. \debcheck{} is more liberal as
   to which package names are acceptable, but issues a warning when a
   package name does not conform to Debian Policy.
-\item[Version] giving the version of the package.
+\item[Version] giving the version of the package. The version mus be
+  conformant to Debian policy.
 \item[Architecture] specifying the architectures on which the package
   may be installed. If this field is missing a warning will be issued
   (since the field is mandatory according to Debian Policy), and the
@@ -25,17 +27,18 @@ ignored:
 \item[Provides] is a list of names symbolizing functionalities realized by the
   package. They have to be taken into account for dependencies and conflicts
   of other packages, see Section~\ref{sec:installability}.
+\item[Essential] specifies whether the package must be installed
+  (\texttt{yes} or \texttt{no}). Optional, defaults to \texttt{no}.
 \end{description}
 
 In particular, \texttt{Recommends} and \texttt{Suggests} are ignored
 by \debcheck. Also, \debcheck{} does not check for the existance of
 fields that are required by Debian policy but that are not relevant
 for the task of \debcheck, like \texttt{Maintainer} or
-\texttt{Description}. *** Is this true?
-
-** What is with the Essential field ??
+\texttt{Description}.
 
 \subsection{Repositories}
+\label{sec:repositories}
 A \emph{repository} is a set of package stanzas. This set may be given
 to \debcheck{} in form of a single file or as several files, in the
 latter case the repository is constituted by all stanzas in all input
@@ -58,6 +61,12 @@ satisfied then it exits with an error:
   like the package of name \texttt{gcc} in version \texttt{4:4.3.2-2}.
   The stanza with name \texttt{gcc} and version \texttt{4:4.4.4-2}
   would constitute a different package.
+
+  It is allowed that the \emph{same} package stanza occurs several
+  time in the input, in that case all copies after the first one are
+  simply ignored. In this context, two package stanzas are considered
+  the same when they have the same value for all the fields that are
+  listed in Section~\ref{sec:packages}.
 \item
   We assume that the values of the \texttt{Architecture} fields are
   consistent, that is that there exists a single architecture that

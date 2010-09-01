@@ -1,8 +1,8 @@
 \section{Installability}
 \label{sec:installability}
 
-Given a repository (see Section~\ref{sec:data}) $R$, we define an
-$R$-installation set a subset $I$ of $R$ that has the following three
+Let $R$ be a repository (see Section~\ref{sec:data}).  An
+\emph{$R$-installation} is a subset $I$ of $R$ that has the following four
 properties:
 \begin{description}
   \item[flatness:] $I$ does not contain two different packages with the same
@@ -15,12 +15,16 @@ properties:
     of conflicts, no package in $I$ satisfies the description of that
     item.  As an exception, it is allowed that a package in $I$ both
     provides a virtual package and at the same time conflicts with it.
+  \item[foundation:] If package $(p,n)\in R$ is essential, then $I$
+    must contain a package $(p,m)$ such that $(p,m)$ is essential.
 \end{description}
 Hence, the notion of an installation captures the idea that a certain
 set of packages may be installed together on a machine, following the
 semantics of binary package relations according to the Debian Policy.
-
-** What is with Essential ??
+The foundation requirement expresses that essential packages must be
+installed; it is formulated in a way that also caters to the
+(extremely rare) case that a package changes its \texttt{Essential}
+value between different versions.
 
 \begin{example}
   Let $R$ be the following repository:
