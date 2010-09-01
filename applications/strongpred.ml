@@ -1,5 +1,6 @@
 (**************************************************************************************)
 (*  Copyright (C) 2009 Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
+(*  Copyright (C) 2009 Roberto Di Cosmo <roberto@dicosmo.org>                         *)
 (*  Copyright (C) 2009 Mancoosi Project                                               *)
 (*                                                                                    *)
 (*  This library is free software: you can redistribute it and/or modify              *)
@@ -171,24 +172,17 @@ let prediction universe =
     with Not_found -> false
   in
   (* function to create a dummy package with a given version and name *)
-  let create_dummy univ p = function
-     (* FIXME: create an option to decide whether we want to suppress
-        analysis of downgrades of p or not; this is the default behaviour
-        right now *)
-    | v when p.Cudf.version > v -> None 
-     (* The version of p in the repository has already been tested *)
-    | v when p.Cudf.version = v -> None 
-    | v -> 
-	let offset = (if p.Cudf.version > v then "-1" else "+1") in
-	let n = 
-	  try (Cudf.lookup_package_property p "number")^offset
-	  with Not_found -> Printf.sprintf "%d%s" p.Cudf.version offset
-	in
-	Some {Cudf.default_package with
-              Cudf.package = p.Cudf.package;
-              version = v;
-              pkg_extra = [("number",`String n)] 
-            }
+  let create_dummy univ p  v = 
+    let offset = (if p.Cudf.version > v then "-1" else "+1") in
+    let n = 
+      try (Cudf.lookup_package_property p "number")^offset
+      with Not_found -> Printf.sprintf "%d%s" p.Cudf.version offset
+    in
+    {Cudf.default_package with
+     Cudf.package = p.Cudf.package;
+     version = v;
+     pkg_extra = [("number",`String n)] 
+   }
   in
   (* discriminants takes a list of version selectors and provide a minimal list 
      of versions v1,...,vn s.t. all possible combinations of the valuse of the
@@ -226,7 +220,7 @@ let prediction universe =
       with 
 	(* If no version of p is explicitly dependend upon, then *)
      (* changing the version of p does not change its impact set *)
-      |{ contents = [] } -> () 
+      |{ contents = [] } -> Printf.printf "Skipping package %s : no version selector mentions it, so IS(p) is invariant.\n" (CudfAdd.string_of_package p)
       |{ contents = l } ->
           Printf.printf "Analysing package %s\n" (CudfAdd.string_of_package p);
           let sels = List.unique l in
@@ -238,31 +232,30 @@ let prediction universe =
 	    (fun v ->
               (* FIXME: prove the following; if (p,v) and (p,w) are in U, and
                  q implies (p,v); then q is not installable when (p,w) replaces (p,v) *)
-              if p.Cudf.version <> v then 
+              if p.Cudf.version = v then Printf.printf " ignoring base version %d of this package.\n" v
+	      else
 	      if mem_package universe (p.Cudf.package,v) then
 		Printf.printf "If we replace %s with version %d, then all its impact set becomes uninstallable.\n"
 		  (string_of_package p) v
 	      else
-		match create_dummy universe p v with
-		|None -> ()
-		|Some dummy ->
-		    Util.Progress.progress predbar;
-		    let u = Cudf.load_universe (dummy::pl) in
-		    let s = Depsolver.load u in
-		    let broken =
-		      List.fold_left
-			(fun acc q ->
-			  let d = Depsolver.edos_install s q in
-			  if not(Diagnostic.is_solution d) then  (* record in res the changes for the version of p in dummy *)
+		let dummy=create_dummy universe p v in
+		Util.Progress.progress predbar;
+		let u = Cudf.load_universe (dummy::pl) in
+		let s = Depsolver.load u in
+		let broken =
+		  List.fold_left
+		    (fun acc q ->
+		      let d = Depsolver.edos_install s q in
+		      if not(Diagnostic.is_solution d) then  (* record in res the changes for the version of p in dummy *)
                             (changed res dummy; q::acc) else acc
-			) [] isp in
-                    let nbroken=List.length broken in
-		    Printf.printf " Changing version of %s from %d to %d breaks %d/%d (=%f percent) of its Impact set.\n"
-		      (string_of_package p) p.Cudf.version v nbroken sizeisp (float (nbroken * 100)  /. (float sizeisp));
-		    Printf.printf " Version %d valuates the existing version selectors as follows:\n  " v;
-		    List.iter (fun (op,v) -> Printf.printf "(%s,%d) " (string_of_relop op) v) sels; print_newline();
-		    List.iter (fun v -> Printf.printf "%b " v) (List.map (evalsel v) sels); print_newline();
-		    Printf.printf " The broken packages in IS(%s) are:\n" (string_of_package p);
+		    ) [] isp in
+                let nbroken=List.length broken in
+		Printf.printf " Changing version of %s from %d to %d breaks %d/%d (=%f percent) of its Impact set.\n"
+		  (string_of_package p) p.Cudf.version v nbroken sizeisp (float (nbroken * 100)  /. (float sizeisp));
+		Printf.printf " Version %d valuates the existing version selectors as follows:\n  " v;
+		List.iter (fun (op,v) -> Printf.printf "(%s,%d) " (string_of_relop op) v) sels; print_newline();
+		List.iter (fun v -> Printf.printf "%b " v) (List.map (evalsel v) sels); print_newline();
+		Printf.printf " The broken packages in IS(%s) are:\n" (string_of_package p);
 		    List.iter (fun q -> Printf.printf "  - %s\n" (string_of_package q)) broken;
 	    ) vl
     ) universe;
