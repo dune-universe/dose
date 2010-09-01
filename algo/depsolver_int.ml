@@ -322,24 +322,26 @@ let pkgcheck callback solver failed tested id =
   try
     let req = Diagnostic_int.Sng id in
     let res =
+      Util.Progress.progress progressbar_univcheck;
       if not(tested.(id)) then begin
         let res = solve solver req in
         begin match res with
-        |Diagnostic_int.Success(f) -> 
-            (try
-              List.iter (fun i ->
-                Util.Progress.progress progressbar_univcheck;
-                tested.(i) <- true
-              ) (f ())
-            with Not_found -> assert false)
-        |_ -> incr failed
+        |Diagnostic_int.Success(f) ->
+            List.iter (fun i -> tested.(i) <- true) (f ())
+        |Diagnostic_int.Failure _  -> incr failed
         end
         ;
         res
       end
-      else begin (* we know this package is not broken *)
-        let f () = Printf.eprintf
-        "Warning: this installation set is empty.\n" ; []
+      else begin
+        (* XXX this will hold hostage a bit of memory in the stack, but
+         * it should be pretty harmless ... *)
+        let f () =
+          (* delayed call to the solver only if the list of installable packages
+           * is demanded *)
+          match solve solver req with
+          |Diagnostic_int.Success(f) -> f ()
+          |Diagnostic_int.Failure _ -> assert false (* impossible *)
         in Diagnostic_int.Success(f) 
       end
     in
