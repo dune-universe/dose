@@ -170,71 +170,107 @@ let prediction universe =
     try ignore(Cudf.lookup_package univ (p,v)); true
     with Not_found -> false
   in
+  (* function to create a dummy package with a given version and name *)
   let create_dummy univ p = function
-    |_,v when p.Cudf.version >= v -> None
-    |(`Eq|`Leq|`Geq),v when mem_package univ (p.Cudf.package,v) -> None
-    |(`Eq|`Leq|`Geq),v ->
-        let n = "eq/leq/geq" in
-        Some { Cudf.default_package with
-          Cudf.package = p.Cudf.package;
-          version = v ;
-          pkg_extra = [("number",`String n)]
-        }
-    |`Lt,v ->
-        let n = (Cudf.lookup_package_property p "number")^"+1" in
-        Some {Cudf.default_package with
-          Cudf.package = p.Cudf.package;
-          version = v + 1;
-          pkg_extra = [("number",`String n)]
-        }
-    |`Gt,v ->
-        let n = (Cudf.lookup_package_property p "number")^"+1" in
-        Some {Cudf.default_package with
-          Cudf.package = p.Cudf.package;
-          version = v + 1;
-          pkg_extra = [("number",`String n)] 
-        }
-    |_,_ -> None
+     (* FIXME: create an option to decide whether we want to suppress
+        analysis of downgrades of p or not; this is the default behaviour
+        right now *)
+    | v when p.Cudf.version > v -> None 
+     (* The version of p in the repository has already been tested *)
+    | v when p.Cudf.version = v -> None 
+    | v -> 
+	let offset = (if p.Cudf.version > v then "-1" else "+1") in
+	let n = 
+	  try (Cudf.lookup_package_property p "number")^offset
+	  with Not_found -> Printf.sprintf "%d%s" p.Cudf.version offset
+	in
+	Some {Cudf.default_package with
+              Cudf.package = p.Cudf.package;
+              version = v;
+              pkg_extra = [("number",`String n)] 
+            }
+  in
+  (* discriminants takes a list of version selectors and provide a minimal list 
+     of versions v1,...,vn s.t. all possible combinations of the valuse of the
+     version selectors are exhibited *)
+  let evalsel v = function
+      (`Eq,v') -> v=v'
+    | (`Geq,v') -> v>=v'
+    | (`Leq,v') -> v<=v'
+    | (`Gt,v') -> v>v'
+    | (`Lt,v') -> v<v'
+    | (`Neq,v') -> v<>v'
+  in
+  let discriminants sels =
+    let rawvl = List.unique (List.map snd sels) in
+    let minv,maxv= List.fold_left (fun (mi,ma) v -> (min mi v,max ma v)) (max_int,min_int) rawvl in
+    let h = Hashtbl.create 17 in
+    let h' = Hashtbl.create 17 in
+    for w = minv-1 to maxv+1 do
+      let row = List.map (evalsel w) sels in
+      if not (Hashtbl.mem h row) then 
+	(Hashtbl.add h row w; Hashtbl.add h' w row);
+    done;
+    Hashtbl.fold (fun k v acc -> k::acc) h' [], h'
+    (* FIXME: need also to return the row associated to *any* version
+       to be able, later, to avoid computing on version which have
+       the same row as a version existing in the repository
+     *)
   in
   Util.Progress.set_total predbar size;
-  Cudf.iter_packages (fun p ->
-    match
-      try Hashtbl.find version_table p.Cudf.package
-      with Not_found -> ref []
-    with 
-    |{ contents = [] } -> ()
-    |{ contents = l } ->
-        Printf.printf "Analysing package %s\n" (CudfAdd.string_of_package p);
-        let vl = List.unique l in
-        let isp = Strongdeps.impactset graph p in
-        let (pl,_) = List.partition (fun z -> not(Cudf.(=%) z p)) pkglist in
-        List.iter (fun q ->
-          List.iter (fun (sel,v) ->
-            Util.Progress.progress predbar;
-            match create_dummy universe p (sel,v) with
-            |None -> ()
-            |Some dummy ->
-              let u = Cudf.load_universe (dummy::pl) in
-              let s = Depsolver.load u in
-                let d = Depsolver.edos_install s q in
-                if not(Diagnostic.is_solution d) then begin
-                  Printf.printf "Package %s is in the IS of %s\n" 
-                  (string_of_package q) (string_of_package p);
-                  if dummy.Cudf.version < p.Cudf.version then
-                    Printf.printf "If we downgrade %s to %s then %s is not installable anymore\n"
-                    (string_of_package p) (string_of_package dummy)
-                    (string_of_package q)
-                  else if dummy.Cudf.version > p.Cudf.version then
-                    Printf.printf "If we upgrade %s to %s then %s is not installable anymore\n"
-                    (string_of_package p) (string_of_package dummy)
-                    (string_of_package q)
-                  else assert false
-                  ;
-                  changed res p
-                end
-          ) vl
-        ) isp
-  ) universe;
+  Cudf.iter_packages 
+    (fun p ->
+      match
+	try Hashtbl.find version_table p.Cudf.package
+	with Not_found -> ref []
+      with 
+	(* If no version of p is explicitly dependend upon, then *)
+     (* changing the version of p does not change its impact set *)
+      |{ contents = [] } -> () 
+      |{ contents = l } ->
+          Printf.printf "Analysing package %s\n" (CudfAdd.string_of_package p);
+          let vl,explain = discriminants (List.unique l) in
+          let isp = Strongdeps.impactset graph p in
+          let (pl,_) = List.partition (fun z -> not(Cudf.(=%) z p)) pkglist in
+	  List.iter 
+	    (fun v ->
+              (* FIXME: prove the following; if (p,v) and (p,w) are in U, and
+                 q implies (p,v); then q is not installable when (p,w) replaces (p,v) *)
+              if p.Cudf.version <> v then 
+	      if mem_package universe (p.Cudf.package,v) then
+		Printf.printf "If we replace %s with version %d, then all its impact set becomes uninstallable.\n"
+		  (string_of_package p) v
+	      else
+		match create_dummy universe p v with
+		|None -> ()
+		|Some dummy ->
+		    Util.Progress.progress predbar;
+		    let u = Cudf.load_universe (dummy::pl) in
+		    let s = Depsolver.load u in
+		    begin
+		      List.iter
+			(fun q ->
+			  let d = Depsolver.edos_install s q in
+			  if not(Diagnostic.is_solution d) then begin
+			    Printf.printf "Package %s is in the IS of %s\n" 
+			      (string_of_package q) (string_of_package p);
+			    if dummy.Cudf.version < p.Cudf.version then
+			      Printf.printf "If we downgrade %s to %s then %s is not installable anymore\n"
+				(string_of_package p) (string_of_package dummy)
+				(string_of_package q)
+			    else if dummy.Cudf.version > p.Cudf.version then
+			      Printf.printf "If we upgrade %s to %s then %s is not installable anymore\n"
+				(string_of_package p) (string_of_package dummy)
+				(string_of_package q)
+			    else assert false
+				;
+                            (* FIXME: use explain to detail the constraints that get violated by moving to version v *)
+			    changed res p
+			  end
+			) isp
+		    end
+	    ) vl
+    ) universe;
   Util.Progress.reset predbar;
   res 
 ;;
@@ -257,3 +293,23 @@ let main () =
 ;;
 
 main();;
+
+
+(* garbage collector *)
+
+(* a function to dump the results of dsicriminants:
+
+  Hashtbl.iter (fun v row -> Printf.printf "Version %d gives " v; List.iter (fun b -> Printf.printf "%b " b) row;print_newline()) expl;; 
+
+Example:
+
+# let vl,expl = discriminants [(`Eq,2);(`Eq,4)];;
+val vl : int list = [4; 2; 1]
+val expl : (int, bool list) Hashtbl.t = <abstr>
+# Hashtbl.iter (fun v row -> Printf.printf "Version %d gives " v; List.iter (fun b -> Printf.printf "%b " b) row;print_newline()) expl;;
+Version 1 gives false false 
+Version 2 gives true false 
+Version 4 gives false true 
+
+
+*)
