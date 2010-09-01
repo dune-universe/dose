@@ -79,3 +79,20 @@ satisfied then it exits with an error:
   architecture field is consistent with a given concrete architecture
   (see Section~\ref{sec:invocation}).
 \end{itemize}
+
+\begin{example} The following input does not constitute a repository:
+\begin{verbatim}
+Package: abc
+Version: 42
+Depends: xyz
+
+Package: abc
+Version: 42
+Depends: pqr
+\end{verbatim}
+The reason is that the package $(abc,42)$ is not unique. \debcheck{}
+will reject such an input. After changing the version in the second
+stanza to 43, for example, the input becomes correct.
+\end{example}
+
+
