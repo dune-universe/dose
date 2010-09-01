@@ -229,8 +229,10 @@ let prediction universe =
       |{ contents = [] } -> () 
       |{ contents = l } ->
           Printf.printf "Analysing package %s\n" (CudfAdd.string_of_package p);
-          let vl,explain = discriminants (List.unique l) in
+          let sels = List.unique l in
+          let vl,explain = discriminants sels in
           let isp = Strongdeps.impactset graph p in
+          let sizeisp = List.length isp in
           let (pl,_) = List.partition (fun z -> not(Cudf.(=%) z p)) pkglist in
 	  List.iter 
 	    (fun v ->
@@ -247,28 +249,21 @@ let prediction universe =
 		    Util.Progress.progress predbar;
 		    let u = Cudf.load_universe (dummy::pl) in
 		    let s = Depsolver.load u in
-		    begin
-		      List.iter
-			(fun q ->
+		    let broken =
+		      List.fold_left
+			(fun acc q ->
 			  let d = Depsolver.edos_install s q in
-			  if not(Diagnostic.is_solution d) then begin
-			    Printf.printf "Package %s is in the IS of %s\n" 
-			      (string_of_package q) (string_of_package p);
-			    if dummy.Cudf.version < p.Cudf.version then
-			      Printf.printf "If we downgrade %s to %s then %s is not installable anymore\n"
-				(string_of_package p) (string_of_package dummy)
-				(string_of_package q)
-			    else if dummy.Cudf.version > p.Cudf.version then
-			      Printf.printf "If we upgrade %s to %s then %s is not installable anymore\n"
-				(string_of_package p) (string_of_package dummy)
-				(string_of_package q)
-			    else assert false
-				;
-                            (* FIXME: use explain to detail the constraints that get violated by moving to version v *)
-			    changed res p
-			  end
-			) isp
-		    end
+			  if not(Diagnostic.is_solution d) then  (* record in res the changes for the version of p in dummy *)
+                            (changed res dummy; q::acc) else acc
+			) [] isp in
+                    let nbroken=List.length broken in
+		    Printf.printf " Changing version of %s from %d to %d breaks %d/%d (=%f percent) of its Impact set.\n"
+		      (string_of_package p) p.Cudf.version v nbroken sizeisp (float (nbroken * 100)  /. (float sizeisp));
+		    Printf.printf " Version %d valuates the existing version selectors as follows:\n  " v;
+		    List.iter (fun (op,v) -> Printf.printf "(%s,%d) " (string_of_relop op) v) sels; print_newline();
+		    List.iter (fun v -> Printf.printf "%b " v) (List.map (evalsel v) sels); print_newline();
+		    Printf.printf " The broken packages in IS(%s) are:\n" (string_of_package p);
+		    List.iter (fun q -> Printf.printf "  - %s\n" (string_of_package q)) broken;
 	    ) vl
     ) universe;
   Util.Progress.reset predbar;
