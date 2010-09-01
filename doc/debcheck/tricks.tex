@@ -1,5 +1,30 @@
 \section{Tips and Tricks}
 \label{sec:tricks}
-** Explain how to encode a complicated query (installing several
-packages togther) by creating a pseudo-package
+\subsection{Encoding checks involving several package}
+\debcheck{} only tests whether any package in the foreground set is
+installable. However, sometimes one is interested in knowing whether
+several packages are co-installable, that is whether there exists an
+an installation set that contains all these packages. One might also
+be interested in an installation that does \emph{not} contain a certain
+package.
+
+This can be encoded by creating a pseudo-package that
+represents the query. 
+
+\begin{example}
+  We wish to know whether it is possible to install at the same time
+  \texttt{a} and \texttt{b}, the latter in some version $\geq 42$, but
+  without installing c. We create a pseudo package like this:
+\begin{verbatim}
+Package: query
+Depends: a, b(>= 42)
+Conflicts: c
+\end{verbatim}
+Then we check for installability of that package with respect to the
+repository:
+\begin{verbatim}
+echo "Package: query\nDepends: a, b(>=42)\nConflicts: c" | debcheck -b repository --
+\end{verbatim}
+\end{example}
+
 
