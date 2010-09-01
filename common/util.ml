@@ -151,7 +151,7 @@ module Progress = struct
         c.rotation <- (1 + c.rotation) land 3;
         Printf.bprintf c.buffer "%c %%%4.1f" rotate.[c.rotation] f
       end ;
-      Format.eprintf "%s@." (Buffer.contents c.buffer)
+      Format.eprintf "%s" (Buffer.contents c.buffer)
     end
 
 end
