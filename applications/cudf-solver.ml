@@ -16,7 +16,7 @@ open Common
 module Options = struct
   open OptParse
 
-  let debug = StdOpt.store_true ()
+  let verbose = StdOpt.incr_option ()
   let cudf = StdOpt.store_true ()
   let out = StdOpt.str_option ()
 
@@ -24,7 +24,7 @@ module Options = struct
   let options = OptParser.make ~description ()
 
   open OptParser
-  add options ~short_name:'v' ~long_name:"verbose" ~help:"Verbose" debug;
+  add options ~short_name:'v' ~help:"Print information (can be repeated)" verbose;
   add options                 ~long_name:"out"   ~help:"Output file" out;
   add options ~short_name:'c' ~long_name:"cudf"  ~help:"print the cudf solution (if any)" cudf;
 end
@@ -32,7 +32,8 @@ end
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
+  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
+
   match posargs with
   |[f] ->
       let (p,l,r) = 

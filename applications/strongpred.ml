@@ -17,7 +17,7 @@ open Common
 module Options = struct
   open OptParse
 
-  let debug = StdOpt.store_true ()
+  let verbose = StdOpt.incr_option ()
 
   let upgradeonly = StdOpt.store_true ()
 
@@ -25,7 +25,7 @@ module Options = struct
   let options = OptParser.make ~description:description ()
 
   open OptParser
-  add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
+  add options ~short_name:'v' ~help:"Print information (can be repeated)" verbose;
   add options ~short_name:'u' ~long_name:"upgradeonly" ~help:"Do not analyse version changes corresponding to downgrades" upgradeonly;
 end
 
@@ -211,7 +211,7 @@ let prediction universe =
       let w = maxv+1-offs in
       let row = List.map (evalsel w) sels in
       if not (Hashtbl.mem h row) then 
-	(Hashtbl.add h row w; Hashtbl.add h' w row);
+        (Hashtbl.add h row w; Hashtbl.add h' w row);
     done;
     Hashtbl.fold (fun k v acc -> k::acc) h' [], h'
     (* FIXME: need also to return the row associated to *any* version
@@ -223,10 +223,10 @@ let prediction universe =
   Cudf.iter_packages 
     (fun p ->
       match
-	try Hashtbl.find version_table p.Cudf.package
-	with Not_found -> ref []
+        try Hashtbl.find version_table p.Cudf.package
+        with Not_found -> ref []
       with 
-	(* If no version of p is explicitly dependend upon, then *)
+        (* If no version of p is explicitly dependend upon, then *)
      (* changing the version of p does not change its impact set *)
       |{ contents = [] } -> Printf.printf "Skipping package %s : no version selector mentions it, so IS(p) is invariant.\n" (CudfAdd.string_of_package p)
       |{ contents = l } ->
@@ -236,38 +236,38 @@ let prediction universe =
           let isp = Strongdeps.impactset graph p in
           let sizeisp = List.length isp in
           let (pl,_) = List.partition (fun z -> not(Cudf.(=%) z p)) pkglist in
-	  List.iter 
-	    (fun v ->
+          List.iter 
+            (fun v ->
               (* FIXME: prove the following; if (p,v) and (p,w) are in U, and
                  q implies (p,v); then q is not installable when (p,w) replaces (p,v) *)
               if p.Cudf.version = v then Printf.printf " ignoring base version %d of this package.\n" v
-	      else
+              else
               if p.Cudf.version > v && (OptParse.Opt.get Options.upgradeonly) then  Printf.printf " ignoring version %d of this package: it is a downgrade\n" v
-	      else
-	      if mem_package universe (p.Cudf.package,v) then
-		Printf.printf "If we replace %s with version %d, then all its impact set becomes uninstallable.\n"
-		  (string_of_package p) v
-	      else
-		let dummy=create_dummy universe p v in
-		Util.Progress.progress predbar;
-		let u = Cudf.load_universe (dummy::pl) in
-		let s = Depsolver.load u in
-		let broken =
-		  List.fold_left
-		    (fun acc q ->
-		      let d = Depsolver.edos_install s q in
-		      if not(Diagnostic.is_solution d) then  (* record in res the changes for the version of p in dummy *)
+              else
+              if mem_package universe (p.Cudf.package,v) then
+                Printf.printf "If we replace %s with version %d, then all its impact set becomes uninstallable.\n"
+                  (string_of_package p) v
+              else
+                let dummy=create_dummy universe p v in
+                Util.Progress.progress predbar;
+                let u = Cudf.load_universe (dummy::pl) in
+                let s = Depsolver.load u in
+                let broken =
+                  List.fold_left
+                    (fun acc q ->
+                      let d = Depsolver.edos_install s q in
+                      if not(Diagnostic.is_solution d) then  (* record in res the changes for the version of p in dummy *)
                             (changed res dummy; q::acc) else acc
-		    ) [] isp in
+                    ) [] isp in
                 let nbroken=List.length broken in
-		Printf.printf " Changing version of %s from %d to %d breaks %d/%d (=%f percent) of its Impact set.\n"
-		  (string_of_package p) p.Cudf.version v nbroken sizeisp (float (nbroken * 100)  /. (float sizeisp));
-		Printf.printf " Version %d valuates the existing version selectors as follows:\n  " v;
-		List.iter (fun (op,v) -> Printf.printf "(%s,%d) " (string_of_relop op) v) sels; print_newline();
-		List.iter (fun v -> Printf.printf "%b " v) (List.map (evalsel v) sels); print_newline();
-		Printf.printf " The broken packages in IS(%s) are:\n" (string_of_package p);
-		    List.iter (fun q -> Printf.printf "  - %s\n" (string_of_package q)) broken;
-	    ) vl
+                Printf.printf " Changing version of %s from %d to %d breaks %d/%d (=%f percent) of its Impact set.\n"
+                  (string_of_package p) p.Cudf.version v nbroken sizeisp (float (nbroken * 100)  /. (float sizeisp));
+                Printf.printf " Version %d valuates the existing version selectors as follows:\n  " v;
+                List.iter (fun (op,v) -> Printf.printf "(%s,%d) " (string_of_relop op) v) sels; print_newline();
+                List.iter (fun v -> Printf.printf "%b " v) (List.map (evalsel v) sels); print_newline();
+                Printf.printf " The broken packages in IS(%s) are:\n" (string_of_package p);
+                    List.iter (fun q -> Printf.printf "  - %s\n" (string_of_package q)) broken;
+            ) vl
     ) universe;
   Util.Progress.reset predbar;
   res 
@@ -276,8 +276,9 @@ let prediction universe =
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  let bars = ["Strongdeps_int.main";"Strongdeps_int.conj"] in
-  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug ~bars () ;
+  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
+  Boilerplate.enable_bars ["Strongdeps_int.main";"Strongdeps_int.conj"];
+
   let (universe,_,_) = Boilerplate.load_universe posargs in
   prediction universe
 (*

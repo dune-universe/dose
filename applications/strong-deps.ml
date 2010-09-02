@@ -16,7 +16,7 @@ open Common
 module Options = struct
   open OptParse
 
-  let debug = StdOpt.store_true ()
+  let verbose = StdOpt.incr_option ()
   let dot = StdOpt.store_true ()
   let dump = StdOpt.store_true ()
   let table =  StdOpt.store_true ()
@@ -29,7 +29,7 @@ module Options = struct
   let options = OptParser.make ~description:description ()
 
   open OptParser
-  add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
+  add options ~short_name:'v' ~help:"Print information (can be repeated)" verbose;
   add options ~long_name:"prefix" ~help:"Prefix output fils with <prefix>" prefix;
   add options ~long_name:"dot" ~help:"Save the strong dependency graph in dot format" dot;
   add options ~long_name:"dump" ~help:"Save the strong dependency graph" dump;
@@ -49,8 +49,9 @@ let mk_filename prefix suffix s = if prefix = "" then s^suffix else prefix^suffi
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  let bars = ["Algo.Strongdep.main";"Algo.Strongdep.conj"] in
-  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug ~bars () ;
+  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
+  Boilerplate.enable_bars ["Algo.Strongdep.main";"Algo.Strongdep.conj"];
+
   let (universe,_,_) = Boilerplate.load_universe posargs in
   let prefix = OptParse.Opt.get Options.prefix in
   let sdgraph = 

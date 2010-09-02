@@ -18,7 +18,7 @@ open Common
 module Options = struct
   open OptParse
 
-  let debug = StdOpt.store_true ()
+  let verbose = StdOpt.incr_option ()
   let status = StdOpt.str_option ()
   let outfile = StdOpt.str_option ()
 
@@ -26,7 +26,7 @@ module Options = struct
   let options = OptParser.make ~description:description ()
 
   open OptParser
-  add options ~short_name:'d' ~long_name:"debug"  ~help:"Print debug information" debug;
+  add options ~short_name:'v' ~help:"Print debug information (can be repeated)" verbose;
   add options                 ~long_name:"status" ~help:"package status (822)" status;
   add options                 ~long_name:"outfile" ~help:"specify the output file" outfile;
 end
@@ -37,7 +37,7 @@ let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
 
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
+  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose) ;
 
   (* raw -> cudf *)
   let (preamble,universe) =

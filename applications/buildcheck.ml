@@ -19,7 +19,7 @@ module Deb = Debian.Packages
 module Options = struct
   open OptParse
 
-  let debug = StdOpt.store_true ()
+  let verbose = StdOpt.incr_option ()
   let successes = StdOpt.store_true ()
   let failures = StdOpt.store_true ()
   let explain = StdOpt.store_true ()
@@ -34,7 +34,7 @@ module Options = struct
   let options = OptParser.make ~description ()
 
   open OptParser
-  add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
+  add options ~short_name:'v' ~help:"Print information (can be repeated)" verbose;
   add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
   add options ~short_name:'f' ~long_name:"failures" ~help:"Only show failures" failures;
   add options ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" successes;
@@ -51,7 +51,8 @@ open Diagnostic
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
+  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
+
   if not(OptParse.Opt.is_set Options.architecture) then begin
     Printf.eprintf "--architecture must be specified\n";
     exit 1;

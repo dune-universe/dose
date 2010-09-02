@@ -17,7 +17,7 @@ open Common
 module Options = struct
   open OptParse
 
-  let debug = StdOpt.store_true ()
+  let verbose = StdOpt.incr_option ()
   let documents = StdOpt.int_option ~default:1 ()
   let install = StdOpt.int_option ~default:0 ()
   let upgrade = StdOpt.int_option ~default:0 ()
@@ -36,7 +36,7 @@ module Options = struct
   let options = OptParser.make ~description:description ()
 
   open OptParser
-  add options                 ~long_name:"debug" ~help:"Print debug information" debug;
+  add options ~short_name:'v' ~help:"Print debug information (can be repeated)" verbose;
   add options ~short_name:'n' ~help:"generate n different random documents" documents;
   add options ~short_name:'i' ~long_name:"install" ~help:"install n random packages" install;
   add options ~short_name:'r' ~long_name:"remove" ~help:"remove n random package" remove;
@@ -156,7 +156,7 @@ let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
 
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
+  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Random.init (OptParse.Opt.get Options.seed);
 
   (* raw -> cudf *)

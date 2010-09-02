@@ -1,10 +1,21 @@
 open ExtLib
 open Common
 
-let enable_debug ?(bars=[]) () =
-  List.iter Util.Progress.enable bars;
-  Util.make_verbose ()
+let enable_debug = function
+  |0 -> () (* quite *)
+  |1 ->
+      Util.Info.all_enabled ()
+  |2 ->
+      Util.Info.all_enabled () ;
+      Util.Warning.all_enabled ()
+  |_ ->
+      Util.Info.all_enabled () ;
+      Util.Warning.all_enabled () ;
+      Util.Debug.all_enabled ()
 ;;
+
+let enable_bars = List.iter Util.Progress.enable
+(* let enable_time = List.iter Util.Timer. *)
 
 let debug fmt = Util.make_debug "Boilerplate" fmt
 let info fmt = Util.make_info "Boilerplate" fmt

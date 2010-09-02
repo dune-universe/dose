@@ -17,7 +17,7 @@ open Diagnostic
 module Options = struct
   open OptParse
 
-  let verbose = StdOpt.store_true ()
+  let verbose = StdOpt.incr_option ()
   let successes = StdOpt.store_true ()
   let failures = StdOpt.store_true ()
   let explain = StdOpt.store_true ()
@@ -31,7 +31,7 @@ module Options = struct
   let options = OptParser.make ~description ()
 
   open OptParser
-  add options ~short_name:'v' ~long_name:"verbose" ~help:"Print progress and timing information" verbose;
+  add options ~short_name:'v' ~long_name:"verbose" ~help:"Print additional information" verbose;
   add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
   add options ~short_name:'f' ~long_name:"failures" ~help:"Only show failures" failures;
   add options ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" successes;
@@ -59,7 +59,7 @@ let main () =
     |"rpmcheck",l -> List.map ((^) "synthesis://") l
     |_,_ -> args
   in
-  if OptParse.Opt.get Options.verbose then Boilerplate.enable_debug () ;
+  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   let default_arch = OptParse.Opt.opt Options.architecture in
   let (universe,from_cudf,_) = Boilerplate.load_universe ~default_arch posargs in
   info "Solving..." ;

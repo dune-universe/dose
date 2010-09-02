@@ -21,13 +21,6 @@ let uuid () =
 
 type label = string
 
-let msg_verbose = ref false
-let time_verbose = ref false
-let make_verbose ?(msg=true) ?(time=false) () =
-  time_verbose := time ; msg_verbose := msg
-let make_quite () = 
-  time_verbose := false ; msg_verbose := false
-
 module type Messages = sig
   type t
   val create: ?enabled:bool -> label -> t
@@ -59,8 +52,8 @@ module MakeMessages(X : sig val label : string end) = struct
 
   let eprintf t fmt =
     Printf.kprintf (
-      if (t.enabled || !allenabled) && !msg_verbose then begin
-        (fun s -> Format.eprintf "%s : %s@." t.label s)
+      if (t.enabled || !allenabled) then begin
+        (fun s -> Format.eprintf "(%s)%s : %s@." X.label t.label s)
       end else ignore
     ) fmt
 
@@ -80,16 +73,16 @@ module MakeMessages(X : sig val label : string end) = struct
 end
 
 (* this way we can have the same label for different messages *)
-module Debug = MakeMessages(struct let label = "Debug" end)
-module Info = MakeMessages(struct let label = "Info" end)
-module Warning = MakeMessages(struct let label = "Warning" end)
+module Debug = MakeMessages(struct let label = "D" end)
+module Info = MakeMessages(struct let label = "I" end)
+module Warning = MakeMessages(struct let label = "W" end)
 
 let make_info label =
-  let t = Info.create ~enabled:true label in
+  let t = Info.create label in
   fun fmt -> Info.eprintf t fmt
 
 let make_warning label =
-  let t = Warning.create ~enabled:true label in
+  let t = Warning.create label in
   fun fmt -> Warning.eprintf t fmt
 
 let make_debug label =
@@ -139,7 +132,7 @@ module Progress = struct
     c.rotation <- 0
 
   let progress ?(i=1) c =
-    if c.enabled && !msg_verbose then begin
+    if c.enabled then begin
       c.perc <- c.perc + i;
       Buffer.clear c.buffer;
       Buffer.add_char c.buffer '\r';
@@ -151,7 +144,7 @@ module Progress = struct
         c.rotation <- (1 + c.rotation) land 3;
         Printf.bprintf c.buffer "%c %%%4.1f" rotate.[c.rotation] f
       end ;
-      Format.eprintf "%s" (Buffer.contents c.buffer)
+      Printf.eprintf "%s" (Buffer.contents c.buffer)
     end
 
 end
@@ -176,7 +169,7 @@ module Timer = struct
   let () = gettimeofday := Unix.gettimeofday
 
   let pp fmt c =
-    if c.enabled && !time_verbose then
+    if c.enabled then
       Format.fprintf fmt "Timer %s. Total time: %f. Count: %i@."
         c.name c.total c.count
 
@@ -216,7 +209,7 @@ module Counter = struct
   }
 
   let pp fmt c =
-    if c.enabled && !time_verbose then
+    if c.enabled then
       Format.fprintf fmt "Counter %s: %i@." c.name c.count
 
   let create ?(enabled=false) s =
@@ -238,4 +231,4 @@ let pp_process_time fmt () =
   Format.fprintf fmt "Process time (sys):   %5.2f@." pt.Unix.tms_stime
 ;;
 
-register (fun fmt -> if !time_verbose then pp_process_time fmt ());;
+register (fun fmt -> if false then pp_process_time fmt ());;

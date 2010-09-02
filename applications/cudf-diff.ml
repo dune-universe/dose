@@ -14,13 +14,13 @@ type solution = {
 
 module Options = struct
   open OptParse
-  let verbose = StdOpt.store_true ()
+  let verbose = StdOpt.incr_option ()
 
   let description = "Compare two or more solutions. Format : solvername:solutionfile"
   let options = OptParser.make ~description:description ()
 
   open OptParser
-  add options ~short_name:'v' ~long_name:"verbose" ~help:"Verbose information" verbose;
+  add options ~short_name:'v' ~help:"Print information (can be repeated)" verbose;
 end
 
 
@@ -235,7 +235,7 @@ let check_sol u r s =
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  if OptParse.Opt.get Options.verbose then Boilerplate.enable_debug () ;
+  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
 
   match posargs with
   |[] -> (Printf.eprintf "You must specify at least a universe and a solution\n" ; exit 1)
