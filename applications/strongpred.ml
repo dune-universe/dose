@@ -19,11 +19,14 @@ module Options = struct
 
   let debug = StdOpt.store_true ()
 
-  let description = "Compute the strong dependency graph"
+  let upgradeonly = StdOpt.store_true ()
+
+  let description = "Analyse impact of version change on the impact set of packages"
   let options = OptParser.make ~description:description ()
 
   open OptParser
   add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
+  add options ~short_name:'u' ~long_name:"upgradeonly" ~help:"Do not analyse version changes corresponding to downgrades" upgradeonly;
 end
 
 (* ----------------------------------- *)
@@ -200,7 +203,12 @@ let prediction universe =
     let minv,maxv= List.fold_left (fun (mi,ma) v -> (min mi v,max ma v)) (max_int,min_int) rawvl in
     let h = Hashtbl.create 17 in
     let h' = Hashtbl.create 17 in
-    for w = minv-1 to maxv+1 do
+    (* perform the loop from hi to lo version, to make sure
+       that = selectors are properly analysed even when 
+       ignoring downgrades *)
+    (* for w = minv-1 to maxv+1 do *)
+    for offs = 0 to (maxv-minv+2) do
+      let w = maxv+1-offs in
       let row = List.map (evalsel w) sels in
       if not (Hashtbl.mem h row) then 
 	(Hashtbl.add h row w; Hashtbl.add h' w row);
@@ -233,6 +241,8 @@ let prediction universe =
               (* FIXME: prove the following; if (p,v) and (p,w) are in U, and
                  q implies (p,v); then q is not installable when (p,w) replaces (p,v) *)
               if p.Cudf.version = v then Printf.printf " ignoring base version %d of this package.\n" v
+	      else
+              if p.Cudf.version > v && (OptParse.Opt.get Options.upgradeonly) then  Printf.printf " ignoring version %d of this package: it is a downgrade\n" v
 	      else
 	      if mem_package universe (p.Cudf.package,v) then
 		Printf.printf "If we replace %s with version %d, then all its impact set becomes uninstallable.\n"
