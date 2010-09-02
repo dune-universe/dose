@@ -173,7 +173,7 @@ module Timer = struct
       Format.fprintf fmt "Timer %s. Total time: %f. Count: %i@."
         c.name c.total c.count
 
-  let create ?(enabled=true) s =
+  let create ?(enabled=false) s =
     let c = { 
       name = s;
       count = 0;
