@@ -46,7 +46,8 @@ class intprojection size = object
     inttovar.(counter) <- v;
     counter <- counter + 1
 
-  (** given a package id return a sat solver variable *)
+  (** given a package id return a sat solver variable 
+      raise Not_found if the package id is not known *)
   method vartoint v =
     if size = 0 then v
     else Hashtbl.find vartoint v

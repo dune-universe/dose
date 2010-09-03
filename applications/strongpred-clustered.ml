@@ -406,7 +406,9 @@ let prediction universe =
                           List.iter (fun (op,v) -> Printf.printf "(%s,%d) " (string_of_relop op) v) sels; print_newline();
                           List.iter (fun v -> Printf.printf "%b " v) (List.map (evalsel v) sels); print_newline();
                           Printf.printf " The broken packages in IS(%s) are:\n" (string_of_package p);
-                          List.iter (fun q -> Printf.printf "  - %s\n" (string_of_package q)) broken
+                          List.iter (fun q -> 
+                            Printf.printf "  - %s\n" (string_of_package q);
+                          ) broken
                         end
                       end
                 ) okcl

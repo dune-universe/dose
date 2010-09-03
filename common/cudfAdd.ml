@@ -95,12 +95,21 @@ class projection = object(self)
   (** var -> int *)
   method vartoint (v : Cudf.package) : int =
     try Cudf_hashtbl.find vartoint v
-    with Not_found -> assert false
+    with Not_found ->
+      failwith (
+        Printf.sprintf
+        "cudfAdd - vartoint package %s does not exist"
+        (string_of_package v)
+      )
       
   (** int -> var *)
   method inttovar (i : int) : Cudf.package =
     try Hashtbl.find inttovar i 
-    with Not_found -> assert false
+    with Not_found ->
+      failwith (
+        Printf.sprintf
+        "cudfAdd - inttovar var does not exist %d" i
+      )
 end 
 
 (** build an hash table that associates (package name, String version) to
