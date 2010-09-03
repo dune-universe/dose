@@ -13,10 +13,13 @@
 open ExtLib
 open ExtString
 open Common
-open Packages
+
+let debug fmt = Util.make_debug "Rpm.Rpmcudf" fmt
+let info fmt = Util.make_info "Rpm.Rpmcudf" fmt
+let warning fmt = Util.make_warning "Rpm.Rpmcudf" fmt
 
 type tables = {
-  units : (name, (int * (Packages.rel * string)) list) Hashtbl.t;
+  units : (Packages.name, (int * (Packages.rel * string)) list) Hashtbl.t;
   files : ((string * string), string) Hashtbl.t;
   fileconflicts : ((string * string), (string * string))  Hashtbl.t;
 }
@@ -56,7 +59,7 @@ let init_tables pkglist =
         try Hashtbl.find t k with Not_found ->
         (let l = ref [] in Hashtbl.add t k l; l)
       in
-      Util.print_warning "provide with disequality for package %s" k; 
+      warning "provide with disequality for package %s" k; 
       l := (sel,v) :: !l
   in
 
@@ -69,10 +72,10 @@ let init_tables pkglist =
   in
 
   List.iter (fun pkg ->
-    add_units (pkg.name,(`Eq,pkg.version));
-    List.iter add_units pkg.provides ;
+    add_units (pkg.Packages.name,(`Eq,pkg.Packages.version));
+    List.iter add_units pkg.Packages.provides ;
     List.iter (fun ((file,_),_) ->
-        Hashtbl.add temp_files file (pkg.name,pkg.version)
+        Hashtbl.add temp_files file (pkg.Packages.name,pkg.Packages.version)
     ) pkg.Packages.files
   ) pkglist
   ;
@@ -82,14 +85,14 @@ let init_tables pkglist =
       |(_,false) -> () (* no conflicts with directories *)
       |((file,_),true) ->
         List.iter (fun (n,v) ->
-          let (pn,pv) = (pkg.name,pkg.version) in
+          let (pn,pv) = (pkg.Packages.name,pkg.Packages.version) in
           if (n,v) <> (pn,pv) then
             Hashtbl.add tables.fileconflicts (pn,pv) (n,v)
         ) (Hashtbl.find_all temp_files file)
     ) pkg.Packages.files ;
 
-    List.iter (fun (name,sel) -> add_files name) pkg.conflicts ;
-    List.iter (List.iter (fun (name,sel) -> add_files name)) pkg.depends 
+    List.iter (fun (name,sel) -> add_files name) pkg.Packages.conflicts ;
+    List.iter (List.iter (fun (name,sel) -> add_files name)) pkg.Packages.depends 
   ) pkglist
   ;
 
@@ -173,32 +176,34 @@ let preamble =
   CudfAdd.add_properties Cudf.default_preamble l
 
 let add_extra extras tables pkg =
-  let number = ("number",`String pkg.version) in
+  let number = ("number",`String pkg.Packages.version) in
   number :: extras
 
 let add_keep pkg =
   try
-    if List.assoc "essential" pkg.extras = "true" then `Keep_package
+    if List.assoc "essential" pkg.Packages.extras = "true" then `Keep_package
     else `Keep_none
   with Not_found -> `Keep_none
 
 let tocudf tables ?(extras=[]) ?(inst=false) pkg =
-  let (n,v) = (pkg.name,pkg.version) in
+  let (n,v) = (pkg.Packages.name,pkg.Packages.version) in
   (* we remove dependencies on files provided by the same package, dependencies
    * on the package itself and dependencies on packages provided by the same
    * package *)
   let depends = 
     List.filter_map (fun l ->
       match List.filter (fun (n,s) ->
-        not(n = pkg.name) &&
-        not (List.exists(fun (x,_) -> x = n ) pkg.provides) && 
-        not(List.mem n (Hashtbl.find_all tables.files (pkg.name,pkg.version)))
+        not(n = pkg.Packages.name) &&
+        not (List.exists(fun (x,_) -> x = n ) pkg.Packages.provides) && 
+        not(List.mem n (
+          Hashtbl.find_all tables.files (pkg.Packages.name,pkg.Packages.version))
+        )
       ) l with
       |[] -> None 
       |l -> Some l
-    ) pkg.depends
+    ) pkg.Packages.depends
   in
-  let name = CudfAdd.encode pkg.name in
+  let name = CudfAdd.encode pkg.Packages.name in
   let version = get_cudf_version tables (n,v) in
   { Cudf.default_package with
     Cudf.package = name ;
@@ -206,11 +211,11 @@ let tocudf tables ?(extras=[]) ?(inst=false) pkg =
     Cudf.keep = add_keep pkg;
     Cudf.depends = load_depends tables depends ;
     Cudf.conflicts = List.unique (
-      (load_conflicts tables pkg.conflicts) (* @
+      (load_conflicts tables pkg.Packages.conflicts) (* @
       (load_fileconflicts tables (n,v)) *)
     );
     Cudf.provides = List.unique (
-      (load_provides (n,v) tables pkg.provides) @
+      (load_provides (n,v) tables pkg.Packages.provides) @
       (load_filesprovides tables (n,v)) 
     );
     Cudf.installed = inst;
