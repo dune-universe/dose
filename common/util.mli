@@ -118,6 +118,7 @@ module Timer : sig
   val stop: t -> 'a -> 'a
 end
 
+(*
 (** Counters are printed all at once by the [dump] function on stderr. 
  * They can enabled or disabled (default) *)
 module Counter : sig
@@ -129,3 +130,4 @@ module Counter : sig
   val incr: t -> unit
   val add: t -> int -> unit
 end
+*)

@@ -23,6 +23,8 @@ type solver = {
   solver : Depsolver_int.solver
 }
 
+(** 
+ * @param check if the universe is consistent *)
 let load ?(check=true) universe =
   let is_consistent check universe =
     if check then Cudf_checker.is_consistent universe
@@ -74,13 +76,15 @@ let diagnosis maps res req =
   { Diagnostic.result = result ; request = request }
 
 let univcheck ?callback universe =
-  let s = load universe in
-  let maps = s.mdf.Mdf.maps in
+  (*let s = load universe in
+  let maps = s.mdf.Mdf.maps in *)
+  let mdf = Mdf.load_from_universe universe in
+  let maps = mdf.Mdf.maps in
   match callback with
-  |None -> Depsolver_int.univcheck (s.mdf,s.solver)
+  |None -> Depsolver_int.univcheck mdf
   |Some f ->
       let callback_int (res,req) = f (diagnosis maps res req) in
-      Depsolver_int.univcheck ~callback:callback_int (s.mdf,s.solver)
+      Depsolver_int.univcheck ~callback:callback_int mdf
 
 let listcheck ?callback universe pkglist =
   let mdf = Mdf.load_from_universe universe in
@@ -107,16 +111,13 @@ let edos_coinstall s pkglist =
 
 let trim universe =
   let trimmed_pkgs = ref [] in
-  ignore (univcheck ~callback:(function d ->
-    match d.Diagnostic.result with
-    | Diagnostic.Success _ ->
-      begin
-        match d.Diagnostic.request with
-        | Diagnostic.Package p -> trimmed_pkgs := p::!trimmed_pkgs
-        | _ -> assert false
-      end
-    | _ -> ()
-  ) universe);
+  let callback d =
+    if Diagnostic.is_solution d then
+      match d.Diagnostic.request with
+      | Diagnostic.Package p -> trimmed_pkgs := p::!trimmed_pkgs
+      | _ -> assert false
+  in
+  ignore (univcheck ~callback universe);
   Cudf.load_universe !trimmed_pkgs
 
 let dependency_closure ?maxdepth ?conjuntive universe pkglist =

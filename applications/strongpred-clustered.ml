@@ -9,6 +9,32 @@
 *)
 
 
+  (* FIXME: change the logic below to the following
+     for all cluster
+       get all versions of all packages in cluster
+         -> here, skip packages with no version mentioned, and remove them from the cluster (their version change is irrelevant)
+       compute discriminants overall
+         foreach version
+           build modified universe in lockstep
+             foreach package p in cluster
+               foreach q in IS(p)
+                 get broken
+             output info on p, precising the cluster...
+   *)
+
+  (* single package logic:
+     foreach p in universe
+       get all versions of p
+         -> here, skip p if no version of it is mentioned
+       compute discriminants
+         foreach version
+           build universe with dummy p with that version
+             foreach q in IS(p)
+               get broken
+             output info on p
+   *)
+
+
 
 
 
@@ -148,24 +174,27 @@ let renumber universe =
 
 (* 
    group packages having the same source into clusters; 
-   each cluster is either (None,[p]) if p has no source,
-   or (Some s, pl) with pl the list of all the packages
+   each cluster is either (p^v,[p]) if p has no source,
+   or (s, pl) with pl the list of all the packages
    having source s
  *)
 
-let src_clusters_of universe = 
-  let cl_h = Hashtbl.create 153 in
-  let addl h k v =
-    if Hashtbl.mem h k then Hashtbl.add h k [v]
-    else Hashtbl.replace h k (v::Hashtbl.find h k) in
-  let no_src_pl =
-    Cudf.fold_packages (fun acc p ->
-      try addl cl_h (Cudf.lookup_package_property p "source") p; acc
-      with Not_found -> p::acc)
-      [] universe
-  in 
-  let no_src_cl = List.map (fun p -> (None,[p])) no_src_pl in
-  no_src_cl@(Hashtbl.fold (fun k v acc -> (Some k,v)::acc) cl_h [])
+let src_clusters_of pkglist = 
+  let add table name e =
+    try let l = Hashtbl.find table name in l := e::!l
+    with Not_found -> Hashtbl.add table name (ref [e])
+  in
+  let get_source p = Cudf.lookup_package_property p "source" in
+  let h = Hashtbl.create 153 in
+  List.iter (fun p ->
+      let s = 
+        try get_source p
+        with Not_found ->
+          Printf.sprintf "%s%d" p.Cudf.package p.Cudf.version
+      in
+      add h s p
+  ) pkglist;
+  Hashtbl.fold (fun k {contents=l} acc -> (k,l)::acc) h []
 ;;
 
 let string_of_relop = function
@@ -178,14 +207,15 @@ let string_of_relop = function
 
 let string_of_package p =
   Printf.sprintf "%s - %d" (CudfAdd.string_of_package p) p.Cudf.version
+;;
 
-  let mem_package univ (p,v) =
-    try ignore(Cudf.lookup_package univ (p,v)); true
-    with Not_found -> false
-  ;;
+let mem_package univ (p,v) =
+  try ignore(Cudf.lookup_package univ (p,v)); true
+  with Not_found -> false
+;;
 
 (* function to create a dummy package with a given version and name *)
-let create_dummy univ p  v = 
+let create_dummy univ p v = 
   let offset = (if p.Cudf.version > v then "-1" else "+1") in
   let n = 
     try (Cudf.lookup_package_property p "number")^offset
@@ -208,27 +238,35 @@ let create_dummy univ p  v =
     | (`Lt,v') -> v<v'
     | (`Neq,v') -> v<>v'
 ;;
-  let discriminants sels =
-    let rawvl = List.unique (List.map snd sels) in
-    let minv,maxv= List.fold_left (fun (mi,ma) v -> (min mi v,max ma v)) (max_int,min_int) rawvl in
-    let h = Hashtbl.create 17 in
-    let h' = Hashtbl.create 17 in
-    (* perform the loop from hi to lo version, to make sure
-       that = selectors are properly analysed even when 
-       ignoring downgrades *)
-    (* for w = minv-1 to maxv+1 do *)
-    for offs = 0 to (maxv-minv+2) do
-      let w = maxv+1-offs in
-      let row = List.map (evalsel w) sels in
-      if not (Hashtbl.mem h row) then 
-	(Hashtbl.add h row w; Hashtbl.add h' w row);
-    done;
-    Hashtbl.fold (fun k v acc -> k::acc) h' [], h'
-      (* FIXME: need also to return the row associated to *any* version
-	 to be able, later, to avoid computing on version which have
-       the same row as a version existing in the repository
-       *)
+
+(* perform the loop from hi to lo version, to make sure
+   that = selectors are properly analysed even when 
+   ignoring downgrades *)
+(* for w = minv-1 to maxv+1 do *)
+(* FIXME: need also to return the row associated to *any* version
+   to be able, later, to avoid computing on version which have
+ the same row as a version existing in the repository
+*)
+let discriminants sels =
+  let rawvl = List.unique (List.map snd sels) in
+  let minv,maxv= List.fold_left (fun (mi,ma) v -> (min mi v,max ma v)) (max_int,min_int) rawvl in
+  let h = Hashtbl.create 17 in
+  let h' = Hashtbl.create 17 in
+
+  for w = maxv+1 downto 0 do
+(*  for offs = 0 to (maxv-minv+2) do
+    let w = maxv+1-offs in
+*)
+    let row = List.map (evalsel w) sels in
+    if not (Hashtbl.mem h row) then begin
+      Hashtbl.add h row w;
+      Hashtbl.add h' w row
+    end;
+  done;
+  Hashtbl.fold (fun k v acc -> k::acc) h' [], h'
 ;;
+
+let to_set l = List.fold_right CudfAdd.Cudf_set.add l CudfAdd.Cudf_set.empty ;;
 
 let prediction universe =
   (* print_endline "------------------------------------------";
@@ -253,119 +291,126 @@ let prediction universe =
   print_endline "------------------------------------------";
   *)
   let universe = Cudf.load_universe pkglist in
+  let pkgset = to_set pkglist in
 
   (* usage of clusters is controlled by a command line option *)
   let clusters = 
-    if (OptParse.Opt.get Options.lockstep) then src_clusters_of universe 
-    else List.map (fun p -> None, [p]) (Cudf.fold_packages (fun acc p -> p::acc) [] universe) in
+    if (OptParse.Opt.get Options.lockstep) then
+      src_clusters_of pkglist 
+    else
+      List.map (fun p -> 
+        let s = Printf.sprintf "%s%d" p.Cudf.package p.Cudf.version in
+        (s, [p])
+      ) pkglist
+  in
+
   let graph = Strongdeps.strongdeps_univ universe in
+
   let changed h p =
     try incr (Hashtbl.find h p) 
     with Not_found -> Hashtbl.add h p (ref 1)
   in
   Util.Progress.set_total predbar size;
 
-  (* FIXME: change the logic below to the following
-     for all cluster
-       get all versions of all packages in cluster
-         -> here, skip packages with no version mentioned, and remove them from the cluster (their version change is irrelevant)
-       compute discriminants overall
-         foreach version
-           build modified universe in lockstep
-             foreach package p in cluster
-               foreach q in IS(p)
-                 get broken
-             output info on p, precising the cluster...
-   *)
-
-  (* single package logic:
-     foreach p in universe
-       get all versions of p
-         -> here, skip p if no version of it is mentioned
-       compute discriminants
-         foreach version
-           build universe with dummy p with that version
-             foreach q in IS(p)
-               get broken
-             output info on p
-   *)
-
-  let exclude u pl = 
-    let inpl p = 
-      let rec isin = 
-	function 
-	    [] -> false 
-	  | q::r -> if Cudf.(=%) p q then true else isin r
-      in isin pl
-    in List.fold_left (fun u' p -> if inpl p then u' else p::u') [] pl 
+  let exclude pkgset pl = 
+    let sl = to_set pl in
+    CudfAdd.Cudf_set.elements (CudfAdd.Cudf_set.diff pkgset sl)
   in
+
   List.iter
     (fun (src,cluster) ->
-      let okvl,okcl = List.fold_left (fun (vl'',pl'') p -> 
-	if Hashtbl.mem version_table p.Cudf.package then
-	  (!(Hashtbl.find version_table p.Cudf.package))@vl'',p::pl''
-	else 
-	  (* If no version of p is explicitly dependend upon, then *)
-	  (* changing the version of p does not change its impact set *)
-	  (Printf.printf "Skipping package %s : no version selector mentions it, so IS(p) is invariant.\n" (CudfAdd.string_of_package p);
-	     (vl'',pl''))
-      ) ([],[]) cluster in
+      Printf.printf "Analysing packages for cluster %s\n" src;
+      let okvl,okcl =
+        List.fold_left (fun (vl,pl) p -> 
+          if Hashtbl.mem version_table p.Cudf.package then
+            let { contents = cl } = Hashtbl.find version_table p.Cudf.package in
+            (cl@vl, p::pl)
+          else begin
+            (* If no version of p is explicitly dependend upon, then *)
+            (* changing the version of p does not change its impact set *)
+            Printf.printf
+            "Skipping package %s : no version selector mentions it, so IS(p) is invariant.\n"
+            (CudfAdd.string_of_package p);
+            (vl,pl)
+          end
+        ) ([],[]) cluster
+      in
       if okcl <> [] then 
-	begin
-          Printf.printf "Analysing cluster:\n    "; List.iter (fun p -> Printf.printf "%s " (CudfAdd.string_of_package p)) okcl; print_newline();
+        begin
+          Printf.printf "Analysing cluster:\n    ";
+          List.iter (fun p -> Printf.printf "%s " (CudfAdd.string_of_package p)) okcl;
+          print_newline();
           let sels = List.unique okvl in
           let vl,explain = discriminants sels in
           (* precompute impact sets of the cluster *)
-          let ispl = List.map (fun p -> let isp = Strongdeps.impactset graph p in p,(List.length isp, isp)) okcl in
+          let ispl =
+            let h = CudfAdd.Cudf_hashtbl.create (List.length okcl) in
+            List.iter (fun p ->
+              let isp = Strongdeps.impactset graph p in 
+              CudfAdd.Cudf_hashtbl.add h p (List.length isp, isp)
+            ) okcl;
+            h
+          in
           (* precompute actual versions of package in this cluster *)
-	  let clv = List.map (fun p -> p.Cudf.version, p) okcl in
-	  List.iter 
-	    (fun v ->
+          (* let clv = List.map (fun p -> p.Cudf.version, p) okcl in *)
+          List.iter 
+            (fun v ->
               (* compute a universe with the relevant packages in the cluster moved to version v *)
-              let pl = exclude pkglist okcl in
-	      let okcl_at_v=List.map (fun p -> 
-		if mem_package universe (p.Cudf.package,v) then p else create_dummy universe p v) okcl in
-	      Util.Progress.progress predbar;
-	      let u = Cudf.load_universe (okcl_at_v@pl) in
-	      let s = Depsolver.load u in
+              let pl = exclude pkgset okcl in
+              let okcl_at_v = 
+                List.map (fun p -> 
+                  if mem_package universe (p.Cudf.package,v) then p
+                  else create_dummy universe p v
+                ) okcl
+              in
+              Util.Progress.progress predbar;
+              let u = Cudf.load_universe (okcl_at_v@pl) in
+              let s = Depsolver.load u in
               List.iter 
                 (* for each package in the cluster, perform analysis *)
-		(fun p -> 
-		  let pn = (string_of_package p) in
-		  (* FIXME: prove the following; if (p,v) and (p,w) are in U, and
+                (fun p -> 
+                  let pn = (string_of_package p) in
+                  (* FIXME: prove the following; if (p,v) and (p,w) are in U, and
                      q implies (p,v); then q is not installable when (p,w) replaces (p,v) *)
-		  if p.Cudf.version = v then Printf.printf " ignoring base version %d of package %s.\n" v pn
-		  else
-		    if p.Cudf.version > v && (OptParse.Opt.get Options.upgradeonly) then  Printf.printf " ignoring version %d of package %s : it is a downgrade\n" v pn
-		    else
-		      if mem_package universe (p.Cudf.package,v) then
-			Printf.printf "If we replace %s with version %d, then all its impact set becomes uninstallable.\n" pn v
-		      else
-			let sizeisp, isp = List.assoc p ispl in
-			let broken =
-			  List.fold_left
-			    (fun acc q ->
+                  if p.Cudf.version = v then 
+                    Printf.printf " ignoring base version %d of package %s.\n" v pn
+                  else 
+                    if p.Cudf.version > v && (OptParse.Opt.get Options.upgradeonly) then
+                      Printf.printf " ignoring version %d of package %s : it is a downgrade\n" v pn
+                    else
+                      if mem_package universe (p.Cudf.package,v) then
+                        Printf.printf "If we replace %s with version %d, then all its impact set becomes uninstallable.\n" pn v
+                      else begin
+                        let sizeisp, isp = CudfAdd.Cudf_hashtbl.find ispl p in
+                        Printf.printf "-+++++++ %s (is size %d)\n" (string_of_package p) sizeisp ;
+                        let broken =
+                          List.fold_left
+                            (fun acc q ->
                               (* take care of packages q in isp that may no longer be present in the updated universe *)
-			      if mem_package u (q.Cudf.package,q.Cudf.version) then
+                              Printf.printf "->>>>>>>>>>>>>>>>> %s\n" (string_of_package q) ;
+                              if mem_package u (q.Cudf.package,q.Cudf.version) then
                                 begin
                                   Printf.printf " - checking package %s in IS(%s)\n" (string_of_package q) pn;
-				  let d = Depsolver.edos_install s q in
-				  if not(Diagnostic.is_solution d) then  (* record in res the changes in IS(p) for moving the cluster okcl_at_v to version v *)
-				    (changed res (p,v,okcl_at_v); q::acc) else acc
-				end
-			      else acc
-			    ) [] isp in
-			let nbroken=List.length broken in
-			Printf.printf " Changing version of %s from %d to %d breaks %d/%d (=%f percent) of its Impact set.\n"
-			  pn p.Cudf.version v nbroken sizeisp (float (nbroken * 100)  /. (float sizeisp));
-			Printf.printf " Version %d valuates the existing version selectors as follows:\n  " v;
-			List.iter (fun (op,v) -> Printf.printf "(%s,%d) " (string_of_relop op) v) sels; print_newline();
-			List.iter (fun v -> Printf.printf "%b " v) (List.map (evalsel v) sels); print_newline();
-			Printf.printf " The broken packages in IS(%s) are:\n" (string_of_package p);
-			List.iter (fun q -> Printf.printf "  - %s\n" (string_of_package q)) broken
-		) okcl_at_v
-	    ) vl
-	end
+                                  let d = Depsolver.edos_install s q in
+                                  if not(Diagnostic.is_solution d) then
+                                    (* record in res the changes in IS(p) for moving the cluster okcl_at_v to version v *)
+                                    (changed res (p,v,okcl_at_v); q::acc) else acc
+                                end
+                              else acc
+                            ) [] isp
+                        in
+                        let nbroken = List.length broken in
+                        Printf.printf " Changing version of %s from %d to %d breaks %d/%d (=%f percent) of its Impact set.\n"
+                          pn p.Cudf.version v nbroken sizeisp (float (nbroken * 100)  /. (float sizeisp));
+                        Printf.printf " Version %d valuates the existing version selectors as follows:\n  " v;
+                        List.iter (fun (op,v) -> Printf.printf "(%s,%d) " (string_of_relop op) v) sels; print_newline();
+                        List.iter (fun v -> Printf.printf "%b " v) (List.map (evalsel v) sels); print_newline();
+                        Printf.printf " The broken packages in IS(%s) are:\n" (string_of_package p);
+                        List.iter (fun q -> Printf.printf "  - %s\n" (string_of_package q)) broken
+                      end
+                ) okcl_at_v
+            ) vl
+        end
     ) clusters;
   Util.Progress.reset predbar;
   res 
@@ -374,8 +419,7 @@ let prediction universe =
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  let bars = ["Strongdeps_int.main";"Strongdeps_int.conj"] in
-  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug ~bars () ;
+  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug 1 ;
   let (universe,_,_) = Boilerplate.load_universe posargs in
   prediction universe
 (*

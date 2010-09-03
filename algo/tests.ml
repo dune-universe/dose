@@ -12,11 +12,8 @@
 
 open ExtLib
 open OUnit
-open Cudf
-
 open Common
-
-module S = Set.Make(struct type t = Cudf.package let compare = compare end)
+module S = CudfAdd.Cudf_set
 
 let f_legacy = "tests/legacy.cudf"
 let f_legacy_sol = "tests/legacy-sol.cudf"

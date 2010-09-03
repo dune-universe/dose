@@ -39,6 +39,10 @@ let pp_package fmt pkg =
 let string_of_version = string_of pp_version
 let string_of_package = string_of pp_package
 
+let is_essential pkg =
+  try (Cudf.lookup_package_property pkg "essential") = "yes"
+  with Not_found -> false
+
 (**/*)
 (* XXX legacy function to be removed *)
 let print_package pkg = string_of_package pkg

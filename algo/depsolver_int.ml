@@ -378,9 +378,10 @@ let listcheck ?callback mdf idlist =
     @param solver dependency solver
     @return the number of packages that cannot be installed
 *)
-let univcheck ?callback (mdf,solver) =
+let univcheck ?callback mdf =
   let timer = Util.Timer.create "Algo.Depsolver.univcheck" in
   Util.Timer.start timer;
+  let solver = init_solver mdf.Mdf.index in
   let failed = ref 0 in
   let size = Array.length mdf.Mdf.index in
   let tested = Array.make size false in

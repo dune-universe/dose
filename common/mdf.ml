@@ -24,7 +24,6 @@ type package = {
 }
 
 type universe = {
-  cudf : Cudf.universe ;
   index : package array ; (** the array index is equal to the package id *)
   maps : CudfAdd.maps (** maps to associate a cudf package to an id *)
 }
@@ -81,11 +80,11 @@ let load_from_list pkglist =
   let universe = Cudf.load_universe pkglist in
   let maps = build_maps universe in
   let index = __load maps universe in
-  { cudf = universe ; index = index ; maps = maps }
+  { index = index ; maps = maps }
 
 (** transform a cudf universe in a mdf universe. All references are
     explicit and given in terms of integer *)
 let load_from_universe universe =
   let maps = build_maps universe in
   let index = __load maps universe in
-  { cudf = universe ; index = index ; maps = maps }
+  { index = index ; maps = maps }
