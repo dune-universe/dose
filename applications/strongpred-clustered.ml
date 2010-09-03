@@ -320,6 +320,8 @@ let prediction universe =
   List.iter
     (fun (src,cluster) ->
       Printf.printf "Analysing packages for cluster %s\n" src;
+      (* collect all version constraints associated to all packages in the
+       * cluster and the list of all packages in the cluster *)
       let okvl,okcl =
         List.fold_left (fun (vl,pl) p -> 
           if Hashtbl.mem version_table p.Cudf.package then
@@ -338,7 +340,7 @@ let prediction universe =
       if okcl <> [] then 
         begin
           Printf.printf "Analysing cluster:\n    ";
-          List.iter (fun p -> Printf.printf "%s " (CudfAdd.string_of_package p)) okcl;
+          List.iter (fun p -> Printf.printf "%s " (string_of_package p)) okcl;
           print_newline();
           let sels = List.unique okvl in
           let vl,explain = discriminants sels in
@@ -381,34 +383,33 @@ let prediction universe =
                       if mem_package universe (p.Cudf.package,v) then
                         Printf.printf "If we replace %s with version %d, then all its impact set becomes uninstallable.\n" pn v
                       else begin
-                        let sizeisp, isp = CudfAdd.Cudf_hashtbl.find ispl p in
-                        Printf.printf "-+++++++ %s (is size %d)\n" (string_of_package p) sizeisp ;
-                        let broken =
-                          List.fold_left
-                            (fun acc q ->
-                              (* take care of packages q in isp that may no longer be present in the updated universe *)
-                              Printf.printf "->>>>>>>>>>>>>>>>> %s\n" (string_of_package q) ;
-                              if mem_package u (q.Cudf.package,q.Cudf.version) then
-                                begin
-                                  Printf.printf " - checking package %s in IS(%s)\n" (string_of_package q) pn;
-                                  let d = Depsolver.edos_install s q in
-                                  if not(Diagnostic.is_solution d) then
-                                    (* record in res the changes in IS(p) for moving the cluster okcl_at_v to version v *)
-                                    (changed res (p,v,okcl_at_v); q::acc) else acc
-                                end
-                              else acc
-                            ) [] isp
-                        in
-                        let nbroken = List.length broken in
-                        Printf.printf " Changing version of %s from %d to %d breaks %d/%d (=%f percent) of its Impact set.\n"
-                          pn p.Cudf.version v nbroken sizeisp (float (nbroken * 100)  /. (float sizeisp));
-                        Printf.printf " Version %d valuates the existing version selectors as follows:\n  " v;
-                        List.iter (fun (op,v) -> Printf.printf "(%s,%d) " (string_of_relop op) v) sels; print_newline();
-                        List.iter (fun v -> Printf.printf "%b " v) (List.map (evalsel v) sels); print_newline();
-                        Printf.printf " The broken packages in IS(%s) are:\n" (string_of_package p);
-                        List.iter (fun q -> Printf.printf "  - %s\n" (string_of_package q)) broken
+                        let sizeisp, isp = try CudfAdd.Cudf_hashtbl.find ispl p with Not_found -> assert false in
+                        begin
+                          let broken =
+                            List.fold_left
+                              (fun acc q ->
+                                (* take care of packages q in isp that may no longer be present in the updated universe *)
+                                if mem_package u (q.Cudf.package,q.Cudf.version) then
+                                  begin
+                                    let d = Depsolver.edos_install s q in
+                                    if not(Diagnostic.is_solution d) then
+                                      (* record in res the changes in IS(p) for moving the cluster okcl_at_v to version v *)
+                                      (changed res (p,v,okcl_at_v); q::acc) else acc
+                                  end
+                                else acc
+                              ) [] isp
+                          in
+                          let nbroken = List.length broken in
+                          Printf.printf " Changing version of %s from %d to %d breaks %d/%d (=%f percent) of its Impact set.\n"
+                            pn p.Cudf.version v nbroken sizeisp (float (nbroken * 100)  /. (float sizeisp));
+                          Printf.printf " Version %d valuates the existing version selectors as follows:\n  " v;
+                          List.iter (fun (op,v) -> Printf.printf "(%s,%d) " (string_of_relop op) v) sels; print_newline();
+                          List.iter (fun v -> Printf.printf "%b " v) (List.map (evalsel v) sels); print_newline();
+                          Printf.printf " The broken packages in IS(%s) are:\n" (string_of_package p);
+                          List.iter (fun q -> Printf.printf "  - %s\n" (string_of_package q)) broken
+                        end
                       end
-                ) okcl_at_v
+                ) okcl
             ) vl
         end
     ) clusters;
