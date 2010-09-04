@@ -18,7 +18,6 @@ module Options = struct
   open OptParse
 
   let verbose = StdOpt.incr_option ()
-
   let upgradeonly = StdOpt.store_true ()
 
   let description = "Analyse impact of version change on the impact set of packages"

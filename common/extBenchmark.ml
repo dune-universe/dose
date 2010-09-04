@@ -219,7 +219,7 @@ let pp_benchmarks fmt data =
           match Hashtbl.find h fa.(j) with
           |[] -> "n/a"
           |h::_ ->
-              let a = h.Benchmark.wall /.  Int64.to_float(h.Benchmark.iters) in
+              let a = h.Benchmark.utime /.  Int64.to_float(h.Benchmark.iters) in
               if last.(j) > 0. && last.(j) < a then begin
                 Printf.sprintf "%.02f(*)" a
               end else begin 

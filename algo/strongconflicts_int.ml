@@ -17,7 +17,9 @@ open ExtLib
 open Common
 open CudfAdd
 
-let debug = Util.make_debug "Strongconflicts_int"
+let debug fmt = Util.make_debug "Strongconflicts_int" fmt
+let info fmt = Util.make_info "Strongconflicts_int" fmt
+let warning fmt = Util.make_warning "Strongconflicts_int" fmt
 
 module SG = Strongdeps_int.G
 module PkgV = struct
