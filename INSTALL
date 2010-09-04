@@ -15,6 +15,7 @@ additional libraries (enable compilation with --with-<library>) :
  - libounit-ocaml-dev / ocaml-ounit-devel
  - librpm-dev / librpm-devel
  - libexpat-ocaml-dev (for --with-xml)
+ - libbenchmark-ocaml-dev (for --with-benchmark)
 
 To use rpm support, dose3 needs librpm > 4.6
 To use ocamlgraph support, dose3 needs libocamlgraph-ocaml-dev >= 1.5.1

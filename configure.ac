@@ -155,7 +155,7 @@ if test "$HAS_OCAMLGRAPH" = "yes" ; then
       AC_MSG_ERROR([found ocamlgraph with version $TMPVERSION (<= 1.5 is required )])
   fi
   PKG_OCAMLGRAPH=pkg_ocamlgraph
-  MLPACK_OCAMLGRAPH="Defaultgraphs Statistics Dominators Strongdeps Strongdeps_int"
+  MLPACK_OCAMLGRAPH="Defaultgraphs Statistics Dominators Strongdeps Strongdeps_int Strongconflicts Strongconflicts_int"
   CONFIG_OCAMLGRAPH="-DHASOCAMLGRAPH"
 else
   PKG_OCAMLGRAPH=pkg_
@@ -208,6 +208,21 @@ if test "$HAS_OUNIT" = "yes" ; then
   PKG_OUNIT="pkg_oUnit"
 else
   PKG_OUNIT=pkg_
+fi
+
+AC_ARG_WITH(benchmark,
+        [ --with-benchmark ],
+        HAS_BENCHMARK=yes,
+        HAS_BENCHMARK=no)
+AC_SUBST(HAS_BENCHMARK)
+if test "$HAS_BENCHMARK" = "yes" ; then
+  AC_CHECK_OCAML_PKG([benchmark])
+  if test "$OCAML_PKG_benchmark" = "no"; then
+   AC_MSG_ERROR([Please install OCaml findlib module 'benchmark'.])
+  fi
+  PKG_BENCHMARK="pkg_benchmark"
+else
+  PKG_BENCHMARK=pkg_
 fi
 
 AC_SUBST(TAGS_PGSQL)

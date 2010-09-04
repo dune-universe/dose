@@ -618,6 +618,8 @@ TAGS_SQLITE
 MLPACK_PGSQL
 PKG_PGSQL
 TAGS_PGSQL
+OCAML_PKG_benchmark
+HAS_BENCHMARK
 OCAML_PKG_oUnit
 HAS_OUNIT
 OCAML_PKG_xml_light
@@ -723,6 +725,7 @@ with_ocamlgraph
 with_curl
 with_xml
 with_oUnit
+with_benchmark
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1353,6 +1356,7 @@ Optional Packages:
  --with-curl
  --with-xml
  --with-oUnit
+ --with-benchmark
 
 Some influential environment variables:
   CC          C compiler command
@@ -5776,6 +5780,48 @@ $as_echo "not found" >&6; }
   PKG_OUNIT="pkg_oUnit"
 else
   PKG_OUNIT=pkg_
+fi
+
+
+# Check whether --with-benchmark was given.
+if test "${with_benchmark+set}" = set; then :
+  withval=$with_benchmark; HAS_BENCHMARK=yes
+else
+  HAS_BENCHMARK=no
+fi
+
+
+if test "$HAS_BENCHMARK" = "yes" ; then
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package benchmark" >&5
+$as_echo_n "checking for OCaml findlib package benchmark... " >&6; }
+
+  unset found
+  unset pkg
+  found=no
+  for pkg in benchmark  ; do
+    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+      OCAML_PKG_benchmark=$pkg
+      found=yes
+      break
+    fi
+  done
+  if test "$found" = "no" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+    OCAML_PKG_benchmark=no
+  fi
+
+
+
+  if test "$OCAML_PKG_benchmark" = "no"; then
+   as_fn_error $? "Please install OCaml findlib module 'benchmark'." "$LINENO" 5
+  fi
+  PKG_BENCHMARK="pkg_benchmark"
+else
+  PKG_BENCHMARK=pkg_
 fi
 
 
