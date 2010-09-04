@@ -1,13 +1,13 @@
-(* TODO: strange interplay between universe before and after renumbering
-   needs to be explained...
-   in strongpred, one mixes universe (the main loop over packages uses it...)
-   and (renumber universe), used to build the version numbers and checking
-   the new universe
-   This produces an error here :-(
+  (* FIXME: 
 
- --Roberto
-*)
+     --> we need to be able to print the Debian original version numbers for each Cudf version of a Package
+         to get interesting output: not only the version of a package existing in the repository, but also
+         every version mentioned of it (create_dummy does not to this well)
 
+     --> in clustered mode, we should only test packages in a cluster on relevant versions *for them*;
+         this may require changing the logic for selecting the discriminants!
+
+   *)
 
   (* FIXME: change the logic below to the following
      for all cluster
@@ -216,7 +216,7 @@ let mem_package univ (p,v) =
 
 (* function to create a dummy package with a given version and name *)
 let create_dummy univ p v = 
-  let offset = (if p.Cudf.version > v then "-1" else "+1") in
+  let offset = (if p.Cudf.version > v then "[-]" else "[+]") in
   let n = 
     try (Cudf.lookup_package_property p "number")^offset
     with Not_found -> Printf.sprintf "%d%s" p.Cudf.version offset
@@ -365,6 +365,16 @@ let prediction universe =
                   else create_dummy universe p v
                 ) okcl
               in
+	      let at_v = 
+		let h = Hashtbl.create 17 in 
+		let _ = List.iter (fun p -> Hashtbl.add h p.Cudf.package p) okcl_at_v in
+		fun p -> 
+		  try Hashtbl.find h p.Cudf.package
+		  with Not_found -> 
+		    (let s = ("Nonexistent "^(string_of_package p)^" in okcl_at_v!") in
+		    Printf.printf "%s : \n" s; List.iter (fun p -> Printf.printf "%s " (string_of_package p)) okcl_at_v;
+		    failwith s)
+	      in
               Util.Progress.progress predbar;
               let u = Cudf.load_universe (okcl_at_v@pl) in
               let s = Depsolver.load u in
@@ -400,8 +410,8 @@ let prediction universe =
                               ) [] isp
                           in
                           let nbroken = List.length broken in
-                          Printf.printf " Changing version of %s from %d to %d breaks %d/%d (=%f percent) of its Impact set.\n"
-                            pn p.Cudf.version v nbroken sizeisp (float (nbroken * 100)  /. (float sizeisp));
+                          Printf.printf " Changing version of %s from %d to %d [%s] breaks %d/%d (=%f percent) of its Impact set.\n"
+                            pn p.Cudf.version v (string_of_package (at_v p)) nbroken sizeisp (float (nbroken * 100)  /. (float sizeisp));
                           Printf.printf " Version %d valuates the existing version selectors as follows:\n  " v;
                           List.iter (fun (op,v) -> Printf.printf "(%s,%d) " (string_of_relop op) v) sels; print_newline();
                           List.iter (fun v -> Printf.printf "%b " v) (List.map (evalsel v) sels); print_newline();
