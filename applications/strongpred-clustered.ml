@@ -206,7 +206,7 @@ let string_of_relop = function
   |`Lt -> "<"
 
 let string_of_package p =
-  Printf.sprintf "%s - %d" (CudfAdd.string_of_package p) p.Cudf.version
+  Printf.sprintf "%s" (CudfAdd.string_of_package p)
 ;;
 
 let mem_package univ (p,v) =
@@ -216,7 +216,12 @@ let mem_package univ (p,v) =
 
 (* function to create a dummy package with a given version and name *)
 let create_dummy univ p v = 
-  let offset = (if p.Cudf.version > v then "[-]" else "[+]") in
+  let offset =
+    if p.Cudf.version > v then 
+      Printf.sprintf "[-%d]" (p.Cudf.version - v)
+    else 
+      Printf.sprintf "[+%d]" (v - p.Cudf.version)
+  in
   let n = 
     try (Cudf.lookup_package_property p "number")^offset
     with Not_found -> Printf.sprintf "%d%s" p.Cudf.version offset
@@ -254,9 +259,6 @@ let discriminants sels =
   let h' = Hashtbl.create 17 in
 
   for w = maxv+1 downto 0 do
-(*  for offs = 0 to (maxv-minv+2) do
-    let w = maxv+1-offs in
-*)
     let row = List.map (evalsel w) sels in
     if not (Hashtbl.mem h row) then begin
       Hashtbl.add h row w;
@@ -269,27 +271,9 @@ let discriminants sels =
 let to_set l = List.fold_right CudfAdd.Cudf_set.add l CudfAdd.Cudf_set.empty ;;
 
 let prediction universe =
-  (* print_endline "------------------------------------------";
-  print_endline "Original universe";
-  Format.printf "%a@\n" Cudf_printer.pp_universe universe; *)
   let (version_table,pkglist) = renumber universe in
   let size = Cudf.universe_size universe in
   let res = Hashtbl.create size in
-
-  (* print_endline "------------------------------------------";
-  print_endline "Universe 1.1 ";
-  Format.printf "%a@\n" Cudf_printer.pp_packages pkglist; *)
-  (*
-  let pp_list fmt l =
-    List.iter (fun (c,v) ->
-      Format.printf "(%s %d)@," (string_of_relop c) v
-    ) (List.unique l)
-  in
-  Hashtbl.iter (fun k { contents = l} ->
-    Format.printf "@[<v 1>%s%a@]@\n" k pp_list l
-  ) version_table;
-  print_endline "------------------------------------------";
-  *)
   let universe = Cudf.load_universe pkglist in
   let pkgset = to_set pkglist in
 
@@ -410,8 +394,8 @@ let prediction universe =
                               ) [] isp
                           in
                           let nbroken = List.length broken in
-                          Printf.printf " Changing version of %s from %d to %d [%s] breaks %d/%d (=%f percent) of its Impact set.\n"
-                            pn p.Cudf.version v (string_of_package (at_v p)) nbroken sizeisp (float (nbroken * 100)  /. (float sizeisp));
+                          Printf.printf " Changing version from %s to %s breaks %d/%d (=%f percent) of its Impact set.\n"
+                            pn (string_of_package (at_v p)) nbroken sizeisp (float (nbroken * 100)  /. (float sizeisp));
                           Printf.printf " Version %d valuates the existing version selectors as follows:\n  " v;
                           List.iter (fun (op,v) -> Printf.printf "(%s,%d) " (string_of_relop op) v) sels; print_newline();
                           List.iter (fun v -> Printf.printf "%b " v) (List.map (evalsel v) sels); print_newline();

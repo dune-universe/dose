@@ -21,10 +21,10 @@ module Options = struct
   let description = ""
   let options = OptParser.make ~description:description ()
 
-  (* open OptParser *)
+  open OptParser
   (*
-  OptParser.add options ~short_name:'v' ~help:"Print information (can be repeated)" verbose;
-  add options ~short_name:'u' ~long_name:"upgradeonly" ~help:"Do not analyse version changes corresponding to downgrades" upgradeonly;
+  add options ~short_name:'v' ~help:"Print information (can be repeated)" verbose;
+  add options ~short_name:'r' ~long_name:"run" ~help:"run all tests" run;
   *)
 end
 
@@ -34,31 +34,33 @@ end
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
 
-  let universe =
-    let f_debian = "tests/debian.cudf" in
-    let (_,pl,_) = Cudf_parser.parse_from_file f_debian in
-    Cudf.load_universe pl
-  in
   let reps = Int64.of_int 4 in
   let latency s f = Benchmark.latency1 ~name:s reps f in 
-  let load () = latency "Depsolver.load" Depsolver.load universe in
-  let trim () = latency "Depsolver.trim" Depsolver.trim universe in
-  let univcheck () = latency "Depsolver.univcheck" Depsolver.univcheck universe in
-  let strongdeps () = latency "Strongdeps.strongdeps" Strongdeps.strongdeps_univ universe in
-  let strongconflicts () = latency "Strongconflicts.strongconflicts" Strongconflicts.strongconflicts universe in
+  let load = latency "Depsolver.load" Depsolver.load in
+  let trim = latency "Depsolver.trim" Depsolver.trim in
+  let univcheck = latency "Depsolver.univcheck" Depsolver.univcheck in
+  let strongdeps = latency "Strongdeps.strongdeps" Strongdeps.strongdeps_univ in
+  let strongconflicts = latency "Strongconflicts.strongconflicts" Strongconflicts.strongconflicts in
+
   let run () =
+    let universe =
+      let f_debian = "tests/debian.cudf" in
+      let (_,pl,_) = Cudf_parser.parse_from_file f_debian in
+      Cudf.load_universe pl
+    in
     List.fold_left Benchmark.merge [] [
-      strongdeps ();
-      (* strongconflicts (); *)
-      univcheck ();
-      load ();
-      trim ();
+      strongdeps universe;
+      (* strongconflicts universe; *)
+      univcheck universe;
+      load universe;
+      trim universe;
     ] 
   in
-  if OptParse.Opt.get Options.run then
+
+  if OptParse.Opt.get Options.run then begin
     let b = ExtBenchmark.make_benchmark (run ()) in
     ExtBenchmark.save_benchmark b
-    ;
+  end ;
   (* this will also read the new benchmark *)
   let l = ExtBenchmark.parse_benchmarks () in
   Format.printf "%a@." ExtBenchmark.pp_benchmarks l

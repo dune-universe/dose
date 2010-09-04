@@ -14,48 +14,14 @@ open ExtLib
 
 type benchmark = float * (string, Benchmark.t list) Hashtbl.t
 
-let string_of_day = function
- |0 -> "Sun"
- |1 -> "Mon"
- |2 -> "Tue"
- |3 -> "Wed"
- |4 -> "Thu"
- |5 -> "Fri"
- |6 -> "Sat"
- |_ -> assert false
-
-let string_of_month = function
- |0 -> "Jan"
- |1 -> "Feb"
- |2 -> "Mar"
- |3 -> "Apr"
- |4 -> "May"
- |5 -> "Jun"
- |6 -> "Jul"
- |7 -> "Aug"
- |8 -> "Sep"
- |9 -> "Oct"
- |10 -> "Nov"
- |11 -> "Dec"
- | _ -> assert false
-
-let string_of_date ?(short=true) ut =
+let string_of_date ut =
   let tm = Unix.gmtime ut in
-  let short_date = 
-    Printf.sprintf "%s, %02d %s %d"
-      (string_of_day tm.Unix.tm_wday)
-      tm.Unix.tm_mday
-      (string_of_month tm.Unix.tm_mon)
-      (tm.Unix.tm_year + 1900)
-  in
-  if not short then
-    Printf.sprintf "%s %02d:%02d:%02d GMT"
-    short_date
+  Printf.sprintf "%02d/%d/%d-%02d:%02d"
+    tm.Unix.tm_mday
+    (tm.Unix.tm_mon + 1)
+    (tm.Unix.tm_year + 1900)
     tm.Unix.tm_hour
     tm.Unix.tm_min
-    tm.Unix.tm_sec
-  else
-    short_date
 ;;
 
 (* -------------------------------------- *)
@@ -128,10 +94,10 @@ let parse_test s =
         iters = Int64.of_string (Str.matched_group 6 s)
       }
   else
-    failwith (Printf.sprintf "invalid sample %s" s)
+    failwith (Printf.sprintf "invalid test %s" s)
 
 let parse_sample s =
-  let s_re = Str.regexp "^\\([a-z][a-zA-Z0-9_]*\\) : \\(.*\\)$" in
+  let s_re = Str.regexp "^\\([a-zA-Z0-9_.]+\\) : \\(.*\\)$" in
   if Str.string_match s_re s 0 then
     let fname = Str.matched_group 1 s in
     let sl = Str.split (Str.regexp ",") (Str.matched_group 2 s) in
@@ -212,7 +178,7 @@ let pp_benchmarks fmt data =
     (* we need to consider the list from the less recent to the more recent, but
      * then I we want to print the from the most recent to the less recent *)
     let i = data_size - i -1 in
-    t.(i).(0) <- string_of_float ut;
+    t.(i).(0) <- string_of_date ut;
     for j = 0 to func_size-1 do
       let avg = 
         try
