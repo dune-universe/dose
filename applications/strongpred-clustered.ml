@@ -4,6 +4,16 @@
          to get interesting output: not only the version of a package existing in the repository, but also
          every version mentioned of it (create_dummy does not to this well)
 
+     --> to perform the clustered analysis properly, we need to have all the Cudf versions of every package in a
+         cluster aligned properly; it is not the case today, as 1.1.2-2 may be version 3 for toto and 5 for
+         titi;
+         solusions:
+           (1) we produce Cudf versions as a unique linear order on the whole repository, and then we
+               can build clusters any way we want, but we will have big holes in the version sequence of each package)
+           (2) we align version only inside a cluster, but then the parser deb->cudf needs to know about clusters,
+               and we still have holes in the version sequence number
+           (3) ??? 
+
      --> in clustered mode, we should only test packages in a cluster on relevant versions *for them*;
          this may require changing the logic for selecting the discriminants!
 
@@ -268,6 +278,25 @@ let discriminants sels =
   Hashtbl.fold (fun k v acc -> k::acc) h' [], h'
 ;;
 
+(* discriminants relarivised to a predefined set of versions *)
+
+let discriminants_of vl sels=
+  (* take versions in decreasing order *)
+  let vl = List.sort ~cmp:(fun v v' -> v'-v) vl in
+  let h = Hashtbl.create 17 in
+  let h' = Hashtbl.create 17 in
+
+  List.iter 
+    (fun w ->
+      let row = List.map (evalsel w) sels in
+      if not (Hashtbl.mem h row) then 
+	(Hashtbl.add h row w;Hashtbl.add h' w row)
+    )
+    vl;
+  Hashtbl.fold (fun k v acc -> k::acc) h' [], h'
+;;
+
+
 let to_set l = List.fold_right CudfAdd.Cudf_set.add l CudfAdd.Cudf_set.empty ;;
 
 let prediction universe =
@@ -310,7 +339,7 @@ let prediction universe =
         List.fold_left (fun (vl,pl) p -> 
           if Hashtbl.mem version_table p.Cudf.package then
             let { contents = cl } = Hashtbl.find version_table p.Cudf.package in
-            (cl@vl, p::pl)
+            (cl@vl, (p,cl)::pl)
           else begin
             (* If no version of p is explicitly dependend upon, then *)
             (* changing the version of p does not change its impact set *)
@@ -324,14 +353,14 @@ let prediction universe =
       if okcl <> [] then 
         begin
           Printf.printf "Analysing cluster:\n    ";
-          List.iter (fun p -> Printf.printf "%s " (string_of_package p)) okcl;
+          List.iter (fun (p,_) -> Printf.printf "%s " (string_of_package p)) okcl;
           print_newline();
           let sels = List.unique okvl in
           let vl,explain = discriminants sels in
           (* precompute impact sets of the cluster *)
           let ispl =
             let h = CudfAdd.Cudf_hashtbl.create (List.length okcl) in
-            List.iter (fun p ->
+            List.iter (fun (p,_) ->
               let isp = Strongdeps.impactset graph p in 
               CudfAdd.Cudf_hashtbl.add h p (List.length isp, isp)
             ) okcl;
@@ -342,12 +371,13 @@ let prediction universe =
           List.iter 
             (fun v ->
               (* compute a universe with the relevant packages in the cluster moved to version v *)
-              let pl = exclude pkgset okcl in
+              let okclp = (List.map fst okcl) in
+              let pl = exclude pkgset okclp in
               let okcl_at_v = 
                 List.map (fun p -> 
                   if mem_package universe (p.Cudf.package,v) then p
                   else create_dummy universe p v
-                ) okcl
+                ) okclp
               in
 	      let at_v = 
 		let h = Hashtbl.create 17 in 
@@ -362,10 +392,14 @@ let prediction universe =
               Util.Progress.progress predbar;
               let u = Cudf.load_universe (okcl_at_v@pl) in
               let s = Depsolver.load u in
+	      let okcl' = List.map (fun (p,psels) -> p,psels, fst (discriminants_of vl psels)) okcl in
               List.iter 
                 (* for each package in the cluster, perform analysis *)
-                (fun p -> 
+                (fun (p,psels,pdiscr) -> 
                   let pn = (string_of_package p) in
+		  if not (List.mem v pdiscr) then
+                    Printf.printf " ignoring cluster version %d, which is not a discriminant of package %s.\n" v pn
+		  else
                   (* FIXME: prove the following; if (p,v) and (p,w) are in U, and
                      q implies (p,v); then q is not installable when (p,w) replaces (p,v) *)
                   if p.Cudf.version = v then 
@@ -405,7 +439,7 @@ let prediction universe =
                           ) broken
                         end
                       end
-                ) okcl
+                ) okcl'
             ) vl
         end
     ) clusters;
