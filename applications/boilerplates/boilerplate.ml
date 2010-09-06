@@ -43,8 +43,8 @@ let deb_load_list ?(extras=[]) ?(status=[]) l =
   let l = Debian.Packages.merge status l in
   let tables = Debian.Debcudf.init_tables l in
   let pkglist = List.map (Debian.Debcudf.tocudf ~extras tables) l in
-  let from_cudf pkg =
-    let (p,i) = (pkg.Cudf.package,pkg.Cudf.version) in
+  let from_cudf (p,i) =
+    (* let (p,i) = (pkg.Cudf.package,pkg.Cudf.version) in *)
     let v = Debian.Debcudf.get_real_version tables (p,i) in
     (p,v)
   in
@@ -58,14 +58,13 @@ let deb_load_list ?(extras=[]) ?(status=[]) l =
 let eclipse_load_list ?(extras=[]) ?(status=[]) l =
   let tables = Eclipse.Eclipsecudf.init_tables l in
   let pkglist = List.map (Eclipse.Eclipsecudf.tocudf ~extras tables) l in
-  let from_cudf pkg =
-    let (p,i) = (pkg.Cudf.package,pkg.Cudf.version) in
+  let from_cudf (p,i) =
+    (* let (p,i) = (pkg.Cudf.package,pkg.Cudf.version) in *)
     let v = Eclipse.Eclipsecudf.get_real_version tables (p,i) in
     (p,v)
   in
   let to_cudf (p,v) =
-    let i = Eclipse.Eclipsecudf.get_cudf_version tables (p,v) in
-    (p,i)
+    (p,Eclipse.Eclipsecudf.get_cudf_version tables (p,v))
   in
   (pkglist,from_cudf,to_cudf)
 
@@ -82,7 +81,7 @@ IFDEF HASRPM THEN
   let tables =  Rpm.Rpmcudf.init_tables l in
   let pkglist = List.map (Rpm.Rpmcudf.tocudf tables) l in
   Rpm.Rpmcudf.clear tables;
-  let from_cudf pkg = (pkg.Cudf.package,string_of_int pkg.Cudf.version) in
+  let from_cudf (p,i) = (p,string_of_int i) in
   let to_cudf (p,v) = failwith "Nope ..." in
   (pkglist,from_cudf,to_cudf)
 ELSE
@@ -131,7 +130,7 @@ let load_cudf doc =
 (* XXX when parsing a cudf, I should also remember the preamble !! *)
 let cudf_load_list file =
   let _, pkglist, _ = parse_cudf file in
-  let from_cudf pkg = (pkg.Cudf.package,string_of_int pkg.Cudf.version) in
+  let from_cudf (p,i) = (p,string_of_int i) in
   let to_cudf (p,v) = (p,int_of_string v) in
   (pkglist,from_cudf,to_cudf)
 

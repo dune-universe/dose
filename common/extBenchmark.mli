@@ -51,3 +51,4 @@ val pp_benchmark : Format.formatter -> benchmark -> unit
  *)
 val pp_benchmarks : Format.formatter -> benchmark list -> unit
 
+val main : ( unit -> Benchmark.samples ) -> unit

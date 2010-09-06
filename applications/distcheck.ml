@@ -62,6 +62,7 @@ let main () =
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   let default_arch = OptParse.Opt.opt Options.architecture in
   let (universe,from_cudf,_) = Boilerplate.load_universe ~default_arch posargs in
+  let from_cudf p = from_cudf (p.Cudf.package,p.Cudf.version) in 
   info "Solving..." ;
   let timer = Util.Timer.create "Solver" in
   Util.Timer.start timer;

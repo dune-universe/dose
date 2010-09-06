@@ -148,65 +148,106 @@ let by_date x y = int_of_float ((fst x) -. (fst y))
 let parse_benchmarks ?(days=7) ?(dirname=".benchmarks") () =
   let l = ref [] in
   let a = Sys.readdir dirname in
-  for i=0 to (min days ((Array.length a)-1)); do
-    let fname = a.(i) in
-    let file = (Filename.concat dirname (Filename.basename fname)) in
-    let (date,h) = parse_benchmark file in
-    l := (date,h)::!l
-  done;
+  if Array.length a > 0 then
+    for i=0 to (min days ((Array.length a)-1)); do
+      let fname = a.(i) in
+      let file = (Filename.concat dirname (Filename.basename fname)) in
+      let (date,h) = parse_benchmark file in
+      l := (date,h)::!l
+    done;
   List.sort ~cmp:by_date !l
 
 module StringSet = Set.Make(String)
 
 let pp_benchmarks fmt data =
-  let error = 0.001 in
-  let fa =
-    Array.of_list (
-      StringSet.elements (
-        List.fold_left (fun s (_,h) ->
-          Hashtbl.fold (fun k _ s -> StringSet.add k s) h s
-        ) StringSet.empty data
+  if List.length data = 0 then 
+    Format.fprintf fmt "Sample Set empty, nothing to print"
+  else begin 
+    let error = 0.001 in
+    let fa =
+      Array.of_list (
+        StringSet.elements (
+          List.fold_left (fun s (_,h) ->
+            Hashtbl.fold (fun k _ s -> StringSet.add k s) h s
+          ) StringSet.empty data
+        )
       )
-    )
-  in
-  let func_size = Array.length fa in
-  let data_size = List.length data in
-  let pp_cell fmt e = Format.fprintf fmt "%s" e in
-  let h = Array.init (func_size+1) (function 0 -> "Date" |n -> fa.(n-1)) in
-  let t = Array.make_matrix (List.length data) (func_size+1) "" in
-  let last = Array.make func_size max_float in
-  let diff a b = (abs_float(a -. b)) > error in
-  List.iteri (fun i (ut,h) ->
-    (* we need to consider the list from the less recent to the more recent, but
-     * then I we want to print the from the most recent to the less recent *)
-    let i = data_size - i -1 in
-    t.(i).(0) <- string_of_date ut;
-    for j = 0 to func_size-1 do
-      let avg = 
-        try
-          match Hashtbl.find h fa.(j) with
-          |[] -> "n/a"
-          |h::_ -> begin
-            (* XXX : I should only compare up to 3 decimal digits *)
-              let a = h.Benchmark.utime /. Int64.to_float(h.Benchmark.iters) in
-              let res = 
-                if diff last.(j) a && last.(j) > 0. && a > last.(j) then
-                  Printf.sprintf "%.03f(*)" a
-                else 
-                  Printf.sprintf "%.03f" a
-              in
-              if a < last.(j) then last.(j) <- a;
-              res
-          end
-        with Not_found -> "X"
-      in
-      t.(i).(j+1) <- avg
-    done
-  ) data;
-  pp_tables (pp_row pp_cell) fmt (h,t)
+    in
+    let func_size = Array.length fa in
+    let data_size = List.length data in
+    let pp_cell fmt e = Format.fprintf fmt "%s" e in
+    let h = Array.init (func_size+1) (function 0 -> "Date" |n -> fa.(n-1)) in
+    let t = Array.make_matrix (List.length data) (func_size+1) "" in
+    let last = Array.make func_size max_float in
+    let diff a b = (abs_float(a -. b)) > error in
+    List.iteri (fun i (ut,h) ->
+      (* we need to consider the list from the less recent to the more recent, but
+       * then I we want to print the from the most recent to the less recent *)
+      let i = data_size - i -1 in
+      t.(i).(0) <- string_of_date ut;
+      for j = 0 to func_size-1 do
+        let avg = 
+          try
+            match Hashtbl.find h fa.(j) with
+            |[] -> "n/a"
+            |h::_ -> begin
+              (* XXX : I should only compare up to 3 decimal digits *)
+                let a = h.Benchmark.utime /. Int64.to_float(h.Benchmark.iters) in
+                let res = 
+                  if diff last.(j) a && last.(j) > 0. && a > last.(j) then
+                    Printf.sprintf "%.03f(*)" a
+                  else 
+                    Printf.sprintf "%.03f" a
+                in
+                if a < last.(j) then last.(j) <- a;
+                res
+            end
+          with Not_found -> "X"
+        in
+        t.(i).(j+1) <- avg
+      done
+    ) data;
+    pp_tables (pp_row pp_cell) fmt (h,t)
+  end
 ;;
 
 let make_benchmark l =
   let h = Hashtbl.create (List.length l) in
   List.iter (fun (s,sl) -> Hashtbl.add h s sl) l;
   (Unix.time(),h)
+
+module Options = struct
+  open OptParse
+
+  let verbose = StdOpt.incr_option ()
+  let run = StdOpt.store_true ()
+  let save = StdOpt.store_false ()
+  let show = StdOpt.store_false ()
+
+
+  let description = ""
+  let options = OptParser.make ~description:description ()
+
+  open OptParser
+  add options ~short_name:'v' ~help:"Print information (can be repeated)" verbose;
+  add options ~short_name:'r' ~long_name:"run" ~help:"run all tests" run;
+  add options ~long_name:"nosave" ~help:"not save test results" save;
+  add options ~long_name:"noshow" ~help:"not show test results" show;
+end
+
+let main run =
+  ignore(OptParse.OptParser.parse_argv Options.options);
+
+  if OptParse.Opt.get Options.run then begin
+    let b = make_benchmark (run ()) in
+    if OptParse.Opt.get Options.save then
+      save_benchmark b
+    else if not(OptParse.Opt.get Options.show) then
+      Format.printf "%a@." pp_benchmarks [b]
+  end ;
+  (* this will also read the new benchmark *)
+  if OptParse.Opt.get Options.show then
+    let l = parse_benchmarks () in
+    Format.printf "%a@." pp_benchmarks l
+;;
+
