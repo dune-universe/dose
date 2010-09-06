@@ -139,7 +139,7 @@ let save_benchmark ?(dirname=".benchmarks") (ut,h) =
   let file = (Filename.concat dirname (Filename.basename fname)) in
   let oc = open_out file in
   let fmt = Format.formatter_of_out_channel oc in
-  pp_benchmark fmt (ut,h) ;
+  Format.fprintf fmt "%a" pp_benchmark (ut,h) ;
   close_out oc
 ;;
 
@@ -159,6 +159,7 @@ let parse_benchmarks ?(days=7) ?(dirname=".benchmarks") () =
 module StringSet = Set.Make(String)
 
 let pp_benchmarks fmt data =
+  let error = 0.001 in
   let fa =
     Array.of_list (
       StringSet.elements (
@@ -173,7 +174,8 @@ let pp_benchmarks fmt data =
   let pp_cell fmt e = Format.fprintf fmt "%s" e in
   let h = Array.init (func_size+1) (function 0 -> "Date" |n -> fa.(n-1)) in
   let t = Array.make_matrix (List.length data) (func_size+1) "" in
-  let last = Array.make func_size 0. in
+  let last = Array.make func_size max_float in
+  let diff a b = (abs_float(a -. b)) > error in
   List.iteri (fun i (ut,h) ->
     (* we need to consider the list from the less recent to the more recent, but
      * then I we want to print the from the most recent to the less recent *)
@@ -184,16 +186,19 @@ let pp_benchmarks fmt data =
         try
           match Hashtbl.find h fa.(j) with
           |[] -> "n/a"
-          |h::_ ->
-              let a = h.Benchmark.utime /.  Int64.to_float(h.Benchmark.iters) in
-              if last.(j) > 0. && last.(j) < a then begin
-                Printf.sprintf "%.02f(*)" a
-              end else begin 
-                if a > 0. then last.(j) <- a;
-                Printf.sprintf "%.02f" a
-              end
-          (* FIXME we should take care of of multiple samples... *)
-        with Not_found -> (last.(j) <- 0. ; "X")
+          |h::_ -> begin
+            (* XXX : I should only compare up to 3 decimal digits *)
+              let a = h.Benchmark.utime /. Int64.to_float(h.Benchmark.iters) in
+              let res = 
+                if diff last.(j) a && last.(j) > 0. && a > last.(j) then
+                  Printf.sprintf "%.03f(*)" a
+                else 
+                  Printf.sprintf "%.03f" a
+              in
+              if a < last.(j) then last.(j) <- a;
+              res
+          end
+        with Not_found -> "X"
       in
       t.(i).(j+1) <- avg
     done

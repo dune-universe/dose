@@ -46,6 +46,8 @@ val parse_benchmarks : ?days:int -> ?dirname:string -> unit -> benchmark list
 (** pretty print a [Benchmark.sample] *)
 val pp_benchmark : Format.formatter -> benchmark -> unit
 
-(** pretty print a table *)
+(** pretty print a table 
+    highlight difference bigger then [error]
+ *)
 val pp_benchmarks : Format.formatter -> benchmark list -> unit
 
