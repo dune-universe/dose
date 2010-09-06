@@ -174,7 +174,7 @@ let compile_query query =
 
   in
   let r = aux query in
-  if Option.is_none r then ""
+  if Option.is_none r then "where true"
   else "where " ^ (Option.get r)
 
 let map_concat f l =
@@ -197,9 +197,10 @@ let create_view_all_packages db query =
     map_concat f db.extras
   in
   let q = compile_query query in
+  (* select distinct on (version.id) *)
   let sql = Printf.sprintf "
 create temp view all_t as
-select distinct on (version.id)
+select 
 version.name as name,
 version.number as number,
 version.id as version_id,
@@ -216,7 +217,6 @@ info.id = version.info_id
 order by version.id,name,number;
 " sql_rel sql_extras q
   in
-  Common.Util.print_info "%s" sql ;
   !Sql.database.exec_no_result db.connection sql
 ;;
 
@@ -225,7 +225,7 @@ order by version.id,name,number;
   current package selection. The table will be removed at exit. *)
 let create_view_universe db =
   let sql = Printf.sprintf "create temp table universe as Select * from all_t" in
-  Common.Util.print_info "%s" sql ;
+  (* Common.Util.print_info "%s" sql ; *)
   let version_idx = "create index version_idx on universe (version_id)" in
   !Sql.database.exec_no_result db.connection sql;
   !Sql.database.exec_no_result db.connection version_idx
@@ -425,7 +425,7 @@ let universe_size db =
 let select_timestamps db query =
   let q = compile_query query in
   let sql = Printf.sprintf "select timestamp from aptlist %s" q in
-  Common.Util.print_info "%s" sql ;
+  (* Common.Util.print_info "%s" sql ; *)
   let rowl = !Sql.database.exec_no_headers db.connection sql in
   List.fold_left (fun acc a -> (Option.get a.(0))::acc) [] rowl
 
@@ -459,6 +459,7 @@ let todebian (pkg: Idbr.package): Debian.Packages.package =
   { Debian.Packages.name = pkg.name;
     version = pkg.number;
     source = ("",None);
+    architecture = "";
     essential = false;
     depends = loadll (List.assoc (`Depends) pkg.cnf_deps);
     pre_depends = loadll (List.assoc (`Pre_depends) pkg.cnf_deps);
