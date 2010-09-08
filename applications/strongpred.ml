@@ -70,16 +70,20 @@ let build_table universe =
   let version_table = Hashtbl.create (Cudf.universe_size universe) in
   Cudf.iter_packages (init_versions_table version_table) universe;
   let h = Hashtbl.create (Cudf.universe_size universe) in
-  Hashtbl.iter (fun k {contents=l} ->
-    let c = ref 1 in
-    let hv = Hashtbl.create (List.length l) in
-    List.iter (fun n ->
-      (* Printf.eprintf "%s : %d -> %d\n" k n (2 * !c); *)
-      Hashtbl.add hv n (2 * !c);
-      c := !c + 1
-    ) (List.sort (List.unique l));
-    Hashtbl.add h k hv
-  ) version_table;
+  Hashtbl.iter
+    (fun k {contents=l} ->
+       let c = ref 1 in
+       let hv = Hashtbl.create (List.length l) in
+	 List.iter
+	   (fun n ->
+	      (* Printf.eprintf "%s : %d -> %d\n" k n (2 * !c); *)
+	      Hashtbl.add hv n (2 * !c);
+	      c := !c + 1
+	   )
+	   (List.sort (List.unique l));
+	 Hashtbl.add h k hv
+    )
+    version_table;
   h
 
 (* map the old universe in a new universe where all versions are even *)
