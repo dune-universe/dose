@@ -45,6 +45,32 @@ let clear tables =
   Hashtbl.clear tables.reverse_table
 ;;
 
+let init_virtual_table table pkg =
+  let add name =
+    if not(Hashtbl.mem table name) then
+      Hashtbl.add table name ()
+  in
+  List.iter (fun (name,_) -> add name) pkg.provides
+
+let init_unit_table table pkg =
+  if not(Hashtbl.mem table pkg.name) then
+    Hashtbl.add table pkg.name ()
+
+let init_versioned_table table pkg =
+  let add name =
+    if not(Hashtbl.mem table name) then
+      Hashtbl.add table name ()
+  in
+  let add_iter_cnf =
+    List.iter (fun disjunction ->
+      List.iter (fun (name,_)-> add name) disjunction
+    ) 
+  in
+  List.iter (fun (name,_) -> add name) pkg.conflicts ;
+  add_iter_cnf pkg.pre_depends ;
+  add_iter_cnf pkg.depends
+;;
+
 let init_versions_table t =
   let add name version = 
     if not(Hashtbl.mem t version) then
@@ -75,32 +101,6 @@ let init_versions_table t =
     cnf_iter pkg.depends;
     cnf_iter pkg.pre_depends;
     cnf_iter pkg.recommends
-;;
-
-let init_virtual_table table pkg =
-  let add name =
-    if not(Hashtbl.mem table name) then
-      Hashtbl.add table name ()
-  in
-  List.iter (fun (name,_) -> add name) pkg.provides
-
-let init_unit_table table pkg =
-  if not(Hashtbl.mem table pkg.name) then
-    Hashtbl.add table pkg.name ()
-
-let init_versioned_table table pkg =
-  let add name =
-    if not(Hashtbl.mem table name) then
-      Hashtbl.add table name ()
-  in
-  let add_iter_cnf =
-    List.iter (fun disjunction ->
-      List.iter (fun (name,_)-> add name) disjunction
-    ) 
-  in
-  List.iter (fun (name,_) -> add name) pkg.conflicts ;
-  add_iter_cnf pkg.pre_depends ;
-  add_iter_cnf pkg.depends
 ;;
 
 let init_tables ?(compare=Version.compare) pkglist =
