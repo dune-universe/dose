@@ -46,6 +46,112 @@ let filter_packages pred =
     []
 ;;
 
+let sourcename_of_package p = 
+  try
+    match List.assoc "source" p.Cudf.pkg_extra with
+	`String s -> s
+      | _ -> failwith "CUDF: source field of wrong type"
+  with
+      Not_found -> failwith "CUDF: source field missing"
+;;
+
+let sourceversion_of_package p = 
+  try
+    match List.assoc "sourceversion" p.Cudf.pkg_extra with
+	`String s -> s
+      | _ -> failwith "CUDF: source version field of wrong type"
+  with
+      Not_found -> failwith "CUDF: source version missing"
+;;
+
+let debversion_of_package p = 
+  try
+    match List.assoc "number" p.Cudf.pkg_extra with
+	`String s -> s
+      | _ -> failwith "debian version of wrong type"
+  with
+      Not_found -> failwith "CUDF: debian version missing"
+;;
+
+(* (purge_universe universe) returns a subset of universe obtained by retaing only the highest *)
+(* version of each binary package, and only the highest version of each source package.        *)
+(* Prints a warning for each surpressed package.                                               *)
+let purge_universe universe =
+  let versions = Hashtbl.create (Cudf.universe_size universe)
+    (* associates to a binary package name the pair (latest cudf version, latest debian version) *)
+  and src_versions = Hashtbl.create (Cudf.universe_size universe)
+    (* associates to a source package name the latest debian version *)
+  and cruft_sources = ref []
+    (* association list, associates to an obsolete (package name, package cudf version) the *)
+    (* newer debian version *)
+  and cruft_binaries = ref []
+    (* associaten list, associates to an obsolete (source name, source debian version) the *)
+    (* newer debian version. *)
+  in
+  Cudf.iter_packages
+    (fun p ->
+      let name = p.Cudf.package
+      and version = p.Cudf.version
+      and deb_version = debversion_of_package p
+      and src_name = sourcename_of_package p
+      and src_version = sourceversion_of_package p
+      in begin
+	try
+	  let (oldversion,olddeb_version) = Hashtbl.find versions name
+	  in 
+	  if oldversion < version 
+	  then begin
+	    cruft_binaries := ((name,oldversion),deb_version)::!cruft_binaries;
+	    Hashtbl.add versions name (version,deb_version)
+	  end
+	  else if version < oldversion
+	  then cruft_binaries := ((name,version),olddeb_version)::!cruft_binaries
+	with
+	    Not_found -> Hashtbl.add versions name (version,deb_version)
+      end;
+      begin
+	try
+	  let oldsrc_version = Hashtbl.find src_versions src_name
+	  in 
+	  let c = Version.compare oldsrc_version src_version
+	  in if c<0 then begin
+	    cruft_sources := ((src_name,oldsrc_version),src_version)::!cruft_sources;
+	    Hashtbl.add src_versions src_name src_version
+	  end else if c>0 then begin
+	    cruft_sources := ((src_name,src_version),oldsrc_version)::!cruft_sources
+	  end
+	with
+	    Not_found -> Hashtbl.add src_versions src_name src_version	   
+      end)
+    universe;
+  Cudf.load_universe
+    (filter_packages
+       (fun p ->
+	 let name = p.Cudf.package
+	 and version = p.Cudf.version
+	 and deb_version = debversion_of_package p
+	 and src_name = sourcename_of_package p
+	 and src_version = sourceversion_of_package p
+	 in
+	 try
+	   let newer_version = List.assoc (name,version) !cruft_binaries
+	   in begin
+	     print_string ("Package ("^name^","^deb_version^") ignored: there is a newer version "^newer_version^".\n");
+	     false
+	   end
+	 with Not_found->
+	   try
+	     let newer_src_version = List.assoc (src_name,src_version) !cruft_sources
+	     in begin
+	       print_string ("Package ("^name^","^deb_version^") ignored: It comes from source ("^src_name^","^src_version^") but this source has newer version "^newer_src_version^".\n");
+	       false
+	     end
+	   with Not_found -> true
+       )
+       universe
+    )
+;;
+
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs =
@@ -56,79 +162,10 @@ let main () =
   in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   let default_arch = OptParse.Opt.opt Options.architecture in
-  let (universe,from_cudf,_) =
+  let (complete_universe,from_cudf,_) =
     Boilerplate.load_universe ~default_arch posargs in
-
-  (* assure that binary and source packages appear only once *) 
-  let versions = Hashtbl.create (Cudf.universe_size universe)
-  and src_versions = Hashtbl.create (Cudf.universe_size universe)
-  and cruft_sources = ref []
-  and cruft_binaries = ref []
-  in begin
-    Cudf.iter_packages
-      (fun p ->
-	 let name = p.Cudf.package
-	 and version = p.Cudf.version
-	 and src_name = List.assoc "source" p.Cudf.pkg_extra
-	 and src_version = List.assoc "sourceversion" p.Cudf.pkg_extra
-	 in begin
-	     try
-	       let oldversion = Hashtbl.find versions name
-	       in 
-		 if oldversion < version 
-		 then begin
-		   cruft_binaries := (name,oldversion)::!cruft_binaries;
-		   Hashtbl.add versions name version
-		 end
-		 else if version < oldversion
-		 then cruft_binaries := (name,version)::!cruft_binaries
-	     with
-		 Not_found -> Hashtbl.add versions name version
-	   end;
-	   begin
-	     try
-	       let oldsrc_version = Hashtbl.find src_versions src_name
-	       in 
-		 if oldsrc_version < src_version (** TODO: debian version comparison!! *)
-		 then begin
-		   cruft_sources := (src_name,src_version)::!cruft_sources;
-		   Hashtbl.add src_versions src_name src_version
-		 end
-		 else  if src_version < oldsrc_version
-		 then cruft_sources := (src_name,src_version)::!cruft_sources
-	     with
-		 Not_found -> Hashtbl.add src_versions src_name src_version	   
-	   end)
-      universe;
-      let filtered_universe =
-	filter_packages
-	  (fun p ->
-	     let name = p.Cudf.package
-	     and version = p.Cudf.version
-	     and deb_version =
-	       match List.assoc "number" p.Cudf.pkg_extra with
-		   `String s -> s
-		 | _ -> failwith "debian version of wrong type"
-	     and src_name = List.assoc "source" p.Cudf.pkg_extra
-	     and src_version = List.assoc "sourceversion" p.Cudf.pkg_extra
-	     in
-	       if List.mem (name,version) !cruft_binaries
-	       then begin
-		 print_string ("Package ("^name^","^deb_version^") ignored.\n");
-		 false
-	       end
-	       else if List.mem (src_name,src_version) !cruft_sources
-	       then begin
-		 print_string ("Package ("^name^","^deb_version^") ignored since cruft source.\n");
-		 false
-	       end
-	       else true
-	  )
-	  universe
-      in ()
-    end;
-
-    let from_cudf p = from_cudf (p.Cudf.package,p.Cudf.version) in 
+  let from_cudf p = from_cudf (p.Cudf.package,p.Cudf.version)
+  and universe = purge_universe complete_universe in 
       info "Solving..." ;
       let timer = Util.Timer.create "Solver" in
 	Util.Timer.start timer;
