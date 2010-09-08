@@ -19,9 +19,9 @@ open Packages
 type tables = {
   virtual_table : (string, unit) Hashtbl.t;
   unit_table : (string, unit) Hashtbl.t ;
-  versions_table : (string, string list) Hashtbl.t;
+  versions_table : (string, int) Hashtbl.t;
   versioned_table : (string, unit) Hashtbl.t;
-  reverse_table : ((string * int), string) Hashtbl.t
+  reverse_table : (int, string list ref) Hashtbl.t
 }
 
 let create n = {
@@ -45,10 +45,10 @@ let clear tables =
   Hashtbl.clear tables.reverse_table
 ;;
 
-let init_versions_table table =
-  let add name version =
-    try let l = Hashtbl.find table name in l := version::!l
-    with Not_found -> Hashtbl.add table name (ref [version])
+let init_versions_table t =
+  let add name version = 
+    if not(Hashtbl.mem t version) then
+      Hashtbl.add t version ()
   in
   let conj_iter =
     List.iter (fun (name,sel) ->
@@ -79,18 +79,18 @@ let init_versions_table table =
 
 let init_virtual_table table pkg =
   let add name =
-    (* if not(Hashtbl.mem table name) then *)
+    if not(Hashtbl.mem table name) then
       Hashtbl.add table name ()
   in
   List.iter (fun (name,_) -> add name) pkg.provides
 
 let init_unit_table table pkg =
-  (* if not(Hashtbl.mem table pkg.name) then *)
+  if not(Hashtbl.mem table pkg.name) then
     Hashtbl.add table pkg.name ()
 
 let init_versioned_table table pkg =
   let add name =
-    (* if not(Hashtbl.mem table name) then *)
+    if not(Hashtbl.mem table name) then
       Hashtbl.add table name ()
   in
   let add_iter_cnf =
@@ -113,27 +113,41 @@ let init_tables ?(compare=Version.compare) pkglist =
   let iut = init_unit_table tables.unit_table in
 
   List.iter (fun pkg -> ivt pkg ; ivrt pkg ; ivdt pkg ; iut pkg) pkglist ;
-
-  Hashtbl.iter (fun k {contents = l} ->
-    Hashtbl.add tables.versions_table k
-    (List.unique (List.sort ~cmp:compare l))
-  ) temp_versions_table
-  ;
-  Hashtbl.clear temp_versions_table ;
+  let l = Hashtbl.fold (fun v _ acc -> v::acc) temp_versions_table [] in
+  let add_reverse i v =
+     try let l = Hashtbl.find tables.reverse_table i in l := v::!l
+     with Not_found -> Hashtbl.add tables.reverse_table i (ref [v])
+  in
+  let cmp x y = Version.compare x y in
+  let sl = List.sort ~cmp l in
+  let rec numbers (prec,i) = function
+    |[] -> ()
+    |v::t ->
+      if (Version.compare v prec) = 0 then begin
+        Hashtbl.add tables.versions_table v i;
+        add_reverse i v;
+        numbers (prec,i) t
+      end else begin
+        Hashtbl.add tables.versions_table v (i+1);
+        add_reverse (i+1) v;
+        numbers (v,(i+1)) t
+      end
+  in
+  (* versions start from 1 *)
+  numbers ("",1) sl;
   tables
+;;
 
-(* versions start from 1 and are even numbers *)
 let get_cudf_version tables (package,version) =
-  try
-    let step = 1 in
-    let l = Hashtbl.find tables.versions_table package in
-    let i = fst(List.findi (fun i a -> a = version) l) in
-    Hashtbl.add tables.reverse_table (CudfAdd.encode package,step*(i+1)) version;
-    step*(i+1)
+  try Hashtbl.find tables.versions_table version
   with Not_found -> assert false
 
-let get_real_version tables (p,i) =
-  try Hashtbl.find tables.reverse_table (p,i)
+let get_real_version tables (package,cudfversion) =
+  try
+    match !(Hashtbl.find tables.reverse_table cudfversion) with
+    |[] -> assert false
+    |[h] -> h
+    |l -> List.fold_left min "999999:999999" l
   with Not_found -> assert false
 
 let loadl tables l =
