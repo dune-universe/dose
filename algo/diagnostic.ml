@@ -27,7 +27,7 @@ type request =
   |PackageList of Cudf.package list
 
 type result =
-  |Success of (unit -> Cudf.package list)
+  |Success of (?all:bool -> unit -> Cudf.package list)
   |Failure of (unit -> reason list)
 
 type diagnosis = { result : result ; request : request }
@@ -151,7 +151,7 @@ let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
        Format.fprintf fmt "@[<v>%a@]@," (pp_package pp) r;
        Format.fprintf fmt "status: ok";
        if explain then begin
-         let is = f () in
+         let is = f ~all:true () in
          if is <> [] then
            Format.fprintf fmt "@,installationset:@,%a" (pp_list (pp_package pp)) is;
        end;

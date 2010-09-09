@@ -56,11 +56,11 @@ let reason maps =
 let result maps result = 
   let from_sat = maps.map#inttovar in
   match result with
-  |Diagnostic_int.Success f ->
-      Diagnostic.Success (fun () ->
+  |Diagnostic_int.Success f_int ->
+      Diagnostic.Success (fun ?(all=false) () ->
         List.map (fun i ->
           {(from_sat i) with Cudf.installed = true}
-        ) (f ())
+        ) (f_int ~all ())
       )
   |Diagnostic_int.Failure f -> Diagnostic.Failure (fun () -> reason maps (f ()))
 
@@ -76,8 +76,6 @@ let diagnosis maps res req =
   { Diagnostic.result = result ; request = request }
 
 let univcheck ?callback universe =
-  (*let s = load universe in
-  let maps = s.mdf.Mdf.maps in *)
   let mdf = Mdf.load_from_universe universe in
   let maps = mdf.Mdf.maps in
   match callback with

@@ -25,7 +25,7 @@ type reason =
 
 (** Results are given as functions and computed only if needed *)
 type result =
-  |Success of (unit -> Cudf.package list)
+  |Success of (?all:bool -> unit -> Cudf.package list)
   (** List of installed packages. We build a new package and set [Installed] =
       True . These packages cannot be used to query the old cudf universe.*)
   |Failure of (unit -> reason list)

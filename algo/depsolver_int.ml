@@ -196,7 +196,7 @@ let solve solver request =
 
   let result solve collect ?(proxies=[]) var =
     if solve solver.constraints var then begin
-      let get_assignent () =
+      let get_assignent ?(all=false) () =
         let l = ref [] in
         Array.iteri (fun i v ->
           if v = S.True then
@@ -322,29 +322,33 @@ let reverse_dependency_closure ?(maxdepth=max_int) reverse =
 (***********************************************************)
 
 let pkgcheck callback solver failed tested id =
+  let memo (tested,failed) res = 
+    begin
+      match res with
+      |Diagnostic_int.Success(f_int) -> 
+          List.iter (fun i -> tested.(i) <- true) (f_int ())
+      |Diagnostic_int.Failure _  -> incr failed
+    end ; res
+  in
   try
     let req = Diagnostic_int.Sng id in
     let res =
       Util.Progress.progress progressbar_univcheck;
-      if not(tested.(id)) then begin
-        let res = solve solver req in
-        begin match res with
-        |Diagnostic_int.Success(f) ->
-            List.iter (fun i -> tested.(i) <- true) (f ())
-        |Diagnostic_int.Failure _  -> incr failed
-        end
-        ;
-        res
-      end
+      if not(tested.(id)) then
+        memo (tested,failed) (solve solver req)
       else begin
-        (* XXX this will hold hostage a bit of memory in the stack, but
-         * it should be pretty harmless ... *)
-        let f () =
-          (* delayed call to the solver only if the list of installable packages
-           * is demanded *)
-          match solve solver req with
-          |Diagnostic_int.Success(f) -> f ()
-          |Diagnostic_int.Failure _ -> assert false (* impossible *)
+        (* this branch is true only if the package was previously
+         * added to the tested packages and therefore it is installable *)
+        (* if all = true then the solver is called again to provide the list
+         * of installed packages despite the fact the the package was already
+         * tested. This is done to provide one installation set for each package
+         * in the universe *)
+        let f ?(all=false) () =
+          if all then
+            match solve solver req with
+            |Diagnostic_int.Success(f_int) -> f_int ()
+            |Diagnostic_int.Failure _ -> assert false (* impossible *)
+          else []
         in Diagnostic_int.Success(f) 
       end
     in

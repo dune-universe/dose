@@ -22,7 +22,7 @@ type reason =
   |Conflict of (int * int)
 
 type result =
-  |Success of (unit -> int list)
+  |Success of (?all:bool -> unit -> int list)
   |Failure of (unit -> reason list)
 
 type request =
