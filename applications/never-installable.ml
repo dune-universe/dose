@@ -82,13 +82,14 @@ let chop_binnmu s =
       Not_found -> s
 ;;
 
+(********************************************************************************************************)
 
 (* (purge_universe universe) returns a subset of universe obtained by retaing only the highest *)
 (* version of each binary package, and only the highest version of each source package.        *)
 (* Prints a warning for each surpressed package.                                               *)
 let purge_universe universe =
 
-  let versions = Hashtbl.create (Cudf.universe_size universe)
+  let current_versions = Hashtbl.create (Cudf.universe_size universe)
     (* associates to a binary package name the pair (latest cudf version, latest debian version) *)
   and src_versions = Hashtbl.create (Cudf.universe_size universe)
     (* associates to a source package name the latest debian version *)
@@ -110,17 +111,17 @@ let purge_universe universe =
       and src_version = sourceversion_of_package p
       in begin
 	try
-	  let (oldversion,olddeb_version) = Hashtbl.find versions name
+	  let (oldversion,olddeb_version) = Hashtbl.find current_versions name
 	  in 
 	  if oldversion < version 
 	  then begin
 	    cruft_binaries := ((name,oldversion),deb_version)::!cruft_binaries;
-	    Hashtbl.add versions name (version,deb_version)
+	    Hashtbl.add current_versions name (version,deb_version)
 	  end
 	  else if version < oldversion
 	  then cruft_binaries := ((name,version),olddeb_version)::!cruft_binaries
 	with
-	    Not_found -> Hashtbl.add versions name (version,deb_version)
+	    Not_found -> Hashtbl.add current_versions name (version,deb_version)
       end;
       begin
 	try
@@ -151,9 +152,8 @@ let purge_universe universe =
 	 try
 	   let newer_version = List.assoc (name,version) !cruft_binaries
 	   in begin
-	       warning
-		 "Package %s(%s) ignored: there is a newer version %s"
-		 name deb_version newer_version;
+	       warning "%s(%s) dropped:" name deb_version;
+	       warning "  %s is newer." newer_version;
 	       false
 	   end
 	 with Not_found->
@@ -161,16 +161,18 @@ let purge_universe universe =
 	     let newer_src_version =
 	       List.assoc (src_name,src_version) !cruft_sources
 	     in begin
-		 warning
-		   ("Package %s(%s) ignored: stems from source %s(%s) but this source has newer version %s")
-		   name deb_version src_name src_version newer_src_version;
-	       false
-	     end
+		 warning "%s(%s) dropped:" name deb_version;
+		 warning "  stems from source %s(%s)" src_name src_version;
+		 warning "  but %s is newer." newer_src_version;
+		 false
+	       end
 	   with Not_found -> true
        )
        universe
     )
 ;;
+
+(**********************************************************************************************************)
 
 let hash_add_tolist table key value =
   try
@@ -218,6 +220,154 @@ let synchronization_table universe =
 	packages_of_source;
       sync_table
 ;;
+
+(****************************************************************************)
+(* This section is largely copied from strongpred.ml !! *)
+
+(* collect all possible versions *)
+let add_to_versions_table table =
+  let add name version =
+    try let l = Hashtbl.find table name in l := version::!l
+    with Not_found -> Hashtbl.add table name (ref [version])
+  in
+  let conj_iter =
+    List.iter (fun (name,sel) ->
+      match sel with
+      |None -> ()
+      |Some(_,version) -> add name version
+    )
+  in
+  let cnf_iter =
+    List.iter (fun disjunction ->
+      List.iter (fun (name,sel) ->
+        match sel with
+        |None -> ()
+        |Some(_,version) -> add name version
+      ) disjunction
+    )
+  in
+  fun pkg ->
+    add pkg.Cudf.package pkg.Cudf.version;
+    conj_iter pkg.Cudf.conflicts ;
+    conj_iter (pkg.Cudf.provides :> Cudf_types.vpkglist) ;
+    cnf_iter pkg.Cudf.depends
+;;
+
+(* build a mapping between package names and a maps old version -> new version *)
+let build_table universe =
+  let version_table = Hashtbl.create (Cudf.universe_size universe) in
+  Cudf.iter_packages (add_to_versions_table version_table) universe;
+  let h = Hashtbl.create (Cudf.universe_size universe) in
+  Hashtbl.iter
+    (fun k {contents=l} ->
+       let c = ref 1 in
+       let hv = Hashtbl.create (List.length l) in
+	 List.iter
+	   (fun n ->
+	      (* Printf.eprintf "%s : %d -> %d\n" k n (2 * !c); *)
+	      Hashtbl.add hv n (2 * !c);
+	      c := !c + 1
+	   )
+	   (ExtLib.List.sort (ExtLib.List.unique l));
+	 Hashtbl.add h k hv
+    )
+    version_table;
+  h
+;;
+
+(* map the old universe to a pair of table {packages->l}, where l is  *)
+(* is the list of all constraints in which the package is mentionend, *)
+(* and package list, such that all package numbers are spaced out.    *)
+let renumber universe = 
+  let add table name version =
+    try let l = Hashtbl.find table name in l := version::!l
+    with Not_found -> Hashtbl.add table name (ref [version])
+  in
+  let h = build_table universe in
+  let rh = Hashtbl.create (Cudf.universe_size universe) in
+  let conj_map hv =
+    List.map (fun (name,sel) ->
+      match sel with
+      |None -> (name,sel)
+      |Some(c,v) -> begin
+        let hv = Hashtbl.find h name in
+        add rh name ((c :> Cudf_types.relop),Hashtbl.find hv v);
+        (name,Some(c,Hashtbl.find hv v))
+      end
+    )
+  in
+  let cnf_map h =
+    List.map (fun disjunction ->
+      List.map (fun (name,sel) ->
+        match sel with
+        |None -> (name,sel)
+        |Some(c,v) -> begin
+          (* Printf.eprintf "->>>>>>>> %s %d\n" name v; *)
+          let hv = Hashtbl.find h name in
+          add rh name (c,Hashtbl.find hv v);
+          (name,Some(c,Hashtbl.find hv v))
+        end 
+      ) disjunction
+    )
+  in
+  let pkglist = 
+    Cudf.fold_packages (fun acc pkg ->
+      let hv = try Hashtbl.find h pkg.Cudf.package with Not_found -> assert false in
+      let p = 
+        { pkg with
+          Cudf.version = (try Hashtbl.find hv pkg.Cudf.version with Not_found -> assert false);
+          Cudf.depends = (try cnf_map h pkg.Cudf.depends with Not_found -> assert false);
+          Cudf.conflicts = (try conj_map h pkg.Cudf.conflicts with Not_found -> assert false);
+          Cudf.provides = (try conj_map h pkg.Cudf.provides with Not_found -> assert false)
+        }
+      in p::acc
+    ) [] universe 
+  in (rh,pkglist)
+;;
+
+let interesting_future_versions p sels real_versions =
+  let evalsel v = function
+      (`Eq,v') -> v=v'
+    | (`Geq,v') -> v>=v'
+    | (`Leq,v') -> v<=v'
+    | (`Gt,v') -> v>v'
+    | (`Lt,v') -> v<v'
+    | (`Neq,v') -> v<>v'
+  in
+  let is_real = Hashtbl.mem p real_versions
+  in
+  let rawvl =
+    if is_real
+    then
+      let pv = Hashtbl.find p real_versions in
+	List.filter
+	  (fun v -> (v > pv))
+	  (ExtLib.List.unique (List.map snd sels))
+    else ExtLib.List.unique (List.map snd sels)
+  in
+  let minv,maxv=
+    List.fold_left
+      (fun (mi,ma) v -> (min mi v,max ma v)) (List.hd rawvl,List.hd rawvl)
+      (List.tl rawvl)
+  in
+  let h = Hashtbl.create 17
+  and h' = Hashtbl.create 17 in
+    begin
+      if is_real then
+	let pv = Hashtbl.find p real_versions
+	in Hashtbl.add h (List.map (evalsel pv) sels) pv
+    end;
+    for offs = 0 to (maxv-minv+2) do
+      let w = maxv+1-offs in
+      let row = List.map (evalsel w) sels in
+	if not (Hashtbl.mem h row) then 
+          (Hashtbl.add h row w; Hashtbl.add h' w row);
+    done;
+    Hashtbl.fold (fun k v acc -> k::acc) h' [], h'
+;;
+
+
+(****************************************************************************)
 
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
