@@ -77,6 +77,7 @@ let debversion_of_package p =
 (* version of each binary package, and only the highest version of each source package.        *)
 (* Prints a warning for each surpressed package.                                               *)
 let purge_universe universe =
+
   let versions = Hashtbl.create (Cudf.universe_size universe)
     (* associates to a binary package name the pair (latest cudf version, latest debian version) *)
   and src_versions = Hashtbl.create (Cudf.universe_size universe)
@@ -85,9 +86,11 @@ let purge_universe universe =
     (* association list, associates to an obsolete (package name, package cudf version) the *)
     (* newer debian version *)
   and cruft_binaries = ref []
-    (* associaten list, associates to an obsolete (source name, source debian version) the *)
+    (* association list, associates to an obsolete (source name, source debian version) the *)
     (* newer debian version. *)
   in
+
+  (* identify cruft *)
   Cudf.iter_packages
     (fun p ->
       let name = p.Cudf.package
@@ -124,6 +127,8 @@ let purge_universe universe =
 	    Not_found -> Hashtbl.add src_versions src_name src_version	   
       end)
     universe;
+
+  (* filter out cruft *)
   Cudf.load_universe
     (filter_packages
        (fun p ->
@@ -150,6 +155,24 @@ let purge_universe universe =
        )
        universe
     )
+;;
+
+let synchronisation_table universe =
+(* returns a hash table that associates names of source packages to names of binary packages. *)
+(* The table associates s to b if s is the source package of some version of b, and if all    *)
+(* binary packages coming from source s have the same version number up to binary NMU.        *)
+
+  let packages_of_source = Hashtbl.create (Cudf.universe_size universe)
+  in 
+  Cudf.iter_packages
+    (fun p -> 
+      let name = p.Cudf.package
+      and deb_version = debversion_of_package p
+      and src_name = sourcename_of_package p
+      in Hashtbl.add packages_of_source src_name (name,deb_version)
+    )
+    universe
+    
 ;;
 
 let main () =
