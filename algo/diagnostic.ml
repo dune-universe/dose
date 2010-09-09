@@ -50,9 +50,10 @@ let build_paths deps root =
 ;;
 
 let pp_package pp fmt pkg =
-  let (p,v) = pp pkg in
+  let (p,v,fields) = pp pkg in
   Format.fprintf fmt "package: %s@," (CudfAdd.decode p);
-  Format.fprintf fmt "version: %s" v
+  Format.fprintf fmt "version: %s" v;
+  List.iter (fun (k,v) -> Format.fprintf fmt "@,%s: %s" k v) fields
 ;;
 
 let pp_dependency pp fmt (i,vpkgs) =
@@ -83,7 +84,7 @@ let pp_dependency pp fmt (i,vpkgs) =
     let pp_item fmt = function
       |(p,None) -> Format.fprintf fmt "%s" (CudfAdd.decode p)
       |(p,Some(c,v)) ->
-          let (p,v) = pp {Cudf.default_package with Cudf.package = p ; version = v} in
+          let (p,v,_) = pp {Cudf.default_package with Cudf.package = p ; version = v} in
           Format.fprintf fmt "%s (%s %s)" (CudfAdd.decode p) (string_of_relop c) v
     in
     pp_list fmt ~pp_item ~sep:" | "
@@ -142,7 +143,7 @@ let print_error pp root fmt l =
   pp_list pp_reason fmt res;
 ;;
 
-let default_pp pkg = (pkg.Cudf.package, CudfAdd.string_of_version pkg)
+let default_pp pkg = (pkg.Cudf.package,CudfAdd.string_of_version pkg,[])
 
 let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) fmt = function
   |{result = Success (f); request = Package r } when success ->

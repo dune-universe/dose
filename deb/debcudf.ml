@@ -195,6 +195,7 @@ let preamble =
     ("replaces",(`Vpkglist (Some [])));
     ("recommends",(`Vpkgformula (Some [])));
     ("number",(`String None));
+    ("architecture",(`String None));
     ("source",(`String (Some ""))) ;
     ("sourceversion",(`String (Some ""))) ]
   in
@@ -202,6 +203,7 @@ let preamble =
 
 let add_extra extras tables pkg =
   let number = ("number",`String pkg.version) in
+  let architecture = ("architecture",`String pkg.architecture) in
   let (source,sourceversion) =
     let n,v =
       match pkg.source with
@@ -229,7 +231,7 @@ let add_extra extras tables pkg =
     |(_,`Vpkgformula []) -> None
     |e -> Some e
   )
-  [number; source; sourceversion; recommends; replaces] @ l
+  [architecture; number; source; sourceversion; recommends; replaces] @ l
 ;;
 
 let add_essential = function

@@ -50,13 +50,14 @@ val is_solution : diagnosis -> bool
  
     @param explain : add a more verbose explanation of the failure or
     print the list of installed packages. 
-    @param pp : print a cudf package
+    @param pp : provide details about the cudf package :
+      (package name, package version, extra property list)
 *)
 val printf :
-  ?pp:(Cudf.package -> (string * string)) -> 
+  ?pp:(Cudf.package -> (string * string * (string * string) list)) -> 
     ?failure:bool -> ?success:bool -> ?explain:bool -> diagnosis -> unit
 
 val fprintf :
-  ?pp:(Cudf.package -> (string * string)) -> 
+  ?pp:(Cudf.package -> (string * string * (string * string) list)) -> 
     ?failure:bool -> ?success:bool -> ?explain:bool -> 
       Format.formatter -> diagnosis -> unit

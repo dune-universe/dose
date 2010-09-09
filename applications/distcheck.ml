@@ -10,6 +10,7 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
+open ExtLib
 open Debian
 open Common
 open Diagnostic
@@ -63,7 +64,15 @@ let main () =
   let default_arch = OptParse.Opt.opt Options.architecture in
   let (universe,from_cudf,_) =
     Boilerplate.load_universe ~default_arch posargs in
-  let from_cudf p = from_cudf (p.Cudf.package,p.Cudf.version) in 
+  let pp pkg =
+    let (p,v) = from_cudf (pkg.Cudf.package,pkg.Cudf.version) in 
+    let l = 
+      List.filter_map (fun k ->
+        try Some(k,Cudf.lookup_package_property pkg k)
+        with Not_found -> None
+      ) ["architecture";"source";"sourceversion"]
+    in (p,v,l)
+  in
   info "Solving..." ;
   let timer = Util.Timer.create "Solver" in
   Util.Timer.start timer;
@@ -72,7 +81,7 @@ let main () =
   let explain = OptParse.Opt.get Options.explain in
   let fmt = Format.std_formatter in
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
-  let callback = Diagnostic.fprintf ~pp:from_cudf ~failure ~success ~explain fmt in
+  let callback = Diagnostic.fprintf ~pp ~failure ~success ~explain fmt in
   let i =
     if OptParse.Opt.is_set Options.checkonly then 
       let pkglist = 
