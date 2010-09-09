@@ -305,6 +305,9 @@ let parse_822_iter parse f ch =
     !l
   with Eof -> !l
 
+(* XXX this merge can be done much more efficiently with an hashtbl
+ * with a equality function on (name,version,arch) and the functor
+ * can be removed... *)
 module RawInput ( Set : Set.S ) = struct
   let input_raw f files =
     let timer = Util.Timer.create "Debian.Format822.input_raw" in

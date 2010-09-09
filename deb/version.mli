@@ -12,6 +12,8 @@
 
 (** Debian version comparison function. *)
 
+val equal : string -> string -> bool
+
 (** compare two debian versions *)
 val compare : string -> string -> int
 

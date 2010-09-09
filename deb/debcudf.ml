@@ -103,7 +103,7 @@ let init_versions_table t =
     cnf_iter pkg.recommends
 ;;
 
-let init_tables ?(compare=Version.compare) pkglist =
+let init_tables pkglist =
   let n = 2 * List.length pkglist in
   let tables = create n in 
   let temp_versions_table = Hashtbl.create n in
@@ -118,12 +118,11 @@ let init_tables ?(compare=Version.compare) pkglist =
      try let l = Hashtbl.find tables.reverse_table i in l := v::!l
      with Not_found -> Hashtbl.add tables.reverse_table i (ref [v])
   in
-  let cmp x y = Version.compare x y in
-  let sl = List.sort ~cmp l in
+  let sl = List.sort ~cmp:Version.compare l in
   let rec numbers (prec,i) = function
     |[] -> ()
     |v::t ->
-      if (Version.compare v prec) = 0 then begin
+      if Version.equal v prec then begin
         Hashtbl.add tables.versions_table v i;
         add_reverse i v;
         numbers (prec,i) t

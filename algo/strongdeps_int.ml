@@ -81,11 +81,14 @@ let strongdeps_int ?(transitive=true) graph mdf l =
         if transitive then
           check_strong true graph solver id (f ())
         else
-        begin
-          let deps = List.filter (fun x -> 
-            List.exists (fun (_,alt,_) -> List.exists (fun y -> y = x) alt) pkg.Mdf.depends) (f ()) in
+          let deps =
+            List.filter (fun x ->
+              List.exists (fun (_,alt,_) ->
+                List.exists (fun y -> y = x) alt
+              ) pkg.Mdf.depends
+            ) (f ()) 
+          in
           check_strong false graph solver id deps
-        end
     end
   ) available ;
   Util.Progress.reset mainbar;

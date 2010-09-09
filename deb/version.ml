@@ -180,3 +180,5 @@ let compare x1 x2 =
       (fun () -> compare_chunks r1 r2))
 ;;
 
+let equal (x : string) (y : string) =
+  if x = y then true else (compare x y) = 0

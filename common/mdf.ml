@@ -36,6 +36,7 @@ let default_package = {
 }
 
 let __load maps universe =
+  let cmp (x : int) (y : int) = x = y in
   let to_sat = maps.map#vartoint in
   let a = Array.create (Cudf.universe_size universe) default_package in
   Cudf.iter_packages (fun pkg ->
@@ -60,7 +61,7 @@ let __load maps universe =
             (vpkg::l1,el @ l2, dl @ l3)
           ) ([],[],[]) disjunction
         (* XXX Maybe here we can gain something if we use a set instead of a list *)
-        in (l1,List.unique l2, List.unique l3)
+        in (l1,List.unique ~cmp l2, List.unique ~cmp:Cudf.(=%) l3)
       ) pkg.Cudf.depends
     in
     let p = {
