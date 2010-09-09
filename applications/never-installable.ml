@@ -36,9 +36,9 @@ module Options = struct
   add options ~short_name:'a' ~long_name:"architecture" ~help:"Set the default architecture" architecture;
 end
 
-let debug fmt = Util.make_debug "Distcheck" fmt
-let info fmt = Util.make_info "Distcheck" fmt
-let warning fmt = Util.make_warning "Distcheck" fmt
+let debug fmt = Util.make_debug "" fmt
+let info fmt = Util.make_info "" fmt
+let warning fmt = Util.make_warning "" fmt
 
 let filter_packages pred =
   Cudf.fold_packages
@@ -151,14 +151,19 @@ let purge_universe universe =
 	 try
 	   let newer_version = List.assoc (name,version) !cruft_binaries
 	   in begin
-	     print_string ("Package ("^name^","^deb_version^") ignored: there is a newer version "^newer_version^".\n");
-	     false
+	       warning
+		 "Package %s(%s) ignored: there is a newer version %s"
+		 name deb_version newer_version;
+	       false
 	   end
 	 with Not_found->
 	   try
-	     let newer_src_version = List.assoc (src_name,src_version) !cruft_sources
+	     let newer_src_version =
+	       List.assoc (src_name,src_version) !cruft_sources
 	     in begin
-	       print_string ("Package ("^name^","^deb_version^") ignored: It comes from source ("^src_name^","^src_version^") but this source has newer version "^newer_src_version^".\n");
+		 warning
+		   ("Package %s(%s) ignored: stems from source %s(%s) but this source has newer version %s")
+		   name deb_version src_name src_version newer_src_version;
 	       false
 	     end
 	   with Not_found -> true
@@ -205,14 +210,10 @@ let synchronization_table universe =
 		 (fun (binp,_binv) -> Hashtbl.add sync_table binp src)
 		 bins
 	     else begin
-	       print_string
-		 ("Warning: binary packages of source "^src^
-		    " not synchronized:\n");
+	       warning "Binary packages of source %s not synchronized" src;
 	       List.iter
-		 (fun (name,version) ->	print_string (name^"("^version^"), "))
+		 (fun (name,version) -> warning "  %s(%s)" name version)
 		 bins;
-	       print_string "\b\b";
-	       print_newline ()
 	     end)
 	packages_of_source;
       sync_table
