@@ -2,8 +2,7 @@
 
 distcheck.native checks broken packages in a repository
 
-./distcheck.native cudf://test.cudf --failures
-./distcheck.native deb:///var/lib/apt/lists/ftp.fr.debian.org_debian_dists_unstable_main_binary-amd64_Packages --failures
+./distcheck.native -e -f --architecture=amd64 --release=unstable/sid --distribution=debian -u deb://tests/sid.packages > sid.yaml
 
 -----
 

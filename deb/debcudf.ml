@@ -92,6 +92,10 @@ let init_versions_table t =
       ) disjunction
     )
   in
+  let add_source = function
+    |(_,None) -> ()
+    |(p,Some(v)) -> add p v
+  in 
   fun pkg ->
     add pkg.name pkg.version;
     conj_iter pkg.breaks;
@@ -100,7 +104,8 @@ let init_versions_table t =
     conj_iter pkg.replaces;
     cnf_iter pkg.depends;
     cnf_iter pkg.pre_depends;
-    cnf_iter pkg.recommends
+    cnf_iter pkg.recommends;
+    add_source pkg.source
 ;;
 
 let init_tables pkglist =

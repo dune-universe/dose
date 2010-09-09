@@ -180,5 +180,17 @@ let compare x1 x2 =
       (fun () -> compare_chunks r1 r2))
 ;;
 
+let compare (x : string) (y : string) =
+  if x = y then 0
+  else
+    let (e1,rest1) = extract_epoch x in
+    let (e2,rest2) = extract_epoch y in
+    (compare_numeric_decimal e1 e2) ***
+      (fun () ->
+        let (u1,r1) = extract_revision rest1 in
+        let (u2,r2) = extract_revision rest2 in
+        (compare_chunks u1 u2) ***
+          (fun () -> compare_chunks r1 r2))
+
 let equal (x : string) (y : string) =
   if x = y then true else (compare x y) = 0
