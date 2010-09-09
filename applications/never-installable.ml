@@ -73,6 +73,16 @@ let debversion_of_package p =
       Not_found -> failwith "CUDF: debian version missing"
 ;;
 
+let chop_binnmu s =
+  (* chops a possible bin-NMU suffix from a debian version string *)
+  try
+    Str.string_before s
+      (Str.search_backward (Str.regexp "\\+b[0-9]+$") s ((String.length s)-1))
+  with
+      Not_found -> s
+;;
+
+
 (* (purge_universe universe) returns a subset of universe obtained by retaing only the highest *)
 (* version of each binary package, and only the highest version of each source package.        *)
 (* Prints a warning for each surpressed package.                                               *)
@@ -157,22 +167,55 @@ let purge_universe universe =
     )
 ;;
 
-let synchronisation_table universe =
-(* returns a hash table that associates names of source packages to names of binary packages. *)
-(* The table associates s to b if s is the source package of some version of b, and if all    *)
-(* binary packages coming from source s have the same version number up to binary NMU.        *)
+let hash_add_tolist table key value =
+  try
+    let old = Hashtbl.find table key
+    in old := (value::!old)
+  with
+      Not_found -> Hashtbl.add table key (ref [value])
+;;
+
+let synchronization_table universe =
+(* returns a hash table that associates names of source packages to names *)
+(* of binary packages. The table associates s to b if s is the source     *)
+(* package of some version of b, and if all binary packages coming from   *)
+(* source s have the same version number up to binary NMU.                *)
 
   let packages_of_source = Hashtbl.create (Cudf.universe_size universe)
   in 
-  Cudf.iter_packages
-    (fun p -> 
-      let name = p.Cudf.package
-      and deb_version = debversion_of_package p
-      and src_name = sourcename_of_package p
-      in Hashtbl.add packages_of_source src_name (name,deb_version)
-    )
-    universe
-    
+    Cudf.iter_packages
+      (fun p -> 
+	 let name = p.Cudf.package
+	 and deb_version = debversion_of_package p
+	 and src_name = sourcename_of_package p
+	 in
+	   hash_add_tolist packages_of_source src_name (name,deb_version)
+      )
+      universe;
+    let sync_table = Hashtbl.create (Cudf.universe_size universe)
+    in 
+      Hashtbl.iter 
+	(fun src bins_ref ->
+	   let bins = !bins_ref
+	   in
+	     if 1=List.length
+	       (ExtLib.List.unique (List.map chop_binnmu (List.map snd bins)))
+	     then
+	       List.iter
+		 (fun (binp,_binv) -> Hashtbl.add sync_table binp src)
+		 bins
+	     else begin
+	       print_string
+		 ("Warning: binary packages of source "^src^
+		    " not synchronized:\n");
+	       List.iter
+		 (fun (name,version) ->	print_string (name^"("^version^"), "))
+		 bins;
+	       print_string "\b\b";
+	       print_newline ()
+	     end)
+	packages_of_source;
+      sync_table
 ;;
 
 let main () =
@@ -188,7 +231,8 @@ let main () =
   let (complete_universe,from_cudf,_) =
     Boilerplate.load_universe ~default_arch posargs in
   let from_cudf p = from_cudf (p.Cudf.package,p.Cudf.version)
-  and universe = purge_universe complete_universe in 
+  and universe = purge_universe complete_universe in
+  let sync_table = synchronization_table universe in
       info "Solving..." ;
       let timer = Util.Timer.create "Solver" in
 	Util.Timer.start timer;
