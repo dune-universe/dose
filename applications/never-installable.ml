@@ -363,7 +363,7 @@ let interesting_future_versions p sels real_versions =
 	if not (Hashtbl.mem h row) then 
           (Hashtbl.add h row w; Hashtbl.add h' w row);
     done;
-    Hashtbl.fold (fun k v acc -> k::acc) h' [], h'
+    Hashtbl.fold (fun k v acc -> k::acc) h' []
 ;;
 
 
@@ -382,23 +382,62 @@ let main () =
   let (complete_universe,from_cudf,_) =
     Boilerplate.load_universe ~default_arch posargs in
   let from_cudf p = from_cudf (p.Cudf.package,p.Cudf.version)
-  and universe = purge_universe complete_universe in
-  let sync_table = synchronization_table universe in
-      info "Solving..." ;
-      let timer = Util.Timer.create "Solver" in
-	Util.Timer.start timer;
-	let explain = OptParse.Opt.get Options.explain in
-	let fmt = Format.std_formatter in
-	  Format.fprintf fmt "@[<v 1>report:@,";
-	  let callback = Diagnostic.fprintf ~pp:from_cudf ~failure:true ~success:false ~explain fmt in
-	  let i = Depsolver.univcheck ~callback universe 
-	  in
-	    ignore(Util.Timer.stop timer ());
-	    Format.fprintf fmt "@]@.";
-	    Format.fprintf fmt "total-packages: %d\n" (Cudf.universe_size universe);
-	    Format.fprintf fmt "broken-packages: %d\n" i;
-	    if OptParse.Opt.is_set Options.architecture then
-	      Format.fprintf fmt "architecture: %s\n" (OptParse.Opt.get Options.architecture)
+  and purged_universe = purge_universe complete_universe in
+  let sync_table = synchronization_table purged_universe 
+  and (sels,renumbered_packages) = renumber purged_universe 
+  in
+  let pl =
+    let pinned_real_packages =
+      List.map
+	(fun p -> {p with
+		     Cudf.provides = ("@source-"^(sourcename_of_package p),Some (`Eq, p.Cudf.version))::p.Cudf.provides;
+		     Cudf.conflicts = ("@source-"^(sourcename_of_package p),Some (`Neq, p.Cudf.version))::p.Cudf.conflicts;
+		  })
+	renumbered_packages
+    and real_versions = Hashtbl.create (List.length renumbered_packages)
+    in
+      List.iter
+	(fun p -> Hashtbl.add real_versions p.Cudf.package p.Cudf.version)
+	renumbered_packages;
+      Hashtbl.fold
+	(fun p sels acc ->
+	   let sync = 
+	     try Some (Hashtbl.find sync_table p.Cudf.package)
+	     with Not_found -> None
+	   in
+	     (List.map
+	       (fun v ->
+		  {Cudf.package = p.Cudf.package;
+		   Cudf.version = v;
+		   Cudf.depends = [];
+		   Cudf.provides = (match sync with Some s -> ["@source-"^s, Some (`Eq, v)] | None -> []);
+		   Cudf.conflicts = (match sync with Some s -> ["@source-"^s, Some (`Neq, v)] | None -> []);
+		   Cudf.installed = false;
+		   Cudf.was_installed = false;
+		   Cudf.keep = `Keep_none;
+		   Cudf.pkg_extra = []
+		  })
+	       (interesting_future_versions p.Cudf.package sels real_versions))@acc
+	)
+	sels
+	pinned_real_packages
+  in
+  let universe = Cudf.load_universe pl in 
+    info "Solving..." ;
+    let timer = Util.Timer.create "Solver" in
+      Util.Timer.start timer;
+      let explain = OptParse.Opt.get Options.explain in
+      let fmt = Format.std_formatter in
+	Format.fprintf fmt "@[<v 1>report:@,";
+	let callback = Diagnostic.fprintf ~pp:from_cudf ~failure:true ~success:false ~explain fmt in
+	let i = Depsolver.univcheck ~callback universe 
+	in
+	  ignore(Util.Timer.stop timer ());
+	  Format.fprintf fmt "@]@.";
+	  Format.fprintf fmt "total-packages: %d\n" (Cudf.universe_size universe);
+	  Format.fprintf fmt "broken-packages: %d\n" i;
+	  if OptParse.Opt.is_set Options.architecture then
+	    Format.fprintf fmt "architecture: %s\n" (OptParse.Opt.get Options.architecture)
 ;;
 
 main () ;;
