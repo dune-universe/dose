@@ -14,6 +14,10 @@ open ExtLib
 open Common
 open Debian
 
+let debug fmt = Util.make_debug "Deb-dudfcudf" fmt
+let info fmt = Util.make_info "Deb-dudfcudf" fmt
+let warning fmt = Util.make_warning "Deb-dudfcudf" fmt
+
 module Deb = Debian.Packages
 
 module L = Xml.LazyList 
@@ -21,7 +25,7 @@ module L = Xml.LazyList
 module Options = struct
   open OptParse
 
-  let debug = StdOpt.store_true ()
+  let verbose = StdOpt.incr_option ()
   let outdir = StdOpt.str_option ()
   let problemid = StdOpt.str_option ()
 
@@ -29,7 +33,7 @@ module Options = struct
   let options = OptParser.make ~description:description ()
 
   open OptParser ;;
-  add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
+  add options ~short_name:'v' ~long_name:"verbose" ~help:"Print additional information" verbose;
   add options ~short_name:'o' ~long_name:"outdir" ~help:"Output directory" outdir;
   add options                 ~long_name:"id" ~help:"Problem id" problemid;
 end
@@ -279,8 +283,8 @@ let main () =
     |[h] -> h
     |_ -> (Printf.eprintf "too many arguments" ; exit 1)
   in
-  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug ~bars:["debdudf"] () ;
-  Util.print_info "parse xml";
+  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose) ;
+  info "parse xml";
 
   let id x = x in
 
@@ -292,7 +296,7 @@ let main () =
     exit 1
   end;
 
-  Util.print_info "convert to dom ... ";
+  info "convert to dom ... ";
 
   let uid = dudfdoc.uid in
   let status =
@@ -318,7 +322,7 @@ let main () =
   in
   let extras = List.map fst extras_property in
 
-  Util.print_info "parse all packages";
+  info "parse all packages";
   Util.Progress.set_total progressbar (List.length packagelist);
   let all_packages =
     List.fold_left (fun acc (release,contents) ->
@@ -334,7 +338,7 @@ let main () =
   in
   Util.Progress.reset progressbar;
 
-  Util.print_info "installed packages";
+  info "installed packages";
   let installed_packages =
     let ch = IO.input_string status in
     let l = Deb.parse_packages_in ~extras:extras id ch in
@@ -342,13 +346,13 @@ let main () =
     l
   in
 
-  Util.print_info "union";
+  info "union";
   let l = Deb.merge installed_packages (Deb.Set.elements all_packages) in
   let tables = Debian.Debcudf.init_tables l in
   let add_extra (k,v) pkg =
     { pkg with Cudf.pkg_extra = (k,v) :: pkg.Cudf.pkg_extra } in
 
-  Util.print_info "convert";
+  info "convert";
   Util.Progress.set_total progressbar (List.length l); 
   let pl =
     List.map (fun pkg ->
@@ -364,7 +368,7 @@ let main () =
 
   let universe = Cudf.load_universe pl in
 
-  Util.print_info "request";
+  info "request";
   let request =
     let mapver = function
       |`Pkg p -> (p,None)
@@ -382,7 +386,7 @@ let main () =
                 info.Debian.Release.suite = d
               ) l
             with Not_found -> begin
-              Util.print_warning "There is no package %s in release %s " p d;
+              warning "There is no package %s in release %s " p d;
               AptPref.max_priority l
             end
           in
@@ -418,7 +422,6 @@ let main () =
         { Cudf.request_id = request_id ; install = [] ; remove = [] ; upgrade = [] ; req_extra = [] ; }
   in
 
-  Util.print_info "dump";
   let oc =
     if OptParse.Opt.is_set Options.outdir then begin
       let dirname = OptParse.Opt.get Options.outdir in

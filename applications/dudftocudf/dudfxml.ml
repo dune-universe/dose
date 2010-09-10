@@ -13,6 +13,10 @@
 open ExtLib
 open Common
 
+let debug fmt = Util.make_debug "Dudfxml" fmt
+let info fmt = Util.make_info "Dudfxml" fmt
+let warning fmt = Util.make_warning "Dudfxml" fmt
+
 module L = Xml.LazyList 
 
 (* ========================================= *)
@@ -92,7 +96,7 @@ let curlget ch url =
   in
   let errorBuffer = ref "" in
   let print_info connection =
-    Util.print_info "Download %s (time : %f)"
+    info "Download %s (time : %f)"
       (Curl.get_effectiveurl connection)
       (Curl.get_totaltime connection)
   in
@@ -182,7 +186,7 @@ let parse input_file =
   in
   let dudfuniverse node =
     Xml.fold (fun universe n ->
-      Util.print_info "   %s" (Xml.tag n);
+      info "   %s" (Xml.tag n);
       if (Xml.tag n) = "package-list" then begin
         let (fmt,filename,url,l) = 
           List.fold_left (fun (fmt,filename,url,l) -> function
@@ -213,7 +217,7 @@ let parse input_file =
   in
   let dudfproblem node =
     Xml.fold (fun dudf node ->
-      Util.print_info "  %s" (Xml.tag node);
+      info "  %s" (Xml.tag node);
       match Xml.tag node with
       |"package-status" -> {dudf with packageStatus = dudfstatus node }
       |"package-universe" -> {dudf with packageUniverse = dudfuniverse node }
@@ -224,7 +228,7 @@ let parse input_file =
   in
   let dudfinstaller node =
     Xml.fold (fun i node ->
-      Util.print_info "  %s" (Xml.tag node);
+      info "  %s" (Xml.tag node);
       match Xml.tag node with
       |"name" -> {i  with name = content_to_string node }
       |"version" -> { i with version = content_to_string node }
@@ -232,7 +236,7 @@ let parse input_file =
     ) dummydudfinst node
   in
   Xml.fold (fun dudf node -> 
-    Util.print_info " %s" (Xml.tag node);
+    info " %s" (Xml.tag node);
     match Xml.tag node with
     |"distribution" -> { dudf with distribution = content_to_string node }
     |"timestamp" -> {dudf with timestamp = content_to_string node}
