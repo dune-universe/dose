@@ -27,6 +27,7 @@ module Options = struct
   let verbose = StdOpt.incr_option ()
   let explain = StdOpt.store_true ()
   let architecture = StdOpt.str_option ()
+  let cudf_output = StdOpt.str_option ()
 
   let description = "Report outdated packages in a package list"
   let options = OptParser.make ~description ()
@@ -38,6 +39,8 @@ module Options = struct
     ~help:"Explain the results" explain;
   add options ~short_name:'a' ~long_name:"architecture"
     ~help:"Set the default architecture" architecture;
+  add options ~long_name:"cudf-to"
+    ~help:"Dump CUDF to file" cudf_output;
 end
 
 let debug fmt = Util.make_debug "" fmt
@@ -183,27 +186,31 @@ let purge_universe universe =
 (**************************************************************************)
 
 let synchronization_table package_list =
-(* Returns a hash table that maps names of binary packages to names of    *)
-(* of source packages. The table maps b to s if s is the source           *)
-(* package of some version of b, and if all binary packages coming from   *)
-(* source s have the same version number up to binary NMU.                *)
-(* Source package names that generate only one binary package are ignored *)
+(* Returns a hash table that maps each name of binary packages to a pait    *)
+(* (source-package-name, source-package-version). The table maps b to (s,v) *)
+(* if (s,v) is the source package of some version of b, and if all binary   *)
+(* packages coming from source s have the same version number up to binNMU. *)
+(* Source package names that generate only one binary package are ignored.  *)
 
   let hash_add_tolist table key value =
+    (* add a value to a list stored in a hashtable *)
     try
       let old = Hashtbl.find table key
       in old := (value::!old)
     with
 	Not_found -> Hashtbl.add table key (ref [value])
   and packages_of_source = Hashtbl.create (List.length package_list)
+  and version_of_source = Hashtbl.create (List.length package_list)
   in 
     List.iter
       (fun p -> 
 	 let name = p.Cudf.package
+	 and version = p.Cudf.version
 	 and deb_version = debversion_of_package p
 	 and src_name = sourcename_of_package p
 	 in
-	   hash_add_tolist packages_of_source src_name (name,deb_version)
+	   hash_add_tolist packages_of_source src_name (name,deb_version);
+	   Hashtbl.add version_of_source src_name version 
       )
       package_list;
     let sync_table = Hashtbl.create (List.length package_list)
@@ -216,7 +223,9 @@ let synchronization_table package_list =
 	       (ExtLib.List.unique (List.map chop_binnmu (List.map snd bins)))
 	     then
 	       List.iter
-		 (fun (binp,_binv) -> Hashtbl.add sync_table binp src)
+		 (fun (binp,_binv) ->
+		    Hashtbl.add sync_table binp
+		      (src,Hashtbl.find version_of_source src))
 		 bins
 	     else begin
 	       warning "Binary packages of source %s not synchronized" src;
@@ -273,7 +282,7 @@ let renumber packages =
 	    version_table;
 	  translation_table
   in let translation_table = build_table packages
-  and rh = Hashtbl.create (List.length packages) in
+  and constraint_table = Hashtbl.create (List.length packages) in
   let clause_map translation_table =
     List.map (fun (name,sel) ->
       match sel with
@@ -281,7 +290,7 @@ let renumber packages =
       |Some(c,v) -> begin
         let translation = Hashtbl.find translation_table name in
 	let new_v = Hashtbl.find translation v in
-          add rh name ((c :> Cudf_types.relop),new_v);
+          add constraint_table name ((c :> Cudf_types.relop),new_v);
           (name,Some(c,new_v))
       end
     )
@@ -308,7 +317,7 @@ let renumber packages =
            }
       ) 
       packages
-  in (rh,pkglist)
+  in (constraint_table,pkglist)
 ;;
 
 (************************************************************************)
@@ -374,30 +383,37 @@ let main () =
   in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   let default_arch = OptParse.Opt.opt Options.architecture in
+
   let (complete_universe,from_cudf,_) =
     Boilerplate.load_universe ~default_arch posargs in
   let from_cudf p = from_cudf (p.Cudf.package,p.Cudf.version)
   and purged_package_list = purge_universe complete_universe in
   let sync_table = synchronization_table purged_package_list 
-  and (sels,renumbered_packages) = renumber purged_package_list
+  and (constraint_table,renumbered_packages) = renumber purged_package_list
   and pp pkg =
     let (p,v) = from_cudf pkg in 
     let l = 
       ExtLib.List.filter_map (fun k ->
         try Some(k,Cudf.lookup_package_property pkg k)
         with Not_found -> None
-      ) ["architecture";"source";"sourceversion"]
+      ) ["source";"sourceversion"]
     in (p,v,l)
+  and pin_real sync_table p =
+    try
+      let (source_name,source_version) =
+	Hashtbl.find sync_table p.Cudf.package
+      in {p with
+	    Cudf.provides =
+	    ("@source-"^source_name, Some (`Eq, source_version))::
+	      p.Cudf.provides;
+	    Cudf.conflicts =
+	    ("@source-"^source_name, Some (`Neq, source_version))::
+	      p.Cudf.conflicts; 
+	 }
+    with Not_found -> p
   in
   let pl =
-    let pinned_real_packages =
-      List.map
-	(fun p -> {p with
-		     Cudf.provides = ("@source-"^(sourcename_of_package p),Some (`Eq, p.Cudf.version))::p.Cudf.provides;
-		     Cudf.conflicts = ("@source-"^(sourcename_of_package p),Some (`Neq, p.Cudf.version))::p.Cudf.conflicts;
-		  })
-	renumbered_packages
-    and real_versions = Hashtbl.create (List.length renumbered_packages)
+    let real_versions = Hashtbl.create (List.length renumbered_packages)
     in
       List.iter
 	(fun p -> Hashtbl.add real_versions p.Cudf.package p.Cudf.version)
@@ -414,10 +430,10 @@ let main () =
 		   Cudf.version = v;
 		   Cudf.depends = [];
 		   Cudf.provides = (match sync with
-		       Some s -> ["@source-"^s, Some (`Eq, v)]
+		       Some (s,_sv) -> ["@source-"^s, Some (`Eq, v)]
 		     | None -> []);
 		   Cudf.conflicts = (match sync with
-		       Some s -> ["@source-"^s, Some (`Neq, v);p,None]
+		       Some (s,_sv) -> ["@source-"^s, Some (`Neq, v);p,None]
 		     | None -> [p,None]);
 		   Cudf.installed = false;
 		   Cudf.was_installed = false;
@@ -426,27 +442,34 @@ let main () =
 		  })
 	       (interesting_future_versions p !sels real_versions))@acc
 	)
-	sels
-	pinned_real_packages
+	constraint_table
+	(List.map (pin_real sync_table) renumbered_packages)
   in
+  info "Number of packages after renumbering: %i" (List.length pl);
   let universe = Cudf.load_universe pl in 
-  print_string (Cudf_printer.string_of_universe universe);
-  print_newline ();
+      
   info "Solving..." ;
   let timer = Util.Timer.create "Solver" in
   Util.Timer.start timer;
   let explain = OptParse.Opt.get Options.explain in
   let fmt = Format.std_formatter in
   Format.fprintf fmt "@[<v 1>report:@,";
-  let callback = Diagnostic.fprintf ~pp ~failure:true ~success:false ~explain fmt in
+  let callback =
+    Diagnostic.fprintf ~pp ~failure:true ~success:false ~explain fmt in
   let i = Depsolver.univcheck ~callback universe 
   in
-  ignore(Util.Timer.stop timer ());
-  Format.fprintf fmt "@]@.";
-  Format.fprintf fmt "total-packages: %d\n" (Cudf.universe_size universe);
-  Format.fprintf fmt "broken-packages: %d\n" i;
-  if OptParse.Opt.is_set Options.architecture then
-    Format.fprintf fmt "architecture: %s\n" (OptParse.Opt.get Options.architecture)
+    ignore(Util.Timer.stop timer ());
+
+    Format.fprintf fmt "@]@.";
+    Format.fprintf fmt "total-packages: %d\n" (Cudf.universe_size universe);
+    Format.fprintf fmt "broken-packages: %d\n" i;
+    if OptParse.Opt.is_set Options.architecture then
+      Format.fprintf fmt "architecture: %s\n"
+	(OptParse.Opt.get Options.architecture);
+    if OptParse.Opt.is_set Options.cudf_output then
+      let ch=open_out (OptParse.Opt.get Options.cudf_output) in
+	Cudf_printer.pp_universe (Format.formatter_of_out_channel ch) universe;
+	close_out ch
 ;;
 
 main () ;;
