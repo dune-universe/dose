@@ -7,16 +7,11 @@
      --> to perform the clustered analysis properly, we need to have all the Cudf versions of every package in a
          cluster aligned properly; it is not the case today, as 1.1.2-2 may be version 3 for toto and 5 for
          titi;
-         solusions:
-           (1) we produce Cudf versions as a unique linear order on the whole repository, and then we
+         solution:
+               we produce Cudf versions as a unique linear order on the whole repository, and then we
                can build clusters any way we want, but we will have big holes in the version sequence of each package)
-           (2) we align version only inside a cluster, but then the parser deb->cudf needs to know about clusters,
-               and we still have holes in the version sequence number
-           (3) ??? 
 
-     --> in clustered mode, we should only test packages in a cluster on relevant versions *for them*;
-         this may require changing the logic for selecting the discriminants!
-
+     --> vl_of_p and at_v have the same structure... factor code and publish abstraction!
    *)
 
   (* FIXME: change the logic below to the following
@@ -119,24 +114,24 @@ let init_versions_table table =
 ;;
 
 (* build a mapping between package names and a map old version -> new version *)
+(* using new = old * 2                                                        *)
 let build_table universe =
   let version_table = Hashtbl.create (Cudf.universe_size universe) in
   Cudf.iter_packages (init_versions_table version_table) universe;
   let h = Hashtbl.create (Cudf.universe_size universe) in
   Hashtbl.iter (fun k {contents=l} ->
-    let c = ref 1 in
     let hv = Hashtbl.create (List.length l) in
     List.iter (fun n ->
-      (* Printf.eprintf "%s : %d -> %d\n" k n (2 * !c); *)
-      Hashtbl.add hv n (2 * !c);
-      c := !c + 1
+      Hashtbl.add hv n (2 * n);
     ) (List.sort (List.unique l));
     Hashtbl.add h k hv
   ) version_table;
   h
 
 (* map the old universe in a new universe where all versions are even *)
-let renumber universe = 
+(* the from_cudf function returns real versions for even cudf ones    *)
+(* and a representation of the interval n-1, n+1 for odd cudf ones    *)
+let renumber (universe,from_cudf,to_cudf)= 
   let add table name version =
     try let l = Hashtbl.find table name in l := version::!l
     with Not_found -> Hashtbl.add table name (ref [version])
@@ -180,7 +175,16 @@ let renumber universe =
         }
       in p::acc
     ) [] universe 
-  in (rh,pkglist)
+  in 
+  let from_cudf' (p,i) = 
+    (* Printf.eprintf "from_cudf' : %s %d\n" p i; 
+    let s = *)
+      if i mod 2 = 0 && i> 2 then try from_cudf (p,(i/2)) with Not_found -> Printf.sprintf "<missing version %d for %s!>" i p 
+      else Printf.sprintf "%s . %s" (try (from_cudf (p,(i/2)))^" <" with Not_found -> "") (try "< "^(from_cudf (p,(i/2+1))) with Not_found -> "")
+    (* in Printf.eprintf "from_cudf' : %s %d gives %s\n" p i s; s *)
+  in
+  let to_cudf' (p,v) = 2 * (to_cudf (p,v))
+  in (rh,pkglist),from_cudf',to_cudf'
 
 (* 
    group packages having the same source into clusters; 
@@ -224,22 +228,39 @@ let mem_package univ (p,v) =
   with Not_found -> false
 ;;
 
-(* function to create a dummy package with a given version and name *)
-let create_dummy univ p v = 
-  let offset =
-    if p.Cudf.version > v then 
-      Printf.sprintf "[-%d]" (p.Cudf.version - v)
+
+(* return a debian version interval corresponding to cudf version v *)
+(* and relevant for package p                                       *)
+
+let debv_of p v vl from_cudf = 
+  let deb_of v = from_cudf(p.Cudf.package,v) in
+  let vl = List.sort ~cmp:(fun v v' -> v-v') vl in
+  let n =
+    if List.mem v vl || vl = [] then deb_of v
     else 
-      Printf.sprintf "[+%d]" (v - p.Cudf.version)
-  in
-  let n = 
-    try (Cudf.lookup_package_property p "number")^offset
-    with Not_found -> Printf.sprintf "%d%s" p.Cudf.version offset
-    in
+      try 
+	let (i,v') = List.findi (fun _ w -> w > v) vl 
+	in if i = 0 then Printf.sprintf "(< %s)" (deb_of v')
+	else Printf.sprintf "(%s < %s < %s)" 
+	    (deb_of (List.nth vl (i-1))) 
+	  (if v mod 2 = 0 then deb_of v else ".")
+	    (deb_of v')
+      with Not_found -> Printf.sprintf "(> %s)" (deb_of (List.last vl))
+  in 
+  Printf.printf "For package %s : \n" p.Cudf.package;
+  List.iter (fun v' -> Printf.printf " %d -> %s \n" v' (from_cudf(p.Cudf.package,v'))) vl;
+  Printf.printf "  cudf %d gives %s\n" v n;
+  n
+;;
+
+(* function to create a dummy package with a given version and name  *)
+(* and an extra property 'number' with a representation of version v *)
+(* built using the list vl of known versions of p in the universe    *)
+let create_dummy univ p v vl from_cudf=
   {Cudf.default_package with
    Cudf.package = p.Cudf.package;
-   version = v;
-   pkg_extra = [("number",`String n)] 
+   version = v; 
+   pkg_extra = [("number",`String (debv_of p v vl from_cudf))] 
    }
 ;;
   (* discriminants takes a list of version selectors and provide a minimal list 
@@ -299,8 +320,8 @@ let discriminants_of vl sels=
 
 let to_set l = List.fold_right CudfAdd.Cudf_set.add l CudfAdd.Cudf_set.empty ;;
 
-let prediction universe =
-  let (version_table,pkglist) = renumber universe in
+let prediction (universe,from_cudf,to_cudf) =
+  let (version_table,pkglist),from_cudf,to_cudf = renumber (universe,from_cudf,to_cudf) in
   let size = Cudf.universe_size universe in
   let res = Hashtbl.create size in
   let universe = Cudf.load_universe pkglist in
@@ -311,7 +332,7 @@ let prediction universe =
     if (OptParse.Opt.get Options.lockstep) then
       src_clusters_of pkglist 
     else
-      List.map (fun p -> 
+      List.map (fun p -> (* use package-version as unique identifier for the cluster *)
         let s = Printf.sprintf "%s%d" p.Cudf.package p.Cudf.version in
         (s, [p])
       ) pkglist
@@ -353,7 +374,7 @@ let prediction universe =
       if okcl <> [] then 
         begin
           Printf.printf "Analysing cluster:\n    ";
-          List.iter (fun (p,_) -> Printf.printf "%s " (string_of_package p)) okcl;
+          List.iter (fun (p,_) -> Printf.printf "%s" (string_of_package p)) okcl;
           print_newline();
           let sels = List.unique okvl in
           let vl,explain = discriminants sels in
@@ -366,8 +387,12 @@ let prediction universe =
             ) okcl;
             h
           in
-          (* precompute actual versions of package in this cluster *)
-          (* let clv = List.map (fun p -> p.Cudf.version, p) okcl in *)
+          (* precompute versions of packages in this cluster *)
+          let vl_of_p = 
+	    let h = Hashtbl.create 17 in
+	    let _ = List.iter (fun (p,cl) -> let vl = List.unique (List.map snd cl) in Hashtbl.add h p.Cudf.package vl) okcl in
+	    (fun p -> try Hashtbl.find h p.Cudf.package with Not_found -> assert false)
+	  in
           List.iter 
             (fun v ->
               (* compute a universe with the relevant packages in the cluster moved to version v *)
@@ -376,7 +401,7 @@ let prediction universe =
               let okcl_at_v = 
                 List.map (fun p -> 
                   if mem_package universe (p.Cudf.package,v) then p
-                  else create_dummy universe p v
+                  else create_dummy universe p v (vl_of_p p) from_cudf
                 ) okclp
               in
 	      let at_v = 
@@ -397,6 +422,11 @@ let prediction universe =
                 (* for each package in the cluster, perform analysis *)
                 (fun (p,psels,pdiscr) -> 
                   let pn = (string_of_package p) in
+                  Printf.printf " analysing package %s\n" pn;
+                  let sizeisp, isp = try CudfAdd.Cudf_hashtbl.find ispl p with Not_found -> assert false in
+		  if sizeisp <= 0 then
+                    Printf.printf " ignoring package %s : it has an empty impact set.\n" pn
+		  else
 		  if not (List.mem v pdiscr) then
                     Printf.printf " ignoring cluster version %d, which is not a discriminant of package %s.\n" v pn
 		  else
@@ -410,9 +440,8 @@ let prediction universe =
                     else
                       if mem_package universe (p.Cudf.package,v) then
                         Printf.printf "If we replace %s with version %d, then all its impact set becomes uninstallable.\n" pn v
-                      else begin
-                        let sizeisp, isp = try CudfAdd.Cudf_hashtbl.find ispl p with Not_found -> assert false in
-                        begin
+                      else 
+			begin
                           let broken =
                             List.fold_left
                               (fun acc q ->
@@ -428,8 +457,12 @@ let prediction universe =
                               ) [] isp
                           in
                           let nbroken = List.length broken in
-                          Printf.printf " Changing version from %s to %s breaks %d/%d (=%f percent) of its Impact set.\n"
-                            pn (string_of_package (at_v p)) nbroken sizeisp (float (nbroken * 100)  /. (float sizeisp));
+			  let pn' = 
+			    let p' = at_v p in 
+			    Printf.sprintf "%s %s" p.Cudf.package (CudfAdd.string_of_version p')
+			  in
+                          Printf.printf " Changing %s [cudf=%d] to %s [cudf=%d] breaks %d/%d (=%f percent) of its Impact set.\n"
+                            pn p.Cudf.version pn' v nbroken sizeisp (float (nbroken * 100)  /. (float sizeisp));
                           Printf.printf " Version %d valuates the existing version selectors as follows:\n  " v;
                           List.iter (fun (op,v) -> Printf.printf "(%s,%d) " (string_of_relop op) v) sels; print_newline();
                           List.iter (fun v -> Printf.printf "%b " v) (List.map (evalsel v) sels); print_newline();
@@ -437,8 +470,7 @@ let prediction universe =
                           List.iter (fun q -> 
                             Printf.printf "  - %s\n" (string_of_package q);
                           ) broken
-                        end
-                      end
+			end
                 ) okcl'
             ) vl
         end
@@ -451,8 +483,8 @@ let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
   if OptParse.Opt.get Options.debug then Boilerplate.enable_debug 1 ;
-  let (universe,_,_) = Boilerplate.load_universe posargs in
-  prediction universe
+  let (universe,from_cudf,to_cudf) = Boilerplate.load_universe posargs in
+  prediction (universe,(fun x -> snd (from_cudf x)), (fun x -> snd (to_cudf x)))
 (*
   let outch = open_out "pred.table" in
   List.iter (fun (p,diff,s,d) ->
