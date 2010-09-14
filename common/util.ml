@@ -53,7 +53,7 @@ module MakeMessages(X : sig val label : string end) = struct
   let eprintf t fmt =
     Printf.kprintf (
       if (t.enabled || !allenabled) then begin
-        (fun s -> Format.eprintf "(%s)%s : %s@." X.label t.label s)
+        (fun s -> Format.eprintf "(%s)%s: %s@." X.label t.label s)
       end else ignore
     ) fmt
 

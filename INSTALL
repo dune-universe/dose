@@ -1,5 +1,6 @@
 
 Dose3 needs ocaml >= 3.11.2
+On debian, dose3 **does not compile** on debian lenny.
 
 required libraries ( DEBIAN / RPM ) :
  - libextlib-ocaml-dev / ocaml-extlib-devel
