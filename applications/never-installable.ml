@@ -186,7 +186,7 @@ let purge_universe universe =
 (**************************************************************************)
 
 let synchronization_table package_list =
-(* Returns a hash table that maps each name of binary packages to a pait    *)
+(* Returns a hash table that maps each name of binary packages to a pair    *)
 (* (source-package-name, source-package-version). The table maps b to (s,v) *)
 (* if (s,v) is the source package of some version of b, and if all binary   *)
 (* packages coming from source s have the same version number up to binNMU. *)
@@ -248,7 +248,7 @@ let renumber packages =
     try let l = Hashtbl.find table name in l := version::!l
     with Not_found -> Hashtbl.add table name (ref [version])
   in let add_to_versions_table table =
-    (* collect all possible versions *)
+    (* collect all versions of all packages mentioned somewhere *)
       let clause_iter =
 	List.iter (fun (name,sel) ->
 		     match sel with
