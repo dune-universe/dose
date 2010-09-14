@@ -62,8 +62,7 @@ let main () =
   in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   let default_arch = OptParse.Opt.opt Options.architecture in
-  let (universe,from_cudf,_) =
-    Boilerplate.load_universe ~default_arch posargs in
+  let (universe,from_cudf,_) = Boilerplate.load_universe ~default_arch posargs in
   let pp pkg =
     let (p,v) = from_cudf (pkg.Cudf.package,pkg.Cudf.version) in 
     let l = 

@@ -68,18 +68,21 @@ let main () =
   let sl = List.map (fun pkg -> Debcudf.tocudf tables pkg) srclist in
   let l = List.fold_left (fun acc pkg -> (Debcudf.tocudf tables pkg)::acc) sl pkglist in
   let universe = Cudf.load_universe l in
-
-  let from_cudf pkg =
+  let pp pkg =
     let (p,i) = (pkg.Cudf.package,pkg.Cudf.version) in
     let v = Debian.Debcudf.get_real_version tables (p,i) in
-    (p,v)
+    let l =
+      List.filter_map (fun k ->
+        try Some(k,Cudf.lookup_package_property pkg k)
+        with Not_found -> None
+      ) ["architecture";"source";"sourceversion"]
+    in (p,v,l)
   in
-
   info "Solving..." ;
   let failure = OptParse.Opt.get Options.failures in
   let success = OptParse.Opt.get Options.successes in
   let explain = OptParse.Opt.get Options.explain in
-  let callback = Diagnostic.printf ~pp:from_cudf ~failure ~success ~explain in
+  let callback = Diagnostic.printf ~pp ~failure ~success ~explain in
   let i = Depsolver.listcheck ~callback universe sl in
   Printf.eprintf "Broken Packages: %d\n" i
 ;;
