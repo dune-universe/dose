@@ -21,7 +21,7 @@ val warning : ('a, unit, string, unit) format4 -> 'a
 
 open ExtLib
 
-type convertion
+type conversion
 
 (** [constraints universe] returns a map between package names
     and an ordered list of constraints where the package name is
@@ -36,12 +36,12 @@ val constraints :
    and a representation of the interval n-1, n+1 for odd cudf ones    *)
 val renumber :
   Cudf.universe * (string * int -> string) * (string * string -> int) ->
-  convertion
+  conversion
 
 (** create a dummy package with a given version and name and an extra property
     'number' with a representation of version v *)
 val create_dummy :
-  convertion -> Cudf_types.pkgname * Cudf_types.version -> Cudf.package
+  conversion -> Cudf_types.pkgname * Cudf_types.version -> Cudf.package
 
 (* discriminants takes a list of version selectors and provide a hashtbl with
    keys the minimal list of versions v1,...,vn s.t. all possible combinations 
@@ -54,5 +54,5 @@ val discriminants :
 
 (** [migrate table v l] migrates all packages in [l] to version [v] *)
 val migrate :
-  convertion -> Cudf_types.version -> Cudf.package list -> Cudf.package list
+  conversion -> Cudf_types.version -> Cudf.package list -> Cudf.package list
 

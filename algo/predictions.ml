@@ -22,7 +22,7 @@ let debug fmt = Util.make_debug "Algo.Predictions" fmt
 let info fmt = Util.make_info "Algo.Predictions" fmt
 let warning fmt = Util.make_warning "Algo.Predictions" fmt
 
-type convertion = {
+type conversion = {
   universe : Cudf.universe ;
   from_cudf : string * int -> string ;
   to_cudf : string * string -> int ;
