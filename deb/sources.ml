@@ -28,7 +28,6 @@ type source = {
   architecture : architecture list
 }
 
-
 let parse_name = parse_package
 let parse_arch s = Str.split (Str.regexp " ") s
 let parse_version s = parse_version s

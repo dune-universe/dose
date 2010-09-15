@@ -10,6 +10,38 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
+module OCAMLHashtbl = Hashtbl
+module OCAMLSet = Set
+open ExtLib
+
+(* I want to hash packages by name/version without considering
+   other fields like Installed / keep / etc.  *)
+(** compare two cudf packages only using name and version *)
+let compare = Cudf.(<%)
+
+(** has a cudf package only using name and version *)
+let hash p = Hashtbl.hash (p.Cudf.package,p.Cudf.version)
+
+(** two cudf packages are equal if name and version are the same *)
+let equal = Cudf.(=%)
+
+(** specialized Hash table for cudf packages *)
+module Cudf_hashtbl =
+  OCAMLHashtbl.Make(struct
+    type t = Cudf.package
+    let equal = equal
+    let hash = hash
+  end)
+
+(** specialized Set for cudf packages *)
+module Cudf_set =
+  OCAMLSet.Make(struct
+    type t = Cudf.package
+    let compare = compare
+  end)
+
+let to_set l = List.fold_right Cudf_set.add l Cudf_set.empty
+
 (** additional functions on Cudf data type.  *)
 
 let add_properties preamble l =
@@ -48,33 +80,21 @@ let is_essential pkg =
 let print_package pkg = string_of_package pkg
 (**/*)
 
-(* I want to hash packages by name/version without considering
-   other fields like Installed / keep / etc.  *)
-(** compare two cudf packages only using name and version *)
-let compare = Cudf.(<%)
+(** [pkgnames universe] returns a list of unique package names *)
+let pkgnames universe =
+  let h = Hashtbl.create (Cudf.universe_size universe) in
+  Cudf.fold_packages (fun acc pkg ->
+    if not (Hashtbl.mem h pkg.Cudf.package) then begin
+      Hashtbl.add h pkg.Cudf.package () ;
+      pkg.Cudf.package::acc
+    end else acc
+  ) [] universe
 
-(** has a cudf package only using name and version *)
-let hash p = Hashtbl.hash (p.Cudf.package,p.Cudf.version)
-
-(** two cudf packages are equal if name and version are the same *)
-let equal = Cudf.(=%)
-
-(** specialized Hash table for cudf packages *)
-module Cudf_hashtbl =
-  Hashtbl.Make(struct
-    type t = Cudf.package
-    let equal = equal
-    let hash = hash
-  end)
-
-(** specialized Set for cudf packages *)
-module Cudf_set =
-  Set.Make(struct
-    type t = Cudf.package
-    let compare = compare
-  end)
-
-open ExtLib
+(** [mem_package univ (p,v)] returns true if the universe contains
+    a package with name [p] and version [v], false otherwise *)
+let mem_package univ (p,v) =
+  try ignore(Cudf.lookup_package univ (p,v)); true
+  with Not_found -> false
 
 (** maps one to one cudf packages to integers *)
 class projection = object(self)
