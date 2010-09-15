@@ -1,3 +1,19 @@
+(**************************************************************************)
+(*  This file is part of a library developed with the support of the      *)
+(*  Mancoosi Project. http://www.mancoosi.org                             *)
+(*                                                                        *)
+(*  Main author(s):                                                       *)
+(*    Copyright (C) 2009,2010 Pietro Abate <pietro.abate@pps.jussieu.fr>  *)
+(*                                                                        *)
+(*  Contributor(s):                                                       *)
+(*                                                                        *)
+(*  This library is free software: you can redistribute it and/or modify  *)
+(*  it under the terms of the GNU Lesser General Public License as        *)
+(*  published by the Free Software Foundation, either version 3 of the    *)
+(*  License, or (at your option) any later version.  A special linking    *)
+(*  exception to the GNU Lesser General Public License applies to this    *)
+(*  library, see the COPYING file for more information.                   *)
+(**************************************************************************)
 
 open Common
 open ExtLib
@@ -208,7 +224,7 @@ let discriminants ?(vl=[]) constraints =
   end else
     List.iter add (List.sort ~cmp:(fun v1 v2 -> v2 - v1) vl)
   ;
-  Hashtbl.fold (fun k v acc -> k::acc) constr_eval [], constr_eval
+  constr_eval
 ;;
 
 (** [migrate table v l] migrates all packages in [l] to version [v] *)
