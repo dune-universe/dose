@@ -28,6 +28,7 @@ module Options = struct
   let verbose = StdOpt.incr_option ()
   let outdir = StdOpt.str_option ()
   let problemid = StdOpt.str_option ()
+  let archdefault = StdOpt.str_option ~default:"" ()
 
   let description = "Convert Debian Dudf files to Cudf format"
   let options = OptParser.make ~description:description ()
@@ -35,6 +36,7 @@ module Options = struct
   open OptParser ;;
   add options ~short_name:'v' ~long_name:"verbose" ~help:"Print additional information" verbose;
   add options ~short_name:'o' ~long_name:"outdir" ~help:"Output directory" outdir;
+  add options ~short_name:'a' ~long_name:"arch" ~help:"Default architecture" archdefault;
   add options                 ~long_name:"id" ~help:"Problem id" problemid;
 end
 
@@ -324,11 +326,12 @@ let main () =
 
   info "parse all packages";
   Util.Progress.set_total progressbar (List.length packagelist);
+  let default_arch = (OptParse.Opt.opt Options.archdefault) in
   let all_packages =
     List.fold_left (fun acc (release,contents) ->
       Util.Progress.progress progressbar ;
       let ch = IO.input_string contents in
-      let l = Deb.parse_packages_in ~extras:extras id ch in
+      let l = Deb.parse_packages_in  ~default_arch:default_arch ~extras:extras id ch in
       let _ = IO.close_in ch in
       List.fold_left (fun s pkg -> 
         Hashtbl.add infoH (pkg.Deb.name,pkg.Deb.version) release ;
