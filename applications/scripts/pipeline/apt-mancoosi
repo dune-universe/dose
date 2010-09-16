@@ -34,6 +34,23 @@ OPTIONS:
                inesct-1.0 (trendy)
                p2cudf-paranoid-1.6 (default)
                p2cudf-trendy-1.6
+               p2param
+
+   -o      User defined objective function:
+
+             + or - indicate maximize or minimize criterion
+
+           know criteria are 
+
+             new : number of new packages in the solution
+             changed : number of changed packages
+             notuptodate : number of packages not at the last version
+             recommended : number of packages with satisfied recommends
+             removed : number of packages removed
+
+           For example, paranoid can be expressed as
+
+            -removed,-changed,-new
 
    -f      Dudf file (format xml not compressed)
    -v      Verbose
@@ -46,18 +63,25 @@ DUDFFILE=
 APTCMD=
 DEBUG=
 VERBOSE=
+OBJFUN=
 
-while getopts  "vf:hs:d" flag
+while getopts  "vf:hs:do:" flag
 do
   case "$flag" in
     s) SOLVER=$OPTARG ;;
     f) DUDFFILE=$OPTARG ;;
+    o) OBJFUN=$OPTARG ;;
     d) set -x ; DEBUG=true ;;
     v) VERBOSE=true ;; 
     h) usage ; exit 0;;
   esac
 #  echo "$flag" $OPTIND $OPTARG
 done
+
+if [ ! -z $OBJFUN ]; then
+    echo "Setting solver to p2param, the only one that supports user defined objective functions up to now";
+    SOLVER=p2param;
+fi
 
 if [ -z $DUDFFILE ]; then
   shift $((OPTIND-1))
@@ -69,7 +93,8 @@ if [ -z $DUDFFILE ]; then
   fi
 fi
 
-BASE=`pwd`
+RELPATH=`dirname $0`
+BASE=`readlink -f $RELPATH`
 DUDFSAVE=$BASE/bin/dudf-save
 DUDFCUDF=$BASE/bin/deb-dudftocudf.native
 SOLVERHOME=$BASE/solvers/$SOLVER
@@ -98,7 +123,7 @@ CUDFFILE=$TEMPDIR/${DUDFFILE/.xml/.cudf}
 echo "solving ($SOLVER)"
 echo "$SOLVER" >> $TIMEFILE
 cd $SOLVERHOME
-$TIME ./$SOLVER $CUDFFILE $TEMPDIR/solution.cudf >& $TEMPDIR/solver.log
+$TIME ./$SOLVER $CUDFFILE $OBJFUN $TEMPDIR/solution.cudf >& $TEMPDIR/solver.log
 cd -
 
 echo "Building apt-args"
@@ -107,6 +132,12 @@ $TIME $SOLTOAPT -verbose -cudf $CUDFFILE -sol solution.cudf > apt-score-args
 tail -n 1 apt-score-args > apt-args
 
 echo
+
+#
+# Print summary of changes
+#
+head -11 apt-score-args
+
 echo "apt-get -s install `cat apt-args`"
 cd ..
 
