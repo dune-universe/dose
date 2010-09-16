@@ -37,6 +37,8 @@ OPTIONS:
                p2param
 
    -o      User defined objective function:
+           the solver will look for a solution optimizing
+	   a sequence of criteria, in the order given (lexicographically)
 
              + or - indicate maximize or minimize criterion
 
@@ -52,7 +54,12 @@ OPTIONS:
 
             -removed,-changed,-new
 
+	   which gives a pretty different result from
+
+	    -changed,-removed,-new
+
    -f      Dudf file (format xml not compressed)
+   -a      Architecture (set the default architecture, e.g. i386, amd64, ...)
    -v      Verbose
    -d      Debug
 EOF
@@ -64,12 +71,15 @@ APTCMD=
 DEBUG=
 VERBOSE=
 OBJFUN=
+ARCH=
+DPKG=`which dpkg`
 
-while getopts  "vf:hs:do:" flag
+while getopts  "vf:hs:do:a:" flag
 do
   case "$flag" in
     s) SOLVER=$OPTARG ;;
     f) DUDFFILE=$OPTARG ;;
+    a) ARCH=$OPTARG ;;
     o) OBJFUN=$OPTARG ;;
     d) set -x ; DEBUG=true ;;
     v) VERBOSE=true ;; 
@@ -78,20 +88,36 @@ do
 #  echo "$flag" $OPTIND $OPTARG
 done
 
-if [ ! -z $OBJFUN ]; then
+if [ ! -z "$OBJFUN" ]; then
     echo "Setting solver to p2param, the only one that supports user defined objective functions up to now";
     SOLVER=p2param;
 fi
 
-if [ -z $DUDFFILE ]; then
+
+if [ -z "$DPKG" ]; then
+    if [ -z "$ARCH" -o -z "$DUDFFILE" ]; then
+	usage
+        echo
+	echo "It appears you are trying to run " `basename $0` " on a non Debian-based machine:"
+	echo "to do this, you need to provide an input DUDF file and a default architecture."
+	exit 1
+    fi
+else 
+  ARCH=${ARCH:=`dpkg --print-architecture`}
+fi
+
+if [ -z "$DUDFFILE" ]; then
   shift $((OPTIND-1))
   APTCMD="$@"
   if [ -z "$APTCMD" ]; then
-    echo "you must specify an apt-get command line or a dudf file"
     usage
+    echo
+    echo "You must specify an apt-get command line or a dudf file with a default architecture"
     exit 1
   fi
 fi
+
+echo "Default architecture is set to $ARCH"
 
 RELPATH=`dirname $0`
 BASE=`readlink -f $RELPATH`
@@ -117,8 +143,8 @@ fi
 
 echo "dudf to cudf (deb-dudftocudf)"
 echo "deb-dudftocudf" >> $TIMEFILE
-$TIME $DUDFCUDF --outdir . $DUDFFILE
-CUDFFILE=$TEMPDIR/${DUDFFILE/.xml/.cudf}
+$TIME $DUDFCUDF -a $ARCH --outdir . $DUDFFILE
+CUDFFILE=$TEMPDIR/`basename $DUDFFILE .xml`.cudf
 
 echo "solving ($SOLVER)"
 echo "$SOLVER" >> $TIMEFILE

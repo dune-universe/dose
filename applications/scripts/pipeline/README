@@ -34,6 +34,8 @@ OPTIONS:
                p2param
 
    -o      User defined objective function:
+           the solver will look for a solution optimizing
+           a sequence of criteria, in the order given (lexicographically)
 
              + or - indicate maximize or minimize criterion
 
@@ -49,9 +51,15 @@ OPTIONS:
 
             -removed,-changed,-new
 
+           which gives a pretty different result from
+
+            -changed,-removed,-new
+
    -f      Dudf file (format xml not compressed)
 
    -d      Debug
+
+   -a      Architecture (set the default architecture, e.g. i386, amd64, ...)
 
    -v      Verbose
 
