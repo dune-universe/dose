@@ -55,11 +55,12 @@ val renumber : (Cudf.universe * from_t * to_t) -> conversion
 val create_dummy :
   conversion -> Cudf_types.pkgname * Cudf_types.version -> Cudf.package
 
-(* discriminants takes a list of version selectors and provide a hashtbl with
-   keys the minimal list of versions v1,...,vn s.t. all possible combinations 
-   of the values of the version selectors are exhibited, and values the
-   evaluation list asosciated to the version *)
-val discriminants : ?vl:int list -> constr list -> (int, bool list) Hashtbl.t
+(* discriminants takes a list of version constraints and provides a hashtbl with
+   keys the minimal list of versions v1,...,vn s.t. all possible combinations of
+   the values of the version constraints are exhibited. Values associated to
+   each version vi is the evaluation list asosciated to the version 
+   *)
+val discriminants : constr list -> (int, bool list) Hashtbl.t
 
 (** [migrate table v l] migrates all packages in [l] to version [v] *)
 val migrate :

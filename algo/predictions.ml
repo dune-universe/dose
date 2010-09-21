@@ -44,24 +44,26 @@ let add_unique h k v =
     Hashtbl.add h k vh
   end
 
+(* collect dependency information *)
+let conj_iter f t l =
+  List.iter (fun (name,sel) ->
+    match sel with
+    |None -> ()
+    |Some(c,v) -> add_unique t name (f (c,v))
+  ) l
+let cnf_iter f t ll = List.iter (conj_iter f t) ll 
+
 (** [constraints universe] returns a map between package names
     and an ordered list of constraints where the package name is
     mentioned *) 
 let constraints universe =
-  let conj_iter table =
-    List.iter (fun (name,sel) ->
-      match sel with
-      |None -> ()
-      |Some(c,v) -> add_unique table name (c,v)
-    )
-  in
-  let cnf_iter table = List.iter (conj_iter table) in
-  let table = Hashtbl.create (Cudf.universe_size universe) in
+  let id x = x in
+  let constraints_table = Hashtbl.create (Cudf.universe_size universe) in
   Cudf.iter_packages (fun pkg ->
-    (* add table pkg.Cudf.package (`Eq,pkg.Cudf.version); *)
-    conj_iter table pkg.Cudf.conflicts ;
-    conj_iter table (pkg.Cudf.provides :> Cudf_types.vpkglist) ;
-    cnf_iter table pkg.Cudf.depends
+    (* add_unique constraints_table pkg.Cudf.package (`Eq,pkg.Cudf.version); *)
+    conj_iter id constraints_table pkg.Cudf.conflicts ;
+    conj_iter id constraints_table (pkg.Cudf.provides :> Cudf_types.vpkglist) ;
+    cnf_iter id constraints_table pkg.Cudf.depends
   ) universe
   ;
   let h = Hashtbl.create (Cudf.universe_size universe) in
@@ -70,7 +72,7 @@ let constraints universe =
       Hashtbl.fold (fun k v acc -> k::acc) hv []
     )
   in
-  Hashtbl.iter (fun n hv -> Hashtbl.add h n (elements hv)) table;
+  Hashtbl.iter (fun n hv -> Hashtbl.add h n (elements hv)) constraints_table;
   h
 ;;
 
@@ -79,45 +81,34 @@ let all_constraints table pkgname =
   with Not_found -> []
 ;;
 
-(* collect all possible versions *)
-let init_versions_table table pkg =
-  let add name version =
-    try let l = Hashtbl.find table name in l := version::!l
-    with Not_found -> Hashtbl.add table name (ref [version])
-  in
-  let conj_iter l =
-    List.iter (fun (name,sel) ->
-      match sel with
-      |None -> ()
-      |Some(_,version) -> add name version
-    ) l
-  in
-  let cnf_iter ll = List.iter conj_iter ll in
-  add pkg.Cudf.package pkg.Cudf.version;
-  cnf_iter pkg.Cudf.depends ;
-  conj_iter pkg.Cudf.conflicts ;
-  conj_iter pkg.Cudf.provides
-;;
-
 (* build a mapping between package names and a map old version -> new version *)
 (* using new = old * 2                                                        *)
-let build_table constraints =
-  let h = Hashtbl.create (Hashtbl.length constraints) in
-  Hashtbl.iter (fun k l ->
-    let hv = Hashtbl.create (List.length l) in
-    List.iter (fun (_,n) ->
-      Hashtbl.add hv n (2 * n);
-    ) l;
-    Hashtbl.add h k hv
-  ) constraints;
+let build_table universe =
+  let version_table = Hashtbl.create (Cudf.universe_size universe) in
+  Cudf.iter_packages (fun pkg ->
+    add_unique version_table pkg.Cudf.package pkg.Cudf.version;
+    cnf_iter snd version_table pkg.Cudf.depends ;
+    conj_iter snd version_table pkg.Cudf.conflicts ;
+    conj_iter snd version_table pkg.Cudf.provides
+  ) universe
+  ;
+  let h = Hashtbl.create (Cudf.universe_size universe) in
+  Hashtbl.iter (fun k hv ->
+    let new_hv = Hashtbl.create (Hashtbl.length hv) in
+    Hashtbl.iter (fun n _ ->
+      Hashtbl.add new_hv n (2 * n);
+    ) hv;
+    Hashtbl.add h k new_hv
+  ) version_table;
   h
 
 (* map the old universe in a new universe where all versions are even *)
 (* the from_cudf function returns real versions for even cudf ones    *)
 (* and a representation of the interval n-1, n+1 for odd cudf ones    *)
 let renumber (universe,from_cudf,to_cudf) =
-  let c = constraints universe in
-  let h = build_table c in
+  (* XXX the only difference is that contraints does not contain the versions
+   * of real packages ... *)
+  let h = build_table universe in
   let map n v =
     try Hashtbl.find (Hashtbl.find h n) v 
     with Not_found -> assert false
@@ -142,23 +133,50 @@ let renumber (universe,from_cudf,to_cudf) =
       in p::acc
     ) [] universe
   in
+  let new_universe = Cudf.load_universe pkglist in
+  let constr = constraints new_universe in
   let new_from_cudf (p,i) =
-    if i mod 2 = 0 && i > 2 then
-      try from_cudf (p,(i/2)) 
-      with Not_found -> 
-        (p,Printf.sprintf "<missing version %d for %s!>" i p)
-    else
-      let hi = (try (snd(from_cudf (p,(i/2))))^" <" with Not_found -> "") in
-      let low = (try "< "^(snd(from_cudf (p,(i/2+1)))) with Not_found -> "") in
-      (p,Printf.sprintf "%s . %s" hi low)
+    (* XXX this sucks ! *)
+    let constr = try List.map snd (Hashtbl.find constr p) with Not_found -> [] in
+    let realver = List.map (fun pkg -> pkg.Cudf.version) (Cudf.lookup_packages new_universe p) in
+    let vl = Util.list_unique (constr@realver) in
+    debug "All versions for package %s : %s" p (String.concat "," (List.map string_of_int vl));
+    try
+      let (minx,maxx,(before,after)) =
+        List.fold_left (fun (x,y,(b,a)) v ->
+          if v = i then raise Not_found ;
+          let b' = if v > b && v < i then v else b in
+          let a' = if v < a && v > i then v else a in
+          ((min x v),(max y v),(b',a'))
+        ) (max_int,1,(1,max_int)) vl
+      in
+      debug "i = %d, min %d, max = %d , before = %d , after = %d" i minx maxx before after ;
+      match (before,after) with
+      |(w,v) when w < minx -> begin
+        debug "< %s <<%d>>" (snd (from_cudf (p,(minx/2)))) (minx);
+        (p, Printf.sprintf "< %s" (snd (from_cudf (p,(minx/2)))))
+      end
+      |(w,v) when v > maxx -> begin
+        debug "> %s <<%d>>" (snd (from_cudf (p,(maxx/2)))) (maxx);
+        (p, Printf.sprintf "> %s" (snd (from_cudf (p,(maxx/2)))))
+      end
+      |(w,v) -> begin
+        let bv = (snd (from_cudf (p,(w/2)))) in
+        let av = (snd (from_cudf (p,(v/2)))) in
+        debug "%s <<%d>> < . < %s <<%d>>" bv (w) av (v);
+        (p,Printf.sprintf "%s < . < %s" bv av)
+      end
+    with Not_found -> begin
+      assert ((i mod 2) = 0);
+      from_cudf (p,(i/2))
+    end
   in
   let new_to_cudf (p,v) = (p,2 * (snd(to_cudf (p,v)))) in 
-  let universe = Cudf.load_universe pkglist in
   {
-    universe = universe;
+    universe = new_universe;
     from_cudf = new_from_cudf;
     to_cudf = new_to_cudf;
-    constraints = c
+    constraints = constraints new_universe
   }
 
 (* function to create a dummy package with a given version and name  *)
@@ -173,37 +191,31 @@ let create_dummy table (name,version) =
 
 (* discriminants takes a list of version selectors and provide a minimal list 
    of versions v1,...,vn s.t. all possible combinations of the valuse of the
-   version selectors are exhibited *)
-let discriminants ?(vl=[]) constraints =
+   version selectors are exhibited. Each evaluation has only one representative *)
+let discriminants constraints =
   let evalsel v = function
-    |(`Eq,v') -> v=v'
-    |(`Geq,v') -> v>=v'
-    |(`Leq,v') -> v<=v'
-    |(`Gt,v') -> v>v'
-    |(`Lt,v') -> v<v'
-    |(`Neq,v') -> v<>v'
+    |(`Eq,v') -> v = v'
+    |(`Geq,v') -> v >= v'
+    |(`Leq,v') -> v <= v'
+    |(`Gt,v') -> v > v'
+    |(`Lt,v') -> v < v'
+    |(`Neq,v') -> v <> v'
   in
   let eval_constr = Hashtbl.create 17 in
   let constr_eval = Hashtbl.create 17 in
-  let add c =
-    let e = List.map (evalsel c) constraints in
-    if not (Hashtbl.mem eval_constr e) then begin
-      Hashtbl.add eval_constr e c;
-      Hashtbl.add constr_eval c e
-    end
+  let rawvl = List.unique ~cmp:(fun (_,(x:int)) (_,(y:int)) -> x = y) constraints in
+  let (minv, maxv) =
+    List.fold_left (fun (mi,ma) (_,v) ->
+      (min mi v,max ma v)
+    ) (max_int,1) rawvl
   in
-  if vl = [] then begin
-    let rawvl = List.unique ~cmp:(fun (_,(x:int)) (_,(y:int)) -> x = y) constraints in
-    let (minv, maxv) =
-      List.fold_left (fun (mi,ma) (_,v) ->
-        (min mi v,max ma v)
-      ) (max_int,min_int) rawvl
-    in
-    for c = maxv+1 downto 0 do add c
-    done
-  end else
-    List.iter add (List.sort ~cmp:(fun v1 v2 -> v2 - v1) vl)
-  ;
+  for constr = maxv+1 downto minv do
+    let eval = List.map (evalsel constr) constraints in
+    if not (Hashtbl.mem eval_constr eval) then begin
+      Hashtbl.add eval_constr eval constr;
+      Hashtbl.add constr_eval constr eval
+    end
+  done ;
   constr_eval
 ;;
 

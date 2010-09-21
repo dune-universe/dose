@@ -13,6 +13,10 @@
 (** return a unique identifier based on random numbers *)
 val uuid: unit -> string
 
+(* return a list of unique elements. This algorithm runs in
+ * O(n) but is not stable *)
+val list_unique : 'a list -> 'a list
+
 (** Debug, ProgressBars, Timers and Loggers *)
 
 type label = string

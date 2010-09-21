@@ -314,6 +314,7 @@ let discriminants_of vl sels=
 	(Hashtbl.add h row w;Hashtbl.add h' w row)
     )
     vl;
+    (* the fold over the hashtbl is always equal to vl ? *)
   Hashtbl.fold (fun k v acc -> k::acc) h' [], h'
 ;;
 
@@ -417,6 +418,8 @@ let prediction (universe,from_cudf,to_cudf) =
               Util.Progress.progress predbar;
               let u = Cudf.load_universe (okcl_at_v@pl) in
               let s = Depsolver.load u in
+              (* psels are all constraints of p ??? *)
+              (* fst (discriminants_of vl psels) == vl ??? *)
 	      let okcl' = List.map (fun (p,psels) -> p,psels, fst (discriminants_of vl psels)) okcl in
               List.iter 
                 (* for each package in the cluster, perform analysis *)

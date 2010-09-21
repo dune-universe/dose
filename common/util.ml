@@ -19,6 +19,22 @@ let uuid () =
   in
   Digest.to_hex (Digest.string (string_of_int (rand ())))
 
+(* This algorithm runs in O(n) but is not stable *)
+let list_unique l =
+  let h = Hashtbl.create (List.length l) in
+  let rec add acc =
+    function
+      | hd :: tl when not (Hashtbl.mem h hd) ->
+          Hashtbl.add h hd ();
+          add (hd :: acc) tl
+      | _ :: tl ->
+          add acc tl
+      | [] ->
+          acc
+  in
+    add [] l
+;;
+
 type label = string
 
 module type Messages = sig
