@@ -45,67 +45,51 @@ let clear tables =
   Hashtbl.clear tables.reverse_table
 ;;
 
+let add table k v =
+  if not(Hashtbl.mem table k) then
+    Hashtbl.add table k v
+
+(* collect names of virtual packages *)
 let init_virtual_table table pkg =
-  let add name =
-    if not(Hashtbl.mem table name) then
-      Hashtbl.add table name ()
-  in
-  List.iter (fun (name,_) -> add name) pkg.provides
+  List.iter (fun (name,_) -> add table name ()) pkg.provides
 
-let init_unit_table table pkg =
-  if not(Hashtbl.mem table pkg.name) then
-    Hashtbl.add table pkg.name ()
+(* collect names of real packages *)
+let init_unit_table table pkg = add table pkg.name ()
 
+(* collect all versions mentioned of depends, pre_depends, conflict and breaks *)
 let init_versioned_table table pkg =
-  let add name =
-    if not(Hashtbl.mem table name) then
-      Hashtbl.add table name ()
-  in
-  let add_iter_cnf =
-    List.iter (fun disjunction ->
-      List.iter (fun (name,_)-> add name) disjunction
-    ) 
-  in
-  List.iter (fun (name,_) -> add name) pkg.conflicts ;
-  add_iter_cnf pkg.pre_depends ;
-  add_iter_cnf pkg.depends
+  let conj_iter l = List.iter (fun (name,_)-> add table name ()) l in
+  let cnf_iter ll = List.iter conj_iter ll in
+  conj_iter pkg.conflicts ;
+  conj_iter pkg.breaks ;
+  cnf_iter pkg.pre_depends ;
+  cnf_iter pkg.depends
 ;;
 
-let init_versions_table t =
-  let add name version = 
-    if not(Hashtbl.mem t version) then
-      Hashtbl.add t version ()
-  in
-  let conj_iter =
+(* collect all versions mentioned anywhere in the universe, including source
+   fields *)
+let init_versions_table table pkg =
+  let conj_iter l =
     List.iter (fun (name,sel) ->
       match CudfAdd.cudfop sel with
       |None -> ()
-      |Some(_,version) -> add name version
-    ) 
+      |Some(_,version) -> add table version ()
+    ) l
   in
-  let cnf_iter = 
-    List.iter (fun disjunction ->
-      List.iter (fun (name,sel) ->
-        match CudfAdd.cudfop sel with
-        |None -> ()
-        |Some(_,version) -> add name version
-      ) disjunction
-    )
-  in
-  let add_source = function
-    |(_,None) -> ()
-    |(p,Some(v)) -> add p v
+  let cnf_iter ll = List.iter conj_iter ll in
+  let add_source pv = function
+    |(_,None) -> add table pv ()
+    |(p,Some(v)) -> add table v ()
   in 
-  fun pkg ->
-    add pkg.name pkg.version;
-    conj_iter pkg.breaks;
-    conj_iter pkg.provides;
-    conj_iter pkg.conflicts ;
-    conj_iter pkg.replaces;
-    cnf_iter pkg.depends;
-    cnf_iter pkg.pre_depends;
-    cnf_iter pkg.recommends;
-    add_source pkg.source
+  add table pkg.version ();
+  conj_iter pkg.breaks;
+  conj_iter pkg.provides;
+  conj_iter pkg.conflicts ;
+  conj_iter pkg.replaces;
+  cnf_iter pkg.depends;
+  cnf_iter pkg.pre_depends;
+  cnf_iter pkg.recommends;
+  add_source pkg.version pkg.source
 ;;
 
 let init_tables pkglist =
@@ -210,11 +194,11 @@ let add_extra extras tables pkg =
   let number = ("number",`String pkg.version) in
   let architecture = ("architecture",`String pkg.architecture) in
   let (source,sourceversion) =
-    let n,v =
+    let (n,v) =
       match pkg.source with
-      |"",_ -> (pkg.name,pkg.version)
-      |n,None -> (n,pkg.version)
-      |n,Some v -> (n,v)
+      |("",_) -> (pkg.name,pkg.version)
+      |(n,None) -> (n,pkg.version)
+      |(n,Some v) -> (n,v)
     in
     ("source",`String n), ("sourceversion", `String v)
   in
