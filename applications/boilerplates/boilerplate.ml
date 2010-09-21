@@ -14,7 +14,7 @@ let enable_debug = function
       Util.Debug.all_enabled ()
 ;;
 
-let enable_bars = List.iter Util.Progress.enable
+let enable_bars l = List.iter Util.Progress.enable l
 (* let enable_time = List.iter Util.Timer. *)
 
 let debug fmt = Util.make_debug "Boilerplate" fmt

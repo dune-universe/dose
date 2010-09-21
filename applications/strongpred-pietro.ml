@@ -18,7 +18,7 @@ module Options = struct
   open OptParse
 
   let verbose = StdOpt.incr_option ()
-  let upgradeonly = StdOpt.store_false ()
+  let upgradeonly = StdOpt.store_true ()
   let single = StdOpt.store_true ()
 
   let description = "Analyse impact of version change on the impact set of packages"
@@ -204,6 +204,7 @@ let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
+  (* Boilerplate.enable_bars ["Strongdeps_int.main"; "Strongdeps_int.conj"]; *)
   let (universe,from_cudf,to_cudf) = Boilerplate.load_universe posargs in
   let results = prediction (universe,from_cudf,to_cudf) in
   ()

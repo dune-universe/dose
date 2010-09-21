@@ -89,9 +89,9 @@ module MakeMessages(X : sig val label : string end) = struct
 end
 
 (* this way we can have the same label for different messages *)
-module Debug = MakeMessages(struct let label = "D" end)
 module Info = MakeMessages(struct let label = "I" end)
 module Warning = MakeMessages(struct let label = "W" end)
+module Debug = MakeMessages(struct let label = "D" end)
 
 let make_info label =
   let t = Info.create label in
