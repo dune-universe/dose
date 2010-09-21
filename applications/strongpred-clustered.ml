@@ -418,8 +418,7 @@ let prediction (universe,from_cudf,to_cudf) =
               Util.Progress.progress predbar;
               let u = Cudf.load_universe (okcl_at_v@pl) in
               let s = Depsolver.load u in
-              (* psels are all constraints of p ??? *)
-              (* fst (discriminants_of vl psels) == vl ??? *)
+              (* focus only on the versions in vl that are discriminants for psels *)
 	      let okcl' = List.map (fun (p,psels) -> p,psels, fst (discriminants_of vl psels)) okcl in
               List.iter 
                 (* for each package in the cluster, perform analysis *)
