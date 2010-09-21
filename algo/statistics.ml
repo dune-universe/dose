@@ -163,6 +163,16 @@ module Make (G: Sig.G) = struct
     get_option !_outdata
   ;;
 
+  let scatteredPlotBoth graph =
+    let add h i o =
+      try Hashtbl.replace h (i, o) ((Hashtbl.find h (i, o)) + 1)
+      with Not_found -> Hashtbl.add h (i, o) 1 in
+    let h = Hashtbl.create 1031 in
+    G.iter_vertex (fun v ->
+      add h (G.in_degree graph v) (G.out_degree graph v)
+    ) graph; 
+    h
+
   (* http://en.wikipedia.org/wiki/Centrality *)
   let centralityDegree graph fd =
     let n = float_of_int (G.nb_vertex graph) in

@@ -25,6 +25,8 @@ module Options =
     let components = StdOpt.store_true ()
     let smallworld = StdOpt.store_true ()
     let centrality = StdOpt.store_true ()
+    let strong_deps = StdOpt.store_true ()
+    let combine_scatter = StdOpt.store_true ()
     let prefix = StdOpt.str_option ~default:"" ()
 
     let description = "Compute the small world statistic of the dependency graph"
@@ -39,6 +41,8 @@ module Options =
     add options ~short_name:'m' ~long_name:"components" ~help:"" components;
     add options ~short_name:'s' ~long_name:"smallworld" ~help:"" smallworld;
     add options ~short_name:'e' ~long_name:"centrality" ~help:"" centrality;
+    add options ~long_name:"strong-deps" ~help:"" strong_deps;
+    add options ~long_name:"combine-scatter" ~help:"" combine_scatter;
   end
 
 (**********************************)
@@ -64,7 +68,7 @@ let rec run outch = function
 
 (**********************************)
 
-module G = Defaultgraphs.SyntacticDependencyGraph.G
+module G = Defaultgraphs.PackageGraph.G
 module S = Statistics.Make(G)
 
 let saveplot h outfile =
@@ -74,12 +78,23 @@ let saveplot h outfile =
   close_out out
 ;;
 
+let saveplot2 h outfile =
+  let out = open_out outfile in
+  Printf.fprintf out "#count degree1 degree2\n" ;
+  Hashtbl.iter (fun (n1, n2) i -> Printf.fprintf out "%d %d %d\n" i n1 n2) h;
+  close_out out
+;;
+
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
+  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug 2 ;
   let (universe,_,_) = Boilerplate.load_universe posargs in
-  let gr = Defaultgraphs.SyntacticDependencyGraph.dependency_graph universe in
+  let gr = 
+    if OptParse.Opt.get Options.strong_deps then
+      Strongdeps.strongdeps_univ universe
+    else 
+      Defaultgraphs.PackageGraph.dependency_graph universe in
   let prefix = OptParse.Opt.get Options.prefix in
   let outch = if prefix = "" then stdout else open_out ( prefix ^ "stats" ) in
   let generic = "Generic" >::: [
@@ -117,13 +132,18 @@ let main () =
     ]
   in
   let scatterplots = "Scattered Plots" >::: [
-    "Scattered Plot In" >:: (fun _ ->
+    if OptParse.Opt.get Options.combine_scatter then
+      ("Combined" >:: (fun _ ->
+        saveplot2 (S.scatteredPlotBoth gr) (prefix^"degree.data"); print_string "Done";
+      ))
+    else
+    ("Scattered Plot In" >:: (fun _ ->
       saveplot (S.scatteredPlotIn gr) (prefix^"indegree.data") ; print_string "Done" );
     "Scattered Plot Out" >:: (fun _ ->
       saveplot (S.scatteredPlotOut gr) (prefix^"outdegree.data"); print_string "Done" );
 (*    "Hops Plot" >:: (fun _ ->
       saveplot (S.hopsplot gr 30) "hopsplot.data"; print_string "Done" );
-      *)
+      *) )
   ]
   in
   let t = ref [] in
