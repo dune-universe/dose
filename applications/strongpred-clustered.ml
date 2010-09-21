@@ -368,7 +368,7 @@ let prediction (universe,from_cudf,to_cudf) =
             Printf.printf
             "Skipping package %s : no version selector mentions it, so IS(p) is invariant.\n"
             (CudfAdd.string_of_package p);
-            (vl,pl)
+            (vl,(p,[])::pl)
           end
         ) ([],[]) cluster
       in
