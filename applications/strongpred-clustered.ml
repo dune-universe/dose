@@ -446,8 +446,9 @@ let prediction (universe,from_cudf,to_cudf) =
 			begin
                           let broken =
                             List.fold_left
-                              (fun acc q ->
-                                (* take care of packages q in isp that may no longer be present in the updated universe *)
+			      (* a package (q,v) in IS(p) may have different status in the new universe u *)
+                              (fun acc q -> 
+                                (*  check packages that are not changed *)
                                 if mem_package u (q.Cudf.package,q.Cudf.version) then
                                   begin
                                     let d = Depsolver.edos_install s q in
@@ -455,7 +456,20 @@ let prediction (universe,from_cudf,to_cudf) =
                                       (* record in res the changes in IS(p) for moving the cluster okcl_at_v to version v *)
                                       (changed res (p,v,okcl_at_v); q::acc) else acc
                                   end
-                                else acc
+                                else 
+				  if mem_package universe (q.Cudf.package,v) then
+                                    (* if (q,v) in isp has been replaced by a (q,w) present in the old universe, check (q,w) *) 
+                                    (*  this never happens when analyzing a single Debian source *)
+                                    begin
+				      let q' = Cudf.lookup_package universe (q.Cudf.package,v) in
+                                      let d = Depsolver.edos_install s q' in
+                                      if not(Diagnostic.is_solution d) then
+					(* record in res the changes in IS(p) for moving the cluster okcl_at_v to version v *)
+					(changed res (p,v,okcl_at_v); q'::acc) else acc
+                                    end
+				  else
+				    (*  if (q,v) in isp has been replaced by a dummy package, it cannot be broken, so do nothing  *)
+				    acc
                               ) [] isp
                           in
                           let nbroken = List.length broken in
