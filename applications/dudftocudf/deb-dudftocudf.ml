@@ -12,7 +12,6 @@
 
 open ExtLib
 open Common
-open Debian
 
 let debug fmt = Util.make_debug "Deb-dudfcudf" fmt
 let info fmt = Util.make_info "Deb-dudfcudf" fmt
@@ -361,7 +360,7 @@ let main () =
     List.map (fun pkg ->
       Util.Progress.progress progressbar ;
       let info = try Some(Hashtbl.find infoH (pkg.Deb.name,pkg.Deb.version)) with Not_found -> None in
-      let cudfpkg = Debcudf.tocudf tables ~extras:extras_property pkg in
+      let cudfpkg = Debian.Debcudf.tocudf tables ~extras:extras_property pkg in
       let priority = AptPref.assign_priority preferences info cudfpkg in
       let cudfpkg = add_extra ("priority", `Int priority) cudfpkg in
       cudfpkg
@@ -376,7 +375,7 @@ let main () =
     let mapver = function
       |`Pkg p -> (p,None)
       |`PkgVer (p,v) -> begin
-          try (p,Some(`Eq,Debcudf.get_cudf_version tables (p,v)))
+          try (p,Some(`Eq,Debian.Debcudf.get_cudf_version tables (p,v)))
           with Not_found -> failwith (Printf.sprintf "There is no version %s of package %s" p v)
       end
       |`PkgDst (p,d) ->
@@ -394,7 +393,7 @@ let main () =
             end
           in
           let number = Cudf.lookup_package_property pkg "number" in
-          (pkg.Cudf.package,Some(`Eq,Debcudf.get_cudf_version tables (pkg.Cudf.package,number)))
+          (pkg.Cudf.package,Some(`Eq,Debian.Debcudf.get_cudf_version tables (pkg.Cudf.package,number)))
     in
     let request_id =
       if OptParse.Opt.is_set Options.problemid then OptParse.Opt.get Options.problemid
@@ -439,7 +438,7 @@ let main () =
   let preamble =
     let p = ("priority",(`Int (Some 500))) in
     let l = List.map snd extras_property in
-    CudfAdd.add_properties Debcudf.preamble (p::l)
+    CudfAdd.add_properties Debian.Debcudf.preamble (p::l)
   in
   Cudf_printer.pp_cudf (Format.formatter_of_out_channel oc) (preamble, universe, request)
 ;;
