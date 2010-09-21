@@ -1,6 +1,6 @@
 
 (** [group_by_source universe] returns a hashtbl that maps
-    (source,sourceversion) -> to a reference of a packages list *)
+    (source,sourceversion) -> to a packages list *)
 let group_by_source universe =
   let th = Hashtbl.create (Cudf.universe_size universe) in
   let add h k v =

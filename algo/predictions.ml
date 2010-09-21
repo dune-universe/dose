@@ -22,11 +22,15 @@ let debug fmt = Util.make_debug "Algo.Predictions" fmt
 let info fmt = Util.make_info "Algo.Predictions" fmt
 let warning fmt = Util.make_warning "Algo.Predictions" fmt
 
+type constr = Cudf_types.relop * Cudf_types.version
+type from_t = Cudf_types.pkgname * Cudf_types.version -> Cudf_types.pkgname * string
+type to_t = Cudf_types.pkgname * string -> Cudf_types.pkgname * Cudf_types.version
+
 type conversion = {
   universe : Cudf.universe ;
-  from_cudf : string * int -> string ;
-  to_cudf : string * string -> int ;
-  constraints : (string, (Cudf_types.relop * int) list) Hashtbl.t ;
+  from_cudf : from_t ;
+  to_cudf : to_t ;
+  constraints : (string, constr list) Hashtbl.t ;
 }
 
 let add_unique h k v =
@@ -70,33 +74,29 @@ let constraints universe =
   h
 ;;
 
+let all_constraints table pkgname =
+  try Hashtbl.find table.constraints pkgname
+  with Not_found -> []
+;;
+
 (* collect all possible versions *)
-let init_versions_table table =
+let init_versions_table table pkg =
   let add name version =
     try let l = Hashtbl.find table name in l := version::!l
     with Not_found -> Hashtbl.add table name (ref [version])
   in
-  let conj_iter =
+  let conj_iter l =
     List.iter (fun (name,sel) ->
       match sel with
       |None -> ()
       |Some(_,version) -> add name version
-    )
+    ) l
   in
-  let cnf_iter =
-    List.iter (fun disjunction ->
-      List.iter (fun (name,sel) ->
-        match sel with
-        |None -> ()
-        |Some(_,version) -> add name version
-      ) disjunction
-    )
-  in
-  fun pkg ->
-    add pkg.Cudf.package pkg.Cudf.version;
-    conj_iter pkg.Cudf.conflicts ;
-    conj_iter (pkg.Cudf.provides :> Cudf_types.vpkglist) ;
-    cnf_iter pkg.Cudf.depends
+  let cnf_iter ll = List.iter conj_iter ll in
+  add pkg.Cudf.package pkg.Cudf.version;
+  cnf_iter pkg.Cudf.depends ;
+  conj_iter pkg.Cudf.conflicts ;
+  conj_iter pkg.Cudf.provides
 ;;
 
 (* build a mapping between package names and a map old version -> new version *)
@@ -129,7 +129,7 @@ let renumber (universe,from_cudf,to_cudf) =
       |Some(c,v) -> (name,Some(c,map name v))
     ) l
   in
-  let cnf_map = List.map conj_map in
+  let cnf_map ll = List.map conj_map ll in
   let pkglist =
     Cudf.fold_packages (fun acc pkg ->
       let p =
@@ -146,13 +146,13 @@ let renumber (universe,from_cudf,to_cudf) =
     if i mod 2 = 0 && i > 2 then
       try from_cudf (p,(i/2)) 
       with Not_found -> 
-        Printf.sprintf "<missing version %d for %s!>" i p
+        (p,Printf.sprintf "<missing version %d for %s!>" i p)
     else
-      let hi = (try (from_cudf (p,(i/2)))^" <" with Not_found -> "") in
-      let low = (try "< "^(from_cudf (p,(i/2+1))) with Not_found -> "") in
-      Printf.sprintf "%s . %s" hi low
+      let hi = (try (snd(from_cudf (p,(i/2))))^" <" with Not_found -> "") in
+      let low = (try "< "^(snd(from_cudf (p,(i/2+1)))) with Not_found -> "") in
+      (p,Printf.sprintf "%s . %s" hi low)
   in
-  let new_to_cudf (p,v) = 2 * (to_cudf (p,v)) in 
+  let new_to_cudf (p,v) = (p,2 * (snd(to_cudf (p,v)))) in 
   let universe = Cudf.load_universe pkglist in
   {
     universe = universe;
@@ -164,30 +164,10 @@ let renumber (universe,from_cudf,to_cudf) =
 (* function to create a dummy package with a given version and name  *)
 (* and an extra property 'number' with a representation of version v *)
 let create_dummy table (name,version) =
-  let interval table (name,version) =
-    let map = table.from_cudf in
-    let vl =
-      try List.map snd (Hashtbl.find table.constraints name)
-      with Not_found -> assert false
-    in
-    if not (List.mem version vl) then
-      try
-        let (i,v1) = List.findi (fun _ w -> w > version) vl in
-        if i = 0 then 
-          Printf.sprintf "(< %s)" (map (name,v1))
-        else
-          Printf.sprintf "(%s < %s < %s)" 
-          (map (name,List.nth vl (i-1)))
-          (if (version mod 2) = 0 then map (name,version) else ".")
-          (map (name,v1))
-      with Not_found ->
-        Printf.sprintf "(> %s)" (map (name,(List.last vl)))
-    else map (name,version)
-  in
   {Cudf.default_package with
    Cudf.package = name;
    version = version;
-   pkg_extra = [("number",`String (interval table (name,version)))]
+   pkg_extra = [("number",`String (snd (table.from_cudf (name,version))))]
   }
 ;;
 

@@ -21,22 +21,34 @@ val warning : ('a, unit, string, unit) format4 -> 'a
 
 open ExtLib
 
-type conversion
+type constr = Cudf_types.relop * Cudf_types.version
+type from_t = Cudf_types.pkgname * Cudf_types.version -> Cudf_types.pkgname * string
+type to_t = Cudf_types.pkgname * string -> Cudf_types.pkgname * Cudf_types.version
+
+type conversion = {
+  universe : Cudf.universe ;
+  from_cudf : from_t ;
+  to_cudf : to_t ;
+  constraints : (string, constr list) Hashtbl.t ;
+}
 
 (** [constraints universe] returns a map between package names
     and an ordered list of constraints where the package name is
     mentioned *)
 val constraints :
-  Cudf.universe ->
-  (Cudf_types.pkgname, (Cudf_types.relop * Cudf_types.version) list)
-  Hashtbl.t
+  Cudf.universe -> (Cudf_types.pkgname, constr list) Hashtbl.t
+
+(** [all_constraints table pkgname] returns an ordered list with 
+    all versions of the package with name [pkgname] that are mentioned
+    as constraint in the universe. Return an empty list if no constraint 
+    is associated with [pkgname] *)
+val all_constraints :
+  conversion -> Cudf_types.pkgname -> constr list
 
 (* map the old universe in a new universe where all versions are even
    the from_cudf function returns real versions for even cudf ones   
    and a representation of the interval n-1, n+1 for odd cudf ones    *)
-val renumber :
-  Cudf.universe * (string * int -> string) * (string * string -> int) ->
-  conversion
+val renumber : (Cudf.universe * from_t * to_t) -> conversion
 
 (** create a dummy package with a given version and name and an extra property
     'number' with a representation of version v *)
@@ -45,12 +57,9 @@ val create_dummy :
 
 (* discriminants takes a list of version selectors and provide a hashtbl with
    keys the minimal list of versions v1,...,vn s.t. all possible combinations 
-   of the valuse of the version selectors are exhibited, and values the
+   of the values of the version selectors are exhibited, and values the
    evaluation list asosciated to the version *)
-val discriminants :
-  ?vl:int list ->
-  (Cudf_types.relop * Cudf_types.version) list ->
-  (int, bool list) Hashtbl.t
+val discriminants : ?vl:int list -> constr list -> (int, bool list) Hashtbl.t
 
 (** [migrate table v l] migrates all packages in [l] to version [v] *)
 val migrate :
