@@ -139,6 +139,7 @@ let renumber (universe,from_cudf,to_cudf) =
     (* XXX this sucks ! *)
     let constr = try List.map snd (Hashtbl.find constr p) with Not_found -> [] in
     let realver = List.map (fun pkg -> pkg.Cudf.version) (Cudf.lookup_packages new_universe p) in
+    (* actually I don't care if it is unique ... *)
     let vl = Util.list_unique (constr@realver) in
     debug "All versions for package %s : %s" p (String.concat "," (List.map string_of_int vl));
     try

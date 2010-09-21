@@ -206,6 +206,8 @@ let main () =
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   let (universe,from_cudf,to_cudf) = Boilerplate.load_universe posargs in
   let results = prediction (universe,from_cudf,to_cudf) in
+  ()
+  (*
   Hashtbl.iter (fun cluster h ->
     Printf.printf "In cluster X\n";
     Hashtbl.iter (fun v {contents = l} ->
@@ -218,6 +220,7 @@ let main () =
       ) l
     ) h
   ) results
+  *)
 ;;
 
 main();;
