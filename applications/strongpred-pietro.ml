@@ -142,7 +142,7 @@ let prediction (universe1,from_cudf1,to_cudf1) =
       Util.Progress.progress predbar;
       (* compute a universe with the relevant packages in the cluster moved to version v *)
       let migration_list = Predictions.migrate conv_table version cluster in
-      let new_universe = Cudf.load_universe (migration_list@universe_subset) in
+      let new_universe = Cudf.load_universe ((* FIXME: make this list unique!!! *) migration_list@universe_subset) in
       let solver = Depsolver.load new_universe in
 
       (* for each package in the cluster, perform analysis *)

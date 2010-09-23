@@ -9,6 +9,7 @@
 <algo>: include
 <common>: include
 <boilerplates>: include
+<scripts>: not_hygienic
 @INCLUDE_RPM@
 @INCLUDE_CUDF@
 @LINK_RPM@
