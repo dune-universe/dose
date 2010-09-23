@@ -43,16 +43,16 @@ let exclude pkgset pl =
   CudfAdd.Cudf_set.elements (CudfAdd.Cudf_set.diff pkgset sl)
 ;;
 
+(*
 let changed h p =
   try incr (Hashtbl.find h p) 
   with Not_found -> Hashtbl.add h p (ref 1)
 ;;
-
 let add h k v =
    try let l = Hashtbl.find h k in l := v::!l
    with Not_found -> Hashtbl.add h k (ref [v])
 ;;
-
+*)
 let impactset graph pkglist =
   let h = Hashtbl.create (List.length pkglist) in
   List.iter (fun pkg ->
@@ -95,6 +95,15 @@ let add_results results cluster version package broken =
   end
 ;;
 
+let string_of_relop = function
+  |`Eq -> "="
+  |`Neq -> "!="
+  |`Geq -> ">="
+  |`Gt -> ">"
+  |`Leq -> "<="
+  |`Lt -> "<"
+;;
+
 let keys h = Hashtbl.fold (fun k _ acc -> k::acc) h [] ;;
 
 let prediction (universe1,from_cudf1,to_cudf1) =
@@ -111,6 +120,11 @@ let prediction (universe1,from_cudf1,to_cudf1) =
   let check results (source,sourceversion) cluster =
     let all_constraints = constraints conv_table cluster in
 
+    if all_constraints = [] then
+      info " ignoring cluster %s (= %s) : no version selector mentions it, so IS(p) is invariant."
+      source sourceversion
+    else
+
     (* precompute versions of packages in this cluster *)
     (* all versions in the cluster that appear in a constraint *)
     (* If no version of p is explicitly dependend upon, then *)
@@ -118,11 +132,6 @@ let prediction (universe1,from_cudf1,to_cudf1) =
     (* XXX here there is the assumption that all versions are different!!! *)
     (* XXX this is not version agnostic !!! *)
     let all_discriminants = keys (Predictions.discriminants all_constraints) in
-
-    if all_discriminants = [] then
-      info " ignoring cluster %s (= %s) : no version selector mentions it, so IS(p) is invariant."
-      source sourceversion
-    else
 
     (* precompute impact sets of the cluster *)
     let impactset_table = impactset graph cluster in
@@ -143,17 +152,29 @@ let prediction (universe1,from_cudf1,to_cudf1) =
         info "analysing package %s w.r.t version (%s)" pn sv;
         debug "%d -> %d" package.Cudf.version version;
 
-        let isp =
-          try Hashtbl.find impactset_table package
-          with Not_found -> assert false
-        in
+        let isp = try Hashtbl.find impactset_table package with Not_found -> assert false in
+        let psels = Predictions.all_constraints conv_table package.Cudf.package in
+        let vl = List.map snd psels in
+        let pdiscr = keys (Predictions.discriminants ~vl psels) in
+        debug "for package %s" pn;
+        List.iter (fun (rel,v) ->
+          debug " (%s %s / %d)" (string_of_relop rel)
+          (snd(conv_table.Predictions.from_cudf (package.Cudf.package,v)))
+          v
+        ) psels;
 
         if List.length isp <= 0 then
           info " ignoring package %s : it has an empty impact set." pn
         else if package.Cudf.version = version then 
           info " ignoring package %s : same base version" pn
+        else if psels = [] then
+          info "ignoring package %s : no constraint mentions it, so IS(p) is invariant" pn
         else if package.Cudf.version > version && (OptParse.Opt.get Options.upgradeonly) then
           info " ignoring package %s : version %s represents a downgrade" pn sv
+          (*
+        else if not (List.mem version pdiscr) then
+          info " ignoring package %s : %s is not a discriminant" pn sv
+          *)
         else if CudfAdd.mem_package universe (package.Cudf.package,version) then begin
           info " ignoring package %s : If we migrate to version %s, then all its impact set becomes uninstallable" pn sv;
           add_results results cluster version package isp (* XXX we should mark this differently *)
@@ -170,7 +191,7 @@ let prediction (universe1,from_cudf1,to_cudf1) =
           let nbroken = List.length broken in
           if nbroken <> 0 then begin 
             let sizeisp = List.length isp in
-            info " Migrating package %s to version %s breaks %d/%d (=%f percent) of its Impact set."
+            info " Migrating package %s to version %s breaks %d/%d (=%.2f percent) of its Impact set."
             pn sv nbroken sizeisp (float (nbroken * 100)  /. (float sizeisp));
             info " The broken packages in IS(%s) are:" pn;
             List.iter (fun q -> info " - %s" (CudfAdd.string_of_package q)) broken;

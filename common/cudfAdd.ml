@@ -14,8 +14,6 @@ module OCAMLHashtbl = Hashtbl
 module OCAMLSet = Set
 open ExtLib
 
-(* I want to hash packages by name/version without considering
-   other fields like Installed / keep / etc.  *)
 (** compare two cudf packages only using name and version *)
 let compare = Cudf.(<%)
 

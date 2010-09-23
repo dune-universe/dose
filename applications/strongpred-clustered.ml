@@ -314,7 +314,6 @@ let discriminants_of vl sels=
 	(Hashtbl.add h row w;Hashtbl.add h' w row)
     )
     vl;
-    (* the fold over the hashtbl is always equal to vl ? *)
   Hashtbl.fold (fun k v acc -> k::acc) h' [], h'
 ;;
 

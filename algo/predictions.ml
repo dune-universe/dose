@@ -190,10 +190,24 @@ let create_dummy table (name,version) =
   }
 ;;
 
+let range constraints = 
+  let rawvl = List.unique ~cmp:(fun (_,(x:int)) (_,(y:int)) -> x = y) constraints in
+  let (minv, maxv) =
+    List.fold_left (fun (mi,ma) (_,v) ->
+      (min mi v,max ma v)
+    ) (max_int,1) rawvl
+  in
+  let rec aux acc = function
+    |n when n = maxv+1 -> maxv::acc
+    |n -> aux (n::acc) (n+1)
+  in
+  aux [] (if minv = 1 then 1 else minv-1)
+;;
+
 (* discriminants takes a list of version selectors and provide a minimal list 
    of versions v1,...,vn s.t. all possible combinations of the valuse of the
    version selectors are exhibited. Each evaluation has only one representative *)
-let discriminants constraints =
+let discriminants ?vl constraints =
   let evalsel v = function
     |(`Eq,v') -> v = v'
     |(`Geq,v') -> v >= v'
@@ -204,19 +218,14 @@ let discriminants constraints =
   in
   let eval_constr = Hashtbl.create 17 in
   let constr_eval = Hashtbl.create 17 in
-  let rawvl = List.unique ~cmp:(fun (_,(x:int)) (_,(y:int)) -> x = y) constraints in
-  let (minv, maxv) =
-    List.fold_left (fun (mi,ma) (_,v) ->
-      (min mi v,max ma v)
-    ) (max_int,1) rawvl
-  in
-  for constr = maxv+1 downto minv do
+  let vl = match vl with None -> range constraints |Some l -> l in
+  List.iter (fun constr ->
     let eval = List.map (evalsel constr) constraints in
     if not (Hashtbl.mem eval_constr eval) then begin
       Hashtbl.add eval_constr eval constr;
       Hashtbl.add constr_eval constr eval
     end
-  done ;
+  ) vl;
   constr_eval
 ;;
 
