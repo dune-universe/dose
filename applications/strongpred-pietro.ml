@@ -155,7 +155,7 @@ let prediction (universe1,from_cudf1,to_cudf1) =
         let isp = try Hashtbl.find impactset_table package with Not_found -> assert false in
         let psels = Predictions.all_constraints conv_table package.Cudf.package in
         let vl = List.map snd psels in
-        let pdiscr = keys (Predictions.discriminants ~vl psels) in
+        let pdiscr = keys (Predictions.discriminants psels) in
         debug "for package %s" pn;
         List.iter (fun (rel,v) ->
           debug " (%s %s / %d)" (string_of_relop rel)
@@ -171,10 +171,8 @@ let prediction (universe1,from_cudf1,to_cudf1) =
           info "ignoring package %s : no constraint mentions it, so IS(p) is invariant" pn
         else if package.Cudf.version > version && (OptParse.Opt.get Options.upgradeonly) then
           info " ignoring package %s : version %s represents a downgrade" pn sv
-          (*
         else if not (List.mem version pdiscr) then
           info " ignoring package %s : %s is not a discriminant" pn sv
-          *)
         else if CudfAdd.mem_package universe (package.Cudf.package,version) then begin
           info " ignoring package %s : If we migrate to version %s, then all its impact set becomes uninstallable" pn sv;
           add_results results cluster version package isp (* XXX we should mark this differently *)
