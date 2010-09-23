@@ -29,29 +29,19 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
   module O = Defaultgraphs.GraphOper(G)
 
   (* to be computed on the strong dependency graph *)
-  let _impactset graph pkg =
+  let _impactset (graph,pkg) =
     G.fold_pred (fun p s ->
       Cudf_set.add p s
     ) graph pkg (Cudf_set.singleton pkg)
 
-  let memo f = 
-    let h = Hashtbl.create 1031 in
-    fun graph -> fun p ->
-      try Hashtbl.find h p
-      with Not_found -> begin
-        let r = f graph p in
-        Hashtbl.add h p r;
-        r
-      end
-
   (* to be computed on the strong dependency graph *)
-  let _scons graph pkg = 
+  let _scons (graph,pkg) = 
     G.fold_succ (fun p s ->
       Cudf_set.add p s
     ) graph pkg (Cudf_set.singleton pkg)
 
-  let impactset = memo _impactset 
-  let scons = memo _scons 
+  let impactset graph pkg = Util.memo _impactset (graph,pkg)
+  let scons graph pkg = Util.memo _scons (graph,pkg)
 
   let stats max = 
     let curr = ref 0 in
@@ -59,7 +49,7 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
     fun i ->
       incr curr;
       if !curr >= step then begin
-        debug "Done %d out of %d%!" i max;
+        debug "Done %d out of %d" i max;
         curr := 0
       end
   ;;

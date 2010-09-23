@@ -33,7 +33,17 @@ let list_unique l =
           acc
   in
     add [] l
-;;
+
+(* standard memoizazion function *)
+let memo f =
+  let h = Hashtbl.create 1023 in
+  fun i ->
+    try Hashtbl.find h i
+    with Not_found -> begin
+      let r = f i in
+      Hashtbl.add h i r ;
+      r
+    end
 
 type label = string
 

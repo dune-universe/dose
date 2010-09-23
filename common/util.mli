@@ -17,6 +17,8 @@ val uuid: unit -> string
  * O(n) but is not stable *)
 val list_unique : 'a list -> 'a list
 
+val memo : ('a -> 'b) -> 'a -> 'b
+
 (** Debug, ProgressBars, Timers and Loggers *)
 
 type label = string

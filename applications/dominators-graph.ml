@@ -21,7 +21,7 @@ open CudfAdd
 module Options = struct
   open OptParse
 
-  let debug = StdOpt.store_true ()
+  let verbose = StdOpt.incr_option ()
   let tarjan = StdOpt.store_true ()
   let out_file = StdOpt.str_option ()
   let do_clean = StdOpt.store_true ()
@@ -34,7 +34,7 @@ module Options = struct
   let options = OptParser.make ~description:description ()
 
   open OptParser
-  add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
+  add options ~short_name:'v' ~long_name:"verbose" ~help:"Print additional information" verbose;
   add options ~short_name:'t' ~long_name:"tarjan" ~help:"Use Tarjan algorithm" tarjan;
   add options ~short_name:'o' ~long_name:"output" ~help:"Send output to file" out_file;
   add options ~long_name:"clean" ~help:"Clean up the dominator graph" do_clean;
@@ -93,10 +93,9 @@ end;;
 
 let () =
 begin
-  Common.Util.set_verbosity Common.Util.Summary;
   at_exit (fun () -> Common.Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug ();
+  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   let (universe,_,_) = Boilerplate.load_universe posargs in
 
   Common.Util.Progress.enable "Algo.Strongdep.main";

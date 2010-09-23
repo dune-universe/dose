@@ -219,7 +219,7 @@ let range constraints =
 (* discriminants takes a list of version selectors and provide a minimal list 
    of versions v1,...,vn s.t. all possible combinations of the valuse of the
    version selectors are exhibited. Each evaluation has only one representative *)
-let discriminants ?vl constraints =
+let discriminants constraints =
   let evalsel v = function
     |(`Eq,v') -> v = v'
     |(`Geq,v') -> v >= v'
@@ -230,14 +230,13 @@ let discriminants ?vl constraints =
   in
   let eval_constr = Hashtbl.create 17 in
   let constr_eval = Hashtbl.create 17 in
-  let vl = match vl with None -> range constraints |Some l -> List.enum l in
   Enum.iter (fun constr ->
     let eval = List.map (evalsel constr) constraints in
     if not (Hashtbl.mem eval_constr eval) then begin
       Hashtbl.add eval_constr eval constr;
       Hashtbl.add constr_eval constr eval
     end
-  ) vl;
+  ) (range constraints);
   constr_eval
 ;;
 
