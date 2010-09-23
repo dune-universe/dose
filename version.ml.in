@@ -1,0 +1,4 @@
+
+let svn_revision="$Id"
+let ocaml_version="@OCAMLVERSION@"
+let build_timestamp=string_of_float (Unix.time ())
