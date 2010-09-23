@@ -5868,8 +5868,7 @@ fi
 
 
 
-
-ac_config_files="$ac_config_files Makefile.config META db/db.mlpack db/_tags algo/_tags rpm/_tags deb/_tags eclipse/_tags algo/algo.mlpack common/_tags applications/_tags applications/boilerplates/_tags _tags version.ml"
+ac_config_files="$ac_config_files Makefile.config META db/db.mlpack db/_tags algo/_tags rpm/_tags deb/_tags eclipse/_tags algo/algo.mlpack common/_tags applications/_tags applications/boilerplates/_tags _tags"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6589,7 +6588,6 @@ do
     "applications/_tags") CONFIG_FILES="$CONFIG_FILES applications/_tags" ;;
     "applications/boilerplates/_tags") CONFIG_FILES="$CONFIG_FILES applications/boilerplates/_tags" ;;
     "_tags") CONFIG_FILES="$CONFIG_FILES _tags" ;;
-    "version.ml") CONFIG_FILES="$CONFIG_FILES version.ml" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5 ;;
   esac

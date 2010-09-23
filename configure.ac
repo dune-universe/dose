@@ -268,7 +268,6 @@ AC_SUBST(PKG_XML)
 AC_SUBST(CFLAGS)
 AC_SUBST(CPPFLAGS)
 AC_SUBST(LDFLAGS)
-AC_SUBST(OCAMLVERSION)
 
 AC_CONFIG_FILES([
   Makefile.config
@@ -284,7 +283,6 @@ AC_CONFIG_FILES([
   applications/_tags
   applications/boilerplates/_tags
   _tags
-  version.ml
 ])
 AC_OUTPUT
 
