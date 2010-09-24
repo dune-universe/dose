@@ -17,8 +17,10 @@ open Diagnostic
 
 module Options = struct
   open OptParse
+  let description = "Report the broken packages in a package list"
+  let options = OptParser.make ~description
+  include Boilerplate.MakeOptions(struct let options = options end)
 
-  let verbose = StdOpt.incr_option ()
   let successes = StdOpt.store_true ()
   let failures = StdOpt.store_true ()
   let explain = StdOpt.store_true ()
@@ -28,11 +30,7 @@ module Options = struct
   let distribution = StdOpt.str_option ()
   let release = StdOpt.str_option ()
 
-  let description = "Report the broken packages in a package list"
-  let options = OptParser.make ~description ()
-
   open OptParser
-  add options ~short_name:'v' ~long_name:"verbose" ~help:"Print additional information" verbose;
   add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
   add options ~short_name:'f' ~long_name:"failures" ~help:"Only show failures" failures;
   add options ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" successes;

@@ -280,7 +280,7 @@ let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
-  Boilerplate.enable_bars ["Strongdeps_int.main";"Strongdeps_int.conj"];
+  Boilerplate.enable_bars true ["Strongdeps_int.main";"Strongdeps_int.conj"];
 
   let (universe,_,_) = Boilerplate.load_universe posargs in
   prediction universe

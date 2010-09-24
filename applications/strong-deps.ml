@@ -50,7 +50,7 @@ let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
-  Boilerplate.enable_bars ["Algo.Strongdep.main";"Algo.Strongdep.conj"];
+  Boilerplate.enable_bars true ["Algo.Strongdep.main";"Algo.Strongdep.conj"];
 
   let (universe,_,_) = Boilerplate.load_universe posargs in
   let prefix = OptParse.Opt.get Options.prefix in

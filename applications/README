@@ -1,5 +1,11 @@
 
 
+To start a new application from scratch, have a look at the example.ml file
+
+
+-------------------------------------------------------------------------
+
+
 distcheck.native checks broken packages in a repository
 
 ./distcheck.native -e -f --architecture=amd64 --release=unstable/sid --distribution=debian -u deb://tests/sid.packages > sid.yaml

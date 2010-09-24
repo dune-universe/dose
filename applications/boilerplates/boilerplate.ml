@@ -1,8 +1,33 @@
 open ExtLib
 open Common
 
+module type Ot = sig
+  val options :
+    ?usage:string ->
+    ?version:string ->
+    ?suppress_usage:bool ->
+    ?suppress_help:bool ->
+    ?prog:string ->
+    ?formatter:OptParse.Formatter.t -> unit -> OptParse.OptParser.t
+end
+
+module MakeOptions(O : Ot) = struct
+  open OptParse ;;
+
+  let verbose = StdOpt.incr_option ()
+  let progress = StdOpt.store_true ()
+  let timers = StdOpt.store_true ()
+  let options = O.options ~version:VersionInfo.version () ;;
+
+  open OptParser ;;
+  add options ~short_name:'v' ~long_name:"verbose" ~help:"print additional information" verbose;
+  add options ~long_name:"progress" ~help:"print progress bars" progress;
+  add options ~long_name:"timers" ~help:"print timing information" progress;
+
+end
+
 let enable_debug = function
-  |0 -> () (* quite *)
+  |0 -> () (* quite : default *)
   |1 ->
       Util.Info.all_enabled ()
   |2 ->
@@ -14,7 +39,8 @@ let enable_debug = function
       Util.Debug.all_enabled ()
 ;;
 
-let enable_bars l = List.iter Util.Progress.enable l
+let enable_bars verbose l =
+  if verbose then List.iter Util.Progress.enable l
 (* let enable_time = List.iter Util.Timer. *)
 
 let debug fmt = Util.make_debug "Boilerplate" fmt

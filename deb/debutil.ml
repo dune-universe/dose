@@ -33,17 +33,17 @@ let group_by_source universe =
     let sourceversion = Cudf.lookup_package_property pkg "sourceversion" in
     let packageversion =  (Cudf.lookup_package_property pkg "number") in
     try
-      let hversions = Hashtbl.find th source in
-      begin try
-        let l = Hashtbl.find hversions sourceversion in
+      let h = Hashtbl.find th (source,sourceversion) in
+      try
+        let l = Hashtbl.find h packageversion in
         l := pkg :: !l
-      with Not_found ->
-        Hashtbl.add hversions sourceversion (ref [pkg])
+      with Not_found -> begin (* found the source, but not the package version *)
+        Hashtbl.add h packageversion (ref[pkg])
       end
-    with Not_found -> begin
-      let hversions = Hashtbl.create 17 in
-      Hashtbl.add hversions sourceversion (ref [pkg]);
-      Hashtbl.add th source hversions
+    with Not_found -> begin (* didn't found the source *)
+      let h = Hashtbl.create 17 in
+      Hashtbl.add h packageversion (ref[pkg]);
+      Hashtbl.add th (source,sourceversion) h
     end
   ) universe;
   let h = Hashtbl.create (Cudf.universe_size universe) in

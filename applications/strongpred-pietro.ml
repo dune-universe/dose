@@ -207,8 +207,8 @@ let prediction (universe1,from_cudf1,to_cudf1) =
       check results (pkg.Cudf.package, CudfAdd.string_of_version pkg) [pkg]
     ) universe
   else
-    Hashtbl.iter (fun source hv ->
-      Hashtbl.iter (fun sourceversion cluster ->
+    Hashtbl.iter (fun (source,sourceversion) hv ->
+      Hashtbl.iter (fun packageversion cluster ->
         info "Analysing cluster %s (= %s)" source sourceversion ;
         check results (source,sourceversion) cluster
       ) hv
