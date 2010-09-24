@@ -19,6 +19,7 @@ open Format822
 let debug fmt = Util.make_debug "Debian.Packages" fmt
 let info fmt = Util.make_info "Debian.Packages" fmt
 let warning fmt = Util.make_warning "Debian.Packages" fmt
+let fatal fmt = Util.make_fatal "Debian.Packages" fmt
 
 (** debian package format *)
 type package = {
@@ -66,7 +67,7 @@ let parse_prov s = parse_veqpkglist parse_veqpkg s
 let parse_essential = function
   |("Yes"|"yes") -> true
   |("No" | "no") -> false (* this one usually is not there *)
-  |_ -> assert false (* unreachable ?? *)
+  |s -> fatal "Field essential has a wrong value : %s" s
 
 let parse_packages_fields default_arch extras par =
   let extras = "status"::extras in

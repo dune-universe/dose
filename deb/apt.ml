@@ -14,6 +14,12 @@
 
 open ExtLib
 open Format822
+open Common
+
+let debug fmt = Util.make_debug "Debian.Apt" fmt
+let info fmt = Util.make_info "Debian.Apt" fmt
+let warning fmt = Util.make_warning "Debian.Apt" fmt
+let fatal fmt = Util.make_fatal "Debian.Apt" fmt
 
 let space_re = Str.regexp "[ \t]+" 
 
@@ -96,14 +102,14 @@ let parse_pkg_req suite s =
     |None -> parse_pkg_only s
     |Some suite -> `PkgDst(s,suite)
     end
-  with Not_found -> failwith (Format.sprintf "Bad apt package in request '%s'@." s)
+  with Not_found -> fatal "Bad apt package in request '%s'" s
 ;;
 
 (** parse a string containing an apt-get command line 
     @return a data structure containing the request *)
 (* XXX upgrade with suite <> None == Install PkgDst ... *)
 let parse_request_apt s =
-  if not (String.exists s "apt-get") then failwith "Not a valid apt-get command" ;
+  if not (String.exists s "apt-get") then fatal "Not a valid apt-get command" ;
   let s = String.slice ~first:((String.find s "apt-get")) s in
   let suite = ref None in
   (* XXX we parse a log of options, but we do not handle them ... *)
@@ -121,18 +127,18 @@ let parse_request_apt s =
   let anon s = reqlist := s :: !reqlist in
   begin
     begin try Arg.parse_argv ~current:(ref 0) (Array.of_list (Str.split space_re s)) options anon ""
-    with Arg.Bad s -> failwith s end ;
+    with Arg.Bad s -> fatal "%s" s end ;
     match List.rev !reqlist with
     |"install" :: tl -> Install(List.map (parse_pkg_req !suite) tl)
     |"remove" :: tl -> Remove(List.map parse_pkg_only tl)
     |["upgrade"] -> Upgrade(!suite)
     |["dist-upgrade"] -> DistUpgrade(!suite)
-    |_ -> failwith (Format.sprintf "Bad apt request '%s'@." s)
+    |_ -> fatal "Bad apt request '%s'" s
   end
 ;;
 
 let parse_request_aptitude s =
-  if not (String.exists s "aptitude") then failwith "Not a valid aptitude command" ;
+  if not (String.exists s "aptitude") then fatal "Not a valid aptitude command" ;
   let s = String.slice ~first:((String.find s "aptitude")) s in
   let suite = ref None in
   (* XXX we parse a log of options, but we do not handle them ... *)
@@ -152,13 +158,13 @@ let parse_request_aptitude s =
   let anon s = reqlist := s :: !reqlist in
   begin
     begin try Arg.parse_argv ~current:(ref 0) (Array.of_list (Str.split space_re s)) options anon ""
-    with Arg.Bad s -> failwith s end ;
+    with Arg.Bad s -> fatal "%s" s end ;
     match List.rev !reqlist with
     |"install" :: tl -> Install(List.map (parse_pkg_req !suite) tl)
     |"remove" :: tl -> Remove(List.map parse_pkg_only tl)
     |["upgrade"] | ["safe-upgrade"] | ["dist-upgrade"] -> Upgrade(!suite)
     |["full-upgrade"] -> DistUpgrade(!suite)
-    |_ -> failwith (Format.sprintf "Bad apt request '%s'@." s)
+    |_ -> fatal "Bad aptitude request '%s'" s
   end
 ;;
 
@@ -193,7 +199,7 @@ let parse_pref_labels s =
     |[v] when (Str.string_match (Str.regexp "[0-9\\.]+") v 0) -> ("v",v)
     |[v] when (Str.string_match (Str.regexp "[a-zA-Z]+") v 0) -> ("a",v)
     |[l;v] -> (l,v)
-    |_ -> assert false
+    |_ -> fatal "To many commas in label %s" s
   ) (Str.split comma_re s)
 
 let general_re = Str.regexp "^[ \t]*\\*[ \t]*$"
@@ -208,8 +214,8 @@ let parse_pin s =
     |"release" -> Pref.Release (parse_pref_labels (Str.matched_group 2 s))
     |"version" -> Pref.Version (Str.matched_group 2 s) 
     |"origin"  -> Pref.Origin (Str.matched_group 2 s)
-    |_ -> assert false
-  else assert false
+    |s -> fatal "Unkwnon pin type %s" s
+  else fatal "Unkwnon pin format %s" s
 
 let parse_priority s = int_of_string s
 

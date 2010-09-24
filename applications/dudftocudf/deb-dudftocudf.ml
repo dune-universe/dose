@@ -16,6 +16,7 @@ open Common
 let debug fmt = Util.make_debug "Deb-dudfcudf" fmt
 let info fmt = Util.make_info "Deb-dudfcudf" fmt
 let warning fmt = Util.make_warning "Deb-dudfcudf" fmt
+let fatal fmt = Util.make_fatal "Deb-dudfcudf" fmt
 
 module Deb = Debian.Packages
 
@@ -82,7 +83,7 @@ module AptPref = struct
     |"o",v -> {criteria with origin = Some v}
     |"l",v -> {criteria with label = Some v}
     |"a",v -> {criteria with archive = Some v}
-    |_,_ -> assert false
+    |s,v -> fatal "Unknon Criteria %s %s" s v
 
   let dummypref = { target_release = None ; specific = [] ; generic = [] }
   let dummycriteria = {
@@ -97,9 +98,9 @@ module AptPref = struct
       match pkg with
       |Debian.Apt.Pref.Star ->
           begin match pin with
-          |Debian.Apt.Pref.Version _ -> assert false
+          |Debian.Apt.Pref.Version s -> fatal "Uhmmm pin with Verions %s" s
           |Debian.Apt.Pref.Origin origin -> begin
-              Printf.eprintf "Warning : origin is not currectly supported\n" ;
+              warning "origin is not currectly supported" ;
               let c = { dummycriteria with origin = Some origin } in
               {preferences with generic = (c, priority) :: preferences.generic}
           end
@@ -113,7 +114,7 @@ module AptPref = struct
               let s = { dummyspec with name = name ; version = Some version } in
               {preferences with specific = (s, priority) :: preferences.specific }
           |Debian.Apt.Pref.Origin origin -> begin
-              Printf.eprintf "Warning : origin is not currectly supported\n" ;
+              warning "Warning : origin is not currectly supported" ;
               let c = { dummycriteria with origin = Some origin } in
               let s = { dummyspec with name = name ; criteria = c} in
               {preferences with specific = (s, priority) :: preferences.specific}
@@ -191,14 +192,14 @@ module AptPref = struct
     |Some p -> p
 
   let max_priority = function
-    |[] -> failwith ("max_priority")
+    |[] -> fatal "Empty max_priority"
     |l ->
         let (i,p) =
           List.fold_left (fun (a,p) pkg ->
             let b = int_of_string (Cudf.lookup_package_property pkg "priority") in
             if a >= b then (a,p) else (b,pkg)
           ) (min_int,Cudf.default_package) l
-        in if i = min_int then failwith ("max_priority") else p
+        in if i = min_int then fatal "Cannot find a max_priority" else p
 
 end
 
@@ -210,7 +211,7 @@ let make_universe pl =
     List.partition (function 
       |("apt",_,_,_) -> true
       |("apt-release",_,_,_) -> false
-      |_ -> assert false
+      |(s,_,_,_) -> fatal "Unknown file type %s" s
     ) pl
   in
   let universe = 
@@ -267,8 +268,8 @@ let parsepackagelist = function
   |(Some t,Some fname,url,_,[cdata]) -> (t,fname,url,Xml.cdata cdata)
   |(Some t,Some fname,url,_,[]) -> (t,fname,url,"")
   |(Some t,Some fname,url,_,_) ->
-      (Printf.eprintf "Warning : Unknown format for package-list element %s %s\n" t fname; exit 1)
-  |_ -> assert false
+      fatal "Unknown format for package-list element %s %s" t fname
+  |_ -> fatal "Completly unknown format for package-list element"
 ;;
 
 (* ========================================= *)
@@ -376,7 +377,8 @@ let main () =
       |`Pkg p -> (p,None)
       |`PkgVer (p,v) -> begin
           try (p,Some(`Eq,Debian.Debcudf.get_cudf_version tables (p,v)))
-          with Not_found -> failwith (Printf.sprintf "There is no version %s of package %s" p v)
+          with Not_found ->
+            fatal "There is no version %s of package %s" p v
       end
       |`PkgDst (p,d) ->
           let l = Cudf.lookup_packages universe p in
@@ -388,7 +390,7 @@ let main () =
                 info.Debian.Release.suite = d
               ) l
             with Not_found -> begin
-              warning "There is no package %s in release %s " p d;
+              warning "There is no package %s in release %s" p d;
               AptPref.max_priority l
             end
           in
@@ -404,7 +406,7 @@ let main () =
       match dudfdoc.metaInstaller.name with
       |"apt-get" -> Debian.Apt.parse_request_apt action
       |"aptitude" -> Debian.Apt.parse_request_aptitude action
-      |s -> failwith("Unsupported meta installer "^s)
+      |s -> fatal "Unsupported meta installer %s" s
     in
     match parsed_action with
     |Debian.Apt.Upgrade (Some (suite))

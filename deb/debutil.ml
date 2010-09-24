@@ -4,14 +4,14 @@
 (* old binNMUs were of the form version-major.minor.binNMU *)
 (** chops a possible bin-NMU suffix from a debian version string *)
 let chop_binnmu s =
-  let rex = Pcre.regexp "^(.*)\\+b[0-9]+$" in
+  let rex = Pcre.regexp "^(.* )\\+b[0-9]+$" in
   try Pcre.get_substring 1 (Pcre.exec ~rex s)
   with Not_found -> s
 ;;
 
 (* *)
 let chop_epoch s =
-  let rex = Pcre.regexp "^[0-9]+:(.*)$" in
+  let rex = Pcre.regexp "^[0-9]+:(.* )$" in
   try Pcre.get_substring 1 (Pcre.exec ~rex s)
   with Not_found -> s
 
@@ -24,6 +24,8 @@ let normalize s = chop_epoch (chop_binnmu s)
 (* the idea is : if the normalized version of the package is equal to
  * the source version, then add it to the table indexed by source version,
  * otherwise add it to the table indexed by package version *)
+(* actually it should be sourceversion -> list of list of clusters grouped by
+ * version *)
 let group_by_source universe =
   let th = Hashtbl.create (Cudf.universe_size universe) in
   Cudf.iter_packages (fun pkg ->

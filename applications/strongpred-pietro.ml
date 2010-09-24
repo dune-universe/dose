@@ -153,8 +153,7 @@ let prediction (universe1,from_cudf1,to_cudf1) =
         debug "%d -> %d" package.Cudf.version version;
 
         let isp = try Hashtbl.find impactset_table package with Not_found -> assert false in
-        let psels = Predictions.all_constraints conv_table package.Cudf.package in
-        let vl = List.map snd psels in
+        let psels = (Util.memo Predictions.all_constraints conv_table) package.Cudf.package in
         let pdiscr = keys (Predictions.discriminants psels) in
         debug "for package %s" pn;
         List.iter (fun (rel,v) ->

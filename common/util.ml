@@ -115,6 +115,10 @@ let make_debug label =
   let t = Debug.create label in
   fun fmt -> Debug.eprintf t fmt
 
+let make_fatal label =
+  let l = Printf.sprintf "Fatal error in module %s: " label in
+  Printf.kprintf (fun s -> failwith (l^s))
+
 (** Printf bars are printed immediately on stderr.
  * they can be enabled or disabled (default) *)
 module Progress = struct

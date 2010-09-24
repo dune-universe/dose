@@ -13,10 +13,12 @@
 (** return a unique identifier based on random numbers *)
 val uuid: unit -> string
 
-(* return a list of unique elements. This algorithm runs in
- * O(n) but is not stable *)
+(** return a list of unique elements. This algorithm runs in
+    O(n) but is not stable *)
 val list_unique : 'a list -> 'a list
 
+(** A generic memoization function. To use with care as it allocates
+    an hashtbl storing all results that will be released only on exit *)
 val memo : ('a -> 'b) -> 'a -> 'b
 
 (** Debug, ProgressBars, Timers and Loggers *)
@@ -75,13 +77,17 @@ module Info : Messages
 *)
 
 (** [make_debug l] create a new printing functions with label [l] *)
-val make_debug : string -> ('a, unit, string, unit) format4 -> 'a
+val make_debug : label -> ('a, unit, string, unit) format4 -> 'a
 
 (** [make_info l] create a new printing functions with label [l] *)
-val make_info : string -> ('a, unit, string, unit) format4 -> 'a
+val make_info : label -> ('a, unit, string, unit) format4 -> 'a
 
 (** [make_warning l] create a new printing functions with label [l] *)
-val make_warning : string -> ('a, unit, string, unit) format4 -> 'a
+val make_warning : label -> ('a, unit, string, unit) format4 -> 'a
+
+(** [make_fatal l] created a function that will throw a fatal exception 
+    with failwith *)
+val make_fatal : string -> ('a, unit, string, 'b) format4 -> 'a
 
 (** ProgressBars are printed immediately on stderr. 
  * To be used, the **must** be created outside the functions where

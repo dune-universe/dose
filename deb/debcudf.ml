@@ -16,6 +16,11 @@ open ExtLib
 open Common
 open Packages
 
+let debug fmt = Util.make_debug "Debian.Debcudf" fmt
+let info fmt = Util.make_info "Debian.Debcudf" fmt
+let warning fmt = Util.make_warning "Debian.Debcudf" fmt
+let fatal fmt = Util.make_fatal "Debian.Debcudf" fmt
+
 type tables = {
   virtual_table : (string, unit) Hashtbl.t;
   unit_table : (string, unit) Hashtbl.t ;
@@ -128,15 +133,19 @@ let init_tables pkglist =
 
 let get_cudf_version tables (package,version) =
   try Hashtbl.find tables.versions_table version
-  with Not_found -> assert false
+  with Not_found -> begin
+    warning "This should never happen : (%s,%s) is not known" package version;
+    raise Not_found
+  end
 
 let get_real_version tables (package,cudfversion) =
   try
     match !(Hashtbl.find tables.reverse_table cudfversion) with
-    |[] -> assert false
+    |[] -> fatal "This should never happen : at lease one version for (%s,%d) must exist" package cudfversion
     |[h] -> h
     |l -> List.fold_left min "999999:999999" l
-  with Not_found -> assert false
+  with Not_found ->
+    fatal "This should never happen : (%s,%d) is not known" package cudfversion
 
 let loadl tables l =
   List.flatten (
@@ -169,7 +178,7 @@ let loadlp tables l =
         if (Hashtbl.mem tables.unit_table name) || (Hashtbl.mem tables.versioned_table name)
         then (CudfAdd.encode (name^"--virtual"),Some(`Eq,get_cudf_version tables (name,v)))
         else (CudfAdd.encode name,Some(`Eq,get_cudf_version tables (name,v)))
-    |_ -> assert false
+    |_ -> fatal "This should never happen : a provide can be either = or unversioned"
   ) l
 
 let loadll tables ll = List.map (loadl tables) ll
