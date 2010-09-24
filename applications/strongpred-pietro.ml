@@ -154,7 +154,7 @@ let prediction (universe1,from_cudf1,to_cudf1) =
 
         let isp = try Hashtbl.find impactset_table package with Not_found -> assert false in
         let psels = (Util.memo Predictions.all_constraints conv_table) package.Cudf.package in
-        let pdiscr = keys (Predictions.discriminants psels) in
+        let pdiscr = keys (Predictions.discriminants ~vl:all_discriminants psels) in
         debug "for package %s" pn;
         List.iter (fun (rel,v) ->
           debug " (%s %s / %d)" (string_of_relop rel)
