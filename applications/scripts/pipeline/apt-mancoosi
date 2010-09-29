@@ -119,8 +119,8 @@ fi
 
 echo "Default architecture is set to $ARCH"
 
-RELPATH=`dirname $0`
-BASE=`readlink -f $RELPATH`
+REALPATH=`readlink -f $0`
+BASE=`dirname $REALPATH`
 DUDFSAVE=$BASE/bin/dudf-save
 DUDFCUDF=$BASE/bin/deb-dudftocudf.native
 SOLVERHOME=$BASE/solvers/$SOLVER
