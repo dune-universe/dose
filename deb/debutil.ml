@@ -1,23 +1,23 @@
-(*
 
 (* binNMU are of the for +b1 ... +bn *)
 (* old binNMUs were of the form version-major.minor.binNMU *)
 (** chops a possible bin-NMU suffix from a debian version string *)
 let chop_binnmu s =
-  let rex = Pcre.regexp "^(.* )\\+b[0-9]+$" in
-  try Pcre.get_substring 1 (Pcre.exec ~rex s)
+  let rex = Str.regexp "^\\(.*\\)\\+b[0-9]+$" in
+  try
+    ignore(Str.search_backward rex s (String.length(s)));
+    Str.matched_group 1 s
   with Not_found -> s
-;;
 
 (* *)
 let chop_epoch s =
-  let rex = Pcre.regexp "^[0-9]+:(.* )$" in
-  try Pcre.get_substring 1 (Pcre.exec ~rex s)
+  let rex = Str.regexp "^[0-9]+:(.*)$" in
+  try
+    ignore(Str.search_forward rex s 0);
+    Str.matched_group 1 s
   with Not_found -> s
 
 let normalize s = chop_epoch (chop_binnmu s)
-
-*)
 
 (** [group_by_source universe] returns a hashtbl that maps
     (source,sourceversion) -> to a packages list *)
@@ -31,7 +31,7 @@ let group_by_source universe =
   Cudf.iter_packages (fun pkg ->
     let source = Cudf.lookup_package_property pkg "source" in
     let sourceversion = Cudf.lookup_package_property pkg "sourceversion" in
-    let packageversion =  (Cudf.lookup_package_property pkg "number") in
+    let packageversion = normalize (Cudf.lookup_package_property pkg "number") in
     try
       let h = Hashtbl.find th (source,sourceversion) in
       try

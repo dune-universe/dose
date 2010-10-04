@@ -16,16 +16,14 @@ open Common
 
 module Options = struct
   open OptParse
+  let description = "Analyse impact of version change on the impact set of packages"
+  let options = OptParser.make ~description
+  include Boilerplate.MakeOptions(struct let options = options end)
 
-  let verbose = StdOpt.incr_option ()
   let upgradeonly = StdOpt.store_true ()
   let single = StdOpt.store_true ()
 
-  let description = "Analyse impact of version change on the impact set of packages"
-  let options = OptParser.make ~description:description ()
-
   open OptParser ;;
-  add options ~short_name:'v' ~long_name:"verbose" ~help:"Print additional information" verbose;
   add options ~short_name:'u' ~long_name:"upgradeonly" ~help:"Do not analyse version changes corresponding to downgrades" upgradeonly;
   add options ~short_name:'s' ~long_name:"single" ~help:"Do not cluster packages by source" single;
 end
@@ -43,16 +41,6 @@ let exclude pkgset pl =
   CudfAdd.Cudf_set.elements (CudfAdd.Cudf_set.diff pkgset sl)
 ;;
 
-(*
-let changed h p =
-  try incr (Hashtbl.find h p) 
-  with Not_found -> Hashtbl.add h p (ref 1)
-;;
-let add h k v =
-   try let l = Hashtbl.find h k in l := v::!l
-   with Not_found -> Hashtbl.add h k (ref [v])
-;;
-*)
 let impactset graph pkglist =
   let h = Hashtbl.create (List.length pkglist) in
   List.iter (fun pkg ->
@@ -72,13 +60,6 @@ let constraints conv_table cluster =
   Hashtbl.fold (fun k _ acc -> k::acc) h []
 ;;
 
-(* for each cluster
-     for each possible candidate future version V
-       for each package P in the cluster
-         for each package Q in the impact set of P
-           how many of these packages Q are broken by the migration to version V
-           ?????
-*)
 let add_results results cluster version package broken = 
   try 
     let h = Hashtbl.find results cluster in
@@ -154,13 +135,8 @@ let prediction (universe1,from_cudf1,to_cudf1) =
 
         let isp = try Hashtbl.find impactset_table package with Not_found -> assert false in
         let psels = (Util.memo Predictions.all_constraints conv_table) package.Cudf.package in
-        let pdiscr = keys (Predictions.discriminants ~vl:all_discriminants psels) in
-        debug "for package %s" pn;
-        List.iter (fun (rel,v) ->
-          debug " (%s %s / %d)" (string_of_relop rel)
-          (snd(conv_table.Predictions.from_cudf (package.Cudf.package,v)))
-          v
-        ) psels;
+        let pdiscr = (Util.memo (Predictions.discriminants ~vl:all_discriminants)) psels in
+        let vl = keys pdiscr in
 
         if List.length isp <= 0 then
           info " ignoring package %s : it has an empty impact set." pn
@@ -170,7 +146,7 @@ let prediction (universe1,from_cudf1,to_cudf1) =
           info "ignoring package %s : no constraint mentions it, so IS(p) is invariant" pn
         else if package.Cudf.version > version && (OptParse.Opt.get Options.upgradeonly) then
           info " ignoring package %s : version %s represents a downgrade" pn sv
-        else if not (List.mem version pdiscr) then
+        else if not (List.mem version vl) then
           info " ignoring package %s : %s is not a discriminant" pn sv
         else if CudfAdd.mem_package universe (package.Cudf.package,version) then begin
           info " ignoring package %s : If we migrate to version %s, then all its impact set becomes uninstallable" pn sv;
