@@ -257,3 +257,20 @@ let cudfop = function
   |Some("ALL",v) -> None
   |None -> None
   |Some(c,v) -> (Printf.eprintf "%s %s" c v ; assert false)
+
+(** return a map package name -> list of all packages with this name ordered by
+    version *)
+(*  XXX uhmmmm maybe re-write it to work in O(n) ? *)
+let group_by_name universe = 
+  let th = Hashtbl.create (2 * (Cudf.universe_size universe)) in
+  let add h k v =
+    try 
+      let s = Hashtbl.find h k in
+      s := Cudf_set.add v !s
+    with Not_found -> Hashtbl.add h k (ref (Cudf_set.singleton v))
+  in
+  Cudf.iter_packages (fun pkg -> add th pkg.Cudf.package pkg) universe;
+  let h = Hashtbl.create (2 * (Cudf.universe_size universe)) in
+  Hashtbl.iter (fun k v -> Hashtbl.add h k (Cudf_set.elements !v)) th;
+  th
+
