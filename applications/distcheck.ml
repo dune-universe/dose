@@ -29,6 +29,7 @@ module Options = struct
   let architecture = StdOpt.str_option ()
   let distribution = StdOpt.str_option ()
   let release = StdOpt.str_option ()
+  let suite = StdOpt.str_option ()
 
   open OptParser
   add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
@@ -37,9 +38,10 @@ module Options = struct
 
   add options ~long_name:"checkonly" ~help:"Check only these package" checkonly;
 
-  add options ~short_name:'a' ~long_name:"architecture" ~help:"Set the default architecture" architecture;
-  add options ~short_name:'r' ~long_name:"release" ~help:"Set the release name" release;
-  add options ~short_name:'d' ~long_name:"distribution" ~help:"Set the distribution" distribution;
+  add options ~long_name:"distrib" ~help:"Set the distribution" distribution;
+  add options ~long_name:"release" ~help:"Set the release name" release;
+  add options ~long_name:"suite" ~help:"Set the release name" suite;
+  add options ~long_name:"arch" ~help:"Set the default architecture" architecture;
   add options ~short_name:'u' ~long_name:"uid" ~help:"Generate a unique identifier for the output document" uuid;
 end
 
@@ -101,6 +103,8 @@ let main () =
     Format.fprintf fmt "distribution: %s\n" (OptParse.Opt.get Options.distribution);
   if OptParse.Opt.is_set Options.release then
     Format.fprintf fmt "release: %s\n" (OptParse.Opt.get Options.release);
+  if OptParse.Opt.is_set Options.suite then
+    Format.fprintf fmt "suite: %s\n" (OptParse.Opt.get Options.suite);
   if OptParse.Opt.is_set Options.architecture then
     Format.fprintf fmt "architecture: %s\n" (OptParse.Opt.get Options.architecture)
 ;;
