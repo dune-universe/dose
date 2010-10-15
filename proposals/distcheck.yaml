@@ -45,7 +45,7 @@ mapping:
                             "package": { type: str, required: true }
                             "version": { type: text, required: true }
                             "architecture": { type: text, required: false }
-                        "paths1":
+                        "depchain1":
                           type: seq
                           sequence:
                             - type: map
@@ -59,7 +59,7 @@ mapping:
                                         "version": { type: text, required: true }
                                         "architecture": { type: text, required: false }
                                         "depends": { type: str, required: false}
-                        "paths2":
+                        "depchain2":
                           type: seq
                           sequence:
                             - type: map
@@ -84,7 +84,7 @@ mapping:
                             "version": { type: text, required: true }
                             "architecture": { type: text, required: false }
                             "missingdep": { type: str, required: false}
-                        "paths":
+                        "depchains":
                           type: seq
                           sequence:
                             - type: map

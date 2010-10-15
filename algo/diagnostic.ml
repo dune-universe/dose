@@ -134,8 +134,8 @@ let print_error pp root fmt l =
         if deps <> [] then begin
           let dl1 = Dependency(i,[],[])::deps in
           let dl2 = Dependency(j,[],[])::deps in
-          Format.fprintf fmt "@,@[<v 1>paths1:@,%a@]" (pp_dependencies pp root) dl1;
-          Format.fprintf fmt "@,@[<v 1>paths2:@,%a@]" (pp_dependencies pp root) dl2;
+          Format.fprintf fmt "@,@[<v 1>depchain1:@,%a@]" (pp_dependencies pp root) dl1;
+          Format.fprintf fmt "@,@[<v 1>depchain2:@,%a@]" (pp_dependencies pp root) dl2;
           Format.fprintf fmt "@]"
         end else
           Format.fprintf fmt "@,@]"
@@ -144,7 +144,7 @@ let print_error pp root fmt l =
         Format.fprintf fmt "@[<v 1>pkg:@,%a@]" (pp_dependency ~label:"missingdep" pp) (i,vpkgs);
         if deps <> [] then begin
           let dl = Dependency(i,vpkgs,[])::deps in
-          Format.fprintf fmt "@,@[<v 1>paths:@,%a@]" (pp_dependencies pp root) dl;
+          Format.fprintf fmt "@,@[<v 1>depchains:@,%a@]" (pp_dependencies pp root) dl;
           Format.fprintf fmt "@]"
         end else
           Format.fprintf fmt "@,@]"
