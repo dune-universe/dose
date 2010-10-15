@@ -39,24 +39,33 @@ let build_paths deps root =
   let rec aux acc deps root =
     match List.partition (fun (i,_,_) -> CudfAdd.equal i root) deps with
     |([],_) when (List.length acc) = 1 -> [] 
-    |([],_) -> [List.rev acc]
-    |(rootlist,rest) ->
+    (* |([],_) -> [List.rev acc] *)
+    |(rootlist,_) ->
         bind rootlist (function
-          |(i,v,[]) -> [List.rev ((i,v)::acc)]
+          |(i,v,[]) -> [List.rev ((* (i,v):: *)acc)]
           |(i,v,l) -> bind l (fun r -> aux ((i,v)::acc) deps r)
         )
   in
   aux [] deps root
 ;;
 
-let pp_package pp fmt pkg =
+let pp_package ?(source=false) pp fmt pkg =
   let (p,v,fields) = pp pkg in
   Format.fprintf fmt "package: %s@," (CudfAdd.decode p);
   Format.fprintf fmt "version: %s" v;
-  List.iter (fun (k,v) -> Format.fprintf fmt "@,%s: %s" k v) fields
+  List.iter (function
+    |(("source"|"sourceversion"),_) -> ()
+    |(k,v) -> Format.fprintf fmt "@,%s: %s" k (CudfAdd.decode v)
+  ) fields;
+  if source then
+    begin try
+      let source = List.assoc "source" fields in
+      let sourceversion = List.assoc "sourceversion" fields in
+      Format.fprintf fmt "@,source: %s (= %s)" source sourceversion
+    with Not_found -> () end
 ;;
 
-let pp_dependency pp fmt (i,vpkgs) =
+let pp_dependency pp ?(label="depends") fmt (i,vpkgs) =
   let pp_vpkglist fmt = 
     (* from libcudf ... again *)
     let pp_list fmt ~pp_item ~sep l =
@@ -91,7 +100,7 @@ let pp_dependency pp fmt (i,vpkgs) =
   in
   Format.fprintf fmt "%a" (pp_package pp) i;
   if vpkgs <> [] then
-    Format.fprintf fmt "@,vpkg: %a" pp_vpkglist vpkgs;
+    Format.fprintf fmt "@,%s: %a" label pp_vpkglist vpkgs;
 ;;
 
 let rec pp_list pp fmt = function
@@ -106,9 +115,9 @@ let pp_dependencies pp root fmt deps =
   let dl = List.map (function Dependency x -> x |_ -> assert false) deps in
   let pathlist = build_paths dl root in
   let rec aux fmt = function
-    |[path] -> Format.fprintf fmt "@[<v 1>-@,@[<v 1>path:@,%a@]@]" (pp_list (pp_dependency pp)) path
+    |[path] -> Format.fprintf fmt "@[<v 1>-@,@[<v 1>depchain:@,%a@]@]" (pp_list (pp_dependency pp)) path
     |path::pathlist ->
-        (Format.fprintf fmt "@[<v 1>-@,@[<v 1>path:@,%a@]@]@," (pp_list (pp_dependency pp)) path;
+        (Format.fprintf fmt "@[<v 1>-@,@[<v 1>depchain:@,%a@]@]@," (pp_list (pp_dependency pp)) path;
         aux fmt pathlist)
     |[] -> ()
   in
@@ -123,21 +132,22 @@ let print_error pp root fmt l =
         Format.fprintf fmt "@[<v 1>pkg1:@,%a@]@," (pp_package pp) i;
         Format.fprintf fmt "@[<v 1>pkg2:@,%a@]" (pp_package pp) j;
         if deps <> [] then begin
-          let dl = Dependency(i,[],[])::Dependency(j,[],[])::deps in
-          Format.fprintf fmt "@,@[<v 1>paths:@,%a@]" (pp_dependencies pp root) dl;
+          let dl1 = Dependency(i,[],[])::deps in
+          let dl2 = Dependency(j,[],[])::deps in
+          Format.fprintf fmt "@,@[<v 1>paths1:@,%a@]" (pp_dependencies pp root) dl1;
+          Format.fprintf fmt "@,@[<v 1>paths2:@,%a@]" (pp_dependencies pp root) dl2;
           Format.fprintf fmt "@]"
         end else
           Format.fprintf fmt "@,@]"
     |EmptyDependency (i,vpkgs) ->
         Format.fprintf fmt "@[<v 1>missing:@,";
-        Format.fprintf fmt "@[<v 1>pkg:@,%a@]" (pp_dependency pp) (i,vpkgs);
+        Format.fprintf fmt "@[<v 1>pkg:@,%a@]" (pp_dependency ~label:"missingdep" pp) (i,vpkgs);
         if deps <> [] then begin
           let dl = Dependency(i,vpkgs,[])::deps in
           Format.fprintf fmt "@,@[<v 1>paths:@,%a@]" (pp_dependencies pp root) dl;
           Format.fprintf fmt "@]"
         end else
           Format.fprintf fmt "@,@]"
-
     |_ -> assert false
   in
   pp_list pp_reason fmt res;
@@ -148,17 +158,20 @@ let default_pp pkg = (pkg.Cudf.package,CudfAdd.string_of_version pkg,[])
 let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) fmt = function
   |{result = Success (f); request = Package r } when success ->
        Format.fprintf fmt "@[<v 1>-@,";
-       Format.fprintf fmt "@[<v>%a@]@," (pp_package pp) r;
-       Format.fprintf fmt "status: ok";
+       Format.fprintf fmt "@[<v>%a@]@," (pp_package ~source:true pp) r;
+       Format.fprintf fmt "status: ok@,";
        if explain then begin
          let is = f ~all:true () in
-         if is <> [] then
-           Format.fprintf fmt "@,installationset:@,%a" (pp_list (pp_package pp)) is;
+         if is <> [] then begin
+           Format.fprintf fmt "@[<v 1>installationset:@," ;
+           Format.fprintf fmt "@[<v>%a@]" (pp_list (pp_package pp)) is;
+           Format.fprintf fmt "@]"
+         end
        end;
        Format.fprintf fmt "@]@,"
   |{result = Failure (f) ; request = Package r } when failure -> 
        Format.fprintf fmt "@[<v 1>-@,";
-       Format.fprintf fmt "@[<v>%a@]@," (pp_package pp) r;
+       Format.fprintf fmt "@[<v>%a@]@," (pp_package ~source:true pp) r;
        Format.fprintf fmt "status: broken@,";
        if explain then begin
          Format.fprintf fmt "@[<v 1>reasons:@,";
