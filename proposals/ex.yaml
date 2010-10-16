@@ -13,7 +13,7 @@ report:
       version: 0.6-8.2+b1
       architecture: amd64
       missingdep: kdebase-kio-plugins
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -65,7 +65,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -132,7 +132,7 @@ report:
       version: 3.0.1+dfsg-1.1
       architecture: amd64
       missingdep: libcv4
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -199,7 +199,7 @@ report:
       version: 0.4.0-4
       architecture: amd64
       missingdep: libevas-svn-05-engines-x (>= 0.9.9.063)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -221,7 +221,7 @@ report:
       version: 0.10.7dfsg-3+b1
       architecture: amd64
       missingdep: libzltext-data (>= 0.10.7dfsg-3+b1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -306,11 +306,7 @@ report:
       package: xserver-xorg-core
       version: 2:1.7.7-5
       architecture: amd64
-     paths1:
-      -
-       depchain:
-        
-     paths2:
+     depchain2:
       -
        depchain:
         -
@@ -332,7 +328,7 @@ report:
       version: 0.28.3-2
       architecture: amd64
       missingdep: libedataserver1.2-11 (>= 2.28.3.1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -372,11 +368,7 @@ report:
       package: xserver-xorg-core
       version: 2:1.7.7-5
       architecture: amd64
-     paths1:
-      -
-       depchain:
-        
-     paths2:
+     depchain2:
       -
        depchain:
         -
@@ -428,7 +420,7 @@ report:
       version: 0.1+git20100802-2
       architecture: amd64
       missingdep: fso-deviced
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -480,7 +472,7 @@ report:
       version: 0.10.7dfsg-3+b1
       architecture: amd64
       missingdep: libzlcore-data (>= 0.10.7dfsg-3+b1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -502,7 +494,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -554,7 +546,7 @@ report:
       version: 0.22-3
       architecture: amd64
       missingdep: libopensync0 (>= 0.22)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -621,7 +613,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -678,7 +670,7 @@ report:
       version: 0.10.7dfsg-3+b1
       architecture: amd64
       missingdep: libzlcore-data (>= 0.10.7dfsg-3+b1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -790,7 +782,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -887,7 +879,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -924,7 +916,7 @@ report:
       version: 1.1.0-5
       architecture: amd64
       missingdep: libraw1394-8
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -946,7 +938,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -983,7 +975,7 @@ report:
       version: 0.10.7dfsg-3+b1
       architecture: amd64
       missingdep: libzlcore-data (>= 0.10.7dfsg-3+b1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -1035,7 +1027,7 @@ report:
       version: 0.10.7dfsg-3+b1
       architecture: amd64
       missingdep: libzlcore-data (>= 0.10.7dfsg-3+b1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -1057,7 +1049,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -1079,7 +1071,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -1151,7 +1143,7 @@ report:
       version: 4.0.0~alpha8+git20090912-1
       architecture: amd64
       missingdep: python (< 2.06)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -1183,7 +1175,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -1205,7 +1197,7 @@ report:
       version: 4.0.0~alpha8+git20090912-1
       architecture: amd64
       missingdep: python (< 2.06)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -1232,7 +1224,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -1269,7 +1261,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -1306,7 +1298,7 @@ report:
       version: 4.0.0~alpha8+git20090912-1
       architecture: amd64
       missingdep: python (< 2.06)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -1328,7 +1320,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -1380,7 +1372,7 @@ report:
       version: 3.0.1+dfsg-1.1
       architecture: amd64
       missingdep: libcv4
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -1422,7 +1414,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -1444,7 +1436,7 @@ report:
       version: 0.10.7dfsg-3+b1
       architecture: amd64
       missingdep: libzlcore-data (>= 0.10.7dfsg-3+b1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -1511,7 +1503,7 @@ report:
       version: 4.0.0~alpha8+git20090912-1
       architecture: amd64
       missingdep: python (< 2.06)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -1568,7 +1560,7 @@ report:
       version: 0.5.15lorg3.2-6
       architecture: amd64
       missingdep: librpm4.4 (>= 4.4)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -1635,7 +1627,7 @@ report:
       version: 0.6.1-2+b3
       architecture: amd64
       missingdep: libopenscenegraph56 (>= 2.08.01)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -1657,7 +1649,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -1709,7 +1701,7 @@ report:
       version: 0.022-2
       architecture: amd64
       missingdep: libopensync0 (>= 0.22)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -1761,7 +1753,7 @@ report:
       version: 0.6.4.dfsg-1
       architecture: amd64
       missingdep: libpetsc3.0.0
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -1813,7 +1805,7 @@ report:
       version: 0.5.15lorg3.2-6
       architecture: amd64
       missingdep: librpm4.4 (>= 4.4)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -1853,7 +1845,7 @@ report:
       package: gforge-web-apache2
       version: 4.8.3-1
       architecture: all
-     paths1:
+     depchain1:
       -
        depchain:
         -
@@ -1871,10 +1863,6 @@ report:
          version: 2.6.6-1
          architecture: all
          depends: python2.6-minimal (>= 2.6.6-1~)
-     paths2:
-      -
-       depchain:
-        
  -
   package: opensync-plugin-google-calendar
   version: 0.22-7
@@ -1949,7 +1937,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -2001,7 +1989,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -2041,7 +2029,7 @@ report:
       package: xserver-xorg-input-citron
       version: 1:2.2.2-1
       architecture: amd64
-     paths1:
+     depchain1:
       -
        depchain:
         -
@@ -2049,10 +2037,6 @@ report:
          version: 1:2.2.2-1
          architecture: amd64
          depends: xserver-xorg-core (>= 2:1.5.99.901)
-     paths2:
-      -
-       depchain:
-        
  -
   package: squishdot
   version: 1.5.0-6.1
@@ -2127,7 +2111,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -2154,7 +2138,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -2191,7 +2175,7 @@ report:
       version: 0.10.7dfsg-3+b1
       architecture: amd64
       missingdep: libzlcore-data (>= 0.10.7dfsg-3+b1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -2213,7 +2197,7 @@ report:
       version: 0.1+git20100802-2
       architecture: amd64
       missingdep: fso-deviced
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -2240,7 +2224,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -2292,7 +2276,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -2354,7 +2338,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -2439,7 +2423,7 @@ report:
       package: xserver-xorg-input-hyperpen
       version: 1:1.3.0-1
       architecture: amd64
-     paths1:
+     depchain1:
       -
        depchain:
         -
@@ -2447,10 +2431,6 @@ report:
          version: 1:1.3.0-1
          architecture: amd64
          depends: xserver-xorg-core (>= 2:1.5.99.901)
-     paths2:
-      -
-       depchain:
-        
  -
   package: opensync-plugin-kdepim
   version: 0.22-4
@@ -2495,7 +2475,7 @@ report:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -2532,7 +2512,7 @@ report:
       version: 4.0.0~alpha8+git20090912-1
       architecture: amd64
       missingdep: python (< 2.06)
-     paths:
+     depchains:
       -
        depchain:
         -

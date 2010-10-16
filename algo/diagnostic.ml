@@ -111,9 +111,11 @@ let rec pp_list pp fmt = function
   |[] -> ()
 ;;
 
-let pp_dependencies pp root fmt deps =
+let create_pathlist root deps =
   let dl = List.map (function Dependency x -> x |_ -> assert false) deps in
-  let pathlist = build_paths dl root in
+  build_paths dl root
+
+let pp_dependencies pp fmt pathlist =
   let rec aux fmt = function
     |[path] -> Format.fprintf fmt "@[<v 1>-@,@[<v 1>depchain:@,%a@]@]" (pp_list (pp_dependency pp)) path
     |path::pathlist ->
@@ -132,19 +134,21 @@ let print_error pp root fmt l =
         Format.fprintf fmt "@[<v 1>pkg1:@,%a@]@," (pp_package pp) i;
         Format.fprintf fmt "@[<v 1>pkg2:@,%a@]" (pp_package pp) j;
         if deps <> [] then begin
-          let dl1 = Dependency(i,[],[])::deps in
-          let dl2 = Dependency(j,[],[])::deps in
-          Format.fprintf fmt "@,@[<v 1>depchain1:@,%a@]" (pp_dependencies pp root) dl1;
-          Format.fprintf fmt "@,@[<v 1>depchain2:@,%a@]" (pp_dependencies pp root) dl2;
+          let pl1 = create_pathlist root (Dependency(i,[],[])::deps) in
+          let pl2 = create_pathlist root (Dependency(j,[],[])::deps) in
+          if pl1 <> [[]] then
+            Format.fprintf fmt "@,@[<v 1>depchain1:@,%a@]" (pp_dependencies pp) pl1;
+          if pl2 <> [[]] then
+            Format.fprintf fmt "@,@[<v 1>depchain2:@,%a@]" (pp_dependencies pp) pl2;
           Format.fprintf fmt "@]"
         end else
           Format.fprintf fmt "@,@]"
     |EmptyDependency (i,vpkgs) ->
         Format.fprintf fmt "@[<v 1>missing:@,";
         Format.fprintf fmt "@[<v 1>pkg:@,%a@]" (pp_dependency ~label:"missingdep" pp) (i,vpkgs);
-        if deps <> [] then begin
-          let dl = Dependency(i,vpkgs,[])::deps in
-          Format.fprintf fmt "@,@[<v 1>depchains:@,%a@]" (pp_dependencies pp root) dl;
+        let pl = create_pathlist root (Dependency(i,vpkgs,[])::deps) in
+        if pl <> [[]] then begin
+          Format.fprintf fmt "@,@[<v 1>depchains:@,%a@]" (pp_dependencies pp) pl;
           Format.fprintf fmt "@]"
         end else
           Format.fprintf fmt "@,@]"
