@@ -10,7 +10,7 @@ RPMSRC = $(filter-out rpm/myocamlbuild.ml, $(wildcard rpm/*.ml rpm/*.mli rpm/*.h
 COMSRC = $(filter-out common/myocamlbuild.ml common/edosSolver.ml common/edosSolver.mli common/util.ml,\
 				 $(wildcard common/*.ml common/*.mli))
 
-all:
+all: lib
 	CPPFLAGS="$(CPPFLAGS)" LDFLAGS="-fstack-protector" $(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
 
 lib:
@@ -56,8 +56,18 @@ test:
 	done
 
 INSTALL_STUFF = META
-INSTALL_STUFF += $(TARGETS)
-INSTALL_STUFF += $(LIBS)
+
+INSTALL_STUFF += $(wildcard _build/algo/*.cma _build/algo/*.cmxa _build/algo/algo.a _build/algo/*.o)
+INSTALL_STUFF += $(wildcard _build/common/*.cma _build/common/*.cmxa _build/common/common.a _build/common/*.o)
+INSTALL_STUFF += $(wildcard _build/deb/*.cma _build/deb/*.cmxa _build/deb/debian.a _build/deb/*.o)
+INSTALL_STUFF += $(wildcard _build/rpm/*.cma _build/rpm/*.cmxa _build/rpm/rpm.a _build/rpm/*.o)
+INSTALL_STUFF += $(wildcard _build/db/*.cma _build/db/*.cmxa _build/db/db.a _build/db/*.o)
+
+INSTALL_STUFF += $(wildcard _build/algo/*.cmi) $(wildcard _build/algo/*.mli)
+INSTALL_STUFF += $(wildcard _build/common/*.cmi) $(wildcard _build/common/*.mli)
+INSTALL_STUFF += $(wildcard _build/deb/*.cmi) $(wildcard _build/deb/*.mli)
+INSTALL_STUFF += $(wildcard _build/rpm/*.cmi) $(wildcard _build/rpm/*.mli)
+INSTALL_STUFF += $(wildcard _build/db/*.cmi) $(wildcard _build/db/*.mli)
 
 install:
 	# install libraries
@@ -68,17 +78,18 @@ install:
 	test -d $(BINDIR) || mkdir -p $(BINDIR)
 	cd _build/applications ; \
 	for f in $$(ls *.$(OCAMLBEST)) ; do \
-		cp $$f $(BINDIR)/$${f%.$(OCAMLBEST)}; \
+	  cp $$f $(BINDIR)/$${f%.$(OCAMLBEST)}; \
 	done
 
-	@echo "Installed binaries into $(BINDIR)"
-
 uninstall:
-	$(UNINSTALL) $(NAME)
-	if [ -f $(BINDIR)/XXXX ] ; then \
-		rm $(BINDIR)/XXXXX ; \
-	fi
-	@echo "Removed $(BINDIR)/XXXX"
+	$(UNINSTALL) $(NAME) $(INSTALL_STUFF)
+
+	for f in $$(ls *.$(OCAMLBEST)) ; do \
+	  if [ -f $(BINDIR)/$${f%.$(OCAMLBEST)}; ] ; then \
+	    rm $(BINDIR)/$${f%.$(OCAMLBEST)}; \
+	  fi \
+	done
+
 
 dist: ./$(DIST_TARBALL)
 ./$(DIST_TARBALL):

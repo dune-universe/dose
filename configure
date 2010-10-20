@@ -606,8 +606,10 @@ INCLUDE_CUDF
 INCLUDE_RPM
 CONFIG_RPM
 LINK_RPM
+BZ2
 PKG_BZ2
 CONFIG_BZ2
+ZIP
 PKG_ZIP
 CONFIG_ZIP
 CONFIG_DB
@@ -4143,6 +4145,7 @@ $as_echo "not found" >&6; }
   fi
   CONFIG_ZIP="-DHASZIP"
   PKG_ZIP=pkg_zip
+  ZIP=zip
 else
   PKG_ZIP=pkg_
 fi
@@ -4186,6 +4189,7 @@ $as_echo "not found" >&6; }
   fi
   CONFIG_BZ2="-DHASBZ2"
   PKG_BZ2=pkg_bz2
+  BZ2=bz2
 else
   PKG_BZ2=pkg_
 fi
@@ -5823,6 +5827,8 @@ $as_echo "not found" >&6; }
 else
   PKG_BENCHMARK=pkg_
 fi
+
+
 
 
 

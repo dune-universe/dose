@@ -6,15 +6,15 @@ CPPFLAGS=@CPPFLAGS@
 LDFLAGS=@LDFLAGS@
 
 OCAMLFIND=@OCAMLFIND@
-DESTDIR =
-LIBDIR = $(DESTDIR)/@OCAMLLIB@
-BINDIR = $(DESTDIR)/usr/bin
+DESTDIR=@prefix@
+LIBDIR=$(DESTDIR)@OCAMLLIB@
+BINDIR=$(DESTDIR)/usr/bin
 ifeq ($(DESTDIR),)
-  INSTALL = $(OCAMLFIND) install
-  UNINSTALL = $(OCAMLFIND) remove
+  INSTALL=$(OCAMLFIND) install
+  UNINSTALL=$(OCAMLFIND) remove
 else
-  INSTALL = $(OCAMLFIND) install -destdir $(LIBDIR)
-  UNINSTALL = $(OCAMLFIND) remove -destdir $(LIBDIR)
+  INSTALL=$(OCAMLFIND) install -destdir $(LIBDIR)
+  UNINSTALL=$(OCAMLFIND) remove -destdir $(LIBDIR)
 endif
 
 OCAMLBUILD=@OCAMLBUILD@
@@ -67,10 +67,8 @@ endif
 #ocamlgraph support
 ifeq ("@HAS_OCAMLGRAPH@","yes")
   TARGETS += \
-			 applications/rmat.$(OCAMLBEST) \
-			 applications/pref-attach.$(OCAMLBEST) \
-			 applications/strong-deps.$(OCAMLBEST) \
-			 applications/ceve.$(OCAMLBEST)
+	     applications/strong-deps.$(OCAMLBEST) \
+	     applications/ceve.$(OCAMLBEST)
 endif
 
 #rpm support

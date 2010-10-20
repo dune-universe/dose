@@ -1,4 +1,4 @@
-<*.ml> or <*.mli> or <*.byte> or <*.native>: pkg_extlib, pkg_json-static, pkg_sqlite3, pkg_threads, pkg_postgresql
+<*.ml> or <*.mli> or <*.cma> or <*.cmx>: pkg_extlib, pkg_json-static, pkg_sqlite3, pkg_threads, pkg_postgresql
 <sqlite>: not_hygienic
 <*.ml> or <*.mli>: pp(@CAMLP4O@ Camlp4MacroParser.cmo @CONFIG_DBBACKEND@)
 <{idbr,sql,@TAGS_SQLITE@,@TAGS_PGSQL@,backend}.cmx>: for-pack(Db)

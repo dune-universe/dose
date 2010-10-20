@@ -1,4 +1,4 @@
-<*.ml> or <*.mli> or <*.cma> or <*.cmxa>: pkg_extlib, pkg_ocamlgraph, @PKG_CUDF@
+<*.ml> or <*.mli> or <*.cma> or <*.cmx>: pkg_extlib, pkg_ocamlgraph, @PKG_CUDF@
 <tests.*>: pkg_extlib, pkg_ocamlgraph, @PKG_CUDF@, pkg_oUnit, @PKG_ZIP@, @PKG_BZ2@, pkg_str
 <bench.*>: pkg_extlib, pkg_benchmark, pkg_str, pkg_ocamlgraph, @PKG_CUDF@, @PKG_ZIP@, @PKG_BZ2@
 <{defaultgraphs,dominators,statistics,diagnostic,diagnostic_int,depsolver,depsolver_int,strongconflicts,strongconflicts_int,strongdeps,strongdeps_int}.cmx>: for-pack(Algo)

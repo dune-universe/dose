@@ -61,6 +61,7 @@ if test "$HAS_ZIP" = "yes" ; then
   fi
   CONFIG_ZIP="-DHASZIP"
   PKG_ZIP=pkg_zip
+  ZIP=zip
 else
   PKG_ZIP=pkg_
 fi
@@ -77,6 +78,7 @@ if test "$HAS_BZ2" = "yes" ; then
   fi
   CONFIG_BZ2="-DHASBZ2"
   PKG_BZ2=pkg_bz2
+  BZ2=bz2
 else
   PKG_BZ2=pkg_
 fi
@@ -240,9 +242,11 @@ AC_SUBST(CONFIG_DB)
 
 AC_SUBST(CONFIG_ZIP)
 AC_SUBST(PKG_ZIP)
+AC_SUBST(ZIP)
 
 AC_SUBST(CONFIG_BZ2)
 AC_SUBST(PKG_BZ2)
+AC_SUBST(BZ2)
 
 AC_SUBST(LINK_RPM)
 AC_SUBST(CONFIG_RPM)
