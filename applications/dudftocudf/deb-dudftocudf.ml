@@ -414,16 +414,17 @@ let main () =
         let il = List.fold_left (fun acc pkg -> `PkgDst (pkg.Deb.name,suite) :: acc) [] installed_packages in
         let l = List.map mapver il in
         { Cudf.request_id = request_id ; install = l ; remove = [] ; upgrade = [] ; req_extra = [] ; }
+    |Debian.Apt.Upgrade None 
+    |Debian.Apt.DistUpgrade None -> 
+        let il = List.fold_left (fun acc pkg -> (`Pkg pkg.Deb.name) :: acc) [] installed_packages in
+        let l = List.map mapver il in
+        { Cudf.request_id = request_id ; install = [] ; remove = [] ; upgrade = l ; req_extra = [] ; }
     |Debian.Apt.Install l ->
         let l = List.map mapver l in
         { Cudf.request_id = request_id ; install = l ; remove = [] ; upgrade = [] ; req_extra = [] ; } 
     |Debian.Apt.Remove l -> 
         let l = List.map (fun (`Pkg p) -> (p,None) ) l in
         { Cudf.request_id = request_id ; install = [] ; remove = l ; upgrade = [] ; req_extra = [] ;}
-    |Debian.Apt.Upgrade None -> 
-        { Cudf.request_id = request_id ; install = [] ; remove = [] ; upgrade = [] ; req_extra = [] ; }
-    |Debian.Apt.DistUpgrade None -> 
-        { Cudf.request_id = request_id ; install = [] ; remove = [] ; upgrade = [] ; req_extra = [] ; }
   in
 
   let oc =
