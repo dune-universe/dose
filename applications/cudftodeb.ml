@@ -6,17 +6,19 @@ open Common
 
 module Options = struct
   open OptParse
+  let description = "Convert a cudf to debian (Packages,status,Request)"
+  let options = OptParser.make ~description
+  include Boilerplate.MakeOptions(struct let options = options end)
 
-  let debug = StdOpt.store_true ()
   let architecture = StdOpt.str_option ~default:"amd64" ()
 
-  let description = "Report the broken packages in a package list"
-  let options = OptParser.make ~description ()
-
   open OptParser
-  add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
   add options ~short_name:'a' ~long_name:"arch" ~help:"Set architecture" architecture;
 end
+
+let debug fmt = Util.make_debug "Cudftodeb" fmt
+let info fmt = Util.make_info "Cudftodeb" fmt
+let warning fmt = Util.make_warning "Cudftodeb" fmt
 
 let pp_pkgname fmt name = Format.fprintf fmt "%s" name
 let pp_version fmt ver = Format.fprintf fmt "%d" ver
@@ -60,7 +62,7 @@ let rec pp_vpkgformula fmt = function
       let pp_and fmt = pp_list fmt ~pp_item:pp_or ~sep:" , " in
       pp_and fmt fmla
 
-let pp_property fmt (n, s) = Format.fprintf fmt "%s: %s@\n" n s
+let pp_property fmt (n, s) = Format.fprintf fmt "%s: %s@." n s
 
 let buf = Buffer.create 1024
 let buf_formatter =
@@ -109,7 +111,7 @@ let pp_package fmt pkg =
   List.iter (fun (k, v) -> pp (k, string_of_value v)) pkg.pkg_extra
 
 let pp_packages fmt =
-  List.iter (fun pkg -> Format.fprintf fmt "%a@\n" pp_package pkg)
+  List.iter (fun pkg -> Format.fprintf fmt "%a@." pp_package pkg)
 ;;
 
 let pp_request fmt req =
@@ -136,8 +138,7 @@ let pp_request fmt req =
   in
   let pp_vpkglist fmt = pp_list fmt ~pp_item:pp_vpkg ~sep:" " in
   let string_of_vpkglist = string_of pp_vpkglist in
-  (* Printf.fprintf (open_out "Request") "%s\n" (string_of_vpkglist all) *)
-  Format.fprintf fmt "%s\n" (string_of_vpkglist all)
+  Format.fprintf fmt "%s@." (string_of_vpkglist all)
 ;;
 
 let convert universe req =
@@ -186,7 +187,7 @@ let convert universe req =
         List.filter_map (function 
           |(name,None) -> Some(name,None)
           |(name,Some(`Eq,ver)) -> Some(name,Some(`Eq,ver))
-          |(name,constr) ->
+          |(name,constr) -> begin
             let l = 
                 List.map (fun p -> 
                   (p.Cudf.package,Some(`Eq,p.Cudf.version))
@@ -200,6 +201,7 @@ let convert universe req =
             in
             reqlist := p::!reqlist ; 
             Some("dummy_"^name,None)
+          end
         ) (req.install @ req.upgrade);
       Cudf.remove =
         List.flatten (
@@ -219,21 +221,19 @@ let convert universe req =
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
+  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
 
   let (status,pkglist,request) =
     match posargs with
     |[u] ->
         begin
-          Common.Util.print_info "Converting file %s" u ;
+          info "Converting file %s" u ;
           match Boilerplate.load_cudf u with
           |(_,univ,None) -> begin
               Printf.eprintf "This is Cudf universe, not a Cudf document. Request missing\n" ; 
               exit 1
             end
-          |(_,univ,Some(req)) ->
-            let (s,l,r) = convert univ req in
-            (s,l,r)
+          |(_,univ,Some(req)) -> convert univ req
         end
     |_ -> (Printf.eprintf "You must specify one cudf document\n" ; exit 1)
   in
@@ -252,9 +252,7 @@ let main () =
   close_out packages_oc ;
 
   pp_packages status_ofr status;
-  close_out status_oc ;
-
-  exit 0
+  close_out status_oc
 ;;
 
 main ();;
