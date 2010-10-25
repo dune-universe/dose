@@ -17,8 +17,10 @@ module L = Xml.LazyList
 
 module Options = struct
   open OptParse
+  let description = "Convert Rpm-based Dudf files to Cudf format"
+  let options = OptParser.make ~description
+  include Boilerplate.MakeOptions(struct let options = options end)
 
-  let debug = StdOpt.store_true ()
   let outdir = StdOpt.str_option ()
   let problemid = StdOpt.str_option ()
   let distribution = StdOpt.str_option () ;;
@@ -30,15 +32,15 @@ module Options = struct
     |_ -> ()
   ;;
 
-  let description = "Convert Rpm-based Dudf files to Cudf format"
-  let options = OptParser.make ~description:description ()
-
   open OptParser ;;
-  add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
   add options ~short_name:'o' ~long_name:"outdir" ~help:"Output directory" outdir;
   add options                 ~long_name:"distr" ~help:"[caixa | mandriva]" distribution;
   add options                 ~long_name:"id" ~help:"Problem id" problemid;
 end
+
+let debug fmt = Util.make_debug "Rpm-dudf" fmt
+let info fmt = Util.make_info "Rpm-dudf" fmt
+let warning fmt = Util.make_warning "Rpm-dudf" fmt
 
 (* ========================================= *)
 
@@ -131,7 +133,7 @@ let read_status str =
                   ]
                 }
               with Invalid_argument("index out of bounds") -> (
-                Util.print_warning "%s" (Json_io.string_of_json (Json_type.Array l));
+                warning "%s" (Json_io.string_of_json (Json_type.Array l));
                 None)
               end
           |_ -> assert false
@@ -171,8 +173,8 @@ let main () =
     |[h] -> h
     |_ -> (Printf.eprintf "too many arguments" ; exit 1)
   in
-  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
-  Util.print_info "parse xml";
+  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
+  info "parse xml";
 
   let dudfdoc = Dudfxml.parse input_file in
 
@@ -207,7 +209,7 @@ let main () =
   let extras = List.map fst extras_property in
   *)
 
-  Util.print_info "parse universe";
+  info "parse universe";
   let all_packages =
     List.fold_left (fun acc (_,_,_,contents) ->
       let ch = IO.input_string contents in
@@ -216,17 +218,17 @@ let main () =
       List.fold_right Rpm.Packages.Set.add l acc
     ) Rpm.Packages.Set.empty packagelist
   in
-  Util.print_info "universe : %d" (Rpm.Packages.Set.cardinal all_packages);
+  info "universe : %d" (Rpm.Packages.Set.cardinal all_packages);
 
-  Util.print_info "parse package status";
+  info "parse package status";
   let installed_packages =
     let l = read_status status in
     List.fold_left (fun s pkg -> Rpm.Packages.Set.add pkg s) Rpm.Packages.Set.empty l
   in
-  Util.print_info "status : %d" (Rpm.Packages.Set.cardinal installed_packages);
+  info "status : %d" (Rpm.Packages.Set.cardinal installed_packages);
 
   let l = Rpm.Packages.Set.elements (Rpm.Packages.Set.union all_packages installed_packages) in
-  Util.print_info "union : %d" (List.length l);
+  info "union : %d" (List.length l);
   let tables = Rpm.Rpmcudf.init_tables l in
 
   let installed =
@@ -238,19 +240,19 @@ let main () =
     h
   in
   
-  Util.print_info "convert";
+  info "convert";
   let pl =
     List.map (fun pkg ->
       let inst = Hashtbl.mem installed (pkg.Rpm.Packages.name,pkg.Rpm.Packages.version) in
       Rpm.Rpmcudf.tocudf tables ~inst:inst pkg
     ) l
   in
-  Util.print_info "cudf packages %d" (List.length pl);
+  info "cudf packages %d" (List.length pl);
 
   let universe = Cudf.load_universe pl in
 
   (* duplicated code from deb-dudfcudf *)
-  Util.print_info "request";
+  info "request";
   let request =
     match OptParse.Opt.get Options.distribution with
     |"caixa" ->
@@ -295,7 +297,7 @@ let main () =
     |_ -> assert false
   in
 
-  Util.print_info "dump";
+  info "dump";
   let oc =
     if OptParse.Opt.is_set Options.outdir then begin
       let dirname = OptParse.Opt.get Options.outdir in
