@@ -15,35 +15,38 @@
 
 open Common
 
-module Options =
-  struct
-    open OptParse
-    let debug = StdOpt.store_true ()
-    let generic = StdOpt.store_true ()
-    let scatterplots = StdOpt.store_true ()
-    let connectivity = StdOpt.store_true ()
-    let components = StdOpt.store_true ()
-    let smallworld = StdOpt.store_true ()
-    let centrality = StdOpt.store_true ()
-    let strong_deps = StdOpt.store_true ()
-    let combine_scatter = StdOpt.store_true ()
-    let prefix = StdOpt.str_option ~default:"" ()
+module Options = struct
+  open OptParse
+  let description = "Compute Small World statistic"
+  let options = OptParser.make ~description
+  include Boilerplate.MakeOptions(struct let options = options end)
+    
+  let generic = StdOpt.store_true ()
+  let scatterplots = StdOpt.store_true ()
+  let connectivity = StdOpt.store_true ()
+  let components = StdOpt.store_true ()
+  let smallworld = StdOpt.store_true ()
+  let centrality = StdOpt.store_true ()
+  let strong_deps = StdOpt.store_true ()
+  let combine_scatter = StdOpt.store_true ()
+  let prefix = StdOpt.str_option ~default:"" ()
 
-    let description = "Compute the small world statistic of the dependency graph"
-    let options = OptParser.make ~description ()
-    open OptParser
+  open OptParser
+  add options ~long_name:"prefix" ~help:"Prefix output fils with <prefix>" prefix;
+  add options ~short_name:'g' ~long_name:"generic" ~help:"" generic;
+  add options ~short_name:'p' ~long_name:"scatterplots" ~help:"" scatterplots;
+  add options ~short_name:'c' ~long_name:"connectivity" ~help:"" connectivity;
+  add options ~short_name:'m' ~long_name:"components" ~help:"" components;
+  add options ~short_name:'s' ~long_name:"smallworld" ~help:"" smallworld;
+  add options ~short_name:'e' ~long_name:"centrality" ~help:"" centrality;
+  add options ~long_name:"strong-deps" ~help:"" strong_deps;
+  add options ~long_name:"combine-scatter" ~help:"" combine_scatter;
+end
 
-    add options ~short_name:'d' ~long_name:"debug" ~help:"Print various aggregate information" debug;
-    add options ~long_name:"prefix" ~help:"Prefix output fils with <prefix>" prefix;
-    add options ~short_name:'g' ~long_name:"generic" ~help:"" generic;
-    add options ~short_name:'p' ~long_name:"scatterplots" ~help:"" scatterplots;
-    add options ~short_name:'c' ~long_name:"connectivity" ~help:"" connectivity;
-    add options ~short_name:'m' ~long_name:"components" ~help:"" components;
-    add options ~short_name:'s' ~long_name:"smallworld" ~help:"" smallworld;
-    add options ~short_name:'e' ~long_name:"centrality" ~help:"" centrality;
-    add options ~long_name:"strong-deps" ~help:"" strong_deps;
-    add options ~long_name:"combine-scatter" ~help:"" combine_scatter;
-  end
+let debug fmt = Util.make_debug "SmallWorld" fmt
+let info fmt = Util.make_info "SmallWorld" fmt
+let warning fmt = Util.make_warning "SmallWorld" fmt
+
 
 (**********************************)
 
@@ -88,7 +91,7 @@ let saveplot2 h outfile =
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug 2 ;
+  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   let (universe,_,_) = Boilerplate.load_universe posargs in
   let gr = 
     if OptParse.Opt.get Options.strong_deps then
