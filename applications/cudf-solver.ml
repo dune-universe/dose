@@ -29,6 +29,12 @@ module Options = struct
   add options ~short_name:'c' ~long_name:"cudf"  ~help:"print the cudf solution (if any)" cudf;
 end
 
+let pp_solution fmt = function
+  |{Diagnostic.result = Diagnostic.Success (f);} ->
+      let is = f ~all:true () in
+      Format.fprintf fmt "%a" Cudf_printer.pp_packages is
+  |_ -> assert false
+
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
@@ -44,7 +50,7 @@ let main () =
       let r = Depsolver.check_request (p,l,r) in
       if Diagnostic.is_solution r then begin
         if OptParse.Opt.get Options.cudf then
-          Diagnostic.printf ~success:true ~explain:true r
+          Format.printf "%a" pp_solution r
         end
       ;
       if not(Diagnostic.is_solution r && OptParse.Opt.get Options.cudf) then begin
