@@ -28,6 +28,10 @@ Run a MISC solver and returns an apt-get command line
 OPTIONS:
    -h      Show this message
    -s      Solvers :
+               apt-get-paranoid
+               apt-get-trendy
+               aptitude-paranoid
+               aptitude-trendy
                aspcud-paranoid-1.0
                aspcud-trendy-1.2
                inescp-1.0 (paranoid)
@@ -59,6 +63,7 @@ OPTIONS:
 	    -changed,-removed,-new
 
    -f      Dudf file (format xml not compressed)
+   -c      Cudf file (not compressed)
    -a      Architecture (set the default architecture, e.g. i386, amd64, ...)
    -v      Verbose
    -d      Debug
@@ -67,6 +72,7 @@ EOF
 
 SOLVER="p2cudf-paranoid-1.6"
 DUDFFILE=
+CUDFFILE=
 APTCMD=
 DEBUG=
 VERBOSE=
@@ -74,11 +80,12 @@ OBJFUN=
 ARCH=
 DPKG=`which dpkg`
 
-while getopts  "vf:hs:do:a:" flag
+while getopts  "vf:hs:do:a:c:" flag
 do
   case "$flag" in
     s) SOLVER=$OPTARG ;;
     f) DUDFFILE=$OPTARG ;;
+    c) CUDFFILE=$OPTARG ;;
     a) ARCH=$OPTARG ;;
     o) OBJFUN=$OPTARG ;;
     d) set -x ; DEBUG=true ;;
@@ -95,24 +102,24 @@ fi
 
 
 if [ -z "$DPKG" ]; then
-    if [ -z "$ARCH" -o -z "$DUDFFILE" ]; then
+    if [ -z "$ARCH" -o -z "$DUDFFILE$CUDFFILE" ]; then
 	usage
         echo
 	echo "It appears you are trying to run " `basename $0` " on a non Debian-based machine:"
-	echo "to do this, you need to provide an input DUDF file and a default architecture."
+	echo "to do this, you need to provide an input DUDF or CUDF file and a default architecture."
 	exit 1
     fi
 else 
   ARCH=${ARCH:=`dpkg --print-architecture`}
 fi
 
-if [ -z "$DUDFFILE" ]; then
+if [ -z "$DUDFFILE$CUDFFILE" ]; then
   shift $((OPTIND-1))
   APTCMD="$@"
   if [ -z "$APTCMD" ]; then
     usage
     echo
-    echo "You must specify an apt-get command line or a dudf file with a default architecture"
+    echo "You must specify an apt-get command line or a CUDF or DUDF file with a default architecture"
     exit 1
   fi
 fi
@@ -131,20 +138,25 @@ TEMPDIR=`mktemp -d`
 TIMEFILE=$TEMPDIR/time.log
 TIME="/usr/bin/time -f %Ereal,%Uuser,%Ssys -o $TIMEFILE -a "
 
-if [ ! -z "$DUDFFILE" ]; then
-    cp $DUDFFILE $TEMPDIR
-    cd $TEMPDIR
+if [ -z "$CUDFFILE" ]; then
+    if [ ! -z "$DUDFFILE" ]; then
+	cp $DUDFFILE $TEMPDIR
+	cd $TEMPDIR
+    else
+	echo "Creating dudf (dudf-save)"
+	cd $TEMPDIR
+	echo "dudf-save" > $TIMEFILE
+	DUDFFILE=`$TIME $DUDFSAVE -n -C apt-get -s $APTCMD 2>&1 | grep "INFO:root:DUDF report" | awk '{print $5}'`
+    fi
+    echo "dudf to cudf (deb-dudftocudf)"
+    echo "deb-dudftocudf" >> $TIMEFILE
+    $TIME $DUDFCUDF -a $ARCH --outdir . $DUDFFILE
+    CUDFFILE=$TEMPDIR/`basename $DUDFFILE .xml`.cudf
 else
-    echo "Creating dudf (dudf-save)"
+    cp $CUDFFILE $TEMPDIR
     cd $TEMPDIR
-    echo "dudf-save" > $TIMEFILE
-    DUDFFILE=`$TIME $DUDFSAVE -n -C apt-get -s $APTCMD 2>&1 | grep "INFO:root:DUDF report" | awk '{print $5}'`
+    CUDFFILE=$TEMPDIR/`basename $CUDFFILE`
 fi
-
-echo "dudf to cudf (deb-dudftocudf)"
-echo "deb-dudftocudf" >> $TIMEFILE
-$TIME $DUDFCUDF -a $ARCH --outdir . $DUDFFILE
-CUDFFILE=$TEMPDIR/`basename $DUDFFILE .xml`.cudf
 
 echo "solving ($SOLVER)"
 echo "$SOLVER" >> $TIMEFILE
