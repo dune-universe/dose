@@ -50,6 +50,8 @@ let main () =
       let r = Depsolver.check_request (p,l,r) in
       if Diagnostic.is_solution r then begin
         if OptParse.Opt.get Options.cudf then
+          if not(Option.is_none p) then 
+            Format.printf "%a\n" Cudf_printer.pp_preamble (Option.get p);
           Format.printf "%a" pp_solution r
         end
       ;
