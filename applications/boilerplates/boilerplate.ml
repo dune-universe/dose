@@ -80,6 +80,12 @@ let deb_load_list ?(extras=[]) ?(status=[]) l =
   in
   (pkglist,from_cudf,to_cudf)
 
+let pp_versions_table fmt (from_cudf, pkglist) =
+  List.iter (fun pkg ->
+    let (p,v) = from_cudf (pkg.Cudf.package,pkg.Cudf.version) in
+    Format.fprintf fmt "%s=%d=%s@." p pkg.Cudf.version v
+  ) pkglist
+
 (** transform a list of debian control stanza into a cudf packages list *)
 let eclipse_load_list ?(extras=[]) ?(status=[]) l =
   let tables = Eclipse.Eclipsecudf.init_tables l in
