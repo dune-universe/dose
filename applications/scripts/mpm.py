@@ -3,6 +3,8 @@
 import os
 import tempfile
 import os.path
+import shutil
+import cStringIO
 
 import apt_pkg
 import apt
@@ -10,6 +12,7 @@ import apt
 from subprocess import Popen, PIPE, STDOUT
 
 cudfConverter="bin/deb-cudf.native"
+cudfSolDiff="bin/cudf_sol_diff.native"
 
 acquireProgress = apt.progress.base.AcquireProgress()
 installProgress = apt.progress.base.InstallProgress()
@@ -36,6 +39,7 @@ def setup():
 #    apt_pkg.Config.set("Debug::pkgOrderList","true")
 
     cache.open(None)
+    print "setup"
     return cache
 
 def update(cache):
@@ -56,40 +60,50 @@ def update(cache):
     cmd = "%s --status %s --outfile %s %s" % (cudfConverter, status, cudf, packages)
     #print cmd
     out = Popen(cmd, shell=True, stdout=PIPE).communicate()[0]
+    print "update"
 
 def solver(cache, request, solver):
     ''' run here the mancoosi solver '''
 
-    infile = os.path.join(aptroot,"solverinput.fifo")
-    os.mkfifo(infile)
-    writer = open(infile,'w+')
+    infile = tempfile.mktemp()
+    writer = open(infile,'w')
     universe = os.path.join(aptroot,"universe.cudf")
     cudf = open(universe,'r')
-    print >>writer, cudf.readlines()
-    print >>writer, "\nrequest:\n"
-    os.close(cudf)
-    os.close(writer)
+    shutil.copyfileobj(cudf, writer)
+    print >>writer, '''
 
-    outfile = os.path.join(aptroot,"solveroutput.fifo")
-    os.mkfifo(outfile)
+request: RAND-CUDF-GENERATOR
+install: libslab0a
+'''
+    cudf.close()
+    writer.close()
 
-    cmd = "solvers/%s/%s %s %s" (solver, infile, outfile)
+    outfile = tempfile.mktemp()
+    cmd = "./%s %s %s" % (solver, infile, outfile)
+    swd = "solvers/%s" % solver
+
     print cmd
-    out = Popen(cmd, shell=True, stdout=PIPE).communicate()[0]
+    out = Popen(cmd, stdout=PIPE, cwd=swd, shell=True).communicate()[0]
     print out
+    
+    cmd = "%s -verbose -cudf %s -sol %s" % (cudfSolDiff, infile, outfile)
+    out = Popen(cmd, stdout=PIPE, shell=True).communicate()[0]
+    
+    #print out
+    diff = cStringIO.StringIO(out)
+    l = diff.readlines()
+    diff.close()
 
-    reader = open(outfile,'r+')
-    os.close(reader)
-
-#    pkg1 = cache["xwatch"]
-#    pkg2 = cache["di"]
-#    pkg1.mark_install() #False,False,False)
-#    print 'pkg1 is marked for install:', pkg1.marked_install
-#    print 'pkg1 is (summary):', pkg1.candidate.summary
-
-#    pkg2.mark_install(False,False,False)
-#    print 'pkg2 is marked for install:', pkg2.marked_install
-#    print 'pkg2 is (summary):', pkg2.candidate.summary
+    print l[1:11]
+    for pkg in l[-1].split(' ') :
+        (p,v) = pkg.lstrip().rstrip().split('=')
+        package = cache[p]
+        #print "candidate %s" % package.candidate
+        package.candidate = package.versions[v]
+        #print "(%s,%s)" % (p,v)
+        #print "candidate %s" % package.candidate
+        #print package.versions
+        package.mark_install(False,False,False)
 
 def simulator():
     ''' run here the model simulator '''
@@ -108,11 +122,11 @@ def install(cache):
 
 def main():
     cache = setup()
-    update(cache)
+#    update(cache)
     solver(cache,"","p2cudf-paranoid-1.6")
 #    simulator()
-#    download(cache)
-    #install(cache)
+    download(cache)
+    install(cache)
 #    cache.commit(acquireProgress,installProgress)
 
     print "Broken: %s " % cache.broken_count
