@@ -17,18 +17,16 @@ open Common
 
 module Options = struct
   open OptParse
+  let description = "Generate a cudf universe from debian Packages"
+  let options = OptParser.make ~description
+  include Boilerplate.MakeOptions(struct let options = options end)
 
-  let verbose = StdOpt.incr_option ()
   let status = StdOpt.str_option ()
   let outfile = StdOpt.str_option ()
 
-  let description = "Generate a cudf document from debian Packages"
-  let options = OptParser.make ~description:description ()
-
   open OptParser
-  add options ~short_name:'v' ~help:"Print debug information (can be repeated)" verbose;
-  add options                 ~long_name:"status" ~help:"package status (822)" status;
-  add options                 ~long_name:"outfile" ~help:"specify the output file" outfile;
+  add options ~long_name:"status" ~help:"package status (822)" status;
+  add options ~long_name:"outfile" ~help:"specify the output file" outfile;
 end
 
 (* ========================================= *)
@@ -37,7 +35,7 @@ let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
 
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose) ;
+  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
 
   (* raw -> cudf *)
   let (preamble,universe) =
@@ -57,7 +55,12 @@ let main () =
     else
       stdout
   in
-  Cudf_printer.pp_cudf (Format.formatter_of_out_channel oc) (preamble,universe,Cudf.default_request);
+
+  let fmt = Format.formatter_of_out_channel oc in
+  Format.fprintf fmt "%a@.%a@." 
+    Cudf_printer.pp_preamble preamble
+    Cudf_printer.pp_universe universe;
+
   if oc <> stdout then close_out oc
 ;;
 
