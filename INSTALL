@@ -1,4 +1,3 @@
-
 Dose3 needs ocaml >= 3.11.2
 On debian, dose3 **does not compile** on debian lenny.
 
@@ -36,15 +35,20 @@ make
 --with-bz2
 --with-oUnit
 
-libcudf is included in the source tree of dose3 (but not in the dose3 release tarball). 
-To use the version of libcudf in the source tree you can specify
---without-libcudf as configure option. By default dose3 uses the system wide version
-of libcudf.
+libcudf is included in the source tree of dose3 available by svn but
+not in the dose3 release tarball. By default dose3 uses the system
+wide version of libcudf. To use the version of libcudf in the source
+tree you can specify --without-libcudf as configure option. If using
+an independently installed version of libcudf you'll need version >=
+0.5.99.
 
-Ex :
+Example:
 ./configure --without-libcudf --with-xml --with-ocamlgraph --with-zip --with-oUnit --with-bz2 --with-rpm
 
-In order to compile the a selection of applications do "make". To compile specific application
+Compiling applications
+----------------------
+In order to compile the a selection of applications do "make". To
+compile specific application
 
 $cd applications/
 $ocamlbuild $app.native
