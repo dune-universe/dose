@@ -15,22 +15,21 @@ open Boilerplate
 open Common
 open Rpm
 
-module Options =
-  struct
-    open OptParse
-    let debug = StdOpt.store_true ()
-    let dump_hdlist = StdOpt.store_true ()
-    let outdir = StdOpt.str_option ()
+module Options = struct
+  open OptParse
+  let description = "Convert rpm packages files to cudf"
+  let options = OptParser.make ~description
+  include Boilerplate.MakeOptions(struct let options = options end)
 
-    let options = OptParser.make ()
+  let dump_hdlist = StdOpt.store_true ()
+  let outdir = StdOpt.str_option ()
 
-    open OptParser
+  open OptParser
 
-    add options ~long_name:"dump" ~help:"Dump the raw hdlist contents" dump_hdlist;
-    add options ~short_name:'d' ~long_name:"debug" ~help:"Print various aggregate information" debug;
-    add options ~long_name:"outdir" ~help:"Send output to a file" outdir;
+  add options ~long_name:"dump" ~help:"Dump the raw hdlist contents" dump_hdlist;
+  add options ~long_name:"outdir" ~help:"Send output to a file" outdir;
 
-  end
+end
 
 (* ========================================= *)
 
@@ -38,7 +37,8 @@ let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
   let bars = ["Rpm.Parse.Hdlists.parse_822_iter"] in
-  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug ~bars () ;
+  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
+  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) bars;
   let uri = argv1 posargs in
 
   let l =

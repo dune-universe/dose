@@ -38,18 +38,18 @@ let warning fmt = Util.make_warning "Strongpred" fmt
 type answer = Failure of string | Success of string
 
 type analysis = {
-    package : (string * string);
+    package : Cudf.package;
     mutable target : string;
     mutable impactset : int;
     mutable broken : int;
     mutable answer : answer;
-    mutable brokenlist : (string * string) list;
+    mutable brokenlist : Cudf.package list;
   }
 
 type cluster = {
   version : string ;
   mutable ignore : bool;
-  mutable packages : (string * string) list;
+  mutable packages : Cudf.package list;
   mutable analysis : analysis list
 }
 
@@ -71,7 +71,7 @@ let default_report = {
 } 
 
 let default_analysis = {
-  package = ("",""); 
+  package = Cudf.default_package; 
   target = ""; 
   broken = 0;
   impactset = 0;
@@ -79,8 +79,26 @@ let default_analysis = {
   brokenlist = []
 } 
 
-let pp_package fmt (p,v) =
+let pp_package fmt pkg =
+  let p = pkg.Cudf.package in
+  let v = CudfAdd.string_of_version pkg in
   Format.fprintf fmt "@[%s (= %s)@]" p v
+;;
+
+let pp_source fmt pkg =
+  let p = Cudf.lookup_package_property pkg "source" in
+  let v = Cudf.lookup_package_property pkg "sourceversion" in
+  Format.fprintf fmt "@[%s (= %s)@]" p v
+;;
+
+let pp_package_stanza source fmt pkg =
+  Format.fprintf fmt "@[name: %a@]" pp_package pkg;
+  if source then begin
+    Format.fprintf fmt "@,@[source: %a@]" pp_source pkg ;
+(*    let s = Cudf.lookup_package_property pkg "sourcesize" in
+    Format.fprintf fmt "@,@[size: %s@]" s ;
+    *)
+  end
 ;;
 
 let rec pp_list pp fmt = function
@@ -102,17 +120,14 @@ let pp_analysis fmt analysis =
   if analysis.brokenlist <> [] then begin
     Format.fprintf fmt "broken: %d@," analysis.broken;
     Format.fprintf fmt "impactset: %d@," analysis.impactset;
-    Format.fprintf fmt "@[<v 1>brokenlist:@,%a@]" (pp_list pp_package) analysis.brokenlist
+    Format.fprintf fmt "@[<v 1>brokenlist:@,%a@]" (pp_list (pp_package_stanza true)) analysis.brokenlist
   end
 ;;
-
-let pp_package_item fmt pkg =
-  Format.fprintf fmt "@[name: %a@]" pp_package pkg
 
 let pp_cluster fmt cluster =
   Format.fprintf fmt "version: %s@," cluster.version;
   if cluster.packages <> [] then
-    Format.fprintf fmt "@[<v 1>packages:@,%a@]@," (pp_list pp_package_item) cluster.packages;
+    Format.fprintf fmt "@[<v 1>packages:@,%a@]@," (pp_list (pp_package_stanza false)) cluster.packages;
   Format.fprintf fmt "ignore: %b@," cluster.ignore;
   if cluster.analysis <> [] then begin
     Format.fprintf fmt "@[<v 1>analysis:@,%a@]" (pp_list pp_analysis) cluster.analysis
@@ -120,7 +135,8 @@ let pp_cluster fmt cluster =
 ;;
 
 let pp_report fmt report =
-  Format.fprintf fmt "source: %a@," pp_package report.source;
+  let (p,v) = report.source in
+  Format.fprintf fmt "source: %s (= %s)@," p v;
   if report.clusters <> [] then
     Format.fprintf fmt "@[<v 1>clusters:@,%a@]" (pp_list pp_cluster) report.clusters
 
@@ -187,8 +203,7 @@ let prediction (universe1,from_cudf1,to_cudf1) =
   let graph = Strongdeps.strongdeps_univ universe in
 
   let check report (source,sourceversion) cluster =
-    let subcluster = { default_cluster with version = sourceversion } in
-    subcluster.packages <- List.map (fun pkg -> (pkg.Cudf.package, CudfAdd.string_of_version pkg)) cluster ;
+    let subcluster = { default_cluster with version = sourceversion; packages = cluster } in
     report.clusters <- subcluster :: report.clusters;
 
     let all_constraints = constraints conv_table cluster in
@@ -223,10 +238,10 @@ let prediction (universe1,from_cudf1,to_cudf1) =
 
         (* for each package in the cluster, perform analysis *)
         List.iter (fun package -> 
-          let (p,v) = (package.Cudf.package, CudfAdd.string_of_version package) in
+          (* let (p,v) = (package.Cudf.package, CudfAdd.string_of_version package) in *)
           let pn = CudfAdd.string_of_package package in
           let (_,sv) = conv_table.Predictions.from_cudf (package.Cudf.package,version) in
-          let report_package = {default_analysis with package = (p,v); target = sv} in
+          let report_package = {default_analysis with package = package; target = sv} in
           debug "%d -> %d" package.Cudf.version version;
 
           let isp = try Hashtbl.find impactset_table package with Not_found -> assert false in
@@ -270,7 +285,7 @@ let prediction (universe1,from_cudf1,to_cudf1) =
               report_package.answer <- Failure(s);
               report_package.broken <- nbroken;
               report_package.impactset <- sizeisp;
-              report_package.brokenlist <- List.map (fun pkg -> (pkg.Cudf.package, CudfAdd.string_of_version pkg)) broken ;
+              report_package.brokenlist <- broken ;
            end else begin
               let s = Printf.sprintf "We can safely migrate package %s to version %s without breaking any dependency" pn sv in
               report_package.answer <- Success(s);
@@ -294,13 +309,14 @@ let prediction (universe1,from_cudf1,to_cudf1) =
       Format.fprintf fmt "@[<v 1>-@,%a@,@]" pp_report report
     ) universe
   else
+    let source_clusters = Debian.Debutil.group_by_source universe in
     Hashtbl.iter (fun (source,sourceversion) hv ->
       let report = { default_report with source = (source,sourceversion) } in
       Hashtbl.iter (fun packageversion cluster ->
         check report (source,packageversion) cluster
       ) hv;
       Format.fprintf fmt "@[<v 1>-@,%a@]@," pp_report report
-    ) (Debian.Debutil.group_by_source universe)
+    ) source_clusters
   ;
   Format.fprintf fmt "@]@.";
   Util.Progress.reset predbar
