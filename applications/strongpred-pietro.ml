@@ -325,8 +325,9 @@ let prediction (universe1,from_cudf1,to_cudf1) =
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
+  let bars = ["Strongpred";"Strongdeps_int.main";"Strongdeps_int.conj"] in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
-  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) ["Strongpred"];
+  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) bars;
   let (universe,from_cudf,to_cudf) = Boilerplate.load_universe posargs in
   prediction (universe,from_cudf,to_cudf)
 ;;
