@@ -244,7 +244,7 @@ let discriminants ?vl constraints =
 (** [migrate table v l] migrates all packages in [l] to version [v] *)
 let migrate table v l =
   List.map (fun p ->
-    if CudfAdd.mem_package table.universe (p.Cudf.package,v) then p
+    if Cudf.mem_package table.universe (p.Cudf.package,v) then p
     else create_dummy table (p.Cudf.package,v)
   ) l
 ;;

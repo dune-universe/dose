@@ -249,14 +249,14 @@ let prediction (universe1,from_cudf1,to_cudf1) =
           end else if not (List.mem version vl) then begin
             let s = Printf.sprintf "ignoring package %s : %s is not a discriminant" pn sv in
             report_package.answer <- Failure(s);
-          end else if CudfAdd.mem_package universe (package.Cudf.package,version) then begin
+          end else if Cudf.mem_package universe (package.Cudf.package,version) then begin
             let s = Printf.sprintf "ignoring package %s : If we migrate to version %s, then all its impact set becomes uninstallable" pn sv in
             report_package.answer <- Failure(s);
           end else begin
             (* take care of packages q in isp that may no longer be present in the updated universe *)
             let broken = 
               List.fold_left (fun acc q ->
-                if CudfAdd.mem_package new_universe (q.Cudf.package,q.Cudf.version) then
+                if Cudf.mem_package new_universe (q.Cudf.package,q.Cudf.version) then
                   let d = Depsolver.edos_install solver q in
                   if not(Diagnostic.is_solution d) then q::acc else acc
                 else acc

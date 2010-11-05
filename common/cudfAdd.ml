@@ -88,12 +88,6 @@ let pkgnames universe =
     end else acc
   ) [] universe
 
-(** [mem_package univ (p,v)] returns true if the universe contains
-    a package with name [p] and version [v], false otherwise *)
-let mem_package univ (p,v) =
-  try ignore(Cudf.lookup_package univ (p,v)); true
-  with Not_found -> false
-
 (** maps one to one cudf packages to integers *)
 class projection = object(self)
 
