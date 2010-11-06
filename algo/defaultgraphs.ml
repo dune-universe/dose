@@ -381,7 +381,8 @@ let intcudf index intgraph =
   let module SG = IntPkgGraph.G in
   let trasformtimer = Util.Timer.create "Defaultgraphs.intcudf" in
   Util.Timer.start trasformtimer;
-  let cudfgraph = PG.create () in
+  let size = 25000 in
+  let cudfgraph = PG.create ~size () in
   SG.iter_edges (fun x y ->
     let p = index.(x) in
     let q = index.(y) in

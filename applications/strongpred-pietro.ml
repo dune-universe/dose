@@ -306,7 +306,7 @@ let prediction (universe1,from_cudf1,to_cudf1) =
       let (p,v) = (pkg.Cudf.package, CudfAdd.string_of_version pkg) in
       let report = { default_report with source = (p,v) } in
       check report (p,v) [pkg];
-      Format.fprintf fmt "@[<v 1>-@,%a@,@]" pp_report report
+      Format.fprintf fmt "@[<v 1>-@,%a@]@," pp_report report
     ) universe
   else
     let source_clusters = Debian.Debutil.group_by_source universe in

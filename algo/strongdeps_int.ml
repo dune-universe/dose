@@ -62,7 +62,8 @@ let somedisj depends =
 (* each package has a node in the graph, even if it does not have  
  * any strong dependencies *)
 let strongdeps_int ?(transitive=true) graph mdf l =
-  let available = List.sort ~cmp:(fun (_,n,_) (_,m,_) -> m - n) l in
+  (* let available = List.sort ~cmp:(fun (_,n,_) (_,m,_) -> m - n) l in *)
+  let available = l in
   let size = List.length available in
 
   Util.Progress.set_total mainbar size;
