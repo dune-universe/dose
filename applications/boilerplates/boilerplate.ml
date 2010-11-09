@@ -1,6 +1,8 @@
 open ExtLib
 open Common
 
+(*************************************************************)
+(* Options *)
 module type Ot = sig
   val options :
     ?usage:string ->
@@ -10,6 +12,21 @@ module type Ot = sig
     ?prog:string ->
     ?formatter:OptParse.Formatter.t -> unit -> OptParse.OptParser.t
 end
+
+let and_sep_re = Pcre.regexp "\\s*;\\s*"
+let pkg_re = Pcre.regexp "\\(([a-z][a-z0-9.+-]*)\\s*,\\s*([a-zA-Z0-9.+:~-]+)\\)"
+let parse_pkg s =
+  let parse_aux str =
+    try
+      let s = Pcre.exec ~rex:pkg_re str  in
+      (Pcre.get_substring s 1, Pcre.get_substring s 2)
+    with
+      Not_found -> (Printf.eprintf "Parse error %s\n" str ; exit 1)
+  in List.map parse_aux (Pcre.split ~rex:and_sep_re s);;
+
+let pkglist_option ?default ?(metavar = "PKGLST") () =
+  OptParse.Opt.value_option metavar default
+  parse_pkg (fun _ s -> Printf.sprintf "invalid package list '%s'" s)
 
 module MakeOptions(O : Ot) = struct
   open OptParse ;;
@@ -46,6 +63,8 @@ let enable_bars verbose l =
 let debug fmt = Util.make_debug "Boilerplate" fmt
 let info fmt = Util.make_info "Boilerplate" fmt
 let warning fmt = Util.make_warning "Boilerplate" fmt
+
+(*************************************************************)
 
 let argv_ f l =
   let a = Array.of_list l in
@@ -283,3 +302,5 @@ let parse uri =
   pkglist
 ;;
 *)
+
+

@@ -15,8 +15,10 @@ open Common
 
 module Options = struct
   open OptParse
+  let description = "Compute the strong dependency graph"
+  let options = OptParser.make ~description
+  include Boilerplate.MakeOptions(struct let options = options end)
 
-  let verbose = StdOpt.incr_option ()
   let dot = StdOpt.store_true ()
   let dump = StdOpt.store_true ()
   let table =  StdOpt.store_true ()
@@ -25,11 +27,7 @@ module Options = struct
   let prefix = StdOpt.str_option ~default:"" ()
   let conj_only = StdOpt.store_true ()
 
-  let description = "Compute the strong dependency graph"
-  let options = OptParser.make ~description:description ()
-
   open OptParser
-  add options ~short_name:'v' ~help:"Print information (can be repeated)" verbose;
   add options ~long_name:"prefix" ~help:"Prefix output fils with <prefix>" prefix;
   add options ~long_name:"dot" ~help:"Save the strong dependency graph in dot format" dot;
   add options ~long_name:"dump" ~help:"Save the strong dependency graph" dump;
@@ -49,9 +47,9 @@ let mk_filename prefix suffix s = if prefix = "" then s^suffix else prefix^suffi
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
+  let bars = ["Strongdeps_int.main";"Strongdeps_int.conj"] in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
-  Boilerplate.enable_bars true ["Algo.Strongdep.main";"Algo.Strongdep.conj"];
-
+  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) bars;
   let (universe,_,_) = Boilerplate.load_universe posargs in
   let prefix = OptParse.Opt.get Options.prefix in
   let sdgraph = 
@@ -92,15 +90,5 @@ let main () =
   ~dump ~dot ~detrans:(OptParse.Opt.get Options.detrans)
   sdgraph
 ;;
-
-(*  |[newl;oldl;oldg] when !Options.incr = true ->
-      begin
-        let oldgraph = Defaultgraphs.StrongDepGraph.load oldg in
-        let g = strong_incr (oldgraph,parse oldl) (parse newl) in
-        Defaultgraphs.StrongDepGraph.out
-        ~dump:!Options.dump ~dot:!Options.dot ~detrans:!Options.detrans
-        g
-      end
-*)
 
 main ();;

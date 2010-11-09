@@ -465,62 +465,81 @@ module StrongDepGraph = struct
     end
   )
 
+  let pbar_edge = Util.Progress.create "StrongDepGraph.transfrom.edges"
+  let pbar_vertex = Util.Progress.create "StrongDepGraph.transfrom.vertex"
+
   (* PackageGraph.G -> StrongDepGraph.G *)
   let transform_out pkggraph =
     let timer = Util.Timer.create "Defaultgraph.StrongDepGraph.transform_out" in
     Util.Timer.start timer;
-    let version p =
-      try (p.Cudf.package,Cudf.lookup_package_property p "Number")
-      with Not_found -> (p.Cudf.package,string_of_int p.Cudf.version)
-    in
+    Util.Progress.set_total pbar_edge (PackageGraph.G.nb_edges pkggraph);
     let graph = G.create () in
     PackageGraph.G.iter_edges (fun p q ->
-      let (np,vp) = version p in
-      let (nq,vq) = version q in
-      G.add_edge graph (np,vp) (nq,vq)
+      Util.Progress.progress pbar_edge ;
+      let vp = CudfAdd.string_of_version p in
+      let vq = CudfAdd.string_of_version q in
+      G.add_edge graph (p.Cudf.package,vp) (q.Cudf.package,vq)
     ) pkggraph ;
+    Util.Progress.reset pbar_edge;
+    Util.Progress.set_total pbar_vertex (PackageGraph.G.nb_vertex pkggraph);
     PackageGraph.G.iter_vertex (fun p ->
-      let (np,vp) = version p in
-      G.add_vertex graph (np,vp)
+      Util.Progress.progress pbar_vertex ;
+      let vp = CudfAdd.string_of_version p in
+      G.add_vertex graph (p.Cudf.package,vp)
     ) pkggraph;
+    Util.Progress.reset pbar_vertex;
     Util.Timer.stop timer graph
 
   (* StrongDepGraph.G -> PackageGraph.G *)
   let transform_in pkglist graph =
     let timer = Util.Timer.create "Defaultgraph.StrongDepGraph.transform_in" in
-    Util.Timer.start timer;
     let vermap = CudfAdd.realversionmap pkglist in
     let package vermap (n,v) =
-        try Hashtbl.find vermap (n,v) with Not_found -> assert false
+        try Hashtbl.find vermap (n,v) 
+        with Not_found -> begin
+          Printf.eprintf "Version not found %s %s" n v ;
+          assert false
+        end
     in
+    Util.Timer.start timer;
+    Util.Progress.set_total pbar_edge (G.nb_edges graph);
     let pkggraph = PackageGraph.G.create () in
     G.iter_edges (fun p q ->
+      Util.Progress.progress pbar_edge ;
       let x = package vermap p in
       let y = package vermap q in
       PackageGraph.G.add_edge pkggraph x y
     ) graph ;
+    Util.Progress.reset pbar_edge;
+    Util.Progress.set_total pbar_vertex (G.nb_vertex graph);
     G.iter_vertex (fun p ->
+      Util.Progress.progress pbar_vertex ;
       let v = package vermap p in
       PackageGraph.G.add_vertex pkggraph v
     ) graph;
+    Util.Progress.reset pbar_vertex;
     Util.Timer.stop timer pkggraph
 
   let load pkglist filename =
     let timer = Util.Timer.create "Defaultgraph.StrongDepGraph.load" in
     Util.Timer.start timer;
     let ic = open_in filename in
-    let graph = ((Marshal.from_channel ic) :> G.t) in
+    let (detrans,graph) = ((Marshal.from_channel ic) :> (bool * G.t)) in
     close_in ic ;
-    debug "Load Strong Dependencies graph";
+    info "Loading Strong Dependencies graph";
     let tg = transform_in pkglist graph in
     (* we assume the graph is detransitivitized *)
-    let sg = PackageGraph.O.O.add_transitive_closure tg in
-    debug "done";
+    let sg =
+      if detrans then begin 
+        info "Computing transitive closure";
+        PackageGraph.O.O.add_transitive_closure tg 
+      end else tg
+    in
     Util.Timer.stop timer sg
 
   (* StrongDepGraph.G -> PackageGraph.G *)
   let out ?(dump=None) ?(dot=None) ?(detrans=false) pkggraph =
-    debug "Dumping Graph : nodes %d , edges %d"
+    info "Dumping Graph : nodes %d , edges %d"
     (PackageGraph.G.nb_vertex pkggraph) (PackageGraph.G.nb_edges pkggraph) ;
     
     let cudfgraph = transform_out pkggraph in
@@ -535,7 +554,7 @@ module StrongDepGraph = struct
       let f = Option.get dump in
       debug "Saving marshal graph in %s\n" f ;
       let oc = open_out f in
-      Marshal.to_channel oc (cudfgraph :> G.t) [];
+      Marshal.to_channel oc ((detrans,cudfgraph) :> (bool * G.t)) [];
       close_out oc
     end ;
 

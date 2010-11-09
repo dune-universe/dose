@@ -21,11 +21,15 @@ module Options = struct
   include Boilerplate.MakeOptions(struct let options = options end)
 
   let upgradeonly = StdOpt.store_true ()
-  let single = StdOpt.store_true ()
+  let clustered = StdOpt.store_false ()
+  let packages = Boilerplate.pkglist_option ()
+  let sdgraph = StdOpt.str_option ()
 
   open OptParser ;;
   add options ~short_name:'u' ~long_name:"upgradeonly" ~help:"Do not analyse version changes corresponding to downgrades" upgradeonly;
-  add options ~short_name:'s' ~long_name:"single" ~help:"Do not cluster packages by source" single;
+  add options ~short_name:'s' ~long_name:"single" ~help:"Do not cluster packages by source" clustered;
+  add options ~long_name:"sel" ~help:"Check only a selection of packages / source" packages;
+  add options ~long_name:"sdgraph" ~help:"Load the strong dependency graph" sdgraph;
 end
 
 let predbar = Util.Progress.create "Strongpred"
@@ -35,7 +39,7 @@ let warning fmt = Util.make_warning "Strongpred" fmt
 
 (* ----------------------------------- *)
 
-type answer = Failure of string | Success of string
+type answer = Ignore of string | Failure of string | Success of string
 
 type analysis = {
     package : Cudf.package;
@@ -112,11 +116,18 @@ let rec pp_list pp fmt = function
 let pp_answer fmt = function
   |Success s -> Format.fprintf fmt "success"
   |Failure s -> Format.fprintf fmt "failure"
+  |Ignore s -> Format.fprintf fmt "ignore"
+
+let pp_info fmt = function
+  |Success s -> Format.fprintf fmt "%s" s
+  |Failure s -> Format.fprintf fmt "%s" s
+  |Ignore  s -> Format.fprintf fmt "%s" s
 
 let pp_analysis fmt analysis =
   Format.fprintf fmt "package: %a@," pp_package analysis.package;
   Format.fprintf fmt "target: \"%s\"@," analysis.target;
   Format.fprintf fmt "answer: %a@," pp_answer analysis.answer;
+  Format.fprintf fmt "info: %a@," pp_info analysis.answer;
   if analysis.brokenlist <> [] then begin
     Format.fprintf fmt "broken: %d@," analysis.broken;
     Format.fprintf fmt "impactset: %d@," analysis.impactset;
@@ -191,16 +202,23 @@ let string_of_relop = function
 
 let keys h = Hashtbl.fold (fun k _ acc -> k::acc) h [] ;;
 
-let prediction (universe1,from_cudf1,to_cudf1) =
-  let conv_table = Predictions.renumber (universe1,from_cudf1,to_cudf1) in
+let prediction sdgraph (universe1,from_cudf,to_cudf) =
+  let conv_table = Predictions.renumber (universe1,from_cudf,to_cudf) in
 
   (* from this point on we work on the renumbered universe *)
   let universe = conv_table.Predictions.universe in 
   let size = Cudf.universe_size universe in
 
+  let graph = 
+    if OptParse.Opt.is_set sdgraph then
+      let pkglist = Cudf.get_packages universe in
+      Defaultgraphs.StrongDepGraph.load pkglist (OptParse.Opt.get sdgraph)
+    else
+      Strongdeps.strongdeps_univ universe 
+  in
+
   let pkglist = Cudf.get_packages universe in
   let pkgset = CudfAdd.to_set pkglist in
-  let graph = Strongdeps.strongdeps_univ universe in
 
   let check report (source,sourceversion) cluster =
     let subcluster = { default_cluster with version = sourceversion; packages = cluster } in
@@ -242,7 +260,6 @@ let prediction (universe1,from_cudf1,to_cudf1) =
           let pn = CudfAdd.string_of_package package in
           let (_,sv) = conv_table.Predictions.from_cudf (package.Cudf.package,version) in
           let report_package = {default_analysis with package = package; target = sv} in
-          debug "%d -> %d" package.Cudf.version version;
 
           let isp = try Hashtbl.find impactset_table package with Not_found -> assert false in
           let psels = (Util.memo Predictions.all_constraints conv_table) package.Cudf.package in
@@ -250,22 +267,31 @@ let prediction (universe1,from_cudf1,to_cudf1) =
           let vl = keys pdiscr in
 
           if List.length isp <= 0 then begin
-            let s = Printf.sprintf "ignoring package %s : it has an empty impact set." pn in
-            report_package.answer <- Failure(s);
+            (* nothing to break here *)
+            let s = Printf.sprintf "package %s : it has an empty impact set. No harm done." pn in
+            report_package.answer <- Success(s);
           end else if package.Cudf.version = version then begin
-            let s = Printf.sprintf "ignoring package %s : same base version" pn in
-            report_package.answer <- Failure(s);
+            (* If I replace a package (p,v) with a dummy package for p with the same version,
+               nothing can go wrong *) 
+            let s = Printf.sprintf "package %s : same base version. No harm done." pn in
+            report_package.answer <- Success(s);
           end else if psels = [] then begin
-            let s = Printf.sprintf "ignoring package %s : no constraint mentions it, so IS(p) is invariant" pn in
-            report_package.answer <- Failure(s);
+            (* If no version of p is explicitly dependend upon, then *)
+            (* changing the version of p does not change its impact set *)
+            let s = Printf.sprintf "package %s : no constraint mentions it, so IS(p) is invariant" pn in
+            report_package.answer <- Success(s);
           end else if package.Cudf.version > version && (OptParse.Opt.get Options.upgradeonly) then begin
-            let s = Printf.sprintf "ignoring package %s : version %s represents a downgrade" pn sv in
-            report_package.answer <- Failure(s);
+            (* user request *)
+            let s = Printf.sprintf "package %s : version %s represents a downgrade" pn sv in
+            report_package.answer <- Ignore(s);
           end else if not (List.mem version vl) then begin
-            let s = Printf.sprintf "ignoring package %s : %s is not a discriminant" pn sv in
-            report_package.answer <- Failure(s);
+            (* this means that some other discriminant subsumes this one *)
+            let s = Printf.sprintf "package %s : %s is not a discriminant" pn sv in
+            report_package.answer <- Ignore(s);
           end else if Cudf.mem_package universe (package.Cudf.package,version) then begin
-            let s = Printf.sprintf "ignoring package %s : If we migrate to version %s, then all its impact set becomes uninstallable" pn sv in
+            (* prove the following; if (p,v) and (p,w) are in U, and
+               q implies (p,v); then q is not installable when (p,w) replaces (p,v) *)
+            let s = Printf.sprintf "package %s : If we migrate to version %s, then all its impact set becomes uninstallable" pn sv in
             report_package.answer <- Failure(s);
           end else begin
             (* take care of packages q in isp that may no longer be present in the updated universe *)
@@ -289,9 +315,9 @@ let prediction (universe1,from_cudf1,to_cudf1) =
            end else begin
               let s = Printf.sprintf "We can safely migrate package %s to version %s without breaking any dependency" pn sv in
               report_package.answer <- Success(s);
-           end ;
-           subcluster.analysis <- report_package :: subcluster.analysis;
-          end
+           end
+          end ;
+          subcluster.analysis <- report_package :: subcluster.analysis;
         ) cluster (* for all packages in the cluster P *)
       ) all_discriminants (* for all discriminants in the cluster V *)
 
@@ -300,38 +326,62 @@ let prediction (universe1,from_cudf1,to_cudf1) =
 
   Util.Progress.set_total predbar size;
   let fmt = Format.std_formatter in
-(*  Format.fprintf fmt "@[<v 1>report:@,"; *)
-  if OptParse.Opt.get Options.single then
-    Cudf.iter_packages (fun pkg ->
-      let (p,v) = (pkg.Cudf.package, CudfAdd.string_of_version pkg) in
-      let report = { default_report with source = (p,v) } in
-      check report (p,v) [pkg];
-      (* Format.fprintf fmt "@[<v 1>-@,%a@]@," pp_report report *)
-      Format.fprintf fmt "@[%a@]@.---@." pp_report report
-    ) universe
-  else
+  if OptParse.Opt.get Options.clustered then
     let source_clusters = Debian.Debutil.group_by_source universe in
-    Hashtbl.iter (fun (source,sourceversion) hv ->
-      let report = { default_report with source = (source,sourceversion) } in
-      Hashtbl.iter (fun packageversion cluster ->
-        check report (source,packageversion) cluster
-      ) hv;
-      (* Format.fprintf fmt "@[<v 1>-@,%a@]@," pp_report report *)
-      Format.fprintf fmt "@[%a@]@.---@." pp_report report
-    ) source_clusters
+    if OptParse.Opt.is_set Options.packages then
+      List.iter (fun (source,sourceversion) ->
+        try
+          let hv = Hashtbl.find source_clusters (source,sourceversion) in
+          let report = { default_report with source = (source,sourceversion) } in
+          Hashtbl.iter (fun packageversion cluster ->
+            check report (source,packageversion) cluster
+          ) hv;
+          Format.fprintf fmt "@[%a@]@.---@." pp_report report
+        with Not_found -> Printf.eprintf "%s (= %s) Not found" source sourceversion
+      ) (OptParse.Opt.get Options.packages)
+    else
+      Hashtbl.iter (fun (source,sourceversion) hv ->
+        let report = { default_report with source = (source,sourceversion) } in
+        Hashtbl.iter (fun packageversion cluster ->
+          check report (source,packageversion) cluster
+        ) hv;
+        Format.fprintf fmt "@[%a@]@.---@." pp_report report
+      ) source_clusters
+  else
+    if OptParse.Opt.is_set Options.packages then
+      List.iter (fun (source,sourceversion) ->
+        try
+          let (_,v) = to_cudf (source,sourceversion) in
+          let pkg = Cudf.lookup_package universe (source,v) in
+          let (p,v) = (pkg.Cudf.package, CudfAdd.string_of_version pkg) in
+          let report = { default_report with source = (p,v) } in
+          check report (p,v) [pkg];
+          Format.fprintf fmt "@[%a@]@.---@." pp_report report
+        with Not_found -> Printf.eprintf "%s (= %s) Not found" source sourceversion
+      ) (OptParse.Opt.get Options.packages)
+    else
+      Cudf.iter_packages (fun pkg ->
+        let (p,v) = (pkg.Cudf.package, CudfAdd.string_of_version pkg) in
+        let report = { default_report with source = (p,v) } in
+        check report (p,v) [pkg];
+        Format.fprintf fmt "@[%a@]@.---@." pp_report report
+      ) universe
   ;
-  (* Format.fprintf fmt "@]@."; *)
   Util.Progress.reset predbar
 ;;
 
 let main () =
   at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  let bars = ["Strongpred";"Strongdeps_int.main";"Strongdeps_int.conj"] in
+  let bars = [
+    "Strongpred";"Strongdeps_int.main";"Strongdeps_int.conj";
+    "StrongDepGraph.transfrom.edges";"StrongDepGraph.transfrom.vertex"
+    ]
+  in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress) bars;
   let (universe,from_cudf,to_cudf) = Boilerplate.load_universe posargs in
-  prediction (universe,from_cudf,to_cudf)
+  prediction Options.sdgraph (universe,from_cudf,to_cudf)
 ;;
 
 main();;
