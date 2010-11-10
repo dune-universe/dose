@@ -60,7 +60,7 @@ let constraints universe =
   let id x = x in
   let constraints_table = Hashtbl.create (Cudf.universe_size universe) in
   Cudf.iter_packages (fun pkg ->
-    (* add_unique constraints_table pkg.Cudf.package (`Eq,pkg.Cudf.version); *)
+    add_unique constraints_table pkg.Cudf.package (`Geq,pkg.Cudf.version);
     conj_iter id constraints_table pkg.Cudf.conflicts ;
     conj_iter id constraints_table (pkg.Cudf.provides :> Cudf_types.vpkglist) ;
     cnf_iter id constraints_table pkg.Cudf.depends

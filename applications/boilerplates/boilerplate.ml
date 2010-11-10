@@ -14,7 +14,7 @@ module type Ot = sig
 end
 
 let and_sep_re = Pcre.regexp "\\s*;\\s*"
-let pkg_re = Pcre.regexp "\\(([a-z][a-z0-9.+-]*)\\s*,\\s*([a-zA-Z0-9.+:~-]+)\\)"
+let pkg_re = Pcre.regexp "\\(([0-9a-z][a-z0-9.+-]*)\\s*,\\s*([a-zA-Z0-9.+:~-]+)\\)"
 let parse_pkg s =
   let parse_aux str =
     try
@@ -88,15 +88,8 @@ let deb_load_list ?(extras=[]) ?(status=[]) l =
   let l = Debian.Packages.merge status l in
   let tables = Debian.Debcudf.init_tables l in
   let pkglist = List.map (Debian.Debcudf.tocudf ~extras tables) l in
-  let from_cudf (p,i) =
-    (* let (p,i) = (pkg.Cudf.package,pkg.Cudf.version) in *)
-    let v = Debian.Debcudf.get_real_version tables (p,i) in
-    (p,v)
-  in
-  let to_cudf (p,v) =
-    let i = Debian.Debcudf.get_cudf_version tables (p,v) in
-    (p,i)
-  in
+  let from_cudf (p,i) = (p,Debian.Debcudf.get_real_version tables (p,i)) in
+  let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
   (pkglist,from_cudf,to_cudf)
 
 let pp_versions_table fmt (from_cudf, pkglist) =
@@ -109,14 +102,8 @@ let pp_versions_table fmt (from_cudf, pkglist) =
 let eclipse_load_list ?(extras=[]) ?(status=[]) l =
   let tables = Eclipse.Eclipsecudf.init_tables l in
   let pkglist = List.map (Eclipse.Eclipsecudf.tocudf ~extras tables) l in
-  let from_cudf (p,i) =
-    (* let (p,i) = (pkg.Cudf.package,pkg.Cudf.version) in *)
-    let v = Eclipse.Eclipsecudf.get_real_version tables (p,i) in
-    (p,v)
-  in
-  let to_cudf (p,v) =
-    (p,Eclipse.Eclipsecudf.get_cudf_version tables (p,v))
-  in
+  let from_cudf (p,i) = (p,Eclipse.Eclipsecudf.get_real_version tables (p,i)) in
+  let to_cudf (p,v) = (p,Eclipse.Eclipsecudf.get_cudf_version tables (p,v)) in
   (pkglist,from_cudf,to_cudf)
 
 (** transform a list of debian control stanza into a cudf universe *)

@@ -351,7 +351,7 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
     if OptParse.Opt.is_set Options.packages then
       List.iter (fun (source,sourceversion) ->
         try
-          let (_,v) = to_cudf (source,sourceversion) in
+          let (_,v) = conv_table.Predictions.to_cudf (source,sourceversion) in
           let pkg = Cudf.lookup_package universe (source,v) in
           let (p,v) = (pkg.Cudf.package, CudfAdd.string_of_version pkg) in
           let report = { default_report with source = (p,v) } in
