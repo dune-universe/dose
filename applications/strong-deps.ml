@@ -60,11 +60,11 @@ let main () =
         List.flatten (List.map (Cudf.lookup_packages universe) l)
       in
       (if OptParse.Opt.get Options.conj_only
-      then Strongdeps.conjdeps ~transitive:true universe pkglist
+      then Strongdeps.conjdeps universe pkglist
       else Strongdeps.strongdeps universe pkglist)
     else
     (if OptParse.Opt.get Options.conj_only
-    then Strongdeps.conjdeps_univ ~transitive:true universe
+    then Strongdeps.conjdeps_univ universe
     else Strongdeps.strongdeps_univ universe)
   in
   if OptParse.Opt.get Options.table then begin
