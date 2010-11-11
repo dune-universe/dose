@@ -137,10 +137,10 @@ let pp_analysis fmt analysis =
   end;
 
   Format.fprintf fmt "answer: %a@," pp_answer analysis.answer;
-  Format.fprintf fmt "info: %a@," pp_info analysis.answer;
+  Format.fprintf fmt "info: \"%a\"@," pp_info analysis.answer;
+  Format.fprintf fmt "impactset: %d@," analysis.impactset;
   if analysis.brokenlist <> [] then begin
     Format.fprintf fmt "broken: %d@," analysis.broken;
-    Format.fprintf fmt "impactset: %d@," analysis.impactset;
     Format.fprintf fmt "@[<v 1>brokenlist:@,%a@]" (pp_list (pp_package_stanza true)) analysis.brokenlist
   end
 ;;
@@ -267,6 +267,7 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
         (* for each package in the cluster, perform analysis *)
         List.iter (fun package -> 
           let isp = try Hashtbl.find impactset_table package with Not_found -> assert false in
+          let sizeisp = List.length isp in
           let psels = (Util.memo Predictions.all_constraints conv_table) package.Cudf.package in
           let pdiscr = (Util.memo (Predictions.discriminants (* ~vl:all_discriminants *) )) psels in
           let vl = keys pdiscr in
@@ -282,7 +283,13 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
           in
           (* here we report the representant of the equivalence class and all
            * elements in it *)
-          let report_package = {default_analysis with package = package; target = (sv,sl)} in
+          let report_package = {
+            default_analysis with 
+              package = package;
+              target = (sv,sl);
+              impactset = sizeisp
+            }
+          in
 
           if package.Cudf.version > version && (OptParse.Opt.get Options.upgradeonly) then begin
             (* user request *)
@@ -323,12 +330,10 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
             in
             let nbroken = List.length broken in
             if nbroken <> 0 then begin 
-              let sizeisp = List.length isp in
               let s = Printf.sprintf "Migrating package %s to version %s breaks %d/%d (=%.2f percent) of its Impact set."
               pn sv nbroken sizeisp (float (nbroken * 100)  /. (float sizeisp)) in
               report_package.answer <- Failure(s);
               report_package.broken <- nbroken;
-              report_package.impactset <- sizeisp;
               report_package.brokenlist <- broken ;
            end else begin
               let s = Printf.sprintf "We can safely migrate package %s to version %s without breaking any dependency" pn sv in
