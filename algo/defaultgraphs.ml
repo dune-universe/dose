@@ -303,7 +303,7 @@ module IntPkgGraph = struct
   module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
   module S = Set.Make(PkgV)
 
-  let add_edge graph i j =
+  let add_edge transitive graph i j =
     let rec adapt k red =
       let new_red = 
         S.fold (fun l acc ->
@@ -319,18 +319,20 @@ module IntPkgGraph = struct
       else adapt k new_red
     in
     G.add_edge graph i j;
-    (* add transitive closure arcs *)
-    adapt i (S.singleton j);
-    G.iter_pred (fun k ->
-      if not (G.mem_edge graph k j) then
-        adapt k (S.singleton j)
-    ) graph i
+    if transitive then begin
+      (* add transitive closure arcs *)
+      adapt i (S.singleton j);
+      G.iter_pred (fun k ->
+        if not (G.mem_edge graph k j) then
+          adapt k (S.singleton j)
+      ) graph i
+    end
 
   (** add to the graph all conjunctive dependencies of package id *)
-  let conjdepgraph_int graph index id =
+  let conjdepgraph_int ?(transitive=false) graph index id =
     G.add_vertex graph id;
     List.iter (function
-      |(_,[p],_) when p <> id -> add_edge graph id p
+      |(_,[p],_) when p <> id -> add_edge transitive graph id p
       | _ -> ()
     ) index.(id).Mdf.depends
 

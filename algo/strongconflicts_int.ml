@@ -62,7 +62,9 @@ let explicit mdf =
       l := swap(i,j):: !l
     ) conflicts
   done;
-  (List.unique ~cmp !l)
+  (* List.unique ~cmp !l *)
+  Util.list_unique !l
+
 ;;
 
 (* [strongconflicts mdf] return the list of strong conflicts
@@ -90,7 +92,8 @@ let strongconflicts mdf =
     Defaultgraphs.IntPkgGraph.conjdepgraph_int cg index i ; 
     IG.add_vertex cache i
   done;
-  let cg = Strongdeps_int.SO.O.add_transitive_closure cg in
+  (* we already add the transitive closure on the fly *)
+  (* let cg = Strongdeps_int.SO.O.add_transitive_closure cg in *)
 
   debug "dependency graph : nodes %d , edges %d" 
   (SG.nb_vertex cg) (SG.nb_edges cg);
@@ -105,7 +108,6 @@ let strongconflicts mdf =
   let conflict_size = List.length ex in
 
   let try_add_edge donei stronglist p q x y =
-  begin
     incr donei;
     if not (IG.mem_edge cache p q) then begin
       IG.add_edge cache p q;
@@ -114,23 +116,20 @@ let strongconflicts mdf =
       |Diagnostic_int.Success _ -> ()
       |Diagnostic_int.Failure f ->
         CG.add_edge_e stronglist (p, (x, y, Other (f ())), q)
-    end ;
-  end in
+    end 
+  in
 
   let debconf_triangle xpred ypred common =
-  begin
     if not (S.is_empty common) then
-    begin
       let xrest = S.diff xpred ypred
       and yrest = S.diff ypred xpred 
       and pred_pred = S.fold (fun z acc ->
         S.union closures.(z).rd acc
       ) common S.empty in
       S.subset xrest pred_pred && S.subset yrest pred_pred
-    end
     else
       false
-  end in
+  in
 
   (* The simplest algorithm. We iterate over all explicit conflicts, 
    * filtering out all couples that cannot possiby be in conflict
@@ -178,13 +177,18 @@ let strongconflicts mdf =
       begin
         let p = S.choose xpred in
         begin
-          debug "triangle %s - %s (%s)" (CudfAdd.print_package pkg_x.Mdf.pkg) (CudfAdd.print_package pkg_y.Mdf.pkg) (CudfAdd.print_package index.(p).Mdf.pkg);
+          debug "triangle %s - %s (%s)" 
+            (CudfAdd.print_package pkg_x.Mdf.pkg)
+            (CudfAdd.print_package pkg_y.Mdf.pkg)
+            (CudfAdd.print_package index.(p).Mdf.pkg);
           try_add_edge donei stronglist p x x y;
           try_add_edge donei stronglist p y x y;
         end
       end
       else if debconf_triangle xpred ypred common then
-        debug "debconf triangle %s - %s" (CudfAdd.print_package pkg_x.Mdf.pkg) (CudfAdd.print_package pkg_y.Mdf.pkg)
+        debug "debconf triangle %s - %s"
+          (CudfAdd.print_package pkg_x.Mdf.pkg)
+          (CudfAdd.print_package pkg_y.Mdf.pkg)
       else
       begin
         S.iter (fun p ->

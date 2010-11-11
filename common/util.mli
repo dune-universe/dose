@@ -14,7 +14,7 @@
 val uuid: unit -> string
 
 (** return a list of unique elements. This algorithm runs in
-    O(n) but is not stable *)
+    O(n) but is not stable . elements are returned in reverse order *)
 val list_unique : 'a list -> 'a list
 
 (** A generic memoization function. To use with care as it allocates
