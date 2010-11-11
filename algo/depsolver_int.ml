@@ -253,7 +253,6 @@ let reverse_dependencies mdf =
     This function has in a memoization strategy.
 *)
 let dependency_closure ?(maxdepth=max_int) ?(conjuntive=false) mdf =
-  let cmp (x : int) (y : int) = x = y in
   let h = Hashtbl.create (Array.length mdf.Mdf.index) in
   fun idlist ->
     try Hashtbl.find h (idlist,conjuntive,maxdepth)
@@ -261,7 +260,7 @@ let dependency_closure ?(maxdepth=max_int) ?(conjuntive=false) mdf =
       let index = mdf.Mdf.index in
       let queue = Queue.create () in
       let visited = Hashtbl.create (2 * (List.length idlist)) in
-      List.iter (fun e -> Queue.add (e,0) queue) (List.unique ~cmp idlist);
+      List.iter (fun e -> Queue.add (e,0) queue) (Util.list_unique idlist);
       while (Queue.length queue > 0) do
         let (id,level) = Queue.take queue in
         if not(Hashtbl.mem visited id) && level < maxdepth then begin
@@ -296,14 +295,13 @@ let dependency_closure ?(maxdepth=max_int) ?(conjuntive=false) mdf =
     This function has in a memoization strategy.
 *)
 let reverse_dependency_closure ?(maxdepth=max_int) reverse =
-  let cmp (x : int) (y : int) = x = y in
   let h = Hashtbl.create (Array.length reverse) in
   fun idlist ->
     try Hashtbl.find h (idlist,maxdepth)
     with Not_found -> begin
       let queue = Queue.create () in
       let visited = Hashtbl.create (List.length idlist) in
-      List.iter (fun e -> Queue.add (e,0) queue) (List.unique ~cmp idlist);
+      List.iter (fun e -> Queue.add (e,0) queue) (Util.list_unique idlist);
       while (Queue.length queue > 0) do
         let (id,level) = Queue.take queue in
         if not(Hashtbl.mem visited id) && level < maxdepth then begin

@@ -200,6 +200,8 @@ let build_maps universe =
   ) universe
   ;
 
+  (* This list unique could be faster is implemented as a monomorphic 
+   * function like Util.list_unique *)
   let who_conflicts pkg = List.unique ~cmp:equal (Cudf_hashtbl.find_all conflicts pkg) in
 
   {

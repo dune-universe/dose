@@ -52,7 +52,7 @@ let swap (p,q) = if p < q then (p,q) else (q,p) ;;
 let to_set l = List.fold_right S.add l S.empty ;;
 
 let explicit mdf =
-  let cmp (x : int * int) (y : int * int) = x = y in
+  (* let cmp (x : int * int) (y : int * int) = x = y in *)
   let index = mdf.Mdf.index in
   let l = ref [] in
   for i=0 to (Array.length index - 1) do
