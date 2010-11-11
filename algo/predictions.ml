@@ -60,7 +60,6 @@ let constraints universe =
   let id x = x in
   let constraints_table = Hashtbl.create (Cudf.universe_size universe) in
   Cudf.iter_packages (fun pkg ->
-    (* add_unique constraints_table pkg.Cudf.package (`Geq,pkg.Cudf.version); *)
     conj_iter id constraints_table pkg.Cudf.conflicts ;
     conj_iter id constraints_table (pkg.Cudf.provides :> Cudf_types.vpkglist) ;
     cnf_iter id constraints_table pkg.Cudf.depends
@@ -136,13 +135,13 @@ let renumber (universe,from_cudf,to_cudf) =
   let new_universe = Cudf.load_universe pkglist in
   let constr = constraints new_universe in
   let new_from_cudf (p,i) =
-    (* XXX this sucks ! *)
     let constr = try List.map snd (Hashtbl.find constr p) with Not_found -> [] in
     let realver = List.map (fun pkg -> pkg.Cudf.version) (Cudf.lookup_packages new_universe p) in
     (* actually I don't care if it is unique ... *)
-    let vl = Util.list_unique (constr@realver) in
+    let vl = (* Util.list_unique *) (constr@realver) in
     debug "All versions for package %s : %s" p (String.concat "," (List.map string_of_int vl));
     try
+      (* Note:  we do this way to run the algo in liner time and not with a sort in log(n) *)
       let (minx,maxx,(before,after)) =
         List.fold_left (fun (x,y,(b,a)) v ->
           if v = i then raise Not_found ;
@@ -230,12 +229,30 @@ let discriminants ?vl constraints =
   in
   let eval_constr = Hashtbl.create 17 in
   let constr_eval = Hashtbl.create 17 in
-  let vl = match vl with None -> range constraints | Some vl -> List.enum vl in
-  Enum.iter (fun constr ->
-    let eval = List.map (evalsel constr) constraints in
+  let vl =
+    match vl with
+    |None -> range constraints
+    |Some vl -> List.enum (List.sort ~cmp:compare vl)
+  in
+(*
+  Enum.iter (fun v ->
+    let eval = List.map (evalsel v) constraints in
     if not (Hashtbl.mem eval_constr eval) then begin
-      Hashtbl.add eval_constr eval constr;
-      Hashtbl.add constr_eval constr eval
+      Hashtbl.add eval_constr eval v;
+      Hashtbl.add constr_eval v []
+    end
+  ) vl ;
+*)
+(* XXX refactor this. I've the feeling it's very slow to use replace *)
+  Enum.iter (fun v ->
+    let eval = List.map (evalsel v) constraints in
+    try
+      let v_rep = Hashtbl.find eval_constr eval in
+      let l = Hashtbl.find constr_eval v_rep in
+      Hashtbl.replace constr_eval v_rep (v::l)
+    with Not_found -> begin
+      Hashtbl.add eval_constr eval v;
+      Hashtbl.add constr_eval v []
     end
   ) vl ;
   constr_eval

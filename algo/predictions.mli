@@ -58,8 +58,8 @@ val create_dummy :
 (** discriminants takes a list of version constraints and provides a hashtbl with
     keys the minimal list of versions v1,...,vn s.t. all possible combinations of
     the values of the version constraints are exhibited. Values associated to
-    each version vi is the evaluation list asosciated to the version *)
-val discriminants : ?vl:int list -> constr list -> (int, bool list) Hashtbl.t
+    each version vi is the list of versions in the same equivalence class *)
+val discriminants : ?vl:int list -> constr list -> (int, int list) Hashtbl.t
 
 (** [migrate table v l] migrates all packages in [l] to version [v] *)
 val migrate :

@@ -46,7 +46,7 @@ let check_strong graph solver p l =
     if p <> q then
       if not(G.mem_edge graph p q) then
         if strong_depends solver p q then 
-          IntPkgGraph.add_edge graph p q
+          IntPkgGraph.add_edge true graph p q
   ) l
 
 (* true if at least one dependency is disjunctive *)
@@ -96,7 +96,7 @@ let strongdeps mdf idlist =
     List.fold_left (fun acc id ->
       let pkg = mdf.Mdf.index.(id) in
       Util.Progress.progress conjbar;
-      IntPkgGraph.conjdepgraph_int graph mdf.Mdf.index id; 
+      IntPkgGraph.conjdepgraph_int ~transitive:true graph mdf.Mdf.index id; 
       let closure = Depsolver_int.dependency_closure mdf [id] in
       (pkg,List.length closure,closure) :: acc
     ) [] idlist
@@ -117,7 +117,7 @@ let strongdeps_univ mdf =
     let id = ref 0 in
     Array.fold_left (fun acc pkg ->
       Util.Progress.progress conjbar;
-      IntPkgGraph.conjdepgraph_int graph mdf.Mdf.index !id;
+      IntPkgGraph.conjdepgraph_int ~transitive:true graph mdf.Mdf.index !id;
       let closure = Depsolver_int.dependency_closure mdf [!id] in
       incr id ;
       (pkg,List.length closure,closure) :: acc

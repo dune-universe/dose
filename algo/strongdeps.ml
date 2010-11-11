@@ -47,7 +47,7 @@ let conjdeps_univ universe =
   let mdf = Mdf.load_from_universe universe in
   let g = Defaultgraphs.IntPkgGraph.G.create () in
   for id=0 to (Array.length mdf.Mdf.index)-1 do
-    Defaultgraphs.IntPkgGraph.conjdepgraph_int g mdf.Mdf.index id
+    Defaultgraphs.IntPkgGraph.conjdepgraph_int ~transitive:true g mdf.Mdf.index id
   done;
   Defaultgraphs.intcudf mdf.Mdf.index g
 
@@ -59,6 +59,6 @@ let conjdeps universe pkglist =
   let idlist = List.map maps.map#vartoint pkglist in
   let g = Defaultgraphs.IntPkgGraph.G.create () in
   List.iter (fun id ->
-    Defaultgraphs.IntPkgGraph.conjdepgraph_int g mdf.Mdf.index id
+    Defaultgraphs.IntPkgGraph.conjdepgraph_int ~transitive:true g mdf.Mdf.index id
   ) idlist ;
   Defaultgraphs.intcudf mdf.Mdf.index g

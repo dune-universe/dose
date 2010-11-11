@@ -43,11 +43,12 @@ type answer = Ignore of string | Failure of string | Success of string
 
 type analysis = {
     package : Cudf.package;
-    mutable target : string;
+    mutable target : (string * string list);
     mutable impactset : int;
     mutable broken : int;
     mutable answer : answer;
     mutable brokenlist : Cudf.package list;
+    mutable discriminants : (int, int list) Hashtbl.t
   }
 
 type cluster = {
@@ -76,11 +77,12 @@ let default_report = {
 
 let default_analysis = {
   package = Cudf.default_package; 
-  target = ""; 
+  target = ("",[]); 
   broken = 0;
   impactset = 0;
   answer = Success(""); 
-  brokenlist = []
+  brokenlist = [];
+  discriminants = Hashtbl.create 0
 } 
 
 let pp_package fmt pkg =
@@ -124,8 +126,12 @@ let pp_info fmt = function
   |Ignore  s -> Format.fprintf fmt "%s" s
 
 let pp_analysis fmt analysis =
+  let (v,l) = analysis.target in
   Format.fprintf fmt "package: %a@," pp_package analysis.package;
-  Format.fprintf fmt "target: \"%s\"@," analysis.target;
+  Format.fprintf fmt "target: \"%s\"@," v;
+  if l <> [] then
+    let l = List.filter ((<>) v) l in
+    Format.fprintf fmt "equiv: \"%s\"@," (String.concat " , " l);
   Format.fprintf fmt "answer: %a@," pp_answer analysis.answer;
   Format.fprintf fmt "info: %a@," pp_info analysis.answer;
   if analysis.brokenlist <> [] then begin
@@ -256,44 +262,52 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
 
         (* for each package in the cluster, perform analysis *)
         List.iter (fun package -> 
-          (* let (p,v) = (package.Cudf.package, CudfAdd.string_of_version package) in *)
-          let pn = CudfAdd.string_of_package package in
-          let (_,sv) = conv_table.Predictions.from_cudf (package.Cudf.package,version) in
-          let report_package = {default_analysis with package = package; target = sv} in
-
           let isp = try Hashtbl.find impactset_table package with Not_found -> assert false in
           let psels = (Util.memo Predictions.all_constraints conv_table) package.Cudf.package in
-          let pdiscr = (Util.memo (Predictions.discriminants ~vl:all_discriminants)) psels in
+          let pdiscr = (Util.memo (Predictions.discriminants (* ~vl:all_discriminants *) )) psels in
           let vl = keys pdiscr in
 
-          if List.length isp <= 0 then begin
-            (* nothing to break here *)
-            let s = Printf.sprintf "package %s : it has an empty impact set. No harm done." pn in
-            report_package.answer <- Success(s);
+          let pn = CudfAdd.string_of_package package in
+          let sv = snd(conv_table.Predictions.from_cudf (package.Cudf.package,version)) in
+          let sl =
+            try 
+              List.map (fun v -> 
+                snd(conv_table.Predictions.from_cudf (package.Cudf.package,v))
+              ) (Hashtbl.find pdiscr version)
+            with Not_found -> []
+          in
+          (* here we report the representant of the equivalence class and all
+           * elements in it *)
+          let report_package = {default_analysis with package = package; target = (sv,sl)} in
+
+          if package.Cudf.version > version && (OptParse.Opt.get Options.upgradeonly) then begin
+            (* user request *)
+            let s = Printf.sprintf "package %s : version %s represents a downgrade" pn sv in
+            report_package.answer <- Ignore(s);
           end else if package.Cudf.version = version then begin
             (* If I replace a package (p,v) with a dummy package for p with the same version,
                nothing can go wrong *) 
             let s = Printf.sprintf "package %s : same base version. No harm done." pn in
+            report_package.answer <- Success(s);
+          end else if List.length isp <= 0 then begin
+            (* nothing to break here *)
+            let s = Printf.sprintf "package %s : it has an empty impact set. No harm done." pn in
             report_package.answer <- Success(s);
           end else if psels = [] then begin
             (* If no version of p is explicitly dependend upon, then *)
             (* changing the version of p does not change its impact set *)
             let s = Printf.sprintf "package %s : no constraint mentions it, so IS(p) is invariant" pn in
             report_package.answer <- Success(s);
-          end else if package.Cudf.version > version && (OptParse.Opt.get Options.upgradeonly) then begin
-            (* user request *)
-            let s = Printf.sprintf "package %s : version %s represents a downgrade" pn sv in
-            report_package.answer <- Ignore(s);
-          end else if not (List.mem version vl) then begin
-            (* this means that some other discriminant subsumes this one *)
-            let s = Printf.sprintf "package %s : %s is not a discriminant" pn sv in
-            report_package.answer <- Ignore(s);
           end else if Cudf.mem_package universe (package.Cudf.package,version) then begin
             (* prove the following; if (p,v) and (p,w) are in U, and
                q implies (p,v); then q is not installable when (p,w) replaces (p,v) *)
             let s = Printf.sprintf "package %s : If we migrate to version %s, then all its impact set becomes uninstallable" pn sv in
             report_package.answer <- Failure(s);
-          end else begin
+          end else if not (List.mem version vl) then begin
+            (* this means that some other discriminant subsumes this one *)
+            let s = Printf.sprintf "package %s : %s is not a discriminant" pn sv in
+            report_package.answer <- Ignore(s);
+           end else begin
             (* take care of packages q in isp that may no longer be present in the updated universe *)
             let broken = 
               List.fold_left (fun acc q ->
