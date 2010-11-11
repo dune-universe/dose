@@ -12,21 +12,19 @@
 
 open Common
 open CudfAdd
+open Defaultgraphs
 
 module ICG = Strongconflicts_int.CG
-module PkgV = struct
-  type t = Cudf.package
-  let compare = Pervasives.compare
-  let hash = Hashtbl.hash
-  let equal = (=)
-end
+
 type cfl_type = Explicit | Conjunctive | Other of Diagnostic.reason list
+
 module CflE = struct
   type t = Cudf.package * Cudf.package * cfl_type
   let compare = Pervasives.compare
   let default = (Cudf.default_package, Cudf.default_package, Other [])
 end
-module CG = Graph.Imperative.Graph.ConcreteLabeled(PkgV)(CflE)
+
+module CG = Graph.Imperative.Graph.ConcreteLabeled(PackageGraph.PkgV)(CflE)
 
 (* tempy. *)
 let reason maps =
@@ -55,7 +53,6 @@ let strongconflicts universe =
   let g = CG.create () in
   let mdf = Mdf.load_from_universe (Depsolver.trim universe) in
   let maps = mdf.Mdf.maps in
-  (* let idlist = Cudf.fold_packages (fun l p -> (maps.map#vartoint p)::l) [] (Depsolver.trim universe) in *)
   let ig = Strongconflicts_int.strongconflicts mdf (* idlist *) in
   (* convert output graph *)
   ICG.iter_vertex (fun v -> CG.add_vertex g (maps.map#inttovar v)) ig;

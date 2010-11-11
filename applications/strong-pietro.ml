@@ -13,63 +13,23 @@
 open Cudf
 open ExtLib
 open Common
-open Graph
-
-let enable_debug () = 
-  (* enable the progress bar for strongdeps *)
-  Common.Util.Progress.enable "Algo.Strongconflicts.local" ;
-  Common.Util.Progress.enable "Algo.Strongconflicts.seeding" ;
-  Common.Util.Progress.enable "Algo.Strongdep.main" ;
-  Common.Util.Progress.enable "Algo.Strongdep.conj" ;
-  Common.Util.set_verbosity Common.Util.Summary
-;;
-
-exception Done
+open Algo
 
 module Options = struct
-  let debug = ref false
-  let strong = ref false
+  open OptParse
+  let description = "Compute Strong Conflicts"
+  let options = OptParser.make ~description
+  include Boilerplate.MakeOptions(struct let options = options end)
 end
 
-let usage = Printf.sprintf "usage: %s [--options] [strong deps graph] doc" (Sys.argv.(0))
-let options =
-  [
-   ("--debug", Arg.Unit enable_debug, "Print debug information");
-   ("--strong", Arg.Set Options.strong, "Compute the strong dependency graph")
-  ]
+let debug fmt = Util.make_debug "StrongConflict" fmt
+let info fmt = Util.make_info "StrongConflict" fmt
+let warning fmt = Util.make_warning "StrongConflict" fmt
+
 
 (* ----------------------------------- *)
 
-module G = Defaultgraphs.PackageGraph.G 
-module D = Defaultgraphs.PackageGraph.D 
-module O = Defaultgraphs.GraphOper(G)
-module SG = Defaultgraphs.StrongDepGraph.G
-module SD = Defaultgraphs.StrongDepGraph.D
-module SO = Defaultgraphs.GraphOper(G)
-
-let parse uri =
-  Printf.eprintf "Parsing and normalizing...%!" ;
-  let timer = Common.Util.Timer.create "Parsing and normalizing" in
-  Common.Util.Timer.start timer;
-  let pkglist =
-    match Input.parse_uri uri with
-    |("deb",(_,_,_,_,file),_) -> begin
-      let l = Debian.Packages.input_raw [file] in
-      let tables = Debian.Debcudf.init_tables l in
-      List.map (Debian.Debcudf.tocudf tables) l
-    end
-    |("cudf",(_,_,_,_,file),_) -> begin
-      let _, l, _ = Boilerplate.parse_cudf file in l
-    end
-    |_ -> failwith "Not supported"
-  in
-  ignore(Common.Util.Timer.stop timer ());
-  Printf.eprintf "done\n%!" ;
-  pkglist
-;;
-
-open CudfAdd
-
+(*
 let soundness universe l =
   let solver = Depsolver.load universe in
   List.iter (fun (p,q) ->
@@ -80,33 +40,35 @@ let soundness universe l =
   ) l
   ;
 ;;
+*)
 
 let swap (p,q) = if p.Cudf.package < q.Cudf.package then (p,q) else (q,p)
 
 let main () =
-  at_exit (fun () -> Common.Util.dump Format.err_formatter);
-  let files = ref [] in
-  let _ =
-    try Arg.parse options (fun f -> files := f::!files ) usage
-    with Arg.Bad s -> failwith s
+  at_exit (fun () -> Util.dump Format.err_formatter);
+  let posargs = OptParse.OptParser.parse_argv Options.options in
+  let bars = [
+    "Strongdeps_int.main";"Strongdeps_int.conj";
+    "StrongDepGraph.transfrom.edges";"StrongDepGraph.transfrom.vertex";
+    "Strongconflicts_int.local"; "Strongconflicts_int.seeding" 
+    ]
   in
-  match !files with
-  |[u] ->
-      let universe = Depsolver.trim (Cudf.load_universe (parse u)) in
-      let l = Strongconflicts.strongconflicts universe in
+  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
+  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) bars;
+  let (universe,from_cudf,to_cudf) = Boilerplate.load_universe posargs in
+  let universe = Depsolver.trim universe in
+  let g = Strongconflicts.strongconflicts universe in
 
-      Common.Util.print_info "Soundness test" ;
-      soundness universe l;
-      Common.Util.print_info "done"; 
+  (* info "Soundness test" ;
+  soundness universe l;
+  info "done"; *)
 
-      List.iter (fun (x,y) ->
-        let (x,y) = swap (x,y) in
-        Printf.printf "%s <-> %s\n" (CudfAdd.print_package x) (CudfAdd.print_package y)
-      ) l
-      ;
-      Common.Util.print_info "Total strong conflicts %d" (List.length l)
-  |_ -> (print_endline usage ; exit 2)
-
+  Strongconflicts.CG.iter_edges (fun x y ->
+    let (x,y) = swap (x,y) in
+    Printf.printf "%s <-> %s\n" (CudfAdd.string_of_package x) (CudfAdd.string_of_package y)
+  ) g
+  ;
+  info "Total strong conflicts %d" (Strongconflicts.CG.nb_edges g)
 ;;
 
 main ();;

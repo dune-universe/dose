@@ -129,9 +129,13 @@ let pp_analysis fmt analysis =
   let (v,l) = analysis.target in
   Format.fprintf fmt "package: %a@," pp_package analysis.package;
   Format.fprintf fmt "target: \"%s\"@," v;
-  let l = Util.list_unique (List.filter ((<>) v) l) in
-  if l <> [] then
-    Format.fprintf fmt "equiv: \"%s\"@," (String.concat " , " l);
+
+  begin
+    let l = Util.list_unique (List.filter ((<>) v) l) in
+    if l <> [] then
+      Format.fprintf fmt "equiv: \"%s\"@," (String.concat " , " l);
+  end;
+
   Format.fprintf fmt "answer: %a@," pp_answer analysis.answer;
   Format.fprintf fmt "info: %a@," pp_info analysis.answer;
   if analysis.brokenlist <> [] then begin
@@ -272,7 +276,7 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
           let sl =
             try 
               List.map (fun v -> 
-                snd(conv_table.Predictions.from_cudf (package.Cudf.package,v))
+                  snd(conv_table.Predictions.from_cudf (package.Cudf.package,v))
               ) (Hashtbl.find pdiscr version)
             with Not_found -> []
           in
