@@ -28,7 +28,7 @@ module Options = struct
   open OptParser ;;
   add options ~short_name:'u' ~long_name:"upgradeonly" ~help:"Do not analyse version changes corresponding to downgrades" upgradeonly;
   add options ~short_name:'s' ~long_name:"single" ~help:"Do not cluster packages by source" clustered;
-  add options ~long_name:"sel" ~help:"Check only a selection of packages / source" packages;
+  add options ~long_name:"sel" ~help:"Check only a selection of packages / source given as (name,version); ..." packages;
   add options ~long_name:"sdgraph" ~help:"Load the strong dependency graph" sdgraph;
 end
 
@@ -39,7 +39,7 @@ let warning fmt = Util.make_warning "Strongpred" fmt
 
 (* ----------------------------------- *)
 
-type answer = Ignore of string | Failure of string | Success of string
+type answer = Ignore of string | Failure of string | Success of string | Downgrade of string
 
 type analysis = {
     package : Cudf.package;
@@ -119,11 +119,13 @@ let pp_answer fmt = function
   |Success s -> Format.fprintf fmt "success"
   |Failure s -> Format.fprintf fmt "failure"
   |Ignore s -> Format.fprintf fmt "ignore"
+  |Downgrade s -> Format.fprintf fmt "downgrade"
 
 let pp_info fmt = function
   |Success s -> Format.fprintf fmt "%s" s
   |Failure s -> Format.fprintf fmt "%s" s
   |Ignore  s -> Format.fprintf fmt "%s" s
+  |Downgrade  s -> Format.fprintf fmt "%s" s
 
 let pp_analysis fmt analysis =
   let (v,l) = analysis.target in
@@ -249,7 +251,9 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
       (* changing the version of p does not change its impact set *)
       (* XXX here there is the assumption that all versions are different!!! *)
       (* XXX this is not version agnostic !!! *)
-      let all_discriminants = keys (Predictions.discriminants all_constraints) in
+      let all_versions = List.map (fun pkg -> pkg.Cudf.version) cluster in
+      let all_discriminants_classes = Predictions.discriminants ~extravcl:all_versions all_constraints in
+      let all_discriminants = keys all_discriminants_classes in
 
       (* precompute impact sets of the cluster *)
       let impactset_table = impactset graph cluster in
@@ -267,7 +271,10 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
           let isp = try Hashtbl.find impactset_table package with Not_found -> assert false in
           let sizeisp = List.length isp in
           let psels = (Util.memo Predictions.all_constraints conv_table) package.Cudf.package in
-          let pdiscr = (Util.memo (Predictions.discriminants (* ~vl:all_discriminants *) )) psels in
+          (* extract from the discriminants of the cluster the ones which are discriminants for p *)
+          (* it is important to do it this way to make sure we keep the same representatives of   *)
+          (* of the version equivalence classes *)
+          let pdiscr = (Util.memo (Predictions.discriminants ~vl:all_discriminants)) psels in
           let vl = keys pdiscr in
 
           let pn = CudfAdd.string_of_package package in
@@ -276,7 +283,7 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
             try 
               List.map (fun v -> 
                   snd(conv_table.Predictions.from_cudf (package.Cudf.package,v))
-              ) (Hashtbl.find pdiscr version)
+              ) (Hashtbl.find all_discriminants_classes version)
             with Not_found -> []
           in
           (* here we report the representant of the equivalence class and all
@@ -292,7 +299,7 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
           if package.Cudf.version > version && (OptParse.Opt.get Options.upgradeonly) then begin
             (* user request *)
             let s = Printf.sprintf "package %s : version %s represents a downgrade" pn sv in
-            report_package.answer <- Ignore(s);
+            report_package.answer <- Downgrade(s);
           end else if package.Cudf.version = version then begin
             (* If I replace a package (p,v) with a dummy package for p with the same version,
                nothing can go wrong *) 
