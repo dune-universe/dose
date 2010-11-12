@@ -1,0 +1,32 @@
+.B -i \fIfile\fR
+Specify an additional input file containing stanzas in deb-control(5)
+format.  These packages are checked for installability the same way as
+packages read from standard input.
+.TP
+.B -I \fIfile\fR
+Specify an additional input file containing stanzas in deb-control(5) format.
+These packages that are not checked for installability but only used for resolving dependencies.
+
+.BI \-checkonly \ list
+where \fIlist\fR is a comma-separated list of package names.  Check only
+for installability of packages with name in \fIlist\fR (of any
+available version). This means that if a package does not exist in
+the input pool then the test passes (since all available versions are
+in that case installable). However, a warning is issued in case a package
+mentionend in \fIlist\fR is not available.
+
+In the context of this option, a package of the form src:\fIp\fR expands
+to the list of all packages that stem from the source package \fIp\fR.
+.TP
+
+
+Check whether the xemacs21 and debhelper packages are installable in a
+distribution described by the file Packages:
+
+  edos-debcheck \-explain \-checkonly xemacs21,debhelper < Packages
+
+Check whether the package bibtex2html, and all binary packages stemming
+from the ocaml source package, are installable
+
+ edos-debcheck \-explain \-checkonly bibtex2html,src:ocaml < Packages
+
