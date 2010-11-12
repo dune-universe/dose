@@ -34,7 +34,7 @@ tool expects its input specifiation in the form
 .I type://pathname
 where
 .I type
-is one of \fBdeb\fR, \fBrpm\fR, or \fBeclipse\fR, and
+is one of \fBdeb\fR, \fBsynthesis\fR, \fBhdlist\fR or \fBeclipse\fR, and
 .I pathname
 is the pathname of a file containing the input. The package metadata
 found in that file must correspond to correspond to the
@@ -57,7 +57,7 @@ The input file has to contain stanzas in the format of deb-control(5),
 separated by one blank line. For instance, the Packages files as found
 on a Debian mirror server, or in the directory
 \fI/var/lib/apt/lists/\fR of a Debian system, are suitable as input to
-\fBedos-debcheck\fR.
+\fBdebcheck\fR.
 .P
 Installability of packages is analyzed according to their
 \fBDepends\fR, \fBConflicst\fR, and \fBProvides\fR fields with their
@@ -69,52 +69,58 @@ In the case of Debian, it is not possible to install at the same time
 two packages with the sqme name but different versions.
 
 .SS RPM
+The input file can be either a \fIsynthesis file or a \fIhdlist file.
+By default rpmcheck accept a synthesis file. To specify a hdlist file
+distcheck must be invoked as hdlist://
 
 .SS Eclipse
-
+The input is a 822 file containing the encoding of OSGi plugins 
+content.xml files.
 
 .SH OPTIONS
 .TP
-.B \-explain
-Explain the results
+.B \-f \-\-failures
+Only show broken package that fails the installability test.
 .TP
-.B \-rules
-Print generated rules
+.B \-v \-\-successes
+Only show packages that do not fail the installability test.
 .TP
-.B \-failures
-Only show failures
+.B \-e \-\-explain
+Explain the results in more details.
 .TP
-.B \-successes
-Only show successes
+.B \-\-checkonly
+Select a subsets of packages to check. By default all packages are checked.
 .TP
-.B \-quiet
-Supress warnings and progress/timing messages
+.B \-v
+Enable info / warnings / debug message. It can be repeated up to three times
 .TP
-.B \-xml
-Output results in XML format
+.B \-\-progress
+Enable progress bars.
 .TP
-.B \-help, \-\-help
-Display this list of options
+.B \-h, \-\-help
+Display this list of options.
 
 .SH EXIT CODE
 The exit code is 0 when all packages that were asked to be checked
-(either explicitly with the \-checkonly option, or because they exist
+(either explicitly with the \-\-checkonly option, or because they exist
 in the package pool file) are available and found to be installable,
 it is 1 when a least one of these packages is available but not
 installable, and it is 2 when at least one of the packages is not
 available but all available packages are found to be
-installable. Hence, the exit code 2 can occur only when the \-checkonly
+installable. Hence, the exit code 2 can occur only when the \-\-checkonly
 option is used.
-
 
 .SH EXAMPLE
 Check which packages in a particular distribution are not installable and why:
 
-  edos-debcheck \-failures \-explain < Packages
+  debcheck \-failures \-explain < Packages
 
 where Packages is the file pertaining to that distribution, as for instance
 found in the directory \fI	/var/lib/apt/lists\fR.
 
+.SH NOTE
+distcheck is a complete reimplementation of edos-debcheck, written for the
+EDOS project.
 
 .SH AUTHOR
 The first verision of edos-debcheck had been written by Jérôme
@@ -125,4 +131,5 @@ by Pietro Abate.
 .BR deb-control (5)
 
 <http://www.edos-project.org> is the home page of the EDOS project.
+<http://www.mancoosi.org> is the home page of the Mancoosi project.
 
