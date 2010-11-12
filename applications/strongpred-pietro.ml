@@ -217,7 +217,6 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
 
   (* from this point on we work on the renumbered universe *)
   let universe = conv_table.Predictions.universe in 
-  let size = Cudf.universe_size universe in
 
   let graph = 
     if OptParse.Opt.is_set sdgraph then
@@ -258,7 +257,6 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
       let universe_subset = exclude pkgset cluster in
 
       List.iter (fun version ->
-        Util.Progress.progress predbar;
         (* compute a universe with the relevant packages in the cluster moved to version v *)
         let migration_list = Predictions.migrate conv_table version cluster in
         let new_universe = Cudf.load_universe (migration_list@universe_subset) in
@@ -299,7 +297,7 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
             (* If I replace a package (p,v) with a dummy package for p with the same version,
                nothing can go wrong *) 
             let s = Printf.sprintf "package %s : same base version. No harm done." pn in
-            report_package.answer <- Success(s);
+            report_package.answer <- Ignore(s);
           end else if List.length isp <= 0 then begin
             (* nothing to break here *)
             let s = Printf.sprintf "package %s : it has an empty impact set. No harm done." pn in
@@ -347,12 +345,14 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
     end
   in
 
-  Util.Progress.set_total predbar size;
   let fmt = Format.std_formatter in
   if OptParse.Opt.get Options.clustered then
     let source_clusters = Debian.Debutil.group_by_source universe in
-    if OptParse.Opt.is_set Options.packages then
+    if OptParse.Opt.is_set Options.packages then begin
+      let pkglist = OptParse.Opt.get Options.packages in
+      Util.Progress.set_total predbar (List.length pkglist);
       List.iter (fun (source,sourceversion) ->
+        Util.Progress.progress predbar;
         try
           let hv = Hashtbl.find source_clusters (source,sourceversion) in
           let report = { default_report with source = (source,sourceversion) } in
@@ -361,18 +361,24 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
           ) hv;
           Format.fprintf fmt "@[%a@]@.---@." pp_report report
         with Not_found -> Printf.eprintf "%s (= %s) Not found" source sourceversion
-      ) (OptParse.Opt.get Options.packages)
-    else
+      ) pkglist
+    end else begin
+      Util.Progress.set_total predbar (Hashtbl.length source_clusters);
       Hashtbl.iter (fun (source,sourceversion) hv ->
+        Util.Progress.progress predbar;
         let report = { default_report with source = (source,sourceversion) } in
         Hashtbl.iter (fun packageversion cluster ->
           check report (source,packageversion) cluster
         ) hv;
         Format.fprintf fmt "@[%a@]@.---@." pp_report report
       ) source_clusters
+    end
   else
-    if OptParse.Opt.is_set Options.packages then
+    if OptParse.Opt.is_set Options.packages then begin
+      let pkglist = OptParse.Opt.get Options.packages in
+      Util.Progress.set_total predbar (List.length pkglist);
       List.iter (fun (source,sourceversion) ->
+        Util.Progress.progress predbar;
         try
           let (_,v) = conv_table.Predictions.to_cudf (source,sourceversion) in
           let pkg = Cudf.lookup_package universe (source,v) in
@@ -381,14 +387,17 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
           check report (p,v) [pkg];
           Format.fprintf fmt "@[%a@]@.---@." pp_report report
         with Not_found -> Printf.eprintf "%s (= %s) Not found" source sourceversion
-      ) (OptParse.Opt.get Options.packages)
-    else
+      ) pkglist
+    end else begin
+      Util.Progress.set_total predbar (Cudf.universe_size universe);
       Cudf.iter_packages (fun pkg ->
+        Util.Progress.progress predbar;
         let (p,v) = (pkg.Cudf.package, CudfAdd.string_of_version pkg) in
         let report = { default_report with source = (p,v) } in
         check report (p,v) [pkg];
         Format.fprintf fmt "@[%a@]@.---@." pp_report report
       ) universe
+    end
   ;
   Util.Progress.reset predbar
 ;;
