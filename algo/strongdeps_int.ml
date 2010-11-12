@@ -66,7 +66,7 @@ let strongdeps_int graph mdf l =
   let size = List.length available in
 
   Util.Progress.set_total mainbar size;
-  let strongtimer = Util.Timer.create "Strongdeps_int.strong" in
+  let strongtimer = Util.Timer.create ~enabled:true "Strongdeps_int.strong" in
 
   Util.Timer.start strongtimer;
   List.iter (fun (pkg,_,closure) ->
@@ -81,7 +81,9 @@ let strongdeps_int graph mdf l =
     end
   ) available ;
   Util.Progress.reset mainbar;
-  Util.Timer.stop strongtimer graph
+  ignore (Util.Timer.stop strongtimer ());
+  debug "strong dep graph: %d vertices, %d edges\n" (G.nb_vertex graph) (G.nb_edges graph);
+  graph
 ;;
 
 (* XXX this can be refactored in a better way ... *)
@@ -89,7 +91,7 @@ let strongdeps mdf idlist =
   let graph = G.create () in
   let size = List.length idlist in
   Util.Progress.set_total conjbar size;
-  let conjtimer = Util.Timer.create "Strongdeps_int.conjdep" in
+  let conjtimer = Util.Timer.create ~enabled:true "Strongdeps_int.conjdep" in
 
   Util.Timer.start conjtimer;
   let l = 
@@ -110,7 +112,7 @@ let strongdeps_univ mdf =
   let graph = G.create () in
   let size = Array.length mdf.Mdf.index in
   Util.Progress.set_total conjbar size;
-  let conjtimer = Util.Timer.create "Strongdeps_int.conjdep" in
+  let conjtimer = Util.Timer.create ~enabled:true "Strongdeps_int.conjdep" in
 
   Util.Timer.start conjtimer;
   let l = 

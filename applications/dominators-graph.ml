@@ -20,8 +20,10 @@ open CudfAdd
 
 module Options = struct
   open OptParse
+  let description = "Compute the dominator graph"
+  let options = OptParser.make ~description
 
-  let verbose = StdOpt.incr_option ()
+  include Boilerplate.MakeOptions(struct let options = options end)
   let tarjan = StdOpt.store_true ()
   let out_file = StdOpt.str_option ()
   let do_clean = StdOpt.store_true ()
@@ -29,16 +31,15 @@ module Options = struct
   let c_only = StdOpt.str_option ()
   let c_but = StdOpt.str_option ()
   let relative = StdOpt.float_option ()
+  let trans_red = StdOpt.store_true ()
 
-  let description = "Compute the dominator graph"
-  let options = OptParser.make ~description:description ()
 
   open OptParser
-  add options ~short_name:'v' ~long_name:"verbose" ~help:"Print additional information" verbose;
   add options ~short_name:'t' ~long_name:"tarjan" ~help:"Use Tarjan algorithm" tarjan;
   add options ~short_name:'o' ~long_name:"output" ~help:"Send output to file" out_file;
   add options ~long_name:"clean" ~help:"Clean up the dominator graph" do_clean;
   add options ~long_name:"clique-reduction" ~help:"(If not-Tarjan) Do clique reduction" do_cr;
+  add options ~long_name:"detransitivise" ~help:"Do transitive reduction" trans_red;
   add options ~short_name:'r' ~long_name:"relative" ~help:"Use relative strong dominance (with percentage)" relative;
   add options ~long_name:"only" ~help:"Output only the cluster(s) containing these packages (comma-separated)" c_only;
   add options ~long_name:"all-but" ~help:"Do not output the cluster(s) containing these packages (comma-separated)" c_but;
@@ -95,10 +96,10 @@ let () =
 begin
   at_exit (fun () -> Common.Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
+  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose); 
   let (universe,_,_) = Boilerplate.load_universe posargs in
 
-  Common.Util.Progress.enable "Algo.Strongdep.main";
+  (* Common.Util.Progress.enable "Algo.Strongdep.main"; *)
   Common.Util.Progress.enable "Algo.dominators";
 
   let dom_graph =
@@ -112,7 +113,7 @@ begin
       | None -> Dom.dominators g
       | Some f -> Dom.dominators ~relative:f g
     end in
-  (* SO.transitive_reduction dom_graph; *)
+  if OptParse.Opt.get Options.trans_red then SO.transitive_reduction dom_graph;
   (match OptParse.Opt.opt Options.c_only with
   | None -> ();
   | Some _ -> ());

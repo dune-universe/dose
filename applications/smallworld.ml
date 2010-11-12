@@ -28,6 +28,8 @@ module Options = struct
   let smallworld = StdOpt.store_true ()
   let centrality = StdOpt.store_true ()
   let strong_deps = StdOpt.store_true ()
+  let detrans = StdOpt.store_true ()
+  let closure = StdOpt.store_true ()
   let combine_scatter = StdOpt.store_true ()
   let prefix = StdOpt.str_option ~default:"" ()
 
@@ -41,6 +43,8 @@ module Options = struct
   add options ~short_name:'e' ~long_name:"centrality" ~help:"" centrality;
   add options ~long_name:"strong-deps" ~help:"" strong_deps;
   add options ~long_name:"combine-scatter" ~help:"" combine_scatter;
+  add options ~long_name:"detrans" ~help:"" detrans;
+  add options ~long_name:"transitive-closure" ~help:"" closure;
 end
 
 let debug fmt = Util.make_debug "SmallWorld" fmt
@@ -72,6 +76,7 @@ let rec run outch = function
 (**********************************)
 
 module G = Defaultgraphs.PackageGraph.G
+module O = Defaultgraphs.GraphOper(G)
 module S = Statistics.Make(G)
 
 let saveplot h outfile =
@@ -83,7 +88,7 @@ let saveplot h outfile =
 
 let saveplot2 h outfile =
   let out = open_out outfile in
-  Printf.fprintf out "#count degree1 degree2\n" ;
+  Printf.fprintf out "#count in_degree out_degree\n" ;
   Hashtbl.iter (fun (n1, n2) i -> Printf.fprintf out "%d %d %d\n" i n1 n2) h;
   close_out out
 ;;
@@ -94,10 +99,15 @@ let main () =
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   let (universe,_,_) = Boilerplate.load_universe posargs in
   let gr = 
-    if OptParse.Opt.get Options.strong_deps then
+  begin
+    let gr' = if OptParse.Opt.get Options.strong_deps then
       Strongdeps.strongdeps_univ universe
     else 
       Defaultgraphs.PackageGraph.dependency_graph universe in
+    if OptParse.Opt.get Options.detrans then O.transitive_reduction gr';
+    if OptParse.Opt.get Options.closure then O.O.transitive_closure gr'
+    else gr'
+  end in
   let prefix = OptParse.Opt.get Options.prefix in
   let outch = if prefix = "" then stdout else open_out ( prefix ^ "stats" ) in
   let generic = "Generic" >::: [

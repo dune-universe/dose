@@ -18,97 +18,57 @@ open Cudf
 open Cudf_types_pp
 open Diagnostic
 
-(* module Graph = Defaultgraphs.SyntacticDependencyGraph
-module G = Graph.G
-module V = Graph.PkgV
-module E = Graph.PkgE
-module SG = Defaultgraphs.PackageGraph.G *)
+module Options = 
+struct
+  open OptParse
 
-let enable_debug () =
-    (* enable the progress bars *)
-    Common.Util.Progress.enable "Algo.Strongdep.main" ;
-    Common.Util.Progress.enable "SyntacticDependencyGraph.dependency_graph" ;
-    Common.Util.set_verbosity Common.Util.Details
-;;
+  let debug = StdOpt.store_true ()
+  (* let strong = StdOpt.store_true ()
+  let no_triangles = StdOpt.store_true () *)
+  let log_file = StdOpt.str_option ()
+  let out_file = StdOpt.str_option ()
 
+  let description = "Compute list of strong conflicts"
+  let options = OptParser.make ~description ()
 
-let usage = Printf.sprintf "usage: %s [--debug] [--log file] uri" Sys.argv.(0);;
-let logfile = ref (open_out "/dev/null");;
-let use_strong_conflicts = ref false;;
-let remove_triangles = ref true;;
+  open OptParser
+  add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
+  add options ~long_name:"log" ~help:"Use log file" log_file;
+  add options ~long_name:"output" ~help:"Use output file" out_file;
+  (* add options ~long_name:"strong" ~help:"Use strong dependencies" strong;
+  add options ~long_name:"no-triangles" ~help:"Do not remove triangle conflicts" no_triangles; *)
+end
+
+let lc = ref None;;
 let oc = ref stdout;;
-
-let options = [
-  ("--debug", Arg.Unit enable_debug, "Print debug information");
-  ("--log", Arg.String (fun s -> close_out !logfile; logfile := open_out s), "Dump log information in file");
-  ("--strong", Arg.Set use_strong_conflicts, "Use strong conflicts");
-  ("--no-triangles", Arg.Clear remove_triangles, "Do not remove triangles");
-  ("--output", Arg.String (fun s -> oc := open_out s), "Use this file for output");
-];;
 
 let log s = 
 begin
-  output_string !logfile s;
-  flush !logfile
+  match !lc with
+  | None -> ()
+  | Some l -> output_string l s
 end;;
 
 let _ =
-let uri = ref "" in
+(* let uri = ref "" in *)
 begin
   at_exit (fun () -> Util.dump Format.err_formatter);
-  let _ =
-    try Arg.parse options (fun f -> uri := f) usage
-    with Arg.Bad s -> failwith s
-  in
-  if !uri == "" then
-  begin
-    Arg.usage options (usage ^ "\nNo input file specified");
-    exit 2
-  end;
+  let posargs = OptParse.OptParser.parse_argv Options.options in
+  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug 3;
+  (match OptParse.Opt.opt Options.log_file with
+  | None -> lc := None
+  | Some l -> lc := Some (open_out l));
+  (match OptParse.Opt.opt Options.out_file with
+  | None -> ()
+  | Some l -> oc := open_out l);
 
-  Printf.eprintf "Parsing...%!";
-  (* let timer = Util.Timer.create "Parsing" in
-  Util.Timer.start timer; *)
-  let u = match Input.parse_uri !uri with
-  | ("deb", (_,_,_,_,file),_) ->
-    begin
-      let l = Debian.Packages.input_raw [file] in
-      Debian.Debcudf.load_universe l
-    end
-  | ("hdlist", (_,_,_,_,file),_) ->
-    begin
-      let l = Rpm.Packages.Hdlists.input_raw [file] in
-      Rpm.Rpmcudf.load_universe l
-    end
-  | ("synth", (_,_,_,_,file),_) ->
-    begin
-      let l = Rpm.Packages.Synthesis.input_raw [file] in
-      Rpm.Rpmcudf.load_universe l
-    end
-  | ("cudf",  (_,_,_,_,file),_) ->
-      begin
-	let cudf_load_list file =
-	  let _, pkglist, _ = Boilerplate.parse_cudf file in
-	  let from_cudf pkg = (pkg.Cudf.package,string_of_int pkg.Cudf.version) in
-	  let to_cudf (p,v) = (p,int_of_string v) in
-	  (pkglist,from_cudf,to_cudf)
-	in
-
-	let cudf_load_universe file =
-	  let (l,f,t) = cudf_load_list file in
-	  (Cudf.load_universe l, f, t)
-	in
-	let (u,_,_) = cudf_load_universe file in u
-      end
-  | (s, _, _) -> failwith (Printf.sprintf "%s: not supported\n" s) in
-  (* ignore (Util.Timer.stop timer ()); *)
-  Printf.eprintf "done\n%!";
+  let (u, _, _) = Boilerplate.load_universe posargs in
 
   let sc = Strongconflicts.strongconflicts u in
 
   Strongconflicts.CG.iter_vertex (fun c1 ->
     let nc = Strongconflicts.CG.out_degree sc c1 in 
-    Printf.printf "%d %s:\n" nc (string_of_pkgname c1.package);
+    Printf.fprintf !oc "%d %s:\n" nc (string_of_pkgname c1.package);
     let cf_ht = Hashtbl.create nc in 
     Strongconflicts.CG.iter_succ_e (fun (_, (r1, r2, ct), c2) ->
       (* aggregate strong conflicts by root *)
@@ -119,10 +79,10 @@ begin
         Hashtbl.add cf_ht (r1, r2) [c2, ct];
     ) sc c1;
     Hashtbl.iter (fun (r1, r2) cl ->
-      Printf.printf "  %d (%s <-> %s)\n" (List.length cl)
+      Printf.fprintf !oc "  %d (%s <-> %s)\n" (List.length cl)
         (string_of_pkgname r1.package) (string_of_pkgname r2.package);
       List.iter (fun (c2, ct) -> 
-        Printf.printf "    * %s (%s)\n" (string_of_pkgname c2.package)
+        Printf.fprintf !oc "    * %s (%s)\n" (string_of_pkgname c2.package)
         (match ct with
         | Strongconflicts.Explicit -> "explicit"
         | Strongconflicts.Conjunctive -> "conjunctive"

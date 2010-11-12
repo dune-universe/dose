@@ -128,6 +128,7 @@ module Timer : sig
   val create: ?enabled:bool -> string -> t
   val start: t -> unit
   val stop: t -> 'a -> 'a
+  val pp: Format.formatter -> t -> unit
 end
 
 (*

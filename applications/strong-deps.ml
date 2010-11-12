@@ -42,6 +42,9 @@ end
 let impactlist graph q =
   Defaultgraphs.PackageGraph.G.fold_pred (fun p acc -> p :: acc ) graph q []
 
+let rev_impactlist graph q =
+  Defaultgraphs.PackageGraph.G.fold_succ (fun p acc -> p :: acc ) graph q []
+
 let mk_filename prefix suffix s = if prefix = "" then s^suffix else prefix^suffix
 
 let main () =
@@ -73,14 +76,16 @@ let main () =
     let l = 
       Defaultgraphs.PackageGraph.G.fold_vertex (fun p l ->
         let strongimpact = List.length (impactlist sdgraph p) in 
+        let rev_strongimpact = List.length (rev_impactlist sdgraph p) in
         let directimpact = List.length (impactlist depgraph p) in
-        (p,strongimpact - directimpact, strongimpact, directimpact) :: l
+        (p,strongimpact - directimpact, rev_strongimpact, strongimpact, directimpact) :: l
       ) depgraph []
     in
-    List.iter (fun (p,diff,s,d) ->
+    Printf.fprintf outch "name, str, rev, dir, diff\n";
+    List.iter (fun (p,diff,r,s,d) ->
       let pkg = CudfAdd.print_package p in
-      Printf.fprintf outch "%s , %d, %d, %d\n" pkg s d diff
-    ) (List.sort ~cmp:(fun (_,x,_,_) (_,y,_,_) -> y - x) l);
+      Printf.fprintf outch "%s , %d, %d, %d, %d\n" pkg s r d diff
+    ) (List.sort ~cmp:(fun (_,x,_,_,_) (_,y,_,_,_) -> y - x) l);
     close_out outch
   end
   ;

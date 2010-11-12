@@ -73,7 +73,7 @@ let main () =
     in (p,v,l)
   in
   info "Solving..." ;
-  let timer = Util.Timer.create "Solver" in
+  let timer = Util.Timer.create ~enabled:true "Solver" in
   Util.Timer.start timer;
   let failure = OptParse.Opt.get Options.failures in
   let success = OptParse.Opt.get Options.successes in
@@ -94,6 +94,7 @@ let main () =
       Depsolver.univcheck ~callback universe 
   in
   ignore(Util.Timer.stop timer ());
+  Util.Timer.pp fmt timer;
   if failure || success then Format.fprintf fmt "@]@.";
   Format.fprintf fmt "total-packages: %d\n" (Cudf.universe_size universe);
   Format.fprintf fmt "broken-packages: %d\n" i;
