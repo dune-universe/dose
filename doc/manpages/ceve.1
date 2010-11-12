@@ -1,0 +1,81 @@
+.TH ceve 1 "November 11, 2010" "Version 3.0" "USER COMMANDS"
+.SH NAME
+ceve \- parse package metadata
+.SH SYNOPSIS
+.B ceve
+[\-h] [\-v] [\-e
+.IR pkgspec ]
+[\-c
+.IR pkgspec ]
+[\-r
+.IR pkgspec ]
+.RI [\-\-depth= n ]
+[\-t
+.IR format ]
+[\-o
+.IR filename ]
+.SH DESCRIPTION
+Ceve is a generalized metadata parser. It reads package specifications,
+extracts package metadata from them, performs some manipulations, and outputs
+the package metadata in one of several formats.
+.SH OPTIONS
+.TP
+.B \-h
+This option displays the help message. Can also be specified as
+.BR \-\-help .
+.TP
+.B \-v
+Be verbose. This option can be repeated for more verbosity.
+.TP
+.BI "\-e " pkgspec
+Extract the transitive closure of packages connected (by conflict or
+dependency) to any of the packages that satisfy
+.IR pkgspec .
+Such a package specification is a list of packages (separated by a semicolon),
+where each package is specified as follows:
+.RI ( name , version ).
+This option can also be specified as
+.RI "\-\-extract=" pkgspec .
+.TP
+.BI "\-c " pkgspec
+Similar to the
+.B \-c
+option, but only uses the dependency relation to make the transitive closure.
+This option can also be specified as
+.RI "\-\-cone=" pkgspec .
+.TP
+.BI "\-r " pkgspec
+Similar to the
+.B \-e
+and
+.B \-c
+options, but uses the reverse dependency relation to make the transitive
+closure. This option can also be specified as
+.RI "\-\-rcone=" pkgspec .
+.TP
+.BI "\-\-depth=" n
+In combination with the
+.BR -e ,
+.B -c
+or
+.B -r
+options, this specifies the maximum depth for the transitive closure.
+.TP
+.BI "\-t " format
+Specifies the output format to use. Possible values are
+.B dot
+for a graph output in Dot/GraphViz format,
+.B cnf
+for an output in CNF format,
+.B dimacs
+for an output in the DIMACS format for CNF formulae, and
+.B pp
+for a pretty-print output in an RFC 822-like format. This option can also be
+specified as
+.RI "\-\-outtype=" format .
+.TP
+.BI "\-o " filename
+Instead of stdout, send output to the file
+.IR filename .
+This option can also be specified as
+.RI "\-\-outfile=" filename .
