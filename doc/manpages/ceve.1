@@ -14,6 +14,7 @@ ceve \- parse package metadata
 .IR format ]
 [\-o
 .IR filename ]
+.I "input-spec"
 .SH DESCRIPTION
 Ceve is a generalized metadata parser. It reads package specifications,
 extracts package metadata from them, performs some manipulations, and outputs
@@ -79,3 +80,50 @@ Instead of stdout, send output to the file
 .IR filename .
 This option can also be specified as
 .RI "\-\-outfile=" filename .
+.TP
+.I input-spec
+This is a URL specifying both the input format and the file to get the input
+from. Possible schemes are:
+.RS
+.IP \(bu 4
+.B cudf
+for cudf files
+.IP \(bu 4
+.B deb
+for Debian package files (possibly compressed with gzip(1) or bzip2(1), depending on compile-time options for dose3)
+.IP \(bu 4
+.B debstdin
+for Debian package files read from standard input
+.IP \(bu 4
+.B eclipse
+for Eclipse (p2) package files
+.IP \(bu 4
+.B pgsql
+for PostgreSQL databasess
+.IP \(bu 4
+.B sqlite
+for sqlite databases
+.IP \(bu 4
+.B hdlist
+for RPM hdlists
+.IP \(bu 4
+.B synth
+for urpmi synthesis hdlists
+.RE
+
+Some examples of URLs:
+
+.RS
+.IP \(bu 4
+deb://Packages.gz (the Debian file packages.gz in the current directory)
+.IP \(bu 4
+cudf:///home/examples/cudf/test.cudf (the CUDF file
+/home/examples/cudf/test.cudf)
+.IP \(bu 4
+psql://user@db.mancoosi.org:723/packages (the database
+.I packages
+on host
+.I db.mancoosi.org
+on port 723, accessed as user
+.IR user )
+.RE
