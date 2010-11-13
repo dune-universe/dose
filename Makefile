@@ -108,6 +108,7 @@ dist: ./$(DIST_TARBALL)
 	rm -rf ./$(DIST_DIR)/algo/libcudf
 	rm -rf ./$(DIST_DIR)/common/libcudf
 	rm -rf ./$(DIST_DIR)/applications/libcudf
+	rm -rf ./$(DIST_DIR)/applications/tests
 	tar cvzf ./$(DIST_TARBALL) ./$(DIST_DIR)
 	rm -rf ./$(DIST_DIR)
 	@echo "Distribution tarball: ./$(DIST_TARBALL)"
