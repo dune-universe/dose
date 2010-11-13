@@ -11,7 +11,7 @@ let chop_binnmu s =
 
 (* *)
 let chop_epoch s =
-  let rex = Str.regexp "^[0-9]+:(.*)$" in
+  let rex = Str.regexp "^[0-9]+:\\(.*\\)$" in
   try
     ignore(Str.search_forward rex s 0);
     Str.matched_group 1 s
