@@ -61,7 +61,7 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
     info "N. of vertex graph %d\n" (G.nb_vertex graph);
     info "N. of edges graph %d\n" (G.nb_edges graph);
     
-    let domtimer = Util.Timer.create ~enabled:true "Algo.Dominators.dominators" in
+    let domtimer = Util.Timer.create "Algo.Dominators.dominators" in
 
     Util.Progress.set_total dombar (G.nb_vertex graph);
     Util.Timer.start domtimer;
@@ -280,7 +280,7 @@ module Make (G: Sig.I with type V.t = Cudf.package) = struct
       end in
       
       begin
-        let tjntimer = Util.Timer.create ~enabled:true "Algo.Dominators.tarjan" in
+        let tjntimer = Util.Timer.create "Algo.Dominators.tarjan" in
         Util.Timer.start tjntimer;
         (* add a start vertex, and connect it to all packages without
          * incoming edges *)

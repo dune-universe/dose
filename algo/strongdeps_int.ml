@@ -66,7 +66,7 @@ let strongdeps_int graph mdf l =
   let size = List.length available in
 
   Util.Progress.set_total mainbar size;
-  let strongtimer = Util.Timer.create ~enabled:true "Strongdeps_int.strong" in
+  let strongtimer = Util.Timer.create "Strongdeps_int.strong" in
 
   Util.Timer.start strongtimer;
   List.iter (fun (pkg,_,closure) ->
@@ -86,12 +86,32 @@ let strongdeps_int graph mdf l =
   graph
 ;;
 
+module S = Set.Make (struct type t = int let compare = Pervasives.compare end)
+
+(* let strongdeps_int_lesstrans graph mdf l
+  let size = List.length l in
+
+  Util.Progress.set_total mainbar size;
+  let strongtimer = Util.Timer.Create "Algo.Strongdep.strong_detrans" in
+
+  Util.Timer.start strongtimer;
+  List.iter (fun pkg ->
+    let id = pkg.Mdf.id in
+    let pkg_slv = Depsolver_int.init_solver mdf.Mdf.index in
+    match Depsolver_int.solver solver (Diagnostic_int.Sng id) with
+    | Diagnostic_int.Failure _ -> ()
+    | Diagnostic_int.Success f ->
+  ) l;
+  Util.Progress.reset mainbar;
+  Util.Timer.stop strongtimer ()
+;; *)
+
 (* XXX this can be refactored in a better way ... *)
 let strongdeps mdf idlist =
   let graph = G.create () in
   let size = List.length idlist in
   Util.Progress.set_total conjbar size;
-  let conjtimer = Util.Timer.create ~enabled:true "Strongdeps_int.conjdep" in
+  let conjtimer = Util.Timer.create "Strongdeps_int.conjdep" in
 
   Util.Timer.start conjtimer;
   let l = 
@@ -112,7 +132,9 @@ let strongdeps_univ mdf =
   let graph = G.create () in
   let size = Array.length mdf.Mdf.index in
   Util.Progress.set_total conjbar size;
-  let conjtimer = Util.Timer.create ~enabled:true "Strongdeps_int.conjdep" in
+  let conjtimer = Util.Timer.create "Strongdeps_int.conjdep" in
+  Util.Progress.enable "Algo.Strongdep.main";
+  Util.Progress.enable "Algo.Strongdep.conj";
 
   Util.Timer.start conjtimer;
   let l = 
@@ -138,8 +160,6 @@ let impactlist graph q =
 (** invariant : we assume the graph is NOT detransitivitized *)
 let stronglist graph q =
   G.fold_succ (fun p acc -> p :: acc ) graph q []
-
-module S = Set.Make (struct type t = int let compare = Pervasives.compare end)
 
 let impactset graph q =
   if G.mem_vertex graph q then

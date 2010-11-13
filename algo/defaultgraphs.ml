@@ -28,7 +28,7 @@ module GraphOper (G : Sig.I) = struct
       with the proviso that we know that our graph already is a transitive 
       closure *)
   let transitive_reduction graph =
-    let timer = Util.Timer.create ~enabled:true "Defaultgraph.GraphOper.transitive_reduction" in
+    let timer = Util.Timer.create "Defaultgraph.GraphOper.transitive_reduction" in
     Util.Timer.start timer;
     G.iter_vertex (fun v ->
       List.iter (fun v' ->
