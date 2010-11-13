@@ -154,7 +154,7 @@ module Progress = struct
     with Not_found ->
       Printf.eprintf "Warning: Progress Bar %s not found\n" s
 
-  let avalaible () = Hashtbl.fold (fun k _ acc -> k::acc) bars []
+  let available () = Hashtbl.fold (fun k _ acc -> k::acc) bars []
 
   let set_total c total = c.total <- total
   let reset c =
@@ -180,48 +180,50 @@ module Progress = struct
 
 end
 
-let loggers = ref []
-let register f = loggers := f :: !loggers
-let dump fmt = List.iter (fun pp -> pp fmt) !loggers
-
 (** Timers are printed all together when the function dump is called.
  * they can be enabled or disabled (default) *)
 module Timer = struct
   type t = {
     name: string;
-    mutable count : int;
     mutable total : float;
     mutable last  : float;
     mutable is_in : bool;
     mutable enabled : bool;
   }
 
+  let timers = Hashtbl.create 10
   let gettimeofday = ref (fun _ -> 0.)
   let () = gettimeofday := Unix.gettimeofday
 
-  let pp fmt c =
-    if c.enabled then
-      Format.fprintf fmt "Timer %s. Total time: %f. Count: %i@."
-        c.name c.total c.count
+  let pp_timer fmt c =
+    Format.fprintf fmt "Timer %s. Total time: %f.@."
+      c.name c.total
+
+  let dump fmt () =
+    Hashtbl.iter (fun _ c -> if c.enabled then pp_timer fmt c) timers
 
   let create ?(enabled=false) s =
     let c = { 
       name = s;
-      count = 0;
       total = 0.;
       last = 0.;
       is_in = false ;
-      enabled = enabled
-    } 
+      enabled = enabled } 
     in
-    register (fun fmt -> pp fmt c);
+    Hashtbl.add timers s c;
     c
+
+  let enable s =
+    try let t = Hashtbl.find timers s in t.enabled <- true
+    with Not_found ->
+      Printf.eprintf "Warning: Timer %s not found\n" s
+
+  let available () = Hashtbl.fold (fun k _ acc -> k::acc) timers []
 
   let start c =
     assert(not c.is_in);
     c.is_in <- true;
-    c.last <- !gettimeofday();
-    c.count <- c.count + 1
+    c.last <- !gettimeofday()
 
   let stop c x =
     assert(c.is_in);
@@ -230,36 +232,8 @@ module Timer = struct
     x
 end
 
-(** Counters are printed all together when the function dump is called.
- * they can be enabled or disabled (default) *)
-module Counter = struct
-  type t = {
-    name: string;
-    mutable count : int;
-    mutable enabled : bool;
-  }
-
-  let pp fmt c =
-    if c.enabled then
-      Format.fprintf fmt "Counter %s: %i@." c.name c.count
-
-  let create ?(enabled=false) s =
-    let c = { name = s; count = 0; enabled = enabled } in
-    register (fun fmt -> pp fmt c);
-    c
-
-  let incr c =
-    c.count <- c.count + 1
-
-  let add c n =
-    c.count <- c.count + n
-end
-
-(* we always print user / sys timers if the user ask to print Summary info *)
 let pp_process_time fmt () =
   let pt = Unix.times () in
   Format.fprintf fmt "Process time (user):  %5.2f@." pt.Unix.tms_utime;
   Format.fprintf fmt "Process time (sys):   %5.2f@." pt.Unix.tms_stime
 ;;
-
-register (fun fmt -> if false then pp_process_time fmt ());;

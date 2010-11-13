@@ -39,26 +39,33 @@ module MakeOptions(O : Ot) = struct
   open OptParser ;;
   add options ~short_name:'v' ~long_name:"verbose" ~help:"print additional information" verbose;
   add options ~long_name:"progress" ~help:"print progress bars" progress;
-  add options ~long_name:"timers" ~help:"print timing information" progress;
+  add options ~long_name:"timers" ~help:"print timing information" timers;
 
 end
 
 let enable_debug = function
   |0 -> () (* quite : default *)
-  |1 ->
-      Util.Info.all_enabled ()
+  |1 -> Util.Info.all_enabled ()
   |2 ->
-      Util.Info.all_enabled () ;
-      Util.Warning.all_enabled ()
+      begin
+        Util.Info.all_enabled () ;
+        Util.Warning.all_enabled ()
+      end
   |_ ->
-      Util.Info.all_enabled () ;
-      Util.Warning.all_enabled () ;
-      Util.Debug.all_enabled ()
+      begin
+        Util.Info.all_enabled () ;
+        Util.Warning.all_enabled () ;
+        Util.Debug.all_enabled ()
+      end
 ;;
 
 let enable_bars verbose l =
   if verbose then List.iter Util.Progress.enable l
-(* let enable_time = List.iter Util.Timer. *)
+
+let enable_timers verbose l = 
+  at_exit (Util.Timer.dump Format.err_formatter);
+  if verbose then List.iter Util.Timer.enable l
+;;
 
 let debug fmt = Util.make_debug "Boilerplate" fmt
 let info fmt = Util.make_info "Boilerplate" fmt

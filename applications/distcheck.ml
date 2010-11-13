@@ -49,8 +49,9 @@ let debug fmt = Util.make_debug "Distcheck" fmt
 let info fmt = Util.make_info "Distcheck" fmt
 let warning fmt = Util.make_warning "Distcheck" fmt
 
+let timer = Util.Timer.create "Solver" 
+
 let main () =
-  at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs =
     let args = OptParse.OptParser.parse_argv Options.options in
     match Filename.basename(Sys.argv.(0)),args with
@@ -61,6 +62,7 @@ let main () =
     |_,_ -> args
   in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
+  Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
   let default_arch = OptParse.Opt.opt Options.architecture in
   let (universe,from_cudf,_) = Boilerplate.load_universe ~default_arch posargs in
   let pp pkg =
@@ -73,7 +75,6 @@ let main () =
     in (p,v,l)
   in
   info "Solving..." ;
-  let timer = Util.Timer.create ~enabled:true "Solver" in
   Util.Timer.start timer;
   let failure = OptParse.Opt.get Options.failures in
   let success = OptParse.Opt.get Options.successes in
@@ -94,7 +95,7 @@ let main () =
       Depsolver.univcheck ~callback universe 
   in
   ignore(Util.Timer.stop timer ());
-  Util.Timer.pp fmt timer;
+
   if failure || success then Format.fprintf fmt "@]@.";
   Format.fprintf fmt "total-packages: %d\n" (Cudf.universe_size universe);
   Format.fprintf fmt "broken-packages: %d\n" i;

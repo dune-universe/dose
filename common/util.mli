@@ -113,11 +113,8 @@ module Progress : sig
   val reset: t -> unit
 
   (** return the labels of all available progress bar *)
-  val avalaible : unit -> label list
+  val available: unit -> label list
 end
-
-(** dump the content of all counters and timers that are enabled*)
-val dump: Format.formatter -> unit
 
 (** Timers are printed all at once by the [dump] function on stderr. 
  * They can enabled or disabled (default) *)
@@ -126,21 +123,19 @@ module Timer : sig
     
   (** [create s] create and register a new logger named [s] *)
   val create: ?enabled:bool -> string -> t
+
+  (** [enable "barname"] : enable the progress bar with label "barname" *)
+  val enable : label -> unit
+ 
+  val pp_timer: Format.formatter -> t -> unit
+
+  (** print all timers that are enabled *)
+  val dump: Format.formatter -> unit -> unit
+
   val start: t -> unit
+
   val stop: t -> 'a -> 'a
-  val pp: Format.formatter -> t -> unit
-end
 
-(*
-(** Counters are printed all at once by the [dump] function on stderr. 
- * They can enabled or disabled (default) *)
-module Counter : sig
-  type t
-    
-  (** [create s] create and register a new logger named [s] *)
-  val create: ?enabled:bool -> string -> t
-
-  val incr: t -> unit
-  val add: t -> int -> unit
+  (** return the labels of all available progress bar *)
+  val available : unit -> label list
 end
-*)

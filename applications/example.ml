@@ -33,16 +33,17 @@ module Options = struct
 end
 
 let main () =
-  (* dump various information at the end of the program *)
-  at_exit (fun () -> Util.dump Format.err_formatter);
 
   let args = OptParse.OptParser.parse_argv Options.options in
   
-  (* enable verbose information *)
+  (* enable info / warning / debug information *)
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   
   (* enable a selection of progress bars *)
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress) [] ;
+
+  (* enable a selection of timers *)
+  Boilerplate.enable_timers (OptParse.Opt.get Options.timers) [];
 
   info "print some verbose info";
   warning "print some warnings";
