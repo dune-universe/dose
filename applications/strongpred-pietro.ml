@@ -252,7 +252,7 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
       (* XXX here there is the assumption that all versions are different!!! *)
       (* XXX this is not version agnostic !!! *)
       let all_versions = List.map (fun pkg -> pkg.Cudf.version) cluster in
-      let all_discriminants_classes = Predictions.discriminants ~extravcl:all_versions all_constraints in
+      let all_discriminants_classes = Predictions.discriminants ~vcl:all_versions all_constraints in
       let all_discriminants = keys all_discriminants_classes in
 
       (* precompute impact sets of the cluster *)
@@ -270,11 +270,11 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
         List.iter (fun package -> 
           let isp = try Hashtbl.find impactset_table package with Not_found -> assert false in
           let sizeisp = List.length isp in
-          let psels = (Util.memo Predictions.all_constraints conv_table) package.Cudf.package in
+          let psels = Predictions.all_constraints conv_table package.Cudf.package in
           (* extract from the discriminants of the cluster the ones which are discriminants for p *)
           (* it is important to do it this way to make sure we keep the same representatives of   *)
           (* of the version equivalence classes *)
-          let pdiscr = (Util.memo (Predictions.discriminants ~vl:all_discriminants)) psels in
+          let pdiscr = Predictions.discriminants ~vl:all_discriminants psels in
           let vl = keys pdiscr in
 
           let pn = CudfAdd.string_of_package package in

@@ -219,8 +219,8 @@ let range constraints =
    of versions v1,...,vn s.t. all possible combinations of the values of the
    version selectors are exhibited. Each evaluation has only one representative. 
    Optional arguments are provided to allow to limit the analysis to a specific
-   set of versions, or to add extra versions to analyse *)
-let discriminants ?vl ?extravcl constraints =
+   set of versions [vl] , or to add extra versions to analyse [vcl]*)
+let discriminants ?vl ?vcl constraints =
   let evalsel v = function
     |(`Eq,v') -> v = v'
     |(`Geq,v') -> v >= v'
@@ -232,20 +232,11 @@ let discriminants ?vl ?extravcl constraints =
   let eval_constr = Hashtbl.create 17 in
   let constr_eval = Hashtbl.create 17 in
   let vl =
-    match (vl, extravcl) with
+    match (vl, vcl) with
     | (None,None) -> range constraints
     | (None,Some el) -> range ((List.map (fun v -> (`Eq,v)) el) @ constraints)
     | (Some vl,_) -> List.enum (List.sort ~cmp:compare vl)
   in
-(*
-  Enum.iter (fun v ->
-    let eval = List.map (evalsel v) constraints in
-    if not (Hashtbl.mem eval_constr eval) then begin
-      Hashtbl.add eval_constr eval v;
-      Hashtbl.add constr_eval v []
-    end
-  ) vl ;
-*)
 (* XXX refactor this. I've the feeling it's very slow to use replace *)
   Enum.iter (fun v ->
     let eval = List.map (evalsel v) constraints in
