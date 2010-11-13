@@ -3,7 +3,130 @@
 
 \subsection{Understanding Explanations of Non-installability}
 
-\subsection{Understanding Explanations of installability} 
+A package can be broken because of a missing package or because of a
+conflict. For a missing package we'll have a stanza like this :
 
-** We should fix the error codes (also for inconsistent input data)
+\begin{verbatim}
+package: libgnuradio-dev
+  version: 3.2.2.dfsg-1
+  architecture: all
+  source: gnuradio (= 3.2.2.dfsg-1)
+  status: broken
+  reasons:
+   -
+    missing:
+     pkg:
+      package: libgruel0
+      version: 3.2.2.dfsg-1+b1
+      architecture: amd64
+      missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
+     paths:
+      -
+       depchain:
+        -
+         package: libgnuradio-dev
+         version: 3.2.2.dfsg-1
+         architecture: all
+         depends: libgnuradio (= 3.2.2.dfsg-1)
+        -
+         package: libgnuradio
+         version: 3.2.2.dfsg-1
+         architecture: all
+         depends: libgnuradio-core0
+        -
+         package: libgnuradio-core0
+         version: 3.2.2.dfsg-1+b1
+         architecture: amd64
+         depends: libgruel0 (= 3.2.2.dfsg-1+b1)
+\end{verbatim}
+
+The first part gives details about the package libgnuradio-dev, specifying its
+status, source and architecture. The second part is the reason of the problem.
+In this case it is a missing package that is essential to install
+libgnuradio-dev. missindep is the dependency that cannot be satisfied is the
+package libgruel0 , in this case: {\tt libboost-thread1.40.0 (>= 1.40.0-1)}.
+
+The paths component gives all possible depchains from the root package
+libgnuradio-dev to libgruel0 . Notice that we do not include the last node in
+the dependency chain to avoid a useless repetition. Of course there might be
+more then on path to reach libgruel0. Distcheck will unroll all of them.
+Because of the structure of debian dependencies usually there are not so many
+paths.
+
+\begin{verbatim}
+package: a
+version: 1
+depends: b, d
+
+package: b
+version: 1
+depends: e
+
+package: d
+version: 1
+depends: f
+
+package: f
+version: 1
+conflicts: e
+
+package: e
+version: 1
+conflicts: f
+\end{verbatim}
+
+The other possible cause of a problem is a conflict. Consider the following :
+
+\begin{verbatim}
+package: a
+  version: 1
+  status: broken
+  reasons:
+   -
+    conflict:
+     pkg1:
+      package: e
+      version: 1
+     pkg2:
+      package: f
+      version: 1
+     depchain1:
+      -
+       depchain:
+        -
+         package: a
+         version: 1
+         depends: b
+        -
+         package: b
+         version: 1
+         depends: e
+     depchain2:
+      -
+       depchain:
+        -
+         package: a
+         version: 1
+         depends: d
+        -
+         package: d
+         version: 1
+         depends: f
+\end{verbatim}
+
+This is the general case of a deep conflict. I use an artificial example here
+instead of a concrete one since this case is not very common and I was not able
+to find one.
+
+The first part of the distcheck report is as before with details about the
+broken package. Since this is a conflict, and all conflicts are binary, we give
+the two packages involved in the conflict first. Packages f and e are in
+conflict, but they are not direct dependency of package a . For this reason, we
+output the two paths that from a lead to f or e. All dependency chains for each
+conflict are together. Again, since there might be more than one way from a to
+reach the conflicting packages, we can have more then one depchain. 
+
+\subsection{Understanding Explanations of installability}
+
+%** We should fix the error codes (also for inconsistent input data)
 
