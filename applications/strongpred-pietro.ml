@@ -410,7 +410,6 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
 ;;
 
 let main () =
-  at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
   let bars = [
     "Strongpred";"Strongdeps_int.main";"Strongdeps_int.conj";

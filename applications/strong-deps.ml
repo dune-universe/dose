@@ -53,7 +53,6 @@ let rev_impactlist graph q =
 let mk_filename prefix suffix s = if prefix = "" then s^suffix else prefix^suffix
 
 let main () =
-  at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
   let bars = ["Strongdeps_int.main";"Strongdeps_int.conj"] in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
