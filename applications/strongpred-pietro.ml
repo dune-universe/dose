@@ -263,6 +263,10 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
       List.iter (fun version ->
         (* compute a universe with the relevant packages in the cluster moved to version v *)
         let migration_list = Predictions.migrate conv_table version cluster in
+        debug "migration list";
+        List.iter (fun pkg ->
+          debug "%s" (CudfAdd.string_of_package pkg)
+        ) migration_list;
         let new_universe = Cudf.load_universe (migration_list@universe_subset) in
         let solver = Depsolver.load new_universe in
 
@@ -356,25 +360,31 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
   if OptParse.Opt.get Options.clustered then
     let source_clusters = Debian.Debutil.group_by_source universe in
     if OptParse.Opt.is_set Options.packages then begin
+      (* by source, but just a selection *)
       let pkglist = OptParse.Opt.get Options.packages in
       Util.Progress.set_total predbar (List.length pkglist);
       List.iter (fun (source,sourceversion) ->
+        debug "analysing source %s %s" source sourceversion;
         Util.Progress.progress predbar;
         try
           let hv = Hashtbl.find source_clusters (source,sourceversion) in
           let report = { default_report with source = (source,sourceversion) } in
           Hashtbl.iter (fun packageversion cluster ->
+            debug "analysing subcluster %s" packageversion;
             check report (source,packageversion) cluster
           ) hv;
           Format.fprintf fmt "@[%a@]@.---@." pp_report report
         with Not_found -> Printf.eprintf "%s (= %s) Not found" source sourceversion
       ) pkglist
     end else begin
+      (* by source, all universe *)
       Util.Progress.set_total predbar (Hashtbl.length source_clusters);
       Hashtbl.iter (fun (source,sourceversion) hv ->
+        debug "analysing source %s %s" source sourceversion;
         Util.Progress.progress predbar;
         let report = { default_report with source = (source,sourceversion) } in
         Hashtbl.iter (fun packageversion cluster ->
+          debug "analysing subcluster %s" packageversion;
           check report (source,packageversion) cluster
         ) hv;
         Format.fprintf fmt "@[%a@]@.---@." pp_report report
@@ -382,6 +392,7 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
     end
   else
     if OptParse.Opt.is_set Options.packages then begin
+      (* by binary packages, but just a selection *)
       let pkglist = OptParse.Opt.get Options.packages in
       Util.Progress.set_total predbar (List.length pkglist);
       List.iter (fun (source,sourceversion) ->
@@ -396,6 +407,7 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
         with Not_found -> Printf.eprintf "%s (= %s) Not found" source sourceversion
       ) pkglist
     end else begin
+      (* by binary packages, all universe *)
       Util.Progress.set_total predbar (Cudf.universe_size universe);
       Cudf.iter_packages (fun pkg ->
         Util.Progress.progress predbar;

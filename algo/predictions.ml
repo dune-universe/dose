@@ -150,20 +150,20 @@ let renumber (universe,from_cudf,to_cudf) =
           ((min x v),(max y v),(b',a'))
         ) (max_int,1,(1,max_int)) vl
       in
-      debug "i = %d, min %d, max = %d , before = %d , after = %d" i minx maxx before after ;
+      (* debug "i = %d, min %d, max = %d , before = %d , after = %d" i minx maxx before after ; *)
       match (before,after) with
       |(w,v) when w < minx -> begin
-        debug "< %s <<%d>>" (snd (from_cudf (p,(minx/2)))) (minx);
+        (* debug "< %s <<%d>>" (snd (from_cudf (p,(minx/2)))) (minx); *)
         (p, Printf.sprintf "< %s" (snd (from_cudf (p,(minx/2)))))
       end
       |(w,v) when v > maxx -> begin
-        debug "> %s <<%d>>" (snd (from_cudf (p,(maxx/2)))) (maxx);
+        (* debug "> %s <<%d>>" (snd (from_cudf (p,(maxx/2)))) (maxx); *)
         (p, Printf.sprintf "> %s" (snd (from_cudf (p,(maxx/2)))))
       end
       |(w,v) -> begin
         let bv = (snd (from_cudf (p,(w/2)))) in
         let av = (snd (from_cudf (p,(v/2)))) in
-        debug "%s <<%d>> < . < %s <<%d>>" bv (w) av (v);
+        (* debug "%s <<%d>> < . < %s <<%d>>" bv (w) av (v); *)
         (p,Printf.sprintf "%s < . < %s" bv av)
       end
     with Not_found -> begin
