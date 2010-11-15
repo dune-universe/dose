@@ -251,7 +251,10 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
       (* changing the version of p does not change its impact set *)
       (* XXX here there is the assumption that all versions are different!!! *)
       (* XXX this is not version agnostic !!! *)
-      let all_versions = List.map (fun pkg -> pkg.Cudf.version) cluster in
+
+      (* since we and normalize clusters, each cluster can have only three types
+       * of versions  x , epoch:x , x+b1 *)
+      let all_versions = Util.list_unique (List.map (fun pkg -> pkg.Cudf.version) cluster) in
       let all_discriminants_classes = Predictions.discriminants ~vcl:all_versions all_constraints in
       let all_discriminants = keys all_discriminants_classes in
 
