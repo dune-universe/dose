@@ -153,7 +153,6 @@ let create_cudf (preamble,universe,request)  =
 ;;
 
 let main () =
-  at_exit (fun () -> Util.dump Format.err_formatter);
 
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
