@@ -286,6 +286,7 @@ AC_CONFIG_FILES([
   common/_tags
   applications/_tags
   applications/boilerplates/_tags
+  common/versionInfo.ml
   _tags
 ])
 AC_OUTPUT

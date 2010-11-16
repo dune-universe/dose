@@ -6,4 +6,4 @@ let build_timestamp = string_of_float (Unix.time ())
 let build_host = Unix.gethostname ()
 let build_os = Sys.os_type
 (* let buidl_user = Unix.getlogin () *)
-let version = "Build version"
+let version = "Build version @PACKAGE_VERSION@"
