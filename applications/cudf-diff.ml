@@ -1,3 +1,14 @@
+(**************************************************************************************)
+(*  Copyright (C) 2010 Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
+(*  Copyright (C) 2010 Mancoosi Project                                               *)
+(*                                                                                    *)
+(*  This library is free software: you can redistribute it and/or modify              *)
+(*  it under the terms of the GNU Lesser General Public License as                    *)
+(*  published by the Free Software Foundation, either version 3 of the                *)
+(*  License, or (at your option) any later version.  A special linking                *)
+(*  exception to the GNU Lesser General Public License applies to this                *)
+(*  library, see the COPYING file for more information.                               *)
+(**************************************************************************************)
 
 module StringSet = Set.Make (String)
 
@@ -14,15 +25,12 @@ type solution = {
 
 module Options = struct
   open OptParse
-  let verbose = StdOpt.incr_option ()
-
-  let description = "Compare two or more solutions. Format : solvername:solutionfile"
-  let options = OptParser.make ~description:description ()
-
-  open OptParser
-  add options ~short_name:'v' ~help:"Print information (can be repeated)" verbose;
+  let description = 
+    "Compare two or more solutions.\n"^
+    "cudf-diff problemfile solver1:solutionfile1 solver2:solutionfile2 ..."
+  let options = OptParser.make ~description
+  include Boilerplate.MakeOptions(struct let options = options end)
 end
-
 
 let pkg_names univ =
   Cudf.fold_packages (fun names pkg ->
@@ -235,6 +243,7 @@ let check_sol u r s =
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
+  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) [];
 
   match posargs with
   |[] -> (Printf.eprintf "You must specify at least a universe and a solution\n" ; exit 1)
@@ -258,6 +267,5 @@ let main () =
       let fmt = Format.std_formatter in
       Format.fprintf fmt "@[%a@]@." pp_diff (univ,sollist);
 ;;
-
 
 main ();;
