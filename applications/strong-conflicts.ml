@@ -12,63 +12,60 @@
 
 (* attempt at computation of strong conflicts with dose3 (TLFKAlibmancoosi) *)
 
-open Common
 open ExtLib
-open Cudf
-open Cudf_types_pp
-open Diagnostic
+open Common
 
-module Options = 
-struct
+module Options = struct
   open OptParse
+  let description = "Compute Strong Conflicts"
+  let options = OptParser.make ~description
+  include Boilerplate.MakeOptions(struct let options = options end)
 
-  let debug = StdOpt.store_true ()
-  (* let strong = StdOpt.store_true ()
-  let no_triangles = StdOpt.store_true () *)
   let log_file = StdOpt.str_option ()
   let out_file = StdOpt.str_option ()
 
-  let description = "Compute list of strong conflicts"
-  let options = OptParser.make ~description ()
-
   open OptParser
-  add options ~short_name:'d' ~long_name:"debug" ~help:"Print debug information" debug;
   add options ~long_name:"log" ~help:"Use log file" log_file;
   add options ~long_name:"output" ~help:"Use output file" out_file;
-  (* add options ~long_name:"strong" ~help:"Use strong dependencies" strong;
-  add options ~long_name:"no-triangles" ~help:"Do not remove triangle conflicts" no_triangles; *)
 end
+
+let debug fmt = Util.make_debug "StrongConflict" fmt
+let info fmt = Util.make_info "StrongConflict" fmt
+let warning fmt = Util.make_warning "StrongConflict" fmt
 
 let lc = ref None;;
 let oc = ref stdout;;
 
 let log s = 
-begin
   match !lc with
   | None -> ()
   | Some l -> output_string l s
-end;;
+;;
 
-let _ =
-(* let uri = ref "" in *)
-begin
-  at_exit (fun () -> Util.dump Format.err_formatter);
+let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug 3;
-  (match OptParse.Opt.opt Options.log_file with
-  | None -> lc := None
-  | Some l -> lc := Some (open_out l));
-  (match OptParse.Opt.opt Options.out_file with
-  | None -> ()
-  | Some l -> oc := open_out l);
+  let bars = [
+    "Strongdeps_int.main";"Strongdeps_int.conj";
+    "StrongDepGraph.transfrom.edges";"StrongDepGraph.transfrom.vertex";
+    "Strongconflicts_int.local"; "Strongconflicts_int.seeding"
+    ]
+  in
+  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
+  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) bars;
 
-  let (u, _, _) = Boilerplate.load_universe posargs in
+  if OptParse.Opt.is_set Options.log_file then 
+    lc := Some (open_out (OptParse.Opt.get Options.log_file));
 
-  let sc = Strongconflicts.strongconflicts u in
+  if OptParse.Opt.is_set Options.out_file then
+    oc := open_out (OptParse.Opt.get Options.out_file);
+
+  let (universe,from_cudf,to_cudf) = Boilerplate.load_universe posargs in
+  let universe = Depsolver.trim universe in
+  let sc = Strongconflicts.strongconflicts universe in
 
   Strongconflicts.CG.iter_vertex (fun c1 ->
     let nc = Strongconflicts.CG.out_degree sc c1 in 
-    Printf.fprintf !oc "%d %s:\n" nc (string_of_pkgname c1.package);
+    Printf.fprintf !oc "%d %s:\n" nc c1.Cudf.package;
     let cf_ht = Hashtbl.create nc in 
     Strongconflicts.CG.iter_succ_e (fun (_, (r1, r2, ct), c2) ->
       (* aggregate strong conflicts by root *)
@@ -80,9 +77,9 @@ begin
     ) sc c1;
     Hashtbl.iter (fun (r1, r2) cl ->
       Printf.fprintf !oc "  %d (%s <-> %s)\n" (List.length cl)
-        (string_of_pkgname r1.package) (string_of_pkgname r2.package);
+        r1.Cudf.package r2.Cudf.package;
       List.iter (fun (c2, ct) -> 
-        Printf.fprintf !oc "    * %s (%s)\n" (string_of_pkgname c2.package)
+        Printf.fprintf !oc "    * %s (%s)\n" c2.Cudf.package
         (match ct with
         | Strongconflicts.Explicit -> "explicit"
         | Strongconflicts.Conjunctive -> "conjunctive"
@@ -90,4 +87,15 @@ begin
       ) cl
     ) cf_ht
   ) sc
-end;;
+
+(*
+    Strongconflicts.CG.iter_edges (fun x y ->
+          let (x,y) = swap (x,y) in
+    Printf.printf "%s <-> %s\n" (CudfAdd.string_of_package x) (CudfAdd.string_of_package y)
+    ) g
+    ;
+    info "Total strong conflicts %d" (Strongconflicts.CG.nb_edges g)
+*)
+;;
+
+main () ;;
