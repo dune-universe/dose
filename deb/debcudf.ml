@@ -139,6 +139,7 @@ let get_cudf_version tables (package,version) =
   end
 
 let get_real_version tables (package,cudfversion) =
+  let min a b = match Version.compare a b with -1 -> a | _ -> b in
   try
     match !(Hashtbl.find tables.reverse_table cudfversion) with
     |[] -> fatal "This should never happen : at lease one version for (%s,%d) must exist" package cudfversion
