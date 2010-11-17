@@ -12,11 +12,7 @@
 
 open ExtLib
 open Common
-open Cudf
-open Graph
-open Defaultgraphs
-open Cudf_types_pp
-open CudfAdd
+open Algo
 
 module Options = struct
   open OptParse
@@ -45,25 +41,17 @@ module Options = struct
   add options ~long_name:"all-but" ~help:"Do not output the cluster(s) containing these packages (comma-separated)" c_but;
 end
 
-module G = StrongDepGraph.G;;
-module O = StrongDepGraph.O;;
-module C = Components.Make(G);;
-
 (* ----------------------------------- *)
 
-module S = Set.Make(struct type t = string * string let compare = Pervasives.compare end)
-module SG = PackageGraph.G
-module SO = PackageGraph.O;;
-module Dom = Dominators.Make(SG)
-module D = PackageGraph.D;;
+module SG = Defaultgraphs.PackageGraph.G
+module SO = Defaultgraphs.PackageGraph.O;;
+module Dom = Dominators
+module D = Defaultgraphs.PackageGraph.D;;
+module PS = CudfAdd.Cudf_set
 
-let is graph pkg =
-  SG.fold_pred (fun p s -> Cudf_set.add p s) graph pkg (Cudf_set.singleton pkg)
-;;
+let is graph pkg = SG.fold_pred (fun p s -> PS.add p s) graph pkg (PS.singleton pkg) ;;
 
-let scons graph pkg =
-  SG.fold_succ (fun p s -> Cudf_set.add p s) graph pkg (Cudf_set.singleton pkg)
-;;
+let scons graph pkg = SG.fold_succ (fun p s -> PS.add p s) graph pkg (PS.singleton pkg) ;;
 
 let clean_graph g = 
 begin
@@ -92,34 +80,40 @@ begin
   ) g
 end;;
 
-let () =
-begin
-  at_exit (fun () -> Common.Util.dump Format.err_formatter);
+let strongdeps_univ universe =
+  let mdf = Mdf.load_from_universe universe in
+  let g = Strongdeps_int.strongdeps_univ ~transitive:false mdf in
+  Defaultgraphs.intcudf mdf.Mdf.index g
+;;
+
+let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose); 
+  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) ["Algo.dominators"]; 
   let (universe,_,_) = Boilerplate.load_universe posargs in
-
-  (* Common.Util.Progress.enable "Algo.Strongdep.main"; *)
-  Common.Util.Progress.enable "Algo.dominators";
 
   let dom_graph =
     if OptParse.Opt.get Options.tarjan then
-      Dom.dominators_tarjan (Strongdeps.strongdeps_univ ~transitive:false universe)
-    else
-    begin
+      Dom.dominators_tarjan (strongdeps_univ universe)
+    else begin
       let g = Strongdeps.strongdeps_univ universe in
       if OptParse.Opt.get Options.do_cr then Dom.clique_reduction g;
       match OptParse.Opt.opt Options.relative with
       | None -> Dom.dominators g
       | Some f -> Dom.dominators ~relative:f g
-    end in
+    end
+  in
   if OptParse.Opt.get Options.trans_red then SO.transitive_reduction dom_graph;
-  (match OptParse.Opt.opt Options.c_only with
-  | None -> ();
-  | Some _ -> ());
+  begin 
+    match OptParse.Opt.opt Options.c_only with
+    | None -> ();
+    | Some _ -> () 
+  end; (* ???? *)
   if OptParse.Opt.get Options.do_clean then clean_graph dom_graph;
   if OptParse.Opt.is_set Options.out_file then
     D.output_graph (open_out (OptParse.Opt.get Options.out_file)) dom_graph
   else
     D.output_graph stdout dom_graph
-end;;
+;;
+
+main () ;;

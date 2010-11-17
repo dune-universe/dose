@@ -88,26 +88,8 @@ let strongdeps_int graph mdf l =
 
 module S = Set.Make (struct type t = int let compare = Pervasives.compare end)
 
-(* let strongdeps_int_lesstrans graph mdf l
-  let size = List.length l in
-
-  Util.Progress.set_total mainbar size;
-  let strongtimer = Util.Timer.Create "Algo.Strongdep.strong_detrans" in
-
-  Util.Timer.start strongtimer;
-  List.iter (fun pkg ->
-    let id = pkg.Mdf.id in
-    let pkg_slv = Depsolver_int.init_solver mdf.Mdf.index in
-    match Depsolver_int.solver solver (Diagnostic_int.Sng id) with
-    | Diagnostic_int.Failure _ -> ()
-    | Diagnostic_int.Success f ->
-  ) l;
-  Util.Progress.reset mainbar;
-  Util.Timer.stop strongtimer ()
-;; *)
-
 (* XXX this can be refactored in a better way ... *)
-let strongdeps mdf idlist =
+let strongdeps ?(transitive=true) mdf idlist =
   let graph = G.create () in
   let size = List.length idlist in
   Util.Progress.set_total conjbar size;
@@ -118,7 +100,7 @@ let strongdeps mdf idlist =
     List.fold_left (fun acc id ->
       let pkg = mdf.Mdf.index.(id) in
       Util.Progress.progress conjbar;
-      IntPkgGraph.conjdepgraph_int ~transitive:true graph mdf.Mdf.index id; 
+      IntPkgGraph.conjdepgraph_int ~transitive graph mdf.Mdf.index id; 
       let closure = Depsolver_int.dependency_closure mdf [id] in
       (pkg,List.length closure,closure) :: acc
     ) [] idlist
@@ -128,7 +110,7 @@ let strongdeps mdf idlist =
   strongdeps_int graph mdf l
 
 (* XXX this can be refactored in a better way ... *)
-let strongdeps_univ mdf =
+let strongdeps_univ ?(transitive=true) mdf =
   let graph = G.create () in
   let size = Array.length mdf.Mdf.index in
   Util.Progress.set_total conjbar size;
@@ -141,7 +123,7 @@ let strongdeps_univ mdf =
     let id = ref 0 in
     Array.fold_left (fun acc pkg ->
       Util.Progress.progress conjbar;
-      IntPkgGraph.conjdepgraph_int ~transitive:true graph mdf.Mdf.index !id;
+      IntPkgGraph.conjdepgraph_int ~transitive graph mdf.Mdf.index !id;
       let closure = Depsolver_int.dependency_closure mdf [!id] in
       incr id ;
       (pkg,List.length closure,closure) :: acc
