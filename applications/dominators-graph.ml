@@ -89,6 +89,7 @@ let strongdeps_univ universe =
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose); 
+  Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Algo.Dominators.dominators"; "Algo.Dominators.tarjan"; "Strongdeps_int.strong"; "Strongdeps_int.conjdep"]; 
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress) ["Algo.dominators"]; 
   let (universe,_,_) = Boilerplate.load_universe posargs in
 
