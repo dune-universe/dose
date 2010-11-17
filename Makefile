@@ -95,7 +95,11 @@ dist: ./$(DIST_TARBALL)
 ./$(DIST_TARBALL):
 	if [ -d ./$(DIST_DIR)/ ] ; then rm -rf ./$(DIST_DIR)/ ; fi
 	if [ -d ./$(DIST_TARBALL) ] ; then rm -f ./$(DIST_TARBALL) ; fi
-	svn export . ./$(DIST_DIR)
+	if [ -d .svn ]; then \
+	  svn export . ./$(DIST_DIR) ; \
+	else \
+	  mkdir ./$(DIST_DIR)/ ; git archive --format=tar HEAD | tar -x -C ./$(DIST_DIR)/ ; \
+	fi
 	rm -rf ./$(DIST_DIR)/debian
 	rm -rf ./$(DIST_DIR)/libcudf
 	rm -rf ./$(DIST_DIR)/deb/tests
