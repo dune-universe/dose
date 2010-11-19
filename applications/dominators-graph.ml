@@ -105,16 +105,16 @@ let main () =
     end
   in
   if OptParse.Opt.get Options.trans_red then SO.transitive_reduction dom_graph;
-  begin 
-    match OptParse.Opt.opt Options.c_only with
-    | None -> ();
-    | Some _ -> () 
-  end; (* ???? *)
+  if OptParse.Opt.is_set Options.c_only then () ;
   if OptParse.Opt.get Options.do_clean then clean_graph dom_graph;
-  if OptParse.Opt.is_set Options.out_file then
-    D.output_graph (open_out (OptParse.Opt.get Options.out_file)) dom_graph
-  else
-    D.output_graph stdout dom_graph
+  let oc =
+    if OptParse.Opt.is_set Options.out_file then
+      open_out (OptParse.Opt.get Options.out_file)
+    else
+      stdout
+  in
+  D.output_graph oc dom_graph;
+  if oc <> stdout then close_out oc
 ;;
 
 main () ;;
