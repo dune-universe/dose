@@ -144,7 +144,12 @@ let get_real_version tables (package,cudfversion) =
     match !(Hashtbl.find tables.reverse_table cudfversion) with
     |[] -> fatal "This should never happen : at lease one version for (%s,%d) must exist" package cudfversion
     |[h] -> h
-    |l -> List.fold_left min "999999:999999" l
+    |l ->
+        begin
+          let v = List.fold_left min "999999:999999" l in
+          warning "version %s is equivalent to (%s)" v (String.concat "," l);
+          v
+        end
   with Not_found ->
     fatal "This should never happen : (%s,%d) is not known" package cudfversion
 
