@@ -25,7 +25,7 @@ module Options = struct
   let failures = StdOpt.store_true ()
   let explain = StdOpt.store_true ()
   let uuid = StdOpt.store_true ()
-  let checkonly = StdOpt.str_option ()
+  let checkonly = Boilerplate.vpkglist_option ()
   let architecture = StdOpt.str_option ()
   let distribution = StdOpt.str_option ()
   let release = StdOpt.str_option ()
@@ -51,6 +51,7 @@ end
 let debug fmt = Util.make_debug "Distcheck" fmt
 let info fmt = Util.make_info "Distcheck" fmt
 let warning fmt = Util.make_warning "Distcheck" fmt
+let fatal fmt = Util.make_fatal "Distcheck" fmt
 
 let timer = Util.Timer.create "Solver" 
 
@@ -67,7 +68,19 @@ let main () =
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
   let default_arch = OptParse.Opt.opt Options.architecture in
-  let (universe,from_cudf,_) = Boilerplate.load_universe ~default_arch posargs in
+  let (universe,from_cudf,to_cudf) = Boilerplate.load_universe ~default_arch posargs in
+  let pkglist = 
+    if OptParse.Opt.is_set Options.checkonly then 
+        List.flatten (
+          List.map (function 
+            |(p,None) -> Cudf.lookup_packages universe p
+            |(p,Some(c,v)) ->
+                let filter = Some(c,snd(to_cudf (p,v))) in
+                Cudf.lookup_packages ~filter universe p
+          ) (OptParse.Opt.get Options.checkonly)
+        )
+    else []
+  in
   let pp pkg =
     let (p,v) = from_cudf (pkg.Cudf.package,pkg.Cudf.version) in 
     let l = 
@@ -93,12 +106,6 @@ let main () =
   let callback = Diagnostic.fprintf ~pp ~failure ~success ~explain fmt in
   let i =
     if OptParse.Opt.is_set Options.checkonly then 
-      let pkglist = 
-        List.flatten (
-          List.map (Cudf.lookup_packages universe)
-          (Str.split (Str.regexp ",") (OptParse.Opt.get Options.checkonly))
-        )
-      in
       Depsolver.listcheck ~callback universe pkglist
     else
       Depsolver.univcheck ~callback universe 
@@ -107,6 +114,7 @@ let main () =
 
   if failure || success then Format.fprintf fmt "@]@.";
   Format.fprintf fmt "total-packages: %d@." (Cudf.universe_size universe);
+  Format.fprintf fmt "checked-packages: %d@." (List.length pkglist);
   Format.fprintf fmt "broken-packages: %d@." i;
   if OptParse.Opt.get Options.uuid then
     Format.fprintf fmt "uid: %s@." (Util.uuid ());
