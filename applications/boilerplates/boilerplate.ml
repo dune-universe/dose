@@ -154,7 +154,7 @@ IFDEF HASRPM THEN
   let pkglist = List.map (Rpm.Rpmcudf.tocudf tables) l in
   Rpm.Rpmcudf.clear tables;
   let from_cudf (p,i) = (p,string_of_int i) in
-  let to_cudf (p,v) = failwith "Nope ..." in
+  let to_cudf (p,v) = failwith (Printf.sprintf "to_cudf failed for p:%s v:%s" p v) in
   (pkglist,from_cudf,to_cudf)
 ELSE
   failwith "librpm not available. re-configure with --with-rpm"
