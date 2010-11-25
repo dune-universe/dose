@@ -16,45 +16,44 @@ open ExtLib
 open ExtString
 open Common
 
-module Options =
-  struct
-    open OptParse
-    let debug = StdOpt.store_true ()
-    let source = StdOpt.store_false ()
-    let outdir = StdOpt.str_option ()
+module Options = struct
+  open OptParse
+  let description = "Extract a debian Packages, status and apt-get request from a cudf document"
+  let options = OptParser.make ~description
+  include Boilerplate.MakeOptions(struct let options = options end)
 
-    let options = OptParser.make ()
-    open OptParser
+  let source = StdOpt.store_false ()
+  let outdir = StdOpt.str_option ()
 
-    add options ~short_name:'d' ~long_name:"debug" ~help:"Print various aggregate information" debug;
-    add options ~long_name:"outdir" ~help:"Send output to a file" outdir;
-    add options ~long_name:"from-cudf" ~help:"do no consider \"number\" property" debug;
+  open OptParser
+  add options ~long_name:"outdir" ~help:"Send output to a file" outdir;
+  add options ~long_name:"from-cudf" ~help:"do no consider \"number\" property" source;
 
-  end
+end
 
 (* ========================================= *)
 
 let debug fmt = Util.make_debug "Aptsoltuions" fmt
 let info fmt = Util.make_info "Aptsolutions" fmt
 let warning fmt = Util.make_warning "Aptsolutions" fmt
+let fatal fmt = Util.make_fatal "Aptsolutions" fmt
 
 let main () =
-  at_exit (fun () -> Util.dump Format.err_formatter);
   let (doc,apt) =
     match OptParse.OptParser.parse_argv Options.options with
-    |[] -> (Printf.eprintf "No input file specified" ; exit 1)
-    |_::[] -> (Printf.eprintf "a  bit more input" ; exit 1)
+    |[] -> fatal "No input file specified"
+    |_::[] -> fatal "a  bit more input"
     |doc::apt::_ -> (doc,apt)
   in
 
-  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
+  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
 
   let (preamble,universe) =
     match Input.parse_uri doc with
     |("cudf",(_,_,_,_,file),_) -> begin
       let p, u, _ = Boilerplate.parse_cudf file in (p,u)
     end
-    |(s,_,_) -> failwith (s^" Not supported")
+    |(s,_,_) -> fatal "%s Not supported" s
   in
 
   let (install,remove) =
@@ -92,7 +91,7 @@ let main () =
   in
 
   if (List.length install) = 0 && (List.length remove) = 0 then begin
-    Printf.eprintf "Empty solution or not a solution\n";
+    info "Empty solution or not a solution";
     exit 0
   end;
 
@@ -111,12 +110,10 @@ let main () =
   List.iter (fun (n,v) ->
     try let pkg = Hashtbl.find t (n,v) in
     Hashtbl.replace t (n,v) {pkg with Cudf.installed = false }
-    with Not_found -> begin
-      Printf.eprintf 
-"Something wrong in the remove request.
-Package in the solution is not present in the universe (%s,%s)" n v;
-      exit 1
-    end
+    with Not_found ->
+      fatal 
+      "Something wrong in the remove request.
+      Package in the solution is not present in the universe (%s,%s)" n v;
   ) remove ;
 
   List.iter (fun (n,v) ->
@@ -124,12 +121,10 @@ Package in the solution is not present in the universe (%s,%s)" n v;
     Hashtbl.replace t (n,v) {pkg with Cudf.installed = true }
     with Not_found -> begin
       if String.starts_with n "dummy_" then ()
-      else begin
-        Printf.eprintf
-"Something wrong in the remove request. Package in the
-solution is not present in the universe (%s,%s)" n v;
-        exit 1
-      end
+      else
+        fatal
+        "Something wrong in the remove request.
+        Package in the solution is not present in the universe (%s,%s)" n v;
     end
   ) install ;
 

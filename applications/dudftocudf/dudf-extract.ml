@@ -86,14 +86,22 @@ let main () =
   let packagelist =
     List.map (fun pl -> parsepackagelist pl) dudfdoc.problem.packageUniverse
   in
-  let oc = open_out (Filename.concat dirname "status") in
-  let fmt = (Format.formatter_of_out_channel oc) in
-  Format.fprintf fmt "%s" status;
+  let action = dudfdoc.problem.action in
+  let preferences = dudfdoc.problem.desiderata in
+
+  List.iter (fun (fname,s) ->
+    let oc = open_out (Filename.concat dirname fname) in
+    let fmt = (Format.formatter_of_out_channel oc) in
+    Format.fprintf fmt "%s@." s;
+    close_out oc;
+  ) [("status",status);("action",action);("preferences",preferences)] ;
+
   List.iter (fun (_,fname,_,s) ->
     let filename = Filename.basename fname in
     let oc = open_out (Filename.concat dirname filename) in
     let fmt = (Format.formatter_of_out_channel oc) in
-    Format.fprintf fmt "%s" s
+    Format.fprintf fmt "%s@." s;
+    close_out oc;
   ) packagelist
 ;;
 

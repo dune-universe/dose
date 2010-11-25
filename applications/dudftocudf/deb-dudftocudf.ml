@@ -24,17 +24,15 @@ module L = Xml.LazyList
 
 module Options = struct
   open OptParse
+  let description = "Convert Debian Dudf files to Cudf format"
+  let options = OptParser.make ~description
+  include Boilerplate.MakeOptions(struct let options = options end)
 
-  let verbose = StdOpt.incr_option ()
   let outdir = StdOpt.str_option ()
   let problemid = StdOpt.str_option ()
   let archdefault = StdOpt.str_option ~default:"" ()
 
-  let description = "Convert Debian Dudf files to Cudf format"
-  let options = OptParser.make ~description:description ()
-
   open OptParser ;;
-  add options ~short_name:'v' ~long_name:"verbose" ~help:"Print additional information" verbose;
   add options ~short_name:'o' ~long_name:"outdir" ~help:"Output directory" outdir;
   add options ~short_name:'a' ~long_name:"arch" ~help:"Default architecture" archdefault;
   add options                 ~long_name:"id" ~help:"Problem id" problemid;
@@ -244,7 +242,7 @@ let make_universe pl =
       ) packagelist
     in 
     List.map (fun (_,fname,_,cdata) ->
-      Printf.eprintf "Warning : Package List without Release. %s\n" fname;
+      warning "Package List without Release. %s" fname;
       (Debian.Release.default_release,cdata)
     ) l
   in
@@ -277,7 +275,6 @@ let parsepackagelist = function
 open Dudfxml.XmlDudf
 
 let main () =
-  at_exit (fun () -> Util.dump Format.err_formatter);
   let progressbar = Util.Progress.create "debdudf" in
   Random.self_init () ;
   let input_file =
@@ -286,6 +283,8 @@ let main () =
     |_ -> (Printf.eprintf "too many arguments" ; exit 1)
   in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose) ;
+  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) ["debdudf"];
+
   info "parse xml";
 
   let id x = x in

@@ -16,6 +16,7 @@ open Common
 let debug fmt = Util.make_debug "Dudfxml" fmt
 let info fmt = Util.make_info "Dudfxml" fmt
 let warning fmt = Util.make_warning "Dudfxml" fmt
+let fatal fmt = Util.make_fatal "Dudfxml" fmt
 
 module L = Xml.LazyList 
 
@@ -120,12 +121,12 @@ let curlget ch url =
     Curl.global_cleanup ()
     with
     |Curl.CurlException (reason, code, str) ->
-        (Printf.eprintf "Error while downloading %s\n%s\n" url !errorBuffer;
+        (warning "Error while downloading %s\n%s" url !errorBuffer;
          Curl.global_cleanup ();
          raise (Failure "")
          )
     |Failure s ->
-        (Printf.eprintf "Caught exception while downloading %s\n%s\n" url s ;
+        (warning "Caught exception while downloading %s\n%s" url s ;
         Curl.global_cleanup ();
         raise (Failure "")
         )
@@ -198,10 +199,8 @@ let parse input_file =
         in
         (fmt,filename,url,l,Xml.children n)::universe
       end
-      else begin
-        Printf.eprintf "Warning : Unknown element \"%s\"\n" (Xml.tag n) ;
-        exit 1
-      end
+      else 
+        fatal "Warning : Unknown element \"%s\"" (Xml.tag n)
     ) [] node
   in
   let dudfoutcome node =
@@ -209,11 +208,11 @@ let parse input_file =
     |"success" ->
         begin try Success (dudfstatus (get_children node "package-status"))
         with Not_found -> (
-          Printf.eprintf "Warning : Missing installer status on success \n"; 
+          warning "Missing installer status on success"; 
           Success { st_installer = [] ; st_metaInstaller = [] }
         ) end
     |"failure" -> Failure (content_to_string node)
-    |s -> (Printf.eprintf "Warning : Unknown result \"%s\"\n" s ; exit 1)
+    |s -> fatal "Unknown result \"%s\"" s
   in
   let dudfproblem node =
     Xml.fold (fun dudf node ->
@@ -223,7 +222,7 @@ let parse input_file =
       |"package-universe" -> {dudf with packageUniverse = dudfuniverse node }
       |"action" -> {dudf with action = content_to_string node }
       |"desiderata" -> {dudf with desiderata = content_to_string node }
-      |s -> (Printf.eprintf "Warning : Unknown element \"%s\"\n" s ; dudf)
+      |s -> (warning "Unknown element \"%s\"" s ; dudf)
     ) dummydudfprob node
   in
   let dudfinstaller node =
@@ -232,7 +231,7 @@ let parse input_file =
       match Xml.tag node with
       |"name" -> {i  with name = content_to_string node }
       |"version" -> { i with version = content_to_string node }
-      |s -> (Printf.eprintf "Warning : Unknown element \"%s\"\n" s ; i)
+      |s -> (warning "Unknown element \"%s\"" s ; i)
     ) dummydudfinst node
   in
   Xml.fold (fun dudf node -> 
@@ -246,5 +245,5 @@ let parse input_file =
     |"problem" -> {dudf with problem = dudfproblem node }
     |"outcome" -> {dudf with outcome = dudfoutcome node }
     |"comment" -> {dudf with comment = Xml.children node }
-    |s -> (Printf.eprintf "Warning : Unknown elemenet \"%s\"\n" s ; dudf)
+    |s -> (warning "Warning : Unknown elemenet \"%s\"" s ; dudf)
   ) dummydudf xdata
