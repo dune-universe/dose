@@ -18,44 +18,49 @@ module Deb = Debian.Packages
 
 module Options = struct
   open OptParse
+  let description = "Report the broken packages in a debian source list"
+  let options = OptParser.make ~description
+  include Boilerplate.MakeOptions(struct let options = options end)
 
-  let verbose = StdOpt.incr_option ()
   let successes = StdOpt.store_true ()
   let failures = StdOpt.store_true ()
   let explain = StdOpt.store_true ()
-  let xml = StdOpt.str_option ()
+  (* let checkonly = Boilerplate.vpkglist_option () *)
   let architecture = StdOpt.str_option ()
-
-  let showall () = (Opt.get successes) && (Opt.get failures)
-  let onlyfail () = (Opt.get failures) && not (Opt.get successes)
-  let onlysucc () = (Opt.get successes) && not (Opt.get failures)
-
-  let description = "Report the broken packages in a package list"
-  let options = OptParser.make ~description ()
+  let distribution = StdOpt.str_option ()
+  let release = StdOpt.str_option ()
+  let suite = StdOpt.str_option ()
+  let outfile = StdOpt.str_option ()
 
   open OptParser
-  add options ~short_name:'v' ~help:"Print information (can be repeated)" verbose;
   add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
   add options ~short_name:'f' ~long_name:"failures" ~help:"Only show failures" failures;
   add options ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" successes;
-  add options ~short_name:'a' ~long_name:"architecture" ~help:"" architecture;
-  add options ~long_name:"xml" ~help:"Output results in XML format" xml;
+
+  (* add options ~long_name:"checkonly" ~help:"Check only these package" checkonly; *)
+
+  add options ~long_name:"distrib" ~help:"Set the distribution" distribution;
+  add options ~long_name:"release" ~help:"Set the release name" release;
+  add options ~long_name:"suite" ~help:"Set the release name" suite;
+  add options ~long_name:"arch" ~help:"Set the default architecture" architecture;
+
+  add options ~short_name:'o' ~long_name:"outfile" ~help:"output file" outfile;
 end
 
 let debug fmt = Util.make_debug "Buildcheck" fmt
 let info fmt = Util.make_info "Buildcheck" fmt
 let warning fmt = Util.make_warning "Buildcheck" fmt
+let fatal fmt = Util.make_fatal "Buildcheck" fmt
 
-open Diagnostic
+let timer = Util.Timer.create "Solver"
 
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
+  Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
 
-  if not(OptParse.Opt.is_set Options.architecture) then begin
-    Printf.eprintf "--architecture must be specified\n";
-    exit 1;
-  end ;
+  if not(OptParse.Opt.is_set Options.architecture) then 
+    fatal "--architecture must be specified";
 
   let pkglist = Deb.input_raw [List.hd posargs] in
   let srclist = 
@@ -64,9 +69,6 @@ let main () =
   in
   let tables = Debcudf.init_tables (srclist @ pkglist) in
  
-  let sl = List.map (fun pkg -> Debcudf.tocudf tables pkg) srclist in
-  let l = List.fold_left (fun acc pkg -> (Debcudf.tocudf tables pkg)::acc) sl pkglist in
-  let universe = Cudf.load_universe l in
   let pp pkg =
     let (p,i) = (pkg.Cudf.package,pkg.Cudf.version) in
     let v = Debian.Debcudf.get_real_version tables (p,i) in
@@ -77,13 +79,41 @@ let main () =
       ) ["architecture";"source";"sourceversion"]
     in (p,v,l)
   in
-  info "Solving..." ;
+
+  let sl = List.map (fun pkg -> Debcudf.tocudf tables pkg) srclist in
+  let l = List.fold_left (fun acc pkg -> (Debcudf.tocudf tables pkg)::acc) sl pkglist in
+
+  let universe = Cudf.load_universe l in
+
   let failure = OptParse.Opt.get Options.failures in
   let success = OptParse.Opt.get Options.successes in
   let explain = OptParse.Opt.get Options.explain in
-  let callback = Diagnostic.printf ~pp ~failure ~success ~explain in
+  let fmt =
+    if OptParse.Opt.is_set Options.outfile then
+      let oc = open_out (OptParse.Opt.get Options.outfile) in
+      Format.formatter_of_out_channel oc
+    else
+      Format.std_formatter
+  in
+  if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
+  let callback = Diagnostic.fprintf ~pp ~failure ~success ~explain fmt in
+
+  Util.Timer.start timer;
   let i = Depsolver.listcheck ~callback universe sl in
-  Printf.eprintf "Broken Packages: %d\n" i
+  ignore(Util.Timer.stop timer ());
+
+  if failure || success then Format.fprintf fmt "@]@.";
+  Format.fprintf fmt "total-packages: %d@." (Cudf.universe_size universe);
+  Format.fprintf fmt "checked-packages: %d@." (List.length sl);
+  Format.fprintf fmt "broken-packages: %d@." i;
+  if OptParse.Opt.is_set Options.distribution then
+    Format.fprintf fmt "distribution: %s@." (OptParse.Opt.get Options.distribution);
+  if OptParse.Opt.is_set Options.release then
+    Format.fprintf fmt "release: %s@." (OptParse.Opt.get Options.release);
+  if OptParse.Opt.is_set Options.suite then
+    Format.fprintf fmt "suite: %s@." (OptParse.Opt.get Options.suite);
+  if OptParse.Opt.is_set Options.architecture then
+    Format.fprintf fmt "architecture: %s@." (OptParse.Opt.get Options.architecture);
 ;;
 
 main () ;;

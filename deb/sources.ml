@@ -93,9 +93,9 @@ let sources2packages arch l =
         version = pkg.version;
         depends = depends (pkg.build_depends_indep @ pkg.build_depends);
         conflicts = conflicts (pkg.build_conflicts_indep @ pkg.build_conflicts);
+        architecture = String.concat "," pkg.architecture
       }
       )
     )
     else None
   ) l
-
