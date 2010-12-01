@@ -53,12 +53,16 @@ module ResultHash = OcamlHash.Make (
 type summary = {
   mutable missing : int;
   mutable conflict : int;
+  mutable unique_missing : int;
+  mutable unique_conflict : int;
   summary : (Cudf.package list ref) ResultHash.t 
 }
 
 let default_result n = {
   missing = 0;
   conflict = 0;
+  unique_missing = 0;
+  unique_conflict = 0;
   summary = ResultHash.create n;
 }
 
@@ -241,8 +245,9 @@ let collect results = function
         |_ -> ()
       ) (f ())
   |_  -> ()
+;;
 
-let pp_summary_row ?(pp=default_pp) fmt = function
+let pp_summary_row pp fmt = function
   |(Conflict (i,j),pl) ->
       Format.fprintf fmt "@[<v 1>conflict:@,";
       Format.fprintf fmt "@[<v 1>pkg1:@,%a@]@," (pp_package pp) i;
@@ -257,17 +262,28 @@ let pp_summary_row ?(pp=default_pp) fmt = function
       pp_list (pp_package ~source:true pp) fmt pl;
       Format.fprintf fmt "@]@]"
   |_ -> ()
+;;
 
-let pp_summary ?(pp=default_pp) fmt result = 
-  Format.fprintf fmt "@[missing-packages: %d@," result.missing;
-  Format.fprintf fmt "conflict-packages: %d@," result.conflict;
+let pp_summary ?(pp=default_pp) () fmt result = 
   let l =
     ResultHash.fold (fun k v acc -> 
       let l1 = Util.list_unique !v in
+      begin match k with
+        |Conflict(_,_) -> result.unique_conflict <- result.unique_conflict + 1;
+        |Missing(_,_) -> result.unique_missing <- result.unique_missing +1;
+        |_ -> ()
+      end;
       if List.length l1 > 1 then (k,l1)::acc else acc 
     ) result.summary [] 
   in
   let l = List.sort ~cmp:(fun (_,l1) (_,l2) -> (List.length l1) - (List.length l2)) l in
+
+  Format.fprintf fmt "missing-packages: %d@." result.missing;
+  Format.fprintf fmt "conflict-packages: %d@." result.conflict;
+  Format.fprintf fmt "unique-missing-packages: %d@." result.unique_missing;
+  Format.fprintf fmt "unique-conflict-packages: %d@." result.unique_conflict;
+
   Format.fprintf fmt "@[<v 1>summary:@," ;
-  pp_list pp_summary_row fmt l;
-  Format.fprintf fmt "@]@]"
+  pp_list (pp_summary_row pp) fmt l;
+  Format.fprintf fmt "@]"
+;;

@@ -128,7 +128,7 @@ let main () =
   Format.fprintf fmt "foreground-packages: %d@." (if nf = 0 then nb else nf);
   Format.fprintf fmt "broken-packages: %d@." i;
  
-  if summary then Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp) results;
+  if summary then Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
 
   if OptParse.Opt.get Options.uuid then
     Format.fprintf fmt "uid: %s@." (Util.uuid ());
