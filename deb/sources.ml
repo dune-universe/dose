@@ -88,7 +88,7 @@ let sources2packages arch l =
     if List.exists (fun a -> a = "all" || a = "any" || a = arch) archs then (
       Some (
       { Packages.default_package with
-        Packages.name = "source---" ^ pkg.name ;
+        Packages.name = "src:" ^ pkg.name ;
         source = (pkg.name, Some pkg.version);
         version = pkg.version;
         depends = depends (pkg.build_depends_indep @ pkg.build_depends);
