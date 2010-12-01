@@ -26,6 +26,7 @@ module Options = struct
   let failures = StdOpt.store_true ()
   let explain = StdOpt.store_true ()
   (* let checkonly = Boilerplate.vpkglist_option () *)
+  let summary = StdOpt.store_true ()
   let architecture = StdOpt.str_option ()
   let distribution = StdOpt.str_option ()
   let release = StdOpt.str_option ()
@@ -38,6 +39,7 @@ module Options = struct
   add options ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" successes;
 
   (* add options ~long_name:"checkonly" ~help:"Check only these package" checkonly; *)
+  add options ~long_name:"summary" ~help:"Print a detailed summary" summary;
 
   add options ~long_name:"distrib" ~help:"Set the distribution" distribution;
   add options ~long_name:"release" ~help:"Set the release name" release;
@@ -84,10 +86,12 @@ let main () =
   let l = List.fold_left (fun acc pkg -> (Debcudf.tocudf tables pkg)::acc) sl pkglist in
 
   let universe = Cudf.load_universe l in
+  let universe_size = Cudf.universe_size universe in
 
   let failure = OptParse.Opt.get Options.failures in
   let success = OptParse.Opt.get Options.successes in
   let explain = OptParse.Opt.get Options.explain in
+  let summary = OptParse.Opt.get Options.summary in
   let fmt =
     if OptParse.Opt.is_set Options.outfile then
       let oc = open_out (OptParse.Opt.get Options.outfile) in
@@ -95,17 +99,8 @@ let main () =
     else
       Format.std_formatter
   in
-  if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
-  let callback = Diagnostic.fprintf ~pp ~failure ~success ~explain fmt in
+  let results = Diagnostic.default_result universe_size in
 
-  Util.Timer.start timer;
-  let i = Depsolver.listcheck ~callback universe sl in
-  ignore(Util.Timer.stop timer ());
-
-  if failure || success then Format.fprintf fmt "@]@.";
-  Format.fprintf fmt "total-packages: %d@." (Cudf.universe_size universe);
-  Format.fprintf fmt "checked-packages: %d@." (List.length sl);
-  Format.fprintf fmt "broken-packages: %d@." i;
   if OptParse.Opt.is_set Options.distribution then
     Format.fprintf fmt "distribution: %s@." (OptParse.Opt.get Options.distribution);
   if OptParse.Opt.is_set Options.release then
@@ -114,6 +109,28 @@ let main () =
     Format.fprintf fmt "suite: %s@." (OptParse.Opt.get Options.suite);
   if OptParse.Opt.is_set Options.architecture then
     Format.fprintf fmt "architecture: %s@." (OptParse.Opt.get Options.architecture);
+
+  if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
+  let callback d = 
+    if summary then Diagnostic.collect results d ;
+    Diagnostic.fprintf ~pp ~failure ~success ~explain fmt d
+  in
+
+  Util.Timer.start timer;
+  let i = Depsolver.listcheck ~callback universe sl in
+  ignore(Util.Timer.stop timer ());
+
+  if failure || success then Format.fprintf fmt "@]@.";
+
+  let nb = universe_size in
+  let nf = List.length sl in
+  Format.fprintf fmt "backgroud-packages: %d@." nb;
+  Format.fprintf fmt "foreground-packages: %d@." (if nf = 0 then nb else nf);
+  Format.fprintf fmt "broken-packages: %d@." i;
+
+  if summary then
+    Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
+
 ;;
 
 main () ;;

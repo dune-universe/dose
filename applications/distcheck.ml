@@ -106,6 +106,18 @@ let main () =
       Format.std_formatter
   in
   let results = Diagnostic.default_result universe_size in
+
+  if OptParse.Opt.get Options.uuid then
+    Format.fprintf fmt "uid: %s@." (Util.uuid ());
+  if OptParse.Opt.is_set Options.distribution then
+    Format.fprintf fmt "distribution: %s@." (OptParse.Opt.get Options.distribution);
+  if OptParse.Opt.is_set Options.release then
+    Format.fprintf fmt "release: %s@." (OptParse.Opt.get Options.release);
+  if OptParse.Opt.is_set Options.suite then
+    Format.fprintf fmt "suite: %s@." (OptParse.Opt.get Options.suite);
+  if OptParse.Opt.is_set Options.architecture then
+    Format.fprintf fmt "architecture: %s@." (OptParse.Opt.get Options.architecture);
+
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
   let callback d =
     if summary then Diagnostic.collect results d ;
@@ -128,18 +140,8 @@ let main () =
   Format.fprintf fmt "foreground-packages: %d@." (if nf = 0 then nb else nf);
   Format.fprintf fmt "broken-packages: %d@." i;
  
-  if summary then Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
-
-  if OptParse.Opt.get Options.uuid then
-    Format.fprintf fmt "uid: %s@." (Util.uuid ());
-  if OptParse.Opt.is_set Options.distribution then
-    Format.fprintf fmt "distribution: %s@." (OptParse.Opt.get Options.distribution);
-  if OptParse.Opt.is_set Options.release then
-    Format.fprintf fmt "release: %s@." (OptParse.Opt.get Options.release);
-  if OptParse.Opt.is_set Options.suite then
-    Format.fprintf fmt "suite: %s@." (OptParse.Opt.get Options.suite);
-  if OptParse.Opt.is_set Options.architecture then
-    Format.fprintf fmt "architecture: %s@." (OptParse.Opt.get Options.architecture);
+  if summary then 
+    Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
 ;;
 
 main () ;;

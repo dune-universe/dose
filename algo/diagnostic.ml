@@ -99,42 +99,42 @@ let pp_package ?(source=false) pp fmt pkg =
     with Not_found -> () end
 ;;
 
-let pp_dependency pp ?(label="depends") fmt (i,vpkgs) =
-  let pp_vpkglist fmt = 
-    (* from libcudf ... again *)
-    let pp_list fmt ~pp_item ~sep l =
-      let rec aux fmt = function
-        | [] -> assert false
-        | [last] -> (* last item, no trailing sep *)
-            Format.fprintf fmt "@,%a" pp_item last
-        | vpkg :: tl -> (* at least one package in tl *)
-            Format.fprintf fmt "@,%a%s" pp_item vpkg sep ;
-            aux fmt tl
-      in
-      match l with
-      | [] -> ()
-      | [sole] -> pp_item fmt sole
-      | _ -> Format.fprintf fmt "@[<h>%a@]" aux l
+let pp_vpkglist pp fmt = 
+  (* from libcudf ... again *)
+  let pp_list fmt ~pp_item ~sep l =
+    let rec aux fmt = function
+      | [] -> assert false
+      | [last] -> (* last item, no trailing sep *)
+          Format.fprintf fmt "@,%a" pp_item last
+      | vpkg :: tl -> (* at least one package in tl *)
+          Format.fprintf fmt "@,%a%s" pp_item vpkg sep ;
+          aux fmt tl
     in
-    let string_of_relop = function
-        `Eq -> "="
-      | `Neq -> "!="
-      | `Geq -> ">="
-      | `Gt -> ">"
-      | `Leq -> "<="
-      | `Lt -> "<"
-    in
-    let pp_item fmt = function
-      |(p,None) -> Format.fprintf fmt "%s" (CudfAdd.decode p)
-      |(p,Some(c,v)) ->
-          let (p,v,_) = pp {Cudf.default_package with Cudf.package = p ; version = v} in
-          Format.fprintf fmt "%s (%s %s)" (CudfAdd.decode p) (string_of_relop c) v
-    in
-    pp_list fmt ~pp_item ~sep:" | "
+    match l with
+    | [] -> ()
+    | [sole] -> pp_item fmt sole
+    | _ -> Format.fprintf fmt "@[<h>%a@]" aux l
   in
+  let string_of_relop = function
+      `Eq -> "="
+    | `Neq -> "!="
+    | `Geq -> ">="
+    | `Gt -> ">"
+    | `Leq -> "<="
+    | `Lt -> "<"
+  in
+  let pp_item fmt = function
+    |(p,None) -> Format.fprintf fmt "%s" (CudfAdd.decode p)
+    |(p,Some(c,v)) ->
+        let (p,v,_) = pp {Cudf.default_package with Cudf.package = p ; version = v} in
+        Format.fprintf fmt "%s (%s %s)" (CudfAdd.decode p) (string_of_relop c) v
+  in
+  pp_list fmt ~pp_item ~sep:" | "
+
+let pp_dependency pp ?(label="depends") fmt (i,vpkgs) =
   Format.fprintf fmt "%a" (pp_package pp) i;
   if vpkgs <> [] then
-    Format.fprintf fmt "@,%s: %a" label pp_vpkglist vpkgs;
+    Format.fprintf fmt "@,%s: %a" label (pp_vpkglist pp) vpkgs;
 ;;
 
 let rec pp_list pp fmt = function
@@ -257,7 +257,7 @@ let pp_summary_row pp fmt = function
       Format.fprintf fmt "@]@]"
   |(Missing (i,vpkgs) ,pl) -> 
       Format.fprintf fmt "@[<v 1>missing:@,";
-      Format.fprintf fmt "@[<v 1>pkg:@,%a@]@," (pp_dependency ~label:"missingdep" pp) (i,vpkgs);
+      Format.fprintf fmt "@[<v 1>missingdep: %a@]@," (pp_vpkglist pp) vpkgs;
       Format.fprintf fmt "@[<v 1>packages:@," ;
       pp_list (pp_package ~source:true pp) fmt pl;
       Format.fprintf fmt "@]@]"
