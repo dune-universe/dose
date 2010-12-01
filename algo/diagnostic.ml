@@ -51,12 +51,15 @@ module ResultHash = OcamlHash.Make (
 )
 
 type summary = {
-  background : int;
-  foreground : int;
-  mutable broken : int;
   mutable missing : int;
   mutable conflict : int;
   summary : (Cudf.package list ref) ResultHash.t 
+}
+
+let default_result n = {
+  missing = 0;
+  conflict = 0;
+  summary = ResultHash.create n;
 }
 
 (** given a list of dependencies, return a list of list containg all
@@ -221,25 +224,12 @@ let is_solution = function
   |{result = Success _ } -> true
   |{result = Failure _ } -> false
 
-let new_result u l =
-  let nb = Cudf.universe_size u in
-  let nf = List.length l in
-  {
-    background = nb;
-    foreground = if nf = 0 then nb else nf;
-    broken = 0;
-    missing = 0;
-    conflict = 0;
-    summary = ResultHash.create nb;
-  }
-
 let add h k v =
   try let l = ResultHash.find h k in l := v :: !l
   with Not_found -> ResultHash.add h k (ref [v])
 
 let collect results = function
   |{result = Failure (f) ; request = Package r } -> 
-      results.broken <- results.broken + 1;
       List.iter (fun reason ->
         match reason with
         |Conflict (i,j) ->
@@ -252,37 +242,32 @@ let collect results = function
       ) (f ())
   |_  -> ()
 
-let pp_summary_row fmt = function
+let pp_summary_row ?(pp=default_pp) fmt = function
   |(Conflict (i,j),pl) ->
       Format.fprintf fmt "@[<v 1>conflict:@,";
-      Format.fprintf fmt "@[<v 1>pkg1:@,%a@]@," (pp_package default_pp) i;
-      Format.fprintf fmt "@[<v 1>pkg2:@,%a@]@," (pp_package default_pp) j;
+      Format.fprintf fmt "@[<v 1>pkg1:@,%a@]@," (pp_package pp) i;
+      Format.fprintf fmt "@[<v 1>pkg2:@,%a@]@," (pp_package pp) j;
       Format.fprintf fmt "@[<v 1>packages:@," ;
-      pp_list (pp_package default_pp) fmt pl;
+      pp_list (pp_package ~source:true pp) fmt pl;
       Format.fprintf fmt "@]@]"
   |(Missing (i,vpkgs) ,pl) -> 
       Format.fprintf fmt "@[<v 1>missing:@,";
-      Format.fprintf fmt "@[<v 1>pkg:@,%a@]@," (pp_dependency ~label:"missingdep" default_pp) (i,vpkgs);
+      Format.fprintf fmt "@[<v 1>pkg:@,%a@]@," (pp_dependency ~label:"missingdep" pp) (i,vpkgs);
       Format.fprintf fmt "@[<v 1>packages:@," ;
-      pp_list (pp_package default_pp) fmt pl;
+      pp_list (pp_package ~source:true pp) fmt pl;
       Format.fprintf fmt "@]@]"
   |_ -> ()
 
-let pp_summary ?(pp=default_pp) ?(summary=false) () fmt result = 
-  Format.fprintf fmt "backgroud-packages: %d@." result.background;
-  Format.fprintf fmt "foreground-packages: %d@." result.foreground;
-  Format.fprintf fmt "broken-packages: %d@." result.broken;
-  Format.fprintf fmt "missing-packages: %d@." result.missing;
-  Format.fprintf fmt "conflict-packages: %d@." result.conflict;
-  if summary then begin
-    let l =
-      ResultHash.fold (fun k v acc -> 
-        let l1 = Util.list_unique !v in
-        if List.length l1 > 1 then (k,l1)::acc else acc 
-      ) result.summary [] 
-    in
-    let l = List.sort ~cmp:(fun (_,l1) (_,l2) -> (List.length l1) - (List.length l2)) l in
-    Format.fprintf fmt "@[<v 1>summary:@," ;
-    pp_list pp_summary_row fmt l;
-    Format.fprintf fmt "@]"
-  end
+let pp_summary ?(pp=default_pp) fmt result = 
+  Format.fprintf fmt "@[missing-packages: %d@," result.missing;
+  Format.fprintf fmt "conflict-packages: %d@," result.conflict;
+  let l =
+    ResultHash.fold (fun k v acc -> 
+      let l1 = Util.list_unique !v in
+      if List.length l1 > 1 then (k,l1)::acc else acc 
+    ) result.summary [] 
+  in
+  let l = List.sort ~cmp:(fun (_,l1) (_,l2) -> (List.length l1) - (List.length l2)) l in
+  Format.fprintf fmt "@[<v 1>summary:@," ;
+  pp_list pp_summary_row fmt l;
+  Format.fprintf fmt "@]@]"

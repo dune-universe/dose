@@ -71,6 +71,7 @@ let main () =
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
   let default_arch = OptParse.Opt.opt Options.architecture in
   let (universe,from_cudf,to_cudf) = Boilerplate.load_universe ~default_arch posargs in
+  let universe_size = Cudf.universe_size universe in
   let pkglist = 
     if OptParse.Opt.is_set Options.checkonly then 
         List.flatten (
@@ -104,7 +105,7 @@ let main () =
     else
       Format.std_formatter
   in
-  let results = Diagnostic.new_result universe pkglist in
+  let results = Diagnostic.default_result universe_size in
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
   let callback d =
     if summary then Diagnostic.collect results d ;
@@ -118,11 +119,16 @@ let main () =
       Depsolver.univcheck ~callback universe 
   in
   ignore(Util.Timer.stop timer ());
-  results.Diagnostic.broken <- i;
 
   if failure || success then Format.fprintf fmt "@]@.";
-  
-  Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~summary ()) results;
+ 
+  let nb = universe_size in
+  let nf = List.length pkglist in
+  Format.fprintf fmt "backgroud-packages: %d@." nb;
+  Format.fprintf fmt "foreground-packages: %d@." (if nf = 0 then nb else nf);
+  Format.fprintf fmt "broken-packages: %d@." i;
+ 
+  if summary then Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp) results;
 
   if OptParse.Opt.get Options.uuid then
     Format.fprintf fmt "uid: %s@." (Util.uuid ());
