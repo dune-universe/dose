@@ -30,6 +30,7 @@ module Options = struct
   let distribution = StdOpt.str_option ()
   let release = StdOpt.str_option ()
   let suite = StdOpt.str_option ()
+  let summary = StdOpt.store_true ()
   let outfile = StdOpt.str_option ()
 
   open OptParser
@@ -38,6 +39,7 @@ module Options = struct
   add options ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" successes;
 
   add options ~long_name:"checkonly" ~help:"Check only these package" checkonly;
+  add options ~long_name:"summary" ~help:"Print a detailed summary" summary;
 
   add options ~long_name:"distrib" ~help:"Set the distribution" distribution;
   add options ~long_name:"release" ~help:"Set the release name" release;
@@ -59,10 +61,10 @@ let main () =
   let posargs =
     let args = OptParse.OptParser.parse_argv Options.options in
     match Filename.basename(Sys.argv.(0)),args with
-    |"debcheck",[] -> ["deb://-"]
-    |"debcheck",l -> List.map ((^) "deb://") l
+    |("debcheck"|"edos-debcheck"),[] -> ["deb://-"]
+    |("debcheck"|"edos-debcheck"),l -> List.map ((^) "deb://") l
     |"eclipsecheck",l -> List.map ((^) "eclipse://") l
-    |"rpmcheck",l -> List.map ((^) "synthesis://") l
+    |("rpmcheck"|"edos-rpmcheck"),l -> List.map ((^) "synthesis://") l
     |_,_ -> args
   in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
@@ -91,10 +93,10 @@ let main () =
     in (p,v,l)
   in
   info "Solving..." ;
-  Util.Timer.start timer;
   let failure = OptParse.Opt.get Options.failures in
   let success = OptParse.Opt.get Options.successes in
   let explain = OptParse.Opt.get Options.explain in
+  let summary = OptParse.Opt.get Options.summary in
   let fmt =
     if OptParse.Opt.is_set Options.outfile then
       let oc = open_out (OptParse.Opt.get Options.outfile) in
@@ -105,9 +107,10 @@ let main () =
   let results = Diagnostic.new_result universe pkglist in
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
   let callback d =
-    Diagnostic.collect results d ;
+    if summary then Diagnostic.collect results d ;
     Diagnostic.fprintf ~pp ~failure ~success ~explain fmt d
   in
+  Util.Timer.start timer;
   let i =
     if OptParse.Opt.is_set Options.checkonly then 
       Depsolver.listcheck ~callback universe pkglist
@@ -115,9 +118,12 @@ let main () =
       Depsolver.univcheck ~callback universe 
   in
   ignore(Util.Timer.stop timer ());
+  results.Diagnostic.broken <- i;
 
   if failure || success then Format.fprintf fmt "@]@.";
-  Diagnostic.pp_summary fmt results;
+  
+  Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~summary ()) results;
+
   if OptParse.Opt.get Options.uuid then
     Format.fprintf fmt "uid: %s@." (Util.uuid ());
   if OptParse.Opt.is_set Options.distribution then

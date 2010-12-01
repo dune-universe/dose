@@ -268,13 +268,21 @@ let pp_summary_row fmt = function
       Format.fprintf fmt "@]@]"
   |_ -> ()
 
-let pp_summary ?(pp=default_pp) fmt result = 
+let pp_summary ?(pp=default_pp) ?(summary=false) () fmt result = 
   Format.fprintf fmt "backgroud-packages: %d@." result.background;
   Format.fprintf fmt "foreground-packages: %d@." result.foreground;
   Format.fprintf fmt "broken-packages: %d@." result.broken;
   Format.fprintf fmt "missing-packages: %d@." result.missing;
   Format.fprintf fmt "conflict-packages: %d@." result.conflict;
-  let l = ResultHash.fold (fun k v acc -> (k,!v)::acc) result.summary [] in
-  Format.fprintf fmt "@[<v 1>summary:@," ;
-  pp_list pp_summary_row fmt l;
-  Format.fprintf fmt "@]"
+  if summary then begin
+    let l =
+      ResultHash.fold (fun k v acc -> 
+        let l1 = Util.list_unique !v in
+        if List.length l1 > 1 then (k,l1)::acc else acc 
+      ) result.summary [] 
+    in
+    let l = List.sort ~cmp:(fun (_,l1) (_,l2) -> (List.length l1) - (List.length l2)) l in
+    Format.fprintf fmt "@[<v 1>summary:@," ;
+    pp_list pp_summary_row fmt l;
+    Format.fprintf fmt "@]"
+  end
