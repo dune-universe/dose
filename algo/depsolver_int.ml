@@ -93,7 +93,7 @@ let init_solver ?(buffer=false) ?(proxy_size=0) ?closure index =
     List.iter (fun (vpkgs,disjunction,_) ->
       incr num_dependencies;
       if List.length disjunction = 0 then
-        S.add_rule constraints [|lit|] [Diagnostic_int.EmptyDependency(pkg_id,vpkgs)]
+        S.add_rule constraints [|lit|] [Diagnostic_int.Missing(pkg_id,vpkgs)]
       else begin
         let lit_list =
           let a =

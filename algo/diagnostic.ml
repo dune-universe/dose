@@ -10,16 +10,18 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
+module OcamlHash = Hashtbl
 open ExtLib
 open Common
 
 let debug fmt = Util.make_debug "Diagnostic" fmt
 let info fmt = Util.make_info "Diagnostic" fmt
 let warning fmt = Util.make_warning "Diagnostic" fmt
+let fatal fmt = Util.make_fatal "Diagnostic" fmt
 
 type reason =
   |Dependency of (Cudf.package * Cudf_types.vpkg list * Cudf.package list)
-  |EmptyDependency of (Cudf.package * Cudf_types.vpkg list)
+  |Missing of (Cudf.package * Cudf_types.vpkg list)
   |Conflict of (Cudf.package * Cudf.package)
 
 type request =
@@ -31,6 +33,31 @@ type result =
   |Failure of (unit -> reason list)
 
 type diagnosis = { result : result ; request : request }
+
+module ResultHash = OcamlHash.Make (
+  struct
+    type t = reason
+
+    let equal v w = match (v,w) with
+    |Missing (_,v1),Missing (_,v2) -> v1 = v2
+    |Conflict(i1,j1),Conflict (i2,j2) -> i1 = i2 && j1 = j2
+    |_ -> false
+
+    let hash = function
+      |Missing (_,vpkgs) -> OcamlHash.hash vpkgs
+      |Conflict (i,j) -> OcamlHash.hash (i,j)
+      |_ -> assert false
+  end
+)
+
+type summary = {
+  background : int;
+  foreground : int;
+  mutable broken : int;
+  mutable missing : int;
+  mutable conflict : int;
+  summary : (Cudf.package list ref) ResultHash.t 
+}
 
 (** given a list of dependencies, return a list of list containg all
  *  paths in the dependency tree starting from [root] *)
@@ -143,7 +170,7 @@ let print_error pp root fmt l =
           Format.fprintf fmt "@]"
         end else
           Format.fprintf fmt "@,@]"
-    |EmptyDependency (i,vpkgs) ->
+    |Missing (i,vpkgs) ->
         Format.fprintf fmt "@[<v 1>missing:@,";
         Format.fprintf fmt "@[<v 1>pkg:@,%a@]" (pp_dependency ~label:"missingdep" pp) (i,vpkgs);
         let pl = create_pathlist root (Dependency(i,vpkgs,[])::deps) in
@@ -152,7 +179,8 @@ let print_error pp root fmt l =
           Format.fprintf fmt "@]"
         end else
           Format.fprintf fmt "@,@]"
-    |_ -> assert false
+    (* only two failures reasons. Dependency describe the dependency chain to a failure witness *)
+    |_ -> assert false 
   in
   pp_list pp_reason fmt res;
 ;;
@@ -192,3 +220,61 @@ let printf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) d
 let is_solution = function
   |{result = Success _ } -> true
   |{result = Failure _ } -> false
+
+let new_result u l =
+  let nb = Cudf.universe_size u in
+  let nf = List.length l in
+  {
+    background = nb;
+    foreground = if nf = 0 then nb else nf;
+    broken = 0;
+    missing = 0;
+    conflict = 0;
+    summary = ResultHash.create nb;
+  }
+
+let add h k v =
+  try let l = ResultHash.find h k in l := v :: !l
+  with Not_found -> ResultHash.add h k (ref [v])
+
+let collect results = function
+  |{result = Failure (f) ; request = Package r } -> 
+      results.broken <- results.broken + 1;
+      List.iter (fun reason ->
+        match reason with
+        |Conflict (i,j) ->
+            add results.summary reason r;
+            results.conflict <- results.conflict + 1
+        |Missing (i,vpkgs) ->
+            add results.summary reason r;
+            results.missing <- results.missing + 1
+        |_ -> ()
+      ) (f ())
+  |_  -> ()
+
+let pp_summary_row fmt = function
+  |(Conflict (i,j),pl) ->
+      Format.fprintf fmt "@[<v 1>conflict:@,";
+      Format.fprintf fmt "@[<v 1>pkg1:@,%a@]@," (pp_package default_pp) i;
+      Format.fprintf fmt "@[<v 1>pkg2:@,%a@]@," (pp_package default_pp) j;
+      Format.fprintf fmt "@[<v 1>packages:@," ;
+      pp_list (pp_package default_pp) fmt pl;
+      Format.fprintf fmt "@]@]"
+  |(Missing (i,vpkgs) ,pl) -> 
+      Format.fprintf fmt "@[<v 1>missing:@,";
+      Format.fprintf fmt "@[<v 1>pkg:@,%a@]@," (pp_dependency ~label:"missingdep" default_pp) (i,vpkgs);
+      Format.fprintf fmt "@[<v 1>packages:@," ;
+      pp_list (pp_package default_pp) fmt pl;
+      Format.fprintf fmt "@]@]"
+  |_ -> ()
+
+let pp_summary ?(pp=default_pp) fmt result = 
+  Format.fprintf fmt "backgroud-packages: %d@." result.background;
+  Format.fprintf fmt "foreground-packages: %d@." result.foreground;
+  Format.fprintf fmt "broken-packages: %d@." result.broken;
+  Format.fprintf fmt "missing-packages: %d@." result.missing;
+  Format.fprintf fmt "conflict-packages: %d@." result.conflict;
+  let l = ResultHash.fold (fun k v acc -> (k,!v)::acc) result.summary [] in
+  Format.fprintf fmt "@[<v 1>summary:@," ;
+  pp_list pp_summary_row fmt l;
+  Format.fprintf fmt "@]"

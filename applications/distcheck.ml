@@ -102,8 +102,12 @@ let main () =
     else
       Format.std_formatter
   in
+  let results = Diagnostic.new_result universe pkglist in
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
-  let callback = Diagnostic.fprintf ~pp ~failure ~success ~explain fmt in
+  let callback d =
+    Diagnostic.collect results d ;
+    Diagnostic.fprintf ~pp ~failure ~success ~explain fmt d
+  in
   let i =
     if OptParse.Opt.is_set Options.checkonly then 
       Depsolver.listcheck ~callback universe pkglist
@@ -113,9 +117,7 @@ let main () =
   ignore(Util.Timer.stop timer ());
 
   if failure || success then Format.fprintf fmt "@]@.";
-  Format.fprintf fmt "total-packages: %d@." (Cudf.universe_size universe);
-  Format.fprintf fmt "checked-packages: %d@." (List.length pkglist);
-  Format.fprintf fmt "broken-packages: %d@." i;
+  Diagnostic.pp_summary fmt results;
   if OptParse.Opt.get Options.uuid then
     Format.fprintf fmt "uid: %s@." (Util.uuid ());
   if OptParse.Opt.is_set Options.distribution then
