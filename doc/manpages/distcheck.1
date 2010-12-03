@@ -1,4 +1,4 @@
-.TH distcheck 1 "November 12, 2010" "Version 3.0" "USER COMMANDS"
+.TH distcheck 1 "December 3, 2010" "Version 2.9" "USER COMMANDS"
 .SH NAME
 distcheck \- check installability of packages according to metadata
 
@@ -66,33 +66,35 @@ treated like \fBDepends\fR, and \fBBreaks\fR are treated like
 \fBConflicts\fR.
 .P
 In the case of Debian, it is not possible to install at the same time
-two packages with the sqme name but different versions.
+two packages with the same name but different versions.
 
 .SS RPM
-The input file can be either a \fIsynthesis file or a \fIhdlist file.
-By default rpmcheck accept a synthesis file. To specify a hdlist file
-distcheck must be invoked as hdlist://
+The input file can be either a \fIsynthesis\fR file or a \fIhdlist\fR
+file.  By default rpmcheck expects a synthesis file as input. To
+specify a hdlist file distcheck must be invoked with a file argument
+of the form hdlist://
 
 .SS Eclipse
-The input is a 822 file containing the encoding of OSGi plugins 
+The input is an 822 file containing the encoding of OSGi plugins 
 content.xml files.
 
 .SH OPTIONS
 .TP
 .B \-f \-\-failures
-Only show broken package that fails the installability test.
+Only show broken packages that fail the installability check.
 .TP
 .B \-v \-\-successes
-Only show packages that do not fail the installability test.
+Only show packages that do not fail the installability check.
 .TP
 .B \-e \-\-explain
-Explain the results in more details.
+Explain the results in more detail.
 .TP
 .B \-\-checkonly
-Select a subsets of packages to check. By default all packages are checked.
+Select a subset of packages to check. By default all packages are checked.
 .TP
 .B \-v
-Enable info / warnings / debug message. It can be repeated up to three times
+Enable info / warnings / debug messages. This option may be repeated
+up to three times in order to increase verbosity.
 .TP
 .B \-\-progress
 Enable progress bars.
@@ -102,13 +104,13 @@ Display this list of options.
 
 .SH EXIT CODE
 The exit code is 0 when all packages that were asked to be checked
-(either explicitly with the \-\-checkonly option, or because they exist
-in the package pool file) are available and found to be installable,
-it is 1 when a least one of these packages is available but not
+(either explicitly with the \-\-checkonly option, or because they
+exist in the repository) are available and found to be installable, it
+is 1 when a least one of these packages is available but not
 installable, and it is 2 when at least one of the packages is not
 available but all available packages are found to be
-installable. Hence, the exit code 2 can occur only when the \-\-checkonly
-option is used.
+installable. Hence, the exit code 2 can occur only when the
+\-\-checkonly option is used.
 
 .SH EXAMPLE
 Check which packages in a particular distribution are not installable and why:
