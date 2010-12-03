@@ -32,7 +32,7 @@ distclean: clean
 	rm algo/_tags algo/algo.mlpack
 	rm applications/_tags
 	rm applications/boilerplates/_tags
-	rm common/_tags
+	rm common/_tags common/versionInfo.ml
 	rm db/_tags db/db.mlpack
 	rm deb/_tags
 	rm rpm/_tags
