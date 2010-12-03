@@ -32,7 +32,7 @@ TARGETS= \
 		 applications/randcudf.$(OCAMLBEST) \
 		 applications/cudf-solver.$(OCAMLBEST) \
 		 applications/distcheck.$(OCAMLBEST) \
-		 applications/buildcheck.$(OCAMLBEST) \
+		 applications/deb-buildcheck.$(OCAMLBEST) \
 		 applications/ceve.$(OCAMLBEST) \
 		 applications/cudf-diff.$(OCAMLBEST)
 

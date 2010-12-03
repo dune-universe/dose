@@ -136,7 +136,7 @@ let main () =
  
   let nb = universe_size in
   let nf = List.length pkglist in
-  Format.fprintf fmt "backgroud-packages: %d@." nb;
+  Format.fprintf fmt "background-packages: %d@." nb;
   Format.fprintf fmt "foreground-packages: %d@." (if nf = 0 then nb else nf);
   Format.fprintf fmt "broken-packages: %d@." i;
  

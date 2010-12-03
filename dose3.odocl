@@ -4,10 +4,10 @@ common/Input
 common/Util
 algo/Depsolver
 algo/Diagnostic
-algo/Cudfsolver
 algo/Depsolver_int
 algo/Diagnostic_int
 algo/Strongdeps
+algo/Strongconflicts
 algo/Defaultgraphs
 algo/Statistics
 deb/Version
