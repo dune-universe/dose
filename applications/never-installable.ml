@@ -29,7 +29,8 @@ module Options = struct
   let architecture = StdOpt.str_option ()
   let cudf_output = StdOpt.str_option ()
 
-  let description = "Report outdated packages in a package list"
+  let description =
+    "Report packages that aren't installable in any futures of a repository"
   let options = OptParser.make ~description ()
 
   open OptParser
@@ -101,13 +102,13 @@ let purge_universe universe =
     (* maps each binary package name to the pair      *)
     (*(latest cudf version, latest debian version)    *)
   and src_versions = Hashtbl.create (Cudf.universe_size universe)
-    (* maps each source package name the latest debian version *)
-  and cruft_sources = ref []
-    (* maps each obsolete (package name, package cudf version) the *)
-    (* newer debian version *)
+    (* maps each source package name to the latest debian version *)
   and cruft_binaries = ref []
-    (* maps each obsolete (source name, source debian version) the *)
-    (* newer debian version. *)
+    (* maps each obsolete (package name, package cudf version) to the *)
+    (* newer debian version *)
+  and cruft_sources = ref []
+    (* maps each obsolete (source name, source debian version) to the *)
+    (* newer debian source version. *)
   in
 
   (* identify cruft *)
@@ -374,7 +375,7 @@ let interesting_future_versions p sels real_versions =
 (****************************************************************************)
 
 let main () =
-  at_exit (fun () -> Util.dump Format.err_formatter);
+  (* at_exit (fun () -> Util.dump Format.err_formatter); *)
   let posargs =
     let args = OptParse.OptParser.parse_argv Options.options in
     match args with
@@ -404,10 +405,10 @@ let main () =
 	Hashtbl.find sync_table p.Cudf.package
       in {p with
 	    Cudf.provides =
-	    ("@source-"^source_name, Some (`Eq, source_version))::
+	    ("src:"^source_name, Some (`Eq, source_version))::
 	      p.Cudf.provides;
 	    Cudf.conflicts =
-	    ("@source-"^source_name, Some (`Neq, source_version))::
+	    ("src:"^source_name, Some (`Neq, source_version))::
 	      p.Cudf.conflicts; 
 	 }
     with Not_found -> p
@@ -430,10 +431,10 @@ let main () =
 		   Cudf.version = v;
 		   Cudf.depends = [];
 		   Cudf.provides = (match sync with
-		       Some (s,_sv) -> ["@source-"^s, Some (`Eq, v)]
+		       Some (s,_sv) -> ["src:"^s, Some (`Eq, v)]
 		     | None -> []);
 		   Cudf.conflicts = (match sync with
-		       Some (s,_sv) -> ["@source-"^s, Some (`Neq, v);p,None]
+		       Some (s,_sv) -> ["src:s"^s, Some (`Neq, v);p,None]
 		     | None -> [p,None]);
 		   Cudf.installed = false;
 		   Cudf.was_installed = false;
