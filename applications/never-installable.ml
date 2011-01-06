@@ -90,35 +90,36 @@ let chop_binnmu s =
       Not_found -> s
 ;;
 
+let chop_epoch s =
+  (* chops a possible epoch from a debian version string *)
+  try
+    Str.string_after s
+      (Str.search_forward (Str.regexp "^[0-9]+:") s ((String.length s)-1))
+  with
+      Not_found -> s
+;;
+
 (****************************************************************************)
 
 (* (purge_universe universe) returns the list of packages in universe that *)
-(* is obtained by retaing only the highest version of each binary package, *)
-(* and only the highest version of each source package.                    *)
+(* is obtained by retaing only the highest version of each binary package. *)
 (* Prints a warning for each surpressed package.                           *)
 let purge_universe universe =
 
   let current_versions = Hashtbl.create (Cudf.universe_size universe)
-    (* maps each binary package name to the pair      *)
-    (*(latest cudf version, latest debian version)    *)
-  and src_versions = Hashtbl.create (Cudf.universe_size universe)
-    (* maps each source package name to the latest debian version *)
+  (* maps each binary package name to the pair      *)
+  (* (latest cudf version, latest debian version)   *)
   and cruft_binaries = ref []
-    (* maps each obsolete (package name, package cudf version) to the *)
-    (* newer debian version *)
-  and cruft_sources = ref []
-    (* maps each obsolete (source name, source debian version) to the *)
-    (* newer debian source version. *)
+  (* maps each obsolete (package name, package cudf version) to the *)
+  (* newer debian version *)
   in
-
+  
   (* identify cruft *)
   Cudf.iter_packages
     (fun p ->
       let name = p.Cudf.package
       and version = p.Cudf.version
       and deb_version = debversion_of_package p
-      and src_name = sourcename_of_package p
-      and src_version = sourceversion_of_package p
       in begin
 	try
 	  let (oldversion,olddeb_version) = Hashtbl.find current_versions name
@@ -129,59 +130,29 @@ let purge_universe universe =
 	    Hashtbl.add current_versions name (version,deb_version)
 	  end
 	  else if version < oldversion
-	  then cruft_binaries :=
-	    ((name,version),olddeb_version)::!cruft_binaries
+	  then
+	    cruft_binaries := ((name,version),olddeb_version)::!cruft_binaries
 	with
 	    Not_found ->
 	      Hashtbl.add current_versions name (version,deb_version)
-      end;
-      begin
-	try
-	  let oldsrc_version = Hashtbl.find src_versions src_name
-	  in 
-	  let c = Version.compare oldsrc_version src_version
-	  in if c<0 then begin
-	    cruft_sources :=
-	      ((src_name,oldsrc_version),src_version)::!cruft_sources;
-	    Hashtbl.add src_versions src_name src_version
-	  end else if c>0 then begin
-	    cruft_sources :=
-	      ((src_name,src_version),oldsrc_version)::!cruft_sources
-	  end
-	with
-	    Not_found -> Hashtbl.add src_versions src_name src_version	   
       end)
     universe;
-
+  
   (* filter out cruft *)
-    filter_packages
-      (fun p ->
-	 let name = p.Cudf.package
-	 and version = p.Cudf.version
-	 and deb_version = debversion_of_package p
-	 and src_name = sourcename_of_package p
-	 and src_version = sourceversion_of_package p
-	 in
-	   try
-	     let newer_version = List.assoc (name,version) !cruft_binaries
-	     in begin
-		 warning "%s(%s) dropped:" name deb_version;
-		 warning "  %s is newer." newer_version;
-		 false
-	       end
-	   with Not_found->
-	     try
-	       let newer_src_version =
-		 List.assoc (src_name,src_version) !cruft_sources
-	       in begin
-		   warning "%s(%s) dropped:" name deb_version;
-		   warning "  stems from source %s(%s)" src_name src_version;
-		   warning "  but %s is newer." newer_src_version;
-		   false
-		 end
-	     with Not_found -> true
-      )
-      universe
+  filter_packages
+    (fun p ->
+      let name = p.Cudf.package
+      and version = p.Cudf.version
+      and deb_version = debversion_of_package p
+      in
+      try
+	warning
+	  "%s(%s) dropped: %s is newer."
+	  name deb_version (List.assoc (name,version) !cruft_binaries);
+	false
+      with Not_found -> true
+    )
+    universe
 ;;
 
 (**************************************************************************)
