@@ -99,15 +99,15 @@ let chop_epoch s =
 
 (****************************************************************************)
 
-(* (purge_universe universe) returns the list of packages in universe that *)
-(* is obtained by retaing only the highest version of each binary package. *)
-(* Prints a warning for each surpressed package.                           *)
+(* (purge_universe universe) returns the list of packages in universe that  *)
+(* is obtained by retaing only the highest version of each binary package,  *)
+(* and a hashtable that maps each package name to the latest version.       *)
+(* Prints a warning for each surpressed package.                            *)
 let purge_universe universe =
 
-  let current_versions = Hashtbl.create (Cudf.universe_size universe)
-  (* maps each binary package name to the pair      *)
-  (* (latest cudf version, latest debian version)   *)
-  and cruft_binaries = ref []
+  let cudf_versions = Hashtbl.create (Cudf.universe_size universe)
+  (* maps each binary package name to the latest cudf version *)
+  and cruft = Hashtbl.create ((Cudf.universe_size universe)/100)
   (* maps each obsolete (package name, package cudf version) to the *)
   (* newer debian version *)
   in
@@ -116,41 +116,44 @@ let purge_universe universe =
   Cudf.iter_packages
     (fun p ->
       let name = p.Cudf.package
-      and version = p.Cudf.version
+      and cudf_version = p.Cudf.version
       and deb_version = debversion_of_package p
       in begin
 	try
-	  let (oldversion,olddeb_version) = Hashtbl.find current_versions name
+	  let old_cudf_version = Hashtbl.find cudf_versions name
 	  in 
-	  if oldversion < version 
+	  if old_cudf_version < cudf_version 
 	  then begin
-	    cruft_binaries := ((name,oldversion),deb_version)::!cruft_binaries;
-	    Hashtbl.add current_versions name (version,deb_version)
+	    Hashtbl.add cruft (name,old_cudf_version) deb_version;
+	    Hashtbl.replace cudf_versions name cudf_version;
 	  end
-	  else if version < oldversion
+	  else if cudf_version < old_cudf_version
 	  then
-	    cruft_binaries := ((name,version),olddeb_version)::!cruft_binaries
-	with
-	    Not_found ->
-	      Hashtbl.add current_versions name (version,deb_version)
+	    let old_deb_version = debversion_of_package
+	      (Cudf.lookup_package universe (name,old_cudf_version))
+	    in Hashtbl.add cruft (name,cudf_version) old_deb_version
+	  else failwith "two packages with same (name,version)"
+	with Not_found -> Hashtbl.add cudf_versions name cudf_version;
       end)
     universe;
   
   (* filter out cruft *)
-  filter_packages
-    (fun p ->
-      let name = p.Cudf.package
-      and version = p.Cudf.version
-      and deb_version = debversion_of_package p
-      in
-      try
-	warning
-	  "%s(%s) dropped: %s is newer."
-	  name deb_version (List.assoc (name,version) !cruft_binaries);
-	false
-      with Not_found -> true
-    )
-    universe
+  let package_list =
+    filter_packages
+      (fun p ->
+	let name = p.Cudf.package
+	and version = p.Cudf.version
+	and deb_version = debversion_of_package p
+	in
+	try
+	  warning
+	    "%s(%s) dropped: %s is newer."
+	    name deb_version (Hashtbl.find cruft (name,version));
+	  false
+	with Not_found -> true
+      )
+      universe
+  in (package_list,cudf_versions)
 ;;
 
 (**************************************************************************)
@@ -355,7 +358,9 @@ let main () =
   let (complete_universe,from_cudf,_) =
     Boilerplate.load_universe ~default_arch posargs in
   let from_cudf p = from_cudf (p.Cudf.package,p.Cudf.version)
-  and purged_package_list = purge_universe complete_universe in
+  and (purged_package_list, cudf_version_table) =
+    purge_universe complete_universe
+  in
   let cluster_size_table = compute_cluster_size_table purged_package_list 
   and (constraint_table,renumbered_packages) = renumber purged_package_list
   and pp pkg =
