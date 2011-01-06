@@ -92,12 +92,9 @@ let chop_binnmu s =
 
 let chop_epoch s =
   (* chops a possible epoch from a debian version string *)
-  try
-    Str.string_after s
-      (ignore (Str.search_forward (Str.regexp "^[0-9]+:") s 0);
-       Str.match_end ())
-  with
-      Not_found -> s
+  if Str.string_match (Str.regexp "[0-9]+:") s 0
+  then Str.string_after s (Str.match_end ())
+  else s
 ;;
 
 (****************************************************************************)
