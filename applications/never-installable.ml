@@ -184,26 +184,30 @@ let compute_cluster_size_table package_list =
 ;;
 
 (* add to a package the constraints that synchronise it with its cluster *)
-let synchronise_package cluster_size_table package cluster_version =
+let synchronise_package cluster_size_table package  =
   let (s,w) as cluster = cluster_of package
   in
   if Hashtbl.find cluster_size_table cluster > 1
-  then let clustername = "src:"^s^":"^w
-       in
-       {package with
-	 Cudf.provides = 
-	   (clustername, Some (`Eq, cluster_version))::package.Cudf.provides;
-	 Cudf.conflicts =
-	   (clustername, Some (`Neq, cluster_version))::package.Cudf.conflicts; 
+  then
+    let clustername = "src:"^s^":"^w
+    and clusterversion = package.Cudf.version
+    in
+    {package with
+      Cudf.provides = 
+	(clustername, Some (`Eq, clusterversion))::package.Cudf.provides;
+      Cudf.conflicts =
+	(clustername, Some (`Neq, clusterversion))::package.Cudf.conflicts; 
        }
   else package
 ;;
 
 (****************************************************************************)
 
+(* returns a hash table that each cluster to the list of version constraints *)
+(* that exist for any binary package belonging to that cluster.              *)
 let build_contraint_table package_list =
   let table = Hashtbl.create ((List.length package_list) / 2) in
-  let add  cluster constr =
+  let add cluster constr =
     try let l = Hashtbl.find table cluster in l := constr::!l
     with Not_found -> Hashtbl.add table cluster (ref [constr])
   in table;;
