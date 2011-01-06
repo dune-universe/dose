@@ -155,58 +155,57 @@ let purge_universe universe =
 
 (**************************************************************************)
 
-let synchronization_table package_list =
-(* Returns a hash table that maps each name of binary packages to a pair    *)
-(* (source-package-name, source-package-version). The table maps b to (s,v) *)
-(* if (s,v) is the source package of some version of b, and if all binary   *)
-(* packages coming from source s have the same version number up to binNMU. *)
-(* Source package names that generate only one binary package are ignored.  *)
+(* The cluster of a binary package p is the pair (s,w) where              *)
+(* -s is the source package of p;                                         *)
+(* -w is the debian version of p without epoch and bin-nmu.               *)
 
-  let hash_add_tolist table key value =
-    (* add a value to a list stored in a hashtable *)
-    try
-      let old = Hashtbl.find table key
-      in old := (value::!old)
-    with
-	Not_found -> Hashtbl.add table key (ref [value])
-  and packages_of_source = Hashtbl.create (List.length package_list)
-  and version_of_source = Hashtbl.create (List.length package_list)
-  in 
-    List.iter
-      (fun p -> 
-	 let name = p.Cudf.package
-	 and version = p.Cudf.version
-	 and deb_version = debversion_of_package p
-	 and src_name = sourcename_of_package p
-	 in
-	   hash_add_tolist packages_of_source src_name (name,deb_version);
-	   Hashtbl.add version_of_source src_name version 
-      )
-      package_list;
-    let sync_table = Hashtbl.create (List.length package_list)
-    in 
-      Hashtbl.iter 
-	(fun src bins_ref -> let bins = !bins_ref
-	 in
-	   if List.length bins > 1 then
-	     if 1=List.length
-	       (ExtLib.List.unique (List.map chop_binnmu (List.map snd bins)))
-	     then
-	       List.iter
-		 (fun (binp,_binv) ->
-		    Hashtbl.add sync_table binp
-		      (src,Hashtbl.find version_of_source src))
-		 bins
-	     else begin
-	       warning "Binary packages of source %s not synchronized" src;
-	       List.iter
-		 (fun (name,version) -> warning "  %s(%s)" name version)
-		 bins;
-	     end)
-	packages_of_source;
-      sync_table
+let cluster_of package = (
+  sourcename_of_package package,
+  chop_epoch (chop_binnmu (debversion_of_package package))
+);;
+
+(* builds a table mapping each cluster to its number of elements.        *)
+let compute_cluster_size_table package_list =
+  let table = Hashtbl.create ((List.length package_list) / 2)
+  in
+  List.iter
+    (fun package ->
+      let cluster = cluster_of package
+      in
+      try let oldcount = Hashtbl.find table cluster
+	  in Hashtbl.replace table cluster (oldcount+1)
+      with Not_found -> Hashtbl.add table cluster 1
+    )
+    package_list;
+  table
 ;;
 
+(* add to a package the constraints that synchronise it with its cluster *)
+let synchronise_package cluster_size_table package cluster_version =
+  let (s,w) as cluster = cluster_of package
+  in
+  if Hashtbl.find cluster_size_table cluster > 1
+  then let clustername = "src:"^s^":"^w
+       in
+       {package with
+	 Cudf.provides = 
+	   (clustername, Some (`Eq, cluster_version))::package.Cudf.provides;
+	 Cudf.conflicts =
+	   (clustername, Some (`Neq, cluster_version))::package.Cudf.conflicts; 
+       }
+  else package
+;;
+
+(****************************************************************************)
+
+let build_contraint_table package_list =
+  let table = Hashtbl.create ((List.length package_list) / 2) in
+  let add  cluster constr =
+    try let l = Hashtbl.find table cluster in l := constr::!l
+    with Not_found -> Hashtbl.add table cluster (ref [constr])
+  in table;;
+  
+  
 (****************************************************************************)
 (* This section is largely copied from strongpred.ml !! *)
 
@@ -344,7 +343,6 @@ let interesting_future_versions p sels real_versions =
 (****************************************************************************)
 
 let main () =
-  (* at_exit (fun () -> Util.dump Format.err_formatter); *)
   let posargs =
     let args = OptParse.OptParser.parse_argv Options.options in
     match args with
@@ -358,7 +356,7 @@ let main () =
     Boilerplate.load_universe ~default_arch posargs in
   let from_cudf p = from_cudf (p.Cudf.package,p.Cudf.version)
   and purged_package_list = purge_universe complete_universe in
-  let sync_table = synchronization_table purged_package_list 
+  let cluster_size_table = compute_cluster_size_table purged_package_list 
   and (constraint_table,renumbered_packages) = renumber purged_package_list
   and pp pkg =
     let (p,v) = from_cudf pkg in 
@@ -368,20 +366,10 @@ let main () =
         with Not_found -> None
       ) ["source";"sourceversion"]
     in (p,v,l)
-  and pin_real sync_table p =
-    try
-      let (source_name,source_version) =
-	Hashtbl.find sync_table p.Cudf.package
-      in {p with
-	    Cudf.provides =
-	    ("src:"^source_name, Some (`Eq, source_version))::
-	      p.Cudf.provides;
-	    Cudf.conflicts =
-	    ("src:"^source_name, Some (`Neq, source_version))::
-	      p.Cudf.conflicts; 
-	 }
-    with Not_found -> p
-  in
+  in ()
+;;
+
+(* 
   let pl =
     let real_versions = Hashtbl.create (List.length renumbered_packages)
     in
@@ -441,6 +429,7 @@ let main () =
 	Cudf_printer.pp_universe (Format.formatter_of_out_channel ch) universe;
 	close_out ch
 ;;
+*)
 
 main () ;;
 
