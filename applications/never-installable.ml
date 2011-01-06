@@ -1,5 +1,5 @@
 (****************************************************************************)
-(*  Copyright (C) 2010 Ralf Treinen <treinen@pps.jussieu.fr>                *)
+(*  Copyright (C) 2010, 2011 Ralf Treinen <treinen@pps.jussieu.fr>          *)
 (*                                                                          *)
 (* This program is free software: you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -94,7 +94,8 @@ let chop_epoch s =
   (* chops a possible epoch from a debian version string *)
   try
     Str.string_after s
-      (Str.search_forward (Str.regexp "^[0-9]+:") s ((String.length s)-1))
+      (ignore (Str.search_forward (Str.regexp "^[0-9]+:") s 0);
+       Str.match_end ())
   with
       Not_found -> s
 ;;
