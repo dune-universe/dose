@@ -375,8 +375,7 @@ let main () =
         with Not_found -> None
       ) ["source";"sourceversion"]
     in (p,v,l)
-  in ()
-;;
+  in 
 
 (* 
   let pl =
@@ -413,6 +412,11 @@ let main () =
 	(List.map (pin_real sync_table) renumbered_packages)
   in
   info "Number of packages after renumbering: %i" (List.length pl);
+
+*)
+
+  let pl=purged_package_list in
+
   let universe = Cudf.load_universe pl in 
       
   info "Solving..." ;
@@ -433,12 +437,14 @@ let main () =
     if OptParse.Opt.is_set Options.architecture then
       Format.fprintf fmt "architecture: %s\n"
 	(OptParse.Opt.get Options.architecture);
-    if OptParse.Opt.is_set Options.cudf_output then
-      let ch=open_out (OptParse.Opt.get Options.cudf_output) in
-	Cudf_printer.pp_universe (Format.formatter_of_out_channel ch) universe;
-	close_out ch
+    
+  if OptParse.Opt.is_set Options.cudf_output then
+    let ch=open_out (OptParse.Opt.get Options.cudf_output)
+    in begin
+      Cudf_printer.pp_universe (Format.formatter_of_out_channel ch) universe;
+      close_out ch
+    end
 ;;
-*)
 
 main () ;;
 
