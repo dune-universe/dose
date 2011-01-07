@@ -190,7 +190,7 @@ let synchronise_package cluster_size_table package  =
   if Hashtbl.find cluster_size_table cluster > 1
   then
     let clustername = "src:"^s^":"^w
-    and clusterversion = package.Cudf.version
+    and clusterversion = 1
     in
     {package with
       Cudf.provides = 
@@ -417,7 +417,9 @@ let main () =
 
   let pl=purged_package_list in
 
-  let universe = Cudf.load_universe pl in 
+  let universe = Cudf.load_universe
+    (List.map (synchronise_package cluster_size_table) pl)
+  in 
       
   info "Solving..." ;
   let timer = Util.Timer.create "Solver" in
