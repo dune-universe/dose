@@ -201,151 +201,48 @@ let synchronise_package cluster_size_table package  =
   else package
 ;;
 
+  
+
 (****************************************************************************)
 
-(* returns a hash table that each cluster to the list of version constraints *)
-(* that exist for any binary package belonging to that cluster.              *)
-let build_contraint_table package_list =
-  let table = Hashtbl.create ((List.length package_list) / 2) in
-  let add cluster constr =
-    try let l = Hashtbl.find table cluster in l := constr::!l
-    with Not_found -> Hashtbl.add table cluster (ref [constr])
-  in table;;
-  
-  
-(****************************************************************************)
-(* This section is largely copied from strongpred.ml !! *)
-
-(* map the package list to a pair of table {package_names->l}, where l is  *)
-(* is the list of all constraints in which the package_name is mentionend, *)
-(* and package list, such that all package numbers are spaced out.         *)
-let renumber packages = 
-  let add table name version =
+(* returns two hash tables :                                                *)
+(* - mapping each cluster s to the list of pairs (p,c) such that            *)
+(*   there exists a constraint c on package name p belonging to cluster s   *)
+(* - mapping each new package name p to the list of constraints such that   *)
+(*   there exists a constraint c on package p.                              *)
+let build_contraint_tables package_list =
+  let ctable = Hashtbl.create ((List.length package_list) / 2)
+  and ntable = Hashtbl.create ((List.length package_list) / 100)
+  and add table name version =
     try let l = Hashtbl.find table name in l := version::!l
     with Not_found -> Hashtbl.add table name (ref [version])
-  in let add_to_versions_table table =
-    (* collect all versions of all packages mentioned somewhere *)
-      let clause_iter =
-	List.iter (fun (name,sel) ->
-		     match sel with
-		       |None -> ()
-		       |Some(_,version) -> add table name version
-		  )
-      in
-	fun pkg ->
-	  add table pkg.Cudf.package pkg.Cudf.version;
-	  clause_iter pkg.Cudf.conflicts ;
-	  clause_iter (pkg.Cudf.provides :> Cudf_types.vpkglist) ;
-	  List.iter clause_iter pkg.Cudf.depends
-  in let build_table packages =
-      (* build a table that maps each package name to a map *)
-      (* old version -> new version                         *)
-      let version_table = Hashtbl.create (List.length packages) in
-	List.iter (add_to_versions_table version_table) packages;
-	let translation_table = Hashtbl.create (List.length packages) in
-	  Hashtbl.iter
-	    (fun p_name {contents=l} ->
-	       let c = ref 1 in
-	       let translation = Hashtbl.create (List.length l) in
-		 List.iter
-		   (fun p_version ->
-		      Hashtbl.add translation p_version (2 * !c);
-		      incr c 
-		   )
-		   (ExtLib.List.sort (ExtLib.List.unique l));
-		 Hashtbl.add translation_table p_name translation
-	    )
-	    version_table;
-	  translation_table
-  in let translation_table = build_table packages
-  and constraint_table = Hashtbl.create (List.length packages) in
-  let clause_map translation_table =
-    List.map (fun (name,sel) ->
-      match sel with
-      |None -> (name,sel)
-      |Some(c,v) -> begin
-        let translation = Hashtbl.find translation_table name in
-	let new_v = Hashtbl.find translation v in
-          add constraint_table name ((c :> Cudf_types.relop),new_v);
-          (name,Some(c,new_v))
-      end
-    )
-  in
-  let pkglist = 
-    List.map
-      (fun pkg ->
-	 let translation =
-	   try Hashtbl.find translation_table pkg.Cudf.package
-	   with Not_found -> assert false in
-           { pkg with
-               Cudf.version = (
-		 try Hashtbl.find translation pkg.Cudf.version
-		 with Not_found -> assert false);
-               Cudf.depends = (
-		 try List.map (clause_map translation_table) pkg.Cudf.depends
-		 with Not_found -> assert false);
-               Cudf.conflicts = (
-		 try clause_map translation_table pkg.Cudf.conflicts
-		 with Not_found -> assert false);
-               Cudf.provides = (
-		 try clause_map translation_table pkg.Cudf.provides
-		 with Not_found -> assert false)
-           }
-      ) 
-      packages
-  in (constraint_table,pkglist)
-;;
-
-(************************************************************************)
-(* This is also copied from Roberto. *)
-
-let interesting_future_versions p sels real_versions =
-  let evalsel v = function
-  (`Eq,v') -> v=v'
-    | (`Geq,v') -> v>=v'
-    | (`Leq,v') -> v<=v'
-    | (`Gt,v') -> v>v'
-    | (`Lt,v') -> v<v'
-    | (`Neq,v') -> v<>v'
-  in
-  let is_real = Hashtbl.mem real_versions p
-  in
-  let rawvl =
-    if is_real
-    then begin
-      let pv = Hashtbl.find real_versions p in
-      List.filter
-	(fun v -> (v > pv))
-	(ExtLib.List.unique (List.map snd sels))
-    end
-    else begin
-      ExtLib.List.unique (List.map snd sels)
-    end
-  in
-  if List.length rawvl = 0
-  then []
-  else
-    let minv,maxv=
-      List.fold_left
-	(fun (mi,ma) v -> (min mi v,max ma v)) (List.hd rawvl,List.hd rawvl)
-	(List.tl rawvl)
-    in
-    let h = Hashtbl.create 17
-    and h' = Hashtbl.create 17 in
+  and iter_constraints f package =
     begin
-      if is_real then
-	let pv = Hashtbl.find real_versions p
-	in Hashtbl.add h (List.map (evalsel pv) sels) pv
-    end;
-    for offs = 0 to (maxv-minv+2) do
-      let w = maxv+1-offs in
-      let row = List.map (evalsel w) sels in
-      if not (Hashtbl.mem h row) then 
-        (Hashtbl.add h row w; Hashtbl.add h' w row);
-    done;
-    Hashtbl.fold (fun k v acc -> k::acc) h' []
+      List.iter 
+	(function clause -> List.iter f clause)
+	package.Cudf.depends;
+      List.iter f package.Cudf.conflicts
+    end
+  in
+  List.iter
+    (fun package ->
+      try
+	let cluster = cluster_of package
+	in
+	iter_constraints
+ 	  (function cons -> add ctable cluster (package.Cudf.package,cons))
+	  package
+      with
+	  Not_found -> 
+	    iter_constraints
+ 	      (function cons -> add ntable package.Cudf.package cons)
+	      package
+	
+      
+    )
+    package_list;
+  (ctable,ntable)
 ;;
-
 
 (****************************************************************************)
 
@@ -366,7 +263,6 @@ let main () =
     purge_universe complete_universe
   in
   let cluster_size_table = compute_cluster_size_table purged_package_list 
-  and (constraint_table,renumbered_packages) = renumber purged_package_list
   and pp pkg =
     let (p,v) = from_cudf pkg in 
     let l = 
@@ -450,3 +346,121 @@ let main () =
 
 main () ;;
 
+(*
+
+
+  
+(* This section is largely copied from strongpred.ml !! *)
+
+(* map the package list to a pair of table {package_names->l}, where l is  *)
+(* is the list of all constraints in which the package_name is mentionend, *)
+(* and package list, such that all package numbers are spaced out.         *)
+let renumber packages = 
+  in let build_table packages =
+      (* build a table that maps each package name to a map *)
+      (* old version -> new version                         *)
+      let version_table = Hashtbl.create (List.length packages) in
+	List.iter (add_to_versions_table version_table) packages;
+	let translation_table = Hashtbl.create (List.length packages) in
+	  Hashtbl.iter
+	    (fun p_name {contents=l} ->
+	       let c = ref 1 in
+	       let translation = Hashtbl.create (List.length l) in
+		 List.iter
+		   (fun p_version ->
+		      Hashtbl.add translation p_version (2 * !c);
+		      incr c 
+		   )
+		   (ExtLib.List.sort (ExtLib.List.unique l));
+		 Hashtbl.add translation_table p_name translation
+	    )
+	    version_table;
+	  translation_table
+  in let translation_table = build_table packages
+  and constraint_table = Hashtbl.create (List.length packages) in
+  let clause_map translation_table =
+    List.map (fun (name,sel) ->
+      match sel with
+      |None -> (name,sel)
+      |Some(c,v) -> begin
+        let translation = Hashtbl.find translation_table name in
+	let new_v = Hashtbl.find translation v in
+          add constraint_table name ((c :> Cudf_types.relop),new_v);
+          (name,Some(c,new_v))
+      end
+    )
+  in
+  let pkglist = 
+    List.map
+      (fun pkg ->
+	 let translation =
+	   try Hashtbl.find translation_table pkg.Cudf.package
+	   with Not_found -> assert false in
+           { pkg with
+               Cudf.version = (
+		 try Hashtbl.find translation pkg.Cudf.version
+		 with Not_found -> assert false);
+               Cudf.depends = (
+		 try List.map (clause_map translation_table) pkg.Cudf.depends
+		 with Not_found -> assert false);
+               Cudf.conflicts = (
+		 try clause_map translation_table pkg.Cudf.conflicts
+		 with Not_found -> assert false);
+               Cudf.provides = (
+		 try clause_map translation_table pkg.Cudf.provides
+		 with Not_found -> assert false)
+           }
+      ) 
+      packages
+  in (constraint_table,pkglist)
+;;
+
+(* This is also copied from Roberto. *)
+
+let interesting_future_versions p sels real_versions =
+  let evalsel v = function
+  (`Eq,v') -> v=v'
+    | (`Geq,v') -> v>=v'
+    | (`Leq,v') -> v<=v'
+    | (`Gt,v') -> v>v'
+    | (`Lt,v') -> v<v'
+    | (`Neq,v') -> v<>v'
+  in
+  let is_real = Hashtbl.mem real_versions p
+  in
+  let rawvl =
+    if is_real
+    then begin
+      let pv = Hashtbl.find real_versions p in
+      List.filter
+	(fun v -> (v > pv))
+	(ExtLib.List.unique (List.map snd sels))
+    end
+    else begin
+      ExtLib.List.unique (List.map snd sels)
+    end
+  in
+  if List.length rawvl = 0
+  then []
+  else
+    let minv,maxv=
+      List.fold_left
+	(fun (mi,ma) v -> (min mi v,max ma v)) (List.hd rawvl,List.hd rawvl)
+	(List.tl rawvl)
+    in
+    let h = Hashtbl.create 17
+    and h' = Hashtbl.create 17 in
+    begin
+      if is_real then
+	let pv = Hashtbl.find real_versions p
+	in Hashtbl.add h (List.map (evalsel pv) sels) pv
+    end;
+    for offs = 0 to (maxv-minv+2) do
+      let w = maxv+1-offs in
+      let row = List.map (evalsel w) sels in
+      if not (Hashtbl.mem h row) then 
+        (Hashtbl.add h row w; Hashtbl.add h' w row);
+    done;
+    Hashtbl.fold (fun k v acc -> k::acc) h' []
+
+*)
