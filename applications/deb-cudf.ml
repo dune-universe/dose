@@ -24,11 +24,13 @@ module Options = struct
   let status = StdOpt.str_option ()
   let outfile = StdOpt.str_option ()
   let vmap = StdOpt.store_true ()
+  let architecture = StdOpt.str_option ()
 
   open OptParser
   add options ~short_name:'s' ~long_name:"status" ~help:"package status (822)" status;
   add options ~short_name:'o' ~long_name:"outfile" ~help:"specify the output file" outfile;
   add options ~short_name:'m' ~long_name:"map" ~help:"dump cudf <-> deb versions map" vmap;
+  add options ~long_name:"arch" ~help:"Set the default architecture" architecture;
 end
 
 (* ========================================= *)
@@ -36,6 +38,7 @@ end
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
+  let default_arch = OptParse.Opt.opt Options.architecture in
 
   (* raw -> cudf *)
   let (preamble, pkglist, from_cudf) =
@@ -44,7 +47,7 @@ let main () =
         Boilerplate.read_deb (OptParse.Opt.get Options.status)
       else []
     in
-    let l = Debian.Packages.input_raw posargs in
+    let l = Debian.Packages.input_raw ~default_arch posargs in
     let (pkglist,from_cudf,_) = Boilerplate.deb_load_list ~status l in
     (Debian.Debcudf.preamble, pkglist, from_cudf)
   in
