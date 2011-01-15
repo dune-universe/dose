@@ -116,6 +116,7 @@ let parse_request_apt s =
   let options = [
     ("-t", Arg.String (fun l -> suite := Some(l)), "");
     ("-s", Arg.Unit (fun _ -> ()), "");
+    ("-y", Arg.Unit (fun _ -> ()), "");
     ("-f", Arg.Unit (fun _ -> ()), "");
     ("--no-install-recommends", Arg.Unit (fun _ -> ()), "");
     ("--install-recommends", Arg.Unit (fun _ -> ()), "");
