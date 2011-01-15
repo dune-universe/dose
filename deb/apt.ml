@@ -117,6 +117,7 @@ let parse_request_apt s =
     ("-t", Arg.String (fun l -> suite := Some(l)), "");
     ("-s", Arg.Unit (fun _ -> ()), "");
     ("-y", Arg.Unit (fun _ -> ()), "");
+    ("-v", Arg.Unit (fun _ -> ()), "");
     ("-f", Arg.Unit (fun _ -> ()), "");
     ("--no-install-recommends", Arg.Unit (fun _ -> ()), "");
     ("--install-recommends", Arg.Unit (fun _ -> ()), "");
@@ -146,6 +147,8 @@ let parse_request_aptitude s =
   let options = [
     ("-t", Arg.String (fun l -> suite := Some(l)), ""); (* default suite *)
     ("-s", Arg.Unit (fun _ -> ()), "");
+    ("-y", Arg.Unit (fun _ -> ()), "");
+    ("-v", Arg.Unit (fun _ -> ()), "");
     ("--full-resolver", Arg.Unit (fun _ -> ()), "");
     ("--safe-resolver", Arg.Unit (fun _ -> ()), "");
     ("-f", Arg.Unit (fun _ -> ()), ""); (* fix-broken *)
