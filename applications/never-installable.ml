@@ -210,7 +210,7 @@ let synchronise_package cluster_size_table package  =
 (*   there exists a constraint c on package name p belonging to cluster s   *)
 (* - mapping each new package name p to the list of constraints such that   *)
 (*   there exists a constraint c on package p.                              *)
-let build_contraint_tables package_list =
+let build_constraint_tables package_list =
   let ctable = Hashtbl.create ((List.length package_list) / 2)
   and ntable = Hashtbl.create ((List.length package_list) / 100)
   and add table name version =
@@ -230,12 +230,12 @@ let build_contraint_tables package_list =
 	let cluster = cluster_of package
 	in
 	iter_constraints
- 	  (function cons -> add ctable cluster (package.Cudf.package,cons))
+ 	  (function cons -> add ctable cluster (package.Cudf.package,snd cons))
 	  package
       with
 	  Not_found -> 
 	    iter_constraints
- 	      (function cons -> add ntable package.Cudf.package cons)
+ 	      (function cons -> add ntable package.Cudf.package (snd cons))
 	      package
 	
       
@@ -245,6 +245,41 @@ let build_contraint_tables package_list =
 ;;
 
 (****************************************************************************)
+
+(* renumber all packages mentioned in the package list in any of the fields *)
+(* version, conflicts, depends, provides.                                   *)
+(* translation is a hash table mapping a package name to an association     *)
+(* list that maps old version numbers to new version numbers.               *)
+let renumber_packages package_list translation =
+  let translate_version package version =
+    try
+      List.assoc version (Hashtbl.find translation package)
+    with
+	Not_found -> version
+  in
+  let translate_constrained = function
+    | (name,None) as c -> c
+    | (name,Some(relation,version)) ->
+      (name,Some(relation,translate_version name version))
+  in
+  List.map
+    (fun p -> { p with 
+      Cudf.version = translate_version p.Cudf.package p.Cudf.version;
+      Cudf.conflicts = List.map translate_constrained p.Cudf.conflicts;
+      Cudf.depends = List.map (List.map translate_constrained) p.Cudf.depends;
+     }
+    )
+    package_list
+;;
+
+(****************************************************************************)
+
+let mapi f = 
+  let rec mapi_aux i = function
+    | [] -> []
+    | h::r -> (f i h)::(mapi_aux (i+1) r)
+  in mapi_aux 0
+;;
 
 let main () =
   let posargs =
@@ -271,8 +306,7 @@ let main () =
         with Not_found -> None
       ) ["source";"sourceversion"]
     in (p,v,l)
-  in 
-
+  in
 (* 
   let pl =
     let real_versions = Hashtbl.create (List.length renumbered_packages)
@@ -315,8 +349,29 @@ let main () =
 
   let universe = Cudf.load_universe
     (List.map (synchronise_package cluster_size_table) pl)
-  in 
-      
+  in
+
+  let cluster_constraint_table,new_constraint_table =
+    build_constraint_tables pl
+  in
+  let translation_table =
+    ExtLib.Hashtbl.map 
+      (fun constraints ->
+	mapi
+	  (fun i x -> x,2*i+1)
+	  (ExtLib.List.unique
+	     (ExtLib.List.sort
+		(List.fold_left 
+		   (fun acc cons -> match cons with
+		     | None -> acc
+		     | Some(rel,version) -> version::acc)
+		   []
+		   !constraints))))
+      new_constraint_table
+  in
+  
+	
+	
   info "Solving..." ;
   let timer = Util.Timer.create "Solver" in
   Util.Timer.start timer;
