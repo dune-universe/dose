@@ -167,20 +167,26 @@ let cluster_of package = (
   chop_epoch (chop_binnmu (debversion_of_package package))
 );;
 
-(* builds a table mapping each cluster to its number of elements.        *)
-let compute_cluster_size_table package_list =
-  let table = Hashtbl.create ((List.length package_list) / 2)
+(* returns to hash tables:                                               *)
+(* - mapping each cluster to its size                                    *)
+(* - mapping each binary package name to its cluster                     *)
+let compute_clusters package_list =
+  let number_of_packages = List.length package_list
+  in
+  let size_table = Hashtbl.create (number_of_packages/2)
+  and cluster_table = Hashtbl.create number_of_packages
   in
   List.iter
     (fun package ->
       let cluster = cluster_of package
       in
-      try let oldcount = Hashtbl.find table cluster
-	  in Hashtbl.replace table cluster (oldcount+1)
-      with Not_found -> Hashtbl.add table cluster 1
+      Hashtbl.add cluster_table package.Cudf.package cluster;
+      try let oldcount = Hashtbl.find size_table cluster
+	  in Hashtbl.replace size_table cluster (oldcount+1)
+      with Not_found -> Hashtbl.add size_table cluster 1
     )
     package_list;
-  table
+  size_table,cluster_table
 ;;
 
 (* add to a package the constraints that synchronise it with its cluster *)
@@ -210,7 +216,7 @@ let synchronise_package cluster_size_table package  =
 (*   there exists a constraint c on package name p belonging to cluster s   *)
 (* - mapping each new package name p to the list of constraints such that   *)
 (*   there exists a constraint c on package p.                              *)
-let build_constraint_tables package_list =
+let build_constraint_tables package_list cluster_table=
   let ctable = Hashtbl.create ((List.length package_list) / 2)
   and ntable = Hashtbl.create ((List.length package_list) / 100)
   and add table name version =
@@ -225,20 +231,10 @@ let build_constraint_tables package_list =
     end
   in
   List.iter
-    (fun package ->
-      try
-	let cluster = cluster_of package
-	in
-	iter_constraints
- 	  (function cons -> add ctable cluster (package.Cudf.package,snd cons))
-	  package
-      with
-	  Not_found -> 
-	    iter_constraints
- 	      (function cons -> add ntable package.Cudf.package (snd cons))
-	      package
-	
-      
+    (iter_constraints
+       (fun (p,c) ->
+	 try add ctable (Hashtbl.find cluster_table p) (p,c)
+	 with Not_found ->  add ntable p c)
     )
     package_list;
   (ctable,ntable)
@@ -297,7 +293,8 @@ let main () =
   and (purged_package_list, cudf_version_table) =
     purge_universe complete_universe
   in
-  let cluster_size_table = compute_cluster_size_table purged_package_list 
+  let size_of_cluster,cluster_of_package = 
+    compute_clusters purged_package_list 
   and pp pkg =
     let (p,v) = from_cudf pkg in 
     let l = 
@@ -345,20 +342,19 @@ let main () =
 
 *)
 
-  let pl=purged_package_list in
-
-  let universe = Cudf.load_universe
-    (List.map (synchronise_package cluster_size_table) pl)
+  let pl= List.map
+    (synchronise_package size_of_cluster)
+    purged_package_list
   in
 
-  let cluster_constraint_table,new_constraint_table =
-    build_constraint_tables pl
+  let constraints_on_clusters,constraints_on_missing_packages =
+    build_constraint_tables pl cluster_of_package
   in
   let translation_table =
     ExtLib.Hashtbl.map 
       (fun constraints ->
 	mapi
-	  (fun i x -> x,2*i+1)
+	  (fun i x -> x,(2*i)+689)
 	  (ExtLib.List.unique
 	     (ExtLib.List.sort
 		(List.fold_left 
@@ -367,11 +363,22 @@ let main () =
 		     | Some(rel,version) -> version::acc)
 		   []
 		   !constraints))))
-      new_constraint_table
+      constraints_on_missing_packages
+  in
+
+  print_string "Clusters:\n";
+  Hashtbl.iter
+    (fun k v -> begin print_string (fst k); print_newline () end)
+    constraints_on_clusters;
+  print_string "Missing:\n";
+  Hashtbl.iter
+    (fun k v -> begin print_string k; print_newline () end)
+    constraints_on_missing_packages;
+  
+  let universe = Cudf.load_universe
+    (renumber_packages pl translation_table)
   in
   
-	
-	
   info "Solving..." ;
   let timer = Util.Timer.create "Solver" in
   Util.Timer.start timer;
