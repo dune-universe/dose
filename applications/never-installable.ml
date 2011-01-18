@@ -385,23 +385,24 @@ let main () =
 	    let (highest_deb_version, list_so_far) =
 	      List.fold_left
 		(fun
-		  (previous_deb_version,accu)
+		  (perhaps_previous_deb_version,accu)
 		  (old_cudf_version,new_cudf_version) ->
 		    let debian_version =
 		      snd(from_cudf(package_name,old_cudf_version))
 		    in
 		    Some debian_version,
-		    (match previous_deb_version with
+		    (match perhaps_previous_deb_version with
 		      | None ->
 			make_package
 			  package_name
 			  (new_cudf_version-1)
 			  ( "(.. " ^ debian_version ^")" )
-		      | Some dbv ->
+		      | Some previous_debian_version ->
 			make_package
 			  package_name
 			  (new_cudf_version-1)
-			  ( "(" ^ dbv ^ " .. " ^ debian_version ^")" )
+			  ( "(" ^ previous_debian_version ^
+			      " .. " ^ debian_version ^")" )
 		    )
 		    ::(make_package
 			 package_name new_cudf_version debian_version)
@@ -410,7 +411,7 @@ let main () =
 		translations
 	    in 
 	    (match highest_deb_version with
-	      | None -> failwith "this cannot happen"
+	      | None -> assert false
 	      | Some deb ->
 		make_package
 		  package_name
