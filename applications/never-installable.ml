@@ -354,7 +354,7 @@ let main () =
     ExtLib.Hashtbl.map 
       (fun constraints ->
 	mapi
-	  (fun i x -> x,(2*i)+689)
+	  (fun i x -> x,(2*i)+2)
 	  (ExtLib.List.unique
 	     (ExtLib.List.sort
 		(List.fold_left 
@@ -374,9 +374,43 @@ let main () =
   Hashtbl.iter
     (fun k v -> begin print_string k; print_newline () end)
     constraints_on_missing_packages;
+
+  let future_missing_packages =
+    let trivial_package = 
+      {Cudf.package = "package name not instantiated";
+       Cudf.version = 0;
+       Cudf.depends = [];
+       Cudf.conflicts = [];
+       Cudf.provides = [];
+       Cudf.installed = false;
+       Cudf.was_installed = false;
+       Cudf.keep = `Keep_none;
+       Cudf.pkg_extra = []
+      }
+    in
+    Hashtbl.fold
+      (fun package_name translations accu ->
+	List.fold_left
+	  (fun accu (old_cudf_version,new_cudf_version) ->
+	    {trivial_package with 
+	      Cudf.package = package_name;
+	      Cudf.version = new_cudf_version}
+	    ::{trivial_package with
+	      Cudf.package = package_name;
+	      Cudf.version = new_cudf_version+1}
+	    ::accu)
+	  ({trivial_package with
+	    Cudf.package = package_name;
+	    Cudf.version = 1}
+	   ::accu)
+	  translations
+      )
+      translation_table
+      []
+  in
   
   let universe = Cudf.load_universe
-    (renumber_packages pl translation_table)
+    (future_missing_packages@(renumber_packages pl translation_table))
   in
   
   info "Solving..." ;
