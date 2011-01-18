@@ -289,14 +289,13 @@ let main () =
 
   let (complete_universe,from_cudf,_) =
     Boilerplate.load_universe ~default_arch posargs in
-  let from_cudf p = from_cudf (p.Cudf.package,p.Cudf.version)
-  and (purged_package_list, cudf_version_table) =
+  let (purged_package_list, cudf_version_table) =
     purge_universe complete_universe
   in
   let size_of_cluster,cluster_of_package = 
     compute_clusters purged_package_list 
   and pp pkg =
-    let (p,v) = from_cudf pkg in 
+    let (p,v) = from_cudf (pkg.Cudf.package,pkg.Cudf.version) in 
     let l = 
       ExtLib.List.filter_map (fun k ->
         try Some(k,Cudf.lookup_package_property pkg k)
@@ -366,44 +365,58 @@ let main () =
       constraints_on_missing_packages
   in
 
-  print_string "Clusters:\n";
-  Hashtbl.iter
-    (fun k v -> begin print_string (fst k); print_newline () end)
-    constraints_on_clusters;
-  print_string "Missing:\n";
-  Hashtbl.iter
-    (fun k v -> begin print_string k; print_newline () end)
-    constraints_on_missing_packages;
-
   let future_missing_packages =
-    let trivial_package = 
-      {Cudf.package = "package name not instantiated";
-       Cudf.version = 0;
+    let make_package package_name cudf_version debian_version =
+      {Cudf.package = package_name;
+       Cudf.version = cudf_version;
        Cudf.depends = [];
        Cudf.conflicts = [];
        Cudf.provides = [];
        Cudf.installed = false;
        Cudf.was_installed = false;
        Cudf.keep = `Keep_none;
-       Cudf.pkg_extra = []
-      }
+       Cudf.pkg_extra = [("number",`String debian_version)] }
     in
     Hashtbl.fold
       (fun package_name translations accu ->
-	List.fold_left
-	  (fun accu (old_cudf_version,new_cudf_version) ->
-	    {trivial_package with 
-	      Cudf.package = package_name;
-	      Cudf.version = new_cudf_version}
-	    ::{trivial_package with
-	      Cudf.package = package_name;
-	      Cudf.version = new_cudf_version+1}
-	    ::accu)
-	  ({trivial_package with
-	    Cudf.package = package_name;
-	    Cudf.version = 1}
-	   ::accu)
-	  translations
+	match translations with
+	  | [] -> (make_package package_name 1 "any")::accu
+	  | _::_ ->
+	    let (highest_deb_version, list_so_far) =
+	      List.fold_left
+		(fun
+		  (previous_deb_version,accu)
+		  (old_cudf_version,new_cudf_version) ->
+		    let debian_version =
+		      snd(from_cudf(package_name,old_cudf_version))
+		    in
+		    Some debian_version,
+		    (match previous_deb_version with
+		      | None ->
+			make_package
+			  package_name
+			  (new_cudf_version-1)
+			  ( "(.. " ^ debian_version ^")" )
+		      | Some dbv ->
+			make_package
+			  package_name
+			  (new_cudf_version-1)
+			  ( "(" ^ dbv ^ " .. " ^ debian_version ^")" )
+		    )
+		    ::(make_package
+			 package_name new_cudf_version debian_version)
+		    ::accu)
+		(None,accu)
+		translations
+	    in 
+	    (match highest_deb_version with
+	      | None -> failwith "this cannot happen"
+	      | Some deb ->
+		make_package
+		  package_name
+		  (2*(List.length translations)+1)
+		  ( "(" ^ deb ^ " ..)" ))
+	    ::list_so_far
       )
       translation_table
       []
