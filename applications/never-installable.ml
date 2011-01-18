@@ -341,13 +341,9 @@ let main () =
 
 *)
 
-  let pl= List.map
-    (synchronise_package size_of_cluster)
-    purged_package_list
-  in
 
   let constraints_on_clusters,constraints_on_missing_packages =
-    build_constraint_tables pl cluster_of_package
+    build_constraint_tables purged_package_list cluster_of_package
   in
   let translation_table =
     ExtLib.Hashtbl.map 
@@ -440,11 +436,25 @@ let main () =
       translation_table
       []
   in
-  
+
+  let pl= List.map
+    (synchronise_package size_of_cluster)
+    purged_package_list
+  in
+
   let universe = Cudf.load_universe
     (future_missing_packages@(renumber_packages pl translation_table))
   in
-  
+
+  begin
+    if OptParse.Opt.is_set Options.cudf_output then
+      let ch=open_out (OptParse.Opt.get Options.cudf_output)
+      in begin
+	Cudf_printer.pp_universe (Format.formatter_of_out_channel ch) universe;
+	close_out ch
+      end
+  end;
+
   info "Solving..." ;
   let timer = Util.Timer.create "Solver" in
   Util.Timer.start timer;
@@ -462,15 +472,9 @@ let main () =
     Format.fprintf fmt "broken-packages: %d\n" i;
     if OptParse.Opt.is_set Options.architecture then
       Format.fprintf fmt "architecture: %s\n"
-	(OptParse.Opt.get Options.architecture);
-    
-  if OptParse.Opt.is_set Options.cudf_output then
-    let ch=open_out (OptParse.Opt.get Options.cudf_output)
-    in begin
-      Cudf_printer.pp_universe (Format.formatter_of_out_channel ch) universe;
-      close_out ch
-    end
+	(OptParse.Opt.get Options.architecture)
 ;;
+    
 
 main () ;;
 
