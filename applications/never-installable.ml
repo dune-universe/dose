@@ -393,18 +393,31 @@ let main () =
 		    Some debian_version,
 		    (match perhaps_previous_deb_version with
 		      | None ->
+			(* We are at the beginning of the list, there is *)
+			(* no smaller version. Create a package which is *)
+			(* the predecessor of the smallest mentionend    *)
+			(* package, its pseudo debian version is an      *)
+			(* interval that is infinite on the lower end.   *)
 			make_package
 			  package_name
 			  (new_cudf_version-1)
 			  ( "(.. " ^ debian_version ^")" )
 		      | Some previous_debian_version ->
+			(* We are in the middle of the list. We create a  *)
+                        (* package that is the predecessor of the current *)
+                        (* version, with a pseudo debian version that is  *)
+                        (* an open interval between the previous and the  *)
+                        (* current debian version.                        *)
 			make_package
 			  package_name
 			  (new_cudf_version-1)
 			  ( "(" ^ previous_debian_version ^
 			      " .. " ^ debian_version ^")" )
 		    )
-		    ::(make_package
+		    ::
+                      (* create a package for the current version, its *)
+                      (* precise debian version is known.              *) 
+		      (make_package
 			 package_name new_cudf_version debian_version)
 		    ::accu)
 		(None,accu)
@@ -413,6 +426,11 @@ let main () =
 	    (match highest_deb_version with
 	      | None -> assert false
 	      | Some deb ->
+		(* We are now at the end of the list. We create a last     *)
+                (* package with a version number that is higher than all   *)
+                (* versions that we have (we know that the highest version *)
+                (* was 2*length of the list), its pseudo debian version is *)
+                (* an open interval that is infinite to the upper end.     *)
 		make_package
 		  package_name
 		  (2*(List.length translations)+1)
