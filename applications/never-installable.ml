@@ -212,11 +212,14 @@ let synchronise_package cluster_size_table package  =
 (****************************************************************************)
 
 (* returns two hash tables :                                                *)
-(* - mapping each cluster s to the list of pairs (p,c) such that            *)
-(*   there exists a constraint c on package name p belonging to cluster s   *)
-(* - mapping each new package name p to the list of constraints such that   *)
-(*   there exists a constraint c on package p.                              *)
-let build_constraint_tables package_list cluster_table=
+(* - mapping each cluster s to the list of pairs (p,n) such that            *)
+(*   there exists a constraint c on package name p belonging to cluster s,  *)
+(*   and using version n, where n is greater than the existing version of   *)
+(*   package p.                                                             *)
+(*   than the existing version number of that package.                      *)
+(* - mapping each new package name p to the list of constraints c where     *)
+(*   there exists a relation on p with constraint c.                        *)
+let build_constraint_tables package_list cluster_table versions_of_packages =
   let ctable = Hashtbl.create ((List.length package_list) / 2)
   and ntable = Hashtbl.create ((List.length package_list) / 100)
   and add table name version =
@@ -233,7 +236,12 @@ let build_constraint_tables package_list cluster_table=
   List.iter
     (iter_constraints
        (fun (p,c) ->
-	 try add ctable (Hashtbl.find cluster_table p) (p,c)
+	 try
+	   let existing_version = Hashtbl.find versions_of_packages p
+	   in match c with
+	     | None -> ()
+	     | Some(_rel,n) -> if n > existing_version then
+		 add ctable (Hashtbl.find cluster_table p) (p,n)
 	 with Not_found ->  add ntable p c)
     )
     package_list;
@@ -303,47 +311,10 @@ let main () =
       ) ["source";"sourceversion"]
     in (p,v,l)
   in
-(* 
-  let pl =
-    let real_versions = Hashtbl.create (List.length renumbered_packages)
-    in
-      List.iter
-	(fun p -> Hashtbl.add real_versions p.Cudf.package p.Cudf.version)
-	renumbered_packages;
-      Hashtbl.fold
-	(fun p sels acc ->
-	   let sync = 
-	     try Some (Hashtbl.find sync_table p)
-	     with Not_found -> None
-	   in
-	     (List.map
-	       (fun v ->
-		  {Cudf.package = p;
-		   Cudf.version = v;
-		   Cudf.depends = [];
-		   Cudf.provides = (match sync with
-		       Some (s,_sv) -> ["src:"^s, Some (`Eq, v)]
-		     | None -> []);
-		   Cudf.conflicts = (match sync with
-		       Some (s,_sv) -> ["src:s"^s, Some (`Neq, v);p,None]
-		     | None -> [p,None]);
-		   Cudf.installed = false;
-		   Cudf.was_installed = false;
-		   Cudf.keep = `Keep_none;
-		   Cudf.pkg_extra = []
-		  })
-	       (interesting_future_versions p !sels real_versions))@acc
-	)
-	constraint_table
-	(List.map (pin_real sync_table) renumbered_packages)
-  in
-  info "Number of packages after renumbering: %i" (List.length pl);
-
-*)
-
 
   let constraints_on_clusters,constraints_on_missing_packages =
-    build_constraint_tables purged_package_list cluster_of_package
+    build_constraint_tables
+      purged_package_list cluster_of_package cudf_version_table
   in
   let translation_table =
     ExtLib.Hashtbl.map 
@@ -360,6 +331,26 @@ let main () =
 		   !constraints))))
       constraints_on_missing_packages
   in
+
+  Hashtbl.iter
+    (fun cluster constraints -> 
+      let future_cluster_versions =
+        (* acending list of normalised debian version numbers that are *)
+        (* used in relations on packages belonging to that cluster.    *)
+	ExtLib.List.unique 
+	  (ExtLib.List.sort
+	     (List.map 
+		(fun c -> chop_epoch (chop_binnmu (snd (from_cudf c))))
+		!constraints
+	     ))
+      in
+      let cudf_of_cluster_version =
+	mapi
+	  (fun i n -> (n,2*i))
+	  future_cluster_versions
+      in ()
+    )
+    constraints_on_clusters;
 
   let future_missing_packages =
     let make_package package_name cudf_version debian_version =
