@@ -14,8 +14,6 @@
 (* You should have received a copy of the GNU General Public License        *)
 (* along with this program.  If not, see <http://www.gnu.org/licenses/>.    *)
 (****************************************************************************)
-(* Parts of this code are canibalized from strongpred.ml.                   *)
-(****************************************************************************)
 
 open Debian
 open Common
@@ -97,6 +95,13 @@ let chop_epoch s =
   else s
 ;;
 
+let normalize s = chop_epoch (chop_binnmu s)
+;;
+
+let rec pos_in_list x = function
+  | h::r -> if h=x then 0 else 1+(pos_in_list x r)
+  | [] -> raise Not_found
+;;
 (****************************************************************************)
 
 (* (purge_universe universe) returns the list of packages in universe that  *)
@@ -313,7 +318,8 @@ let main () =
   
   Hashtbl.iter
     (fun _package versions ->
-      let l = ExtLib.List.unique (ExtLib.List.sort (!versions ))
+      let l = ExtLib.List.unique 
+	(ExtLib.List.sort ~cmp:Debian.Version.compare (!versions ))
       in versions := l)
     normalized_debian_versions_of_cluster;
 
@@ -336,7 +342,20 @@ let main () =
   Hashtbl.iter 
     (fun package cudf_versions ->
       if Hashtbl.mem cudf_version_table package
-      then ()
+      then 
+	Hashtbl.add translation_table package
+	  (((Hashtbl.find cudf_version_table package),1)::
+	      (List.map
+		 (fun cudf_version ->
+		   let n =
+		     pos_in_list 
+		       (normalize (snd (from_cudf (package,cudf_version))))
+		       (!(Hashtbl.find
+			    normalized_debian_versions_of_cluster
+			    (Hashtbl.find cluster_of_package package)))
+		   in (cudf_version,2*n+3)
+		 )
+		 !cudf_versions))
       else
 	Hashtbl.add translation_table package
 	  (mapi
@@ -344,7 +363,7 @@ let main () =
 	     (ExtLib.List.unique (ExtLib.List.sort !cudf_versions)))
     )
     referred_versions_of_package;
-  
+
   let future_missing_packages =
     let make_package package_name cudf_version debian_version =
       {Cudf.package = package_name;
@@ -359,6 +378,8 @@ let main () =
     in
     Hashtbl.fold
       (fun package_name translations accu ->
+	if not (Hashtbl.mem cudf_version_table package_name)
+	then
 	match translations with
 	  | [] -> (make_package package_name 1 "any")::accu
 	  | _::_ ->
@@ -416,6 +437,8 @@ let main () =
 		  (2*(List.length translations)+1)
 		  ( "(" ^ deb ^ " ..)" ))
 	    ::list_so_far
+	else
+	  accu
       )
       translation_table
       []
@@ -446,7 +469,7 @@ let main () =
   let fmt = Format.std_formatter in
   Format.fprintf fmt "@[<v 1>report:@,";
   let callback =
-    Diagnostic.fprintf ~pp ~failure:true ~success:false ~explain fmt in
+    Diagnostic.fprintf ~pp ~failure:false ~success:false ~explain fmt in
   let i = Depsolver.univcheck ~callback universe 
   in
     ignore(Util.Timer.stop timer ());
@@ -462,54 +485,3 @@ let main () =
 
 main () ;;
 
-(*
-
-(* This is also copied from Roberto. *)
-
-let interesting_future_versions p sels real_versions =
-  let evalsel v = function
-  (`Eq,v') -> v=v'
-    | (`Geq,v') -> v>=v'
-    | (`Leq,v') -> v<=v'
-    | (`Gt,v') -> v>v'
-    | (`Lt,v') -> v<v'
-    | (`Neq,v') -> v<>v'
-  in
-  let is_real = Hashtbl.mem real_versions p
-  in
-  let rawvl =
-    if is_real
-    then begin
-      let pv = Hashtbl.find real_versions p in
-      List.filter
-	(fun v -> (v > pv))
-	(ExtLib.List.unique (List.map snd sels))
-    end
-    else begin
-      ExtLib.List.unique (List.map snd sels)
-    end
-  in
-  if List.length rawvl = 0
-  then []
-  else
-    let minv,maxv=
-      List.fold_left
-	(fun (mi,ma) v -> (min mi v,max ma v)) (List.hd rawvl,List.hd rawvl)
-	(List.tl rawvl)
-    in
-    let h = Hashtbl.create 17
-    and h' = Hashtbl.create 17 in
-    begin
-      if is_real then
-	let pv = Hashtbl.find real_versions p
-	in Hashtbl.add h (List.map (evalsel pv) sels) pv
-    end;
-    for offs = 0 to (maxv-minv+2) do
-      let w = maxv+1-offs in
-      let row = List.map (evalsel w) sels in
-      if not (Hashtbl.mem h row) then 
-        (Hashtbl.add h row w; Hashtbl.add h' w row);
-    done;
-    Hashtbl.fold (fun k v acc -> k::acc) h' []
-
-*)
