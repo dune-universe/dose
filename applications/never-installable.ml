@@ -207,47 +207,6 @@ let synchronise_package cluster_size_table package  =
   else package
 ;;
 
-  
-
-(****************************************************************************)
-
-(* returns two hash tables :                                                *)
-(* - mapping each cluster s to the list of pairs (p,n) such that            *)
-(*   there exists a constraint c on package name p belonging to cluster s,  *)
-(*   and using version n, where n is greater than the existing version of   *)
-(*   package p.                                                             *)
-(*   than the existing version number of that package.                      *)
-(* - mapping each new package name p to the list of constraints c where     *)
-(*   there exists a relation on p with constraint c.                        *)
-let build_constraint_tables package_list cluster_table versions_of_packages =
-  let ctable = Hashtbl.create ((List.length package_list) / 2)
-  and ntable = Hashtbl.create ((List.length package_list) / 100)
-  and add table name version =
-    try let l = Hashtbl.find table name in l := version::!l
-    with Not_found -> Hashtbl.add table name (ref [version])
-  and iter_constraints f package =
-    begin
-      List.iter 
-	(function clause -> List.iter f clause)
-	package.Cudf.depends;
-      List.iter f package.Cudf.conflicts
-    end
-  in
-  List.iter
-    (iter_constraints
-       (fun (p,c) ->
-	 try
-	   let existing_version = Hashtbl.find versions_of_packages p
-	   in match c with
-	     | None -> ()
-	     | Some(_rel,n) -> if n > existing_version then
-		 add ctable (Hashtbl.find cluster_table p) (p,n)
-	 with Not_found ->  add ntable p c)
-    )
-    package_list;
-  (ctable,ntable)
-;;
-
 (****************************************************************************)
 
 (* renumber all packages mentioned in the package list in any of the fields *)
@@ -311,47 +270,81 @@ let main () =
       ) ["source";"sourceversion"]
     in (p,v,l)
   in
-
-  let constraints_on_clusters,constraints_on_missing_packages =
-    build_constraint_tables
-      purged_package_list cluster_of_package cudf_version_table
+  
+  let referred_versions_of_package = 
+    Hashtbl.create
+      (let n = List.length purged_package_list in n + n/10)
+  and normalized_debian_versions_of_cluster =
+    Hashtbl.create (Hashtbl.length size_of_cluster)
   in
-  let translation_table =
-    ExtLib.Hashtbl.map 
-      (fun constraints ->
-	mapi
-	  (fun i x -> x,(2*i)+2)
-	  (ExtLib.List.unique
-	     (ExtLib.List.sort
-		(List.fold_left 
-		   (fun acc cons -> match cons with
-		     | None -> acc
-		     | Some(rel,version) -> version::acc)
-		   []
-		   !constraints))))
-      constraints_on_missing_packages
+  let add table name version =
+    try let l = Hashtbl.find table name	in l := version::!l
+    with Not_found -> Hashtbl.add table name (ref [version])
+  and add_without_version table name =
+    if not (Hashtbl.mem table name)
+    then Hashtbl.add table name (ref [])
+  and iter_constraints f package =
+    begin
+      List.iter 
+	(function clause -> List.iter f clause)
+	package.Cudf.depends;
+      List.iter f package.Cudf.conflicts
+    end
   in
+  List.iter
+    (iter_constraints
+       (fun (package,constr) ->
+	 match constr with
+	   | None -> add_without_version referred_versions_of_package package
+	   | Some(_rel,version) ->
+	     try
+	       let existing_version =
+		 Hashtbl.find cudf_version_table package
+	       in
+	       if version > existing_version then begin
+		 add referred_versions_of_package package version;
+		 add normalized_debian_versions_of_cluster
+		   (Hashtbl.find cluster_of_package package)
+		   (chop_binnmu (chop_epoch (snd (from_cudf(package,version)))))
+	       end
+	     with Not_found -> add referred_versions_of_package package version
+       ))
+    purged_package_list;
+  
+  Hashtbl.iter
+    (fun _package versions ->
+      let l = ExtLib.List.unique (ExtLib.List.sort (!versions ))
+      in versions := l)
+    normalized_debian_versions_of_cluster;
 
   Hashtbl.iter
-    (fun cluster constraints -> 
-      let future_cluster_versions =
-        (* acending list of normalised debian version numbers that are *)
-        (* used in relations on packages belonging to that cluster.    *)
-	ExtLib.List.unique 
-	  (ExtLib.List.sort
-	     (List.map 
-		(fun c -> chop_epoch (chop_binnmu (snd (from_cudf c))))
-		!constraints
-	     ))
-      in
-      let cudf_of_cluster_version =
-	mapi
-	  (fun i n -> (n,2*i))
-	  future_cluster_versions
-      in ()
+    (fun (s,v) versions ->
+      print_string s;
+      print_char ':';
+      print_string v;
+      print_string ": ";
+      List.iter
+	(fun v -> print_string v; print_string ", ")
+	(!versions);
+      print_newline ()
     )
-    constraints_on_clusters;
-
+    normalized_debian_versions_of_cluster;
+  
+  let translation_table = Hashtbl.create
+    (Hashtbl.length referred_versions_of_package)
+  in
+  Hashtbl.iter 
+    (fun package cudf_versions ->
+      if Hashtbl.mem cudf_version_table package
+      then ()
+      else
+	Hashtbl.add translation_table package
+	  (mapi
+	     (fun i x -> x,(2*i)+2)
+	     (ExtLib.List.unique (ExtLib.List.sort !cudf_versions)))
+    )
+    referred_versions_of_package;
+  
   let future_missing_packages =
     let make_package package_name cudf_version debian_version =
       {Cudf.package = package_name;
