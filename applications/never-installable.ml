@@ -79,23 +79,23 @@ let debversion_of_package p =
       Not_found -> failwith "CUDF: debian version missing"
 ;;
 
-let chop_binnmu s =
+
+(* normalize a debian version string by removing epoch and bin-NMU *)
+let normalize s =
+  let chop_binnmu s =
   (* chops a possible bin-NMU suffix from a debian version string *)
-  try
-    Str.string_before s
-      (Str.search_backward (Str.regexp "\\+b[0-9]+$") s ((String.length s)-1))
-  with
-      Not_found -> s
-;;
-
-let chop_epoch s =
+    try
+      Str.string_before s
+	(Str.search_backward (Str.regexp "\\+b[0-9]+$") s ((String.length s)-1))
+    with
+	Not_found -> s
+  and chop_epoch s =
   (* chops a possible epoch from a debian version string *)
-  if Str.string_match (Str.regexp "[0-9]+:") s 0
-  then Str.string_after s (Str.match_end ())
-  else s
-;;
-
-let normalize s = chop_epoch (chop_binnmu s)
+    if Str.string_match (Str.regexp "[0-9]+:") s 0
+    then Str.string_after s (Str.match_end ())
+    else s
+  in
+  chop_epoch (chop_binnmu s)
 ;;
 
 let rec pos_in_list x = function
@@ -168,8 +168,7 @@ let purge_universe universe =
 (* -w is the debian version of p without epoch and bin-nmu.               *)
 
 let cluster_of package = (
-  sourcename_of_package package,
-  chop_epoch (chop_binnmu (debversion_of_package package))
+  sourcename_of_package package, normalize (debversion_of_package package)
 );;
 
 (* returns to hash tables:                                               *)
@@ -310,7 +309,7 @@ let main () =
 		 add referred_versions_of_package package version;
 		 add normalized_debian_versions_of_cluster
 		   (Hashtbl.find cluster_of_package package)
-		   (chop_binnmu (chop_epoch (snd (from_cudf(package,version)))))
+		   (normalize (snd (from_cudf(package,version))))
 	       end
 	     with Not_found -> add referred_versions_of_package package version
        ))
