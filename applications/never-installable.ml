@@ -363,7 +363,38 @@ let main () =
     )
     referred_versions_of_package;
 
-  let future_missing_packages =
+  let new_cudf_to_debian = Hashtbl.create (Hashtbl.length translation_table)
+  in
+  Hashtbl.iter
+    (fun package_name translations ->
+      let is_existing_package = Hashtbl.mem cudf_version_table package_name
+      in
+      Hashtbl.add new_cudf_to_debian package_name
+	(if (not is_existing_package) && translations=[]
+	 then [(1,"any")]
+	 else 
+	    let (highest_debian_version, accu) =
+	      List.fold_left
+		(fun
+		  (previous_debian_version, accu)
+		  (old_cudf_version, new_cudf_version) ->
+		    let debian_version =
+		      snd(from_cudf(package_name,old_cudf_version))
+		    in
+		    (debian_version,
+		     ((new_cudf_version-1),
+		      ("("^previous_debian_version^".."^debian_version^")"))
+		     ::(new_cudf_version,debian_version)
+		     ::accu))
+		("",[])
+		translations
+	    in 
+	    (2*(List.length translations)+1,"("^highest_debian_version^"..)")
+	    ::accu
+	))
+    translation_table;
+
+  let future_packages =
     let make_package package_name cudf_version debian_version =
       {Cudf.package = package_name;
        Cudf.version = cudf_version;
@@ -377,69 +408,12 @@ let main () =
     in
     Hashtbl.fold
       (fun package_name translations accu ->
-	if not (Hashtbl.mem cudf_version_table package_name)
-	then
-	match translations with
-	  | [] -> (make_package package_name 1 "any")::accu
-	  | _::_ ->
-	    let (highest_deb_version, list_so_far) =
-	      List.fold_left
-		(fun
-		  (perhaps_previous_deb_version,accu)
-		  (old_cudf_version,new_cudf_version) ->
-		    let debian_version =
-		      snd(from_cudf(package_name,old_cudf_version))
-		    in
-		    Some debian_version,
-		    (match perhaps_previous_deb_version with
-		      | None ->
-			(* We are at the beginning of the list, there is *)
-			(* no smaller version. Create a package which is *)
-			(* the predecessor of the smallest mentionend    *)
-			(* package, its pseudo debian version is an      *)
-			(* interval that is infinite on the lower end.   *)
-			make_package
-			  package_name
-			  (new_cudf_version-1)
-			  ( "(.. " ^ debian_version ^")" )
-		      | Some previous_debian_version ->
-			(* We are in the middle of the list. We create a  *)
-                        (* package that is the predecessor of the current *)
-                        (* version, with a pseudo debian version that is  *)
-                        (* an open interval between the previous and the  *)
-                        (* current debian version.                        *)
-			make_package
-			  package_name
-			  (new_cudf_version-1)
-			  ( "(" ^ previous_debian_version ^
-			      " .. " ^ debian_version ^")" )
-		    )
-		    ::
-                      (* create a package for the current version, its *)
-                      (* precise debian version is known.              *) 
-		      (make_package
-			 package_name new_cudf_version debian_version)
-		    ::accu)
-		(None,accu)
-		translations
-	    in 
-	    (match highest_deb_version with
-	      | None -> assert false
-	      | Some deb ->
-		(* We are now at the end of the list. We create a last     *)
-                (* package with a version number that is higher than all   *)
-                (* versions that we have (we know that the highest version *)
-                (* was 2*length of the list), its pseudo debian version is *)
-                (* an open interval that is infinite to the upper end.     *)
-		make_package
-		  package_name
-		  (2*(List.length translations)+1)
-		  ( "(" ^ deb ^ " ..)" ))
-	    ::list_so_far
-	else
-	  accu
-      )
-      translation_table
+	(List.map
+	   (fun (cudf_version, debian_version) ->
+	     (make_package package_name cudf_version debian_version))
+	   translations)
+	@ accu)
+      new_cudf_to_debian
       []
   in
 
@@ -449,7 +423,7 @@ let main () =
   in
 
   let universe = Cudf.load_universe
-    (future_missing_packages@(renumber_packages pl translation_table))
+    (future_packages@(renumber_packages pl translation_table))
   in
 
   begin
