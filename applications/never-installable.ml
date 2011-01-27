@@ -367,31 +367,42 @@ let main () =
   in
   Hashtbl.iter
     (fun package_name translations ->
-      let is_existing_package = Hashtbl.mem cudf_version_table package_name
-      in
       Hashtbl.add new_cudf_to_debian package_name
-	(if (not is_existing_package) && translations=[]
-	 then [(1,"any")]
-	 else 
-	    let (highest_debian_version, accu) =
-	      List.fold_left
-		(fun
-		  (previous_debian_version, accu)
-		  (old_cudf_version, new_cudf_version) ->
-		    let debian_version =
-		      snd(from_cudf(package_name,old_cudf_version))
-		    in
-		    (debian_version,
-		     ((new_cudf_version-1),
-		      ("("^previous_debian_version^".."^debian_version^")"))
-		     ::(new_cudf_version,debian_version)
-		     ::accu))
-		("",[])
-		translations
-	    in 
-	    (2*(List.length translations)+1,"("^highest_debian_version^"..)")
-	    ::accu
-	))
+	(if Hashtbl.mem cudf_version_table package_name (* existing package? *)
+	then
+	  let deb_versions=Hashtbl.find
+	    normalized_debian_versions_of_cluster
+	    (Hashtbl.find cluster_of_package package_name)
+	  in let rec f current_cudf previous_debian_version = function
+	    | h::r -> 
+	      (current_cudf-1,"("^previous_debian_version^".."^h)
+	      ::(current_cudf,h)
+	      ::(f (current_cudf+2) h r)
+	    | [] ->
+	      [(2*List.length !deb_versions+1,previous_debian_version^"..")]
+	     in (1,"current debian version")::(f 2 "" !deb_versions)
+	else if translations=[]
+	then [(1,"any")]
+	else 
+	  let (highest_debian_version, accu) =
+	    List.fold_left
+	      (fun
+		(previous_debian_version, accu)
+		(old_cudf_version, new_cudf_version) ->
+		  let debian_version =
+		    snd(from_cudf(package_name,old_cudf_version))
+		  in
+		  (debian_version,
+		   ((new_cudf_version-1),
+		    ("("^previous_debian_version^".."^debian_version^")"))
+		   ::(new_cudf_version,debian_version)
+		   ::accu))
+	      ("",[])
+	      translations
+	  in 
+	  (2*(List.length translations)+1,"("^highest_debian_version^"..)")
+	  ::accu
+    ))
     translation_table;
 
   let future_packages =
