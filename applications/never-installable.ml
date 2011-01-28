@@ -21,7 +21,7 @@ open Diagnostic
 
 module Options = struct
   open OptParse
-
+    
   let verbose = StdOpt.incr_option ()
   let explain = StdOpt.store_true ()
   let architecture = StdOpt.str_option ()
@@ -363,47 +363,69 @@ let main () =
     )
     referred_versions_of_package;
 
+  
   let new_cudf_to_debian = Hashtbl.create (Hashtbl.length translation_table)
   in
   Hashtbl.iter
     (fun package_name translations ->
       Hashtbl.add new_cudf_to_debian package_name
-	(if Hashtbl.mem cudf_version_table package_name (* existing package? *)
-	then
-	  let deb_versions=Hashtbl.find
-	    normalized_debian_versions_of_cluster
-	    (Hashtbl.find cluster_of_package package_name)
-	  in let rec f current_cudf previous_debian_version = function
-	    | h::r -> 
-	      (current_cudf-1,"("^previous_debian_version^".."^h)
-	      ::(current_cudf,h)
-	      ::(f (current_cudf+2) h r)
-	    | [] ->
-	      [(2*List.length !deb_versions+1,previous_debian_version^"..")]
-	     in (1,"current debian version")::(f 2 "" !deb_versions)
-	else if translations=[]
-	then [(1,"any")]
-	else 
-	  let (highest_debian_version, accu) =
-	    List.fold_left
-	      (fun
-		(previous_debian_version, accu)
-		(old_cudf_version, new_cudf_version) ->
-		  let debian_version =
-		    snd(from_cudf(package_name,old_cudf_version))
-		  in
-		  (debian_version,
-		   ((new_cudf_version-1),
-		    ("("^previous_debian_version^".."^debian_version^")"))
-		   ::(new_cudf_version,debian_version)
-		   ::accu))
-	      ("",[])
-	      translations
-	  in 
-	  (2*(List.length translations)+1,"("^highest_debian_version^"..)")
-	  ::accu
-    ))
+	(if Hashtbl.mem cudf_version_table package_name
+	 then (* we have a package with that name in the universe *)
+	    let current_debian_version =
+	      snd(from_cudf(package_name,
+			    Hashtbl.find cudf_version_table package_name))
+	    and deb_versions =
+	      try !(Hashtbl.find
+		      normalized_debian_versions_of_cluster
+		      (Hashtbl.find cluster_of_package package_name))
+	      with Not_found -> []
+	    in let rec f current_cudf previous_debian_version = function
+	      | h::r -> 
+		(current_cudf,"("^previous_debian_version^".."^h^")")
+		::(current_cudf+1,h)
+		::(f (current_cudf+2) h r)
+	      | [] ->
+		[(2*List.length deb_versions+2,
+		  "("^previous_debian_version^"..)")
+		]
+	       in
+	       (1,current_debian_version)
+	       ::(f 2 current_debian_version deb_versions)
+	 else (* there is no package with that name in the universe *)
+	    if translations=[]
+	    then [(1,"(..)")]
+	    else
+	      let (highest_debian_version, accu) =
+		List.fold_left
+		  (fun
+		    (previous_debian_version, accu)
+		    (old_cudf_version, new_cudf_version) ->
+		      let debian_version =
+			snd(from_cudf(package_name,old_cudf_version))
+		      in
+		      (debian_version,
+		       ((new_cudf_version-1),
+			("("^previous_debian_version^".."^debian_version^")"))
+		       ::(new_cudf_version,debian_version)
+		       ::accu))
+		  ("",[])
+		  translations
+	      in
+	      (2*(List.length translations)+1,"("^highest_debian_version^"..)")
+	      ::accu
+	))
     translation_table;
+  
+  Hashtbl.iter
+    (fun package translations ->
+      print_string package;
+      print_char ' ';
+      (List.iter
+	 (fun (cudf,deb) ->
+	   print_int cudf; print_char '=';print_string deb;print_char ' ')
+	 translations);
+      print_newline ())
+    new_cudf_to_debian;
 
   let future_packages =
     let make_package package_name cudf_version debian_version =
@@ -433,6 +455,7 @@ let main () =
     purged_package_list
   in
 
+  (*
   let universe = Cudf.load_universe
     (future_packages@(renumber_packages pl translation_table))
   in
@@ -464,6 +487,7 @@ let main () =
     if OptParse.Opt.is_set Options.architecture then
       Format.fprintf fmt "architecture: %s\n"
 	(OptParse.Opt.get Options.architecture)
+  *) ()
 ;;
     
 
