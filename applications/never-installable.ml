@@ -322,6 +322,7 @@ let main () =
       in versions := l)
     normalized_debian_versions_of_cluster;
 
+(*
   Hashtbl.iter
     (fun (s,v) versions ->
       print_string s;
@@ -329,12 +330,13 @@ let main () =
       print_string v;
       print_string ": ";
       List.iter
-	(fun v -> print_string v; print_string ", ")
-	(!versions);
+        (fun v -> print_string v; print_string ", ")
+        (!versions);
       print_newline ()
     )
     normalized_debian_versions_of_cluster;
-  
+*)
+
   let translation_table = Hashtbl.create
     (Hashtbl.length referred_versions_of_package)
   in
@@ -379,18 +381,21 @@ let main () =
 		      normalized_debian_versions_of_cluster
 		      (Hashtbl.find cluster_of_package package_name))
 	      with Not_found -> []
-	    in let rec f current_cudf previous_debian_version = function
-	      | h::r -> 
-		(current_cudf,"("^previous_debian_version^".."^h^")")
-		::(current_cudf+1,h)
-		::(f (current_cudf+2) h r)
-	      | [] ->
-		[(2*List.length deb_versions+2,
-		  "("^previous_debian_version^"..)")
-		]
-	       in
-	       (1,current_debian_version)
-	       ::(f 2 current_debian_version deb_versions)
+	    in if deb_versions = []
+	      then [(1,current_debian_version)]
+	      else
+		let rec f current_cudf previous_debian_version = function
+		  | h::r -> 
+		    (current_cudf,"("^previous_debian_version^".."^h^")")
+		    ::(current_cudf+1,h)
+		    ::(f (current_cudf+2) h r)
+		  | [] ->
+		    [(2*List.length deb_versions+2,
+		      "("^previous_debian_version^"..)")
+		    ]
+		in
+		(1,current_debian_version)
+		::(f 2 current_debian_version deb_versions)
 	 else (* there is no package with that name in the universe *)
 	    if translations=[]
 	    then [(1,"(..)")]
@@ -415,7 +420,7 @@ let main () =
 	      ::accu
 	))
     translation_table;
-  
+
   Hashtbl.iter
     (fun package translations ->
       print_string package;
