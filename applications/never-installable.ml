@@ -102,64 +102,6 @@ let rec pos_in_list x = function
   | h::r -> if h=x then 0 else 1+(pos_in_list x r)
   | [] -> raise Not_found
 ;;
-(****************************************************************************)
-
-(* (purge_universe universe) returns the list of packages in universe that  *)
-(* is obtained by retaing only the highest version of each binary package,  *)
-(* and a hashtable that maps each package name to the latest version.       *)
-(* Prints a warning for each surpressed package.                            *)
-let purge_universe universe =
-
-  let cudf_versions = Hashtbl.create (Cudf.universe_size universe)
-  (* maps each binary package name to the latest cudf version *)
-  and cruft = Hashtbl.create ((Cudf.universe_size universe)/100)
-  (* maps each obsolete (package name, package cudf version) to the *)
-  (* newer debian version *)
-  in
-  
-  (* identify cruft *)
-  Cudf.iter_packages
-    (fun p ->
-      let name = p.Cudf.package
-      and cudf_version = p.Cudf.version
-      and deb_version = debversion_of_package p
-      in begin
-	try
-	  let old_cudf_version = Hashtbl.find cudf_versions name
-	  in 
-	  if old_cudf_version < cudf_version 
-	  then begin
-	    Hashtbl.add cruft (name,old_cudf_version) deb_version;
-	    Hashtbl.replace cudf_versions name cudf_version;
-	  end
-	  else if cudf_version < old_cudf_version
-	  then
-	    let old_deb_version = debversion_of_package
-	      (Cudf.lookup_package universe (name,old_cudf_version))
-	    in Hashtbl.add cruft (name,cudf_version) old_deb_version
-	  else failwith "two packages with same (name,version)"
-	with Not_found -> Hashtbl.add cudf_versions name cudf_version;
-      end)
-    universe;
-  
-  (* filter out cruft *)
-  let package_list =
-    filter_packages
-      (fun p ->
-	let name = p.Cudf.package
-	and version = p.Cudf.version
-	and deb_version = debversion_of_package p
-	in
-	try
-	  warning
-	    "%s(%s) dropped: %s is newer."
-	    name deb_version (Hashtbl.find cruft (name,version));
-	  false
-	with Not_found -> true
-      )
-      universe
-  in (package_list,cudf_versions)
-;;
 
 (**************************************************************************)
 
@@ -258,15 +200,58 @@ let main () =
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   let default_arch = OptParse.Opt.opt Options.architecture in
 
-  let (complete_universe,from_cudf,_) =
+  let (original_universe, original_from_cudf,_original_to_cudf) =
     Boilerplate.load_universe ~default_arch posargs in
-  let (purged_package_list, cudf_version_table) =
-    purge_universe complete_universe
+
+  (* maps each binary package name to the latest cudf version *)
+  let cudf_version_table =
+    Hashtbl.create (Cudf.universe_size original_universe) in
+
+  (* list of packages, contains only the latest version of each package.    *)
+  (* In the sequele we will only use this list of packages. The restriction *)
+  (* to the latest version of a package only guarantees that we can build   *)
+  (* functions from binary package names to package properties by looking   *)
+  (* at a specific package with a given name.                               *)
+  let purged_package_list =
+
+      let cruft = Hashtbl.create ((Cudf.universe_size original_universe)/100)
+      (* maps each obsolete (package name, package cudf version) to the *)
+      (* newer debian version *)
+      in
+      Cudf.iter_packages
+	(fun p ->
+	  let name = p.Cudf.package
+	  and cudf_version = p.Cudf.version
+	  and deb_version = debversion_of_package p
+	  in begin
+	    try
+	      let old_cudf_version = Hashtbl.find cudf_version_table name
+	      in 
+	      if old_cudf_version < cudf_version 
+	      then begin
+		Hashtbl.add cruft (name,old_cudf_version) deb_version;
+		Hashtbl.replace cudf_version_table name cudf_version;
+	      end
+	      else if cudf_version < old_cudf_version
+	      then
+		let old_deb_version = debversion_of_package
+		  (Cudf.lookup_package original_universe
+		     (name,old_cudf_version))
+		in Hashtbl.add cruft (name,cudf_version) old_deb_version
+	      else assert false
+	    with Not_found -> Hashtbl.add cudf_version_table name cudf_version;
+	  end)
+	original_universe;
+      
+      filter_packages
+	(fun p -> Hashtbl.mem cruft (p.Cudf.package,p.Cudf.version))
+	original_universe
+	
   in
   let size_of_cluster,cluster_of_package = 
     compute_clusters purged_package_list 
   and pp pkg =
-    let (p,v) = from_cudf (pkg.Cudf.package,pkg.Cudf.version) in 
+    let (p,v) = original_from_cudf (pkg.Cudf.package,pkg.Cudf.version) in 
     let l = 
       ExtLib.List.filter_map (fun k ->
         try Some(k,Cudf.lookup_package_property pkg k)
@@ -309,7 +294,7 @@ let main () =
 		 add referred_versions_of_package package version;
 		 add normalized_debian_versions_of_cluster
 		   (Hashtbl.find cluster_of_package package)
-		   (normalize (snd (from_cudf(package,version))))
+		   (normalize (snd (original_from_cudf(package,version))))
 	       end
 	     with Not_found -> add referred_versions_of_package package version
        ))
@@ -350,7 +335,7 @@ let main () =
 		 (fun cudf_version ->
 		   let n =
 		     pos_in_list 
-		       (normalize (snd (from_cudf (package,cudf_version))))
+		       (normalize (snd (original_from_cudf (package,cudf_version))))
 		       (!(Hashtbl.find
 			    normalized_debian_versions_of_cluster
 			    (Hashtbl.find cluster_of_package package)))
@@ -374,7 +359,7 @@ let main () =
 	(if Hashtbl.mem cudf_version_table package_name
 	 then (* we have a package with that name in the universe *)
 	    let current_debian_version =
-	      snd(from_cudf(package_name,
+	      snd(original_from_cudf(package_name,
 			    Hashtbl.find cudf_version_table package_name))
 	    and deb_versions =
 	      try !(Hashtbl.find
@@ -406,7 +391,7 @@ let main () =
 		    (previous_debian_version, accu)
 		    (old_cudf_version, new_cudf_version) ->
 		      let debian_version =
-			snd(from_cudf(package_name,old_cudf_version))
+			snd(original_from_cudf(package_name,old_cudf_version))
 		      in
 		      (debian_version,
 		       ((new_cudf_version-1),
