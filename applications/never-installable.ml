@@ -19,6 +19,8 @@ open Debian
 open Common
 open Diagnostic
 
+let debug_switch=false;;
+
 module Options = struct
   open OptParse
     
@@ -45,12 +47,6 @@ end
 let debug fmt = Util.make_debug "" fmt
 let info fmt = Util.make_info "" fmt
 let warning fmt = Util.make_warning "" fmt
-
-let filter_packages pred =
-  Cudf.fold_packages
-    (fun acc p -> if pred p then p::acc else acc)
-    []
-;;
 
 let sourcename_of_package p = 
   try
@@ -103,6 +99,13 @@ let rec pos_in_list x = function
   | [] -> raise Not_found
 ;;
 
+(* reverse assoc - like List.assoc, but searches the key corresponding to *)
+(* a given value.                                                         *)
+let rec rassoc y = function
+  | [] -> Not_found
+  | (k,v)::r -> if v=y then k else rassoc y r
+;;
+
 (**************************************************************************)
 
 (* The cluster of a binary package p is the pair (s,w) where              *)
@@ -112,28 +115,6 @@ let rec pos_in_list x = function
 let cluster_of package = (
   sourcename_of_package package, normalize (debversion_of_package package)
 );;
-
-(* returns to hash tables:                                               *)
-(* - mapping each cluster to its size                                    *)
-(* - mapping each binary package name to its cluster                     *)
-let compute_clusters package_list =
-  let number_of_packages = List.length package_list
-  in
-  let size_table = Hashtbl.create (number_of_packages/2)
-  and cluster_table = Hashtbl.create number_of_packages
-  in
-  List.iter
-    (fun package ->
-      let cluster = cluster_of package
-      in
-      Hashtbl.add cluster_table package.Cudf.package cluster;
-      try let oldcount = Hashtbl.find size_table cluster
-	  in Hashtbl.replace size_table cluster (oldcount+1)
-      with Not_found -> Hashtbl.add size_table cluster 1
-    )
-    package_list;
-  size_table,cluster_table
-;;
 
 (* add to a package the constraints that synchronise it with its cluster *)
 let synchronise_package cluster_size_table package  =
@@ -159,7 +140,7 @@ let synchronise_package cluster_size_table package  =
 (* version, conflicts, depends, provides.                                   *)
 (* translation is a hash table mapping a package name to an association     *)
 (* list that maps old version numbers to new version numbers.               *)
-let renumber_packages package_list translation =
+let renumber_packages translation package_list =
   let translate_version package version =
     try
       List.assoc version (Hashtbl.find translation package)
@@ -181,14 +162,14 @@ let renumber_packages package_list translation =
     package_list
 ;;
 
-(****************************************************************************)
-
 let mapi f = 
   let rec mapi_aux i = function
     | [] -> []
     | h::r -> (f i h)::(mapi_aux (i+1) r)
   in mapi_aux 0
 ;;
+
+(****************************************************************************)
 
 let main () =
   let posargs =
@@ -200,18 +181,21 @@ let main () =
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   let default_arch = OptParse.Opt.opt Options.architecture in
 
+(****************************************************************************)
+(* 1: read the universe, and retain a list of packages that contains only   *)
+(* the latest version of any package. In the sequele we will only use this  *)
+(* list of packages. The restriction to the latest version of a package     *)
+(* guarantees that we can build functions from binary package names to      *)
+(* package properties by looking at a specific package with a given name.   *)
+
   let (original_universe, original_from_cudf,_original_to_cudf) =
     Boilerplate.load_universe ~default_arch posargs in
 
   (* maps each binary package name to the latest cudf version *)
-  let cudf_version_table =
+  let orig_version_per_binname =
     Hashtbl.create (Cudf.universe_size original_universe) in
 
   (* list of packages, contains only the latest version of each package.    *)
-  (* In the sequele we will only use this list of packages. The restriction *)
-  (* to the latest version of a package only guarantees that we can build   *)
-  (* functions from binary package names to package properties by looking   *)
-  (* at a specific package with a given name.                               *)
   let purged_package_list =
 
       let cruft = Hashtbl.create ((Cudf.universe_size original_universe)/100)
@@ -225,12 +209,12 @@ let main () =
 	  and deb_version = debversion_of_package p
 	  in begin
 	    try
-	      let old_cudf_version = Hashtbl.find cudf_version_table name
+	      let old_cudf_version = Hashtbl.find orig_version_per_binname name
 	      in 
 	      if old_cudf_version < cudf_version 
 	      then begin
 		Hashtbl.add cruft (name,old_cudf_version) deb_version;
-		Hashtbl.replace cudf_version_table name cudf_version;
+		Hashtbl.replace orig_version_per_binname name cudf_version;
 	      end
 	      else if cudf_version < old_cudf_version
 	      then
@@ -239,32 +223,59 @@ let main () =
 		     (name,old_cudf_version))
 		in Hashtbl.add cruft (name,cudf_version) old_deb_version
 	      else assert false
-	    with Not_found -> Hashtbl.add cudf_version_table name cudf_version;
+	    with Not_found -> Hashtbl.add orig_version_per_binname name cudf_version;
 	  end)
 	original_universe;
       
-      filter_packages
-	(fun p -> Hashtbl.mem cruft (p.Cudf.package,p.Cudf.version))
+      Cudf.fold_packages
+	(fun acc p ->
+	  if  Hashtbl.mem cruft (p.Cudf.package,p.Cudf.version)
+	  then acc
+	  else p::acc)
+	[]
 	original_universe
 	
   in
-  let size_of_cluster,cluster_of_package = 
-    compute_clusters purged_package_list 
-  and pp pkg =
-    let (p,v) = original_from_cudf (pkg.Cudf.package,pkg.Cudf.version) in 
-    let l = 
-      ExtLib.List.filter_map (fun k ->
-        try Some(k,Cudf.lookup_package_property pkg k)
-        with Not_found -> None
-      ) ["source";"sourceversion"]
-    in (p,v,l)
+  let number_current_packages = List.length purged_package_list
   in
+
+(**************************************************************************)
+(* 2: gather various informations associated to binary package names      *)
+(* and to clusters. A cluster is identified by a source package name      *)
+(* plus a debian version string.                                          *)
+
+  let size_per_cluster = Hashtbl.create (number_current_packages/2)
+  (* associates to each cluster its size.                                *)
+  and cluster_per_binname = Hashtbl.create number_current_packages
+  (* associates to each binary package name its cluster.                 *)
+  in
+  List.iter
+    (fun package ->
+      let cluster = cluster_of package
+      in
+      Hashtbl.add cluster_per_binname package.Cudf.package cluster;
+      try let oldcount = Hashtbl.find size_per_cluster cluster
+	  in Hashtbl.replace size_per_cluster cluster (oldcount+1)
+      with Not_found -> Hashtbl.add size_per_cluster cluster 1
+    )
+    purged_package_list;
   
-  let referred_versions_of_package = 
-    Hashtbl.create
-      (let n = List.length purged_package_list in n + n/10)
-  and normalized_debian_versions_of_cluster =
-    Hashtbl.create (Hashtbl.length size_of_cluster)
+  let referred_versions_per_binname = Hashtbl.create (number_current_packages/2)
+  (* associates to each binary package name the list of original cudf    *)
+  (* versions that are used in constraints mentioning that package, and  *)
+  (* that are strictly newer than the current package. If a              *)
+  (* package is never mentionend in a constraint that that package name  *)
+  (* is not bound in that table. If a package is ony mentionend without  *)
+  (* version constraint then this package name is bound to [].           *)
+  and referred_debversions_per_cluster =
+    Hashtbl.create (Hashtbl.length size_per_cluster)
+  (* associates to each cluster c the list of debian versions v where    *)
+  (* - there is some constraint on a package p with debian version w     *)
+  (* - c is the cluster of p                                             *)
+  (* - w is strictly newer than the current version of p                 *)
+  (* - v is the normalized form of w (without epoch and binnmu)          *)
+  (* when there is no such (p,v) for cluster c then c the table contains *)
+  (* no binding for c.                                                   *)
   in
   let add table name version =
     try let l = Hashtbl.find table name	in l := version::!l
@@ -273,6 +284,7 @@ let main () =
     if not (Hashtbl.mem table name)
     then Hashtbl.add table name (ref [])
   and iter_constraints f package =
+    (* iterate f over all constraints that ocur in the package *)
     begin
       List.iter 
 	(function clause -> List.iter f clause)
@@ -284,19 +296,24 @@ let main () =
     (iter_constraints
        (fun (package,constr) ->
 	 match constr with
-	   | None -> add_without_version referred_versions_of_package package
-	   | Some(_rel,version) ->
+	   | None -> add_without_version referred_versions_per_binname package
+	   | Some(_relation,version) ->
 	     try
-	       let existing_version =
-		 Hashtbl.find cudf_version_table package
+	       let current_version =
+		 Hashtbl.find orig_version_per_binname package
 	       in
-	       if version > existing_version then begin
-		 add referred_versions_of_package package version;
-		 add normalized_debian_versions_of_cluster
-		   (Hashtbl.find cluster_of_package package)
-		   (normalize (snd (original_from_cudf(package,version))))
-	       end
-	     with Not_found -> add referred_versions_of_package package version
+	       if version > current_version then
+		 begin
+		   add referred_versions_per_binname package version;
+		   add referred_debversions_per_cluster
+		     (Hashtbl.find cluster_per_binname package)
+		     (normalize (snd (original_from_cudf(package,version))))
+		 end
+	     with
+		 Not_found ->
+		   (* the package is missing, it hence does not belong to *)
+		   (* any cluster.                                        *)
+		   add referred_versions_per_binname package version
        ))
     purged_package_list;
   
@@ -305,66 +322,90 @@ let main () =
       let l = ExtLib.List.unique 
 	(ExtLib.List.sort ~cmp:Debian.Version.compare (!versions ))
       in versions := l)
-    normalized_debian_versions_of_cluster;
+    referred_debversions_per_cluster;
 
-(*
   Hashtbl.iter
-    (fun (s,v) versions ->
-      print_string s;
-      print_char ':';
-      print_string v;
-      print_string ": ";
-      List.iter
-        (fun v -> print_string v; print_string ", ")
-        (!versions);
-      print_newline ()
-    )
-    normalized_debian_versions_of_cluster;
-*)
+    (fun _package versions ->
+      versions := (ExtLib.List.unique (ExtLib.List.sort (!versions))))
+    referred_versions_per_binname;
 
-  let translation_table = Hashtbl.create
-    (Hashtbl.length referred_versions_of_package)
+  if debug_switch then begin
+    print_string "debian versions per cluster:\n";
+    Hashtbl.iter
+      (fun (s,v) versions ->
+	print_string s;
+	print_char ':';
+	print_string v;
+	print_string ": ";
+	List.iter
+          (fun v -> print_string v; print_string ", ")
+          (!versions);
+	print_newline ()
+      )
+      referred_debversions_per_cluster;
+  end;
+
+(**************************************************************************)
+(* 3: determine how packages have to be renumbered, and what are the new  *)
+(* packages that have to be created.                                      *)
+
+  let translation_table = Hashtbl.create number_current_packages
+  (* associates to every binary package name (existing or missing) an     *)
+  (* association list that associates to each original cudf version the   *)
+  (*  new cudf version.                                                   *)
   in
   Hashtbl.iter 
-    (fun package cudf_versions ->
-      if Hashtbl.mem cudf_version_table package
+    (fun pname cudf_versions ->
+      if Hashtbl.mem orig_version_per_binname pname
       then 
-	Hashtbl.add translation_table package
-	  (((Hashtbl.find cudf_version_table package),1)::
+	(* the package currenly exists, w have to look at its cluster *)
+	Hashtbl.add translation_table pname
+	  (
+	    (* the existing version of the package gets renumbered to 1 *)
+	    ((Hashtbl.find orig_version_per_binname pname),1)::
+	      (* the mentionend versions (of the cluster!) get renumbered *)
+	      (* to 3,5,7,...                                             *)
 	      (List.map
 		 (fun cudf_version ->
 		   let n =
+		     (* look at which position that debian version occurs *)
+		     (* in the list of all mentionend debian versions of  *)
+		     (* any package in its cluster.                       *)
 		     pos_in_list 
-		       (normalize (snd (original_from_cudf (package,cudf_version))))
+		       (normalize
+			  (snd (original_from_cudf (pname,cudf_version))))
 		       (!(Hashtbl.find
-			    normalized_debian_versions_of_cluster
-			    (Hashtbl.find cluster_of_package package)))
+			    referred_debversions_per_cluster
+			    (Hashtbl.find cluster_per_binname pname)))
 		   in (cudf_version,2*n+3)
 		 )
 		 !cudf_versions))
       else
-	Hashtbl.add translation_table package
-	  (mapi
-	     (fun i x -> x,(2*i)+2)
-	     (ExtLib.List.unique (ExtLib.List.sort !cudf_versions)))
+	(* the package does currently not exist, we just map the mentionend *)
+	(* numbers to 2,4,6,...                                             *)
+	Hashtbl.add translation_table pname
+	  (mapi (fun i x -> x,(2*i)+2) (!cudf_versions))
     )
-    referred_versions_of_package;
-
+    referred_versions_per_binname;
   
   let new_cudf_to_debian = Hashtbl.create (Hashtbl.length translation_table)
+  (* associates to every binary package an association list thap maps   *)
+  (* each new cudf version number to the (pseudo) debian version string *)
+  (* that it represents (either a debian version mentionend in the      *)
+  (* the original repository, or an interval of these).                 *)
   in
   Hashtbl.iter
     (fun package_name translations ->
       Hashtbl.add new_cudf_to_debian package_name
-	(if Hashtbl.mem cudf_version_table package_name
+	(if Hashtbl.mem orig_version_per_binname package_name
 	 then (* we have a package with that name in the universe *)
 	    let current_debian_version =
 	      snd(original_from_cudf(package_name,
-			    Hashtbl.find cudf_version_table package_name))
+			    Hashtbl.find orig_version_per_binname package_name))
 	    and deb_versions =
 	      try !(Hashtbl.find
-		      normalized_debian_versions_of_cluster
-		      (Hashtbl.find cluster_of_package package_name))
+		      referred_debversions_per_cluster
+		      (Hashtbl.find cluster_per_binname package_name))
 	      with Not_found -> []
 	    in if deb_versions = []
 	      then [(1,current_debian_version)]
@@ -406,50 +447,88 @@ let main () =
 	))
     translation_table;
 
-  Hashtbl.iter
-    (fun package translations ->
-      print_string package;
-      print_char ' ';
-      (List.iter
-	 (fun (cudf,deb) ->
-	   print_int cudf; print_char '=';print_string deb;print_char ' ')
-	 translations);
-      print_newline ())
-    new_cudf_to_debian;
+  if debug_switch then begin
+    print_string "\nNew CUDF version to Debian version mapping:\n";
+    Hashtbl.iter
+      (fun package translations ->
+	print_string package;
+	print_char ' ';
+	(List.iter
+	   (fun (cudf,deb) ->
+	     print_int cudf; print_char '=';print_string deb;print_char ' ')
+	   translations);
+	print_newline ())
+      new_cudf_to_debian;
+  end;
 
-  let future_packages =
-    let make_package package_name cudf_version debian_version =
+(*************************************************************************)
+(* 4: Create the new list of packages, containing the original ones with *)
+(* renumbered versions, and the new ones.                                *)
+
+  let completed_package_list =
+    let make_package package_name cudfv debianv provides conflicts =
       {Cudf.package = package_name;
-       Cudf.version = cudf_version;
+       Cudf.version = cudfv;
        Cudf.depends = [];
-       Cudf.conflicts = [];
-       Cudf.provides = [];
+       Cudf.conflicts = conflicts;
+       Cudf.provides = provides;
        Cudf.installed = false;
        Cudf.was_installed = false;
        Cudf.keep = `Keep_none;
-       Cudf.pkg_extra = [("number",`String debian_version)] }
+       Cudf.pkg_extra = [("number",`String debianv)] }
     in
     Hashtbl.fold
       (fun package_name translations accu ->
-	(List.map
-	   (fun (cudf_version, debian_version) ->
-	     (make_package package_name cudf_version debian_version))
-	   translations)
-	@ accu)
+	if Hashtbl.mem orig_version_per_binname package_name
+	then
+	  let (srcname,versionslist) = 
+	    (Hashtbl.find cluster_per_binname package_name)
+	  in
+	  let pseudosrcname="src:"^srcname
+	  in
+	  (* TODO: check whether cluster is trivial or not *)
+	  (* TODO maintain a translation of debian vesions of source clusters *)
+	  (* to cudf versions.            *)
+	  (List.map
+	    (fun (cudf_version, debian_version) ->
+	      (make_package
+		 package_name cudf_version debian_version
+		 [(pseudosrcname,None)] [(pseudosrcname,None)]))
+	    (List.filter (fun (cudf,_) -> cudf > 1) translations))
+	  @accu
+	else
+	  (List.map
+	     (fun (cudf_version, debian_version) ->
+	       (make_package package_name cudf_version debian_version [] []))
+	     translations)
+	  @accu)
       new_cudf_to_debian
-      []
+      (List.map
+	 (synchronise_package size_per_cluster)
+	 (renumber_packages translation_table purged_package_list))
+      
   in
 
-  let pl= List.map
-    (synchronise_package size_of_cluster)
-    purged_package_list
-  in
+(***************************************************************************)
+(* 5: Run the solver on the complete set of packages.                      *)
 
-  (*
-  let universe = Cudf.load_universe
-    (future_packages@(renumber_packages pl translation_table))
-  in
+(*
+  List.iter
+    (fun p -> begin
+      print_newline ();
+      print_string p.Cudf.package;
+      print_newline ();
+      print_int p.Cudf.version;
+      print_newline ();
+    end
+    )
+    completed_package_list;
+  
+*)
 
+  let universe = Cudf.load_universe completed_package_list
+  in
+  
   begin
     if OptParse.Opt.is_set Options.cudf_output then
       let ch=open_out (OptParse.Opt.get Options.cudf_output)
@@ -457,7 +536,19 @@ let main () =
 	Cudf_printer.pp_universe (Format.formatter_of_out_channel ch) universe;
 	close_out ch
       end
-  end;
+  end
+;;
+
+(*
+  let pp pkg =
+    let (p,v) = original_from_cudf (pkg.Cudf.package,pkg.Cudf.version) in 
+    let l = 
+      ExtLib.List.filter_map (fun k ->
+        try Some(k,Cudf.lookup_package_property pkg k)
+        with Not_found -> None
+      ) ["source";"sourceversion"]
+    in (p,v,l)
+  in
 
   info "Solving..." ;
   let timer = Util.Timer.create "Solver" in
@@ -477,9 +568,7 @@ let main () =
     if OptParse.Opt.is_set Options.architecture then
       Format.fprintf fmt "architecture: %s\n"
 	(OptParse.Opt.get Options.architecture)
-  *) ()
-;;
-    
+  *)
 
 main () ;;
 
