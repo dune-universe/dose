@@ -94,18 +94,6 @@ let normalize s =
   chop_epoch (chop_binnmu s)
 ;;
 
-let rec pos_in_list x = function
-  | h::r -> if h=x then 0 else 1+(pos_in_list x r)
-  | [] -> raise Not_found
-;;
-
-(* reverse assoc - like List.assoc, but searches the key corresponding to *)
-(* a given value.                                                         *)
-let rec rassoc y = function
-  | [] -> Not_found
-  | (k,v)::r -> if v=y then k else rassoc y r
-;;
-
 (**************************************************************************)
 
 (* The cluster of a binary package p is the pair (s,w) where              *)
@@ -162,11 +150,23 @@ let renumber_packages translation package_list =
     package_list
 ;;
 
-let mapi f = 
-  let rec mapi_aux i = function
+(* like List.map, but the function to be applied gets as first argument *)
+(* the position in the list (starting on 0), and as second argument the *)
+(* current list element.                                                *)
+(* listmap_with_index f [x0; ... ; xn] = [f 0 x0; ... ; f n xn]         *) 
+let listmap_with_index f = 
+  let rec listmap_with_index_aux i = function
     | [] -> []
-    | h::r -> (f i h)::(mapi_aux (i+1) r)
-  in mapi_aux 0
+    | h::r -> (f i h)::(listmap_with_index_aux (i+1) r)
+  in listmap_with_index_aux 0
+;;
+
+(* returns the index of the first occurrence of an element in a list,  *)
+(* starting on 0. Failure if it does not occur in the list.            *)
+(* index_in_list xi [x0; ... ; xi; ... ; xn] = i                       *)
+let rec index_in_list x = function
+  | h::r -> if h=x then 0 else 1+(index_in_list x r)
+  | [] -> failwith ("Can't find position in list: "^x)
 ;;
 
 (****************************************************************************)
@@ -371,7 +371,7 @@ let main () =
 		     (* look at which position that debian version occurs *)
 		     (* in the list of all mentionend debian versions of  *)
 		     (* any package in its cluster.                       *)
-		     pos_in_list 
+		     index_in_list 
 		       (normalize
 			  (snd (original_from_cudf (pname,cudf_version))))
 		       (!(Hashtbl.find
@@ -384,7 +384,7 @@ let main () =
 	(* the package does currently not exist, we just map the mentionend *)
 	(* numbers to 2,4,6,...                                             *)
 	Hashtbl.add translation_table pname
-	  (mapi (fun i x -> x,(2*i)+2) (!cudf_versions))
+	  (listmap_with_index (fun i x -> x,(2*i)+2) (!cudf_versions))
     )
     referred_versions_per_binname;
   
@@ -481,20 +481,24 @@ let main () =
       (fun package_name translations accu ->
 	if Hashtbl.mem orig_version_per_binname package_name
 	then
-	  let (srcname,versionslist) = 
+	  let (srcname,versionslist) as cluster = 
 	    (Hashtbl.find cluster_per_binname package_name)
 	  in
 	  let pseudosrcname="src:"^srcname
 	  in
-	  (* TODO: check whether cluster is trivial or not *)
 	  (* TODO maintain a translation of debian vesions of source clusters *)
 	  (* to cudf versions.            *)
-	  (List.map
-	    (fun (cudf_version, debian_version) ->
-	      (make_package
-		 package_name cudf_version debian_version
-		 [(pseudosrcname,None)] [(pseudosrcname,None)]))
-	    (List.filter (fun (cudf,_) -> cudf > 1) translations))
+	  (listmap_with_index
+	     (if (Hashtbl.find size_per_cluster cluster) = 1
+	      then fun _i (cudf_version, debian_version) ->
+		make_package package_name cudf_version debian_version [] []
+	      else
+		 fun i (cudf_version, debian_version) ->
+		   make_package
+		     package_name cudf_version debian_version
+		     [(pseudosrcname, Some (`Eq, i+2))]
+		     [(pseudosrcname, Some (`Neq, i+2))])
+	     (List.filter (fun (cudf,_) -> cudf > 1) translations))
 	  @accu
 	else
 	  (List.map
