@@ -134,15 +134,10 @@ let curlget ch url =
 
 type compression = Bz2 | Cz
 
-let pkgget ?(cachedir=".dudf") ?compression ?(fname=None) url =
+let pkgget ?(cachedir=".dudf") ?compression url =
   if not(Sys.file_exists cachedir) then Unix.mkdir cachedir 0o777 ;
   let filename =
-    let fname = Digest.to_hex (Digest.string url)
-    (*
-      if Option.is_none fname then (Digest.to_hex (Digest.string url))
-      else Option.get fname
-      *)
-    in
+    let fname = Digest.to_hex (Digest.string url) in
     let f = 
       match compression with
       |Some Bz2 when not(Filename.check_suffix fname "bz2") -> (fname^".bz2")

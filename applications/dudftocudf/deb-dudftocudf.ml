@@ -30,7 +30,7 @@ module Options = struct
 
   let outdir = StdOpt.str_option ()
   let problemid = StdOpt.str_option ()
-  let archdefault = StdOpt.str_option ~default:"" ()
+  let archdefault = StdOpt.str_option ()
 
   open OptParser ;;
   add options ~short_name:'o' ~long_name:"outdir" ~help:"Output directory" outdir;
@@ -203,6 +203,32 @@ end
 
 (* ========================================= *)
 
+let guess_default_arch rl =
+  let guess = Hashtbl.create 5 in
+  List.iter (function 
+    |("apt",fname,_,_) -> begin
+      let re = Str.regexp ".*_binary-\\(.*\\)_Packages.*$" in
+      try 
+        let _ = Str.search_backward re fname (String.length fname) in
+        let a = Str.matched_group 1 fname in
+        try 
+          let i = Hashtbl.find guess a in
+          i := !i + 1
+        with Not_found ->
+          Hashtbl.add guess a (ref 1)
+      with Not_found -> info "No Arch guess from %s" fname
+    end
+    |(_,_,_,_) -> ()
+  ) rl;
+  match Hashtbl.length guess with
+  |0 -> warning "No default architecture found" ; None
+  |1 -> Some(fst(List.hd(Hashtbl.fold (fun k v l -> (k,!v)::l) guess [])))
+  |_ ->
+      let cmp x y = (snd x) - (snd y) in
+      let l = Hashtbl.fold (fun k v l -> (k,!v)::l) guess [] in
+      Some(fst(List.hd (List.sort ~cmp l)))
+;;
+
 let make_universe pl =
   let fl = ref [] in
   let (packagelist,releaselist) =
@@ -259,10 +285,10 @@ let has_children nodelist tag =
 let parsepackagelist = function
   |(Some "apt",Some fname,url,_,[inc]) when has_children [inc] "include" ->
       let href = Xml.attrib inc "href" in
-      ("apt",fname,url,Dudfxml.pkgget ~compression:Dudfxml.Bz2 ~fname:(Some fname) href)
+      ("apt",fname,url,Dudfxml.pkgget ~compression:Dudfxml.Bz2 href)
   |(Some "apt-release",Some fname,url,_,[inc]) when has_children [inc] "include" ->
       let href = Xml.attrib inc "href" in
-      ("apt-release",fname,url,Dudfxml.pkgget ~fname:(Some fname) href)
+      ("apt-release",fname,url,Dudfxml.pkgget href)
   |(Some t,Some fname,url,_,[cdata]) -> (t,fname,url,Xml.cdata cdata)
   |(Some t,Some fname,url,_,[]) -> (t,fname,url,"")
   |(Some t,Some fname,url,_,_) ->
@@ -305,13 +331,12 @@ let main () =
     |[status] -> Xml.fold (fun a x -> a^(Xml.cdata x)) "" status
     |_ -> Printf.eprintf "Warning: wrong status" ; ""
   in
-  let packagelist = 
-    let l = 
-      List.map (fun pl -> parsepackagelist pl) 
-      dudfdoc.problem.packageUniverse
-    in
-    make_universe l
+  let _package_list = 
+    List.map (fun pl -> parsepackagelist pl) 
+    dudfdoc.problem.packageUniverse
   in
+
+  let packagelist = make_universe _package_list in
   let action = dudfdoc.problem.action in
   let preferences = AptPref.parse dudfdoc.problem.desiderata in
 
@@ -325,12 +350,19 @@ let main () =
 
   info "parse all packages";
   Util.Progress.set_total progressbar (List.length packagelist);
-  let default_arch = (OptParse.Opt.opt Options.archdefault) in
+  let default_arch = 
+    if OptParse.Opt.is_set Options.archdefault then
+      OptParse.Opt.opt Options.archdefault
+    else
+      match guess_default_arch _package_list with
+      |None -> (warning "No default Arch. Unable to guess"; None)
+      |Some s -> info "Guessed Default Arch %s" s ; Some s
+  in
   let all_packages =
     List.fold_left (fun acc (release,contents) ->
       Util.Progress.progress progressbar ;
       let ch = IO.input_string contents in
-      let l = Deb.parse_packages_in  ~default_arch:default_arch ~extras:extras id ch in
+      let l = Deb.parse_packages_in  ~default_arch ~extras id ch in
       let _ = IO.close_in ch in
       List.fold_left (fun s pkg -> 
         Hashtbl.add infoH (pkg.Deb.name,pkg.Deb.version) release ;
@@ -343,7 +375,7 @@ let main () =
   info "installed packages";
   let installed_packages =
     let ch = IO.input_string status in
-    let l = Deb.parse_packages_in ~extras:extras id ch in
+    let l = Deb.parse_packages_in ~extras id ch in
     let _ = IO.close_in ch in
     l
   in

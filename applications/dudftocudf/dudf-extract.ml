@@ -54,10 +54,10 @@ let has_children nodelist tag =
 let parsepackagelist = function
   |(Some "apt",Some fname,url,_,[inc]) when has_children [inc] "include" ->
       let href = Xml.attrib inc "href" in
-      ("apt",fname,url,Dudfxml.pkgget ~compression:Dudfxml.Bz2 ~fname:(Some fname) href)
+      ("apt",fname,url,Dudfxml.pkgget ~compression:Dudfxml.Bz2 href)
   |(Some "apt-release",Some fname,url,_,[inc]) when has_children [inc] "include" ->
       let href = Xml.attrib inc "href" in
-      ("apt-release",fname,url,Dudfxml.pkgget ~fname:(Some fname) href)
+      ("apt-release",fname,url,Dudfxml.pkgget href)
   |(Some t,Some fname,url,_,[cdata]) -> (t,fname,url,Xml.cdata cdata)
   |(Some t,Some fname,url,_,[]) -> (t,fname,url,"")
   |(Some t,Some fname,url,_,_) ->
