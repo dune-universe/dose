@@ -10,7 +10,7 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-(* parse apt-get -s output and generated a cudf solution of the problem *)
+(* parse apt-get -s output and generate a cudf solution of the problem *)
 
 open ExtLib
 open ExtString
@@ -18,11 +18,11 @@ open Common
 
 module Options = struct
   open OptParse
-  let description = "Extract a debian Packages, status and apt-get request from a cudf document"
+  let description = "parse an apt-get solution and generate a cudf solution"
   let options = OptParser.make ~description
   include Boilerplate.MakeOptions(struct let options = options end)
 
-  let source = StdOpt.store_false ()
+  let source = StdOpt.store_true ()
   let outdir = StdOpt.str_option ()
 
   open OptParser
@@ -108,8 +108,9 @@ let main () =
   ) universe;
 
   List.iter (fun (n,v) ->
-    try let pkg = Hashtbl.find t (n,v) in
-    Hashtbl.replace t (n,v) {pkg with Cudf.installed = false }
+    try
+      let pkg = Hashtbl.find t (n,v) in
+      Hashtbl.replace t (n,v) {pkg with Cudf.installed = false }
     with Not_found ->
       fatal 
       "Something wrong in the remove request.
@@ -117,13 +118,14 @@ let main () =
   ) remove ;
 
   List.iter (fun (n,v) ->
-    try let pkg = Hashtbl.find t (n,v) in
-    Hashtbl.replace t (n,v) {pkg with Cudf.installed = true }
+    try 
+      let pkg = Hashtbl.find t (n,v) in
+      Hashtbl.replace t (n,v) {pkg with Cudf.installed = true }
     with Not_found -> begin
       if String.starts_with n "dummy_" then ()
       else
         fatal
-        "Something wrong in the remove request.
+        "Something wrong in the install request.
         Package in the solution is not present in the universe (%s,%s)" n v;
     end
   ) install ;
