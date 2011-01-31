@@ -540,18 +540,15 @@ let main () =
 	Cudf_printer.pp_universe (Format.formatter_of_out_channel ch) universe;
 	close_out ch
       end
-  end
-;;
+  end;
 
-(*
   let pp pkg =
-    let (p,v) = original_from_cudf (pkg.Cudf.package,pkg.Cudf.version) in 
     let l = 
       ExtLib.List.filter_map (fun k ->
         try Some(k,Cudf.lookup_package_property pkg k)
         with Not_found -> None
       ) ["source";"sourceversion"]
-    in (p,v,l)
+    in (pkg.Cudf.package,(debversion_of_package pkg),l)
   in
 
   info "Solving..." ;
@@ -561,7 +558,7 @@ let main () =
   let fmt = Format.std_formatter in
   Format.fprintf fmt "@[<v 1>report:@,";
   let callback =
-    Diagnostic.fprintf ~pp ~failure:false ~success:false ~explain fmt in
+    Diagnostic.fprintf ~pp ~failure:true ~success:false ~explain fmt in
   let i = Depsolver.univcheck ~callback universe 
   in
     ignore(Util.Timer.stop timer ());
@@ -572,7 +569,7 @@ let main () =
     if OptParse.Opt.is_set Options.architecture then
       Format.fprintf fmt "architecture: %s\n"
 	(OptParse.Opt.get Options.architecture)
-  *)
+;;
 
 main () ;;
 
