@@ -537,6 +537,7 @@ let main () =
     if OptParse.Opt.is_set Options.cudf_output then
       let ch=open_out (OptParse.Opt.get Options.cudf_output)
       in begin
+	output_string ch "preamble: \nproperty: number: string\n\n";
 	Cudf_printer.pp_universe (Format.formatter_of_out_channel ch) universe;
 	close_out ch
       end
