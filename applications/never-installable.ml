@@ -544,12 +544,14 @@ let main () =
   end;
 
   let pp pkg =
+    let p = pkg.Cudf.package in
+    let v = debversion_of_package pkg in 
     let l = 
       ExtLib.List.filter_map (fun k ->
         try Some(k,Cudf.lookup_package_property pkg k)
         with Not_found -> None
       ) ["source";"sourceversion"]
-    in (pkg.Cudf.package,(debversion_of_package pkg),l)
+    in (p,v,l)
   in
 
   info "Solving..." ;
