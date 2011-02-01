@@ -110,7 +110,7 @@ let synchronise_package cluster_size_table package  =
   in
   if Hashtbl.find cluster_size_table cluster > 1
   then
-    let clustername = "src:"^s^":"^w
+    let clustername = "src/"^s^"/"^w
     and clusterversion = 1
     in
     {package with
@@ -470,7 +470,7 @@ let main () =
       {Cudf.package = package_name;
        Cudf.version = cudfv;
        Cudf.depends = [];
-       Cudf.conflicts = conflicts;
+       Cudf.conflicts = (package_name,None)::conflicts;
        Cudf.provides = provides;
        Cudf.installed = false;
        Cudf.was_installed = false;
@@ -481,13 +481,11 @@ let main () =
       (fun package_name translations accu ->
 	if Hashtbl.mem orig_version_per_binname package_name
 	then
-	  let (srcname,versionslist) as cluster = 
+	  let (srcname,srcversion) as cluster = 
 	    (Hashtbl.find cluster_per_binname package_name)
 	  in
-	  let pseudosrcname="src:"^srcname
+	  let pseudosrcname="src/"^srcname^"/"^srcversion
 	  in
-	  (* TODO maintain a translation of debian vesions of source clusters *)
-	  (* to cudf versions.            *)
 	  (listmap_with_index
 	     (if (Hashtbl.find size_per_cluster cluster) = 1
 	      then fun _i (cudf_version, debian_version) ->
