@@ -128,22 +128,45 @@ let synchronise_package cluster_size_table package  =
 (* version, conflicts, depends, provides.                                   *)
 (* translation is a hash table mapping a package name to an association     *)
 (* list that maps old version numbers to new version numbers.               *)
-let renumber_packages translation package_list =
+let renumber_packages translation current_version_per_package package_list =
   let translate_version package version =
-    try
-      List.assoc version (Hashtbl.find translation package)
-    with
-	Not_found -> version
+    List.assoc version (Hashtbl.find translation package)
   in
   let translate_constrained = function
     | (name,None) as c -> c
     | (name,Some(relation,version)) ->
-      (name,Some(relation,translate_version name version))
+      try
+	(name,Some(relation,translate_version name version))
+      with
+	  (* a version may not be in the translation list, this happens *)
+	  (* exactly when we have a relation to an existing package     *)
+	  (* and the version in the constraint is <= then the currently *)
+	  (* existing version of that package.                          *)
+	  Not_found ->
+	    try 
+	      let existing_version =
+		Hashtbl.find current_version_per_package name
+	      in 
+	      if existing_version = version
+	      then
+		(* existing versions of packages that are mebntionend *)
+		(* in constraints are always mapped to 1              *)
+		(name,Some(relation,1))
+	      else
+		begin
+		  assert (version < existing_version);
+		  match relation with
+		    | `Geq | `Gt | `Neq -> (name,None)
+		    | `Leq | `Lt | `Eq  -> (name,Some(`Eq,0))
+		end
+	    with Not_found -> assert false
+	      
   in
   List.map
     (fun p -> { p with 
       Cudf.version = translate_version p.Cudf.package p.Cudf.version;
       Cudf.conflicts = List.map translate_constrained p.Cudf.conflicts;
+      Cudf.provides = List.map translate_constrained p.Cudf.provides;
       Cudf.depends = List.map (List.map translate_constrained) p.Cudf.depends;
      }
     )
@@ -507,7 +530,8 @@ let main () =
       new_cudf_to_debian
       (List.map
 	 (synchronise_package size_per_cluster)
-	 (renumber_packages translation_table purged_package_list))
+	 (renumber_packages translation_table orig_version_per_binname
+	    purged_package_list))
       
   in
 
