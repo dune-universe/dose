@@ -432,21 +432,19 @@ let main () =
 		      referred_debversions_per_cluster
 		      (Hashtbl.find cluster_per_binname package_name))
 	      with Not_found -> []
-	    in if deb_versions = []
-	      then [(1,current_debian_version)]
-	      else
-		let rec f current_cudf previous_debian_version = function
-		  | h::r -> 
-		    (current_cudf,"("^previous_debian_version^".."^h^")")
-		    ::(current_cudf+1,h)
-		    ::(f (current_cudf+2) h r)
-		  | [] ->
-		    [(2*List.length deb_versions+2,
-		      "("^previous_debian_version^"..)")
-		    ]
-		in
-		(1,current_debian_version)
-		::(f 2 current_debian_version deb_versions)
+	    in 
+	    let rec f current_cudf previous_debian_version = function
+	      | h::r -> 
+		(current_cudf,"("^previous_debian_version^".."^h^")")
+		::(current_cudf+1,h)
+		::(f (current_cudf+2) h r)
+	      | [] ->
+		[(2*List.length deb_versions+2,
+		  "("^previous_debian_version^"..)")
+		]
+	    in
+	    (1,current_debian_version)
+	    ::(f 2 current_debian_version deb_versions)
 	 else (* there is no package with that name in the universe *)
 	    if translations=[]
 	    then [(1,"(..)")]
