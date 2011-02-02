@@ -72,7 +72,9 @@ let debversion_of_package p =
 	`String s -> s
       | _ -> failwith "debian version of wrong type"
   with
-      Not_found -> failwith "CUDF: debian version missing"
+      Not_found -> failwith
+	("CUDF: debian version missing for package \""^p.Cudf.package^
+	    "\", version "^(string_of_int p.Cudf.version))
 ;;
 
 
@@ -566,14 +568,21 @@ let main () =
   end;
 
   let pp pkg =
-    let p = pkg.Cudf.package in
-    let v = debversion_of_package pkg in 
+    let name = pkg.Cudf.package
+    and cudf_v = pkg.Cudf.version in
+    let deb_v =
+      if cudf_v = 0
+      then "out of the past ..."
+      else
+	try List.assoc cudf_v (Hashtbl.find new_cudf_to_debian name)
+	with Not_found -> debversion_of_package pkg 
+    in 
     let l = 
       ExtLib.List.filter_map (fun k ->
         try Some(k,Cudf.lookup_package_property pkg k)
         with Not_found -> None
       ) ["source";"sourceversion"]
-    in (p,v,l)
+    in (name,deb_v,l)
   in
 
   info "Solving..." ;
