@@ -439,9 +439,7 @@ let main () =
 		::(current_cudf+1,h)
 		::(f (current_cudf+2) h r)
 	      | [] ->
-		[(2*List.length deb_versions+2,
-		  "("^previous_debian_version^"..)")
-		]
+		[(current_cudf,"("^previous_debian_version^"..)")]
 	    in
 	    (1,current_debian_version)
 	    ::(f 2 current_debian_version deb_versions)
