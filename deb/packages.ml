@@ -38,6 +38,7 @@ type package = {
   replaces : vpkg list;
   provides : veqpkg list;
   extras : (string * string) list;
+  priority : string;
 }
 
 let default_package = {
@@ -56,6 +57,7 @@ let default_package = {
   replaces = [];
   provides = [];
   extras = [];
+  priority = "";
 }
 
 let parse_name = parse_package
@@ -104,6 +106,7 @@ let parse_packages_fields default_arch extras par =
         replaces = (try parse_m parse_conj "replaces" with Not_found -> []);
         provides = (try parse_m parse_prov "provides" with Not_found -> []);
         extras = parse_e extras;
+        priority = parse_s (fun x -> String.lowercase x) "priority";
       }
   in
   (* this package doesn't either have version or name or architecture *)

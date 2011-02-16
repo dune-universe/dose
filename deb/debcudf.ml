@@ -208,6 +208,7 @@ let preamble =
 let add_extra extras tables pkg =
   let number = ("number",`String pkg.version) in
   let architecture = ("architecture",`String pkg.architecture) in
+  let priority = ("priority",`String pkg.priority) in
   let (source,sourceversion) =
     let (n,v) =
       match pkg.source with
@@ -235,7 +236,8 @@ let add_extra extras tables pkg =
     |(_,`Vpkgformula []) -> None
     |e -> Some e
   )
-  [architecture; number; source; sourceversion; recommends; replaces] @ l
+  [priority; architecture; number;
+   source; sourceversion; recommends; replaces]@ l
 ;;
 
 let add_essential = function
