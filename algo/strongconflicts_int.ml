@@ -89,9 +89,6 @@ let strongconflicts mdf =
   let cg = SG.create ~size () in
   for i = 0 to (size - 1) do
     Util.Progress.progress seedingbar;
-    let rdc = to_set (Depsolver_int.reverse_dependency_closure reverse [i]) in
-    let rd = to_set reverse.(i) in
-    closures.(i) <- {rdc = rdc; rd = rd};
     Defaultgraphs.IntPkgGraph.conjdepgraph_int ~transitive:true cg index i ; 
     IG.add_vertex cache i
   done;
@@ -140,7 +137,12 @@ let strongconflicts mdf =
       let donei = ref 0 in
       let pkg_x = index.(x) in
       let pkg_y = index.(y) in
-      let (a,b) = (closures.(x).rdc, closures.(y).rdc) in 
+    (* let rdc = to_set (Depsolver_int.reverse_dependency_closure reverse [i]) in
+    let rd = to_set reverse.(i) in
+    closures.(i) <- {rdc = rdc; rd = rd}; *)
+      let (a,b) =
+        (to_set (Depsolver_int.reverse_dependency_closure reverse [x]),
+        to_set (Depsolver_int.reverse_dependency_closure reverse [y])) in
 
       IG.add_edge cache x y;
       CG.add_edge_e strongraph (x, (x, y, Explicit), y);
@@ -165,8 +167,8 @@ let strongconflicts mdf =
       (* unless :
        * 1- x and y are in triangle, that is: there is ONE reverse dependency
        * of both x and y that has a disjunction "x | y". *)
-      let xpred = closures.(x).rd in
-      let ypred = closures.(y).rd in 
+      let xpred = to_set reverse.(x) in
+      let ypred = to_set reverse.(y) in
       let common = S.inter xpred ypred in
       if (S.cardinal xpred = 1) && (S.cardinal ypred = 1) && (S.choose xpred = S.choose ypred) then
         let p = S.choose xpred in
