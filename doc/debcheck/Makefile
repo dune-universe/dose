@@ -2,7 +2,8 @@ MAIN=debcheck
 SHELL=/bin/bash
 DEPS = $(wildcard *.tex)
 
-$(MAIN).html: $(DEPS)	
+$(MAIN).html: $(DEPS) $(MAIN).aux
+	bibtex $(MAIN)	
 	hevea -fix $(MAIN).tex
 
 $(MAIN).ps: $(MAIN).dvi
@@ -11,8 +12,11 @@ $(MAIN).ps: $(MAIN).dvi
 $(MAIN).dvi: $(DEPS)
 	latex $(MAIN)
 
+$(MAIN).aux: $(DEPS)
+	latex $(MAIN)
+
 clean:
-	-rm -f $(MAIN).{dvi,aux,toc,haux,htoc,log}
+	-rm -f $(MAIN).{dvi,aux,toc,haux,htoc,log,bbl,blg}
 
 veryclean: clean
 	-rm -f $(MAIN).{html,ps}	
