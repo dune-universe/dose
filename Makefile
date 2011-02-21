@@ -9,6 +9,10 @@ APPSRC = $(filter-out applications/myocamlbuild.ml, $(wildcard applications/*.ml
 RPMSRC = $(filter-out rpm/myocamlbuild.ml, $(wildcard rpm/*.ml rpm/*.mli rpm/*.h rpm/*.c))
 COMSRC = $(filter-out common/myocamlbuild.ml common/edosSolver.ml common/edosSolver.mli common/util.ml,\
 				 $(wildcard common/*.ml common/*.mli))
+# stuff not not put in a distribution tarball
+DIST_EXCLUDE = debian libcudf deb/tests rpm/tests common/tests algo/tests deb/libcudf rpm/libcudf \
+	eclipse/libcudf algo/libcudf common/libcudf applications/libcudf applications/tests \
+	applications/attic
 
 all: lib
 	CPPFLAGS="$(CPPFLAGS)" LDFLAGS="-fstack-protector" $(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
@@ -62,7 +66,6 @@ INSTALL_STUFF += $(wildcard _build/common/*.cma _build/common/*.cmxa _build/comm
 INSTALL_STUFF += $(wildcard _build/deb/*.cma _build/deb/*.cmxa _build/deb/debian.a _build/deb/*.o)
 INSTALL_STUFF += $(wildcard _build/rpm/*.cma _build/rpm/*.cmxa _build/rpm/rpm.a _build/rpm/*.o)
 INSTALL_STUFF += $(wildcard _build/db/*.cma _build/db/*.cmxa _build/db/db.a _build/db/*.o)
-
 INSTALL_STUFF += $(wildcard _build/algo/*.cmi) $(wildcard _build/algo/*.mli)
 INSTALL_STUFF += $(wildcard _build/common/*.cmi) $(wildcard _build/common/*.mli)
 INSTALL_STUFF += $(wildcard _build/deb/*.cmi) $(wildcard _build/deb/*.mli)
@@ -90,7 +93,6 @@ uninstall:
 	  fi \
 	done
 
-
 dist: ./$(DIST_TARBALL)
 ./$(DIST_TARBALL):
 	if [ -d ./$(DIST_DIR)/ ] ; then rm -rf ./$(DIST_DIR)/ ; fi
@@ -100,19 +102,7 @@ dist: ./$(DIST_TARBALL)
 	else \
 	  mkdir ./$(DIST_DIR)/ ; git archive --format=tar HEAD | tar -x -C ./$(DIST_DIR)/ ; \
 	fi
-	rm -rf ./$(DIST_DIR)/debian
-	rm -rf ./$(DIST_DIR)/libcudf
-	rm -rf ./$(DIST_DIR)/deb/tests
-	rm -rf ./$(DIST_DIR)/rpm/tests
-	rm -rf ./$(DIST_DIR)/common/tests
-	rm -rf ./$(DIST_DIR)/algo/tests
-	rm -rf ./$(DIST_DIR)/deb/libcudf
-	rm -rf ./$(DIST_DIR)/rpm/libcudf
-	rm -rf ./$(DIST_DIR)/eclipse/libcudf
-	rm -rf ./$(DIST_DIR)/algo/libcudf
-	rm -rf ./$(DIST_DIR)/common/libcudf
-	rm -rf ./$(DIST_DIR)/applications/libcudf
-	rm -rf ./$(DIST_DIR)/applications/tests
+	for f in $(DIST_EXCLUDE) ; do rm -rf ./$(DIST_DIR)/$$f; done
 	tar cvzf ./$(DIST_TARBALL) ./$(DIST_DIR)
 	rm -rf ./$(DIST_DIR)
 	@echo "Distribution tarball: ./$(DIST_TARBALL)"
