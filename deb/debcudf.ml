@@ -200,6 +200,7 @@ let preamble =
     ("recommends",(`Vpkgformula (Some [])));
     ("number",(`String None));
     ("architecture",(`String None));
+    ("priority",(`String (Some "")));
     ("source",(`String (Some ""))) ;
     ("sourceversion",(`String (Some ""))) ]
   in
