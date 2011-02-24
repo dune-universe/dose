@@ -24,13 +24,24 @@ module Options = struct
   let status = StdOpt.str_option ()
   let outfile = StdOpt.str_option ()
   let vmap = StdOpt.store_true ()
+  let inst = StdOpt.store_true ()
   let architecture = StdOpt.str_option ()
 
   open OptParser
-  add options ~short_name:'s' ~long_name:"status" ~help:"package status (822)" status;
-  add options ~short_name:'o' ~long_name:"outfile" ~help:"specify the output file" outfile;
-  add options ~short_name:'m' ~long_name:"map" ~help:"dump cudf <-> deb versions map" vmap;
-  add options ~long_name:"arch" ~help:"Set the default architecture" architecture;
+  add options ~short_name:'s' ~long_name:"status" 
+  ~help:"package status (822)" status;
+
+  add options ~short_name:'o' ~long_name:"outfile" 
+  ~help:"specify the output file prefix" outfile;
+
+  add options ~short_name:'m' ~long_name:"map"
+  ~help:"dump cudf <-> deb versions map" vmap;
+
+  add options ~short_name:'c' ~long_name:"inst"
+  ~help:"dump the installed packages" inst;
+
+  add options ~long_name:"arch" 
+  ~help:"Set the default architecture" architecture;
 end
 
 (* ========================================= *)
@@ -53,7 +64,7 @@ let main () =
   in
   let oc =
     if OptParse.Opt.is_set Options.outfile then
-      let file = OptParse.Opt.get Options.outfile in
+      let file = (OptParse.Opt.get Options.outfile) ^ ".cudf" in
       open_out file
     else
       stdout
@@ -62,9 +73,31 @@ let main () =
   let fmt = Format.formatter_of_out_channel oc in
   Format.fprintf fmt "%a@." Cudf_printer.pp_preamble preamble;
   List.iter (fun pkg ->
-    Format.fprintf fmt "%a@." Cudf_printer.pp_package pkg
+    Format.fprintf fmt "%a@." Cudf_printer.pp_package 
+    begin 
+      if OptParse.Opt.get Options.vmap then 
+        {pkg with Cudf.installed = false} 
+      else pkg 
+    end
   ) pkglist ;
   if oc <> stdout then close_out oc ;
+
+  if OptParse.Opt.get Options.vmap then begin
+    let oc = 
+      if OptParse.Opt.is_set Options.outfile then
+        let file = (OptParse.Opt.get Options.outfile) ^ ".status" in
+        open_out file
+      else
+        stdout
+    in
+    let fmt = Format.formatter_of_out_channel oc in
+    Format.fprintf fmt "%a@." Cudf_printer.pp_preamble preamble;
+    List.iter (fun pkg ->
+      if pkg.Cudf.installed then
+        Format.fprintf fmt "%a@." Cudf_printer.pp_package pkg
+    ) pkglist ;
+    if oc <> stdout then close_out oc
+  end;
 
   if OptParse.Opt.get Options.vmap then begin
     let oc = 
