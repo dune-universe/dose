@@ -13,7 +13,7 @@
 open Ocamlbuild_plugin
 open Command (* no longer needed for OCaml >= 3.10.2 *)
 
-let clibs = [("rpm","rpm")]
+let clibs = [("rpm","rpm",["rpm";"rpmio"])]
 
 (* these functions are not really officially exported *)
 let run_and_read = Ocamlbuild_pack.My_unix.run_and_read
@@ -85,9 +85,11 @@ let _ = dispatch begin function
   
        let cppfl = split (env_var "CPPFLAGS") ' ' in
 
-       List.iter begin fun (lib,dir) ->
-         flag ["ocaml"; "link"; "c_use_"^lib; "byte"] & S[A"-custom"; A"-cclib"; A("-l"^lib)];
-         flag ["ocaml"; "link"; "c_use_"^lib; "native"] & S[A"-cclib"; A("-l"^lib); A"-ccopt"; A(env_var "LDFLAGS")];
+       List.iter begin fun (lib,dir,libs) ->
+         List.iter begin fun l ->
+           flag ["ocaml"; "link"; "c_use_"^lib; "byte"] & S[A"-custom"; A"-cclib"; A("-l"^l)];
+           flag ["ocaml"; "link"; "c_use_"^lib; "native"] & S[A"-cclib"; A("-l"^l); A"-ccopt"; A(env_var "LDFLAGS")];
+         end libs ;
 
          dep ["ocaml"; "link"; "c_use_"^lib] & [dir^"/lib"^lib^"_stubs.a"];
          (* Make sure the C pieces and built... *)

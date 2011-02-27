@@ -28,12 +28,14 @@ else
 endif
 
 TARGETS= \
-		 applications/deb-cudf.$(OCAMLBEST) \
-		 applications/randcudf.$(OCAMLBEST) \
-		 applications/cudf-solver.$(OCAMLBEST) \
 		 applications/distcheck.$(OCAMLBEST) \
 		 applications/deb-buildcheck.$(OCAMLBEST) \
 		 applications/ceve.$(OCAMLBEST) \
+
+EXPERIMENTAL= \
+		 applications/deb-cudf.$(OCAMLBEST) \
+		 applications/randcudf.$(OCAMLBEST) \
+		 applications/cudf-solver.$(OCAMLBEST) \
 		 applications/cudf-diff.$(OCAMLBEST)
 
 LIBS= \
@@ -53,21 +55,27 @@ endif
 
 #database support
 ifeq ("@HAS_DB@","yes") 
-  TARGETS += applications/db-cudf.$(OCAMLBEST)
+  EXPERIMENTAL += applications/db-cudf.$(OCAMLBEST)
   LIBS += db/db.$(OCAMLLIBBEST)
 #  TEST_DB=db
 endif
 
 ifeq ("@HAS_XML@","yes")
 ifeq ("@HAS_CURL@","yes")
-  TARGETS += applications/dudftocudf/deb-dudftocudf.$(OCAMLBEST)
+  EXPERIMENTAL += applications/dudftocudf/deb-dudftocudf.$(OCAMLBEST)
 endif
 endif
 
 #ocamlgraph support
 ifeq ("@HAS_OCAMLGRAPH@","yes")
+  EXPERIMENTAL += \
+	     applications/strong-deps.$(OCAMLBEST)
+endif
+
+
+#ocamlgraph support
+ifeq ("@HAS_OCAMLGRAPH@","yes")
   TARGETS += \
-	     applications/strong-deps.$(OCAMLBEST) \
 	     applications/ceve.$(OCAMLBEST)
 endif
 
