@@ -12,7 +12,7 @@ COMSRC = $(filter-out common/myocamlbuild.ml common/edosSolver.ml common/edosSol
 # stuff not not put in a distribution tarball
 DIST_EXCLUDE = debian libcudf deb/tests rpm/tests common/tests algo/tests deb/libcudf rpm/libcudf \
 	eclipse/libcudf algo/libcudf common/libcudf applications/libcudf applications/tests \
-	applications/attic
+	experimental
 
 all: lib
 	CPPFLAGS="$(CPPFLAGS)" LDFLAGS="-fstack-protector" $(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
