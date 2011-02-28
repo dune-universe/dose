@@ -51,7 +51,7 @@ headers: header.txt .headache.conf
 	headache -h header.txt -c .headache.conf $(ALGOSRC) $(DEBSRC) $(DBSRC) $(APPSRC) $(RPMSRC) $(COMSRC)
 
 test:
-	@for i in $(TESTS); do\
+	for i in $(TESTS); do\
 		cd $$i ;\
 		echo "#######TESTING $$i" ;\
 		$(OCAMLBUILD) $(OBFLAGS) tests.$(OCAMLBEST) ;\

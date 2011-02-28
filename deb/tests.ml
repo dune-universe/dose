@@ -49,7 +49,7 @@ let test_virtual =
   "test virtual" >::: [
     "provides" >:: (fun _ -> 
       try
-        let ssmtp = Cudf.lookup_package universe ("ssmtp",1) in
+        let ssmtp = Cudf.lookup_package universe ("ssmtp",8366) in
         let vpkg = ("mail-transport-agent--virtual",None) in
         let provides = maps.CudfAdd.who_provides vpkg in
         assert_equal true (List.exists ((=%) ssmtp) provides)
@@ -62,7 +62,7 @@ let test_conflicts =
   "test conflict" >::: [
     "self conflict" >:: (fun _ -> 
       try 
-        let ssmtp = Cudf.lookup_package universe ("ssmtp",1) in
+        let ssmtp = Cudf.lookup_package universe ("ssmtp",8366) in
         assert_equal true (List.mem (ssmtp.package,None) ssmtp.conflicts)
       with Not_found -> assert_failure "ssmtp version mismatch"
     );
