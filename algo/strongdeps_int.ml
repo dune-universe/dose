@@ -115,8 +115,6 @@ let strongdeps_univ ?(transitive=true) mdf =
   let size = Array.length mdf.Mdf.index in
   Util.Progress.set_total conjbar size;
   let conjtimer = Util.Timer.create "Strongdeps_int.conjdep" in
-  Util.Progress.enable "Algo.Strongdep.main";
-  Util.Progress.enable "Algo.Strongdep.conj";
 
   Util.Timer.start conjtimer;
   let l = 
