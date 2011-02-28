@@ -153,6 +153,14 @@ module Make (G: Sig.G) = struct
     get_option !_avgindegree
   ;;
 
+  let zdp graph =
+    G.fold_vertex (fun v sum ->
+      if G.in_degree graph v == 0 && G.out_degree graph v == 0 then
+        sum + 1
+      else
+        sum
+    ) graph 0
+
   let scatteredPlotIn graph =
     computeInDegree graph;
     get_option !_indata

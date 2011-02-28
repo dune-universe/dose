@@ -19,6 +19,7 @@ let debug fmt = Util.make_debug "Defaultgraphs" fmt
 let info fmt = Util.make_info "Defaultgraphs" fmt
 let warning fmt = Util.make_warning "Defaultgraphs" fmt
 
+let tr_timer = Util.Timer.create "Defaultgraph.GraphOper.transitive_reduction"
 
 (** generic operation over imperative graphs *)
 module GraphOper (G : Sig.I) = struct
@@ -28,8 +29,7 @@ module GraphOper (G : Sig.I) = struct
       with the proviso that we know that our graph already is a transitive 
       closure *)
   let transitive_reduction graph =
-    let timer = Util.Timer.create "Defaultgraph.GraphOper.transitive_reduction" in
-    Util.Timer.start timer;
+    Util.Timer.start tr_timer;
     G.iter_vertex (fun v ->
       List.iter (fun v' ->
         if v <> v' then
@@ -39,7 +39,7 @@ module GraphOper (G : Sig.I) = struct
         ) (G.succ graph v')
       ) (G.succ graph v);
     ) graph;
-    Util.Timer.stop timer ()
+    Util.Timer.stop tr_timer ()
 
   module O = Oper.I(G) 
 
@@ -318,6 +318,8 @@ module IntPkgGraph = struct
       if S.is_empty new_red then ()
       else adapt k new_red
     in
+  begin
+    debug "Adding edge from %d to %d" i j;
     G.add_edge graph i j;
     if transitive then begin
       (* add transitive closure arcs *)
@@ -327,6 +329,7 @@ module IntPkgGraph = struct
           adapt k (S.singleton j)
       ) graph i
     end
+  end
 
   (** add to the graph all conjunctive dependencies of package id *)
   let conjdepgraph_int ?(transitive=false) graph index id =

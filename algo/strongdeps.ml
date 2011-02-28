@@ -22,18 +22,18 @@ let warning fmt = Util.make_warning "StrongDeps" fmt
 
 (** [strongdeps u l] build the strong dependency graph of all packages in 
     [l] wrt the universe [u] *)
-let strongdeps universe pkglist =
+let strongdeps ?(transitive=true) universe pkglist =
   let mdf = Mdf.load_from_universe universe in
   let maps = mdf.Mdf.maps in
   let idlist = List.map maps.map#vartoint pkglist in
-  let g = Strongdeps_int.strongdeps mdf idlist in
+  let g = Strongdeps_int.strongdeps ~transitive mdf idlist in
   Defaultgraphs.intcudf mdf.Mdf.index g
 
 (** [strongdeps_univ u] build the strong dependency graph of 
     all packages in the universe [u] *)
-let strongdeps_univ universe =
+let strongdeps_univ ?(transitive=true) universe =
   let mdf = Mdf.load_from_universe universe in
-  let g = Strongdeps_int.strongdeps_univ mdf in
+  let g = Strongdeps_int.strongdeps_univ ~transitive mdf in
   Defaultgraphs.intcudf mdf.Mdf.index g
 
 (** compute the impact set of the node [q], that is the list of all 
@@ -42,12 +42,12 @@ let impactset graph q =
   let module G = Defaultgraphs.PackageGraph.G in
   G.fold_pred (fun p acc -> p :: acc ) graph q []
 
-(** compute the transitive closure of the conjunctive dependency graph *)
-let conjdeps_univ universe =
+(** compute the (transitive closure of) the conjunctive dependency graph *)
+let conjdeps_univ ?(transitive=true) universe =
   let mdf = Mdf.load_from_universe universe in
   let g = Defaultgraphs.IntPkgGraph.G.create () in
   for id=0 to (Array.length mdf.Mdf.index)-1 do
-    Defaultgraphs.IntPkgGraph.conjdepgraph_int ~transitive:true g mdf.Mdf.index id
+    Defaultgraphs.IntPkgGraph.conjdepgraph_int ~transitive g mdf.Mdf.index id
   done;
   Defaultgraphs.intcudf mdf.Mdf.index g
 

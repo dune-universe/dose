@@ -97,7 +97,6 @@ let strongconflicts mdf =
 
   (* add all edges to the cache *)
   SG.iter_edges (IG.add_edge cache) cg;
-
   debug " done";
 
   let i = ref 0 in

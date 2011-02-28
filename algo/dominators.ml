@@ -16,6 +16,9 @@ open ExtLib
 open Common
 
 let dombar = Util.Progress.create "Algo.dominators"
+let domtimer = Util.Timer.create "Algo.Dominators.dominators"
+let tjntimer = Util.Timer.create "Algo.Dominators.tarjan"
+let crtimer = Util.Timer.create "Algo.Dominators.cycle_reduction"
 
 let debug fmt = Util.make_debug "Dominators" fmt
 let info fmt = Util.make_info "Dominators" fmt
@@ -59,7 +62,6 @@ let dominators ?relative graph =
   info "N. of vertex graph %d\n" (G.nb_vertex graph);
   info "N. of edges graph %d\n" (G.nb_edges graph);
   
-  let domtimer = Util.Timer.create "Algo.Dominators.dominators" in
 
   Util.Progress.set_total dombar (G.nb_vertex graph);
   Util.Timer.start domtimer;
@@ -168,7 +170,11 @@ let cycle_reduction g =
       Hashtbl.replace visited v false
     end
   in
-  G.iter_vertex (fun v -> if not (Hashtbl.mem visited v) then visit [] v) g 
+  begin
+    Util.Timer.start crtimer;
+    G.iter_vertex (fun v -> if not (Hashtbl.mem visited v) then visit [] v) g;
+    Util.Timer.stop crtimer ()
+  end
 ;;
 
 
@@ -176,10 +182,10 @@ module T = Traverse.Dfs(G)
 
 let dominators_tarjan g =
   let graph = G.copy g in
-  debug "sd_graph before reduction: %d vertices, %d edges\n" (G.nb_vertex graph) (G.nb_edges graph);
+  info "sd_graph before reduction: %d vertices, %d edges\n" (G.nb_vertex graph) (G.nb_edges graph);
   cycle_reduction graph;
   O.transitive_reduction graph;
-  debug "sd_graph after reduction: %d vertices, %d edges\n" (G.nb_vertex graph) (G.nb_edges graph);
+  info "sd_graph after reduction: %d vertices, %d edges\n" (G.nb_vertex graph) (G.nb_edges graph);
   let start_pkg = { Cudf.default_package with Cudf.package = "START" } in
   let vertex_order = ref [] in
   let n = ref 1 in
@@ -233,7 +239,6 @@ let dominators_tarjan g =
     else compress_path v v
   in
   
-  let tjntimer = Util.Timer.create "Algo.Dominators.tarjan" in
   Util.Timer.start tjntimer;
 
   (* add a start vertex, and connect it to all packages without
@@ -287,7 +292,7 @@ let dominators_tarjan g =
     debug "step 4 for %s...%!" (CudfAdd.print_package w);
     match (try G.pred domgr w with Invalid_argument _ -> []) with
     | [] -> ()
-    | [p] when (compare p (Hashtbl.find semi_ht w) <> 0) ->
+    | [p] -> if (compare p (Hashtbl.find semi_ht w) <> 0) then
         begin
           match (try G.pred domgr p with Invalid_argument _ -> []) with
           | [] -> ()
