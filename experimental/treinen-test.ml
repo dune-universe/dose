@@ -9,9 +9,13 @@ module Options = struct
   include Boilerplate.MakeOptions(struct let options = options end)
 
   let out_file = StdOpt.str_option ()
+  let do_sd = StdOpt.store_false ()
+  let do_sc = StdOpt.store_false ()
 
   open OptParser
   add options ~long_name:"output" ~help:"Use output file" out_file;
+  add options ~long_name:"no-strong-deps" ~help:"Do not do SD test" do_sd;
+  add options ~long_name:"no-strong-conflicts" ~help:"Do not do SC test" do_sc;
 end
 module SD = Defaultgraphs.PackageGraph.G
 module SC = Strongconflicts.CG
@@ -25,14 +29,18 @@ let oc = ref stdout;;
 let prio_of x =
 begin
   match x with
-  | `String y ->
-    if y = "required" then 1
-    else if y = "important" then 2
-    else if y = "standard" then 3
-    else if y = "optional" then 4
-    else if y = "extra" then 5
-    else failwith (Printf.sprintf "Package with unknown priority (%s)" y)
-  | _ -> failwith ("Package with wrong-typed priority")
+  | `String y -> y
+  | _ -> failwith "Package with wrong-typed priority"
+end
+
+let prio_val x =
+begin
+  if x = "required" then 1
+  else if x = "important" then 2
+  else if x = "standard" then 3
+  else if x = "optional" then 4
+  else if x = "extra" then 5
+  else failwith (Printf.sprintf "Package with unknown priority (%s)" x)
 end
 
 let _ =
@@ -52,20 +60,39 @@ begin
 
   let (universe,from_cudf,to_cudf) = Boilerplate.load_universe posargs in
   let universe = Depsolver.trim universe in
-  let sd = Strongdeps.strongdeps_univ universe in
+  if OptParse.Opt.get Options.do_sd then
+  let sd = Strongdeps.strongdeps_univ ~transitive:false universe in
+  let sdht = Hashtbl.create 2048 in
+  begin
     info "Testing for priority-challenged dependencies...";
     SD.iter_edges (fun p q ->
-      let p_prio = prio_of (List.assoc ("priority") p.pkg_extra)
-      and q_prio = prio_of (List.assoc ("priority") q.pkg_extra) in
+      let p_prio = prio_val (Cudf.lookup_package_property p "priority")
+      and q_prio = prio_val (Cudf.lookup_package_property q "priority") in
         if p_prio < q_prio then
-          Printf.fprintf !oc "%s(%d) -> %s(%d)\n" p.package p_prio q.package q_prio
+          Hashtbl.add sdht p q
     ) sd;
+    let pkgs = List.unique ~cmp:(=%) (List.sort ~cmp:(<%)
+      (Hashtbl.fold (fun p q acc -> p::acc) sdht [])) in
+      List.iter (fun p ->
+        Printf.fprintf !oc "%s (= %s) (priority: %s) depends on:\n"
+          p.package (Cudf.lookup_package_property p "number") (Cudf.lookup_package_property p "priority");
+        List.iter (fun q ->
+          Printf.fprintf !oc "  - %s (= %s) (priority: %s)\n" q.package
+            (Cudf.lookup_package_property q "number") (Cudf.lookup_package_property q "priority")
+        ) (Hashtbl.find_all sdht p)
+      ) pkgs
+  end;
+  if OptParse.Opt.get Options.do_sc then
   let sc = Strongconflicts.strongconflicts universe in
+  begin
     info "Testing for conflicts between optional or lower packages...";
-    SC.iter_edges (fun p q ->
+    (* SC.iter_edges (fun p q ->
       let p_prio = prio_of (List.assoc ("priority") p.pkg_extra)
       and q_prio = prio_of (List.assoc ("priority") q.pkg_extra) in
-        if p_prio <= 4 && q_prio <= 4 then
-          Printf.fprintf !oc "%s(%d) <-> %s(%d)\n" p.package p_prio q.package q_prio
-    ) sc
+        if (prio_val p_prio) <= 4 && (prio_val q_prio) <= 4 then
+          Printf.fprintf !oc "%s-%s (%d) <-> %s-%s (%d)\n"
+            p.package p.pkg_version p_prio
+            q.package q.pkg_version q_prio
+    ) sc *)
+  end
 end;;
