@@ -105,8 +105,8 @@ let parse_packages_fields default_arch extras par =
         breaks = (try parse_m parse_conj "breaks" with Not_found -> []);
         replaces = (try parse_m parse_conj "replaces" with Not_found -> []);
         provides = (try parse_m parse_prov "provides" with Not_found -> []);
+        priority = (try parse_s (fun x -> String.lowercase x) "priority" with Not_found -> "");
         extras = parse_e extras;
-        priority = parse_s (fun x -> String.lowercase x) "priority";
       }
   in
   (* this package doesn't either have version or name or architecture *)
