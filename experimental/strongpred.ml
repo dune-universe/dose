@@ -428,7 +428,7 @@ let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
   let bars = [
     "Strongpred";"Strongdeps_int.main";"Strongdeps_int.conj";
-    "StrongDepGraph.transfrom.edges";"StrongDepGraph.transfrom.vertex"
+    "StrongDepGraph.transform.edges";"StrongDepGraph.transform.vertex"
     ]
   in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);

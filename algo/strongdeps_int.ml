@@ -89,7 +89,7 @@ let strongdeps_int graph mdf l =
 module S = Set.Make (struct type t = int let compare = Pervasives.compare end)
 
 (* XXX this can be refactored in a better way ... *)
-let strongdeps ?(transitive=true) mdf idlist =
+let strongdeps mdf idlist =
   let graph = G.create () in
   let size = List.length idlist in
   Util.Progress.set_total conjbar size;
@@ -100,7 +100,7 @@ let strongdeps ?(transitive=true) mdf idlist =
     List.fold_left (fun acc id ->
       let pkg = mdf.Mdf.index.(id) in
       Util.Progress.progress conjbar;
-      IntPkgGraph.conjdepgraph_int ~transitive graph mdf.Mdf.index id; 
+      IntPkgGraph.conjdepgraph_int graph mdf.Mdf.index id; 
       let closure = Depsolver_int.dependency_closure mdf [id] in
       (pkg,List.length closure,closure) :: acc
     ) [] idlist
@@ -110,7 +110,7 @@ let strongdeps ?(transitive=true) mdf idlist =
   strongdeps_int graph mdf l
 
 (* XXX this can be refactored in a better way ... *)
-let strongdeps_univ ?(transitive=true) mdf =
+let strongdeps_univ mdf =
   let graph = G.create () in
   let size = Array.length mdf.Mdf.index in
   Util.Progress.set_total conjbar size;
@@ -121,7 +121,7 @@ let strongdeps_univ ?(transitive=true) mdf =
     let id = ref 0 in
     Array.fold_left (fun acc pkg ->
       Util.Progress.progress conjbar;
-      IntPkgGraph.conjdepgraph_int ~transitive graph mdf.Mdf.index !id;
+      IntPkgGraph.conjdepgraph_int graph mdf.Mdf.index !id;
       let closure = Depsolver_int.dependency_closure mdf [!id] in
       incr id ;
       (pkg,List.length closure,closure) :: acc

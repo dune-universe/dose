@@ -32,6 +32,7 @@ module Options = struct
   add options ~long_name:"no-strong-conflicts" ~help:"Do not do SC test" do_sc;
 end
 module SD = Defaultgraphs.PackageGraph.G
+module SO = Defaultgraphs.PackageGraph.O
 module SC = Strongconflicts.CG
 
 let debug fmt = Util.make_debug "StrongConflict" fmt
@@ -62,7 +63,7 @@ begin
   let posargs = OptParse.OptParser.parse_argv Options.options in
   let bars = [
     "Strongdeps_int.main";"Strongdeps_int.conj";
-    "StrongDepGraph.transfrom.edges";"StrongDepGraph.transfrom.vertex";
+    "StrongDepGraph.transform.edges";"StrongDepGraph.transform.vertex";
     "Strongconflicts_int.local"; "Strongconflicts_int.seeding"
     ]
   in
@@ -75,7 +76,8 @@ begin
   let (universe,from_cudf,to_cudf) = Boilerplate.load_universe posargs in
   let universe = Depsolver.trim universe in
   if OptParse.Opt.get Options.do_sd then
-  let sd = Strongdeps.strongdeps_univ ~transitive:false universe in
+  let sd = Strongdeps.strongdeps_univ universe in
+    SO.transitive_reduction sd;
   let sdht = Hashtbl.create 2048 in
   begin
     info "Testing for priority-challenged dependencies...";
@@ -100,13 +102,12 @@ begin
   let sc = Strongconflicts.strongconflicts universe in
   begin
     info "Testing for conflicts between optional or lower packages...";
-    (* SC.iter_edges (fun p q ->
+    SC.iter_edges (fun p q ->
       let p_prio = prio_of (List.assoc ("priority") p.pkg_extra)
       and q_prio = prio_of (List.assoc ("priority") q.pkg_extra) in
         if (prio_val p_prio) <= 4 && (prio_val q_prio) <= 4 then
-          Printf.fprintf !oc "%s-%s (%d) <-> %s-%s (%d)\n"
-            p.package p.pkg_version p_prio
-            q.package q.pkg_version q_prio
-    ) sc *)
+          Printf.fprintf !oc "%s (%s) <-> %s (%s)\n"
+            p.package p_prio q.package q_prio
+    ) sc
   end
 end;;

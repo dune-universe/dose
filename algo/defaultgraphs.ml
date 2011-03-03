@@ -332,10 +332,10 @@ module IntPkgGraph = struct
   end
 
   (** add to the graph all conjunctive dependencies of package id *)
-  let conjdepgraph_int ?(transitive=false) graph index id =
+  let conjdepgraph_int graph index id =
     G.add_vertex graph id;
     List.iter (function
-      |(_,[p],_) when p <> id -> add_edge transitive graph id p
+      |(_,[p],_) when p <> id -> add_edge false graph id p
       | _ -> ()
     ) index.(id).Mdf.depends
 
@@ -467,8 +467,8 @@ module StrongDepGraph = struct
     end
   )
 
-  let pbar_edge = Util.Progress.create "StrongDepGraph.transfrom.edges"
-  let pbar_vertex = Util.Progress.create "StrongDepGraph.transfrom.vertex"
+  let pbar_edge = Util.Progress.create "StrongDepGraph.transform.edges"
+  let pbar_vertex = Util.Progress.create "StrongDepGraph.transform.vertex"
 
   (* PackageGraph.G -> StrongDepGraph.G *)
   let transform_out pkggraph =

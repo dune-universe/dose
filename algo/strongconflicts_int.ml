@@ -86,7 +86,7 @@ let strongconflicts mdf =
   let cg = SG.create ~size () in
   for i = 0 to (size - 1) do
     Util.Progress.progress seedingbar;
-    Defaultgraphs.IntPkgGraph.conjdepgraph_int ~transitive:true cg index i ; 
+    Defaultgraphs.IntPkgGraph.conjdepgraph_int cg index i ; 
     IG.add_vertex cache i
   done;
   (* we already add the transitive closure on the fly *)
