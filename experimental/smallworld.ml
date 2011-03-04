@@ -94,7 +94,6 @@ let saveplot2 h outfile =
 ;;
 
 let main () =
-  at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   let (universe,_,_) = Boilerplate.load_universe posargs in
@@ -145,18 +144,18 @@ let main () =
     ]
   in
   let scatterplots = "Scattered Plots" >::: [
-    if OptParse.Opt.get Options.combine_scatter then
-      ("Combined" >:: (fun _ ->
-        saveplot2 (S.scatteredPlotBoth gr) (prefix^"degree.data"); print_string "Done";
-      ))
-    else
-    ("Scattered Plot In" >:: (fun _ ->
-      saveplot (S.scatteredPlotIn gr) (prefix^"indegree.data") ; print_string "Done" );
-    "Scattered Plot Out" >:: (fun _ ->
-      saveplot (S.scatteredPlotOut gr) (prefix^"outdegree.data"); print_string "Done" );
+    if OptParse.Opt.get Options.combine_scatter then begin
+      "Combined" >:: (fun _ -> saveplot2 (S.scatteredPlotBoth gr) (prefix^"degree.data")
+      )
+    end else begin
+    ("Scattered Plot In" >:: (fun _ -> saveplot (S.scatteredPlotIn gr) (prefix^"indegree.data"))
+    );
+    ("Scattered Plot Out" >:: (fun _ -> saveplot (S.scatteredPlotOut gr) (prefix^"outdegree.data"))
+    )
 (*    "Hops Plot" >:: (fun _ ->
       saveplot (S.hopsplot gr 30) "hopsplot.data"; print_string "Done" );
-      *) )
+      *) 
+    end
   ]
   in
   let t = ref [] in
