@@ -235,15 +235,15 @@ let strongdep_cycle =
 let strongdep_conj =
   "strongdep conj" >:: (fun _ ->
     let edge_list = [
-      (("cc",1),("ff",1)) ;
-      (("cc",1),("ee",1)) ;
-      (("ee",1),("ff",1)) ;
       (("aa",1),("bb",1)) ;
+      (("aa",1),("dd",1)) ;
       (("aa",1),("ee",1)) ;
       (("aa",1),("ff",1)) ;
-      (("aa",1),("dd",1)) ;
+      (("bb",1),("ee",1)) ;
       (("bb",1),("ff",1)) ;
-      (("bb",1),("ee",1)) ]
+      (("cc",1),("ee",1)) ;
+      (("cc",1),("ff",1)) ;
+      (("ee",1),("ff",1)) ]
     in
     test_strong f_strongdeps_conj edge_list
   )

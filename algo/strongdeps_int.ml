@@ -80,7 +80,6 @@ let strongdeps_int graph mdf l =
       |Diagnostic_int.Success(f) -> check_strong graph solver id (f ())
     end
   ) available ;
-  SO.O.add_transitive_closure graph;
   Util.Progress.reset mainbar;
   ignore (Util.Timer.stop strongtimer ());
   debug "strong dep graph: %d vertices, %d edges\n" (G.nb_vertex graph) (G.nb_edges graph);
@@ -111,7 +110,7 @@ let strongdeps mdf idlist =
   strongdeps_int graph mdf l
 
 (* XXX this can be refactored in a better way ... *)
-let strongdeps_univ mdf =
+let strongdeps_univ ?(transitive=true) mdf =
   let graph = G.create () in
   let size = Array.length mdf.Mdf.index in
   Util.Progress.set_total conjbar size;
@@ -130,7 +129,11 @@ let strongdeps_univ mdf =
   in
   Util.Progress.reset conjbar;
   Util.Timer.stop conjtimer ();
-  strongdeps_int graph mdf l
+  strongdeps_int graph mdf l;
+  if transitive then
+    SO.O.add_transitive_closure graph
+  else
+    graph;;
 
 (** return the impact set (list) of the node [q] in [graph] *)
 (** invariant : we assume the graph is NOT detransitivitized *)

@@ -184,7 +184,7 @@ let strongconflicts mdf =
         ) a
       ;
 
-      debug " | tuple examined %d" !donei;
+      debug "\n | tuple examined %d" !donei;
       total := !total + !donei
     end
   ) ex ;
