@@ -80,6 +80,7 @@ let strongdeps_int graph mdf l =
       |Diagnostic_int.Success(f) -> check_strong graph solver id (f ())
     end
   ) available ;
+  SO.O.add_transitive_closure graph;
   Util.Progress.reset mainbar;
   ignore (Util.Timer.stop strongtimer ());
   debug "strong dep graph: %d vertices, %d edges\n" (G.nb_vertex graph) (G.nb_edges graph);
