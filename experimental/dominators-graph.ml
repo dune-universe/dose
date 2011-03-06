@@ -82,7 +82,7 @@ end;;
 
 let strongdeps_univ universe =
   let mdf = Mdf.load_from_universe universe in
-  let g = Strongdeps_int.strongdeps_univ ~transitive:false mdf in
+  let g = Strongdeps_int.strongdeps_univ (* ~transitive:false *) mdf in (* FIXME: API change in strondeps_int? *)
   Defaultgraphs.intcudf mdf.Mdf.index g
 ;;
 
