@@ -102,6 +102,7 @@ let dominators ?relative graph =
     If we do this before transitive reduction, any cycle will be a clique
     and thus this will also perform cycle reduction. *)
 let clique_reduction graph =
+  info "Starting clique reduction...";
   List.iter (function
   | [] -> ()
   | [_] -> ()
@@ -131,6 +132,7 @@ let clique_reduction graph =
  * false in hashtbl: visited in another component, true in hashtbl:
  * visited here *)
 let cycle_reduction g =
+  info "Starting cycle reduction...";
   let visited = Hashtbl.create (G.nb_vertex g) in
   let rec get_cycle res path v' =
     match path with
@@ -146,9 +148,12 @@ let cycle_reduction g =
     in
     G.add_vertex g nv;
     List.iter (fun p ->
-      G.iter_pred (fun p' -> if not (List.mem p' c) then G.add_edge g p' nv) g p;
-      G.iter_succ (fun p' -> if not (List.mem p' c) then G.add_edge g nv p') g p;
-      G.remove_vertex g p;
+      if G.mem_vertex g p then
+      begin
+        G.iter_pred (fun p' -> if not (List.mem p' c) then G.add_edge g p' nv) g p;
+        G.iter_succ (fun p' -> if not (List.mem p' c) then G.add_edge g nv p') g p;
+        G.remove_vertex g p;
+      end;
       Hashtbl.remove visited p
     ) (v'::c);
     (other, nv)
