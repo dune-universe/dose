@@ -26,6 +26,7 @@ let f_strongdeps_conflict = "tests/strongdep-conflict.cudf"
 let f_strongdeps_cycle = "tests/strongdep-cycle.cudf"
 let f_strongdeps_conj = "tests/strongdep-conj.cudf"
 let f_strongcfl_simple = "tests/strongcfl-simple.cudf"
+let f_strongcfl_triangle = "tests/strongcfl-triangle.cudf"
 let f_selfprovide = "tests/selfprovide.cudf"
 
 let (universe,request) =
@@ -281,6 +282,13 @@ let strongcfl_simple =
     test_strongcfl f_strongcfl_simple edge_list
   )
 
+let strongcfl_triangle = 
+  "strongcfl triangle" >:: (fun _ ->
+    let edge_list = [
+      (("romeo", 1), ("quebec", 1)) ]
+    in
+    test_strongcfl f_strongcfl_triangle edge_list
+  )
 let test_strongdep =
   "strong dependencies" >::: [
     strongdep_simple ;
@@ -291,7 +299,8 @@ let test_strongdep =
 
 let test_strongcfl = 
   "strong conflicts" >::: [
-    strongcfl_simple
+    strongcfl_simple ;
+    strongcfl_triangle
   ]   
 
 let test_dependency_graph =
