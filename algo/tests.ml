@@ -25,6 +25,7 @@ let f_strongdeps_simple = "tests/strongdep-simple.cudf"
 let f_strongdeps_conflict = "tests/strongdep-conflict.cudf"
 let f_strongdeps_cycle = "tests/strongdep-cycle.cudf"
 let f_strongdeps_conj = "tests/strongdep-conj.cudf"
+let f_strongcfl_simple = "tests/strongcfl-simple.cudf"
 let f_selfprovide = "tests/selfprovide.cudf"
 
 let (universe,request) =
@@ -201,6 +202,27 @@ let test_strong file l =
   ;
   assert_equal (List.sort sdedges) (List.sort testedges)
 
+let test_strongcfl file l =
+  let module SG = Strongconflicts.CG in
+  let (_,universe,_) = Cudf_parser.load_from_file file in
+  let g = Strongconflicts.strongconflicts universe in
+  let scedges = SG.fold_edges (fun p q l -> (p,q)::l) g [] in
+  let testedges =
+    List.map (fun (v,z) ->
+      let p = Cudf.lookup_package universe v in
+      let q = Cudf.lookup_package universe z in
+      (p,q)
+    ) l
+  in
+  if not((List.sort scedges) = (List.sort testedges)) then
+    List.iter (fun (p,q) -> 
+      Printf.eprintf "%s <-> %s\n" 
+      (CudfAdd.print_package p)
+      (CudfAdd.print_package q)
+    ) scedges
+  ;
+  assert_equal (List.sort scedges) (List.sort testedges)
+
 let strongdep_simple =
   "strongdep simple" >:: (fun _ ->
     let edge_list = [
@@ -248,6 +270,16 @@ let strongdep_conj =
     test_strong f_strongdeps_conj edge_list
   )
 
+let strongcfl_simple = 
+  "strongcfl simple" >:: (fun _ ->
+    let edge_list = [
+      (("bravo", 1), ("alpha", 1))  ;
+      (("quebec", 1), ("alpha", 1)) ;
+      (("papa", 1), ("bravo", 1))   ;
+      (("quebec", 1), ("papa", 1))  ]
+    in
+    test_strongcfl f_strongcfl_simple edge_list
+  )
 
 let test_strongdep =
   "strong dependencies" >::: [
@@ -256,6 +288,11 @@ let test_strongdep =
     strongdep_cycle ;
     strongdep_conj 
   ]
+
+let test_strongcfl = 
+  "strong conflicts" >::: [
+    strongcfl_simple
+  ]   
 
 let test_dependency_graph =
   "syntactic dependency graph" >:: (fun _ ->
@@ -295,6 +332,7 @@ let all =
   "all tests" >::: [
     test_depsolver ;
     test_strongdep ;
+    test_strongcfl ;
     test_defaultgraphs ;
     test_clause_dump ;
   ]
