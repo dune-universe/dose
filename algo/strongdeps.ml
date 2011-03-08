@@ -31,9 +31,9 @@ let strongdeps universe pkglist =
 
 (** [strongdeps_univ u] build the strong dependency graph of 
     all packages in the universe [u] *)
-let strongdeps_univ universe =
+let strongdeps_univ ?(transitive=true) universe =
   let mdf = Mdf.load_from_universe universe in
-  let g = Strongdeps_int.strongdeps_univ mdf in
+  let g = Strongdeps_int.strongdeps_univ ~transitive mdf in
   Defaultgraphs.intcudf mdf.Mdf.index g
 
 (** compute the impact set of the node [q], that is the list of all 

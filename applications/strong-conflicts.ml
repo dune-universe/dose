@@ -79,11 +79,23 @@ let main () =
       Printf.fprintf !oc "  %d (%s <-> %s)\n" (List.length cl)
         r1.Cudf.package r2.Cudf.package;
       List.iter (fun (c2, ct) -> 
-        Printf.fprintf !oc "    * %s (%s)\n" c2.Cudf.package
+        Printf.fprintf !oc "    * %s" c2.Cudf.package;
         (match ct with
-        | Strongconflicts.Explicit -> "explicit"
-        | Strongconflicts.Conjunctive -> "conjunctive"
-        | Strongconflicts.Other _ -> "other")
+        | Strongconflicts.Explicit -> Printf.fprintf !oc " (explicit)\n"
+        | Strongconflicts.Conjunctive -> Printf.fprintf !oc " (conjunctive)\n"
+        | Strongconflicts.Other d ->
+					begin
+						Printf.fprintf !oc " (other)\n";
+						List.iter (function
+							| Diagnostic.Dependency (p1, l, pl) ->
+								Printf.fprintf !oc "      - dependency: %s / %s / %s\n"
+									p1.Cudf.package
+									(String.concat ", " (List.rev_map fst l))
+									(String.concat "," (List.rev_map (fun p2 -> p2.Cudf.package) pl));
+							| Diagnostic.Missing _    -> Printf.fprintf !oc "      - mss\n";
+							| Diagnostic.Conflict _   -> Printf.fprintf !oc "      - cfl\n";
+						) d;
+					end)
       ) cl
     ) cf_ht
   ) sc

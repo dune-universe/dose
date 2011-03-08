@@ -322,7 +322,6 @@ module IntPkgGraph = struct
     debug "Adding edge from %d to %d" i j;
     G.add_edge graph i j;
     if transitive then begin
-      (* add transitive closure arcs *)
       adapt i (S.singleton j);
       G.iter_pred (fun k ->
         if not (G.mem_edge graph k j) then
@@ -332,10 +331,10 @@ module IntPkgGraph = struct
   end
 
   (** add to the graph all conjunctive dependencies of package id *)
-  let conjdepgraph_int graph index id =
+  let conjdepgraph_int ?(transitive=false) graph index id =
     G.add_vertex graph id;
     List.iter (function
-      |(_,[p],_) when p <> id -> add_edge false graph id p
+      |(_,[p],_) when p <> id -> add_edge transitive graph id p
       | _ -> ()
     ) index.(id).Mdf.depends
 

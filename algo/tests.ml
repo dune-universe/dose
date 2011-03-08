@@ -182,10 +182,10 @@ let solution_set =
   let (_,pl,_) = Cudf_parser.parse_from_file f_legacy_sol in
   List.fold_right S.add pl S.empty
 
-let test_strong file l =
+let test_strong ?(transitive=true) file l =
   let module G = Defaultgraphs.PackageGraph.G in
   let (_,universe,_) = Cudf_parser.load_from_file file in
-  let g = Strongdeps.strongdeps_univ universe in
+  let g = Strongdeps.strongdeps_univ ~transitive universe in
   let sdedges = G.fold_edges (fun p q l -> (p,q)::l) g [] in
   let testedges =
     List.map (fun (v,z) ->
@@ -271,6 +271,18 @@ let strongdep_conj =
     test_strong f_strongdeps_conj edge_list
   )
 
+let strongdep_detrans =
+  "strongdep detrans" >:: (fun _ ->
+    let edge_list = [
+      (("aa",1),("bb",1)) ;
+      (("aa",1),("dd",1)) ;
+      (("bb",1),("ee",1)) ;
+      (("cc",1),("ee",1)) ;
+      (("ee",1),("ff",1)) ]
+    in
+    test_strong ~transitive:false f_strongdeps_conj edge_list
+  )
+
 let strongcfl_simple = 
   "strongcfl simple" >:: (fun _ ->
     let edge_list = [
@@ -289,12 +301,14 @@ let strongcfl_triangle =
     in
     test_strongcfl f_strongcfl_triangle edge_list
   )
+
 let test_strongdep =
   "strong dependencies" >::: [
     strongdep_simple ;
     strongdep_conflict ;
     strongdep_cycle ;
-    strongdep_conj 
+    strongdep_conj ;
+		strongdep_detrans
   ]
 
 let test_strongcfl = 

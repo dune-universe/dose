@@ -47,7 +47,7 @@ struct
       open_out (Opt.get out_ch)
     else stdout
 
-  let description = "Ceve ... what does it mean ?"
+  let description = "Ceve - integrated metadata parser and transformer"
   let options = OptParser.make ~description:description ()
 
   open OptParser
