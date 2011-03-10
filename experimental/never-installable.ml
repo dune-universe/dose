@@ -19,23 +19,25 @@ open Debian
 open Common
 open Diagnostic
 
-let debug_switch=false;;
+let debug fmt = Util.make_debug "" fmt
+let info fmt = Util.make_info "" fmt
+let warning fmt = Util.make_warning "" fmt
+
+let debug_switch = false
 
 module Options = struct
   open OptParse
-    
-  let verbose = StdOpt.incr_option ()
+  let description =
+    "Report packages that aren't installable in any futures of a repository"
+  let options = OptParser.make ~description 
+
+  include Boilerplate.MakeOptions(struct let options = options end)
+
   let explain = StdOpt.store_true ()
   let architecture = StdOpt.str_option ()
   let cudf_output = StdOpt.str_option ()
 
-  let description =
-    "Report packages that aren't installable in any futures of a repository"
-  let options = OptParser.make ~description ()
-
   open OptParser
-  add options ~short_name:'v' ~long_name:"verbose"
-    ~help:"Print additional information" verbose;
   add options ~short_name:'e' ~long_name:"explain"
     ~help:"Explain the results" explain;
   add options ~short_name:'a' ~long_name:"architecture"
@@ -43,10 +45,6 @@ module Options = struct
   add options ~long_name:"cudf-to"
     ~help:"Dump CUDF to file" cudf_output;
 end
-
-let debug fmt = Util.make_debug "" fmt
-let info fmt = Util.make_info "" fmt
-let warning fmt = Util.make_warning "" fmt
 
 let sourcename_of_package p = 
   try
@@ -212,6 +210,8 @@ let main () =
     |l -> List.map ((^) "deb://") l
   in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
+  Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
+  
   let default_arch = OptParse.Opt.opt Options.architecture in
 
 (****************************************************************************)
