@@ -94,7 +94,7 @@ let main () =
       ) depgraph []
       end
     in
-    Printf.fprintf outch "name, #str-in, #str-out, #dir-in, #dir-out, diff\n";
+    Printf.fprintf outch "name, #str-out, #str-in, #dir-out, #dir-in, diff\n";
     List.iter (fun (p,diff,rs,s,rd,d) ->
       let pkg = CudfAdd.print_package p in
       Printf.fprintf outch "%s , %d, %d, %d, %d, %d\n" pkg rs s rd d diff
