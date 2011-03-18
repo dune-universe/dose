@@ -20,6 +20,8 @@ open Defaultgraphs
 
 let mainbar = Util.Progress.create "Strongdeps_int.main"
 let conjbar = Util.Progress.create "Strongdeps_int.conj"
+let strongtimer = Util.Timer.create "Strongdeps_int.strong"
+let conjtimer = Util.Timer.create "Strongdeps_int.conjdep"
 
 let debug fmt = Util.make_debug "Strongdeps_int" fmt
 let info fmt = Util.make_info "Strongdeps_int" fmt
@@ -66,7 +68,6 @@ let strongdeps_int ?(transitive=true) graph mdf l =
   let size = List.length available in
 
   Util.Progress.set_total mainbar size;
-  let strongtimer = Util.Timer.create "Strongdeps_int.strong" in
 
   Util.Timer.start strongtimer;
   List.iter (fun (pkg,_,closure) ->
@@ -93,7 +94,6 @@ let strongdeps mdf idlist =
   let graph = G.create () in
   let size = List.length idlist in
   Util.Progress.set_total conjbar size;
-  let conjtimer = Util.Timer.create "Strongdeps_int.conjdep" in
 
   Util.Timer.start conjtimer;
   let l = 
@@ -114,7 +114,6 @@ let strongdeps_univ ?(transitive=true) mdf =
   let graph = G.create () in
   let size = Array.length mdf.Mdf.index in
   Util.Progress.set_total conjbar size;
-  let conjtimer = Util.Timer.create "Strongdeps_int.conjdep" in
 
   Util.Timer.start conjtimer;
   let l = 

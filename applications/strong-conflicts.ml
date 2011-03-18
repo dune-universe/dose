@@ -44,14 +44,11 @@ let log s =
 
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  let bars = [
-    "Strongdeps_int.main";"Strongdeps_int.conj";
-    "StrongDepGraph.transform.edges";"StrongDepGraph.transform.vertex";
-    "Strongconflicts_int.local"; "Strongconflicts_int.seeding"
-    ]
-  in
+  let bars = ["Strongconflicts_int.local"; "Strongconflicts_int.seeding"] in
+  let timers = ["Strongconflicts_int.main"] in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress) bars;
+  Boilerplate.enable_timers (OptParse.Opt.get Options.timers) timers;
 
   if OptParse.Opt.is_set Options.log_file then 
     lc := Some (open_out (OptParse.Opt.get Options.log_file));

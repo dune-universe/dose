@@ -38,6 +38,9 @@ module CG = Graph.Imperative.Graph.ConcreteLabeled(PkgV)(CflE)
 let seedingbar = Util.Progress.create "Strongconflicts_int.seeding" ;;
 let localbar = Util.Progress.create "Strongconflicts_int.local" ;;
 
+(** timer *)
+let sctimer = Util.Timer.create "Strongconflicts_int.main";;
+
 (* open Depsolver_int *)
 
 module S = Set.Make (struct type t = int let compare = Pervasives.compare end)
@@ -79,6 +82,7 @@ let strongconflicts mdf =
   let size = (Array.length index) in
   let cache = IG.make size in
 
+  Util.Timer.start sctimer;
   debug "Pre-seeding ...";
 
   Util.Progress.set_total seedingbar (Array.length mdf.Mdf.index);
@@ -191,5 +195,6 @@ let strongconflicts mdf =
 
   Util.Progress.reset localbar;
   debug " total tuple examined %d" !total;
+  ignore (Util.Timer.stop sctimer ());
   strongraph
 ;;
