@@ -31,6 +31,17 @@ let cudf_list = List.map (Debcudf.tocudf ~extras:extras_properties tables) ipr_l
 let universe = Cudf.load_universe cudf_list ;;
 let maps = CudfAdd.build_maps universe ;;
 
+let test_version = 
+  let v = "1:1.4-5+b1" in
+  "debian version parsing" >::: [
+    "splitting" >:: (fun _ ->
+      let (e,u,r,b) = Version.split v in
+      assert_equal (e,u,r,b) ("1","1.4","5","+b1")
+    );
+    "normalize" >:: (fun _ ->
+      assert_equal (Version.normalize v) "1.4-5"
+    );
+  ]
 let test_format =
   "name mangling" >::: []
 
@@ -76,7 +87,7 @@ let test_mapping =
   ]
 
 let all = 
-  "all tests" >::: [ test_mapping ; test_conflicts ]
+  "all tests" >::: [ test_mapping ; test_conflicts; test_version ]
 
 let main () =
   OUnit.run_test_tt_main all

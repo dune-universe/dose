@@ -9,6 +9,8 @@
 (*  library, see the COPYING file for more information.                   *)
 (**************************************************************************)
 
+let fatal fmt = Common.Util.make_fatal "Debian.Version" fmt
+
 (* cannibalized from ocamldeb *)
 
 let is_digit = function
@@ -68,10 +70,33 @@ let extract_revision x =
   | Not_found -> (x,"")
 ;;
 
+(* binNMU are of the for +b1 ... +bn *)
+(* old binNMUs were of the form version-major.minor.binNMU *)
+(** chops a possible bin-NMU suffix from a debian version string *)
+let extract_binnmu x =
+  let rex = Str.regexp "^\\(.*\\)\\(\\+b[0-9]+\\)$" in
+  try
+    ignore(Str.search_backward rex x (String.length(x)));
+    (Str.matched_group 1 x,Str.matched_group 2 x)
+  with Not_found -> (x,"")
+
 let extract_chunks x =
   let (epoch,rest) = extract_epoch x in
   let (upstream,revision) = extract_revision rest in
   (epoch,upstream,revision)
+;;
+
+let split x =
+  let (e,u,rest) = extract_chunks x in
+  let (r,b) = extract_binnmu rest in
+  (e,u,r,b)
+;;
+
+let normalize s =
+  let (e,u,rest) = extract_chunks s in
+  match extract_binnmu rest with
+  |("","") -> ""
+  |(x,_) -> Printf.sprintf "%s-%s" u x
 ;;
 
 let ( ** ) x y = if x = 0 then y else x;;
@@ -194,3 +219,37 @@ let compare (x : string) (y : string) =
 
 let equal (x : string) (y : string) =
   if x = y then true else (compare x y) = 0
+
+let evalsel (v,c) = 
+  match Common.CudfAdd.cudfop c with
+  |Some(`Eq,w) -> equal v w
+  |Some(`Geq,w) -> compare v w >= 0
+  |Some(`Leq,w) -> compare v w <= 0
+  |Some(`Gt,w) -> compare v w > 1
+  |Some(`Lt,w) -> compare v w < 1
+  |Some(`Neq,w) -> not(equal v w)
+  |None -> fatal "Not a constraint" 
+
+(** [split_by_epoch vpl] splits the (sorted) list [vpl] grouping their elements by epoch *)
+(*
+let split_by_epoch =
+  let samepoch =
+    function
+        (e1,e2) when e1=e2 -> true
+      | (e1,e2) when e1="0:" && e2="" -> true
+      | (e1,e2) when e1="" && e2="0:" -> true
+      | _ -> false
+  in
+  let rec aux e (acc::accl) = function
+      [] -> List.rev (List.map List.rev (acc::accl))
+    | ((_,Eq debv) as vpair)::r when samepoch(e,(Debutil.chop_version debv)) ->
+        aux e ((vpair::acc)::accl) r
+    | ((_,Eq debv) as vpair)::r ->
+        aux (Debutil.chop_version debv) ([vpair]::acc::accl) r
+    | _ -> failwith "Split_by_epoch only handles real versions"
+  in function
+      [] -> []
+    | ((_,Eq debv) as vpair)::r -> aux (Debutil.chop_version debv) [[vpair]] r
+    | _ -> failwith "Split_by_epoch only handles real versions"
+;;
+*)
