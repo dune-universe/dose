@@ -1,5 +1,5 @@
 <*.ml> or <*.mli> or <*.cma> or <*.cmx>: pkg_extlib, @PKG_CUDF@
-<{packages,sources,apt,release,version,format822,debcudf,architecture,debutil}.cmx>: for-pack(Debian)
+<{packages,sources,apt,release,version,format822,debcudf,architecture,debutil,evolution}.cmx>: for-pack(Debian)
 <tests.*>: pkg_extlib, pkg_str, pkg_oUnit, @PKG_CUDF@, @PKG_ZIP@, @PKG_BZ2@
 <bench.*>: pkg_extlib, pkg_benchmark, pkg_str, pkg_ocamlgraph, @PKG_CUDF@, @PKG_ZIP@, @PKG_BZ2@
 <common>: include

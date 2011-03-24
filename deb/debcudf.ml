@@ -97,7 +97,7 @@ let init_versions_table table pkg =
   add_source pkg.version pkg.source
 ;;
 
-let init_tables pkglist =
+let init_tables ?(step=1) ?(versionlist=[]) pkglist =
   let n = 2 * List.length pkglist in
   let tables = create n in 
   let temp_versions_table = Hashtbl.create n in
@@ -106,6 +106,7 @@ let init_tables pkglist =
   let ivdt = init_versioned_table tables.versioned_table in
   let iut = init_unit_table tables.unit_table in
 
+  List.iter (fun v -> add temp_versions_table v ()) versionlist; 
   List.iter (fun pkg -> ivt pkg ; ivrt pkg ; ivdt pkg ; iut pkg) pkglist ;
   let l = Hashtbl.fold (fun v _ acc -> v::acc) temp_versions_table [] in
   let add_reverse i v =
@@ -121,9 +122,9 @@ let init_tables pkglist =
         add_reverse i v;
         numbers (prec,i) t
       end else begin
-        Hashtbl.add tables.versions_table v (i+1);
-        add_reverse (i+1) v;
-        numbers (v,(i+1)) t
+        Hashtbl.add tables.versions_table v (i+step);
+        add_reverse (i+step) v;
+        numbers (v,(i+step)) t
       end
   in
   (* versions start from 1 *)
@@ -278,8 +279,8 @@ let load_list l =
   Util.Timer.stop timer pkglist
 
 let load_universe l =
-  let pkglist = load_list l in
   let timer = Util.Timer.create "Debian.Debcudf.load_universe" in
+  let pkglist = load_list l in
   Util.Timer.start timer;
   let univ = Cudf.load_universe pkglist in
   Util.Timer.stop timer univ

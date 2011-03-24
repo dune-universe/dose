@@ -17,9 +17,11 @@
 type tables
 
 (** initialize the version conversion tables *)
-val init_tables : Packages.package list -> tables
+val init_tables : ?step:int -> ?versionlist:Format822.version list -> Packages.package list -> tables
 
-(** return the cudf version associated to a tuple (name,version) *)
+(** return the cudf version associated to a tuple (name,version). 
+ * return Not_found if there is not package or cudf version associated
+ * to the tuple (name,version) *)
 val get_cudf_version : tables -> Format822.name * Format822.version -> int
 
 (** return the real version associated to a Cudf package *)

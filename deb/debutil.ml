@@ -1,3 +1,14 @@
+(**************************************************************************************)
+(*  Copyright (C) 2009 Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
+(*  Copyright (C) 2009 Mancoosi Project                                               *)
+(*                                                                                    *)
+(*  This library is free software: you can redistribute it and/or modify              *)
+(*  it under the terms of the GNU Lesser General Public License as                    *)
+(*  published by the Free Software Foundation, either version 3 of the                *)
+(*  License, or (at your option) any later version.  A special linking                *)
+(*  exception to the GNU Lesser General Public License applies to this                *)
+(*  library, see the COPYING file for more information.                               *)
+(**************************************************************************************)
 
 (* binNMU are of the for +b1 ... +bn *)
 (* old binNMUs were of the form version-major.minor.binNMU *)
@@ -26,12 +37,17 @@ let normalize s = chop_epoch (chop_binnmu s)
  * otherwise add it to the table indexed by package version *)
 (* actually it should be sourceversion -> list of list of clusters grouped by
  * version *)
-let group_by_source universe =
-  let th = Hashtbl.create (Cudf.universe_size universe) in
-  Cudf.iter_packages (fun pkg ->
-    let source = Cudf.lookup_package_property pkg "source" in
-    let sourceversion = Cudf.lookup_package_property pkg "sourceversion" in
-    let packageversion = normalize (Cudf.lookup_package_property pkg "number") in
+let cluster packagelist =
+  let th = Hashtbl.create (List.length packagelist) in
+  List.iter (fun pkg ->
+    let (source, sourceversion) =
+     match pkg.Packages.source with
+     |("",None) -> (pkg.Packages.name, pkg.Packages.version)
+     |(n,None) -> (n, pkg.Packages.version)
+     |(n,Some v) -> (n,v)
+    in
+    let packageversion = normalize pkg.Packages.version in
+
     try
       let h = Hashtbl.find th (source,sourceversion) in
       try
@@ -45,14 +61,11 @@ let group_by_source universe =
       Hashtbl.add h packageversion (ref[pkg]);
       Hashtbl.add th (source,sourceversion) h
     end
-  ) universe;
-  let h = Hashtbl.create (Cudf.universe_size universe) in
-  Hashtbl.iter (fun n thv ->
-    let hv = Hashtbl.create 17 in
-    Hashtbl.iter (fun v {contents=l} ->
-      Hashtbl.add hv v l
-    ) thv;
-    Hashtbl.add h n hv
+  ) packagelist ;
+  let h = Hashtbl.create (List.length packagelist) in
+  Hashtbl.iter (fun (s,v) thv ->
+    let l = Hashtbl.fold (fun v {contents=l} acc -> (v,l)::acc) thv [] in
+    Hashtbl.add h (s,v) l
   ) th;
   h
 ;;

@@ -220,16 +220,6 @@ let compare (x : string) (y : string) =
 let equal (x : string) (y : string) =
   if x = y then true else (compare x y) = 0
 
-let evalsel (v,c) = 
-  match Common.CudfAdd.cudfop c with
-  |Some(`Eq,w) -> equal v w
-  |Some(`Geq,w) -> compare v w >= 0
-  |Some(`Leq,w) -> compare v w <= 0
-  |Some(`Gt,w) -> compare v w > 1
-  |Some(`Lt,w) -> compare v w < 1
-  |Some(`Neq,w) -> not(equal v w)
-  |None -> fatal "Not a constraint" 
-
 (** [split_by_epoch vpl] splits the (sorted) list [vpl] grouping their elements by epoch *)
 (*
 let split_by_epoch =

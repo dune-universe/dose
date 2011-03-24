@@ -79,14 +79,14 @@ let test_cluster =
           ("aa","1",[("aa","1")]);
           ("ee_source","2",[("ff","2")]);
           ("ee_source","1",[("gg","1");("ee","1")]);
-          ("cc_source","1",[("dd","1")]);
           ("cc_source","1",[("cc","2")]);
+          ("cc_source","1",[("dd","1")]);
         ]
       in
 
-      Hashtbl.iter (fun (sourcename, sourceversion) h ->
+      Hashtbl.iter (fun (sourcename, sourceversion) l ->
         (* Printf.eprintf "(1)cluster (%s,%s)\n%!" sourcename sourceversion; *)
-        Hashtbl.iter (fun version cluster ->
+        List.iter (fun (version,cluster) ->
           (* Printf.eprintf "(1)v %s\n%!" version; *)
           let l = List.map(fun pkg -> (pkg.Packages.name,pkg.Packages.version)) cluster in
           (*
@@ -95,7 +95,7 @@ let test_cluster =
           ) cluster;
           *)
           assert_delay (sourcename,sourceversion,l);
-        ) h
+        ) l
       ) clusters
     ); 
   ]
@@ -147,13 +147,13 @@ let test_evolution =
           ("aa","1","1",[]);
           ("ee_source","2","2",[]);
           ("ee_source","1","1",[]);
-          ("cc_source","1","1",[`Lo "3"]);
           ("cc_source","1","2",[`Lo "3";`Eq "4";`Eq "3"]);
+          ("cc_source","1","1",[`Lo "3"]);
         ]
       in
-      Hashtbl.iter (fun (sourcename, sourceversion) h ->
+      Hashtbl.iter (fun (sourcename, sourceversion) l ->
         (* Printf.eprintf "(2)cluster (%s,%s)\n%!" sourcename sourceversion; *)
-        Hashtbl.iter (fun version cluster ->
+        List.iter (fun (version ,cluster) ->
           (* Printf.eprintf "(2)v : %s\n%!" version; *)
           let l = Evolution.discriminants ~downgrade:sourceversion constraints_table cluster in
           (*
@@ -162,23 +162,36 @@ let test_evolution =
           ) l;
           *)
           assert_delay (sourcename,sourceversion,version,l);
-        ) h
+        ) l
       ) clusters;
       assert_equal true true
     );
-    "align" >:: (fun _ ->
+    "align (with epoch)" >:: (fun _ ->
       let r = Evolution.align "1:3.4+b5" (`In ("2:3.5","2:3.6")) in
       assert_equal r (`In ("1:3.5","1:3.6"))
     );
+    "align (without epoch 1)" >:: (fun _ ->
+      let r = Evolution.align "3.4+b5" (`In ("2:3.5","2:3.6")) in
+      assert_equal r (`In ("2:3.5","2:3.6"))
+    );
+    "align (without epoch 2)" >:: (fun _ ->
+      let r = Evolution.align "3.4+b5" (`In ("3.5","3.6")) in
+      assert_equal r (`In ("3.5","3.6"))
+    );
+(*
     "migration" >:: (fun _ ->
       Hashtbl.iter (fun (sourcename, sourceversion) h ->
         Hashtbl.iter (fun version cluster ->
-          (* let migrationlist = Debian.Evolution.migrate cluster target in *)
-          ()
+          let migrationlist = Debian.Evolution.migrate cluster (`Lo "1:3") in
+          List.iter (fun ((pkg,target),newtarget) -> 
+            Printf.eprintf "%s %s\n%!" pkg.Packages.name pkg.Packages.version;
+            Printf.eprintf "old %s\n%!" (Evolution.string_of_range target);
+            Printf.eprintf "new %s\n%!" (Evolution.string_of_range newtarget)
+          ) migrationlist
         ) h
-      ) clusters;
-      assert_equal true true
+      ) clusters
     );
+*)
   ]
 ;;
 

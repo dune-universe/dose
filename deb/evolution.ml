@@ -133,18 +133,20 @@ let all_constraints table pkgname =
 
 (* return a new target rebased accordingly to the epoch of the base version *)
 let align version target =
-  let (pe,_,_,_) = Version.split version in
-  let rebase v =
-    match Version.split v with
-    |(_,u,"","") -> Printf.sprintf "%s:%s" pe u
-    |(_,u,r,"")  -> Printf.sprintf "%s:%s-%s" pe u r
-    |(_,u,r,b)   -> Printf.sprintf "%s:%s-%s%s" pe u r b
-  in
-  match target with
-  |`Eq v -> `Eq (rebase v)
-  |`Hi v -> `Hi (rebase v)
-  |`Lo v -> `Lo (rebase v)
-  |`In (v,w) -> `In (rebase v,rebase w)
+  match Version.split version  with
+  |("",_,_,_) -> target
+  |(pe,_,_,_) ->
+    let rebase v =
+      match Version.split v with
+      |(_,u,"","") -> Printf.sprintf "%s:%s" pe u
+      |(_,u,r,"")  -> Printf.sprintf "%s:%s-%s" pe u r
+      |(_,u,r,b)   -> Printf.sprintf "%s:%s-%s%s" pe u r b
+    in
+    match target with
+    |`Eq v -> `Eq (rebase v)
+    |`Hi v -> `Hi (rebase v)
+    |`Lo v -> `Lo (rebase v)
+    |`In (v,w) -> `In (rebase v,rebase w)
 ;;
 
 let all_versions constr = Util.list_unique (List.map (snd) constr) ;;
@@ -165,6 +167,10 @@ let discriminants ?downgrade constraints_table cluster =
       (Hashtbl.fold (fun k v acc -> k::acc) d []) @ l
     ) [] cluster
   )
+;;
+
+let migrate packagelist target =
+  List.map (fun pkg -> ((pkg,target),(align pkg.Packages.version target))) packagelist
 ;;
 
 (*
@@ -214,6 +220,4 @@ let main () =
 main ();;  
 *)
 
-let migrate packagelist target =
-  List.map (fun pkg -> ((pkg,target),(align pkg.Packages.version target))) packagelist
-;;
+
