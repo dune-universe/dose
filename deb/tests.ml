@@ -147,18 +147,22 @@ let test_evolution =
           ("aa","1","1",[]);
           ("ee_source","2","2",[]);
           ("ee_source","1","1",[]);
-          ("cc_source","1","2",[`Lo "3";`Eq "4";`Eq "3"]);
-          ("cc_source","1","1",[`Lo "3"]);
+          ("cc_source","1","2",[(`Lo "3",[]);(`Eq "4",[]);(`Eq "3",[`Hi "4";`In ("3","4")])]);
+          ("cc_source","1","1",[(`Lo "3",[`Hi "3";`Eq "3"])]);
         ]
       in
       Hashtbl.iter (fun (sourcename, sourceversion) l ->
         (* Printf.eprintf "(2)cluster (%s,%s)\n%!" sourcename sourceversion; *)
-        List.iter (fun (version ,cluster) ->
+        List.iter (fun (version,cluster) ->
           (* Printf.eprintf "(2)v : %s\n%!" version; *)
           let l = Evolution.discriminants ~downgrade:sourceversion constraints_table cluster in
           (*
-          List.iter (fun target ->
+          List.iter (fun (target,equiv) ->
             Printf.eprintf "(2)d : %s\n%!" (Evolution.string_of_range target);
+            List.iter (fun target ->
+            Printf.eprintf "(2)d : e %s\n%!" (Evolution.string_of_range target);
+            ) equiv;
+            Printf.eprintf "(2)d : ----\n%!"
           ) l;
           *)
           assert_delay (sourcename,sourceversion,version,l);

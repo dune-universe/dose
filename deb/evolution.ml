@@ -53,13 +53,14 @@ let evalsel compare (target,constr) =
 ;;
 
 (* returns a list of ranges w.r.t. the list of versions vl *)
+(* the range is a [ ... [ kind of interval *)
 let range vl =
   let l = List.sort ~cmp:(fun v1 v2 -> Version.compare v2 v1) vl in
   let rec aux acc = function
     |(None,[]) -> acc
     |(None,a::t) -> aux ((`Hi a)::acc) (Some a,t)
     |(Some b,a::t) -> aux ((`In (a,b))::(`Eq b)::acc) (Some a,t)
-    |(Some b,[]) -> (`Lo b)::(`Eq b)::acc
+    |(Some b,[]) -> (`Lo b)::(`Eq b)::acc 
   in
   aux [] (None,l)
 ;;
@@ -159,14 +160,19 @@ let discriminants ?downgrade constraints_table cluster =
   Util.list_unique (
     List.fold_left (fun l pkg ->
       let constr = all_constraints constraints_table pkg.Packages.name in
-      let uplist = 
+      let versionlist = 
         let vl = all_versions constr in
         match downgrade with
         |None -> vl
-        |Some v -> List.filter (fun w -> (Version.compare v w) < 0) vl 
+        |Some v -> 
+            let f x =
+              match Version.split v,Version.split x with
+              |(_,v,_,_),(_,w,_,_) -> (Version.compare v w) < 0
+            in
+            List.filter f vl
       in
-      let d = discriminant uplist constr in
-      (Hashtbl.fold (fun k v acc -> k::acc) d []) @ l
+      let d = discriminant versionlist constr in
+      (Hashtbl.fold (fun k v acc -> (k,v)::acc) d []) @ l
     ) [] cluster
   )
 ;;

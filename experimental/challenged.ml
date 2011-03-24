@@ -37,12 +37,12 @@ let exclude pkgset pl =
   CudfAdd.Cudf_set.elements (CudfAdd.Cudf_set.diff pkgset sl)
 ;;
 
-let dummy pkg version =
+let dummy pkg number version =
   {Cudf.default_package with
    Cudf.package = pkg.Cudf.package;
    version = version;
    provides = pkg.Cudf.provides;
-   pkg_extra = [("number",`String "")]
+   pkg_extra = [("number",`String number)]
   }
 
 
@@ -58,7 +58,8 @@ let upgrade tables universe migrationlist =
             ((Debian.Debcudf.get_cudf_version tables (pkg.Debian.Packages.name,v)) - 1)
       in
       let p = Cudf.lookup_package universe (pkg.Debian.Packages.name,orig) in
-      (dummy p newv)::l
+      let number = Debian.Evolution.string_of_range target in
+      (dummy p number newv)::l
     ) [] migrationlist
   in
   let to_remove = 
@@ -93,7 +94,8 @@ let challenged repository =
   let constraints_table = Debian.Evolution.constraints repository in
   Hashtbl.iter (fun (sn,sv) l ->
     List.iter (fun (version,cluster) ->
-      List.iter (fun target ->
+      (* all packages in this cluster have the same version *)
+      List.iter (fun (target,equiv) ->
         let migrationlist = Debian.Evolution.migrate cluster target in
         let vl = 
           List.fold_left (fun acc -> function
@@ -102,8 +104,9 @@ let challenged repository =
           ) [] migrationlist
         in
         version_acc := vl @ !version_acc;
-        Hashtbl.add worktable (cluster,(sn,sv),target) migrationlist
-      ) (Debian.Evolution.discriminants ~downgrade:sourceversion constraints_table cluster)
+        let aligned_target = Debian.Evolution.align version target in
+        Hashtbl.add worktable (cluster,(sn,sv,version),target,aligned_target,equiv) migrationlist
+      ) (Debian.Evolution.discriminants ~downgrade:version constraints_table cluster)
     ) l
   ) clusters;
 
@@ -112,25 +115,32 @@ let challenged repository =
   let tables = Debian.Debcudf.init_tables ~step:2 ~versionlist repository in
   let pkglist = List.map (Debian.Debcudf.tocudf tables) repository in
   let universe = Cudf.load_universe pkglist in
-  let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
   let brokenref = Depsolver.univcheck universe in
 
   Util.Progress.set_total predbar (Hashtbl.length worktable);
 
   (* computing *)
-  let univ_size = List.length pkglist in
-  Hashtbl.iter(fun (cluster,(sn,sv),target) migrationlist ->
+  let fmt = Format.std_formatter in
+  Format.fprintf fmt "@[<v 1>report:@,";
+  Format.fprintf fmt "broken packages reference: %d@," brokenref;
+  Hashtbl.iter(fun (cluster,(sn,sv,bv),target,aligned_target,equiv) migrationlist ->
     Util.Progress.progress predbar;
-    flush_all ();
     let future = upgrade tables universe migrationlist in
-    
-    let results = ref [] in
-    let callback d = results := d::!results in
 
+    Format.fprintf fmt "cluster: %s %s@," sn sv;
+    Format.fprintf fmt "sub cluster bin version: %s@," bv;
+    Format.fprintf fmt "target: %s @," (Debian.Evolution.string_of_range target);
+    Format.fprintf fmt "aligned target: %s @," (Debian.Evolution.string_of_range aligned_target);
+    Format.fprintf fmt "equiv: %s@," (String.concat " , " (List.map (Debian.Evolution.string_of_range) equiv));
+
+    let callback d = Diagnostic.fprintf ~failure:true fmt d in
     let i = Depsolver.univcheck ~callback future in
-    add predmap (cluster,(sn,sv),target) (i,!results)
-  ) worktable
-  ;
+
+    Format.fprintf fmt "broken packages: %d@," (i - brokenref);
+    
+    Hashtbl.add predmap (cluster,(sn,sv),target) (i - brokenref);
+  ) worktable ;
+  Format.fprintf fmt "@]@.";
 
   predmap
 ;;
@@ -141,10 +151,10 @@ let main () =
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress) ["challenged"] ;
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) [];
   let pred = challenged (Debian.Packages.input_raw args) in 
-  Hashtbl.iter (fun (_,(sn,sv),target) (broken,results) ->
+  Hashtbl.iter (fun (_,(sn,sv),target) broken ->
     Format.printf "upgrading cluster %s %s@." sn sv;
     Format.printf "to target %s@." (Debian.Evolution.string_of_range target);
-    Format.printf "breaks %d packages@.@." (i - brokenref)
+    Format.printf "breaks %d packages@.@." broken
   ) pred
 ;;
 
