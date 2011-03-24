@@ -16,7 +16,7 @@ open ExtLib
 open Common
 open Algo
 
-let predbar = Util.Progress.create "Challenged" ;;
+let predbar = Util.Progress.create "challenged" ;;
 let info fmt = Util.make_info "challenged" fmt
 let warning fmt = Util.make_warning "challenged" fmt
 let debug fmt = Util.make_debug "challenged" fmt
@@ -46,14 +46,7 @@ let dummy pkg version =
   }
 
 
-(* this function modify the Cudf universe (in place ??) by
- * associating a (real) package in cluster to a cudf package 
- * in universe and then migrating this package according to the 
- * target version. The universe is a renumbered cudf universe,
- * the target version is given in term of intervals of real versions *)
 let upgrade tables universe migrationlist =
-  (* this function maps all "compatible" versions of all
-   * packages in cluster to the target version *)
   let pkgset = Cudf.fold_packages (fun s p -> CudfAdd.Cudf_set.add p s) CudfAdd.Cudf_set.empty universe in
   let to_add = 
     List.fold_left (fun l ((pkg,_),target) ->
@@ -78,13 +71,6 @@ let upgrade tables universe migrationlist =
   Cudf.load_universe (to_add@universe_subset)
 ;;
 
-(* there are four distribution specific functions :
- * cluster : a function that associates a list of packages to a (source,version)
- * discriminants : a function that find all discriminants of a set of packages
- * convert : a function that converts real packages to cudf packages
- * align : a function that move a real version to a target
- * *)
-
 let add h k v =
   try
     let l = Hashtbl.find h k in
@@ -105,7 +91,7 @@ let challenged repository =
   let clusters = Debian.Debutil.cluster repository in
   let version_acc = ref [] in
   let constraints_table = Debian.Evolution.constraints repository in
-  Hashtbl.iter (fun (sourcename,sourceversion) l ->
+  Hashtbl.iter (fun (sn,sv) l ->
     List.iter (fun (version,cluster) ->
       List.iter (fun target ->
         let migrationlist = Debian.Evolution.migrate cluster target in
@@ -116,7 +102,7 @@ let challenged repository =
           ) [] migrationlist
         in
         version_acc := vl @ !version_acc;
-        Hashtbl.add worktable (cluster,sourcename,target) migrationlist
+        Hashtbl.add worktable (cluster,(sn,sv),target) migrationlist
       ) (Debian.Evolution.discriminants ~downgrade:sourceversion constraints_table cluster)
     ) l
   ) clusters;
@@ -126,46 +112,23 @@ let challenged repository =
   let tables = Debian.Debcudf.init_tables ~step:2 ~versionlist repository in
   let pkglist = List.map (Debian.Debcudf.tocudf tables) repository in
   let universe = Cudf.load_universe pkglist in
-  (* let from_cudf (p,i) = (p,Debian.Debcudf.get_real_version tables (p,i)) in *)
   let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
   let brokenref = Depsolver.univcheck universe in
 
   Util.Progress.set_total predbar (Hashtbl.length worktable);
 
   (* computing *)
-  Hashtbl.iter(fun (cluster,sourcename,target) migrationlist ->
-    (* info "Working on cluster : %s" sourcename; *)
+  let univ_size = List.length pkglist in
+  Hashtbl.iter(fun (cluster,(sn,sv),target) migrationlist ->
     Util.Progress.progress predbar;
     flush_all ();
     let future = upgrade tables universe migrationlist in
     
-    (* let solver = Depsolver.load future in *)
-    let i = Depsolver.univcheck future in
-    add predmap (cluster,sourcename,target) i
+    let results = ref [] in
+    let callback d = results := d::!results in
 
-      (*
-    List.iter (fun real_p ->
-      (* info "real_p %s %s" real_p.Debian.Packages.name real_p.Debian.Packages.version; *)
-      List.iter (fun real_q ->
-        if not(List.mem real_q cluster) then begin
-          (* info "real_q %s %s" real_q.Debian.Packages.name real_q.Debian.Packages.version; *)
-          let (q,i) = to_cudf (real_q.Debian.Packages.name,real_q.Debian.Packages.version) in
-          (* info "pkg_q %s %d" q i; *)
-          let pkg_q = Cudf.lookup_package future (q,i) in
-          if not (Diagnostic.is_solution (Depsolver.edos_install solver pkg_q)) then begin
-            (*
-begin
-            Format.printf "upgrading %s %s@." real_p.Debian.Packages.name real_p.Debian.Packages.version;
-            Format.printf "to target %s@." (Debian.Evolution.string_of_range target);
-            Format.printf "breaks %s %s@." real_q.Debian.Packages.name real_q.Debian.Packages.version;
-end;
-*)
-            add predmap (real_p,target) real_q
-          end
-        end
-      ) repository
-    ) cluster
-      *)
+    let i = Depsolver.univcheck ~callback future in
+    add predmap (cluster,(sn,sv),target) (i,!results)
   ) worktable
   ;
 
@@ -173,18 +136,16 @@ end;
 ;;
 
 let main () =
-
   let args = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
-  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) ["Challenged"] ;
+  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) ["challenged"] ;
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) [];
   let pred = challenged (Debian.Packages.input_raw args) in 
-  Hashtbl.iter (fun (_,sourcename,target) broken ->
-    Format.printf "upgrading cluster %s @." sourcename;
+  Hashtbl.iter (fun (_,(sn,sv),target) (broken,results) ->
+    Format.printf "upgrading cluster %s %s@." sn sv;
     Format.printf "to target %s@." (Debian.Evolution.string_of_range target);
     Format.printf "breaks %d packages@.@." (i - brokenref)
   ) pred
-
 ;;
 
 main ();;

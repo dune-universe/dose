@@ -1,5 +1,5 @@
 (**************************************************************************************)
-(*  Copyright (C) 2011 Pietro Abate, Roberto Di Cosmo                                 *)
+(*  Copyright (C) 2011 Pietro Abate                                                   *)
 (*  Copyright (C) 2011 Mancoosi Project                                               *)
 (*                                                                                    *)
 (*  This library is free software: you can redistribute it and/or modify              *)
@@ -27,6 +27,7 @@ let string_of_range = function
   |`In (v1,v2) -> Printf.sprintf "%s < . < %s" v1 v2
 ;;
 
+(* evaluates a constraint w.r.t. a range version *)
 let evalsel compare (target,constr) =
   match target with
   |`Hi v ->
@@ -51,6 +52,7 @@ let evalsel compare (target,constr) =
       |_ -> false end
 ;;
 
+(* returns a list of ranges w.r.t. the list of versions vl *)
 let range vl =
   let l = List.sort ~cmp:(fun v1 v2 -> Version.compare v2 v1) vl in
   let rec aux acc = function
@@ -62,7 +64,6 @@ let range vl =
   aux [] (None,l)
 ;;
 
-(* vl \subseteq realversions ( constraints ) *)
 let discriminant vl constraints =
   let eval_constr = Hashtbl.create 17 in
   let constr_eval = Hashtbl.create 17 in
@@ -149,6 +150,7 @@ let align version target =
     |`In (v,w) -> `In (rebase v,rebase w)
 ;;
 
+(* all versions mentioned in a list of constraints *)
 let all_versions constr = Util.list_unique (List.map (snd) constr) ;;
 
 (* downgrade establish the upgrade treshold from which the discriminant should
@@ -172,52 +174,3 @@ let discriminants ?downgrade constraints_table cluster =
 let migrate packagelist target =
   List.map (fun pkg -> ((pkg,target),(align pkg.Packages.version target))) packagelist
 ;;
-
-(*
-let main () =
-  let packagelist = Packages.input_raw ["tests/discriminants"] in
-  let constraints_table = constraints packagelist in
-  List.iter (fun pkg ->
-    Printf.eprintf "Name %s\nVersion %s\n" pkg.Packages.name pkg.Packages.version;
-    let constr = all_constraints constraints_table pkg.Packages.name in
-    List.iter (fun (c,s) ->
-      let p = function
-        |`Eq -> "=" | `Geq -> ">=" | `Gt -> ">" | `Leq -> "=<" | `Lt -> "<"
-      in 
-      Printf.eprintf "Constr (%s,%s) \n" (p c) s
-    ) constr ;
-    let vl = all_versions constr in
-    let rl = range ~downgrade:false vl in
-    List.iter (fun r ->
-      let p = function
-        |`Eq s -> Printf.eprintf " %s " s
-        |`Hi s -> Printf.eprintf " . < %s " s
-        |`Lo s -> Printf.eprintf " %s < . " s
-        |`In (v1,v2) -> Printf.eprintf " %s < . < %s " v1 v2
-      in
-      Printf.eprintf "range "; p r ;
-      Printf.eprintf "\n"
-    ) rl;
-    List.iter (fun v ->
-      Printf.eprintf "Versions %s\n" v
-    ) vl;
-    let d = discriminant vl constr in
-    Hashtbl.iter (fun k v ->
-      let p = function
-        |`Eq s -> Printf.eprintf " %s " s
-        |`Hi s -> Printf.eprintf " . < %s " s
-        |`Lo s -> Printf.eprintf " %s < . " s
-        |`In (v1,v2) -> Printf.eprintf " %s < . < %s " v1 v2
-      in
-      p k;
-      Printf.eprintf "[";
-      List.iter p v;
-      Printf.eprintf "]\n"
-    ) d 
-  ) packagelist 
-;;
-
-main ();;  
-*)
-
-
