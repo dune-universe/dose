@@ -170,15 +170,15 @@ let strongconflicts mdf =
       if (S.cardinal xpred = 1) && (S.cardinal ypred = 1) && (S.choose xpred = S.choose ypred) then
         let p = S.choose xpred in
         debug "triangle %s - %s (%s)" 
-          (CudfAdd.print_package pkg_x.Mdf.pkg)
-          (CudfAdd.print_package pkg_y.Mdf.pkg)
-          (CudfAdd.print_package index.(p).Mdf.pkg);
+          (CudfAdd.string_of_package pkg_x.Mdf.pkg)
+          (CudfAdd.string_of_package pkg_y.Mdf.pkg)
+          (CudfAdd.string_of_package index.(p).Mdf.pkg);
         try_add_edge strongraph p x x y; incr donei;
         try_add_edge strongraph p y x y; incr donei;
       else if triangle reverse xpred ypred common then
         debug "debconf triangle %s - %s"
-          (CudfAdd.print_package pkg_x.Mdf.pkg)
-          (CudfAdd.print_package pkg_y.Mdf.pkg)
+          (CudfAdd.string_of_package pkg_x.Mdf.pkg)
+          (CudfAdd.string_of_package pkg_y.Mdf.pkg)
       else
         S.iter (fun p ->
           S.iter (fun q ->

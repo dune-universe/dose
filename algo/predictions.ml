@@ -176,7 +176,7 @@ let renumber (universe,from_cudf,to_cudf) =
     universe = new_universe;
     from_cudf = Util.memo new_from_cudf;
     to_cudf = new_to_cudf;
-    constraints = constraints new_universe
+    constraints = constr
   }
 
 (* function to create a dummy package with a given version and name  *)

@@ -84,13 +84,13 @@ let dominators ?relative graph =
         | None -> 
           if S.subset dfs isp then begin
             G.add_edge domgraph p q;
-            debug "Dominator %s -D-> %s !" (CudfAdd.print_package p) (CudfAdd.print_package q);
+            debug "Dominator %s -D-> %s !" (CudfAdd.string_of_package p) (CudfAdd.string_of_package q);
           end
         | Some f -> 
           let fv = ( float ( S.cardinal (S.diff dfs isp)) *. 100.) /. ( float (S.cardinal isp)) in
           if fv <= f then begin
             G.add_edge domgraph p q;
-            debug "Dominator %s -D-> %s !" (CudfAdd.print_package p) (CudfAdd.print_package q);
+            debug "Dominator %s -D-> %s !" (CudfAdd.string_of_package p) (CudfAdd.string_of_package q);
           end
       end
     ) graph p
@@ -231,11 +231,11 @@ let dominators_tarjan g =
         match G.pred forest p with
         | [] -> res
         | [_] -> compress_path res p
-        | _ -> fatal "Vertex %s has multiple predecessors in forest" (CudfAdd.print_package p)
+        | _ -> fatal "Vertex %s has multiple predecessors in forest" (CudfAdd.string_of_package p)
       end
       else
         compress_path p p
-    | _ -> fatal "Vertex %s has multiple predecessors in forest" (CudfAdd.print_package v)
+    | _ -> fatal "Vertex %s has multiple predecessors in forest" (CudfAdd.string_of_package v)
   in
   
   let eval v =
@@ -260,7 +260,7 @@ let dominators_tarjan g =
   let bucket_ht = Hashtbl.create (G.nb_vertex graph) in
   (* step 2 and 3 *)
   List.iter (fun w ->
-    debug "step 2 for vertex %s...%!" (CudfAdd.print_package w);
+    debug "step 2 for vertex %s...%!" (CudfAdd.string_of_package w);
     G.iter_pred (fun v ->
       let u = eval v in
       let semi_u = Hashtbl.find semi_ht u in
@@ -274,12 +274,12 @@ let dominators_tarjan g =
       begin
         link parent_w w;
         List.iter (fun v ->
-          debug "step 3 for vertex %s...%!" (CudfAdd.print_package w);
+          debug "step 3 for vertex %s...%!" (CudfAdd.string_of_package w);
           let u = eval v in
           (match (try G.pred domgr v with Invalid_argument _ -> []) with
           | [] -> ()
           | [p] -> G.remove_edge domgr p v
-          | _ -> fatal "Vertex %s has multiple dominators" (CudfAdd.print_package v));
+          | _ -> fatal "Vertex %s has multiple dominators" (CudfAdd.string_of_package v));
           if smaller_number (Hashtbl.find semi_ht u) (Hashtbl.find semi_ht v) then
             G.add_edge domgr u v
           else
@@ -290,11 +290,11 @@ let dominators_tarjan g =
           Hashtbl.remove bucket_ht parent_w
         done;
       end
-    | _ -> fatal "Vertex %s has multiple predecessors in spanning tree" (CudfAdd.print_package w)
+    | _ -> fatal "Vertex %s has multiple predecessors in spanning tree" (CudfAdd.string_of_package w)
   ) !vertex_order;
   (* step 4 *)
   List.iter (fun w ->
-    debug "step 4 for %s...%!" (CudfAdd.print_package w);
+    debug "step 4 for %s...%!" (CudfAdd.string_of_package w);
     match (try G.pred domgr w with Invalid_argument _ -> []) with
     | [] -> ()
     | [p] -> if (compare p (Hashtbl.find semi_ht w) <> 0) then
@@ -302,9 +302,9 @@ let dominators_tarjan g =
           match (try G.pred domgr p with Invalid_argument _ -> []) with
           | [] -> ()
           | [p_p] -> (G.remove_edge domgr p w; G.add_edge domgr p_p w)
-          | _ -> fatal "Vertex %s has multiple dominators" (CudfAdd.print_package p)
+          | _ -> fatal "Vertex %s has multiple dominators" (CudfAdd.string_of_package p)
         end
-    | _ -> fatal "Vertex %s has multiple dominators" (CudfAdd.print_package w)
+    | _ -> fatal "Vertex %s has multiple dominators" (CudfAdd.string_of_package w)
   ) (List.rev !vertex_order);
   Util.Timer.stop tjntimer domgr
 ;;

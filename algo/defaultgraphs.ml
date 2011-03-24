@@ -82,8 +82,8 @@ module SyntacticDependencyGraph = struct
 
   let string_of_vertex vertex =
     match G.V.label vertex with
-    |PkgV.Pkg p -> Printf.sprintf "Pkg %s" (CudfAdd.print_package p)
-    |PkgV.Or (p, _) -> Printf.sprintf "Or %s" (CudfAdd.print_package p)
+    |PkgV.Pkg p -> Printf.sprintf "Pkg %s" (CudfAdd.string_of_package p)
+    |PkgV.Or (p, _) -> Printf.sprintf "Or %s" (CudfAdd.string_of_package p)
 
   let string_of_edge edge =
     let label =
@@ -103,8 +103,8 @@ module SyntacticDependencyGraph = struct
       include G
       let vertex_name v =
         match G.V.label v with
-        |PkgV.Pkg i -> Printf.sprintf "\"%s\"" (CudfAdd.print_package i)
-        |PkgV.Or (i,c) -> Printf.sprintf "\"Or%s-%d\"" (CudfAdd.print_package i) c
+        |PkgV.Pkg i -> Printf.sprintf "\"%s\"" (CudfAdd.string_of_package i)
+        |PkgV.Or (i,c) -> Printf.sprintf "\"Or%s-%d\"" (CudfAdd.string_of_package i) c
 
       let graph_attributes = fun _ -> [`Rankdir `LeftToRight]
       let get_subgraph = fun _ -> None
@@ -194,7 +194,7 @@ module PackageGraph = struct
   module DisplayF (G : Sig.I) =
     struct
       include G
-      let vertex_name v = Printf.sprintf "\"%s\"" (CudfAdd.print_package v)
+      let vertex_name v = Printf.sprintf "\"%s\"" (CudfAdd.string_of_package v)
 
       let graph_attributes = fun _ -> []
       let get_subgraph = fun _ -> None

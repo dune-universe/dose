@@ -75,7 +75,7 @@ let is_essential pkg =
 
 (**/*)
 (* XXX legacy function to be removed *)
-let print_package pkg = string_of_package pkg
+(* let print_package pkg = string_of_package pkg *)
 (**/*)
 
 (** [pkgnames universe] returns a list of unique package names *)
