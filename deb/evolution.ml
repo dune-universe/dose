@@ -12,7 +12,6 @@
 
 open ExtLib
 open Common
-open Debian
 
 type range = [
     `Hi of string
@@ -20,6 +19,13 @@ type range = [
   | `Lo of string 
   | `Eq of string
 ]
+
+let string_of_range = function
+  |`Hi v -> Printf.sprintf "%s < ." v
+  |`Lo v -> Printf.sprintf ". < %s" v
+  |`Eq v -> Printf.sprintf "= %s" v
+  |`In (v1,v2) -> Printf.sprintf "%s < . < %s" v1 v2
+;;
 
 let evalsel compare (target,constr) =
   match target with
@@ -37,7 +43,6 @@ let evalsel compare (target,constr) =
       |_ -> false end
   |`In (v1,v2) ->
       begin match constr with
-      (* |Some(`Neq,w) -> not((compare v1 w > 1) && (compare v2 w < 1)) (* XXX * *) *)
       |(`Eq,w) -> (compare v1 w > 1) && (compare v2 w < 1)
       |((`Gt|`Geq),w) ->
           (compare v1 w = 0) || (compare v1 w > 1) && (compare v2 w < 1) 
@@ -46,9 +51,8 @@ let evalsel compare (target,constr) =
       |_ -> false end
 ;;
 
-let range ?(downgrade=false) vl =
-  let cmp v w = if downgrade then Version.compare w v else Version.compare v w in
-  let l = List.sort ~cmp vl in
+let range vl =
+  let l = List.sort ~cmp:(fun v1 v2 -> Version.compare v2 v1) vl in
   let rec aux acc = function
     |(None,[]) -> acc
     |(None,a::t) -> aux ((`Hi a)::acc) (Some a,t)
@@ -59,7 +63,7 @@ let range ?(downgrade=false) vl =
 ;;
 
 (* vl \subseteq realversions ( constraints ) *)
-let discriminant ?(downgrade=false) vl constraints =
+let discriminant vl constraints =
   let eval_constr = Hashtbl.create 17 in
   let constr_eval = Hashtbl.create 17 in
   List.iter (fun target ->
@@ -76,7 +80,7 @@ let discriminant ?(downgrade=false) vl constraints =
       Hashtbl.add eval_constr eval target;
       Hashtbl.add constr_eval target []
     end
-  ) (range ~downgrade vl) ;
+  ) (range vl) ;
   constr_eval
 ;;
 
@@ -114,7 +118,7 @@ let constraints packagelist =
   ;
   let h = Hashtbl.create (List.length packagelist) in
   let elements hv =
-    List.sort ~cmp:(fun (_,v1) (_,v2) -> Version.compare v1 v2) (
+    List.sort ~cmp:(fun (_,v1) (_,v2) -> Version.compare v2 v1) (
       Hashtbl.fold (fun k v acc -> k::acc) hv []
     )
   in
@@ -137,14 +141,33 @@ let align version target =
     |(_,u,r,b)   -> Printf.sprintf "%s:%s-%s%s" pe u r b
   in
   match target with
-  |(`Eq v) -> (`Eq (rebase v))
-  |(`Hi v) -> (`Hi (rebase v))
-  |(`Lo v) -> (`Lo (rebase v))
-  |(`In (v,w)) -> (`In (rebase v,rebase w))
+  |`Eq v -> `Eq (rebase v)
+  |`Hi v -> `Hi (rebase v)
+  |`Lo v -> `Lo (rebase v)
+  |`In (v,w) -> `In (rebase v,rebase w)
 ;;
 
-let all_versions constr = List.map (fun (_,v) -> v) constr ;;
+let all_versions constr = Util.list_unique (List.map (snd) constr) ;;
 
+(* downgrade establish the upgrade treshold from which the discriminant should
+ * be considered as an upgrade *) 
+let discriminants ?downgrade constraints_table cluster =
+  Util.list_unique (
+    List.fold_left (fun l pkg ->
+      let constr = all_constraints constraints_table pkg.Packages.name in
+      let uplist = 
+        let vl = all_versions constr in
+        match downgrade with
+        |None -> vl
+        |Some v -> List.filter (fun w -> (Version.compare v w) < 0) vl 
+      in
+      let d = discriminant uplist constr in
+      (Hashtbl.fold (fun k v acc -> k::acc) d []) @ l
+    ) [] cluster
+  )
+;;
+
+(*
 let main () =
   let packagelist = Packages.input_raw ["tests/discriminants"] in
   let constraints_table = constraints packagelist in
@@ -188,10 +211,9 @@ let main () =
   ) packagelist 
 ;;
 
-main ();; 
-
-(*
-let migrate target packagelist =
-  List.map (fun pkg -> dummy pkg (align pkg.Packages.version target)) packagelist
-;;
+main ();;  
 *)
+
+let migrate packagelist target =
+  List.map (fun pkg -> ((pkg,target),(align pkg.Packages.version target))) packagelist
+;;

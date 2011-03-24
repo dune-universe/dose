@@ -25,10 +25,9 @@ let extras_properties = [
   ("installed-Size", ("installedsize", `Nat None))
 ];;
 let extras = List.map fst extras_properties ;;
-(* let ipr_list = Packages.parse_packages_in ~extras:extras (fun x -> x) ch ;; *)
-let ipr_list = Packages.input_raw [f_packages] ;;
-let tables = Debcudf.init_tables ipr_list ;;
-let cudf_list = List.map (Debcudf.tocudf ~extras:extras_properties tables) ipr_list ;;
+let packagelist = Packages.input_raw [f_packages] ;;
+let tables = Debcudf.init_tables packagelist ;;
+let cudf_list = List.map (Debcudf.tocudf ~extras:extras_properties tables) packagelist ;; 
 let universe = Cudf.load_universe cudf_list ;;
 let maps = CudfAdd.build_maps universe ;;
 
@@ -49,23 +48,137 @@ let test_format =
   "name mangling" >::: []
 ;;
 
+let string_of_relop = function
+  |`Eq -> "="
+  |`Neq -> "!="
+  |`Geq -> ">="
+  |`Gt -> ">"
+  |`Leq -> "<="
+  |`Lt -> "<"
+;;
+
+let rec assert_delay_stub l =
+  let acc = ref l in
+  fun e ->
+    match !acc with
+    |[] -> assert_failure "OUnit: not equal"
+    |h::tl -> begin
+        acc := tl;
+        assert_equal e h
+    end
+;;
+
+let test_cluster =
+  let packagelist = Packages.input_raw ["tests/discriminants"] in
+  let clusters = Debutil.cluster packagelist in
+  "cluster" >::: [
+    "groups" >:: (fun _ -> 
+      let assert_delay = 
+        assert_delay_stub [
+          ("bb","1",[("bb","1")]);
+          ("aa","1",[("aa","1")]);
+          ("ee_source","2",[("ff","2")]);
+          ("ee_source","1",[("gg","1");("ee","1")]);
+          ("cc_source","1",[("dd","1")]);
+          ("cc_source","1",[("cc","2")]);
+        ]
+      in
+
+      Hashtbl.iter (fun (sourcename, sourceversion) h ->
+        (* Printf.eprintf "(1)cluster (%s,%s)\n%!" sourcename sourceversion; *)
+        Hashtbl.iter (fun version cluster ->
+          (* Printf.eprintf "(1)v %s\n%!" version; *)
+          let l = List.map(fun pkg -> (pkg.Packages.name,pkg.Packages.version)) cluster in
+          (*
+          List.iter (fun pkg ->
+            Printf.eprintf "(1)pkg %s %s\n%!" pkg.Packages.name pkg.Packages.version
+          ) cluster;
+          *)
+          assert_delay (sourcename,sourceversion,l);
+        ) h
+      ) clusters
+    ); 
+  ]
+;;
+
+
 let test_evolution =
   let packagelist = Packages.input_raw ["tests/discriminants"] in
   let constraints_table = Evolution.constraints packagelist in
-  let constr = Evolution.all_constraints constraints_table "a" in
-  let vl = Evolution.all_versions constr in
+  let clusters = Debutil.cluster packagelist in
   "evolution" >::: [
     "constraints" >:: (fun _ ->
-      assert_equal [(`Eq,"1");(`Lt,"2")] constr
+      let constr = Evolution.all_constraints constraints_table "cc" in
+      (* List.iter (fun (c,v) -> Printf.printf "(%s %s)\n" (string_of_relop c) v ) constr;
+       * *)
+      assert_equal [(`Eq,"4");(`Lt,"3")] constr
     );
     "versions" >:: (fun _ ->
-      assert_equal ["1";"2"] vl
+      let vl = Evolution.all_versions [(`Gt,"3"); (`Eq,"3"); (`Lt,"4")] in
+      (* List.iter (Printf.printf "-<< %s <<") vl; *)
+      assert_equal ["4";"3"] vl
     );
-(*    "discriminants" >:: (fun _ ->
-      let discr = discriminant vl constr in
-      true
-    ) 
-*)
+    "range (1)" >:: (fun _ ->
+      let rl = Evolution.range ["3";"4"] in
+      (* List.iter (fun r -> Printf.printf "%s\n" (Evolution.string_of_range r)) rl; *)
+      assert_equal [(`Lo "3");(`Eq "3");(`In ("3","4"));(`Eq "4");(`Hi "4")] rl
+    );
+    "range (2)" >:: (fun _ ->
+      let rl = Evolution.range ["1"] in
+      (* List.iter (fun r -> Printf.printf "%s\n" (Evolution.string_of_range r)) rl; *)
+      assert_equal [(`Lo "1");(`Eq "1");(`Hi "1")] rl
+    );
+    "discriminant (single)" >:: (fun _ ->
+      let assert_delay = assert_delay_stub [ (`Eq "1",[]); (`Lo "1",[`Hi "1"]) ] in
+      let constr = Evolution.all_constraints constraints_table "bb" in
+      let vl = Evolution.all_versions constr in
+      let discr = Evolution.discriminant vl constr in
+      (*
+      Hashtbl.iter (fun k _ -> 
+        Printf.eprintf "(3) %s\n%!" (Evolution.string_of_range k);
+      ) discr;
+      *)
+      Hashtbl.iter (fun d equiv -> assert_delay (d,equiv)) discr 
+    ); 
+    "discriminant (cluster)" >:: (fun _ ->
+      let assert_delay = 
+        assert_delay_stub [
+          ("bb","1","1",[]);
+          ("aa","1","1",[]);
+          ("ee_source","2","2",[]);
+          ("ee_source","1","1",[]);
+          ("cc_source","1","1",[`Lo "3"]);
+          ("cc_source","1","2",[`Lo "3";`Eq "4";`Eq "3"]);
+        ]
+      in
+      Hashtbl.iter (fun (sourcename, sourceversion) h ->
+        (* Printf.eprintf "(2)cluster (%s,%s)\n%!" sourcename sourceversion; *)
+        Hashtbl.iter (fun version cluster ->
+          (* Printf.eprintf "(2)v : %s\n%!" version; *)
+          let l = Evolution.discriminants ~downgrade:sourceversion constraints_table cluster in
+          (*
+          List.iter (fun target ->
+            Printf.eprintf "(2)d : %s\n%!" (Evolution.string_of_range target);
+          ) l;
+          *)
+          assert_delay (sourcename,sourceversion,version,l);
+        ) h
+      ) clusters;
+      assert_equal true true
+    );
+    "align" >:: (fun _ ->
+      let r = Evolution.align "1:3.4+b5" (`In ("2:3.5","2:3.6")) in
+      assert_equal r (`In ("1:3.5","1:3.6"))
+    );
+    "migration" >:: (fun _ ->
+      Hashtbl.iter (fun (sourcename, sourceversion) h ->
+        Hashtbl.iter (fun version cluster ->
+          (* let migrationlist = Debian.Evolution.migrate cluster target in *)
+          ()
+        ) h
+      ) clusters;
+      assert_equal true true
+    );
   ]
 ;;
 
@@ -79,6 +192,7 @@ let test_numbering =
       with Not_found -> assert_failure "debconf version mismatch"
     );
   ] 
+;;
 
 let test_virtual = 
   "test virtual" >::: [
@@ -115,6 +229,7 @@ let all =
     test_mapping ;
     test_conflicts;
     test_version;
+    test_cluster;
     test_evolution
   ]
 
