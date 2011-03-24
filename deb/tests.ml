@@ -25,7 +25,8 @@ let extras_properties = [
   ("installed-Size", ("installedsize", `Nat None))
 ];;
 let extras = List.map fst extras_properties ;;
-let ipr_list = Packages.parse_packages_in ~extras:extras (fun x -> x) ch ;;
+(* let ipr_list = Packages.parse_packages_in ~extras:extras (fun x -> x) ch ;; *)
+let ipr_list = Packages.input_raw [f_packages] ;;
 let tables = Debcudf.init_tables ipr_list ;;
 let cudf_list = List.map (Debcudf.tocudf ~extras:extras_properties tables) ipr_list ;;
 let universe = Cudf.load_universe cudf_list ;;
@@ -42,8 +43,31 @@ let test_version =
       assert_equal (Version.normalize v) "1.4-5"
     );
   ]
+;;
+
 let test_format =
   "name mangling" >::: []
+;;
+
+let test_evolution =
+  let packagelist = Packages.input_raw ["tests/discriminants"] in
+  let constraints_table = Evolution.constraints packagelist in
+  let constr = Evolution.all_constraints constraints_table "a" in
+  let vl = Evolution.all_versions constr in
+  "evolution" >::: [
+    "constraints" >:: (fun _ ->
+      assert_equal [(`Eq,"1");(`Lt,"2")] constr
+    );
+    "versions" >:: (fun _ ->
+      assert_equal ["1";"2"] vl
+    );
+(*    "discriminants" >:: (fun _ ->
+      let discr = discriminant vl constr in
+      true
+    ) 
+*)
+  ]
+;;
 
 let test_numbering = 
   "test numbering" >::: [
@@ -87,7 +111,12 @@ let test_mapping =
   ]
 
 let all = 
-  "all tests" >::: [ test_mapping ; test_conflicts; test_version ]
+  "all tests" >::: [ 
+    test_mapping ;
+    test_conflicts;
+    test_version;
+    test_evolution
+  ]
 
 let main () =
   OUnit.run_test_tt_main all
