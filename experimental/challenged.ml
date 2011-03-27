@@ -27,9 +27,10 @@ module Options = struct
   let options = OptParser.make ~description:"find challenged packages"
   include Boilerplate.MakeOptions(struct let options = options end)
 
-  let fail = StdOpt.store_true ()
+  let checkonly = Boilerplate.pkglist_option ()
   open OptParser
-  add options ~short_name:'f' ~long_name:"fail" ~help:"exit with a failoure" fail;
+
+  add options ~long_name:"select" ~help:"Check only these package ex. (sn1,sv1),(sn2,sv2)" checkonly;
 end
 
 let exclude pkgset pl =
@@ -84,7 +85,7 @@ let add h k v =
  * packagelist are cudf packages, 
  * cluster are real packages,
  * future are cudf packages *)
-let challenged repository =
+let challenged ?clusterlist repository =
   let predmap = Hashtbl.create 1023 in
   
   (* distribution specific *)
@@ -92,7 +93,7 @@ let challenged repository =
   let clusters = Debian.Debutil.cluster repository in
   let version_acc = ref [] in
   let constraints_table = Debian.Evolution.constraints repository in
-  Hashtbl.iter (fun (sn,sv) l ->
+  let cluster_iter (sn,sv) l =
     List.iter (fun (version,cluster) ->
       (* all packages in this cluster have the same version *)
       List.iter (fun (target,equiv) ->
@@ -108,7 +109,18 @@ let challenged repository =
         Hashtbl.add worktable (cluster,(sn,sv,version),target,aligned_target,equiv) migrationlist
       ) (Debian.Evolution.discriminants ~downgrade:version constraints_table cluster)
     ) l
-  ) clusters;
+  in
+
+  if Option.is_none clusterlist then
+    Hashtbl.iter cluster_iter clusters
+  else
+    List.iter (fun (sn,sv) ->
+      begin try
+        let l = Hashtbl.find clusters (sn,sv) in
+        cluster_iter (sn,sv) l
+      with Not_found -> fatal "cluster %s %s is not correctly specified" sn sv end
+    ) (Option.get clusterlist) 
+  ;
 
   (* cudf part *)
   let versionlist = Util.list_unique !version_acc in
@@ -134,7 +146,7 @@ let challenged repository =
     Format.fprintf fmt "equiv: %s@," (String.concat " , " (List.map (Debian.Evolution.string_of_range) equiv));
 
     let callback d = Diagnostic.fprintf ~failure:true fmt d in
-    let i = Depsolver.univcheck ~callback future in
+    let i = Depsolver.univcheck future in
 
     Format.fprintf fmt "broken packages: %d@," (i - brokenref);
     
@@ -150,6 +162,7 @@ let main () =
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress) ["challenged"] ;
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) [];
+  (* let clusterlist = OptParse.Opt.get Options.checkonly in *)
   let pred = challenged (Debian.Packages.input_raw args) in 
   Hashtbl.iter (fun (_,(sn,sv),target) broken ->
     Format.printf "upgrading cluster %s %s@." sn sv;

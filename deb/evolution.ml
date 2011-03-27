@@ -167,7 +167,7 @@ let discriminants ?downgrade constraints_table cluster =
         |Some v -> 
             let f x =
               match Version.split v,Version.split x with
-              |(_,v,_,_),(_,w,_,_) -> (Version.compare v w) < 0
+              |(_,v,_,_),(_,w,_,_) -> (Version.compare v w) <= 0
             in
             List.filter f vl
       in
