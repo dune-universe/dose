@@ -98,8 +98,23 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
   let cluster_iter (sn,sv) l =
     List.iter (fun (version,cluster) ->
       (* all packages in this cluster have the same version *)
+      (*
+      Printf.eprintf "%s %s -> %s %d\n%!" sn sv version (List.length cluster);
+      List.iter (fun pkg ->
+        Printf.eprintf "%s %s\n%!" pkg.Debian.Packages.name pkg.Debian.Packages.version;
+      ) cluster;
+      *)
       List.iter (fun (target,equiv) ->
         let migrationlist = Debian.Evolution.migrate cluster target in
+        (* Printf.eprintf "target : %s\n%!" (Debian.Evolution.string_of_range target);
+        List.iter (fun ((pkg,orig),target) ->
+          Printf.eprintf "%s : %s -> (%s) %s\n%!" 
+          pkg.Debian.Packages.name pkg.Debian.Packages.version 
+          (Debian.Evolution.string_of_range orig)
+          (Debian.Evolution.string_of_range target);
+        ) migrationlist;
+        *)
+
         let vl = 
           List.fold_left (fun acc -> function
             |(_,(`Hi v|`Lo v|`Eq v)) -> v::acc 
@@ -147,9 +162,7 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
     Format.fprintf fmt "aligned target: %s @," (Debian.Evolution.string_of_range aligned_target);
     Format.fprintf fmt "equiv: %s@," (String.concat " , " (List.map (Debian.Evolution.string_of_range) equiv));
 
-    let callback d = 
-      if verbose then Diagnostic.fprintf ~failure:true fmt d 
-    in
+    let callback d = if verbose then Diagnostic.fprintf ~failure:true ~explain:true fmt d in
     let i = Depsolver.univcheck ~callback future in
 
     Format.fprintf fmt "broken packages: %d@," (i - brokenref);

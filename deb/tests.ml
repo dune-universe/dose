@@ -119,12 +119,12 @@ let test_evolution =
       assert_equal ["4";"3"] vl
     );
     "range (1)" >:: (fun _ ->
-      let rl = Evolution.range ["3";"4"] in
+      let rl = Evolution.range ~downgrade:true ["3";"4"] in
       (* List.iter (fun r -> Printf.printf "%s\n" (Evolution.string_of_range r)) rl; *)
       assert_equal [(`Lo "3");(`Eq "3");(`In ("3","4"));(`Eq "4");(`Hi "4")] rl
     );
     "range (2)" >:: (fun _ ->
-      let rl = Evolution.range ["1"] in
+      let rl = Evolution.range ~downgrade:true ["1"] in
       (* List.iter (fun r -> Printf.printf "%s\n" (Evolution.string_of_range r)) rl; *)
       assert_equal [(`Lo "1");(`Eq "1");(`Hi "1")] rl
     );
@@ -132,7 +132,7 @@ let test_evolution =
       let assert_delay = assert_delay_stub [ (`Eq "1",[]); (`Lo "1",[`Hi "1"]) ] in
       let constr = Evolution.all_constraints constraints_table "bb" in
       let vl = Evolution.all_versions constr in
-      let discr = Evolution.discriminant vl constr in
+      let discr = Evolution.discriminant ~downgrade:true vl constr in
       (*
       Hashtbl.iter (fun k _ -> 
         Printf.eprintf "(3) %s\n%!" (Evolution.string_of_range k);
@@ -143,20 +143,22 @@ let test_evolution =
     "discriminant (cluster)" >:: (fun _ ->
       let assert_delay = 
         assert_delay_stub [
-          ("bb","1","1",[]);
+          ("bb","1","1",[(`Hi "1",[]);(`Eq "1",[])]);
           ("aa","1","1",[]);
           ("ee_source","2","2",[]);
           ("ee_source","1","1",[]);
-          ("cc_source","1","2",[(`Lo "3",[]);(`Eq "4",[]);(`Eq "3",[`Hi "4";`In ("3","4")])]);
-          ("cc_source","1","1",[(`Lo "3",[`Hi "3";`Eq "3"])]);
+          ("cc_source","1","2",[(`Eq "4",[]);(`Eq "3",[`Hi "4";`In ("3","4")])]);
+          ("cc_source","1","1",[(`Eq "3",[`Hi "3"])]);
         ]
       in
       Hashtbl.iter (fun (sourcename, sourceversion) l ->
-        (* Printf.eprintf "(2)cluster (%s,%s)\n%!" sourcename sourceversion; *)
+        (*
+        Printf.eprintf "(2)cluster (%s,%s)\n%!" sourcename sourceversion; 
+        *)
         List.iter (fun (version,cluster) ->
-          (* Printf.eprintf "(2)v : %s\n%!" version; *)
-          let l = Evolution.discriminants ~downgrade:sourceversion constraints_table cluster in
+          let l = Evolution.discriminants sourceversion constraints_table cluster in
           (*
+          Printf.eprintf "(2)v : %s\n%!" version;
           List.iter (fun (target,equiv) ->
             Printf.eprintf "(2)d : %s\n%!" (Evolution.string_of_range target);
             List.iter (fun target ->
@@ -171,7 +173,7 @@ let test_evolution =
       assert_equal true true
     );
     "align (with epoch)" >:: (fun _ ->
-      let r = Evolution.align "1:3.4+b5" (`In ("2:3.5","2:3.6")) in
+      let r = Evolution.align "1:3.4+b5" (`In ("3.5","3.6")) in
       assert_equal r (`In ("1:3.5","1:3.6"))
     );
     "align (without epoch 1)" >:: (fun _ ->

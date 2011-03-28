@@ -54,18 +54,19 @@ let evalsel compare (target,constr) =
 
 (* returns a list of ranges w.r.t. the list of versions vl *)
 (* the range is a [ ... [ kind of interval *)
-let range vl =
+let range ?(downgrade=false) vl =
   let l = List.sort ~cmp:(fun v1 v2 -> Version.compare v2 v1) vl in
   let rec aux acc = function
     |(None,[]) -> acc
     |(None,a::t) -> aux ((`Hi a)::acc) (Some a,t)
     |(Some b,a::t) -> aux ((`In (a,b))::(`Eq b)::acc) (Some a,t)
+    |(Some b,[]) when downgrade = false -> (`Eq b)::acc 
     |(Some b,[]) -> (`Lo b)::(`Eq b)::acc 
   in
   aux [] (None,l)
 ;;
 
-let discriminant vl constraints =
+let discriminant ?(downgrade=false) vl constraints =
   let eval_constr = Hashtbl.create 17 in
   let constr_eval = Hashtbl.create 17 in
   List.iter (fun target ->
@@ -82,7 +83,7 @@ let discriminant vl constraints =
       Hashtbl.add eval_constr eval target;
       Hashtbl.add constr_eval target []
     end
-  ) (range vl) ;
+  ) (range ~downgrade vl) ;
   constr_eval
 ;;
 
@@ -156,20 +157,17 @@ let all_versions constr = Util.list_unique (List.map (snd) constr) ;;
 
 (* downgrade establish the upgrade treshold from which the discriminant should
  * be considered as an upgrade *) 
-let discriminants ?downgrade constraints_table cluster =
+let discriminants refversion constraints_table cluster =
   Util.list_unique (
     List.fold_left (fun l pkg ->
       let constr = all_constraints constraints_table pkg.Packages.name in
       let versionlist = 
         let vl = all_versions constr in
-        match downgrade with
-        |None -> vl
-        |Some v -> 
-            let f x =
-              match Version.split v,Version.split x with
-              |(_,v,_,_),(_,w,_,_) -> (Version.compare v w) <= 0
-            in
-            List.filter f vl
+        let f x =
+          match Version.split refversion, Version.split x with
+          |(_,v,_,_),(_,w,_,_) -> (Version.compare v w) <= 0
+        in
+        List.filter f vl
       in
       let d = discriminant versionlist constr in
       (Hashtbl.fold (fun k v acc -> (k,v)::acc) d []) @ l
