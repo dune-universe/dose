@@ -49,7 +49,8 @@ let evalsel compare (target,constr) =
           (compare v1 w = 0) || (compare v1 w > 1) && (compare v2 w < 1) 
       |((`Lt|`Leq),w) ->
           (compare v2 w = 0) || (compare v1 w > 1) && (compare v2 w < 1) 
-      |_ -> false end
+      |_ -> false 
+      end
 ;;
 
 (* returns a list of ranges w.r.t. the list of versions vl *)
@@ -84,7 +85,7 @@ let discriminant ?(downgrade=false) vl constraints =
       Hashtbl.add constr_eval target []
     end
   ) (range ~downgrade vl) ;
-  constr_eval
+  (Hashtbl.fold (fun k v acc -> (k,v)::acc) constr_eval [])
 ;;
 
 let add_unique h k v =
@@ -99,24 +100,24 @@ let add_unique h k v =
   end
 
 (* collect dependency information *)
-let conj_iter f t l =
+let conj_iter t l =
   List.iter (fun (name,sel) ->
     match CudfAdd.cudfop sel with
-    |None -> ()
-    |Some(c,v) -> add_unique t name (f (c,v))
+    |None -> add_unique t name (`Eq,"0")
+    |Some(c,v) -> add_unique t name (c,v)
   ) l
-let cnf_iter f t ll = List.iter (conj_iter f t) ll
+let cnf_iter t ll = List.iter (conj_iter t) ll
 
 (** [constraints universe] returns a map between package names
     and an ordered list of constraints where the package name is
     mentioned *)
 let constraints packagelist =
-  let id x = x in
+  (* let id x = x in *)
   let constraints_table = Hashtbl.create (List.length packagelist) in
   List.iter (fun pkg ->
-    conj_iter id constraints_table pkg.Packages.conflicts ;
-    conj_iter id constraints_table pkg.Packages.provides ;
-    cnf_iter id constraints_table pkg.Packages.depends
+    conj_iter constraints_table pkg.Packages.conflicts ;
+    conj_iter constraints_table pkg.Packages.provides ;
+    cnf_iter constraints_table pkg.Packages.depends
   ) packagelist
   ;
   let h = Hashtbl.create (List.length packagelist) in
@@ -157,20 +158,17 @@ let all_versions constr = Util.list_unique (List.map (snd) constr) ;;
 
 (* downgrade establish the upgrade treshold from which the discriminant should
  * be considered as an upgrade *) 
-let discriminants refversion constraints_table cluster =
+let discriminants ?filter constraints_table cluster =
   Util.list_unique (
     List.fold_left (fun l pkg ->
       let constr = all_constraints constraints_table pkg.Packages.name in
       let versionlist = 
-        let vl = all_versions constr in
-        let f x =
-          match Version.split refversion, Version.split x with
-          |(_,v,_,_),(_,w,_,_) -> (Version.compare v w) <= 0
-        in
-        List.filter f vl
+        let l = all_versions constr in
+        if Option.is_none filter then l
+        else List.filter (Option.get filter) l 
       in
       let d = discriminant versionlist constr in
-      (Hashtbl.fold (fun k v acc -> (k,v)::acc) d []) @ l
+      (* Hashtbl.fold (fun k v acc -> (k,v)::acc) d [] *) d @ l
     ) [] cluster
   )
 ;;

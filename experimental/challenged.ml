@@ -50,15 +50,20 @@ let dummy pkg number version =
 
 
 let upgrade tables universe migrationlist =
-  let pkgset = Cudf.fold_packages (fun s p -> CudfAdd.Cudf_set.add p s) CudfAdd.Cudf_set.empty universe in
+  let getv = Debian.Debcudf.get_cudf_version tables in
+  let pkgset = 
+    Cudf.fold_packages (fun s p -> 
+      CudfAdd.Cudf_set.add p s
+    ) CudfAdd.Cudf_set.empty universe 
+  in
   let to_add = 
     List.fold_left (fun l ((pkg,_),target) ->
-      let orig = Debian.Debcudf.get_cudf_version tables (pkg.Debian.Packages.name,pkg.Debian.Packages.version) in
+      let orig = getv (pkg.Debian.Packages.name,pkg.Debian.Packages.version) in
       let newv =
         match target with
-        |`Eq v -> Debian.Debcudf.get_cudf_version tables (pkg.Debian.Packages.name,v)
-        |`Hi v |`Lo v |`In (_,v) ->
-            ((Debian.Debcudf.get_cudf_version tables (pkg.Debian.Packages.name,v)) - 1)
+        |`Eq v -> getv (pkg.Debian.Packages.name,v)
+        |`Hi v -> (getv (pkg.Debian.Packages.name,v)) + 1
+        |`Lo v |`In (_,v) -> (getv (pkg.Debian.Packages.name,v)) - 1
       in
       let p = Cudf.lookup_package universe (pkg.Debian.Packages.name,orig) in
       let number = Debian.Evolution.string_of_range target in
@@ -67,7 +72,7 @@ let upgrade tables universe migrationlist =
   in
   let to_remove = 
     List.map (fun ((pkg,_),_) -> 
-      let orig = Debian.Debcudf.get_cudf_version tables (pkg.Debian.Packages.name,pkg.Debian.Packages.version) in
+      let orig = getv (pkg.Debian.Packages.name,pkg.Debian.Packages.version) in
       Cudf.lookup_package universe (pkg.Debian.Packages.name,orig) 
     ) migrationlist 
   in
@@ -97,6 +102,10 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
   let constraints_table = Debian.Evolution.constraints repository in
   let cluster_iter (sn,sv) l =
     List.iter (fun (version,cluster) ->
+      let filter x =
+        match Debian.Version.split version, Debian.Version.split x with
+        |(_,v,_,_),(_,w,_,_) -> (Debian.Version.compare v w) <= 0
+      in
       (* all packages in this cluster have the same version *)
       (*
       Printf.eprintf "%s %s -> %s %d\n%!" sn sv version (List.length cluster);
@@ -124,7 +133,7 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
         version_acc := vl @ !version_acc;
         let aligned_target = Debian.Evolution.align version target in
         Hashtbl.add worktable (cluster,(sn,sv,version),target,aligned_target,equiv) migrationlist
-      ) (Debian.Evolution.discriminants ~downgrade:version constraints_table cluster)
+      ) (Debian.Evolution.discriminants ~filter constraints_table cluster)
     ) l
   in
 

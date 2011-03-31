@@ -129,16 +129,19 @@ let test_evolution =
       assert_equal [(`Lo "1");(`Eq "1");(`Hi "1")] rl
     );
     "discriminant (single)" >:: (fun _ ->
-      let assert_delay = assert_delay_stub [ (`Eq "1",[]); (`Lo "1",[`Hi "1"]) ] in
+      let assert_delay = assert_delay_stub [ (`Lo "1",[`Hi "1"]); (`Eq "1",[]) ] in
       let constr = Evolution.all_constraints constraints_table "bb" in
       let vl = Evolution.all_versions constr in
       let discr = Evolution.discriminant ~downgrade:true vl constr in
       (*
-      Hashtbl.iter (fun k _ -> 
-        Printf.eprintf "(3) %s\n%!" (Evolution.string_of_range k);
+      List.iter (fun (target,equiv) -> 
+        Printf.eprintf "(3) %s\n%!" (Evolution.string_of_range target);
+        List.iter (fun k ->
+          Printf.eprintf "(3) e %s\n%!" (Evolution.string_of_range k);
+        ) equiv;
       ) discr;
       *)
-      Hashtbl.iter (fun d equiv -> assert_delay (d,equiv)) discr 
+      List.iter (fun (target,equiv) -> assert_delay (target,equiv)) discr 
     ); 
     "discriminant (cluster)" >:: (fun _ ->
       let assert_delay = 
@@ -156,7 +159,11 @@ let test_evolution =
         Printf.eprintf "(2)cluster (%s,%s)\n%!" sourcename sourceversion; 
         *)
         List.iter (fun (version,cluster) ->
-          let l = Evolution.discriminants sourceversion constraints_table cluster in
+          let filter x =
+            match Debian.Version.split version, Debian.Version.split x with
+            |(_,v,_,_),(_,w,_,_) -> (Debian.Version.compare v w) <= 0
+          in
+          let l = Evolution.discriminants ~filter constraints_table cluster in
           (*
           Printf.eprintf "(2)v : %s\n%!" version;
           List.iter (fun (target,equiv) ->
