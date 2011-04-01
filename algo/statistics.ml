@@ -1,12 +1,17 @@
-(* Copyright (C) 2008 Stefano Zacchiroli <zack@debian.org> and 
- * Jaap Boender <boender@pps.jussieu.fr> and
- * Pietro Abate <pietro.abate@pps.jussieu.fr>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
+(**************************************************************************************)
+(* Copyright (C) 2008 Stefano Zacchiroli <zack@debian.org> and                        *)
+(* Jaap Boender <boender@pps.jussieu.fr> and                                          *)
+(* Pietro Abate <pietro.abate@pps.jussieu.fr>                                         *)
+(*                                                                                    *)
+(*  This library is free software: you can redistribute it and/or modify              *)
+(*  it under the terms of the GNU Lesser General Public License as                    *)
+(*  published by the Free Software Foundation, either version 3 of the                *)
+(*  License, or (at your option) any later version.  A special linking                *)
+(*  exception to the GNU Lesser General Public License applies to this                *)
+(*  library, see the COPYING file for more information.                               *)
+(**************************************************************************************)
+
+(*
  * More info about small world networks
  * http://en.wikipedia.org/wiki/Small-world_network
  *)
