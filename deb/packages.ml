@@ -60,27 +60,55 @@ let default_package = {
   priority = "";
 }
 
-let parse_name = parse_package
-let parse_vpkg = parse_constr
-let parse_veqpkg = parse_constr
-let parse_conj s = parse_vpkglist parse_vpkg s
-let parse_cnf s = parse_vpkgformula parse_vpkg s
-let parse_prov s = parse_veqpkglist parse_veqpkg s
-let parse_essential = function
+exception ParseError of string * string
+exception IgnorePackage of string
+
+let parse_name _ s = Format822.parse_package s
+let parse_version _ s = Format822.parse_version s
+let parse_source _ s = Format822.parse_source s
+let parse_vpkg _ s = Format822.parse_constr s
+let parse_veqpkg _ s = Format822.parse_constr s
+let parse_conj _ s = Format822.parse_vpkglist Format822.parse_constr s
+let parse_cnf _ s = Format822.parse_vpkgformula Format822.parse_constr s
+let parse_prov _ s = Format822.parse_veqpkglist Format822.parse_constr s
+let parse_bool field = function
   |("Yes"|"yes") -> true
   |("No" | "no") -> false (* this one usually is not there *)
-  |s -> fatal "Field essential has a wrong value : %s" s
+  |s -> fatal "Field %s has a wrong value : %s" field s
+let parse_string _ s = String.lowercase s
+let parse_int _ s = int_of_string s
+
+let parse_architecture default_arch _ s = 
+  match default_arch with
+  |None -> String.lowercase s
+  |Some default_arch ->
+      let default_arch = String.lowercase default_arch in
+      let arch = String.lowercase s in
+      if (default_arch = arch || arch = "all") then arch else
+        raise (IgnorePackage (
+          Printf.sprintf 
+          "architecture: %s is different from %s (default) or 'all'" 
+          arch default_arch
+          )
+        )
+;;
 
 let parse_packages_fields default_arch extras par =
-  let extras = "status"::extras in
-  let parse_s f field = f (single_line field (List.assoc field par)) in
-  let parse_m f field = f (String.concat " " (List.assoc field par)) in
-  let guard =
-    match default_arch with
-    |None -> fun _ -> true (* no filter *)
-    |Some default_arch ->
-        let default_arch = String.lowercase default_arch in
-        fun arch -> (default_arch = arch || arch = "all")
+  let parse_s ?opt ?(err="") ?(multi=false) f field =
+    let delayed_f () =
+      let line =
+        let s = List.assoc field par in
+        if multi then String.concat " " s
+        else Format822.single_line field s
+      in
+      f field line
+    in
+    if Option.is_none opt then
+      try delayed_f ()
+      with Not_found -> raise (ParseError (field,err))
+    else
+      try delayed_f ()
+      with Not_found -> Option.get opt
   in
   let parse_e extras =
     List.filter_map (fun prop -> 
@@ -89,40 +117,46 @@ let parse_packages_fields default_arch extras par =
       with Not_found -> None
     ) extras
   in
-  let exec () = 
-      {
-        name = parse_s parse_name "package";
-        version = parse_s parse_version "version";
-        architecture = parse_s (fun x -> String.lowercase x) "architecture";
-        essential = (try parse_s parse_essential "essential" with Not_found -> false);
-        source = (try parse_s parse_source "source" with Not_found -> ("",None));
-        depends = (try parse_m parse_cnf "depends" with Not_found -> []);
-        pre_depends = (try parse_m parse_cnf "pre-depends" with Not_found -> []);
-        recommends = (try parse_m parse_cnf "recommends" with Not_found -> []);
-        suggests = (try parse_m parse_conj "suggests" with Not_found -> []);
-        enhances = (try parse_m parse_conj "enhances" with Not_found -> []);
-        conflicts = (try parse_m parse_conj "conflicts" with Not_found -> []);
-        breaks = (try parse_m parse_conj "breaks" with Not_found -> []);
-        replaces = (try parse_m parse_conj "replaces" with Not_found -> []);
-        provides = (try parse_m parse_prov "provides" with Not_found -> []);
-        priority = (try parse_s (fun x -> String.lowercase x) "priority" with Not_found -> "");
+  try
+    Some {
+        name = parse_s ~err:"(MISSING NAME)" parse_name "package";
+        version = parse_s ~err:"(MISSING VERSION)" parse_version "version";
+        architecture = parse_s ~err:"(MISSING ARCH)" (parse_architecture default_arch) "architecture";
+        source = parse_s ~opt:("",None) parse_source "source";
+
+        essential = parse_s ~opt:false parse_bool "essential";
+        priority = parse_s ~opt:"" parse_string "priority";
+
+        depends = parse_s ~opt:[] ~multi:true parse_cnf "depends";
+        pre_depends = parse_s ~opt:[] ~multi:true parse_cnf "pre-depends";
+        recommends = parse_s ~opt:[] ~multi:true parse_cnf "recommends";
+        suggests = parse_s ~opt:[] ~multi:true parse_conj "suggests";
+        enhances = parse_s ~opt:[] ~multi:true parse_conj "enhances";
+        conflicts = parse_s ~opt:[] ~multi:true parse_conj "conflicts";
+        breaks = parse_s ~opt:[] ~multi:true parse_conj "breaks";
+        replaces = parse_s ~opt:[] ~multi:true parse_conj "replaces";
+        provides = parse_s ~opt:[] ~multi:true parse_conj "provides";
         extras = parse_e extras;
-      }
-  in
-  (* this package doesn't either have version or name or architecture *)
-  try if guard (parse_s (fun x -> x) "architecture") then Some(exec ()) else None 
-  with Not_found -> begin
-    let p = try parse_s (fun x -> x) "package" with Not_found -> "(MISSING NAME)" in
-    let v = try parse_s (fun x -> x) "version" with Not_found -> "(MISSING VERSION)" in
-    let a = try parse_s (fun x -> x) "architecture" with Not_found -> "(MISSING ARCH)" in
-    warning "Ignoring broken package %s-%s.%s" p v a  ;
-    None 
-  end
+    }
+  with 
+    |ParseError (f,s) -> begin
+      List.iter (fun (k,v) -> Printf.eprintf "%s: %s\n%!" k (String.concat " " v)) par;
+      warning "Parse Error in field %s : %s" f s;
+      None
+    end
+    |IgnorePackage s -> begin
+      List.iter (fun (k,v) -> Printf.eprintf "%s: %s\n%!" k (String.concat " " v)) par;
+      warning "Package Ignored : %s" s;
+      None
+    end
+;;
 
 (** parse a debian Packages file from the channel [ch] *)
 let parse_packages_in ?(default_arch=None) ?(extras=[]) f ch =
-  let parse_packages = Format822.parse_822_iter (parse_packages_fields default_arch extras) in
-  parse_packages f (start_from_channel ch)
+  let parse_packages = 
+    Format822.parse_822_iter (parse_packages_fields default_arch extras) 
+  in
+  parse_packages f (Format822.start_from_channel ch)
 
 (**/**)
 let id p = (p.name,p.version,p.architecture)
@@ -170,4 +204,3 @@ let input_raw ?(default_arch=None) ?(extras=[]) =
 let input_raw_ch ?(default_arch=None) ?(extras=[]) = 
   let module M = Format822.RawInput(Set) in
   M.input_raw_ch (parse_packages_in ~default_arch ~extras)
-
