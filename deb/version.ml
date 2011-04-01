@@ -1,5 +1,5 @@
 (**************************************************************************)
-(*  Copyright (C) 2009  Jaap Boender (jaap.boender@pps.jussieu.fr)        *)
+(*  Copyright (C) 2009  Jaap Boender <jaap.boender@pps.jussieu.fr>        *)
 (*                                                                        *)
 (*  This library is free software: you can redistribute it and/or modify  *)
 (*  it under the terms of the GNU Lesser General Public License as        *)
