@@ -15,10 +15,13 @@ $(MAIN).dvi: $(DEPS)
 $(MAIN).aux: $(DEPS)
 	latex $(MAIN)
 
+headers:
+	headache -h headache.header -c headache.conf $(DEPS)
+
 clean:
 	-rm -f $(MAIN).{dvi,aux,toc,haux,htoc,log,bbl,blg}
 
 veryclean: clean
 	-rm -f $(MAIN).{html,ps}	
 
-.phony: clean realclean
+.phony: clean realclean headers
