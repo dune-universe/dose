@@ -219,27 +219,3 @@ let compare (x : string) (y : string) =
 
 let equal (x : string) (y : string) =
   if x = y then true else (compare x y) = 0
-
-(** [split_by_epoch vpl] splits the (sorted) list [vpl] grouping their elements by epoch *)
-(*
-let split_by_epoch =
-  let samepoch =
-    function
-        (e1,e2) when e1=e2 -> true
-      | (e1,e2) when e1="0:" && e2="" -> true
-      | (e1,e2) when e1="" && e2="0:" -> true
-      | _ -> false
-  in
-  let rec aux e (acc::accl) = function
-      [] -> List.rev (List.map List.rev (acc::accl))
-    | ((_,Eq debv) as vpair)::r when samepoch(e,(Debutil.chop_version debv)) ->
-        aux e ((vpair::acc)::accl) r
-    | ((_,Eq debv) as vpair)::r ->
-        aux (Debutil.chop_version debv) ([vpair]::acc::accl) r
-    | _ -> failwith "Split_by_epoch only handles real versions"
-  in function
-      [] -> []
-    | ((_,Eq debv) as vpair)::r -> aux (Debutil.chop_version debv) [[vpair]] r
-    | _ -> failwith "Split_by_epoch only handles real versions"
-;;
-*)
