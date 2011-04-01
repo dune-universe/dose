@@ -227,7 +227,6 @@ let add_extra extras tables pkg =
       try 
         let s = List.assoc debprop pkg.extras in
         let typ = Cudf_types.type_of_typedecl v in
-        Printf.eprintf "aaaa%!";
         Some (cudfprop, Cudf_types_pp.parse_value typ s)
       with Not_found -> None
     ) extras

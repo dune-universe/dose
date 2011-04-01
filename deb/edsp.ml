@@ -96,31 +96,3 @@ let extras_tocudf =
   ("Section", ("section", `String (Some ""))); 
   ]
 ;;
-
-let main () =
-  let file = "tests/scenario" in
-  let ch = Input.open_file file in
-  let (request,pkglist) = input_raw_ch ch in
-  let _ = Input.close_ch ch in
-  let tables = Debcudf.init_tables pkglist in
-  let default_preamble =
-    let l = List.map snd extras_tocudf in
-    CudfAdd.add_properties Debcudf.preamble l
-  in
-  (*
-  Printf.eprintf "Request %s \n%!" request.request;
-  List.iter (fun pkg ->
-    Printf.eprintf "%s %s\n%!" pkg.Packages.name pkg.Packages.version
-  ) pkglist;
-  *)
-  let cudfpkglist = List.map (fun pkg ->
-    Printf.eprintf "%s %s\n%!" pkg.Packages.name pkg.Packages.version;
-    List.iter (fun (f,e) -> Printf.eprintf "%s: %s\n%!" f e)
-    pkg.Packages.extras;
-    let q = Debcudf.tocudf tables ~extras:extras_tocudf pkg in
-    Printf.eprintf "%s %d\n%!" q.Cudf.package q.Cudf.version;
-    q
-  ) pkglist in
-  ()
-;;
-
