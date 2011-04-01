@@ -32,13 +32,13 @@ module Options = struct
 
 end
 
-(*
 let make_request request = 
   {Cudf.default_request with
-    install = request.Edsp.install;
-    remove = request.Edsp.remove;
+  Cudf.request_id = request.Edsp.request;
+  Cudf.install = List.map (fun (n,c) -> (n,None)) request.Edsp.install;
+  Cudf.remove = List.map (fun (n,c) -> (n,None)) request.Edsp.remove;
   }
-*)
+;;
 
 let main () =
   let args = OptParse.OptParser.parse_argv Options.options in
@@ -46,25 +46,35 @@ let main () =
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress) [] ;
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) [];
 
-  let file = List.hd args in
-  let ch = Input.open_file file in
+  let ch = 
+    match args with 
+    |[] -> (IO.input_channel stdin)
+    |file::_ -> Input.open_file file 
+  in
+  
   let (request,pkglist) = Edsp.input_raw_ch ch in
-  let _ = Input.close_ch ch in
+  
+  if args <> [] then Input.close_ch ch;
+
   let tables = Debcudf.init_tables pkglist in
   let default_preamble =
     let l = List.map snd Edsp.extras_tocudf in
     CudfAdd.add_properties Debcudf.preamble l
   in
+  
   let cudfpkglist = List.map (Debcudf.tocudf tables ~extras:Edsp.extras_tocudf) pkglist in
+  
   let oc =
     if OptParse.Opt.is_set Options.outfile then
       open_out (OptParse.Opt.get Options.outfile)
     else
       stdout
   in
+  
   let fmt = Format.formatter_of_out_channel oc in
   Format.fprintf fmt "%a@." Cudf_printer.pp_preamble default_preamble;
   List.iter (Format.fprintf fmt "%a@." Cudf_printer.pp_package) cudfpkglist ;
+  Format.fprintf fmt "%a@." Cudf_printer.pp_request (make_request request);
   if oc <> stdout then close_out oc ; ()
 ;;
 

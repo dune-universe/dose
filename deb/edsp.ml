@@ -42,17 +42,20 @@ let default_request = {
   preferences = ""
 }
 
+let parse_conj _ s = 
+  Format822.list_parser ~sep:Format822.space_re Format822.parse_constr s
+
 let parse_request_stanza par =
   let aux par =
     Some {
-        request = Packages.parse_s ~err:"(Malformed REQUEST)" Packages.parse_string "request" par;
-        install = Packages.parse_s ~opt:[] Packages.parse_conj "install" par;
-        remove = Packages.parse_s ~opt:[] Packages.parse_conj "remove" par;
-        upgrade = Packages.parse_s ~opt:false Packages.parse_bool "upgrade" par;
-        distupgrade = Packages.parse_s ~opt:false Packages.parse_bool "dist-upgrade" par;
-        autoremove = Packages.parse_s ~opt:false Packages.parse_bool "autoremove" par;
-        strict_pin = Packages.parse_s ~opt:true Packages.parse_bool "strict-pinning" par;
-        preferences = Packages.parse_s ~opt:"" Packages.parse_string "preferences" par;
+      request = Packages.parse_s ~err:"(Malformed REQUEST)" Packages.parse_string "request" par;
+      install = Packages.parse_s ~opt:[] parse_conj "install" par;
+      remove = Packages.parse_s ~opt:[] parse_conj "remove" par;
+      upgrade = Packages.parse_s ~opt:false Packages.parse_bool "upgrade" par;
+      distupgrade = Packages.parse_s ~opt:false Packages.parse_bool "dist-upgrade" par;
+      autoremove = Packages.parse_s ~opt:false Packages.parse_bool "autoremove" par;
+      strict_pin = Packages.parse_s ~opt:true Packages.parse_bool "strict-pinning" par;
+      preferences = Packages.parse_s ~opt:"" Packages.parse_string "preferences" par;
     }
   in Packages.parse_packages_fields aux par
 ;;
@@ -88,11 +91,11 @@ let input_raw_ch ch =
 ;;
 
 let extras_tocudf =
-  [("installed", ("installed", `Bool (Some false)));
-  ("APT-Pin", ("apt_pin", `Posint (Some 0)));
-  ("APT-ID", ("apt_id", `String None));
-  ("APT-Candidate", ("apt_candidate", `Bool (Some false)));
-  ("APT-Automatic", ("apt_automatic", `Bool (Some false)));
+  [("Installed", ("installed", `Bool (Some false)));
+  ("APT-Pin", ("apt-pin", `Posint (Some 0)));
+  ("APT-ID", ("apt-id", `String None));
+  ("APT-Candidate", ("apt-candidate", `Bool (Some false)));
+  ("APT-Automatic", ("apt-automatic", `Bool (Some false)));
   ("Section", ("section", `String (Some ""))); 
   ]
 ;;

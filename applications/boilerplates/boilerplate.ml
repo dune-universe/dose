@@ -132,7 +132,7 @@ let argv3 l = argv_ (fun a -> (a.(0),a.(1),a.(2))) l
 let read_deb ?(extras=[]) s =
   let ch = Input.open_file s in
   let l = Debian.Packages.parse_packages_in ~extras ch in
-  let _ = (* IO.close_in ch *) Input.close_ch ch in
+  let _ = Input.close_ch ch in
   l
 
 (** transform a list of debian control stanza into a cudf packages list *)
