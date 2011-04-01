@@ -1,8 +1,7 @@
-All files are copyright Pietro Abate, with the following exceptions:
+All files that do not carry an explicit copyright notice in its
+header are:
 
-deb/version.ml : Jaap Boender
-deb/format822.ml Jerome Vouillion, Stefano Zacchiroli, Pietro Abate
-algo/statistics.ml Jaap Boender, Stefano Zacchiroli, Pietro Abate
-common/edosSolver.ml common/edosSolver.mli : Jerome Vouillion
-common/util.ml : Alain Frish, Pietro Abate
-common/url.ml : b8_bavard, b8_fee_carabine, INRIA
+Copyright 2009,2010,2011: Pietro Abate and Université Paris-Diderot.
+
+Licence: see file COPYINGy
+
