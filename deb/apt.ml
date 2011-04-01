@@ -235,7 +235,7 @@ let parse_preferences_fields p =
   with Not_found -> None
 
 (** parse the apt_preferences file *)
-let parse_preferences_in f ch =
+let parse_preferences_in ch =
   let parse_preferences_rec = parse_822_iter parse_preferences_fields in
-  parse_preferences_rec f (start_from_channel ch)
+  parse_preferences_rec (start_from_channel ch)
 

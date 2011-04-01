@@ -285,9 +285,8 @@ exception Eof
 (** parse a 822 compliant file.
     @return list of packages.
     @param parse : paragraph parser
-    @param f : filter to be applied to each paragraph 
     @param ExtLib.IO.input channel *)
-let parse_822_iter parse f ch =
+let parse_822_iter parse ch =
   let total = 25000 in (* estimate *)
   Util.Progress.set_total progressbar total;
   let l = ref [] in
@@ -299,7 +298,7 @@ let parse_822_iter parse f ch =
       |Some par ->
         begin match parse par with
         |None -> ()
-        |Some e -> l := (f e) :: !l
+        |Some e -> l := e :: !l
         end
     done ;
     !l
@@ -309,7 +308,7 @@ let parse_822_iter parse f ch =
  * with a equality function on (name,version,arch) and the functor
  * can be removed... *)
 module RawInput ( Set : Set.S ) = struct
-  let input_raw f files =
+  let input_raw parse files =
     let timer = Util.Timer.create "Debian.Format822.input_raw" in
     Util.Timer.start timer;
     if List.length files > 1 then info "Merging debian packages lists" ;
@@ -317,7 +316,7 @@ module RawInput ( Set : Set.S ) = struct
       List.fold_left (fun acc file ->
         info "Parsing debian file %s..." file;
         let ch = (Input.open_file file) in
-        let l = f (fun x -> x) ch in
+        let l = parse ch in
         let _ = Input.close_ch ch in
         List.fold_left (fun s x -> Set.add x s) acc l
       ) Set.empty files
@@ -325,12 +324,12 @@ module RawInput ( Set : Set.S ) = struct
     info "total Debian packages %n" (Set.cardinal s);
     Util.Timer.stop timer (Set.elements s)
 
-  let input_raw_ch f ch =
+  let input_raw_ch parse ch =
     let timer = Util.Timer.create "Debian.Format822.input_raw_ch" in
     Util.Timer.start timer;
     let s =
       info "Parsing debian packages...";
-      let l = f (fun x -> x) ch in
+      let l = parse ch in
       let _ = Input.close_ch ch in
       List.fold_left (fun s x -> Set.add x s) Set.empty l
     in

@@ -87,9 +87,9 @@ let parse_packages_fields extras par =
   end
 
 (** parse a debian Packages file from the channel [ch] *)
-let parse_packages_in ?(extras=[]) f ch =
+let parse_packages_in ?(extras=[]) ch =
   let parse_packages = Debian.Format822.parse_822_iter (parse_packages_fields extras) in
-  parse_packages f (start_from_channel ch)
+  parse_packages (start_from_channel ch)
 
 (**/**)
 module Set = struct

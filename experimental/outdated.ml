@@ -134,7 +134,8 @@ let outdated ?(verbose=false) ?(clusterlist=None) repository =
         end
     end
   ) constraints_table;
-
+  Hashtbl.clear realpackages;
+  info "1";
 
   let versionlist = Util.list_unique !version_acc in
   let tables = Debian.Debcudf.init_tables ~step:2 ~versionlist repository in
@@ -166,6 +167,7 @@ let outdated ?(verbose=false) ?(clusterlist=None) repository =
       in l@acc
     ) worktable []
   in
+  info "2";
   (*
   List.iter (fun pkg ->
     Format.printf "%a@." Cudf_printer.pp_package pkg
@@ -174,10 +176,11 @@ let outdated ?(verbose=false) ?(clusterlist=None) repository =
 
   (* add additional pseudo-source packages *)
   let universe = Cudf.load_universe pkglist in
+  info "3 %d" (List.length pkglist);
 
   let fmt = Format.std_formatter in
   Format.fprintf fmt "@[<v 1>report:@,";
-  let callback d = Diagnostic.fprintf ~failure:true ~explain:true fmt d in
+  let callback d = if false then Diagnostic.fprintf ~failure:true ~explain:true fmt d in
   let i = Depsolver.univcheck ~callback universe in
   Format.fprintf fmt "@]@.";
 ;; 

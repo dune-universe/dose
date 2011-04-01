@@ -71,12 +71,21 @@ let parse_veqpkg _ s = Format822.parse_constr s
 let parse_conj _ s = Format822.parse_vpkglist Format822.parse_constr s
 let parse_cnf _ s = Format822.parse_vpkgformula Format822.parse_constr s
 let parse_prov _ s = Format822.parse_veqpkglist Format822.parse_constr s
+
+(* parse and convert to a specific type *)
 let parse_bool field = function
   |("Yes"|"yes") -> true
   |("No" | "no") -> false (* this one usually is not there *)
   |s -> fatal "Field %s has a wrong value : %s" field s
 let parse_string _ s = String.lowercase s
 let parse_int _ s = int_of_string s
+
+(* parse and return a string -> for extra fields *)
+let parse_bool_s field = function
+  |("Yes"|"yes") -> "true"
+  |("No" | "no") -> "false" (* this one usually is not there *)
+  |s -> fatal "Field %s has a wrong value : %s" field s
+let parse_int_s _ s = string_of_int(int_of_string s)
 
 let parse_architecture default_arch _ s = 
   match default_arch with
@@ -93,70 +102,83 @@ let parse_architecture default_arch _ s =
         )
 ;;
 
-let parse_packages_fields default_arch extras par =
-  let parse_s ?opt ?(err="") ?(multi=false) f field =
-    let delayed_f () =
-      let line =
-        let s = List.assoc field par in
-        if multi then String.concat " " s
-        else Format822.single_line field s
-      in
-      f field line
+(* opt = None && err = None -> Not_found : this is for extras
+ * opt = None && err = Some s -> ParseError s :
+ * opt = Some s -> return s *)
+let parse_s ?opt ?err ?(multi=false) f field par =
+  let delayed_f () =
+    let line =
+      let field = String.lowercase field in
+      let s = List.assoc field par in
+      if multi then String.concat " " s
+      else Format822.single_line field s
     in
-    if Option.is_none opt then
-      try delayed_f ()
-      with Not_found -> raise (ParseError (field,err))
-    else
-      try delayed_f ()
-      with Not_found -> Option.get opt
+    f field line
   in
-  let parse_e extras =
-    List.filter_map (fun prop -> 
-      let prop = String.lowercase prop in
-      try Some (prop,single_line prop (List.assoc prop par))
+  if Option.is_none opt then
+    try delayed_f ()
+    with Not_found -> 
+      if Option.is_none err then raise Not_found
+      else raise (ParseError (field,(Option.get err)^" (no default declared)"))
+  else
+    try delayed_f ()
+    with Not_found -> Option.get opt
+;;
+
+(* parse extra fields parse_f returns a string *)
+let parse_e extras par =
+  List.filter_map (fun (field, parse_f) ->
+      let field = String.lowercase field in
+      try Some (field,parse_f par)
       with Not_found -> None
-    ) extras
-  in
-  try
-    Some {
-        name = parse_s ~err:"(MISSING NAME)" parse_name "package";
-        version = parse_s ~err:"(MISSING VERSION)" parse_version "version";
-        architecture = parse_s ~err:"(MISSING ARCH)" (parse_architecture default_arch) "architecture";
-        source = parse_s ~opt:("",None) parse_source "source";
+  ) extras
+;;
 
-        essential = parse_s ~opt:false parse_bool "essential";
-        priority = parse_s ~opt:"" parse_string "priority";
-
-        depends = parse_s ~opt:[] ~multi:true parse_cnf "depends";
-        pre_depends = parse_s ~opt:[] ~multi:true parse_cnf "pre-depends";
-        recommends = parse_s ~opt:[] ~multi:true parse_cnf "recommends";
-        suggests = parse_s ~opt:[] ~multi:true parse_conj "suggests";
-        enhances = parse_s ~opt:[] ~multi:true parse_conj "enhances";
-        conflicts = parse_s ~opt:[] ~multi:true parse_conj "conflicts";
-        breaks = parse_s ~opt:[] ~multi:true parse_conj "breaks";
-        replaces = parse_s ~opt:[] ~multi:true parse_conj "replaces";
-        provides = parse_s ~opt:[] ~multi:true parse_conj "provides";
-        extras = parse_e extras;
-    }
+let parse_packages_fields stanza_parser par =
+  try stanza_parser par
   with 
     |ParseError (f,s) -> begin
       List.iter (fun (k,v) -> Printf.eprintf "%s: %s\n%!" k (String.concat " " v)) par;
-      warning "Parse Error in field %s : %s" f s;
+      Printf.eprintf "Parse Error in field %s : %s" f s;
       None
     end
     |IgnorePackage s -> begin
       List.iter (fun (k,v) -> Printf.eprintf "%s: %s\n%!" k (String.concat " " v)) par;
-      warning "Package Ignored : %s" s;
+      Printf.eprintf "Package Ignored : %s" s;
       None
     end
 ;;
 
+let parse_package_stanza default_arch extras par = 
+  let aux par = 
+    let parse_arch = parse_architecture default_arch in
+    Some {
+        name = parse_s ~err:"(MISSING NAME)" parse_name "package" par;
+        version = parse_s ~err:"(MISSING VERSION)" parse_version "version" par;
+        architecture = parse_s ~err:"(MISSING ARCH)" parse_arch "architecture" par;
+        source = parse_s ~opt:("",None) parse_source "source" par;
+
+        essential = parse_s ~opt:false parse_bool "essential" par;
+        priority = parse_s ~opt:"" parse_string "priority" par;
+
+        depends = parse_s ~opt:[] ~multi:true parse_cnf "depends" par;
+        pre_depends = parse_s ~opt:[] ~multi:true parse_cnf "pre-depends" par;
+        recommends = parse_s ~opt:[] ~multi:true parse_cnf "recommends" par;
+        suggests = parse_s ~opt:[] ~multi:true parse_conj "suggests" par;
+        enhances = parse_s ~opt:[] ~multi:true parse_conj "enhances" par;
+        conflicts = parse_s ~opt:[] ~multi:true parse_conj "conflicts" par;
+        breaks = parse_s ~opt:[] ~multi:true parse_conj "breaks" par;
+        replaces = parse_s ~opt:[] ~multi:true parse_conj "replaces" par;
+        provides = parse_s ~opt:[] ~multi:true parse_conj "provides" par;
+        extras = parse_e extras par;
+    }
+  in parse_packages_fields aux par
+;;
+
 (** parse a debian Packages file from the channel [ch] *)
-let parse_packages_in ?(default_arch=None) ?(extras=[]) f ch =
-  let parse_packages = 
-    Format822.parse_822_iter (parse_packages_fields default_arch extras) 
-  in
-  parse_packages f (Format822.start_from_channel ch)
+let parse_packages_in ?(default_arch=None) ?(extras=[]) ch =
+  let parse_packages = Format822.parse_822_iter (parse_package_stanza default_arch extras) in
+  parse_packages (Format822.start_from_channel ch)
 
 (**/**)
 let id p = (p.name,p.version,p.architecture)
@@ -195,12 +217,18 @@ let merge status packages =
   in
   Set.elements ps
 
+let default_extras = [
+  ("Status", parse_s parse_string "status");
+]
+
 (** input_raw [file] : parse a debian Packages file from [file] *)
 let input_raw ?(default_arch=None) ?(extras=[]) = 
   let module M = Format822.RawInput(Set) in
+  let extras = default_extras @ extras in
   M.input_raw (parse_packages_in ~default_arch ~extras)
 
 (** input_raw_ch ch : parse a debian Packages file from channel [ch] *)
 let input_raw_ch ?(default_arch=None) ?(extras=[]) = 
   let module M = Format822.RawInput(Set) in
+  let extras = default_extras @ extras in
   M.input_raw_ch (parse_packages_in ~default_arch ~extras)

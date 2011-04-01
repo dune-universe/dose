@@ -18,6 +18,14 @@ open Cudf
 let f_packages = "tests/Packages" ;;
 let f_release = "tests/Release" ;;
 
+(* XXX TODO:
+  * add test for default arch
+  * add test for extras
+  * add test for parsing errors
+  * add test for Ingore Packages
+  * add test for status and merge
+  * *)
+
 let ch = Input.open_file f_packages ;;
 let extras_properties = [
   ("maintainer", ("maintainer", `String None));

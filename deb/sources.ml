@@ -57,9 +57,9 @@ let parse_sources_fields par =
   try Some (exec ()) with Not_found -> None (* this package doesn't either have version or name *)
 
 (** parse a debian Sources file from channel *)
-let parse_sources_in f ch =
+let parse_sources_in ch =
   let parse_packages = parse_822_iter parse_sources_fields in
-  parse_packages f (start_from_channel ch)
+  parse_packages (start_from_channel ch)
 
 (** parse a debian Sources file *)
 let input_raw =

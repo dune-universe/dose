@@ -19,7 +19,7 @@ open Algo
 let test_debian_distcheck_lenny =
   "debian_distcheck_lenny" >:: (fun _ ->
     let ch = Input.open_file "tests/lenny.packages" in
-    let l = Debian.Packages.parse_packages_in (fun x->x) ch in
+    let l = Debian.Packages.parse_packages_in ch in
     Input.close_ch ch;
     let universe = Debian.Debcudf.load_universe l in
     let i = Depsolver.univcheck universe in
@@ -29,7 +29,7 @@ let test_debian_distcheck_lenny =
 let test_debian_distcheck_sid =
   "debian_distcheck_sid" >:: (fun _ ->
     let ch = Input.open_file "tests/sid.packages" in
-    let l = Debian.Packages.parse_packages_in (fun x->x) ch in
+    let l = Debian.Packages.parse_packages_in ch in
     Input.close_ch ch;
     let universe = Debian.Debcudf.load_universe l in
     let i = Depsolver.univcheck universe in
