@@ -1,7 +1,7 @@
 (*****************************************************************************)
 (*  Copyright (C) 2009  <pietro.abate@pps.jussieu.fr>                        *)
-(*  Part of  the following code is borrowed from Cduce.                      *)
-(*  Copyright: Alain Frish                                                   *)
+(*  Part of  the following code is taken from Cduce.                         *)
+(*  (Cduce has Copyright (C) 2005 Alain Frisch and contributors)             *)
 (*                                                                           *)
 (*  This library is free software: you can redistribute it and/or modify     *)
 (*  it under the terms of the GNU Lesser General Public License as           *)
@@ -9,6 +9,10 @@
 (*  License, or (at your option) any later version.  A special linking       *)
 (*  exception to the GNU Lesser General Public License applies to this       *)
 (*  library, see the COPYING file for more information.                      *)
+(*                                                                           *)
+(*  Cduce had been published under an MIT-like licence which allows to deal  *)
+(*  without restriction in it. The portion of code taken from Cduce is not a *)
+(*  substantial portion of the source code of Cduce.                         *)
 (*****************************************************************************)
 
 (** return a unique identifier *)
@@ -35,7 +39,7 @@ let list_unique l =
   in
   (* List.rev *) add [] l
 
-(* standard memoizazion function *)
+(* standard memoization function *)
 let memo f =
   let h = Hashtbl.create 1023 in
   fun i ->
