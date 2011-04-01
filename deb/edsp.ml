@@ -92,7 +92,7 @@ let input_raw_ch ch =
 
 let extras_tocudf =
   [("Installed", ("installed", `Bool (Some false)));
-  ("APT-Pin", ("apt-pin", `Posint (Some 0)));
+  ("APT-Pin", ("apt-pin", `Int None));
   ("APT-ID", ("apt-id", `String None));
   ("APT-Candidate", ("apt-candidate", `Bool (Some false)));
   ("APT-Automatic", ("apt-automatic", `Bool (Some false)));
