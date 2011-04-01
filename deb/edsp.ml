@@ -14,7 +14,6 @@
 
 open ExtLib
 open Common
-open Debian
 
 let debug fmt = Util.make_debug "Debian.Edsp" fmt
 let info fmt = Util.make_info "Debian.Edsp" fmt
@@ -125,4 +124,3 @@ let main () =
   ()
 ;;
 
-main ();;
