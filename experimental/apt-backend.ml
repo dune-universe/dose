@@ -23,16 +23,24 @@ let fatal fmt = Util.make_fatal "apt-get backend" fmt
 
 module Options = struct
   open OptParse
-  let options = OptParser.make ~description:"apt-get backend (EDSP v. 0.3)"
+  let description = "apt-get backend (EDSP v. 0.3)"
+  let options = OptParser.make ~description
   include Boilerplate.MakeOptions(struct let options = options end)
 
   let outfile = StdOpt.str_option ()
+  let solfile = StdOpt.str_option ()
+  let solver = StdOpt.str_option ()
+
   open OptParser
-  add options ~short_name:'o' ~long_name:"outfile" ~help:"specify the output file prefix" outfile;
+  add options ~long_name:"outfile" ~help:"universe output" outfile;
+  add options ~long_name:"solfile" ~help:"solution output" solfile;
+  add options ~short_name:'s' ~long_name:"solver" ~help:"external solver" solver;
 
 end
 
 let make_request request = 
+  (* XXX add here the semantic translation for autoremove, strict-pinning
+   * and friends in req_extra *)
   {Cudf.default_request with
   Cudf.request_id = request.Edsp.request;
   Cudf.install = List.map (fun (n,c) -> (n,None)) request.Edsp.install;
