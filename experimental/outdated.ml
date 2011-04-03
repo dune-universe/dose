@@ -83,7 +83,11 @@ let outdated ?(verbose=false) ?(clusterlist=None) repository =
     (* Printf.eprintf "source: %s %s\n%!" sn sv; *)
     List.iter (fun (version,cluster) ->
       (* Printf.eprintf "bin version: %s \n%!" version; *)
-      let discr = Debian.Evolution.discriminants constraints_table cluster in
+      let filter x =
+        match Debian.Version.split version, Debian.Version.split x with
+        |(_,v,_,_),(_,w,_,_) -> (Debian.Version.compare v w) <= 0
+      in
+      let discr = Debian.Evolution.discriminants ~filter constraints_table cluster in
       let vl =
         List.fold_left (fun acc (target,equiv) ->
           (*
@@ -134,7 +138,6 @@ let outdated ?(verbose=false) ?(clusterlist=None) repository =
         end
     end
   ) constraints_table;
-  Hashtbl.clear realpackages;
   info "1";
 
   let versionlist = Util.list_unique !version_acc in
@@ -159,7 +162,10 @@ let outdated ?(verbose=false) ?(clusterlist=None) repository =
               let number = Debian.Evolution.string_of_range target in
               if newv <> p.Cudf.version && not(Hashtbl.mem duplicates (pn,newv)) then begin
                 Hashtbl.add duplicates (pn,newv) ();
-                (sync (sn,sv) (dummy p number newv))::acc
+                if List.length cluster > 1 then
+                  (sync (sn,sv) (dummy p number newv))::acc
+                else
+                   (dummy p number newv)::acc
               end else acc
             ) acc (target::equiv)
           ) ((sync (sn,sv) p)::acc) constr
@@ -168,14 +174,19 @@ let outdated ?(verbose=false) ?(clusterlist=None) repository =
     ) worktable []
   in
   info "2";
-  (*
+  
   List.iter (fun pkg ->
     Format.printf "%a@." Cudf_printer.pp_package pkg
   ) pkglist ;
-  *)
 
   (* add additional pseudo-source packages *)
   let universe = Cudf.load_universe pkglist in
+  Hashtbl.clear worktable;
+  Hashtbl.clear duplicates;
+  Hashtbl.clear realpackages;
+  Hashtbl.clear constraints_table;
+  Debian.Debcudf.clear tables;
+
   info "3 %d" (List.length pkglist);
 
   let fmt = Format.std_formatter in
@@ -189,7 +200,8 @@ let outdated ?(verbose=false) ?(clusterlist=None) repository =
 let main () =
   let args = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
-  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) [] ;
+  Boilerplate.enable_bars (OptParse.Opt.get Options.progress)
+  ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
 
   let clusterlist = OptParse.Opt.opt Options.checkonly in

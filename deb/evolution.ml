@@ -167,8 +167,7 @@ let discriminants ?filter constraints_table cluster =
         if Option.is_none filter then l
         else List.filter (Option.get filter) l 
       in
-      let d = discriminant versionlist constr in
-      (* Hashtbl.fold (fun k v acc -> (k,v)::acc) d [] *) d @ l
+      (discriminant versionlist constr) @ l
     ) [] cluster
   )
 ;;

@@ -76,8 +76,11 @@ let diagnosis maps res req =
   { Diagnostic.result = result ; request = request }
 
 let univcheck ?callback universe =
+  info "univcheck enter 1";
   let mdf = Mdf.load_from_universe universe in
+  info "univcheck enter 1.1";
   let maps = mdf.Mdf.maps in
+  info "univcheck enter 2";
   match callback with
   |None -> Depsolver_int.univcheck mdf
   |Some f ->
