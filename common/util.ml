@@ -116,7 +116,7 @@ let make_debug label =
 
 let make_fatal label =
   let l = Printf.sprintf "Fatal error in module %s: " label in
-  Printf.kprintf (fun s -> failwith (l^s))
+  Printf.kprintf (fun s -> Printf.eprintf "%s%s\n%!" l s; exit (-1))
 
 (** Printf bars are printed immediately on stderr.
  * they can be enabled or disabled (default) *)

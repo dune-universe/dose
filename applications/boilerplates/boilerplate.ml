@@ -121,7 +121,7 @@ let enable_timers verbose l =
 let argv_ f l =
   let a = Array.of_list l in
   if Array.length a = 0 then
-    (Printf.eprintf "No input file specified" ; exit 1)
+    fatal "No input file specified"
   else f a
 
 let argv1 l = argv_ (fun a -> a.(0)) l
@@ -195,23 +195,36 @@ let parse_cudf doc =
     fatal "Error while loading CUDF from %s: %s" doc (Printexc.to_string exn)
   end
 
+(*
 let load_cudf_ch ch =
   try
     let p = Cudf_parser.from_IO_in_channel ch in
     Cudf_parser.load p
   with
   |Cudf_parser.Parse_error _
-  | Cudf.Constraint_violation _ as exn -> begin
+  |Cudf.Constraint_violation _ as exn -> begin
     fatal "Error while loading CUDF: %s" (Printexc.to_string exn)
   end
+*)
 
 (** parse a cudf file and return a triple (preamble,universe,request option).
     If the package is not valid fails and exit *)
 let load_cudf doc = 
   let ch = Input.open_file doc in
-  let l = load_cudf_ch ch in
+  let l = 
+    try
+      let p = Cudf_parser.from_IO_in_channel ch in
+      Cudf_parser.load p
+    with
+    |Cudf_parser.Parse_error _
+    |Cudf.Constraint_violation _ as exn -> begin
+      fatal "Error while loading CUDF file %s:\n%s" doc (Printexc.to_string exn)
+    end 
+  in
+  (* let l = load_cudf_ch ch in *)
   Input.close_ch ch;
   l
+;;
 
 (* XXX when parsing a cudf, I should also remember the preamble !! *)
 let cudf_load_list file =
@@ -274,7 +287,7 @@ IFDEF HASDB THEN
         let l = Db.Backend.load_selection db (`All) in
         deb_load_list ~extras l
 ELSE
-      failwith (dbtype^" Not supported. re-configure with --with-??")
+    fatal "%s Not supported. re-configure with --with-??" dbtype
 END
   |("hdlist", l) -> 
 IFDEF HASRPM THEN
@@ -282,7 +295,7 @@ IFDEF HASRPM THEN
       let l = Rpm.Packages.Hdlists.input_raw filelist in
       rpm_load_list l
 ELSE
-    failwith ("hdlist Not supported. re-configure with --with-rpm")
+    fatal "hdlist Not supported. re-configure with --with-rpm"
 END
   |("synth", l) -> 
 IFDEF HASRPM THEN
@@ -290,9 +303,9 @@ IFDEF HASRPM THEN
       let l = Rpm.Packages.Synthesis.input_raw filelist in
       rpm_load_list l
 ELSE
-    failwith ("synth Not supported. re-configure with --with-rpm")
+    fatal "synth Not supported. re-configure with --with-rpm"
 END
-    |(s,_) -> failwith (s^" Not supported")
+    |(s,_) -> fatal "%s Not supported" s
 ;;
 
 (** parse and merge a list of files into a cudf package list *)
