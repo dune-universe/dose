@@ -1,4 +1,4 @@
-.TH ceve 1 "November 11, 2010" "Version 3.0" "USER COMMANDS"
+.TH ceve 1 "November 11, 2010" "@PACKAGE_VERSION@" "USER COMMANDS"
 .SH NAME
 ceve \- parse package metadata
 .SH SYNOPSIS

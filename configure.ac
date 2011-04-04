@@ -287,6 +287,9 @@ AC_CONFIG_FILES([
   applications/_tags
   applications/boilerplates/_tags
   common/versionInfo.ml
+  doc/manpages/buildcheck.1
+  doc/manpages/ceve.1
+  doc/manpages/distcheck.1
   _tags
 ])
 AC_OUTPUT
