@@ -157,8 +157,8 @@ let renumber_packages translation current_version_per_package package_list =
 	      in 
 	      if existing_version = version
 	      then
-		(* existing versions of packages that are mebntionend *)
-		(* in constraints are always mapped to 1              *)
+		(* existing versions of packages that are mentionend *)
+		(* in constraints are always mapped to 1             *)
 		(name,Some(relation,1))
 	      else
 		begin
