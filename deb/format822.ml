@@ -181,8 +181,8 @@ let parse_version s =
 
 (*****************************************************)
 
-let strict_package_re = Str.regexp "^[a-z0-9][a-z0-9.+-]+$"
-let package_re = Str.regexp "^[A-Za-z0-9][A-Za-z0-9._+-]+$"
+let strict_package_re = Str.regexp "^[a-z0-9][a-z0-9.+-]+\\(:[a-z0-9][a-z0-9]*\\)?$"
+let package_re = Str.regexp "^[A-Za-z0-9][A-Za-z0-9._+-]+\\(:[a-z0-9][a-z0-9]*\\)?$"
 
 let check_package_name i s =
   if not (Str.string_match strict_package_re s 0) then begin

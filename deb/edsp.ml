@@ -91,11 +91,21 @@ let input_raw_ch ch =
 ;;
 
 let extras_tocudf =
-  [("Installed", ("installed", `Bool (Some false)));
+  [
   ("APT-Pin", ("apt-pin", `Int None));
   ("APT-ID", ("apt-id", `String None));
   ("APT-Candidate", ("apt-candidate", `Bool (Some false)));
   ("APT-Automatic", ("apt-automatic", `Bool (Some false)));
   ("Section", ("section", `String (Some ""))); 
   ]
+;;
+
+let tocudf tables pkg =
+  let inst =
+    try
+      Packages.parse_bool "Installed"
+      (List.assoc "Installed" pkg.Packages.extras)
+    with Not_found -> false
+  in
+  Debcudf.tocudf tables ~inst ~extras:extras_tocudf pkg 
 ;;
