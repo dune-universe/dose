@@ -225,8 +225,7 @@ let pp_diff fmt (univ,hl) =
 
 let parse_univ f1 =
   match Boilerplate.load_cudf f1 with
-  |_,_,None ->
-      (Printf.eprintf "file %s is not a valid cudf document\n" f1 ; exit 1)
+  |_,_,None -> fatal "file %s is not a valid cudf document" f1
   |_,u,Some r -> u,r
 ;;
 
