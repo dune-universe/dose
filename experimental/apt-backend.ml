@@ -76,10 +76,16 @@ let solver_dir =
   try Sys.getenv("APTSOLVERS") with Not_found -> "/usr/lib/apt/solvers"
 
 let main () =
+  let timer1 = Util.Timer.create "parsing" in
+  let timer2 = Util.Timer.create "conversion" in
+  let timer3 = Util.Timer.create "cudfio" in
+  let timer4 = Util.Timer.create "solver" in
+  let timer5 = Util.Timer.create "solution" in
   let args = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress) [] ;
-  Boilerplate.enable_timers (OptParse.Opt.get Options.timers) [];
+  Boilerplate.enable_timers (OptParse.Opt.get Options.timers)
+  ["parsing";"cudfio";"conversion";"solver";"solution"];
 
   let solver =
     let name = 
@@ -97,10 +103,13 @@ let main () =
     |file::_ -> Input.open_file file 
   in
   
+  Util.Timer.start timer1;
   let (request,pkglist) = Edsp.input_raw_ch ch in
+  Util.Timer.stop timer1 ();
   
   if args <> [] then Input.close_ch ch;
 
+  Util.Timer.start timer2;
   let tables = Debcudf.init_tables pkglist in
   let default_preamble =
     let l = List.map snd Edsp.extras_tocudf in
@@ -115,6 +124,7 @@ let main () =
       p
     ) pkglist 
   in
+  Util.Timer.stop timer2 ();
   (*
   let oc =
     if OptParse.Opt.is_set Options.outfile then
@@ -130,19 +140,24 @@ let main () =
 
   let oc = open_out infile in
   
+  Util.Timer.start timer3;
   let fmt = Format.formatter_of_out_channel oc in
   Format.fprintf fmt "%a@\n" Cudf_printer.pp_preamble default_preamble;
   List.iter (Format.fprintf fmt "%a@\n" Cudf_printer.pp_package) cudfpkglist ;
   Format.fprintf fmt "%a@\n" Cudf_printer.pp_request (make_request request);
   if oc <> stdout then close_out oc ;
+  Util.Timer.stop timer3 ();
 
   (* TODO: the criteria should be computed on the fly w.r.t. strict pinning and
    * preferences *)
+  Util.Timer.start timer4;
   let criteria = "-notuptodate,-removed,-changed" in
   let cmd = Printf.sprintf "%s %s %s %s" solver infile outfile criteria in
   let debug = exec cmd in
   Printf.eprintf "%s\n%s\n%!" cmd debug; 
+  Util.Timer.stop timer4 ();
 
+  Util.Timer.start timer5;
   let cudf_parser = Cudf_parser.from_file outfile in
   let (_,sol,_) = Cudf_parser.parse cudf_parser in
   (* List.iter (Format.printf "%a@." Cudf_printer.pp_package) sol; *)
@@ -155,7 +170,8 @@ let main () =
       |true,false -> Format.printf "Install: %s@." apt_id
       |false,true -> Format.printf "Remove: %s@." apt_id
     with Not_found -> fatal "Conversion error"
-  ) sol
+  ) sol;
+  Util.Timer.stop timer5 ();
 
 ;;
 
