@@ -12,22 +12,6 @@
 
 (** Debian Specific Cudf conversion routines *)
 
-module StringHashtbl = Hashtbl.Make (
-  struct
-    type t = string
-    let equal (a : string) (b : string) = (a = b)
-    let hash s = Hashtbl.hash s
-  end
-)
-
-module IntHashtbl = Hashtbl.Make (
-  struct
-    type t = int
-    let equal (a : int) (b : int) = (a = b)
-    let hash i = Hashtbl.hash i
-  end
-)
-
 open ExtLib
 open Common
 open Packages
@@ -38,19 +22,19 @@ let warning fmt = Util.make_warning "Debian.Debcudf" fmt
 let fatal fmt = Util.make_fatal "Debian.Debcudf" fmt
 
 type tables = {
-  virtual_table : unit StringHashtbl.t;
-  unit_table : unit StringHashtbl.t ;
-  versions_table : int StringHashtbl.t;
-  versioned_table : unit StringHashtbl.t;
-  reverse_table : string list ref IntHashtbl.t
+  virtual_table : unit Util.StringHashtbl.t;
+  unit_table : unit Util.StringHashtbl.t ;
+  versions_table : int Util.StringHashtbl.t;
+  versioned_table : unit Util.StringHashtbl.t;
+  reverse_table : string list ref Util.IntHashtbl.t
 }
 
 let create n = {
-  virtual_table = StringHashtbl.create (10 * n);
-  unit_table = StringHashtbl.create (2 * n);
-  versions_table = StringHashtbl.create (10 * n);
-  versioned_table = StringHashtbl.create (10 *n);
-  reverse_table = IntHashtbl.create (10 * n);
+  virtual_table = Util.StringHashtbl.create (10 * n);
+  unit_table = Util.StringHashtbl.create (2 * n);
+  versions_table = Util.StringHashtbl.create (10 * n);
+  versioned_table = Util.StringHashtbl.create (10 *n);
+  reverse_table = Util.IntHashtbl.create (10 * n);
 }
 
 type lookup = {
@@ -59,16 +43,16 @@ type lookup = {
 }
 
 let clear tables =
-  StringHashtbl.clear tables.virtual_table;
-  StringHashtbl.clear tables.unit_table;
-  StringHashtbl.clear tables.versions_table;
-  StringHashtbl.clear tables.versioned_table;
-  IntHashtbl.clear tables.reverse_table
+  Util.StringHashtbl.clear tables.virtual_table;
+  Util.StringHashtbl.clear tables.unit_table;
+  Util.StringHashtbl.clear tables.versions_table;
+  Util.StringHashtbl.clear tables.versioned_table;
+  Util.IntHashtbl.clear tables.reverse_table
 ;;
 
 let add table k v =
-  if not(StringHashtbl.mem table k) then
-    StringHashtbl.add table k v
+  if not(Util.StringHashtbl.mem table k) then
+    Util.StringHashtbl.add table k v
 
 (* collect names of virtual packages *)
 let init_virtual_table table pkg =
@@ -116,7 +100,7 @@ let init_versions_table table pkg =
 let init_tables ?(step=1) ?(versionlist=[]) pkglist =
   let n = List.length pkglist in
   let tables = create n in 
-  let temp_versions_table = StringHashtbl.create (10 * n) in
+  let temp_versions_table = Util.StringHashtbl.create (10 * n) in
   let ivt = init_versions_table temp_versions_table in
   let ivrt = init_virtual_table tables.virtual_table in
   let ivdt = init_versioned_table tables.versioned_table in
@@ -124,10 +108,10 @@ let init_tables ?(step=1) ?(versionlist=[]) pkglist =
 
   List.iter (fun v -> add temp_versions_table v ()) versionlist; 
   List.iter (fun pkg -> ivt pkg ; ivrt pkg ; ivdt pkg ; iut pkg) pkglist ;
-  let l = StringHashtbl.fold (fun v _ acc -> v::acc) temp_versions_table [] in
+  let l = Util.StringHashtbl.fold (fun v _ acc -> v::acc) temp_versions_table [] in
   let add_reverse i v =
-     try let l = IntHashtbl.find tables.reverse_table i in l := v::!l
-     with Not_found -> IntHashtbl.add tables.reverse_table i (ref [v])
+     try let l = Util.IntHashtbl.find tables.reverse_table i in l := v::!l
+     with Not_found -> Util.IntHashtbl.add tables.reverse_table i (ref [v])
   in
   let sl = List.sort ~cmp:Version.compare l in
   let rec numbers (prec,i) = function
@@ -149,7 +133,7 @@ let init_tables ?(step=1) ?(versionlist=[]) pkglist =
 ;;
 
 let get_cudf_version tables (package,version) =
-  try StringHashtbl.find tables.versions_table version
+  try Util.StringHashtbl.find tables.versions_table version
   with Not_found -> begin
     warning "This should never happen : (%s,%s) is not known" package version;
     raise Not_found
@@ -158,7 +142,7 @@ let get_cudf_version tables (package,version) =
 let get_real_version tables (package,cudfversion) =
   let min a b = match Version.compare a b with -1 -> a | _ -> b in
   try
-    match !(IntHashtbl.find tables.reverse_table cudfversion) with
+    match !(Util.IntHashtbl.find tables.reverse_table cudfversion) with
     |[] -> fatal "This should never happen : at lease one version for (%s,%d) must exist" package cudfversion
     |[h] -> h
     |l ->
@@ -175,8 +159,8 @@ let loadl tables l =
     List.map (fun (name,sel) ->
       match CudfAdd.cudfop sel with
       |None ->
-          if (StringHashtbl.mem tables.virtual_table name) &&
-          (StringHashtbl.mem tables.versioned_table name) then
+          if (Util.StringHashtbl.mem tables.virtual_table name) &&
+          (Util.StringHashtbl.mem tables.versioned_table name) then
             [(CudfAdd.encode (name^"--virtual"), None);
              (CudfAdd.encode name, None)]
           else
@@ -194,11 +178,11 @@ let loadlp tables l =
   List.map (fun (name,sel) ->
     match CudfAdd.cudfop sel with
     |None  ->
-        if (StringHashtbl.mem tables.unit_table name) || (StringHashtbl.mem tables.versioned_table name)
+        if (Util.StringHashtbl.mem tables.unit_table name) || (Util.StringHashtbl.mem tables.versioned_table name)
         then (CudfAdd.encode (name^"--virtual"),None)
         else (CudfAdd.encode name, None)
     |Some(`Eq,v) ->
-        if (StringHashtbl.mem tables.unit_table name) || (StringHashtbl.mem tables.versioned_table name)
+        if (Util.StringHashtbl.mem tables.unit_table name) || (Util.StringHashtbl.mem tables.versioned_table name)
         then (CudfAdd.encode (name^"--virtual"),Some(`Eq,get_cudf_version tables (name,v)))
         else (CudfAdd.encode name,Some(`Eq,get_cudf_version tables (name,v)))
     |_ -> fatal "This should never happen : a provide can be either = or unversioned"
