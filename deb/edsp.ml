@@ -42,8 +42,7 @@ let default_request = {
   preferences = ""
 }
 
-let parse_conj _ s = 
-  Format822.list_parser ~sep:Format822.space_re Format822.parse_constr s
+let parse_conj _ s = Format822.list_parser ~sep:" " Format822.parse_constr s
 
 let parse_request_stanza par =
   let aux par =

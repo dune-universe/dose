@@ -29,7 +29,7 @@ type source = {
 }
 
 let parse_name = parse_package
-let parse_arch s = Str.split (Str.regexp " ") s
+let parse_arch s = String.nsplit s " " (* Str.split (Str.regexp " ") s *)
 let parse_version s = parse_version s
 let parse_binary s = parse_vpkglist parse_constr s
 let parse_cnf s = parse_vpkgformula parse_builddeps s
