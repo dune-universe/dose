@@ -207,7 +207,11 @@ let merge status packages =
   let h = Hashtbl.create (List.length status) in
   List.iter (fun p ->
     try
+<<<<<<< HEAD
       match String.nsplit (assoc "Status" p.extras) " " with
+=======
+      match String.nsplit (assoc "status" p.extras) " " with
+>>>>>>> - add monomorphic hash tables
       |[_;_;"installed"] -> Hashtbl.add h (id p) p
       |_ -> ()
     with Not_found -> ()

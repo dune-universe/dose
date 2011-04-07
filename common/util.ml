@@ -235,3 +235,19 @@ let pp_process_time fmt () =
   Format.fprintf fmt "Process time (user):  %5.2f@." pt.Unix.tms_utime;
   Format.fprintf fmt "Process time (sys):   %5.2f@." pt.Unix.tms_stime
 ;;
+
+module StringHashtbl = Hashtbl.Make (
+  struct
+    type t = string
+    let equal (a : string) (b : string) = (a = b)
+    let hash s = Hashtbl.hash s
+  end
+)
+
+module IntHashtbl = Hashtbl.Make (
+  struct
+    type t = int
+    let equal (a : int) (b : int) = (a = b)
+    let hash i = Hashtbl.hash i
+  end
+)
