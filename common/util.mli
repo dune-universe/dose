@@ -140,5 +140,5 @@ module Timer : sig
   val available : unit -> label list
 end
 
-module IntHashtbl : Hashtbl.S
-module StringHashtbl : Hashtbl.S
+module IntHashtbl : Hashtbl.S with type key = int
+module StringHashtbl : Hashtbl.S with type key = string

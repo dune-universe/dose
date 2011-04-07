@@ -74,8 +74,8 @@ let parse_prov _ s = Format822.parse_veqpkglist Format822.parse_constr s
 
 (* parse and convert to a specific type *)
 let parse_bool field = function
-  |("Yes"|"yes"|"true" |"True") -> true
-  |("No" | "no"|"false"|"False") -> false (* this one usually is not there *)
+  |("Yes"|"yes"|"True" |"true") -> true
+  |("No" |"no" |"False"|"false") -> false (* this one usually is not there *)
   |s -> fatal "Field %s has a wrong value : %s" field s
 let parse_string _ s = s
 let parse_int _ s = int_of_string s

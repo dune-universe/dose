@@ -178,11 +178,13 @@ let loadlp tables l =
   List.map (fun (name,sel) ->
     match CudfAdd.cudfop sel with
     |None  ->
-        if (Util.StringHashtbl.mem tables.unit_table name) || (Util.StringHashtbl.mem tables.versioned_table name)
+        if (Util.StringHashtbl.mem tables.unit_table name) || 
+        (Util.StringHashtbl.mem tables.versioned_table name)
         then (CudfAdd.encode (name^"--virtual"),None)
         else (CudfAdd.encode name, None)
     |Some(`Eq,v) ->
-        if (Util.StringHashtbl.mem tables.unit_table name) || (Util.StringHashtbl.mem tables.versioned_table name)
+        if (Util.StringHashtbl.mem tables.unit_table name) || 
+        (Util.StringHashtbl.mem tables.versioned_table name)
         then (CudfAdd.encode (name^"--virtual"),Some(`Eq,get_cudf_version tables (name,v)))
         else (CudfAdd.encode name,Some(`Eq,get_cudf_version tables (name,v)))
     |_ -> fatal "This should never happen : a provide can be either = or unversioned"
