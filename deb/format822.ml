@@ -101,7 +101,7 @@ let parse_paragraph i =
         data := remove_ws (cur i) :: !data;
         next i
       done;
-      fields := (String.lowercase name, List.rev !data) :: !fields;
+      fields := (name, List.rev !data) :: !fields;
       not (eof i || is_blank i)
     do () done;
     assert (!fields <> []) ;

@@ -164,7 +164,7 @@ let main () =
   List.iter (fun p ->
     try
       let (was_inst,pkg) = Hashtbl.find univ (p.Cudf.package,p.Cudf.version) in
-      let apt_id = List.assoc "apt-id" pkg.Packages.extras in
+      let apt_id = List.assoc "APT-ID" pkg.Packages.extras in
       match p.Cudf.installed,was_inst with
       |true,true | false,false -> ()
       |true,false -> Format.printf "Install: %s@." apt_id

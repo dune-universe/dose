@@ -74,25 +74,25 @@ let parse_prov _ s = Format822.parse_veqpkglist Format822.parse_constr s
 
 (* parse and convert to a specific type *)
 let parse_bool field = function
-  |("Yes"|"yes") -> true
-  |("No" | "no") -> false (* this one usually is not there *)
+  |("Yes"|"yes"|"true" |"True") -> true
+  |("No" | "no"|"false"|"False") -> false (* this one usually is not there *)
   |s -> fatal "Field %s has a wrong value : %s" field s
-let parse_string _ s = String.lowercase s
+let parse_string _ s = s
 let parse_int _ s = int_of_string s
 
 (* parse and return a string -> for extra fields *)
 let parse_bool_s field = function
-  |("Yes"|"yes") -> "true"
-  |("No" | "no") -> "false" (* this one usually is not there *)
+  |("Yes"|"yes"|"true" |"True") -> "true"
+  |("No" |"no" |"false"|"False") -> "false" (* this one usually is not there *)
   |s -> fatal "Field %s has a wrong value : %s" field s
 let parse_int_s _ s = string_of_int(int_of_string s)
 
 let parse_architecture default_arch _ s = 
   match default_arch with
-  |None -> String.lowercase s
+  |None -> s
   |Some default_arch ->
-      let default_arch = String.lowercase default_arch in
-      let arch = String.lowercase s in
+      let default_arch = default_arch in
+      let arch = s in
       if (default_arch = arch || arch = "all") then arch else
         raise (IgnorePackage (
           Printf.sprintf 
@@ -102,14 +102,19 @@ let parse_architecture default_arch _ s =
         )
 ;;
 
+let rec assoc (n : string) = function
+  |(k,v)::_ when k = n -> v
+  |_::t -> assoc n t
+  |[] -> raise Not_found
+;;
+
 (* opt = None && err = None -> Not_found : this is for extras
  * opt = None && err = Some s -> ParseError s :
  * opt = Some s -> return s *)
 let parse_s ?opt ?err ?(multi=false) f field par =
   let delayed_f () =
     let line =
-      let field = String.lowercase field in
-      let s = List.assoc field par in
+      let s = assoc field par in
       if multi then String.concat " " s
       else Format822.single_line field s
     in
@@ -128,7 +133,6 @@ let parse_s ?opt ?err ?(multi=false) f field par =
 (* parse extra fields parse_f returns a string *)
 let parse_e extras par =
   List.filter_map (fun (field, parse_f) ->
-      let field = String.lowercase field in
       try Some (field,parse_f par)
       with Not_found -> None
   ) extras
@@ -153,23 +157,23 @@ let parse_package_stanza default_arch extras par =
   let aux par = 
     let parse_arch = parse_architecture default_arch in
     Some {
-        name = parse_s ~err:"(MISSING NAME)" parse_name "package" par;
-        version = parse_s ~err:"(MISSING VERSION)" parse_version "version" par;
-        architecture = parse_s ~err:"(MISSING ARCH)" parse_arch "architecture" par;
-        source = parse_s ~opt:("",None) parse_source "source" par;
+        name = parse_s ~err:"(MISSING NAME)" parse_name "Package" par;
+        version = parse_s ~err:"(MISSING VERSION)" parse_version "Version" par;
+        architecture = parse_s ~err:"(MISSING ARCH)" parse_arch "Architecture" par;
+        source = parse_s ~opt:("",None) parse_source "Source" par;
 
-        essential = parse_s ~opt:false parse_bool "essential" par;
-        priority = parse_s ~opt:"" parse_string "priority" par;
+        essential = parse_s ~opt:false parse_bool "Essential" par;
+        priority = parse_s ~opt:"" parse_string "Priority" par;
 
-        depends = parse_s ~opt:[] ~multi:true parse_cnf "depends" par;
-        pre_depends = parse_s ~opt:[] ~multi:true parse_cnf "pre-depends" par;
-        recommends = parse_s ~opt:[] ~multi:true parse_cnf "recommends" par;
-        suggests = parse_s ~opt:[] ~multi:true parse_conj "suggests" par;
-        enhances = parse_s ~opt:[] ~multi:true parse_conj "enhances" par;
-        conflicts = parse_s ~opt:[] ~multi:true parse_conj "conflicts" par;
-        breaks = parse_s ~opt:[] ~multi:true parse_conj "breaks" par;
-        replaces = parse_s ~opt:[] ~multi:true parse_conj "replaces" par;
-        provides = parse_s ~opt:[] ~multi:true parse_conj "provides" par;
+        depends = parse_s ~opt:[] ~multi:true parse_cnf "Depends" par;
+        pre_depends = parse_s ~opt:[] ~multi:true parse_cnf "Pre-depends" par;
+        recommends = parse_s ~opt:[] ~multi:true parse_cnf "Recommends" par;
+        suggests = parse_s ~opt:[] ~multi:true parse_conj "Suggests" par;
+        enhances = parse_s ~opt:[] ~multi:true parse_conj "Enhances" par;
+        conflicts = parse_s ~opt:[] ~multi:true parse_conj "Conflicts" par;
+        breaks = parse_s ~opt:[] ~multi:true parse_conj "Breaks" par;
+        replaces = parse_s ~opt:[] ~multi:true parse_conj "Replaces" par;
+        provides = parse_s ~opt:[] ~multi:true parse_conj "Provides" par;
         extras = parse_e extras par;
     }
   in parse_packages_fields aux par
@@ -203,7 +207,7 @@ let merge status packages =
   let h = Hashtbl.create (List.length status) in
   List.iter (fun p ->
     try
-      match String.nsplit (List.assoc "status" p.extras) " " with
+      match String.nsplit (assoc "Status" p.extras) " " with
       |[_;_;"installed"] -> Hashtbl.add h (id p) p
       |_ -> ()
     with Not_found -> ()
@@ -218,7 +222,7 @@ let merge status packages =
   Set.elements ps
 
 let default_extras = [
-  ("Status", parse_s parse_string "status");
+  ("Status", parse_s parse_string "Status");
 ]
 
 (** input_raw [file] : parse a debian Packages file from [file] *)

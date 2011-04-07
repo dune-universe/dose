@@ -47,19 +47,20 @@ let parse_conj _ s = Format822.list_parser ~sep:" " Format822.parse_constr s
 let parse_request_stanza par =
   let aux par =
     Some {
-      request = Packages.parse_s ~err:"(Malformed REQUEST)" Packages.parse_string "request" par;
-      install = Packages.parse_s ~opt:[] parse_conj "install" par;
-      remove = Packages.parse_s ~opt:[] parse_conj "remove" par;
-      upgrade = Packages.parse_s ~opt:false Packages.parse_bool "upgrade" par;
-      distupgrade = Packages.parse_s ~opt:false Packages.parse_bool "dist-upgrade" par;
-      autoremove = Packages.parse_s ~opt:false Packages.parse_bool "autoremove" par;
-      strict_pin = Packages.parse_s ~opt:true Packages.parse_bool "strict-pinning" par;
-      preferences = Packages.parse_s ~opt:"" Packages.parse_string "preferences" par;
+      request = Packages.parse_s ~err:"(Malformed REQUEST)" Packages.parse_string "Request" par;
+      install = Packages.parse_s ~opt:[] parse_conj "Install" par;
+      remove = Packages.parse_s ~opt:[] parse_conj "Remove" par;
+      upgrade = Packages.parse_s ~opt:false Packages.parse_bool "Upgrade" par;
+      distupgrade = Packages.parse_s ~opt:false Packages.parse_bool "Dist-Upgrade" par;
+      autoremove = Packages.parse_s ~opt:false Packages.parse_bool "Autoremove" par;
+      strict_pin = Packages.parse_s ~opt:true Packages.parse_bool "Strict-Pinning" par;
+      preferences = Packages.parse_s ~opt:"" Packages.parse_string "Preferences" par;
     }
   in Packages.parse_packages_fields aux par
 ;;
 
 let parse_installed par = Packages.parse_s Packages.parse_bool_s "Installed" par ;;
+let parse_hold par = Packages.parse_s Packages.parse_bool_s "Hold" par ;;
 let parse_apt_id par = Packages.parse_s ~err:"(MISSING APT-ID)" Packages.parse_string "APT-ID" par ;;
 let parse_apt_pin par = Packages.parse_s ~err:"(MISSING APT-Pin)" Packages.parse_int_s "APT-Pin" par ;;
 let parse_automatic par = Packages.parse_s Packages.parse_bool_s "APT-Automatic" par ;;
@@ -70,6 +71,7 @@ let input_raw_ch ch =
   (* (field,opt,err,multi,parsing function) *)
   let extras = [
     ("Installed", parse_installed);
+    ("Hold", parse_hold);
     ("APT-ID", parse_apt_id);
     ("APT-Pin", parse_apt_pin);
     ("APT-Candidate", parse_candidate);
@@ -79,10 +81,10 @@ let input_raw_ch ch =
   in
   let request = 
     match Format822.parse_paragraph (Format822.start_from_channel ch) with 
-    |None -> fatal "empty request"
+    |None -> fatal "empty request (empty document)"
     |Some par -> 
         match parse_request_stanza par with
-        |None -> fatal "empty request"
+        |None -> fatal "empty request (document does not start with a request)"
         |Some r -> r
   in
   let pkglist = Packages.parse_packages_in ~extras ch in
@@ -91,6 +93,7 @@ let input_raw_ch ch =
 
 let extras_tocudf =
   [
+  ("Hold", ("hold", `Bool (Some false)));
   ("APT-Pin", ("apt-pin", `Int None));
   ("APT-ID", ("apt-id", `String None));
   ("APT-Candidate", ("apt-candidate", `Bool (Some false)));
@@ -103,7 +106,7 @@ let tocudf tables pkg =
   let inst =
     try
       Packages.parse_bool "Installed"
-      (List.assoc "Installed" pkg.Packages.extras)
+      (Packages.assoc "Installed" pkg.Packages.extras)
     with Not_found -> false
   in
   Debcudf.tocudf tables ~inst ~extras:extras_tocudf pkg 

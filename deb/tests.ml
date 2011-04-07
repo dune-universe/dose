@@ -28,9 +28,9 @@ let f_release = "tests/Release" ;;
 
 let ch = Input.open_file f_packages ;;
 let extras_properties = [
-  ("maintainer", ("maintainer", `String None));
-  ("size", ("size", `Nat None));
-  ("installed-Size", ("installedsize", `Nat None))
+  ("Maintainer", ("maintainer", `String None));
+  ("Size", ("size", `Nat None));
+  ("Installed-Size", ("installedsize", `Nat None))
 ];;
 let extras = List.map fst extras_properties ;;
 let packagelist = Packages.input_raw [f_packages] ;;
