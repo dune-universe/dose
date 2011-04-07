@@ -244,8 +244,10 @@ let rec filter init acc uris =
   |[],Some init -> (init,acc)
   |uri::tail, _ ->
     begin match Input.parse_uri uri, init with
+    (* XXX add support !
     |("cudf",(_,_,_,_,"-"),_) as p, None when tail = [] -> ("cudfstdin",[p])
     |("cudf",(_,_,_,_,"-"),_), _ when tail <> [] -> fatal "Only one cudf stdin input allowed"
+    *)
 
     |("cudf",_,_) as p, None when tail = [] -> ("cudf",[p])
     |("cudf",_,_), _ when tail <> [] -> fatal "Only one cudf input allowed"
@@ -306,6 +308,25 @@ ELSE
     fatal "synth Not supported. re-configure with --with-rpm"
 END
     |(s,_) -> fatal "%s Not supported" s
+;;
+
+let supported_formats =
+  let standard = ["cudf://";"deb://";"deb://-";"eclipse://"] in
+  let rpm = 
+IFDEF HASRPM THEN
+     ["hdlist://";"synth://"]
+ELSE
+     []
+END
+   in
+   let db =
+IFDEF HASDB THEN
+     ["pgsql://";"sqlite://"]
+ELSE
+     []
+END
+   in
+   standard@rpm@db
 ;;
 
 (** parse and merge a list of files into a cudf package list *)

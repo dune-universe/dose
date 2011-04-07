@@ -64,7 +64,7 @@ let main () =
     |("debcheck"|"edos-debcheck"),[] -> ["deb://-"]
     |("debcheck"|"edos-debcheck"),l -> List.map ((^) "deb://") l
     |"eclipsecheck",l -> List.map ((^) "eclipse://") l
-    |("rpmcheck"|"edos-rpmcheck"),l -> List.map ((^) "synthesis://") l
+    |("rpmcheck"|"edos-rpmcheck"),l -> List.map ((^) "synth://") l
     |_,_ -> args
   in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
