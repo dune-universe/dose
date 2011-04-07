@@ -54,7 +54,7 @@ let explicit mdf =
   let l = ref [] in
   for i=0 to (Array.length index - 1) do
     let pkg = index.(i) in
-    let conflicts = List.map snd pkg.Mdf.conflicts in
+    let conflicts = List.rev_map snd pkg.Mdf.conflicts in
     List.iter (fun j ->
       l := swap(i,j):: !l
     ) conflicts

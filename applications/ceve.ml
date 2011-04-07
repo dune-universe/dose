@@ -15,6 +15,10 @@ open Cudf
 open ExtLib
 open Common
 
+let debug fmt = Util.make_debug "Ceve" fmt
+let info fmt = Util.make_info "Ceve" fmt
+let warning fmt = Util.make_warning "Ceve" fmt
+
 IFDEF HASOCAMLGRAPH THEN
   module DGraph = Defaultgraphs.SyntacticDependencyGraph
 END
@@ -24,9 +28,9 @@ struct
   open OptParse
 
   exception Format
-  let out_option ?default ?(metavar = "<dot|cnf|dimacs|pp>") () =
+  let out_option ?default ?(metavar = "<dot|cnf|dimacs|pp|table>") () =
     let corce = function
-      |("cnf"|"dimacs"|"pp"|"dot") as s -> s
+      |("cnf"|"dimacs"|"pp"|"dot"|"table") as s -> s
       | _ -> raise Format
     in
     let error _ s = Printf.sprintf "%s format not supported" s in
@@ -94,6 +98,20 @@ ELSE
   failwith "DB not available"
 END
 ;;
+
+let nr_conflicts maps univ =
+begin
+  Cudf.fold_packages (fun acc p ->
+    let cfl = List.filter (fun x -> not (x =% p))
+      (List.flatten (List.rev_map maps.CudfAdd.who_provides p.conflicts)) in
+    debug "%s: %d conflicts" (Cudf_types_pp.string_of_pkgname p.package)
+      (List.length cfl);
+    List.iter (fun c ->
+      debug "- %s" (Cudf_types_pp.string_of_pkgname c.package)
+    ) cfl;
+    acc + (List.length cfl)
+  ) 0 univ
+end;;
 
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
@@ -165,6 +183,7 @@ let main () =
   let output ll =
     List.iter (fun l ->
       let u = Cudf.load_universe l in
+      let m = CudfAdd.build_maps u in
       let oc = Options.output_ch () in
       begin match OptParse.Opt.get Options.output_ty with
       |"dot" -> 
@@ -175,7 +194,10 @@ ELSE
 END
       |"cnf" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~enc:Depsolver.Cnf u)
       |"dimacs" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~enc:Depsolver.Dimacs u)
-      |"pp" -> Cudf_printer.pp_universe (Format.formatter_of_out_channel oc) universe
+      |"pp" -> Cudf_printer.pp_universe (Format.formatter_of_out_channel oc) u
+      |"table" -> Printf.fprintf oc "%d\t%d\t%d\n"
+        (Cudf.universe_size u) (DGraph.G.nb_edges (DGraph.dependency_graph u))
+        (nr_conflicts m u)
       |_ -> assert false
       end ;
       close_out oc;
