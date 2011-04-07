@@ -87,12 +87,10 @@ let parse_bool_s field = function
   |s -> fatal "Field %s has a wrong value : %s" field s
 let parse_int_s _ s = string_of_int(int_of_string s)
 
-let parse_architecture default_arch _ s = 
+let parse_architecture default_arch _ arch = 
   match default_arch with
-  |None -> s
+  |None -> arch
   |Some default_arch ->
-      let default_arch = default_arch in
-      let arch = s in
       if (default_arch = arch || arch = "all") then arch else
         raise (IgnorePackage (
           Printf.sprintf 
@@ -166,7 +164,7 @@ let parse_package_stanza default_arch extras par =
         priority = parse_s ~opt:"" parse_string "Priority" par;
 
         depends = parse_s ~opt:[] ~multi:true parse_cnf "Depends" par;
-        pre_depends = parse_s ~opt:[] ~multi:true parse_cnf "Pre-depends" par;
+        pre_depends = parse_s ~opt:[] ~multi:true parse_cnf "Pre-Depends" par;
         recommends = parse_s ~opt:[] ~multi:true parse_cnf "Recommends" par;
         suggests = parse_s ~opt:[] ~multi:true parse_conj "Suggests" par;
         enhances = parse_s ~opt:[] ~multi:true parse_conj "Enhances" par;
@@ -207,11 +205,7 @@ let merge status packages =
   let h = Hashtbl.create (List.length status) in
   List.iter (fun p ->
     try
-<<<<<<< HEAD
       match String.nsplit (assoc "Status" p.extras) " " with
-=======
-      match String.nsplit (assoc "status" p.extras) " " with
->>>>>>> - add monomorphic hash tables
       |[_;_;"installed"] -> Hashtbl.add h (id p) p
       |_ -> ()
     with Not_found -> ()
