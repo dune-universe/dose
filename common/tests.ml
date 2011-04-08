@@ -138,6 +138,15 @@ let test_lookup_packages =
     test_who_provides;
   ]
 
+let test_encode =
+  "name mangling" >::: [
+    "name encoding" >:: (fun _ ->
+      assert_equal (CudfAdd.encode "/bin/bash__") "/bin/bash%5f%5f"
+    )
+  ]
+;;
+
+
 (*
 let test_projection
 
@@ -152,6 +161,7 @@ let test_mdf
 let all = 
   "all tests" >::: [
     parse_uri ;
+    test_encode;
     test_lookup_packages;
   ]
 

@@ -52,10 +52,6 @@ let test_version =
   ]
 ;;
 
-let test_format =
-  "name mangling" >::: []
-;;
-
 let string_of_relop = function
   |`Eq -> "="
   |`Neq -> "!="
@@ -253,7 +249,6 @@ let test_conflicts =
 
 let test_mapping =
   "test deb -> cudf mapping" >::: [
-    test_format ;
 (*    test_numbering ; *)
     test_virtual
   ]

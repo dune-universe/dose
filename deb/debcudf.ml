@@ -157,16 +157,17 @@ let get_real_version tables (package,cudfversion) =
 let loadl tables l =
   List.flatten (
     List.map (fun (name,sel) ->
+      let encname = CudfAdd.encode name in
       match CudfAdd.cudfop sel with
       |None ->
           if (Util.StringHashtbl.mem tables.virtual_table name) &&
           (Util.StringHashtbl.mem tables.versioned_table name) then
-            [(CudfAdd.encode (name^"--virtual"), None);
-             (CudfAdd.encode name, None)]
+            [(encname^"--virtual", None);
+             (encname, None)]
           else
-            [(CudfAdd.encode name, None)]
+            [(encname, None)]
       |Some(op,v) ->
-          [(CudfAdd.encode name,Some(op,get_cudf_version tables (name,v)))]
+          [(encname,Some(op,get_cudf_version tables (name,v)))]
     ) l
   )
 
@@ -176,17 +177,18 @@ let loadlc tables name l = (CudfAdd.encode name, None)::(loadl tables l)
 
 let loadlp tables l =
   List.map (fun (name,sel) ->
+    let encname = CudfAdd.encode name in
     match CudfAdd.cudfop sel with
     |None  ->
         if (Util.StringHashtbl.mem tables.unit_table name) || 
         (Util.StringHashtbl.mem tables.versioned_table name)
-        then (CudfAdd.encode (name^"--virtual"),None)
-        else (CudfAdd.encode name, None)
+        then (encname^"--virtual",None)
+        else (encname, None)
     |Some(`Eq,v) ->
         if (Util.StringHashtbl.mem tables.unit_table name) || 
         (Util.StringHashtbl.mem tables.versioned_table name)
-        then (CudfAdd.encode (name^"--virtual"),Some(`Eq,get_cudf_version tables (name,v)))
-        else (CudfAdd.encode name,Some(`Eq,get_cudf_version tables (name,v)))
+        then (encname^"--virtual",Some(`Eq,get_cudf_version tables (name,v)))
+        else (encname,Some(`Eq,get_cudf_version tables (name,v)))
     |_ -> fatal "This should never happen : a provide can be either = or unversioned"
   ) l
 

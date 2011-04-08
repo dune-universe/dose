@@ -73,11 +73,6 @@ let is_essential pkg =
   try (Cudf.lookup_package_property pkg "essential") = "yes"
   with Not_found -> false
 
-(**/*)
-(* XXX legacy function to be removed *)
-(* let print_package pkg = string_of_package pkg *)
-(**/*)
-
 (** [pkgnames universe] returns a list of unique package names *)
 let pkgnames universe =
   let h = Hashtbl.create (Cudf.universe_size universe) in
@@ -234,15 +229,13 @@ let encode s =
 
 let decode s =
   let hex_re = Str.regexp "%[0-9a-f][0-9a-f]" in
-  (* if Str.string_match hex_re s 0 then begin *)
-    let un s =
-      let s = Str.matched_string s in
-      let hex = String.sub s 1 2 in
-      let n = int_of_string ("0x" ^ hex) in
-      String.make 1 (Char.chr n)
-    in
-    Str.global_substitute hex_re un s
-  (* end else s *)
+  let un s =
+    let s = Str.matched_string s in
+    let hex = String.sub s 1 2 in
+    let n = int_of_string ("0x" ^ hex) in
+    String.make 1 (Char.chr n)
+  in
+  Str.global_substitute hex_re un s
 
 let cudfop = function
   |Some(("<<" | "<"),v) -> Some(`Lt,v)
@@ -257,6 +250,7 @@ let cudfop = function
 (** return a map package name -> list of all packages with this name ordered by
     version *)
 (*  XXX uhmmmm maybe re-write it to work in O(n) ? *)
+(*
 let group_by_name universe = 
   let th = Hashtbl.create (2 * (Cudf.universe_size universe)) in
   let add h k v =
@@ -269,4 +263,4 @@ let group_by_name universe =
   let h = Hashtbl.create (2 * (Cudf.universe_size universe)) in
   Hashtbl.iter (fun k v -> Hashtbl.add h k (Cudf_set.elements !v)) th;
   th
-
+*)
