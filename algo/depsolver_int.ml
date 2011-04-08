@@ -33,7 +33,7 @@ module S = EdosSolver.M(R)
     if size = 0 then the mapping is the identity function *)
 class intprojection size = object
 
-  val vartoint = Hashtbl.create (2 * size)
+  val vartoint = Util.IntHashtbl.create (2 * size)
   val inttovar = Array.create size 0
   val mutable counter = 0
 
@@ -42,7 +42,7 @@ class intprojection size = object
     if (size = 0) then assert false ;
     if (counter > size - 1) then assert false;
     debug "intprojection : var %d -> int %d" v counter;
-    Hashtbl.add vartoint v counter;
+    Util.IntHashtbl.add vartoint v counter;
     inttovar.(counter) <- v;
     counter <- counter + 1
 
@@ -50,7 +50,7 @@ class intprojection size = object
       raise Not_found if the package id is not known *)
   method vartoint v =
     if size = 0 then v
-    else Hashtbl.find vartoint v
+    else Util.IntHashtbl.find vartoint v
       
   (* given a sat solver variable return a package id *)
   method inttovar i =

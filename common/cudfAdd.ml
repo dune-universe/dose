@@ -92,7 +92,7 @@ let pkgnames universe =
 class projection = object(self)
 
   val vartoint = Cudf_hashtbl.create 1023
-  val inttovar = Hashtbl.create 1023
+  val inttovar = Util.IntHashtbl.create 1023
   val mutable counter = 0
 
   method init = List.iter self#add
@@ -101,7 +101,7 @@ class projection = object(self)
   method add (v : Cudf.package) =
     let j = counter in
     Cudf_hashtbl.add vartoint v j ;
-    Hashtbl.add inttovar j v ;
+    Util.IntHashtbl.add inttovar j v ;
     counter <- counter + 1
 
   (** var -> int *)
@@ -116,7 +116,7 @@ class projection = object(self)
       
   (** int -> var *)
   method inttovar (i : int) : Cudf.package =
-    try Hashtbl.find inttovar i 
+    try Util.IntHashtbl.find inttovar i 
     with Not_found ->
       failwith (
         Printf.sprintf
@@ -160,14 +160,14 @@ type maps = {
 let build_maps universe =
   let size = Cudf.universe_size universe in
   let conflicts = Cudf_hashtbl.create (2 * size) in
-  let provides = Hashtbl.create (2 * size) in
+  let provides = Util.StringHashtbl.create (2 * size) in
   let map = new projection in
 
   Cudf.iter_packages (fun pkg ->
     map#add pkg; (* associate an integer to each package *)
     List.iter (function
-      |name, None -> Hashtbl.add provides name (pkg, None)
-      |name, Some (_, ver) -> Hashtbl.add provides name (pkg, (Some ver))
+      |name, None -> Util.StringHashtbl.add provides name (pkg, None)
+      |name, Some (_, ver) -> Util.StringHashtbl.add provides name (pkg, (Some ver))
     ) pkg.Cudf.provides
   ) universe
   ;
@@ -177,7 +177,7 @@ let build_maps universe =
       |pkg, None -> Some(pkg)
       |pkg, Some v when Cudf.version_matches v constr -> Some(pkg)
       |_,_ -> None
-    ) (Hashtbl.find_all provides pkgname)
+    ) (Util.StringHashtbl.find_all provides pkgname)
   in
 
   let who_provides (pkgname,constr) =
