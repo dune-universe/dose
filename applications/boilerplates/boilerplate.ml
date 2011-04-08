@@ -310,7 +310,7 @@ END
     |(s,_) -> fatal "%s Not supported" s
 ;;
 
-let supported_formats =
+let supported_formats () =
   let standard = ["cudf://";"deb://";"deb://-";"eclipse://"] in
   let rpm = 
 IFDEF HASRPM THEN

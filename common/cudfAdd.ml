@@ -14,6 +14,11 @@ module OCAMLHashtbl = Hashtbl
 module OCAMLSet = Set
 open ExtLib
 
+let progressbar = Util.Progress.create "CudfAdd.build_maps"
+
+(* the id of a package *)
+let id pkg = (pkg.Cudf.package,pkg.Cudf.version)
+
 (** compare two cudf packages only using name and version *)
 let compare = Cudf.(<%)
 
@@ -27,15 +32,15 @@ let equal = Cudf.(=%)
 module Cudf_hashtbl =
   OCAMLHashtbl.Make(struct
     type t = Cudf.package
-    let equal = equal
-    let hash = hash
+    let equal = Cudf.(=%)
+    let hash p = Hashtbl.hash (p.Cudf.package,p.Cudf.version)
   end)
 
 (** specialized Set for cudf packages *)
 module Cudf_set =
   OCAMLSet.Make(struct
     type t = Cudf.package
-    let compare = compare
+    let compare = Cudf.(<%) 
   end)
 
 let to_set l = List.fold_right Cudf_set.add l Cudf_set.empty
@@ -122,7 +127,7 @@ end
 (** build an hash table that associates (package name, String version) to
  * cudf packages *)
 let realversionmap pkglist =
-  let h = Hashtbl.create (2 * (List.length pkglist)) in
+  let h = Hashtbl.create (5 * (List.length pkglist)) in
   List.iter (fun pkg ->
     Hashtbl.add h (pkg.Cudf.package,string_of_version pkg) pkg
   ) pkglist ;
@@ -151,57 +156,100 @@ type maps = {
   map : projection
 }
 
+module CSet =
+  OCAMLSet.Make(struct
+    type t = (Cudf.package * Cudf_types.version option)
+    let compare c1 c2 = 
+      match c1,c2 with
+      |(p1,None),(p2,None) when equal p1 p2 -> 0
+      |(p1,Some v1),(p2,Some v2) when (equal p1 p2 && v1 = v2) -> 0
+      |_ -> 1
+  end)
+
 (** build a map from a cudf universe *)
 let build_maps universe =
   let size = Cudf.universe_size universe in
-  let conflicts = Cudf_hashtbl.create (2 * size) in
-  let provides = Util.StringHashtbl.create (2 * size) in
+  let conflicts = Cudf_hashtbl.create (3 * size) in
+  let provides = Util.StringHashtbl.create (3 * size) in
   let map = new projection in
 
+  Util.Progress.set_total progressbar size ;
+
+  let add_provides name constr =
+    try let s = Util.StringHashtbl.find provides name in s := CSet.add constr !s 
+    with Not_found -> Util.StringHashtbl.add provides name (ref (CSet.singleton constr))
+  in
+  let find_provides pkgname =
+    try CSet.elements !(Util.StringHashtbl.find provides pkgname)
+    with Not_found -> []
+  in
+  let add_conflict pkg1 pkg2 =
+    try let s = Cudf_hashtbl.find conflicts pkg1 in s := Cudf_set.add pkg2 !s 
+    with Not_found -> Cudf_hashtbl.add conflicts pkg1 (ref (Cudf_set.singleton pkg2))
+  in
+  let find_conflicts pkg =
+    try Cudf_set.elements !(Cudf_hashtbl.find conflicts pkg)
+    with Not_found -> []
+  in
+
   Cudf.iter_packages (fun pkg ->
-    map#add pkg; (* associate an integer to each package *)
+    Util.Progress.progress progressbar;
+    (* associates an integer to each package *)
+    map#add pkg; 
+    (* associates to each feature the package providing it 
+     * with a specific constraint *)
     List.iter (function
-      |name, None -> Util.StringHashtbl.add provides name (pkg, None)
-      |name, Some (_, ver) -> Util.StringHashtbl.add provides name (pkg, (Some ver))
+      |name, None when name = pkg.Cudf.package -> ()
+      |name, None -> add_provides name (pkg, None)
+      |name, Some (_, ver) -> add_provides name (pkg, (Some ver))
     ) pkg.Cudf.provides
   ) universe
   ;
+  Util.Progress.reset progressbar;
 
   let lookup_virtual (pkgname,constr) =
     List.filter_map (function
       |pkg, None -> Some(pkg)
       |pkg, Some v when Cudf.version_matches v constr -> Some(pkg)
       |_,_ -> None
-    ) (Util.StringHashtbl.find_all provides pkgname)
+    ) (find_provides pkgname)
   in
 
   let who_provides (pkgname,constr) =
-    let real = Cudf.lookup_packages ~filter:constr universe pkgname in
-    let virt = lookup_virtual (pkgname,constr) in
-    (real @ virt)
+    match constr with
+    |None -> 
+        List.fold_left (fun acc (pkg,_) -> pkg::acc)
+        (Cudf.lookup_packages universe pkgname)
+        (find_provides pkgname)
+    |Some _ ->
+        List.fold_left (fun acc -> function
+          |pkg, None -> pkg::acc
+          |pkg, Some v when Cudf.version_matches v constr -> pkg::acc
+          |_,_ -> acc
+        )
+        (Cudf.lookup_packages ~filter:constr universe pkgname)
+        (find_provides pkgname)
   in
 
   (* we need to iterate twice on the package list as we need the
    * list of all virtual packages in order to generate the conflict list *)
   Cudf.iter_packages (fun pkg ->
+    Util.Progress.progress progressbar;
     List.iter (fun (name,constr) ->
       List.iter (fun p ->
         if not(equal p pkg) then begin
-          Cudf_hashtbl.add conflicts pkg p ;
-          Cudf_hashtbl.add conflicts p pkg
+          add_conflict pkg p ;
+          add_conflict p pkg
         end
       ) (who_provides (name,constr))
     ) pkg.Cudf.conflicts
   ) universe
   ;
-
-  (* This list unique could be faster is implemented as a monomorphic 
-   * function like Util.list_unique *)
-  let who_conflicts pkg = List.unique ~cmp:equal (Cudf_hashtbl.find_all conflicts pkg) in
+  Util.Progress.reset progressbar;
 
   {
-    who_conflicts = who_conflicts ;
-    who_provides = who_provides ;
+    who_conflicts = find_conflicts;
+    who_provides = who_provides;
     lookup_virtual = lookup_virtual ;
     map = map
   }
@@ -246,21 +294,3 @@ let cudfop = function
   |Some("ALL",v) -> None
   |None -> None
   |Some(c,v) -> (Printf.eprintf "%s %s" c v ; assert false)
-
-(** return a map package name -> list of all packages with this name ordered by
-    version *)
-(*  XXX uhmmmm maybe re-write it to work in O(n) ? *)
-(*
-let group_by_name universe = 
-  let th = Hashtbl.create (2 * (Cudf.universe_size universe)) in
-  let add h k v =
-    try 
-      let s = Hashtbl.find h k in
-      s := Cudf_set.add v !s
-    with Not_found -> Hashtbl.add h k (ref (Cudf_set.singleton v))
-  in
-  Cudf.iter_packages (fun pkg -> add th pkg.Cudf.package pkg) universe;
-  let h = Hashtbl.create (2 * (Cudf.universe_size universe)) in
-  Hashtbl.iter (fun k v -> Hashtbl.add h k (Cudf_set.elements !v)) th;
-  th
-*)

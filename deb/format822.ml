@@ -19,6 +19,7 @@ open Common
 let debug fmt = Util.make_debug "Debian.Format822" fmt
 let info fmt = Util.make_info "Debian.Format822" fmt
 let warning fmt = Util.make_warning "Debian.Format822" fmt
+let fatal fmt = Util.make_fatal "Debian.Format822" fmt
 
 type name = string
 type version = string
@@ -68,10 +69,6 @@ let is_blank i = not (eof i) && cur i = ""
 let skip_blank_lines i =
   while is_blank i do next i done
 
-  (*
-let field_re = Str.regexp "^\\([^:]*\\)*:[ \t]*\\(.*\\)$"
-*)
-
 let remove_ws s =
   let l = String.length s in
   let p = ref (l - 1) in
@@ -111,10 +108,7 @@ let parse_paragraph i =
 let single_line f = function
   |[s] -> s
   | _ as l ->
-      failwith (
-        Printf.sprintf "field '%s' should be a single line\n%s"
-        f (String.concat " " l)
-      )
+      fatal "field '%s' should be a single line\n%s" f (String.concat " " l)
 
 (* May need to accept package name containing "_" *)
 (* XXX remove Str from here !!!! *)
@@ -254,24 +248,6 @@ let parse_builddeps s =
 
 (*****************************************************)
 
-(* let space_re = Str.regexp "[ \t]+" *)
-(* let and_sep_re = Str.regexp "[ \t]*,[ \t]*" *)
-(* let or_sep_re = Str.regexp "[ \t]*|[ \t]*" *)
-(*
-let parse_source s =
-  match Str.split space_re s with
-  |[n] -> (n,None)
-  |[n;s'] ->
-      let re = Str.regexp "(\\([^)]+\\))" in
-      if Str.string_match re s' 0 then 
-        (n,Some (Str.matched_group 1 s'))
-      else begin
-        warning "Bad source name '%s'\n" s;
-        (n,None)
-      end
-  |_ -> parse_error ~s:(Printf.sprintf "Malformed source field : '%s'" s) dummy_t
-*)
-
 let parse_source s =
   match String.nsplit s " " with
   |[n] -> (String.strip n,None)
@@ -285,25 +261,10 @@ let parse_source s =
       end
   |_ -> parse_error ~s:(Printf.sprintf "Malformed source field : '%s'" s) dummy_t
 
-(*
-let list_parser ?(sep = space_re) p s = List.map p (Str.split sep s)
-*)
-
 let list_parser ?(sep = " ") p s =
   List.map (fun s -> p (String.strip s)) (String.nsplit s sep)
-(*
-let parse_vpkglist parse_vpkg = list_parser ~sep:and_sep_re parse_vpkg
-*)
-let parse_vpkglist parse_vpkg = list_parser ~sep:"," parse_vpkg
 
-(*
-let parse_vpkgformula parse_vpkg s =
-  let and_args = Str.split and_sep_re s in
-  List.map (fun and_arg ->
-    let or_args = Str.split or_sep_re and_arg in
-    List.map parse_vpkg or_args
-  ) and_args
-*)
+let parse_vpkglist parse_vpkg = list_parser ~sep:"," parse_vpkg
 
 let parse_vpkgformula parse_vpkg s =
   let and_args = String.nsplit s "," in
@@ -312,9 +273,6 @@ let parse_vpkgformula parse_vpkg s =
     List.map (fun s -> parse_vpkg (String.strip s)) or_args
   ) and_args
 
-(*
-let parse_veqpkglist parse_veqpkg = list_parser ~sep:and_sep_re parse_veqpkg
-*)
 let parse_veqpkglist parse_veqpkg = list_parser ~sep:"," parse_veqpkg
 
 let progressbar = Util.Progress.create "Debian.Parse.parse_822_iter"

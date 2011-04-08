@@ -16,6 +16,8 @@
 open ExtLib
 open CudfAdd
 
+let progressbar = Util.Progress.create "Mdf.__load"
+
 type package = {
   id : int ; (** package id relative to the universe *)
   pkg : Cudf.package; (** cudf package *)
@@ -36,10 +38,13 @@ let default_package = {
 }
 
 let __load maps universe =
-  let cmp (x : int) (y : int) = x = y in
+  let cmp : int -> int -> bool = (=) in
   let to_sat = maps.map#vartoint in
-  let a = Array.create (Cudf.universe_size universe) default_package in
+  let size = Cudf.universe_size universe in
+  let a = Array.create size default_package in
+  Util.Progress.set_total progressbar size ;
   Cudf.iter_packages (fun pkg ->
+    Util.Progress.progress progressbar;
     let id = to_sat pkg in
     let cl =
       List.map (fun p ->
@@ -68,7 +73,9 @@ let __load maps universe =
     in
     a.(id) <- p
   ) universe;
+  Util.Progress.reset progressbar;
   a
+;;
 
 (** trasfrom a cudf package list in a Mdf universe. All references are
     explicit and given in terms of integer *)
