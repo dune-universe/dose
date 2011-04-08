@@ -55,12 +55,11 @@ let __load maps universe =
       List.map (fun disjunction ->
         let (l1,l2,l3) =
           List.fold_left (fun (l1,l2,l3) vpkg ->
-            let dl = maps.who_provides vpkg in
-            let el = List.map to_sat dl in
-            (vpkg::l1,el @ l2, dl @ l3)
+            let l = maps.who_provides vpkg in
+            let el = List.fold_left (fun acc i -> (to_sat i)::acc) l2 l in
+            let dl = List.fold_left (fun acc i -> i::acc) l3 l in
+            (vpkg::l1,el,dl)
           ) ([],[],[]) disjunction
-        (* XXX Maybe here we can gain something if we use a set instead of a list *)
-        (* XXX this list unique could be faster if implemented as in Util.list_unique *)
         in (l1,List.unique ~cmp l2, List.unique ~cmp:Cudf.(=%) l3)
       ) pkg.Cudf.depends
     in
