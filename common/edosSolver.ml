@@ -547,6 +547,11 @@ module M (X : S) = struct
   let solve_lst st l = solve_lst_rec st [] l
 
   let initialize_problem ?(print_var = (fun fmt -> Format.fprintf fmt "%d")) ?(buffer=false) n =
+    Gc.set { (Gc.get()) with
+      Gc.minor_heap_size = 4 * 1024 * 1024; (*4M*)
+      Gc.major_heap_increment = 32 * 1024 * 1024; (*32M*)
+      Gc.max_overhead = 150;
+    } ; (* let's fly ! *)
     { st_assign = Array.make n Unknown;
       st_reason = Array.make n None;
       st_level = Array.make n (-1);

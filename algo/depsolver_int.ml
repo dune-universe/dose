@@ -192,17 +192,19 @@ let copy_solver solver =
 
 (** low level call to the sat solver *)
 let solve solver request =
+  (* XXX this function gets called a zillion times ! *)
   S.reset solver.constraints;
 
   let result solve collect ?(proxies=[]) var =
     if solve solver.constraints var then begin
       let get_assignent ?(all=false) () =
         let l = ref [] in
-        Array.iteri (fun i v ->
-          if v = S.True then
+        let a = S.assignment solver.constraints in
+        for i = 0 to (Array.length a) - 1 do
+          if a.(i) = S.True then
             if not(List.mem i proxies) then
               l := (solver.map#inttovar i) :: !l
-        ) (S.assignment solver.constraints);
+        done;
         !l
       in
       Diagnostic_int.Success(get_assignent)
