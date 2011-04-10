@@ -10,6 +10,7 @@
 (**************************************************************************)
 
 let fatal fmt = Common.Util.make_fatal "Debian.Version" fmt
+let info fmt = Common.Util.make_info "Debian.Version" fmt
 
 (* cannibalized from ocamldeb *)
 
@@ -95,7 +96,7 @@ let split x =
 let normalize s =
   let (e,u,rest) = extract_chunks s in
   match extract_binnmu rest with
-  |("","") -> ""
+  |("","") -> u
   |(x,_) -> Printf.sprintf "%s-%s" u x
 ;;
 

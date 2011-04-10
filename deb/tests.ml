@@ -40,14 +40,42 @@ let universe = Cudf.load_universe cudf_list ;;
 let maps = CudfAdd.build_maps universe ;;
 
 let test_version = 
-  let v = "1:1.4-5+b1" in
   "debian version parsing" >::: [
-    "splitting" >:: (fun _ ->
+    "splitting all" >:: (fun _ ->
+      let v = "1:1.4-5+b1" in
       let (e,u,r,b) = Version.split v in
       assert_equal (e,u,r,b) ("1","1.4","5","+b1")
     );
-    "normalize" >:: (fun _ ->
+    "normalize all" >:: (fun _ ->
+      let v = "1:1.4-5+b1" in
       assert_equal (Version.normalize v) "1.4-5"
+    );
+    "splitting partial 1" >:: (fun _ ->
+      let v = "1.4-5+b1" in
+      let (e,u,r,b) = Version.split v in
+      assert_equal (e,u,r,b) ("","1.4","5","+b1")
+    );
+    "normalize partial 1" >:: (fun _ ->
+      let v = "1.4-5+b1" in
+      assert_equal (Version.normalize v) "1.4-5"
+    );
+    "splitting partial 2" >:: (fun _ ->
+      let v = "1.4" in
+      let (e,u,r,b) = Version.split v in
+      assert_equal (e,u,r,b) ("","1.4","","")
+    );
+    "normalize partial 2" >:: (fun _ ->
+      let v = "1.4" in
+      assert_equal (Version.normalize v) "1.4"
+    );
+    "splitting partial 3" >:: (fun _ ->
+      let v = "0" in
+      let (e,u,r,b) = Version.split v in
+      assert_equal (e,u,r,b) ("","0","","")
+    );
+    "normalize partial 3" >:: (fun _ ->
+      let v = "0" in
+      assert_equal (Version.normalize v) "0"
     );
   ]
 ;;

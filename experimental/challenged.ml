@@ -48,7 +48,6 @@ let dummy pkg number version =
    pkg_extra = [("number",`String number)]
   }
 
-
 let upgrade tables universe migrationlist =
   let getv = Debian.Debcudf.get_cudf_version tables in
   let pkgset = 
@@ -81,11 +80,8 @@ let upgrade tables universe migrationlist =
 ;;
 
 let add h k v =
-  try
-    let l = Hashtbl.find h k in
-    l := v::!l
-  with Not_found ->
-    Hashtbl.add h k (ref [v])
+  try let l = Hashtbl.find h k in l := v::!l
+  with Not_found -> Hashtbl.add h k (ref [v])
 ;;
 
 (* repository are real packages, 
@@ -102,9 +98,11 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
   let constraints_table = Debian.Evolution.constraints repository in
   let cluster_iter (sn,sv) l =
     List.iter (fun (version,cluster) ->
-      let filter x =
-        match Debian.Version.split version, Debian.Version.split x with
-        |(_,v,_,_),(_,w,_,_) -> (Debian.Version.compare v w) <= 0
+      let filter =
+        let v = Debian.Debutil.normalize version in
+        fun x ->
+          let w = Debian.Debutil.normalize x in
+          (Debian.Version.compare v w) <= 0
       in
       (* all packages in this cluster have the same version *)
       (*
@@ -132,7 +130,8 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
         in
         version_acc := vl @ !version_acc;
         let aligned_target = Debian.Evolution.align version target in
-        Hashtbl.add worktable (cluster,(sn,sv,version),target,aligned_target,equiv) migrationlist
+        let key = (cluster,(sn,sv,version),target,aligned_target,equiv) in
+        Hashtbl.add worktable key migrationlist
       ) (Debian.Evolution.discriminants ~filter constraints_table cluster)
     ) l
   in
