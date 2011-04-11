@@ -105,23 +105,8 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
           (Debian.Version.compare v w) <= 0
       in
       (* all packages in this cluster have the same version *)
-      (*
-      Printf.eprintf "%s %s -> %s %d\n%!" sn sv version (List.length cluster);
-      List.iter (fun pkg ->
-        Printf.eprintf "%s %s\n%!" pkg.Debian.Packages.name pkg.Debian.Packages.version;
-      ) cluster;
-      *)
       List.iter (fun (target,equiv) ->
         let migrationlist = Debian.Evolution.migrate cluster target in
-        (* Printf.eprintf "target : %s\n%!" (Debian.Evolution.string_of_range target);
-        List.iter (fun ((pkg,orig),target) ->
-          Printf.eprintf "%s : %s -> (%s) %s\n%!" 
-          pkg.Debian.Packages.name pkg.Debian.Packages.version 
-          (Debian.Evolution.string_of_range orig)
-          (Debian.Evolution.string_of_range target);
-        ) migrationlist;
-        *)
-
         let vl = 
           List.fold_left (fun acc -> function
             |(_,(`Hi v|`Lo v|`Eq v)) -> v::acc 
@@ -130,8 +115,10 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
         in
         version_acc := vl @ !version_acc;
         let aligned_target = Debian.Evolution.align version target in
-        let key = (cluster,(sn,sv,version),target,aligned_target,equiv) in
-        Hashtbl.add worktable key migrationlist
+        let key = (cluster,(sn,sv,version)) in 
+        let value = (target,aligned_target,equiv,migrationlist) in
+        try let l = Hashtbl.find worktable key in l:= value :: !l 
+        with Not_found -> Hashtbl.add worktable key (ref [value])
       ) (Debian.Evolution.discriminants ~filter constraints_table cluster)
     ) l
   in
@@ -160,22 +147,28 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
   let fmt = Format.std_formatter in
   Format.fprintf fmt "@[<v 1>report:@,";
   Format.fprintf fmt "broken packages reference: %d@," brokenref;
-  Hashtbl.iter(fun (cluster,(sn,sv,bv),target,aligned_target,equiv) migrationlist ->
-    Util.Progress.progress predbar;
-    let future = upgrade tables universe migrationlist in
+  Hashtbl.iter(fun (cluster,(sn,sv,bv)) {contents = l} ->
+    Format.fprintf fmt "@[<v>source: %s %s@," sn sv;
+    Format.fprintf fmt "clusters:@,";
+    Format.fprintf fmt "version: %s@," bv;
+    Format.fprintf fmt "@[<v 1>analysis:@,";
+    List.iter (fun (target,aligned_target,equiv,migrationlist) ->
+      Util.Progress.progress predbar;
+      let future = upgrade tables universe migrationlist in
 
-    Format.fprintf fmt "cluster: %s %s@," sn sv;
-    Format.fprintf fmt "sub cluster bin version: %s@," bv;
-    Format.fprintf fmt "target: %s @," (Debian.Evolution.string_of_range target);
-    Format.fprintf fmt "aligned target: %s @," (Debian.Evolution.string_of_range aligned_target);
-    Format.fprintf fmt "equiv: %s@," (String.concat " , " (List.map (Debian.Evolution.string_of_range) equiv));
+      Format.fprintf fmt "target: %s @," (Debian.Evolution.string_of_range target);
+      Format.fprintf fmt "aligned target: %s @," (Debian.Evolution.string_of_range aligned_target);
+      Format.fprintf fmt "equiv: %s@," (String.concat " , " (List.map (Debian.Evolution.string_of_range) equiv));
 
-    let callback d = if verbose then Diagnostic.fprintf ~failure:true ~explain:true fmt d in
-    let i = Depsolver.univcheck ~callback future in
-
-    Format.fprintf fmt "broken packages: %d@," (i - brokenref);
-    
-    Hashtbl.add predmap (cluster,(sn,sv),target) (i - brokenref);
+      let callback d = if verbose then Diagnostic.fprintf ~failure:true ~explain:true fmt d in
+      Format.fprintf fmt "distcheck: @,";
+      let i = Depsolver.univcheck ~callback future in
+      Format.fprintf fmt "broken: %d@," (i - brokenref);
+      Format.fprintf fmt "@,";
+      
+      (* Hashtbl.add predmap (cluster,(sn,sv),target) (i - brokenref); *)
+    ) l;
+    Format.fprintf fmt "@]@]@,---@.";
   ) worktable ;
   Format.fprintf fmt "@]@.";
 
