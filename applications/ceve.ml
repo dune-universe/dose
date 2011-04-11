@@ -190,14 +190,19 @@ let main () =
 IFDEF HASOCAMLGRAPH THEN
           DGraph.D.output_graph oc (DGraph.dependency_graph u)
 ELSE
-        failwith ("dot Not supported")
+        failwith ("dot not supported: needs ocamlgraph")
 END
       |"cnf" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~enc:Depsolver.Cnf u)
       |"dimacs" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~enc:Depsolver.Dimacs u)
       |"pp" -> Cudf_printer.pp_universe (Format.formatter_of_out_channel oc) u
-      |"table" -> Printf.fprintf oc "%d\t%d\t%d\n"
+      |"table" ->
+IFDEF HASOCAMLGRAPH THEN
+        Printf.fprintf oc "%d\t%d\t%d\n"
         (Cudf.universe_size u) (DGraph.G.nb_edges (DGraph.dependency_graph u))
         (nr_conflicts m u)
+ELSE
+        failwith ("table not supported: needs ocamlgraph")
+END
       |_ -> assert false
       end ;
       close_out oc;
