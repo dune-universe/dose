@@ -461,6 +461,7 @@ let todebian (pkg: Idbr.package): Debian.Packages.package =
     source = ("",None);
     architecture = "";
     essential = false;
+    priority = "";
     depends = loadll (List.assoc (`Depends) pkg.cnf_deps);
     pre_depends = loadll (List.assoc (`Pre_depends) pkg.cnf_deps);
     recommends = [];

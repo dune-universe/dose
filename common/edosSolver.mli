@@ -21,10 +21,10 @@ end
 (** Sat solver functor type *)
 module type T = sig
 
-  (** i *)
+  (** generic failure reason *)
   module X : S
 
-  (** i *)
+  (** state of the solver *)
   type state
 
   (** variables are integers numbered from 0 to (size - 1) *)
