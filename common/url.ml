@@ -22,9 +22,9 @@ type input_scheme =
   | Sqlite | Pgsql                             (* data bases *)
 ;;
 
-let is_file_scheme = function
-  | Deb | Cudf | Eclipse | Synthesis | Hdlist -> true
-  | Sqlite | Pgsql -> false
+let is_local_scheme = function
+  | Deb | Cudf | Eclipse | Synthesis | Hdlist | Sqlite -> true
+  | Pgsql -> false
 ;;
 
 let scheme_to_string = function
@@ -65,7 +65,7 @@ type url = {
 (* printing *************************************************************)
 
 let to_string u =
-  if is_file_scheme u.scheme
+  if is_local_scheme u.scheme
   then (scheme_to_string u.scheme)^"://"^u.path
   else
     (scheme_to_string u.scheme) ^ "://"  ^
@@ -130,7 +130,7 @@ let of_string s =
   then error "missing '://' separator" s;
   let scheme = scheme_of_string (String.sub s 0 pos_colon)
   and start_rest = pos_colon+3 in
-  if is_file_scheme scheme
+  if is_local_scheme scheme
   then
       (* we have a local file scheme: everything after the seperator *)
       (* constitutes the path name.                                  *)
