@@ -254,11 +254,11 @@ let rec filter opt_scheme acc uris =
     |(Url.Cudf,_,_) as p, None when tail = [] -> (Url.Cudf,[p])
     |(Url.Cudf,_,_), _ when tail <> [] -> fatal "Only one cudf input allowed"
 
-    |(Url.Deb,(_,_,_,_,"-"),_) as p, None when tail = [] -> (Url.Deb,[]) (* stdin *) (* also check acc ? *)
-    |(Url.Deb,(_,_,_,_,"-"),_), _ when tail <> [] -> fatal "Only one deb stdin input allowed"
+    |(Url.Deb,(_,_,_,_,"-"),_) as p, None when tail = [] && acc = []-> (Url.Deb,[]) (* stdin *)
+    |(Url.Deb,(_,_,_,_,"-"),_), _ when tail <> [] || acc <> [] -> fatal "Only one deb stdin input allowed"
 
-    |((Url.Pgsql|Url.Sqlite) as dbtype,_,_) as p, None when tail = [] -> (dbtype,[p])
-    |((Url.Pgsql|Url.Sqlite),_,_), None when tail <> [] -> fatal "Only one db input allowed"
+    |((Url.Pgsql|Url.Sqlite) as dbtype,_,_) as p, None when tail = [] && acc = [] -> (dbtype,[p])
+    |((Url.Pgsql|Url.Sqlite),_,_), None when tail <> [] || acc <> [] -> fatal "Only one db input allowed"
 
     |(t,_,_) as p, None -> filter (Some t) (p::acc) tail
     |(t,_,_) as p, Some i when t = i -> filter (Some t) (p::acc) tail
