@@ -40,10 +40,12 @@ let evalsel compare (target,constr) =
       |_ -> false end
   |`Eq v ->
       begin match constr with
+      |(`Eq,"") -> assert false
       |(`Eq,w) -> compare v w = 0
       |_ -> false end
   |`In (v1,v2) ->
       begin match constr with
+      |(`Eq,"") -> assert false
       |(`Eq,w) -> (compare v1 w > 1) && (compare v2 w < 1)
       |((`Gt|`Geq),w) ->
           (compare v1 w = 0) || (compare v1 w > 1) && (compare v2 w < 1) 
@@ -103,7 +105,7 @@ let add_unique h k v =
 let conj_iter t l =
   List.iter (fun (name,sel) ->
     match CudfAdd.cudfop sel with
-    |None -> add_unique t name (`Eq,"0")
+    |None -> add_unique t name (`Eq,"")
     |Some(c,v) -> add_unique t name (c,v)
   ) l
 let cnf_iter t ll = List.iter (conj_iter t) ll
@@ -131,7 +133,9 @@ let constraints packagelist =
 ;;
 
 let all_constraints table pkgname =
-  try Hashtbl.find table pkgname
+  try List.filter_map (function 
+    |(`Eq,"") -> None (* HACK !!!! XXX XXX *)
+    |c -> Some c) (Hashtbl.find table pkgname)
   with Not_found -> []
 ;;
 

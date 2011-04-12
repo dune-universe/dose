@@ -2,7 +2,7 @@
 (*  This file is part of a library developed with the support of the      *)
 (*  Mancoosi Project. http://www.mancoosi.org                             *)
 (*                                                                        *)
-(*  Main author(s):  ADD authors here                                     *)
+(*  Main author(s): Pietro Abate                                          *)
 (*                                                                        *)
 (*  Contributor(s):  ADD minor contributors here                          *)
 (*                                                                        *)
@@ -85,16 +85,19 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
   let realpackages = Hashtbl.create 1023 in
 
   let clusters = Debian.Debutil.cluster repository in
+  (* for each cluste, I associate to it its discriminants,
+   * cluster name and binary version *)
   Hashtbl.iter (fun (sn,sv) l ->
     List.iter (fun (version,cluster) ->
       let filter =
+        let a = Debian.Version.normalize version in
         fun target ->
+          if version = target then false else
           match Debian.Version.split target with
           |("",u2,r2,b2) ->
-              let a = Debian.Version.normalize version in
               let b = Debian.Version.normalize target in
               (Debian.Version.compare a b) < 0
-          |_ -> (Debian.Version.compare version target) < 0
+          |_ -> (Debian.Version.compare version target) < 0 
       in
       let discr = Debian.Evolution.discriminants ~filter constraints_table cluster in
       let vl =
@@ -112,36 +115,24 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
 
   version_acc := Util.list_unique !version_acc;
 
+  (* for each package name, that is not a real package,
+   * I create a package with version 1 and I put it in a
+   * cluster by itself *)
   Hashtbl.iter (fun name constr -> match (name,constr) with
-    |(name,constr) when (Hashtbl.mem realpackages name) -> ()
-    |(name,constr) -> begin
-        match constr with
-        |[] -> ()
-        |[(`Eq,"0")] -> begin
-          let pkg = {
-            Debian.Packages.default_package with 
-            Debian.Packages.name = name;
-            version = "1";
-            } 
-          in
-          let cluster = [pkg] in
-          version_acc := "1" :: !version_acc;
-          Hashtbl.add worktable cluster ([],name,"")
-        end
-        |_ -> begin
-          let vl = Debian.Evolution.all_versions constr in
-          let discr = Debian.Evolution.discriminant vl constr in
-          let pkg = {
-            Debian.Packages.default_package with 
-            Debian.Packages.name = name;
-            version = "1";
-            } 
-          in
-          let cluster = [pkg] in
-          version_acc := ("1" :: vl) @ !version_acc;
-          Hashtbl.add worktable cluster (discr,name,"")
-        end
-    end
+    |(name,_) when (Hashtbl.mem realpackages name) -> ()
+    |(name,[]) -> ()
+    |(name,_) ->
+        let vl = Debian.Evolution.all_versions constr in
+        let discr = Debian.Evolution.discriminant vl constr in
+        let pkg = {
+          Debian.Packages.default_package with 
+          Debian.Packages.name = name;
+          version = "1";
+          } 
+        in
+        let cluster = [pkg] in
+        version_acc := ("1" :: vl) @ !version_acc;
+        Hashtbl.add worktable cluster (discr,name,"")
   ) constraints_table;
 
   let versionlist = Util.list_unique !version_acc in
@@ -149,7 +140,7 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
   let duplicates = Hashtbl.create 1023 in
   let getv = Debian.Debcudf.get_cudf_version tables in
   let pkglist = 
-    Hashtbl.fold (fun cluster (constr,sn,sv) acc ->
+    Hashtbl.fold (fun cluster (constr,sn,version) acc ->
       let sync x y = if List.length cluster > 1 then sync x y else y in
       let l = 
         List.fold_left (fun acc pkg ->
@@ -164,15 +155,18 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
                 |`Lo v |`In (_,v) -> (getv (pn,v)) - 1
               in
               let number = Debian.Evolution.string_of_range target in
-              if newv <> p.Cudf.version && not(Hashtbl.mem duplicates (pn,newv)) then begin
-                Hashtbl.add duplicates (pn,newv) ();
-                if List.length cluster > 1 then
-                  (sync (sn,sv) (dummy p number newv))::acc
-                else
-                   (dummy p number newv)::acc
+              assert (version <> "");
+              assert (newv <> p.Cudf.version);
+              if Hashtbl.mem duplicates (pn,newv) then
+                Printf.eprintf "duplicate\n";
+
+              if not(Hashtbl.mem duplicates (pn,newv)) then begin
+                Hashtbl.add duplicates (pn,newv) (); 
+                (sync (sn,version) (dummy p number newv))::acc
               end else acc
+
             ) acc (target::equiv)
-          ) ((sync (sn,sv) p)::acc) constr
+          ) ((sync (sn,version) p)::acc) constr
         ) [] cluster
       in l@acc
     ) worktable []
@@ -193,8 +187,9 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
 
   let fmt = Format.std_formatter in
   Format.fprintf fmt "@[<v 1>report:@,";
-  let callback d = if verbose then 
-    Diagnostic.fprintf ~failure:true ~explain:true fmt d 
+  let callback d = 
+    if false then 
+      Diagnostic.fprintf ~failure:true ~explain:true fmt d 
   in
   let i = Depsolver.univcheck ~callback universe in
   Format.fprintf fmt "broken: %d@," i;
