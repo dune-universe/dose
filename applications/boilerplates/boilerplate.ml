@@ -237,26 +237,28 @@ let cudf_load_universe file =
   let (l,f,t) = cudf_load_list file in
   (Cudf.load_universe l, f, t)
 
-(* return a list of file of the same type *)
-let rec filter init acc uris =
-  match uris,init with
+(* Check that all uris are of type that is an instance of scheme *)
+(* If yes return that instance of scheme, and the list of pathes *)
+(* in uris.                                                      *)
+let rec filter opt_scheme acc uris =
+  match uris,opt_scheme with
   |[],None -> fatal "No input provided"
-  |[],Some init -> (init,acc)
+  |[],Some real_scheme -> (real_scheme,acc)
   |uri::tail, _ ->
-    begin match Input.parse_uri uri, init with
+    begin match Input.parse_uri uri, opt_scheme with
     (* XXX add support !
-    |("cudf",(_,_,_,_,"-"),_) as p, None when tail = [] -> ("cudfstdin",[p])
-    |("cudf",(_,_,_,_,"-"),_), _ when tail <> [] -> fatal "Only one cudf stdin input allowed"
+    |(Url.Cudf,(_,_,_,_,"-"),_) as p, None when tail = [] -> ("cudfstdin",[p])
+    |(Url.Cudf,(_,_,_,_,"-"),_), _ when tail <> [] -> fatal "Only one cudf stdin input allowed"
     *)
 
-    |("cudf",_,_) as p, None when tail = [] -> ("cudf",[p])
-    |("cudf",_,_), _ when tail <> [] -> fatal "Only one cudf input allowed"
+    |(Url.Cudf,_,_) as p, None when tail = [] -> (Url.Cudf,[p])
+    |(Url.Cudf,_,_), _ when tail <> [] -> fatal "Only one cudf input allowed"
 
-    |("deb",(_,_,_,_,"-"),_) as p, None when tail = [] -> ("debstdin",[p])
-    |("deb",(_,_,_,_,"-"),_), _ when tail <> [] -> fatal "Only one deb stdin input allowed"
+    |(Url.Deb,(_,_,_,_,"-"),_) as p, None when tail = [] -> (Url.Deb,[]) (* stdin *) (* also check acc ? *)
+    |(Url.Deb,(_,_,_,_,"-"),_), _ when tail <> [] -> fatal "Only one deb stdin input allowed"
 
-    |(("pgsql"|"sqlite") as dbtype,_,_) as p, None when tail = [] -> (dbtype,[p])
-    |(("pgsql"|"sqlite"),_,_), None when tail <> [] -> fatal "Only one db input allowed"
+    |((Url.Pgsql|Url.Sqlite) as dbtype,_,_) as p, None when tail = [] -> (dbtype,[p])
+    |((Url.Pgsql|Url.Sqlite),_,_), None when tail <> [] -> fatal "Only one db input allowed"
 
     |(t,_,_) as p, None -> filter (Some t) (p::acc) tail
     |(t,_,_) as p, Some i when t = i -> filter (Some t) (p::acc) tail
@@ -270,28 +272,28 @@ let unpack (_,(_,_,_,_,file),_) = file
 (** parse a list of uris of the same type and return a cudf packages list *)
 let parse_input ?(default_arch=None) ?(extras=[]) uris =
   match filter None [] uris with
-  |("cudf",[("cudf",(_,_,_,_,file),_)]) ->
+  |(Url.Cudf,[(Url.Cudf,(_,_,_,_,file),_)]) ->
       cudf_load_list file
-  |("debstdin", [p]) ->
+  |(Url.Deb, []) ->
       let l = Debian.Packages.input_raw_ch ~default_arch (IO.input_channel stdin) in
       deb_load_list ~extras l
-  |("deb", l) ->
+  |(Url.Deb, l) ->
       let filelist = List.map unpack l in
       let l = Debian.Packages.input_raw ~default_arch filelist in
       deb_load_list ~extras l
-  |("eclipse", l) ->
+  |(Url.Eclipse, l) ->
       let filelist = List.map unpack l in
       let l = Eclipse.Packages.input_raw filelist in
       eclipse_load_list ~extras l
-  |("pgsql"|"sqlite"), [(("pgsql"|"sqlite") as dbtype,info,(Some query))] ->
+  |(Url.Pgsql|Url.Sqlite), [((Url.Pgsql|Url.Sqlite) as dbtype,info,(Some query))] ->
 IFDEF HASDB THEN
         let db = Db.Backend.init_database dbtype info (Idbr.parse_query query) in
         let l = Db.Backend.load_selection db (`All) in
         deb_load_list ~extras l
 ELSE
-    fatal "%s Not supported. re-configure with --with-??" dbtype
+    fatal "%s Not supported. re-configure with --with-??" (Url.scheme_to_string dbtype)
 END
-  |("hdlist", l) -> 
+  |(Url.Hdlist, l) -> 
 IFDEF HASRPM THEN
       let filelist = List.map unpack l in
       let l = Rpm.Packages.Hdlists.input_raw filelist in
@@ -299,22 +301,22 @@ IFDEF HASRPM THEN
 ELSE
     fatal "hdlist Not supported. re-configure with --with-rpm"
 END
-  |("synth", l) -> 
+  |(Url.Synthesis, l) -> 
 IFDEF HASRPM THEN
       let filelist = List.map unpack l in
       let l = Rpm.Packages.Synthesis.input_raw filelist in
       rpm_load_list l
 ELSE
-    fatal "synth Not supported. re-configure with --with-rpm"
+    fatal "synthesis input format not supported. re-configure with --with-rpm"
 END
-    |(s,_) -> fatal "%s Not supported" s
+    |(s,_) -> fatal "%s Not supported" (Url.scheme_to_string s)
 ;;
 
 let supported_formats () =
   let standard = ["cudf://";"deb://";"deb://-";"eclipse://"] in
   let rpm = 
 IFDEF HASRPM THEN
-     ["hdlist://";"synth://"]
+     ["hdlist://";"synthesis://"]
 ELSE
      []
 END
