@@ -1,279 +1,223 @@
-(**************************************************************************************)
-(* Copyright 2001, 2002 b8_bavard, b8_fee_carabine, INRIA *)
-(*
-    This file is part of mldonkey.
+(****************************************************************************)
+(*  Copyright (C) 2011 Ralf Treinen <ralf.treinen@pps.jussieu.fr>           *)
+(*  Copyright (C) 2011 Mancoosi Project                                     *)
+(*                                                                          *)
+(*  This library is free software: you can redistribute it and/or modify    *)
+(*  it under the terms of the GNU Lesser General Public License as          *)
+(*  published by the Free Software Foundation, either version 3 of the      *)
+(*  License, or (at your option) any later version.  A special linking      *)
+(*  exception to the GNU Lesser General Public License applies to this      *)
+(*  library, see the COPYING file for more information.                     *)
+(****************************************************************************)
 
-    mldonkey is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
+exception Invalid_url of string;;
 
-    mldonkey is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+let error m s = raise (Invalid_url (m^": "^s));;
 
-    You should have received a copy of the GNU General Public License
-    along with mldonkey; if not, write to the Free Software
-    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-*)
-(**************************************************************************************)
+(***********************************************************************)
+(* Input schemes *******************************************************)
 
-let split s c =
-  let len = String.length s in
-  let rec iter pos =
-    try
-      if pos = len then [""] else
-      let pos2 = String.index_from s pos c in
-      if pos2 = pos then "" :: iter (pos+1) else
-        (String.sub s pos (pos2-pos)) :: (iter (pos2+1))
-    with _ -> [String.sub s pos (len-pos)]
-  in
-  iter 0
+type input_scheme =
+    Deb | Cudf | Eclipse | Synthesis | Hdlist  (* file types *)
+  | Sqlite | Pgsql                             (* data bases *)
 ;;
 
-let before s pos = String.sub s 0 pos
-let after s pos =
-    let len = String.length s in
-    String.sub s pos (len - pos)
-;;
-let cut_at s c =
-  try
-    let pos = String.index s c in
-    before s pos,
-    after s (pos+1);
-  with _ -> s, ""
+let is_file_scheme = function
+  | Deb | Cudf | Eclipse | Synthesis | Hdlist -> true
+  | Sqlite | Pgsql -> false
 ;;
 
-open Buffer
+let scheme_to_string = function
+  | Deb -> "deb"
+  | Eclipse -> "eclipse"
+  | Cudf -> "cudf"
+  | Synthesis -> "synthesis"
+  | Hdlist -> "hdlist"
+  | Pgsql -> "pgsql"
+  | Sqlite -> "sqlite"
+;;
+
+let scheme_of_string = function
+  | "deb" -> Deb
+  | "cudf" -> Cudf
+  | "eclipse" -> Eclipse
+  | "synthesis" -> Synthesis
+  | "hdlist" -> Hdlist
+  | "sqlite" -> Sqlite
+  | "pgsql" -> Pgsql
+  | s -> error "unknown scheme" s
+;;
+
+(***********************************************************************)
 
 type url = {
-    proto : string;
-    server : string;
-    port : int;
-    full_file : string;
-    file : string;
-    user : string;
-    passwd : string;
-    args : (string*string) list;
-
-    string : string;
-  }
-
-(* encode using x-www-form-urlencoded form *)
-let encode s =
-  let pos = ref 0 in
-  let len = String.length s in
-  let res = String.create (3*len) in
-  let hexa_digit x =
-    if x >= 10 then Char.chr (Char.code 'A' + x - 10)
-    else Char.chr (Char.code '0' + x) in
-  for i=0 to len-1 do
-    match s.[i] with
-    | 'a'..'z' | 'A'..'Z' | '0'..'9' | '.' | '-' | '*' | '_' ->
-        res.[!pos] <- s.[i]; incr pos
-(*    | ' ' -> res.[!pos] <- '+'; incr pos *)
-    | c ->
-        res.[!pos] <- '%';
-        res.[!pos+1] <- hexa_digit (Char.code c / 16);
-        res.[!pos+2] <- hexa_digit (Char.code c mod 16);
-        pos := !pos + 3
-  done;
-  String.sub res 0 !pos
-
-(* decode using x-www-form-urlencoded form *)
-
-let digit_hexa x =
-  match x with
-  | 'a' .. 'f' -> (Char.code x) + 10 - (Char.code 'a')
-  | 'A' .. 'F' -> (Char.code x) + 10 - (Char.code 'A')
-  | '0' .. '9' -> (Char.code x) - (Char.code '0')
-  | _ -> failwith "Not an hexa number (encode.ml)"
-
-let decode s =
-  let len = String.length s in
-  let r = Buffer.create len in
-  let rec iter i =
-    if i < len then
-      match s.[i] with
-      | '+' -> Buffer.add_char r  ' '; iter (i+1)
-      | '%' ->
-          let n =
-            try
-              let fst = digit_hexa s.[i+1] in
-              let snd = digit_hexa s.[i+2] in
-              Buffer.add_char r (char_of_int (fst*16 + snd));
-              3
-            with _ ->
-                Buffer.add_char r '%';
-                1
-          in
-          iter (i+n)
-
-      | c -> Buffer.add_char r c; iter (i+1)
-  in
-  iter 0;
-  Buffer.contents r
+  scheme : input_scheme;
+  host   : string option;
+  port   : int option;
+  path   : string; (** db name or filename *)
+  user   : string option;
+  passwd : string option;
+  query  : (string * string) list; (** query string *)
+};;
 
 
-let to_string url =
-  let res = Buffer.create 80 in
-  add_string res url.proto;
-  add_string res "://";
-  if url.user <> "" || url.passwd <> "" then begin
-      add_string res url.user;
-      add_string res ":";
-      add_string res url.passwd;
-      add_string res "@";
-    end;
-  add_string res url.server;
-    (match url.proto, url.port with
-      "http", 80
-    | "ftp", 21
-    | "ssh", 22 -> ()
-    | ("http" | "ftp" | "ssh"), _ ->
-        (add_char res ':'; add_string res (string_of_int url.port));
-    | _, port when port <> 0 ->
-        (add_char res ':'; add_string res (string_of_int url.port));
-    | _ -> ());
-  add_string res url.full_file;
-  contents res
+(************************************************************************)
+(* printing *************************************************************)
 
-let cut_args url_end =
-  if url_end = "" then []
+let to_string u =
+  if is_file_scheme u.scheme
+  then (scheme_to_string u.scheme)^"://"^u.path
   else
-  let args = split url_end '&' in
-  List.map (fun s ->
-        let (name, value) = cut_at s '=' in
-      decode name, decode value
-    ) args
+    (scheme_to_string u.scheme) ^ "://"  ^
+      (match u.user with
+	| None -> ""
+	| Some user -> 
+	  ( match u.passwd with
+	    | None -> user^"@"
+	    | Some passwd -> user^":"^passwd^"@")) ^
+      (match u.host with
+	| None -> ""
+	| Some host -> host)^ 
+      (match u.port with
+	| None -> ""
+	| Some port -> ":"^(string_of_int port))^
+      "/" ^ u.path ^
+      (match u.query with
+	| [] -> ""
+	| [(key,value)] -> "?"^key^"="^value
+	| (firstkey,firstvalue)::rest ->
+	  (List.fold_left
+	     (fun acc (key,value) -> acc^";"^key^"="^value)
+	     ("?"^firstkey^"="^firstvalue)
+	     rest))
+;;
 
-let create proto user passwd server port full_file =
-  let short_file, args = cut_at full_file '?' in
-  let args = cut_args args in
-  let url =
-    {
-      proto = proto;
-      server = server;
-      port = port;
-      full_file = full_file;
-      file = short_file;
-      user = user;
-      passwd = passwd;
-      args = args;
+(********************************************************************)
+(* parsing **********************************************************)
 
-      string = "";
-    }
-  in
-  { url with string = to_string url }
-
-let put_args s args =
-  if args = [] then s else
-  let res = Buffer.create 256 in
-  Buffer.add_string res s;
-  Buffer.add_char res '?';
-  let rec manage_args = function
-    | [] -> assert false
-    | [a, ""] ->
-        Buffer.add_string res (encode a)
-    | [a, b] ->
-        Buffer.add_string res (encode a); Buffer.add_char res '='; Buffer.add_string res
-          (encode b)
-    | (a,b)::l ->
-        Buffer.add_string res (encode a); Buffer.add_char res '='; Buffer.add_string res
-          (encode b);
-        Buffer.add_char res '&'; manage_args l in
-(*  lprintf "len args %d" (List.length args); lprint_newline ();*)
-  manage_args args;
-  Buffer.contents res
-
-let of_string ?(args=[]) s =
-  let s = put_args s args in
-  let size = String.length s in
-  let url =
-    let get_two init_pos =
-      let pos = ref init_pos in
-      while s.[!pos] <> ':' && s.[!pos] <> '/' && s.[!pos] <> '@' && !pos < size -1 do
-        incr pos
-      done;
-      if !pos = size -1 then pos := init_pos ;
-      let first = String.sub s init_pos (!pos - init_pos) in
-      if s.[!pos] = ':'
-      then
-        (let deb = !pos+1 in
-          while s.[!pos] <> '@' && s.[!pos] <> '/' do
-            incr pos
-          done;
-          (first, String.sub s deb (!pos-deb), !pos))
-      else
-        (first, "", !pos) in
-    let cut init_pos default_port =
-      let stra, strb, new_pos = get_two init_pos in
-      let user, pass, host, port, end_pos =
-        if s.[new_pos] = '@'
-        then
-          (let host, port_str, end_pos = get_two (new_pos+1) in
-            let port =
-              if port_str="" then default_port else int_of_string port_str in
-            stra, strb, host, port, end_pos)
-        else
-          (let port = if strb="" then default_port else int_of_string strb in
-            "", "", stra, port, new_pos) in
-      let len = String.length s in
-      let file = String.sub s end_pos (len - end_pos) in
-      host, port, file, user, pass in
+(* parse a query from the string [s], starting from position [from] *)
+(* until the end of [s]. [length] is the length of [s].             *)
+(* pairs in the query are separated by ';'. In each pair, key and   *)
+(* are separated by '='. A teminating ';' is accepted but not       *)
+(* required                                                         *)
+let rec parse_query_from s from length =
+  if from >= length
+  then []
+  else
     try
-      let colon = String.index s ':' in
-      let len = String.length s  in
-      if len > colon + 2 &&
-        s.[colon+1] = '/' &&
-        s.[colon+2] = '/' then
-        let proto =  String.sub s 0 colon in
-        let port = match proto with
-            "http" -> 80
-          | "ftp" -> 21
-          | "ssh" -> 22
-          | _ -> 0
-        in
-        let host, port, full_file, user, pass = cut (colon+3) port in
-        create proto user pass host port full_file
+      let pos_equal = String.index_from s from '=' in
+      try
+	let pos_semicolon = String.index_from s (pos_equal+1) ';' in
+	((String.sub s from (pos_equal-from)),
+	 (String.sub s (pos_equal+1) (pos_semicolon-pos_equal-1)))::
+	  (parse_query_from s (pos_semicolon+1) length)
+      with Not_found ->
+	[(String.sub s from (pos_equal-from)),
+	 (String.sub s (pos_equal+1) (length-pos_equal-1))]
+    with
+	Not_found -> error
+	  ("no '=' found after position "^(string_of_int from)) s
 
-      else
-        raise Not_found
-    with Not_found ->
-        let short_file, args = cut_at s '?' in
-        let args = cut_args args in
-        {
-          proto = "file";
-          server = "";
-          port = 0;
-          full_file = s;
-          file = short_file;
-          user = "";
-          passwd = "";
-          args = args;
-
-          string = s;
-        }
+let of_string s =
+  let l = String.length s in
+  let pos_colon =
+    try String.index s ':'
+    with Not_found -> error "missing '://' separator" s
   in
-  url
-
-let to_string url = url.string
-
-let to_string_no_args url =
-  let res = Buffer.create 80 in
-  add_string res url.proto;
-  add_string res "://";
-  add_string res url.server;
-  (match url.proto, url.port with
-      "http", 80
-    | "ftp", 21
-    | "ssh", 22 -> ()
-    | ("http" | "ftp" | "ssh"), _ ->
-        (add_char res ':'; add_string res (string_of_int url.port));
-    | _, port when port <> 0 ->
-        (add_char res ':'; add_string res (string_of_int url.port));
-    | _ -> ());
-  add_string res url.file;
-  contents res
+  if pos_colon+2 >= l
+    || String.get s (pos_colon+1) <> '/'
+    || String.get s (pos_colon+2) <> '/'
+  then error "missing '://' separator" s;
+  let scheme = scheme_of_string (String.sub s 0 pos_colon)
+  and start_rest = pos_colon+3 in
+  if is_file_scheme scheme
+  then
+      (* we have a local file scheme: everything after the seperator *)
+      (* constitutes the path name.                                  *)
+      { scheme  = scheme;
+	path    = String.sub s start_rest (l-start_rest);
+	user    = None;
+	passwd  = None;
+	host    = None;
+	port    = None;
+	query   = []
+      }
+  else
+      (* we have a data base scheme: split the rest *)
+      let pos_slash =
+	(* position of the first slash in the rest, which is mandatory  *)
+        (* since it separates the authentication part from the path     *)
+	try String.index_from s start_rest '/'
+	with Not_found ->
+	  error "database scheme needs authentication/path separator" s
+      in
+      let pos_at_in_auth =
+	(* the position of @ before the first slash, or -1 otherwise    *)
+	try 
+	  let pos_at = String.index_from s start_rest '@' in
+	  if pos_at < pos_slash then pos_at else -1
+	with Not_found -> -1
+      in
+      let user,passwd =
+	if pos_at_in_auth < 0 
+	then (* [user[:pass]@] is missing *)
+	  None,None
+	else (* we have @ before the first / *)
+	  try
+	    let sep_user_pass = String.index_from s start_rest ':'
+	    in
+	    if sep_user_pass > pos_at_in_auth 
+	    then (* ignore ":" that comes after "@": no password *)
+	      Some (String.sub s start_rest (pos_at_in_auth-start_rest)),
+	      None
+	    else (* we have user and password *)
+	      Some (String.sub s start_rest (sep_user_pass-start_rest)),
+	      Some (String.sub s (sep_user_pass+1)
+		      (pos_at_in_auth-sep_user_pass-1))
+	  with Not_found ->
+	    (* no ":" at all: we only have a user but no password *)
+	    Some (String.sub s start_rest (pos_at_in_auth-start_rest)),
+	    None
+      and host,port =
+	let start_host =
+	  (* if the rest starts on user[:passwd]@ then the host[:port] *)
+	  (* part starts right after the @, oherwise it starts at the  *)
+	  (* beginning of the rest.                                    *)
+	  if pos_at_in_auth<0 then start_rest else pos_at_in_auth+1
+	in try
+	     let sep_host_port = String.index_from s start_host ':'
+	     in 
+	     if sep_host_port > pos_slash 
+	     then (* ignore ":" that comes after "/": no port *)
+	       Some (String.sub s start_host (pos_slash-start_host)),
+	       None
+	     else (* we have a host and a port *)
+	       Some (String.sub s start_host (sep_host_port-start_host)),
+	       Some (int_of_string (String.sub s
+				      (sep_host_port+1)
+				      (pos_slash-sep_host_port-1)))
+	  with Not_found ->
+	    (* no ":" at all: only host, no port *)
+	    Some (String.sub s start_host (pos_slash-start_host)),
+	    None
+      and path,query =
+	try
+	  let sep_path_query = String.index_from s (pos_slash+1) '?'
+	  in (* we have path and query *)
+	  (String.sub s (pos_slash+1) (sep_path_query-pos_slash-1)),
+	  (parse_query_from s (sep_path_query+1)) l
+	with Not_found ->
+	  (* no "?": only path, no query *)
+	  (String.sub s (pos_slash+1) (l-pos_slash-1)),
+	  []
+      in
+      { scheme = scheme;
+	path   = path;
+	user   = user;
+	passwd = passwd;
+	host   = host;
+	port   = port;
+	query  = query
+      }
+;;
 

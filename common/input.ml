@@ -65,19 +65,25 @@ END
     std_open_file file
 ;;
 
+let string_of_opt = function
+  | None -> ""
+  | Some s -> s
+;;
+
 let parse_uri s =
-  let opt s = if s <> "" then Some s else None in 
-  let url = Url.of_string ~args:[] s in
-  let user = opt url.Url.user in
-  let pass = opt url.Url.passwd in
-  let host = opt url.Url.server in
-  let port = if url.Url.port = 0 then None else Some (string_of_int url.Url.port) in
-  let query = try Some (List.assoc "query" url.Url.args) with Not_found -> None in
+  let url = Url.of_string s in
+  let user = url.Url.user 
+  and pass = url.Url.passwd 
+  and host = url.Url.host 
+  and port = match url.Url.port with
+    | None -> None
+    | Some portno -> Some (string_of_int portno)
+  and query = try Some (List.assoc "query" url.Url.query) with Not_found -> None in
   let db =
-    match url.Url.proto with
-    |"pgsql" ->
-        if (Str.string_before url.Url.file 1) = "/" then
-        Str.string_after url.Url.file 1 else url.Url.file
-    |_ -> Printf.sprintf "%s%s" url.Url.server url.Url.file
+    match url.Url.scheme with
+    | Url.Pgsql ->
+        if (Str.string_before url.Url.path 1) = "/" then
+        Str.string_after url.Url.path 1 else url.Url.path
+    |_ -> Printf.sprintf "%s%s" (string_of_opt url.Url.host) url.Url.path
   in
-  (url.Url.proto,(user,pass,host,port,db),query)
+  (url.Url.scheme,(user,pass,host,port,db),query)

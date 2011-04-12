@@ -47,7 +47,7 @@ val close_ch : IO.input -> unit
 
     @return a tuple representing the uri *)
 val parse_uri : string -> (
-  string *            (* format *)
+  Url.input_scheme *            (* format *)
   (string option      (* username *)
   * string option     (* password *)
   * string option     (* hostname *)
