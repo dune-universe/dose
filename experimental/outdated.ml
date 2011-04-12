@@ -17,9 +17,10 @@
 open ExtLib
 open Common
 
-let debug fmt = Util.make_debug "" fmt
-let info fmt = Util.make_info "" fmt
-let warning fmt = Util.make_warning "" fmt
+let debug fmt = Util.make_debug "Outdated" fmt
+let info fmt = Util.make_info "Outdated" fmt
+let warning fmt = Util.make_warning "Outdated" fmt
+let fatal fmt = Util.make_fatal "Outdated" fmt
 
 module Options = struct
   open OptParse
@@ -33,6 +34,7 @@ module Options = struct
   let architecture = StdOpt.str_option ()
   let checkonly = Boilerplate.pkglist_option ()
   let brokenlist = StdOpt.store_true ()
+  let dump = StdOpt.store_true ()
 
   open OptParser
   add options ~short_name:'a' ~long_name:"architecture" 
@@ -43,6 +45,10 @@ module Options = struct
   
   add options ~short_name:'b' 
   ~help:"Print the list of broken packages" brokenlist;
+
+  add options ~long_name:"dump"
+  ~help:"Dump the cudf package list" dump;
+
 
 end
 
@@ -70,7 +76,7 @@ let dummy pkg number version =
    pkg_extra = [("number",`String number)]
   }
 
-let outdated ?(verbose=false) ?(clusterlist=None) repository =
+let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
   let worktable = Hashtbl.create 1024 in
   let version_acc = ref [] in
   let constraints_table = Debian.Evolution.constraints repository in
@@ -80,20 +86,19 @@ let outdated ?(verbose=false) ?(clusterlist=None) repository =
 
   let clusters = Debian.Debutil.cluster repository in
   Hashtbl.iter (fun (sn,sv) l ->
-    (* Printf.eprintf "source: %s %s\n%!" sn sv; *)
     List.iter (fun (version,cluster) ->
-      (* Printf.eprintf "bin version: %s \n%!" version; *)
-      let filter x =
-        match Debian.Version.split version, Debian.Version.split x with
-        |(_,v,_,_),(_,w,_,_) -> (Debian.Version.compare v w) <= 0
+      let filter =
+        fun target ->
+          match Debian.Version.split target with
+          |("",u2,r2,b2) ->
+              let a = Debian.Version.normalize version in
+              let b = Debian.Version.normalize target in
+              (Debian.Version.compare a b) < 0
+          |_ -> (Debian.Version.compare version target) < 0
       in
       let discr = Debian.Evolution.discriminants ~filter constraints_table cluster in
       let vl =
         List.fold_left (fun acc (target,equiv) ->
-          (*
-          Printf.eprintf "target : %s [%s]\n%!" (Debian.Evolution.string_of_range target)
-          (String.concat " " (List.map Debian.Evolution.string_of_range equiv));
-          *)
           get_versions (get_versions acc [target]) equiv
         ) [] discr
       in
@@ -138,7 +143,6 @@ let outdated ?(verbose=false) ?(clusterlist=None) repository =
         end
     end
   ) constraints_table;
-  info "1";
 
   let versionlist = Util.list_unique !version_acc in
   let tables = Debian.Debcudf.init_tables ~step:2 ~versionlist repository in
@@ -173,11 +177,11 @@ let outdated ?(verbose=false) ?(clusterlist=None) repository =
       in l@acc
     ) worktable []
   in
-  info "2";
   
-  List.iter (fun pkg ->
-    Format.printf "%a@." Cudf_printer.pp_package pkg
-  ) pkglist ;
+  if dump then
+    List.iter (fun pkg ->
+      Format.printf "%a@." Cudf_printer.pp_package pkg
+    ) pkglist ;
 
   (* add additional pseudo-source packages *)
   let universe = Cudf.load_universe pkglist in
@@ -187,12 +191,13 @@ let outdated ?(verbose=false) ?(clusterlist=None) repository =
   Hashtbl.clear constraints_table;
   Debian.Debcudf.clear tables;
 
-  info "3 %d" (List.length pkglist);
-
   let fmt = Format.std_formatter in
   Format.fprintf fmt "@[<v 1>report:@,";
-  let callback d = if false then Diagnostic.fprintf ~failure:true ~explain:true fmt d in
+  let callback d = if verbose then 
+    Diagnostic.fprintf ~failure:true ~explain:true fmt d 
+  in
   let i = Depsolver.univcheck ~callback universe in
+  Format.fprintf fmt "broken: %d@," i;
   Format.fprintf fmt "@]@.";
 ;; 
 
@@ -207,10 +212,11 @@ let main () =
 
   let clusterlist = OptParse.Opt.opt Options.checkonly in
   let verbose = OptParse.Opt.get Options.brokenlist in
+  let dump = OptParse.Opt.get Options.dump in
 
   let default_arch = OptParse.Opt.opt Options.architecture in
   let packagelist = Debian.Packages.input_raw ~default_arch args in
-  let o = outdated packagelist in
+  let o = outdated ~verbose ~dump packagelist in
   ()
 
 

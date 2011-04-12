@@ -44,16 +44,20 @@ let test_version =
     "splitting all" >:: (fun _ ->
       let v = "1:1.4-5+b1" in
       let (e,u,r,b) = Version.split v in
-      assert_equal (e,u,r,b) ("1","1.4","5","+b1")
+      assert_equal (e,u,r,b) ("1","1.4","5","b1")
     );
     "normalize all" >:: (fun _ ->
       let v = "1:1.4-5+b1" in
       assert_equal (Version.normalize v) "1.4-5"
     );
+    "concat all" >:: (fun _ ->
+      let v = "1:1.4-5+b1" in
+      assert_equal (Version.concat (Version.split v)) v
+    );
     "splitting partial 1" >:: (fun _ ->
       let v = "1.4-5+b1" in
       let (e,u,r,b) = Version.split v in
-      assert_equal (e,u,r,b) ("","1.4","5","+b1")
+      assert_equal (e,u,r,b) ("","1.4","5","b1")
     );
     "normalize partial 1" >:: (fun _ ->
       let v = "1.4-5+b1" in

@@ -38,6 +38,7 @@ val compare : string -> string -> int
  * (epoch,upstream,revision,binnmu) = split v
  * v = epoch ^ ":" ^ upstream ^ "-" ^ revision ^ binnmu *)
 val split : string -> (string * string * string * string)
+val concat : (string * string * string * string) -> string
 
 (* chop the epoch and binnmu component from a version *)
 val normalize : string -> string

@@ -10,26 +10,6 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-(* binNMU are of the for +b1 ... +bn *)
-(* old binNMUs were of the form version-major.minor.binNMU *)
-(** chops a possible bin-NMU suffix from a debian version string *)
-let chop_binnmu s =
-  let rex = Str.regexp "^\\(.*\\)\\+b[0-9]+$" in
-  try
-    ignore(Str.search_backward rex s (String.length(s)));
-    Str.matched_group 1 s
-  with Not_found -> s
-
-(* *)
-let chop_epoch s =
-  let rex = Str.regexp "^[0-9]+:\\(.*\\)$" in
-  try
-    ignore(Str.search_forward rex s 0);
-    Str.matched_group 1 s
-  with Not_found -> s
-
-let normalize s = chop_epoch (chop_binnmu s)
-
 (** [group_by_source universe] returns a hashtbl that maps
     (source,sourceversion) -> to a packages list *)
 (* the idea is : if the normalized version of the package is equal to
@@ -46,7 +26,7 @@ let cluster packagelist =
      |(n,None) -> (n, pkg.Packages.version)
      |(n,Some v) -> (n,v)
     in
-    let packageversion = normalize pkg.Packages.version in
+    let packageversion = Version.normalize pkg.Packages.version in
 
     try
       let h = Hashtbl.find th (source,sourceversion) in

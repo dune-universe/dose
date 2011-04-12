@@ -57,29 +57,21 @@ let extract_epoch x =
   | Not_found -> ("",x)
 ;;
 
-let extract_revision x =
+let extract_string c x =
   try
-    let di = String.rindex x '-' in
+    let di = String.rindex x c in
     if di < String.length x - 1 then
-      let upstream = String.sub x 0 di
-      and revision = String.sub x (di + 1) (String.length x - di - 1)
-      in
-      (upstream,revision)
+      let before = String.sub x 0 di in
+      let after = String.sub x (di + 1) (String.length x - di - 1) in
+      (before,after)
     else
       (x,"")
   with
   | Not_found -> (x,"")
 ;;
 
-(* binNMU are of the for +b1 ... +bn *)
-(* old binNMUs were of the form version-major.minor.binNMU *)
-(** chops a possible bin-NMU suffix from a debian version string *)
-let extract_binnmu x =
-  let rex = Str.regexp "^\\(.*\\)\\(\\+b[0-9]+\\)$" in
-  try
-    ignore(Str.search_backward rex x (String.length(x)));
-    (Str.matched_group 1 x,Str.matched_group 2 x)
-  with Not_found -> (x,"")
+let extract_revision s = extract_string '-' s
+let extract_binnmu s = extract_string '+' s
 
 let extract_chunks x =
   let (epoch,rest) = extract_epoch x in
@@ -93,12 +85,21 @@ let split x =
   (e,u,r,b)
 ;;
 
-let normalize s =
-  let (e,u,rest) = extract_chunks s in
-  match extract_binnmu rest with
-  |("","") -> u
-  |(x,_) -> Printf.sprintf "%s-%s" u x
+let concat = function
+  |("",u,"","") -> Printf.sprintf "%s" u (* 1.1 *)
+  |("",u,r,"") -> Printf.sprintf "%s-%s" u r (* 1.1-1 *)
+  |("",u,"",b) -> Printf.sprintf "%s+%s" u b (* 1.1+b1 *)
+  |("",u,r,b) -> Printf.sprintf "%s-%s+%s" u r b (* 1.1-1+b1 *)
+  |(e,u,"","") -> Printf.sprintf "%s:%s" e u (* 1:1.1 *)
+  |(e,u,"",b) -> Printf.sprintf "%s:%s+%s" e u b (* 1:1.1+b1 *)
+  |(e,u,r,"") -> Printf.sprintf "%s:%s-%s" e u r (* 1:1.1-1 *)
+  |(e,u,r,b) -> Printf.sprintf "%s:%s-%s+%s" e u r b (* 1:1.1-1+b1 *)
 ;;
+
+let normalize s = 
+  let (e,u,r,b) = split s in
+  concat ("",u,r,"")
+;; 
 
 let ( ** ) x y = if x = 0 then y else x;;
 let ( *** ) x y = if x = 0 then y () else x;;
