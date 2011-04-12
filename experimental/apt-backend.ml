@@ -73,7 +73,7 @@ let exec cmd =
 ;;
 
 let solver_dir = 
-  try Sys.getenv("APTSOLVERS") with Not_found -> "/usr/lib/apt/solvers"
+  try Sys.getenv("CUDFSOLVERS") with Not_found -> "/usr/lib/cudf/solvers"
 
 let main () =
   let timer1 = Util.Timer.create "parsing" in
