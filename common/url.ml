@@ -53,7 +53,7 @@ let scheme_of_string = function
 type url = {
   scheme : input_scheme;
   host   : string option;
-  port   : int option;
+  port   : string option;
   path   : string; (** db name or filename *)
   user   : string option;
   passwd : string option;
@@ -80,7 +80,7 @@ let to_string u =
 	| Some host -> host)^ 
       (match u.port with
 	| None -> ""
-	| Some port -> ":"^(string_of_int port))^
+	| Some port -> ":"^port)^
       "/" ^ u.path ^
       (match u.query with
 	| [] -> ""
@@ -149,8 +149,12 @@ let of_string s =
         (* since it separates the authentication part from the path     *)
 	try String.index_from s start_rest '/'
 	with Not_found ->
-	  error "database scheme needs authentication/path separator" s
+	  error "remote scheme needs authentication/path separator" s
       in
+      (* The first path segment in case of a remote scheme must not be  *)
+      (* empty.                                                         *)
+      if pos_slash=start_rest
+      then error "path of a remote scheme must not start on '/'" s;
       let pos_at_in_auth =
 	(* the position of @ before the first slash, or -1 otherwise    *)
 	try 
@@ -193,9 +197,8 @@ let of_string s =
 	       None
 	     else (* we have a host and a port *)
 	       Some (String.sub s start_host (sep_host_port-start_host)),
-	       Some (int_of_string (String.sub s
-				      (sep_host_port+1)
-				      (pos_slash-sep_host_port-1)))
+	       Some (String.sub s
+		       (sep_host_port+1) (pos_slash-sep_host_port-1))
 	  with Not_found ->
 	    (* no ":" at all: only host, no port *)
 	    Some (String.sub s start_host (pos_slash-start_host)),
@@ -220,4 +223,6 @@ let of_string s =
 	query  = query
       }
 ;;
+
+of_string "pgsql://a/ksdklfjsdklfjl";;
 

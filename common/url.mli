@@ -18,7 +18,7 @@ type input_scheme =
 type url = {
   scheme : input_scheme;
   host   : string option;
-  port   : int option;
+  port   : string option;
   path   : string; (** db name or filename *)
   user   : string option;
   passwd : string option;

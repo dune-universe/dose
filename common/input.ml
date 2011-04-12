@@ -75,15 +75,8 @@ let parse_uri s =
   let user = url.Url.user 
   and pass = url.Url.passwd 
   and host = url.Url.host 
-  and port = match url.Url.port with
-    | None -> None
-    | Some portno -> Some (string_of_int portno)
+  and port = url.Url.port
   and query = try Some (List.assoc "query" url.Url.query) with Not_found -> None in
-  let db =
-    match url.Url.scheme with
-    | Url.Pgsql ->
-        if (Str.string_before url.Url.path 1) = "/" then
-        Str.string_after url.Url.path 1 else url.Url.path
-    |_ -> Printf.sprintf "%s%s" (string_of_opt url.Url.host) url.Url.path
+  let db = Printf.sprintf "%s%s" (string_of_opt url.Url.host) url.Url.path
   in
   (url.Url.scheme,(user,pass,host,port,db),query)
