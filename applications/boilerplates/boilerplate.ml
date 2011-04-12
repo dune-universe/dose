@@ -254,7 +254,7 @@ let rec filter opt_scheme acc uris =
     |(Url.Cudf,_,_) as p, None when tail = [] -> (Url.Cudf,[p])
     |(Url.Cudf,_,_), _ when tail <> [] -> fatal "Only one cudf input allowed"
 
-    |(Url.Deb,(_,_,_,_,"-"),_) as p, None when tail = [] && acc = []-> (Url.Deb,[]) (* stdin *)
+    |(Url.Deb,(_,_,_,_,"-"),_), None when tail = [] && acc = []-> (Url.Deb,[]) (* stdin *)
     |(Url.Deb,(_,_,_,_,"-"),_), _ when tail <> [] || acc <> [] -> fatal "Only one deb stdin input allowed"
 
     |((Url.Pgsql|Url.Sqlite) as dbtype,_,_) as p, None when tail = [] && acc = [] -> (dbtype,[p])
