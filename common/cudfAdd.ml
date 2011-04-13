@@ -12,6 +12,7 @@
 
 module OCAMLHashtbl = Hashtbl
 module OCAMLSet = Set
+
 open ExtLib
 
 let progressbar = Util.Progress.create "CudfAdd.build_maps"
@@ -78,6 +79,7 @@ let is_essential pkg =
   try (Cudf.lookup_package_property pkg "essential") = "yes"
   with Not_found -> false
 
+(*
 (** [pkgnames universe] returns a list of unique package names *)
 let pkgnames universe =
   let h = Hashtbl.create (Cudf.universe_size universe) in
@@ -87,6 +89,14 @@ let pkgnames universe =
       pkg.Cudf.package::acc
     end else acc
   ) [] universe
+*)
+
+module StringSet = OCAMLSet.Make(String)
+
+let pkgnames universe =
+  Cudf.fold_packages (fun names pkg ->
+    StringSet.add pkg.Cudf.package names
+  ) StringSet.empty universe
 
 (** maps one to one cudf packages to integers *)
 class projection = object(self)
@@ -156,6 +166,7 @@ type maps = {
   map : projection
 }
 
+(* constraints set *)
 module CSet =
   OCAMLSet.Make(struct
     type t = (Cudf.package * Cudf_types.version option)

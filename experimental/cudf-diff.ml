@@ -10,18 +10,17 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-module StringSet = Set.Make (String)
 
 open ExtLib
 open Common
 
-module Cudf_set = CudfAdd.Cudf_set
+let debug fmt = Util.make_debug "Cudf-Diff" fmt
+let info fmt = Util.make_info "Cudf-Diff" fmt
+let warning fmt = Util.make_warning "Cudf-Diff" fmt
+let fatal fmt = Util.make_fatal "Cudf-Diff" fmt
 
-type solution = {
-  installed : Cudf_set.t ;
-  removed : Cudf_set.t ;
-  unchanged : Cudf_set.t
-}
+module Cudf_set = CudfAdd.Cudf_set
+module StringSet = CudfAdd.StringSet
 
 module Options = struct
   open OptParse
@@ -31,42 +30,6 @@ module Options = struct
   let options = OptParser.make ~description
   include Boilerplate.MakeOptions(struct let options = options end)
 end
-
-let pkg_names univ =
-  Cudf.fold_packages (fun names pkg ->
-    StringSet.add pkg.Cudf.package names
-  ) StringSet.empty univ
-
-let makeset l = List.fold_right Cudf_set.add l Cudf_set.empty
-
-(* the list of all packages (versions) that were installed before
- * but not now *)
-let removed univ sol pkgname =
-  let were_installed = makeset (Cudf.get_installed univ pkgname) in
-  let are_installed = makeset (Cudf.get_installed sol pkgname) in
-  Cudf_set.diff were_installed are_installed
-
-(* the list of all packages (versions) that were not installed before
- * but are installed now *)
-let installed univ sol pkgname =
-  let were_installed = makeset (Cudf.get_installed univ pkgname) in
-  let are_installed = makeset (Cudf.get_installed sol pkgname) in
-  Cudf_set.diff are_installed were_installed
-
-(* for each pkgname I've the list of all versions that were installed, removed
- * or left unchanged *)
-let diff univ sol =
-  let pkgnames = pkg_names univ in
-  let h = Hashtbl.create (StringSet.cardinal pkgnames) in
-  StringSet.iter (fun pkgname ->
-    let a = makeset (Cudf.lookup_packages univ pkgname) in
-    let r = removed univ sol pkgname in
-    let i = installed univ sol pkgname in
-    let u = Cudf_set.diff a (Cudf_set.union r i) in
-    let s = { removed = r ; installed = i ; unchanged = u } in
-    Hashtbl.add h pkgname s
-  ) pkgnames ;
-  h
 
 let pp_set ~inst fmt s =
   let install pkg = if pkg.Cudf.installed && inst then "*" else "" in
@@ -145,26 +108,31 @@ type t =
 let uniqueversion all s =
   let l = ref [] in
   let i = Cudf_set.filter (fun pkg -> pkg.Cudf.installed) all in
-  if (Cudf_set.cardinal i <= 1) && ((Cudf_set.cardinal s.installed) <= 1) then
+  if (Cudf_set.cardinal i <= 1) && ((Cudf_set.cardinal s.CudfDiff.installed) <= 1) then
     begin
-      if (Cudf_set.cardinal s.installed) = 1 then begin
+      if (Cudf_set.cardinal s.CudfDiff.installed) = 1 then begin
         if (Cudf_set.cardinal i) = 1 then begin
           let np = Cudf_set.choose i in
-          let op = Cudf_set.choose s.installed in
+          let op = Cudf_set.choose s.CudfDiff.installed in
           if np.Cudf.version < op.Cudf.version
-          then l := Up(s.installed)::!l 
-          else l := Dw(s.installed)::!l
+          then l := Up(s.CudfDiff.installed)::!l 
+          else l := Dw(s.CudfDiff.installed)::!l
         end
         else
-          l := In(s.installed)::!l
+          l := In(s.CudfDiff.installed)::!l
       end;
-      if not (Cudf_set.is_empty s.unchanged) then l := Un(s.unchanged)::!l;
-      if not (Cudf_set.is_empty s.removed) then l := Rm(s.removed)::!l ;
+      if not (Cudf_set.is_empty s.CudfDiff.unchanged) then
+        l := Un(s.CudfDiff.unchanged)::!l;
+      if not (Cudf_set.is_empty s.CudfDiff.removed) then 
+        l := Rm(s.CudfDiff.removed)::!l ;
     end
   else begin
-    if not (Cudf_set.is_empty s.unchanged) then l := Un(s.unchanged)::!l;
-    if not (Cudf_set.is_empty s.removed) then l := Rm(s.removed)::!l ;
-    if not (Cudf_set.is_empty s.installed) then l := In(s.installed)::!l ;
+    if not (Cudf_set.is_empty s.CudfDiff.unchanged) then 
+      l := Un(s.CudfDiff.unchanged)::!l;
+    if not (Cudf_set.is_empty s.CudfDiff.removed) then 
+      l := Rm(s.CudfDiff.removed)::!l ;
+    if not (Cudf_set.is_empty s.CudfDiff.installed) then 
+      l := In(s.CudfDiff.installed)::!l ;
   end;
   !l
 ;;
@@ -172,7 +140,7 @@ let uniqueversion all s =
 let unchanged sols all pkgname =
   Array.exists (fun (solname,(filename,h)) ->
     let s = Hashtbl.find h pkgname in
-    not(Cudf_set.equal all s.unchanged)
+    not(Cudf_set.equal all s.CudfDiff.unchanged)
   ) sols
 
 let allequal sols pkgname =
@@ -181,9 +149,9 @@ let allequal sols pkgname =
   Array.exists (fun (solname,(filename,h)) ->
     let s = Hashtbl.find h pkgname in
     not(
-      (Cudf_set.equal s.installed ss.installed) &&
-      (Cudf_set.equal s.removed ss.removed) &&
-      (Cudf_set.equal s.unchanged ss.unchanged)
+      (Cudf_set.equal s.CudfDiff.installed ss.CudfDiff.installed) &&
+      (Cudf_set.equal s.CudfDiff.removed ss.CudfDiff.removed) &&
+      (Cudf_set.equal s.CudfDiff.unchanged ss.CudfDiff.unchanged)
     )
   ) sols
 
@@ -192,7 +160,7 @@ let pp_diff fmt (univ,hl) =
   let a_hl = Array.of_list hl in
   Format.bprintf header.(0) "package names";
   Array.iteri (fun i (solname,_) -> Format.bprintf header.(i+1) "%s" solname) a_hl;
-  let names = pkg_names univ in
+  let names = CudfAdd.pkgnames univ in
   let table = 
     Array.init (StringSet.cardinal names) (fun _ ->
       Array.init ((List.length hl) + 1) (fun _ -> Buffer.create 50)
@@ -200,7 +168,7 @@ let pp_diff fmt (univ,hl) =
   in
   let i = ref 0 in
   StringSet.iter (fun pkgname ->
-    let all = makeset (Cudf.lookup_packages univ pkgname) in
+    let all = CudfAdd.to_set (Cudf.lookup_packages univ pkgname) in
     if allequal a_hl pkgname then begin
       Format.bprintf table.(!i).(0) "%s{%a}" pkgname (pp_set ~inst:true) all;
       for j = 0 to (List.length hl) - 1 do
@@ -262,7 +230,7 @@ let main () =
           else (Printf.eprintf "%s is not a valid solution. Discarded\n" f ; None)
         ) l
       in
-      let sollist = List.map (fun (h,(f,s)) -> (h,(f,diff univ s))) hl in
+      let sollist = List.map (fun (h,(f,s)) -> (h,(f,CudfDiff.diff univ s))) hl in
       let fmt = Format.std_formatter in
       Format.fprintf fmt "@[%a@]@." pp_diff (univ,sollist);
 ;;
