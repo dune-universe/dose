@@ -32,8 +32,8 @@ module Options = struct
   let solver = StdOpt.str_option ()
 
   open OptParser
-  add options ~long_name:"outfile" ~help:"universe output" outfile;
-  add options ~long_name:"solfile" ~help:"solution output" solfile;
+  add options ~long_name:"univfile" ~help:"dump the cudf universe" outfile;
+  add options ~long_name:"solfile" ~help:"dump the cudf solution" solfile;
   add options ~short_name:'s' ~long_name:"solver" ~help:"external solver" solver;
 
 end
@@ -74,9 +74,25 @@ let exec cmd =
 let solver_dir = 
   try Sys.getenv("CUDFSOLVERS") with Not_found -> "/usr/lib/cudf/solvers"
 
-let pp_pkg fmt pkg = 
+let pp_pkg fmt (s,univ) = 
+  let p = CudfAdd.Cudf_set.choose s in
+  let pkg = Hashtbl.find univ (p.Cudf.package,p.Cudf.version) in
+  let apt_id = Debian.Packages.assoc "APT-ID" pkg.Packages.extras in
   Format.fprintf fmt "Package: %s\n" pkg.Packages.name;
-  Format.fprintf fmt "Version: %s\n" pkg.Packages.version
+  Format.fprintf fmt "Version: %s\n" pkg.Packages.version;
+  Format.fprintf fmt "APT-ID: %s\n" apt_id
+;;
+
+(* TODO: the criteria should be computed on the fly w.r.t. strict pinning and
+ * preferences *)
+let choose_criteria request = 
+  let paranoid = "-removed,-changed" in
+  let upgrade = "-notuptodate,-removed,-changed" in
+  let trendy = "-removed,-notuptodate,-unmet_recommends,-new" in
+  if request.Edsp.upgrade || request.Edsp.distupgrade then
+    upgrade
+  else
+    paranoid
 ;;
 
 let main () =
@@ -124,10 +140,13 @@ let main () =
   let cudfpkglist = 
     List.map (fun pkg ->
       let p = Edsp.tocudf tables pkg in
-      Hashtbl.add univ (p.Cudf.package,p.Cudf.version) (p.Cudf.installed,pkg);
+      Hashtbl.add univ (p.Cudf.package,p.Cudf.version) pkg;
       p
     ) pkglist 
   in
+  let universe = Cudf.load_universe cudfpkglist in
+  let cudf_request = make_request request in
+  let cudf = (default_preamble,universe,cudf_request) in
   Util.Timer.stop timer2 ();
   (*
   let oc =
@@ -138,7 +157,7 @@ let main () =
   in
   *)
 
-  (* XXX we should use a named pipe for in and out *)
+  (* XXX we should use a named pipe for in and out i or a tmp file *)
   let infile = "/tmp/cudf_req" in
   let outfile = "/tmp/cudf_sol" in
 
@@ -146,37 +165,37 @@ let main () =
   
   Util.Timer.start timer3;
   let fmt = Format.formatter_of_out_channel oc in
-  Format.fprintf fmt "%a@\n" Cudf_printer.pp_preamble default_preamble;
-  List.iter (Format.fprintf fmt "%a@\n" Cudf_printer.pp_package) cudfpkglist ;
-  Format.fprintf fmt "%a@\n" Cudf_printer.pp_request (make_request request);
+  Format.fprintf fmt "%a" Cudf_printer.pp_cudf cudf;
   if oc <> stdout then close_out oc ;
   Util.Timer.stop timer3 ();
 
-  (* TODO: the criteria should be computed on the fly w.r.t. strict pinning and
-   * preferences *)
   Util.Timer.start timer4;
-  let criteria = "-notuptodate,-removed,-changed" in
+  let criteria = choose_criteria request in
   let cmd = Printf.sprintf "%s %s %s %s" solver infile outfile criteria in
   let debug = exec cmd in
-  (* Printf.eprintf "%s\n%s\n%!" cmd debug; *) 
+  Printf.eprintf "%s\n%s\n%!" cmd debug; 
   Util.Timer.stop timer4 ();
 
   Util.Timer.start timer5;
   let cudf_parser = Cudf_parser.from_file outfile in
   let (_,sol,_) = Cudf_parser.parse cudf_parser in
-  (* List.iter (Format.printf "%a@." Cudf_printer.pp_package) sol; *)
-  List.iter (fun p ->
-    try
-      let (was_inst,pkg) = Hashtbl.find univ (p.Cudf.package,p.Cudf.version) in
-      let apt_id = Debian.Packages.assoc "APT-ID" pkg.Packages.extras in
-      match p.Cudf.installed,was_inst with
-      |true,true | false,false -> ()
-      |true,false -> Format.printf "Install: %s\n%a@." apt_id pp_pkg pkg
-      |false,true -> Format.printf "Remove: %s\n%a@." apt_id pp_pkg pkg
-    with Not_found -> fatal "Conversion error"
-  ) sol;
+  let diff = CudfDiff.diff (Cudf.load_universe cudfpkglist) (Cudf.load_universe sol) in
+  Hashtbl.iter (fun pkgname s ->
+    if CudfAdd.Cudf_set.is_empty s.CudfDiff.unchanged then begin
+      let inst = s.CudfDiff.installed in
+      let rem = s.CudfDiff.removed in
+      match CudfAdd.Cudf_set.is_empty inst, CudfAdd.Cudf_set.is_empty rem with
+      |false,true ->
+          Format.printf "Install: %a@." pp_pkg (inst,univ)
+      |true,false ->
+          Format.printf "Remove: %a@." pp_pkg (rem,univ)
+      |false,false ->
+          Format.printf "Remove: %a@." pp_pkg (rem,univ);
+          Format.printf "Install: %a@." pp_pkg (inst,univ)
+      |true,true -> fatal "soldiff fatal error"
+    end
+  ) diff;
   Util.Timer.stop timer5 ();
-
 ;;
 
 main ();;
