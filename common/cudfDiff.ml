@@ -22,18 +22,25 @@ type solution = {
   unchanged : Cudf_set.t
 }
 
+let to_set univ l =
+  List.fold_left (fun s p ->
+    let q = Cudf.lookup_package univ (p.Cudf.package,p.Cudf.version) in
+    Cudf_set.add q s
+  ) Cudf_set.empty l
+;;
+
 (* the list of all packages (versions) that were installed before
  * but not now *)
 let removed univ sol pkgname =
-  let were_installed = CudfAdd.to_set (Cudf.get_installed univ pkgname) in
-  let are_installed = CudfAdd.to_set (Cudf.get_installed sol pkgname) in
+  let were_installed = to_set univ (Cudf.get_installed univ pkgname) in
+  let are_installed = to_set univ (Cudf.get_installed sol pkgname) in
   Cudf_set.diff were_installed are_installed
 
 (* the list of all packages (versions) that were not installed before
  * but are installed now *)
 let installed univ sol pkgname =
-  let were_installed = CudfAdd.to_set (Cudf.get_installed univ pkgname) in
-  let are_installed = CudfAdd.to_set (Cudf.get_installed sol pkgname) in
+  let were_installed = to_set univ (Cudf.get_installed univ pkgname) in
+  let are_installed = to_set univ (Cudf.get_installed sol pkgname) in
   Cudf_set.diff are_installed were_installed
 
 (* for each pkgname I've the list of all versions that were installed, removed

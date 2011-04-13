@@ -145,10 +145,8 @@ let align version target =
   |("",_,_,_) -> target
   |(pe,_,_,_) ->
     let rebase v =
-      match Version.split v with
-      |(_,u,"","") -> Printf.sprintf "%s:%s" pe u
-      |(_,u,r,"")  -> Printf.sprintf "%s:%s-%s" pe u r
-      |(_,u,r,b)   -> Printf.sprintf "%s:%s-%s%s" pe u r b
+      let (_,u,r,b) = Version.split v in
+      Version.concat (pe,u,r,b)
     in
     match target with
     |`Eq v -> `Eq (rebase v)

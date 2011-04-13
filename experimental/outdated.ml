@@ -144,12 +144,17 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
   let pkglist = 
     Hashtbl.fold (fun cluster (constr,sn,version) acc ->
       (* let sync x y = if List.length cluster > 1 then sync x y else y in *)
+      (*
       Printf.eprintf "cluster: %s %s\n" sn version;
       Printf.eprintf "size: %d\n" (List.length cluster);
+      *)
       let l = 
         List.fold_left (fun acc pkg ->
           let pn = pkg.Debian.Packages.name in
           let p = Debian.Debcudf.tocudf tables pkg in
+            Printf.eprintf "package: %s\n" pn;
+            Printf.eprintf "version: %s\n" version;
+
           List.fold_left (fun acc (target,equiv) ->
             List.fold_left (fun acc target ->
               let newv =
@@ -159,16 +164,16 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
                 |`Lo v |`In (_,v) -> (getv (pn,v)) - 1
               in
               let number = Debian.Evolution.string_of_range target in
+              Printf.eprintf "target: %s\n" number;
               assert (version <> "");
               assert (newv <> p.Cudf.version);
               if Hashtbl.mem duplicates (pn,newv) then
-                Printf.eprintf "duplicate\n";
+                fatal "duplicate";
 
               if not(Hashtbl.mem duplicates (pn,newv)) then begin
                 Hashtbl.add duplicates (pn,newv) (); 
                 (sync (sn,version) (dummy p number newv))::acc
               end else acc
-
             ) acc (target::equiv)
           ) ((sync (sn,version) p)::acc) constr
         ) [] cluster

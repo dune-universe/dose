@@ -195,18 +195,6 @@ let parse_cudf doc =
     fatal "Error while loading CUDF from %s: %s" doc (Printexc.to_string exn)
   end
 
-(*
-let load_cudf_ch ch =
-  try
-    let p = Cudf_parser.from_IO_in_channel ch in
-    Cudf_parser.load p
-  with
-  |Cudf_parser.Parse_error _
-  |Cudf.Constraint_violation _ as exn -> begin
-    fatal "Error while loading CUDF: %s" (Printexc.to_string exn)
-  end
-*)
-
 (** parse a cudf file and return a triple (preamble,universe,request option).
     If the package is not valid fails and exit *)
 let load_cudf doc = 
@@ -221,7 +209,6 @@ let load_cudf doc =
       fatal "Error while loading CUDF file %s:\n%s" doc (Printexc.to_string exn)
     end 
   in
-  (* let l = load_cudf_ch ch in *)
   Input.close_ch ch;
   l
 ;;

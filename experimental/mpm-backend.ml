@@ -30,6 +30,7 @@ module Options = struct
   let merge = StdOpt.store_true ()
   let convert = StdOpt.store_true ()
   let check = StdOpt.store_true ()
+  let diff = StdOpt.store_true ()
 
   open OptParser
   add options ~short_name:'o' ~long_name:"outfile"
@@ -46,6 +47,9 @@ module Options = struct
 
   add options ~long_name:"check"
   ~help:"check if a cudf file is a solution for a cudf request" check;
+
+  add options ~long_name:"diff"
+  ~help:"convert the solution for mpm. Args: univ sol" diff;
 
 end
 
@@ -134,6 +138,43 @@ let convert (posargs,outfile,default_arch) =
   close_out oc;
 ;;
 
+let pp_pkg fmt s =
+  let p = CudfAdd.Cudf_set.choose s in
+  Format.fprintf fmt "Package: %s\n" p.Cudf.package;
+  Format.fprintf fmt "Version: %a\n" CudfAdd.pp_version p;
+  try
+    let arch = Cudf.lookup_package_property p "architecture" in 
+    Format.fprintf fmt "Architecture: %s\n" arch
+  with Not_found -> ()
+;;
+  
+let solution posargs =
+  let (sol,univ) =
+    match posargs with
+    |[c;s] ->
+        let (_,sol,_) = Boilerplate.load_cudf s in
+        let (_,univ,_) = Boilerplate.load_cudf c in
+        (sol,univ)
+    |_ -> fatal "You must specify a cudf universe a cudf solution"
+  in
+  let diff = CudfDiff.diff univ sol in
+  Hashtbl.iter (fun pkgname s ->
+    if CudfAdd.Cudf_set.is_empty s.CudfDiff.unchanged then begin
+      let inst = s.CudfDiff.installed in
+      let rem = s.CudfDiff.removed in
+      match CudfAdd.Cudf_set.is_empty inst, CudfAdd.Cudf_set.is_empty rem with
+      |false,true ->
+          Format.printf "Install:\n%a@." pp_pkg inst
+      |true,false ->
+          Format.printf "Remove:\n%a@." pp_pkg rem
+      |false,false ->
+          Format.printf "Remove:\n%a@." pp_pkg rem;
+          Format.printf "Install:\n%a@." pp_pkg inst
+      |true,true -> fatal "soldiff fatal error"
+    end
+  ) diff
+;;
+
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
@@ -155,6 +196,8 @@ let main () =
     convert (posargs,outfile,default_arch)
   else if OptParse.Opt.get Options.check then
     check posargs
+  else if OptParse.Opt.get Options.diff then
+    solution posargs
   else
     fatal "you must specify at least one of --merge --convert or --check"
 ;;
