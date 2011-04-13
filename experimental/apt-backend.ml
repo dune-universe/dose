@@ -49,7 +49,6 @@ let make_request request =
   }
 ;;
 
-
 let rec input_all_lines acc chan =
   try input_all_lines ((input_line chan)::acc) chan
   with End_of_file -> acc
@@ -63,17 +62,22 @@ let exec cmd =
   begin match stat with
     |Unix.WEXITED 0 -> ()
     |Unix.WEXITED i ->
-        fatal "command '%s'\nfailed with code %d\n" cmd i
+        info "command '%s'\nfailed with code %d" cmd i
     |Unix.WSIGNALED i ->
-        fatal "command '%s'\nkilled by signal %d\n" cmd i 
+        info "command '%s'\nkilled by signal %d" cmd i 
     |Unix.WSTOPPED i ->
-        fatal "command '%s'\nstopped by signal %d" cmd i
+        info "command '%s'\nstopped by signal %d" cmd i
   end;
   String.concat "\n" lines
 ;;
 
 let solver_dir = 
   try Sys.getenv("CUDFSOLVERS") with Not_found -> "/usr/lib/cudf/solvers"
+
+let pp_pkg fmt pkg = 
+  Format.fprintf fmt "Package: %s\n" pkg.Packages.name;
+  Format.fprintf fmt "Version: %s\n" pkg.Packages.version
+;;
 
 let main () =
   let timer1 = Util.Timer.create "parsing" in
@@ -154,7 +158,7 @@ let main () =
   let criteria = "-notuptodate,-removed,-changed" in
   let cmd = Printf.sprintf "%s %s %s %s" solver infile outfile criteria in
   let debug = exec cmd in
-  Printf.eprintf "%s\n%s\n%!" cmd debug; 
+  (* Printf.eprintf "%s\n%s\n%!" cmd debug; *) 
   Util.Timer.stop timer4 ();
 
   Util.Timer.start timer5;
@@ -164,11 +168,11 @@ let main () =
   List.iter (fun p ->
     try
       let (was_inst,pkg) = Hashtbl.find univ (p.Cudf.package,p.Cudf.version) in
-      let apt_id = List.assoc "APT-ID" pkg.Packages.extras in
+      let apt_id = Debian.Packages.assoc "APT-ID" pkg.Packages.extras in
       match p.Cudf.installed,was_inst with
       |true,true | false,false -> ()
-      |true,false -> Format.printf "Install: %s@." apt_id
-      |false,true -> Format.printf "Remove: %s@." apt_id
+      |true,false -> Format.printf "Install: %s\n%a@." apt_id pp_pkg pkg
+      |false,true -> Format.printf "Remove: %s\n%a@." apt_id pp_pkg pkg
     with Not_found -> fatal "Conversion error"
   ) sol;
   Util.Timer.stop timer5 ();
