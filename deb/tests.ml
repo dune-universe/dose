@@ -81,6 +81,15 @@ let test_version =
       let v = "0" in
       assert_equal (Version.normalize v) "0"
     );
+    "splitting partial 4" >:: (fun _ ->
+      let v = "1.1+b6" in
+      let (e,u,r,b) = Version.split v in
+      assert_equal (e,u,r,b) ("","1.1","","b6")
+    );
+    "normalize partial 4" >:: (fun _ ->
+      let v = "1.1+b6" in
+      assert_equal (Version.normalize v) "1.1"
+    );
   ]
 ;;
 
@@ -148,6 +157,19 @@ let test_evolution =
       (* List.iter (fun (c,v) -> Printf.printf "(%s %s)\n" (string_of_relop c) v ) constr;
        * *)
       assert_equal [(`Eq,"4");(`Lt,"3")] constr
+    );
+    "constraints hack" >:: (fun _ ->
+      let constr = Hashtbl.find constraints_table "hh" in
+      (* List.iter (fun (c,v) -> Printf.printf "(%s %s)\n" (string_of_relop c) v ) constr;
+       *)
+      assert_equal [(`Eq,"")] constr
+    );
+    "constraints empty" >:: (fun _ ->
+      let constr = Evolution.all_constraints constraints_table "hh" in
+      (*
+      List.iter (fun (c,v) -> Printf.printf "(%s %s)\n" (string_of_relop c) v ) constr;
+      *)
+      assert_equal [] constr
     );
     "versions" >:: (fun _ ->
       let vl = Evolution.all_versions [(`Gt,"3"); (`Eq,"3"); (`Lt,"4")] in

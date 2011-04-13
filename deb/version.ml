@@ -73,16 +73,11 @@ let extract_string c x =
 let extract_revision s = extract_string '-' s
 let extract_binnmu s = extract_string '+' s
 
-let extract_chunks x =
-  let (epoch,rest) = extract_epoch x in
+let split s =
+  let (epoch,rest) = extract_epoch s in
+  let (rest,binnmu) = extract_binnmu rest in
   let (upstream,revision) = extract_revision rest in
-  (epoch,upstream,revision)
-;;
-
-let split x =
-  let (e,u,rest) = extract_chunks x in
-  let (r,b) = extract_binnmu rest in
-  (e,u,r,b)
+  (epoch,upstream,revision,binnmu)
 ;;
 
 let concat = function
@@ -199,12 +194,14 @@ let rec compare_chunks x y =
 ;;
 
 let compare x1 x2 =
-  let (e1,u1,r1) = extract_chunks x1
-  and (e2,u2,r2) = extract_chunks x2
+  let (e1,u1,r1,b1) = split x1
+  and (e2,u2,r2,b2) = split x2
   in
   (compare_numeric_decimal e1 e2) ***
     (fun () -> (compare_chunks u1 u2) ***
-      (fun () -> compare_chunks r1 r2))
+      (fun () -> (compare_chunks r1 r2) ***
+        (fun () -> (compare_chunks b1 b2)))
+    )
 ;;
 
 let compare (x : string) (y : string) =

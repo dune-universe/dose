@@ -88,7 +88,9 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
   (* for each cluste, I associate to it its discriminants,
    * cluster name and binary version *)
   Hashtbl.iter (fun (sn,sv) l ->
+    Printf.eprintf "sn:%s sv:%s\n" sn sv;
     List.iter (fun (version,cluster) ->
+    Printf.eprintf "bin ver:%s\n len:%d\n\n" version (List.length cluster);
       let filter =
         let a = Debian.Version.normalize version in
         fun target ->
@@ -141,7 +143,9 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
   let getv = Debian.Debcudf.get_cudf_version tables in
   let pkglist = 
     Hashtbl.fold (fun cluster (constr,sn,version) acc ->
-      let sync x y = if List.length cluster > 1 then sync x y else y in
+      (* let sync x y = if List.length cluster > 1 then sync x y else y in *)
+      Printf.eprintf "cluster: %s %s\n" sn version;
+      Printf.eprintf "size: %d\n" (List.length cluster);
       let l = 
         List.fold_left (fun acc pkg ->
           let pn = pkg.Debian.Packages.name in

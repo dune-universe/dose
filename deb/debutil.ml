@@ -20,23 +20,21 @@
 let cluster packagelist =
   let th = Hashtbl.create (List.length packagelist) in
   List.iter (fun pkg ->
-    let (source, sourceversion) =
-     match pkg.Packages.source with
-     |("",None) -> (pkg.Packages.name, pkg.Packages.version)
-     |(n,None) -> (n, pkg.Packages.version)
-     |(n,Some v) -> (n,v)
-    in
     let packageversion = Version.normalize pkg.Packages.version in
-
+    let (source, sourceversion) =
+      match pkg.Packages.source with
+      |("",None) -> (pkg.Packages.name, packageversion)
+      |(n,None) -> (n, packageversion)
+      |(n,Some v) -> (n,v)
+    in
     try
       let h = Hashtbl.find th (source,sourceversion) in
-      try
-        let l = Hashtbl.find h packageversion in
-        l := pkg :: !l
-      with Not_found -> begin (* found the source, but not the package version *)
+      try let l = Hashtbl.find h packageversion in l := pkg :: !l
+      with Not_found -> 
+        (* found the source, but not the package version *)
         Hashtbl.add h packageversion (ref[pkg])
-      end
-    with Not_found -> begin (* didn't found the source *)
+    with Not_found -> begin 
+      (* didn't found the source *)
       let h = Hashtbl.create 17 in
       Hashtbl.add h packageversion (ref[pkg]);
       Hashtbl.add th (source,sourceversion) h
