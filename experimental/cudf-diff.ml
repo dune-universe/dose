@@ -10,7 +10,6 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-
 open ExtLib
 open Common
 
@@ -98,45 +97,6 @@ let pp_tables pp_row fmt (header,table) =
   Format.pp_close_tbox fmt ();
 ;;
 
-type t =
-  |Un of Cudf_set.t (* unchanged *)
-  |Rm of Cudf_set.t (* removed *)
-  |In of Cudf_set.t (* installed *)
-  |Up of Cudf_set.t (* upgraded *)
-  |Dw of Cudf_set.t (* downgraded *)
-
-let uniqueversion all s =
-  let l = ref [] in
-  let i = Cudf_set.filter (fun pkg -> pkg.Cudf.installed) all in
-  if (Cudf_set.cardinal i <= 1) && ((Cudf_set.cardinal s.CudfDiff.installed) <= 1) then
-    begin
-      if (Cudf_set.cardinal s.CudfDiff.installed) = 1 then begin
-        if (Cudf_set.cardinal i) = 1 then begin
-          let np = Cudf_set.choose i in
-          let op = Cudf_set.choose s.CudfDiff.installed in
-          if np.Cudf.version < op.Cudf.version
-          then l := Up(s.CudfDiff.installed)::!l 
-          else l := Dw(s.CudfDiff.installed)::!l
-        end
-        else
-          l := In(s.CudfDiff.installed)::!l
-      end;
-      if not (Cudf_set.is_empty s.CudfDiff.unchanged) then
-        l := Un(s.CudfDiff.unchanged)::!l;
-      if not (Cudf_set.is_empty s.CudfDiff.removed) then 
-        l := Rm(s.CudfDiff.removed)::!l ;
-    end
-  else begin
-    if not (Cudf_set.is_empty s.CudfDiff.unchanged) then 
-      l := Un(s.CudfDiff.unchanged)::!l;
-    if not (Cudf_set.is_empty s.CudfDiff.removed) then 
-      l := Rm(s.CudfDiff.removed)::!l ;
-    if not (Cudf_set.is_empty s.CudfDiff.installed) then 
-      l := In(s.CudfDiff.installed)::!l ;
-  end;
-  !l
-;;
-
 let unchanged sols all pkgname =
   Array.exists (fun (solname,(filename,h)) ->
     let s = Hashtbl.find h pkgname in
@@ -175,13 +135,13 @@ let pp_diff fmt (univ,hl) =
         let (solname,(filename,h)) = a_hl.(j) in
         let s = Hashtbl.find h pkgname in
         let pp_elem fmt = function
-          |In s -> Format.fprintf fmt "In{%a}" (pp_set ~inst:true) s
-          |Un s -> Format.fprintf fmt "Un{%a}" (pp_set ~inst:true) s
-          |Rm s -> Format.fprintf fmt "Rm{%a}" (pp_set ~inst:false) s
-          |Dw s -> Format.fprintf fmt "Dw{%a}" (pp_set ~inst:true) s
-          |Up s -> Format.fprintf fmt "Up{%a}" (pp_set ~inst:true) s
+          |CudfDiff.In s -> Format.fprintf fmt "In{%a}" (pp_set ~inst:true) s
+          |CudfDiff.Un s -> Format.fprintf fmt "Un{%a}" (pp_set ~inst:true) s
+          |CudfDiff.Rm s -> Format.fprintf fmt "Rm{%a}" (pp_set ~inst:false) s
+          |CudfDiff.Dw s -> Format.fprintf fmt "Dw{%a}" (pp_set ~inst:true) s
+          |CudfDiff.Up s -> Format.fprintf fmt "Up{%a}" (pp_set ~inst:true) s
         in
-        let l = uniqueversion all s in
+        let l = CudfDiff.uniqueversion all s in
         Format.bprintf (table.(!i).(j+1)) "@[<h>%a@]" (pp_list ~sep:"," pp_elem) l  
       done;
     end;
