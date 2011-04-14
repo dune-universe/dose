@@ -138,16 +138,6 @@ let convert (posargs,outfile,default_arch) =
   close_out oc;
 ;;
 
-let pp_pkg fmt s =
-  let p = CudfAdd.Cudf_set.choose s in
-  Format.fprintf fmt "Package: %s\n" p.Cudf.package;
-  Format.fprintf fmt "Version: %a\n" CudfAdd.pp_version p;
-  try
-    let arch = Cudf.lookup_package_property p "architecture" in 
-    Format.fprintf fmt "Architecture: %s\n" arch
-  with Not_found -> ()
-;;
-  
 let solution posargs =
   let (sol,univ) =
     match posargs with
@@ -158,21 +148,26 @@ let solution posargs =
     |_ -> fatal "You must specify a cudf universe a cudf solution"
   in
   let diff = CudfDiff.diff univ sol in
+  let pp fmt s =
+    let p = CudfAdd.Cudf_set.choose s in
+    Format.fprintf fmt "%s=%a" p.Cudf.package CudfAdd.pp_version p
+  in
   Hashtbl.iter (fun pkgname s ->
     if CudfAdd.Cudf_set.is_empty s.CudfDiff.unchanged then begin
       let inst = s.CudfDiff.installed in
       let rem = s.CudfDiff.removed in
       match CudfAdd.Cudf_set.is_empty inst, CudfAdd.Cudf_set.is_empty rem with
       |false,true ->
-          Format.printf "Install:\n%a@." pp_pkg inst
+          Format.printf "+%a " pp inst
       |true,false ->
-          Format.printf "Remove:\n%a@." pp_pkg rem
+          Format.printf "-%a " pp rem
       |false,false ->
-          Format.printf "Remove:\n%a@." pp_pkg rem;
-          Format.printf "Install:\n%a@." pp_pkg inst
+          Format.printf "-%a " pp rem;
+          Format.printf "+%a " pp inst
       |true,true -> fatal "soldiff fatal error"
     end
-  ) diff
+  ) diff;
+  Format.printf "@."
 ;;
 
 let main () =
