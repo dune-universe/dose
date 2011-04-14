@@ -275,6 +275,7 @@ AC_SUBST(LDFLAGS)
 
 AC_CONFIG_FILES([
   Makefile.config
+  experimental/Makefile
   META
   db/db.mlpack
   db/_tags
