@@ -5,4 +5,3 @@
 <eclipse>: include
 @INCLUDE_RPM@
 @INCLUDE_CUDF@
-<pkglab.top>: use_unix, use_str, pkg_extlib, pkg_pcre, @PKG_ZIP@, @PKG_BZ2@, c_use_rpm
