@@ -87,6 +87,7 @@ let _ = dispatch begin function
 
        List.iter begin fun (lib,dir,libs) ->
          List.iter begin fun l ->
+				 	 flag ["ocaml"; "link"; "c_use_"^lib; "mktop"] & S[A"-custom"; A"-cclib"; A("-l"^l); A"-cclib"; A(dir ^ "/lib" ^ lib ^ "_stubs.a")];
            flag ["ocaml"; "link"; "c_use_"^lib; "byte"] & S[A"-custom"; A"-cclib"; A("-l"^l)];
            flag ["ocaml"; "link"; "c_use_"^lib; "native"] & S[A"-cclib"; A("-l"^l); A"-ccopt"; A(env_var "LDFLAGS")];
          end libs ;
