@@ -5,6 +5,7 @@ libcudf/Cudf_conf
 libcudf/Cudf_822_parser
 libcudf/Cudf_822_lexer
 libcudf/Cudf_parser
+libcudf/Cudf_checker
 libcudf/Cudf_type_parser
 libcudf/Cudf_type_lexer
 libcudf/Cudf_types
@@ -13,4 +14,5 @@ libcudf/Cudf
 common/Url
 common/Common
 applications/boilerplates/Boilerplate
+algo/Algo
 experimental/Pkglab
