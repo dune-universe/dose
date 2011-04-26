@@ -400,7 +400,7 @@ let build_bdd g =
 
 let buddy_check solver mdf cg a p ll =
   let size = List.length ll in
-  let dcl = Depsolver_int.dependency_closure ~conjuntive:true mdf [p] in 
+  let dcl = Depsolver_int.dependency_closure ~conjunctive:true mdf [p] in 
   if List.exists (not_buddy a mdf) dcl then false else
   let dcl = Strongdeps_int.stronglist (Strongdeps_int.strongdeps mdf [p]) p in
   if List.exists (not_buddy a mdf) dcl then false else 

@@ -108,7 +108,7 @@ let test_dependency_closure =
 let test_conjunctive_dependency_closure =
   "conjunctive dependency closure" >:: (fun _ ->
     List.iter (fun pkg ->
-      let dcl = Depsolver.dependency_closure ~conjuntive:true universe [pkg] in
+      let dcl = Depsolver.dependency_closure ~conjunctive:true universe [pkg] in
 (*      print_endline (CudfAdd.print_package pkg);
       List.iter (fun pkg -> print_endline (CudfAdd.print_package pkg)) dcl;
       print_newline (); *)

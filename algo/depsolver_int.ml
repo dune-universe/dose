@@ -248,17 +248,17 @@ let reverse_dependencies mdf =
     all packages in [l] .
 
     @param maxdepth the maximum cone depth (infinite by default)
-    @param conjuntive consider only conjuntive dependencies (false by default)
+    @param conjunctive consider only conjunctive dependencies (false by default)
     @param index the package universe
     @param l a subset of [index]
 
     This function has in a memoization strategy.
 *)
-let dependency_closure ?(maxdepth=max_int) ?(conjuntive=false) mdf =
+let dependency_closure ?(maxdepth=max_int) ?(conjunctive=false) mdf =
   let h = Hashtbl.create (Array.length mdf.Mdf.index) in
   let cmp : int -> int -> bool = (=) in
   fun idlist ->
-    try Hashtbl.find h (idlist,conjuntive,maxdepth)
+    try Hashtbl.find h (idlist,conjunctive,maxdepth)
     with Not_found -> begin
       let index = mdf.Mdf.index in
       let queue = Queue.create () in
@@ -269,10 +269,10 @@ let dependency_closure ?(maxdepth=max_int) ?(conjuntive=false) mdf =
         if not(Hashtbl.mem visited id) && level < maxdepth then begin
           Hashtbl.add visited id ();
           List.iter (function
-            |(_,[i],_) when conjuntive = true ->
+            |(_,[i],_) when conjunctive = true ->
               if not(Hashtbl.mem visited i) then
                 Queue.add (i,level+1) queue
-            |(_,dsj,_) when conjuntive = false ->
+            |(_,dsj,_) when conjunctive = false ->
               List.iter (fun i ->
                 if not(Hashtbl.mem visited i) then
                   Queue.add (i,level+1) queue
@@ -282,7 +282,7 @@ let dependency_closure ?(maxdepth=max_int) ?(conjuntive=false) mdf =
         end
       done;
       let result = Hashtbl.fold (fun k _ l -> k::l) visited [] in
-      Hashtbl.add h (idlist,conjuntive,maxdepth) result;
+      Hashtbl.add h (idlist,conjunctive,maxdepth) result;
       result
     end
 

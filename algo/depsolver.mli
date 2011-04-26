@@ -54,7 +54,7 @@ val listcheck : ?callback:(Diagnostic.diagnosis -> unit) ->
 (** [dependency_closure universe l] compute the dependencies closure 
     of the give package list.
     Invariant : l must be a subset of universe *)
-val dependency_closure : ?maxdepth:int -> ?conjuntive:bool ->
+val dependency_closure : ?maxdepth:int -> ?conjunctive:bool ->
   Cudf.universe -> Cudf.package list -> Cudf.package list
 
 (** [reverse_dependencies univ l] compute the reverse dependency list of all

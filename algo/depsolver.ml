@@ -117,11 +117,11 @@ let trim universe =
   ignore (univcheck ~callback universe);
   Cudf.load_universe !trimmed_pkgs
 
-let dependency_closure ?maxdepth ?conjuntive universe pkglist =
+let dependency_closure ?maxdepth ?conjunctive universe pkglist =
   let mdf = Mdf.load_from_universe universe in
   let maps = mdf.Mdf.maps in
   let idlist = List.map maps.map#vartoint pkglist in
-  let closure = Depsolver_int.dependency_closure ?maxdepth ?conjuntive mdf idlist in
+  let closure = Depsolver_int.dependency_closure ?maxdepth ?conjunctive mdf idlist in
   List.map maps.map#inttovar closure
 
 let reverse_dependencies universe =
