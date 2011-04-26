@@ -5446,7 +5446,7 @@ done
 
   INCLUDE_RPM="<rpm>: include"
   CONFIG_RPM="-DHASRPM"
-  LINK_RPM="<*.native>: c_use_rpm"
+  LINK_RPM="<*.native> or <*.top>: c_use_rpm"
 fi
 
 
@@ -5882,7 +5882,7 @@ fi
 
 
 
-ac_config_files="$ac_config_files Makefile.config experimental/Makefile META db/db.mlpack db/_tags algo/_tags rpm/_tags deb/_tags eclipse/_tags algo/algo.mlpack common/_tags applications/_tags applications/boilerplates/_tags common/versionInfo.ml doc/manpages/buildcheck.1 doc/manpages/ceve.1 doc/manpages/distcheck.1 _tags"
+ac_config_files="$ac_config_files Makefile.config experimental/Makefile META db/db.mlpack db/_tags algo/_tags rpm/_tags deb/_tags eclipse/_tags algo/algo.mlpack common/_tags applications/_tags experimental/_tags applications/boilerplates/_tags common/versionInfo.ml doc/manpages/buildcheck.1 doc/manpages/ceve.1 doc/manpages/distcheck.1 _tags"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6613,6 +6613,7 @@ do
     "algo/algo.mlpack") CONFIG_FILES="$CONFIG_FILES algo/algo.mlpack" ;;
     "common/_tags") CONFIG_FILES="$CONFIG_FILES common/_tags" ;;
     "applications/_tags") CONFIG_FILES="$CONFIG_FILES applications/_tags" ;;
+    "experimental/_tags") CONFIG_FILES="$CONFIG_FILES experimental/_tags" ;;
     "applications/boilerplates/_tags") CONFIG_FILES="$CONFIG_FILES applications/boilerplates/_tags" ;;
     "common/versionInfo.ml") CONFIG_FILES="$CONFIG_FILES common/versionInfo.ml" ;;
     "doc/manpages/buildcheck.1") CONFIG_FILES="$CONFIG_FILES doc/manpages/buildcheck.1" ;;
