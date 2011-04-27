@@ -27,57 +27,25 @@ let string_of_range = function
   |`In (v1,v2) -> Printf.sprintf "%s < . < %s" v1 v2
 ;;
 
-(* evaluates a constraint w.r.t. a range version *)
-let evalsel compare (target,constr) =
-  match target with
-  |`Hi v ->
-      begin match constr with
-      |(`Gt,w) -> compare v w > 1
-      |_ -> false end
-  |`Lo v ->
-      begin match constr with
-      |(`Lt,w) -> compare v w < 1
-      |_ -> false end
-  |`Eq v ->
-      begin match constr with
-      |(`Eq,"") -> assert false
-      |(`Eq,w) -> compare v w = 0
-      |_ -> false end
-  |`In (v1,v2) ->
-      begin match constr with
-      |(`Eq,"") -> assert false
-      |(`Eq,w) -> (compare v1 w > 1) && (compare v2 w < 1)
-      |((`Gt|`Geq),w) ->
-          (compare v1 w = 0) || (compare v1 w > 1) && (compare v2 w < 1) 
-      |((`Lt|`Leq),w) ->
-          (compare v2 w = 0) || (compare v1 w > 1) && (compare v2 w < 1) 
-      |_ -> false 
-      end
-;;
-
 (* returns a list of ranges w.r.t. the list of versions vl *)
 (* the range is a [ ... [ kind of interval *)
-let range ?(downgrade=false) vl =
+let range ?(bottom=false) vl =
   let l = List.sort ~cmp:(fun v1 v2 -> Version.compare v2 v1) vl in
   let rec aux acc = function
     |(None,[]) -> acc
     |(None,a::t) -> aux ((`Hi a)::acc) (Some a,t)
     |(Some b,a::t) -> aux ((`In (a,b))::(`Eq b)::acc) (Some a,t)
-    |(Some b,[]) when downgrade = false -> (`Eq b)::acc 
+    |(Some b,[]) when bottom = false -> (`Eq b)::acc 
     |(Some b,[]) -> (`Lo b)::(`Eq b)::acc 
   in
   aux [] (None,l)
 ;;
 
-let discriminant ?(downgrade=false) vl constraints =
+let discriminant ?(bottom=false) evalsel vl constraints =
   let eval_constr = Hashtbl.create 17 in
   let constr_eval = Hashtbl.create 17 in
   List.iter (fun target ->
-    let eval =
-      List.map (fun constr -> 
-        evalsel Version.compare (target,constr)
-      ) constraints 
-    in
+    let eval = List.map (evalsel target) constraints in
     try
       let v_rep = Hashtbl.find eval_constr eval in
       let l = Hashtbl.find constr_eval v_rep in
@@ -86,7 +54,7 @@ let discriminant ?(downgrade=false) vl constraints =
       Hashtbl.add eval_constr eval target;
       Hashtbl.add constr_eval target []
     end
-  ) (range ~downgrade vl) ;
+  ) (range ~bottom vl) ;
   (Hashtbl.fold (fun k v acc -> (k,v)::acc) constr_eval [])
 ;;
 
@@ -105,8 +73,8 @@ let add_unique h k v =
 let conj_iter t l =
   List.iter (fun (name,sel) ->
     match CudfAdd.cudfop sel with
-    |None -> add_unique t name (`Eq,"")
-    |Some(c,v) -> add_unique t name (c,v)
+    |None -> add_unique t name None
+    |Some(c,v) -> add_unique t name (Some(c,v))
   ) l
 let cnf_iter t ll = List.iter (conj_iter t) ll
 
@@ -114,7 +82,6 @@ let cnf_iter t ll = List.iter (conj_iter t) ll
     and an ordered list of constraints where the package name is
     mentioned *)
 let constraints packagelist =
-  (* let id x = x in *)
   let constraints_table = Hashtbl.create (List.length packagelist) in
   List.iter (fun pkg ->
     conj_iter constraints_table pkg.Packages.conflicts ;
@@ -124,8 +91,13 @@ let constraints packagelist =
   ;
   let h = Hashtbl.create (List.length packagelist) in
   let elements hv =
-    List.sort ~cmp:(fun (_,v1) (_,v2) -> Version.compare v2 v1) (
-      Hashtbl.fold (fun k v acc -> k::acc) hv []
+    let cmp (_,v1) (_,v2) = Version.compare v2 v1 in
+    List.sort ~cmp (
+      Hashtbl.fold (fun k _ acc ->
+        match k with
+        |None -> acc 
+        |Some k -> k::acc
+      ) hv []
     )
   in
   Hashtbl.iter (fun n hv -> Hashtbl.add h n (elements hv)) constraints_table;
@@ -133,9 +105,7 @@ let constraints packagelist =
 ;;
 
 let all_constraints table pkgname =
-  try List.filter_map (function 
-    |(`Eq,"") -> None (* HACK !!!! XXX XXX *)
-    |c -> Some c) (Hashtbl.find table pkgname)
+  try (Hashtbl.find table pkgname)
   with Not_found -> []
 ;;
 
@@ -157,22 +127,6 @@ let align version target =
 
 (* all versions mentioned in a list of constraints *)
 let all_versions constr = Util.list_unique (List.map (snd) constr) ;;
-
-(* downgrade establish the upgrade treshold from which the discriminant should
- * be considered as an upgrade *) 
-let discriminants ?filter constraints_table cluster =
-  Util.list_unique (
-    List.fold_left (fun l pkg ->
-      let constr = all_constraints constraints_table pkg.Packages.name in
-      let versionlist = 
-        let l = all_versions constr in
-        if Option.is_none filter then l
-        else List.filter (Option.get filter) l 
-      in
-      (discriminant versionlist constr) @ l
-    ) [] cluster
-  )
-;;
 
 let migrate packagelist target =
   List.map (fun pkg -> ((pkg,target),(align pkg.Packages.version target))) packagelist

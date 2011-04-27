@@ -52,15 +52,8 @@ module Options = struct
 
 end
 
-let rec get_versions acc = function
-  |[] -> acc
-  |(`Hi v|`Lo v|`Eq v)::t -> get_versions (v::acc) t
-  |(`In (v1,v2))::t -> get_versions (v1::v2::acc) t
-;;
-
-let sync (sn,sv) p =
+let sync (sn,sv,v) p =
   let cn = "src/"^sn^"/"^sv in
-  let v = p.Cudf.version in
   {p with
     Cudf.provides = (cn, Some (`Eq, v))::p.Cudf.provides;
     Cudf.conflicts = (cn, Some (`Neq, v))::p.Cudf.conflicts;
@@ -75,6 +68,46 @@ let dummy pkg number version =
    provides = pkg.Cudf.provides;
    pkg_extra = [("number",`String number)]
   }
+;;
+
+let extract_epochs vl =
+  List.unique (
+    List.fold_left (fun acc v ->
+      let (e,_,_,_) = Debian.Version.split v in
+      e :: acc
+    ) [] vl
+  )
+
+let add_epochs el vl =
+  List.fold_left (fun acc1 e ->
+    List.fold_left (fun acc2 v ->
+      match Debian.Version.split v with
+      |("",u,r,b) -> (Debian.Version.concat (e,u,r,b))::v::acc2
+      |_ -> v::acc2
+    ) acc1 vl
+  ) [] el
+
+let add_normalize vl =
+  List.fold_left (fun acc v ->
+    let (e,u,r,b) = Debian.Version.split v in
+    (Debian.Version.concat ("",u,r,""))::v::acc
+  ) [] vl
+
+let evalsel getv target constr =
+  let evalsel v = function
+    |(`Eq,w) ->  v = (getv w)
+    |(`Geq,w) -> v >= (getv w)
+    |(`Leq,w) -> v <= (getv w)
+    |(`Gt,w) ->  v > (getv w)
+    |(`Lt,w) ->  v < (getv w)
+    |(`Neq,w) -> v <> (getv w)
+  in
+  match target with
+  |`Hi v -> evalsel ((getv v) + 1) constr
+  |`Lo v -> evalsel ((getv v) - 1) constr
+  |`Eq v -> evalsel (getv v) constr
+  |`In (v1,v2) -> evalsel ((getv v2) - 1) constr
+;;
 
 let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
   let worktable = Hashtbl.create 1024 in
@@ -88,44 +121,37 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
   (* for each cluste, I associate to it its discriminants,
    * cluster name and binary version *)
   Hashtbl.iter (fun (sn,sv) l ->
-    Printf.eprintf "sn:%s sv:%s\n" sn sv;
+    (* Printf.eprintf "sn:%s sv:%s\n" sn sv; *)
     List.iter (fun (version,cluster) ->
-    Printf.eprintf "bin ver:%s\n len:%d\n\n" version (List.length cluster);
-      let filter =
-        let a = Debian.Version.normalize version in
-        fun target ->
-          if version = target then false else
-          match Debian.Version.split target with
-          |("",u2,r2,b2) ->
-              let b = Debian.Version.normalize target in
-              (Debian.Version.compare a b) < 0
-          |_ -> (Debian.Version.compare version target) < 0 
-      in
-      let discr = Debian.Evolution.discriminants ~filter constraints_table cluster in
-      let vl =
-        List.fold_left (fun acc (target,equiv) ->
-          get_versions (get_versions acc [target]) equiv
-        ) [] discr
-      in
-      version_acc := vl @ !version_acc;
-      List.iter (fun pkg ->
-        Hashtbl.add realpackages pkg.Debian.Packages.name version
-      ) cluster;
-      Hashtbl.add worktable cluster (discr,sn,version)
+    (* Printf.eprintf "bin ver:%s\n len:%d\n\n" version (List.length cluster); *)
+    let (versionlist, constr) =
+      let clustervl = List.map (fun pkg -> pkg.Debian.Packages.version) cluster in
+      List.fold_left (fun (vl,cl) pkg ->
+        Hashtbl.add realpackages pkg.Debian.Packages.name version;
+        let pn = pkg.Debian.Packages.name in
+        let pv = pkg.Debian.Packages.version in
+        let constr = Debian.Evolution.all_constraints constraints_table pn in
+        let vl = clustervl@(Debian.Evolution.all_versions constr) in
+        let el = (extract_epochs vl) in
+        let tvl = add_normalize vl in
+        let versionlist = add_epochs el tvl in
+        (versionlist @ vl, constr @ cl)
+      ) ([],[]) cluster
+    in
+    version_acc := versionlist @ !version_acc;
+    Hashtbl.add worktable (sn,version) (cluster,List.unique
+    versionlist,List.unique constr)
     ) l
   ) clusters;
-
-  version_acc := Util.list_unique !version_acc;
+(* get all epochs and all versions and generate a new version for each epoch *)
 
   (* for each package name, that is not a real package,
    * I create a package with version 1 and I put it in a
    * cluster by itself *)
   Hashtbl.iter (fun name constr -> match (name,constr) with
     |(name,_) when (Hashtbl.mem realpackages name) -> ()
-    |(name,[]) -> ()
     |(name,_) ->
         let vl = Debian.Evolution.all_versions constr in
-        let discr = Debian.Evolution.discriminant vl constr in
         let pkg = {
           Debian.Packages.default_package with 
           Debian.Packages.name = name;
@@ -133,54 +159,62 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
           } 
         in
         let cluster = [pkg] in
-        version_acc := ("1" :: vl) @ !version_acc;
-        Hashtbl.add worktable cluster (discr,name,"")
+        version_acc := vl @ !version_acc;
+        Hashtbl.add worktable (name,"") (cluster,vl,constr)
   ) constraints_table;
 
-  let versionlist = Util.list_unique !version_acc in
+  let versionlist = Util.list_unique ("1"::!version_acc) in
+
+  info "Total Names: %d" (Hashtbl.length worktable);
+  info "Total versions: %d" (List.length versionlist);
+
   let tables = Debian.Debcudf.init_tables ~step:2 ~versionlist repository in
   let duplicates = Hashtbl.create 1023 in
-  let getv = Debian.Debcudf.get_cudf_version tables in
+  let getv v = Debian.Debcudf.get_cudf_version tables ("",v) in
   let pkglist = 
-    Hashtbl.fold (fun cluster (constr,sn,version) acc ->
-      (* let sync x y = if List.length cluster > 1 then sync x y else y in *)
-      (*
-      Printf.eprintf "cluster: %s %s\n" sn version;
-      Printf.eprintf "size: %d\n" (List.length cluster);
-      *)
-      let l = 
-        List.fold_left (fun acc pkg ->
-          let pn = pkg.Debian.Packages.name in
-          let p = Debian.Debcudf.tocudf tables pkg in
-            Printf.eprintf "package: %s\n" pn;
-            Printf.eprintf "version: %s\n" version;
+    let s = 
+      CudfAdd.to_set (
+        Hashtbl.fold (fun (sn,version) (cluster,vl,constr) acc0 ->
+          let acc0 = 
+            List.fold_left (fun l pkg ->
+                let p = Debian.Debcudf.tocudf tables pkg in
+                (sync (sn,version,1) p)::l
+            ) acc0 cluster
+          in
+          let discr = Debian.Evolution.discriminant (evalsel getv) vl constr in
+          let i = ref 1 in
+          List.fold_left (fun acc1 (target,equiv) ->
+            List.fold_left (fun acc2 target ->
+              incr i;
+              List.fold_left (fun acc3 pkg ->
+                let p = Debian.Debcudf.tocudf tables pkg in
+                let pn = pkg.Debian.Packages.name in
+                let pv = p.Cudf.version in
 
-          List.fold_left (fun acc (target,equiv) ->
-            List.fold_left (fun acc target ->
-              let newv =
-                match target with
-                |`Eq v -> getv (pn,v)
-                |`Hi v -> (getv (pn,v)) + 1
-                |`Lo v |`In (_,v) -> (getv (pn,v)) - 1
-              in
-              let number = Debian.Evolution.string_of_range target in
-              Printf.eprintf "target: %s\n" number;
-              assert (version <> "");
-              assert (newv <> p.Cudf.version);
-              if Hashtbl.mem duplicates (pn,newv) then
-                fatal "duplicate";
+                let target = Debian.Evolution.align pkg.Debian.Packages.version target in
+                let newv =
+                  match target with
+                  |`Eq v -> getv v
+                  |`Hi v -> (getv v) + 1
+                  |`Lo v |`In (_,v) -> (getv v) - 1
+                in
+                let number = Debian.Evolution.string_of_range target in
 
-              if not(Hashtbl.mem duplicates (pn,newv)) then begin
-                Hashtbl.add duplicates (pn,newv) (); 
-                (sync (sn,version) (dummy p number newv))::acc
-              end else acc
-            ) acc (target::equiv)
-          ) ((sync (sn,version) p)::acc) constr
-        ) [] cluster
-      in l@acc
-    ) worktable []
+                if newv > pv then begin
+                  if List.length cluster > 1 then
+                    (sync (sn,version,!i) (dummy p number newv))::acc3
+                  else
+                    (dummy p number newv)::acc3
+                end else acc3
+
+              ) acc2 cluster
+            ) acc1 (target::equiv)
+          ) acc0 discr
+        ) worktable []
+      )
+    in CudfAdd.Cudf_set.elements s
   in
-  
+
   if dump then
     List.iter (fun pkg ->
       Format.printf "%a@." Cudf_printer.pp_package pkg
@@ -197,11 +231,12 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
   let fmt = Format.std_formatter in
   Format.fprintf fmt "@[<v 1>report:@,";
   let callback d = 
-    if false then 
+    if verbose then 
       Diagnostic.fprintf ~failure:true ~explain:true fmt d 
   in
   let i = Depsolver.univcheck ~callback universe in
-  Format.fprintf fmt "broken: %d@," i;
+  Format.fprintf fmt "total-packages: %d@," (List.length pkglist);
+  Format.fprintf fmt "total-broken: %d@," i;
   Format.fprintf fmt "@]@.";
 ;; 
 
