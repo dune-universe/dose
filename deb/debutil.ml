@@ -10,6 +10,14 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
+open ExtLib
+open Common
+
+let debug fmt = Util.make_debug "Debutil" fmt
+let info fmt = Util.make_info "Debutil" fmt
+let warning fmt = Util.make_warning "Debutil" fmt
+let fatal fmt = Util.make_fatal "Debutil" fmt
+
 (** [group_by_source universe] returns a hashtbl that maps
     (source,sourceversion) -> to a packages list *)
 (* the idea is : if the normalized version of the package is equal to
@@ -41,9 +49,14 @@ let cluster packagelist =
     end
   ) packagelist ;
   let h = Hashtbl.create (List.length packagelist) in
+  let i = ref 0 in
   Hashtbl.iter (fun (s,v) thv ->
     let l = Hashtbl.fold (fun v {contents=l} acc -> (v,l)::acc) thv [] in
+    i := !i + (List.length l);
     Hashtbl.add h (s,v) l
   ) th;
+  info "Packages: %d" (List.length packagelist);
+  info "Source Clusters: %d" (Hashtbl.length h);
+  info "Binary (effective) Clusters: %d" !i;
   h
 ;;
