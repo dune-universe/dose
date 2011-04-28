@@ -29,7 +29,7 @@ module Options = struct
 
   let checkonly = Boilerplate.pkglist_option ()
   let brokenlist = StdOpt.store_true ()
-  open OptParser
+  open OptParser ;;
 
   add options ~long_name:"select" ~help:"Check only these package ex. (sn1,sv1),(sn2,sv2)" checkonly;
   add options ~short_name:'b' ~help:"Print the list of broken packages" brokenlist;
@@ -49,7 +49,7 @@ let dummy pkg number version =
   }
 
 let upgrade tables universe migrationlist =
-  let getv = Debian.Debcudf.get_cudf_version tables in
+  let getv v = Debian.Debcudf.get_cudf_version tables ("",v) in
   let pkgset = 
     Cudf.fold_packages (fun s p -> 
       CudfAdd.Cudf_set.add p s
@@ -57,12 +57,12 @@ let upgrade tables universe migrationlist =
   in
   let to_add = 
     List.fold_left (fun l ((pkg,_),target) ->
-      let orig = getv (pkg.Debian.Packages.name,pkg.Debian.Packages.version) in
+      let orig = getv pkg.Debian.Packages.version in
       let newv =
         match target with
-        |`Eq v -> getv (pkg.Debian.Packages.name,v)
-        |`Hi v -> (getv (pkg.Debian.Packages.name,v)) + 1
-        |`Lo v |`In (_,v) -> (getv (pkg.Debian.Packages.name,v)) - 1
+        |`Eq v -> getv v
+        |`Hi v -> (getv v) + 1
+        |`Lo v |`In (_,v) -> (getv v) - 1
       in
       let p = Cudf.lookup_package universe (pkg.Debian.Packages.name,orig) in
       let number = Debian.Evolution.string_of_range target in
@@ -71,7 +71,7 @@ let upgrade tables universe migrationlist =
   in
   let to_remove = 
     List.map (fun ((pkg,_),_) -> 
-      let orig = getv (pkg.Debian.Packages.name,pkg.Debian.Packages.version) in
+      let orig = getv pkg.Debian.Packages.version in
       Cudf.lookup_package universe (pkg.Debian.Packages.name,orig) 
     ) migrationlist 
   in
@@ -82,6 +82,51 @@ let upgrade tables universe migrationlist =
 let add h k v =
   try let l = Hashtbl.find h k in l := v::!l
   with Not_found -> Hashtbl.add h k (ref [v])
+;;
+
+let extract_epochs vl =
+  List.unique (
+    List.fold_left (fun acc v ->
+      let (e,_,_,_) = Debian.Version.split v in
+      e :: acc
+    ) [] vl
+  )
+
+let add_epochs el vl =
+  List.fold_left (fun acc1 e ->
+    List.fold_left (fun acc2 v ->
+      match Debian.Version.split v with
+      |("",u,r,b) -> (Debian.Version.concat (e,u,r,b))::v::acc2
+      |_ -> v::acc2
+    ) acc1 vl
+  ) [] el
+
+let add_normalize vl =
+  List.fold_left (fun acc v ->
+    let (e,u,r,b) = Debian.Version.split v in
+    (Debian.Version.concat ("",u,r,""))::v::acc
+  ) [] vl
+
+let evalsel getv target constr =
+  let evalsel v = function
+    |(`Eq,w) ->  v = (getv w)
+    |(`Geq,w) -> v >= (getv w)
+    |(`Leq,w) -> v <= (getv w)
+    |(`Gt,w) ->  v > (getv w)
+    |(`Lt,w) ->  v < (getv w)
+    |(`Neq,w) -> v <> (getv w)
+  in
+  match target with
+  |`Hi v -> evalsel ((getv v) + 1) constr
+  |`Lo v -> evalsel ((getv v) - 1) constr
+  |`Eq v -> evalsel (getv v) constr
+  |`In (v1,v2) -> evalsel ((getv v2) - 1) constr
+;;
+
+let version_of_target getv = function
+  |`Eq v -> getv v
+  |`Hi v -> (getv v) + 1
+  |`Lo v |`In (_,v) -> (getv v) - 1
 ;;
 
 (* repository are real packages, 
@@ -98,28 +143,21 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
   let constraints_table = Debian.Evolution.constraints repository in
   let cluster_iter (sn,sv) l =
     List.iter (fun (version,cluster) ->
-      let filter =
-        let v = Debian.Debutil.normalize version in
-        fun x ->
-          let w = Debian.Debutil.normalize x in
-          (Debian.Version.compare v w) <= 0
-      in
-      (* all packages in this cluster have the same version *)
-      List.iter (fun (target,equiv) ->
-        let migrationlist = Debian.Evolution.migrate cluster target in
-        let vl = 
-          List.fold_left (fun acc -> function
-            |(_,(`Hi v|`Lo v|`Eq v)) -> v::acc 
-            |(_,`In (v1,v2)) -> v1::v2::acc
-          ) [] migrationlist
-        in
-        version_acc := vl @ !version_acc;
-        let aligned_target = Debian.Evolution.align version target in
-        let key = (cluster,(sn,sv,version)) in 
-        let value = (target,aligned_target,equiv,migrationlist) in
-        try let l = Hashtbl.find worktable key in l:= value :: !l 
-        with Not_found -> Hashtbl.add worktable key (ref [value])
-      ) (Debian.Evolution.discriminants ~filter constraints_table cluster)
+    let (versionlist, constr) =
+      let clustervl = List.map (fun pkg -> pkg.Debian.Packages.version) cluster in
+      List.fold_left (fun (vl,cl) pkg ->
+        let pn = pkg.Debian.Packages.name in
+        let constr = Debian.Evolution.all_constraints constraints_table pn in
+        let vl = clustervl@(Debian.Evolution.all_versions constr) in
+        let el = (extract_epochs vl) in
+        let tvl = add_normalize vl in
+        let versionlist = add_epochs el tvl in
+        (versionlist @ vl, constr @ cl)
+      ) ([],[]) cluster
+    in
+    version_acc := versionlist @ !version_acc;
+    Hashtbl.add worktable (sn,version) (cluster,List.unique
+    versionlist,List.unique constr)
     ) l
   in
 
@@ -137,37 +175,52 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
   (* cudf part *)
   let versionlist = Util.list_unique !version_acc in
   let tables = Debian.Debcudf.init_tables ~step:2 ~versionlist repository in
+  let getv v = Debian.Debcudf.get_cudf_version tables ("",v) in
   let pkglist = List.map (Debian.Debcudf.tocudf tables) repository in
   let universe = Cudf.load_universe pkglist in
   let brokenref = Depsolver.univcheck universe in
 
   Util.Progress.set_total predbar (Hashtbl.length worktable);
 
+  info "Total Names: %d" (Hashtbl.length worktable);
+  info "Total versions: %d" (List.length versionlist);
+
   (* computing *)
   let fmt = Format.std_formatter in
   Format.fprintf fmt "@[<v 1>report:@,";
   Format.fprintf fmt "broken packages reference: %d@," brokenref;
-  Hashtbl.iter(fun (cluster,(sn,sv,bv)) {contents = l} ->
-    Format.fprintf fmt "@[<v>source: %s %s@," sn sv;
-    Format.fprintf fmt "clusters:@,";
-    Format.fprintf fmt "version: %s@," bv;
+  Hashtbl.iter (fun (sn,sv) (cluster,vl,constr) ->
+    Util.Progress.progress predbar;
+    let discr = Debian.Evolution.discriminant (evalsel getv) vl constr in
+    Format.fprintf fmt "@[<v 1>source: %s %s@," sn sv;
+    if verbose then begin
+      Format.fprintf fmt "@[<v 1>clusters:@,";
+      List.iter (fun pkg ->
+        let (pn,pv) = (pkg.Debian.Packages.name, getv pkg.Debian.Packages.version) in
+        let p = Cudf.lookup_package universe (pn,pv) in
+        Format.fprintf fmt "%a@," Cudf_printer.pp_package p
+      ) cluster;
+      Format.fprintf fmt "@]@,";
+    end;
     Format.fprintf fmt "@[<v 1>analysis:@,";
-    List.iter (fun (target,aligned_target,equiv,migrationlist) ->
-      Util.Progress.progress predbar;
+    List.iter (fun (target,equiv) ->
+      let migrationlist = Debian.Evolution.migrate cluster target in
       let future = upgrade tables universe migrationlist in
 
       Format.fprintf fmt "target: %s @," (Debian.Evolution.string_of_range target);
-      Format.fprintf fmt "aligned target: %s @," (Debian.Evolution.string_of_range aligned_target);
       Format.fprintf fmt "equiv: %s@," (String.concat " , " (List.map (Debian.Evolution.string_of_range) equiv));
 
-      let callback d = if verbose then Diagnostic.fprintf ~failure:true ~explain:true fmt d in
-      Format.fprintf fmt "distcheck: @,";
+      let callback d = 
+        if verbose then Diagnostic.fprintf ~failure:true ~explain:true fmt d 
+      in
+      if verbose then
+        Format.fprintf fmt "distcheck: @,";
+
       let i = Depsolver.univcheck ~callback future in
-      Format.fprintf fmt "broken: %d@," (i - brokenref);
+      Format.fprintf fmt "broken: %d@," i;
       Format.fprintf fmt "@,";
       
-      (* Hashtbl.add predmap (cluster,(sn,sv),target) (i - brokenref); *)
-    ) l;
+    ) discr;
     Format.fprintf fmt "@]@]@,---@.";
   ) worktable ;
   Format.fprintf fmt "@]@.";
