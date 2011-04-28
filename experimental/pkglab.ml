@@ -51,9 +51,14 @@ let conflicts_set (u, m) p =
 ;;
 
 (* examples:
+(* load a universe from a Debian Packages file *)
 let u = load "deb:///var/lib/apt/lists/ftp.be.debian.org_debian_dists_squeeze_main_binary-amd64_Packages";;
+(* all packages whose names starts with ocaml *)
 let ocamlunits= search_package u "^ocaml";;
-let c12 = let (a::b::_) = ocamlunits in cone u [a;b];; (* union des cones de 2 paquets Ocaml
-
+(* union of the cones of 2 OCaml packages *)
+let c12 = let (a::b::_) = ocamlunits in cone u [a;b];;
+(* packages with self conflicts on provides *)
 let l = filter_packages (fun p -> not (PS.is_empty (PS.inter (provides_set u p) (conflicts_set u p)))) u;;
+(* compute list of packages with the size of their cones *)
+let cl = List.map (fun p -> (p.Cudf.package,p.Cudf.version,List.length (cone u [p]))) ul;;
  *)
