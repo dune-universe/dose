@@ -1,6 +1,6 @@
 
 all:
-	g++ -lapt-pkg -fPIC -shared -o libcollate_debian.so debian_collation.cpp
+	$(CXX) $(CPPFLAGS) $(LDFLAGS) -lapt-pkg -fPIC -shared -o libcollate_debian.so debian_collation.cpp
 	cd sqlitext && make
 	cp sqlitext/sqlitext.py sqlitext/_sqlitext.so .
 

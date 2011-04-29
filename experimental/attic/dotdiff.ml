@@ -12,10 +12,10 @@
 
 open Common
 
-let enable_debug () =
+(* let enable_debug () =
   (* enable the progress bar for strongdeps *)
   Common.Util.set_verbosity Common.Util.Summary
-;;
+;; *)
 
 module Options = struct
   let load = ref false
@@ -32,7 +32,7 @@ let options =
    ("--detrans", Arg.Set Options.detrans, "Transitive reduction.");
    ("--text", Arg.Set Options.text, "Diff like output");
    ("--dot", Arg.Set Options.dot, "Dot output");
-   ("--debug", Arg.Unit enable_debug, "Print debug information");
+   (* ("--debug", Arg.Unit enable_debug, "Print debug information"); *)
   ]
 
 (* ----------------------------------- *)

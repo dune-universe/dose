@@ -1,8 +1,8 @@
 # FreeBSD
-# CFLAGS=-I/usr/local/include
-# LDFLAGS=-L/usr/local/lib
-CFLAGS=""
-LDFLAGS=""
+CFLAGS=-I/usr/local/include
+LDFLAGS=-L/usr/local/lib
+# CFLAGS=""
+# LDFLAGS=""
 
 all:
 	swig -python sqlitext.i

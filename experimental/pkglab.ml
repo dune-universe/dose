@@ -1,3 +1,6 @@
+open Common
+open CudfAdd
+
 module Package =
 struct
 	type t = Cudf.package
@@ -14,41 +17,47 @@ module PS = Set.Make(Package);;
 let load url =
 begin
 	let (univ, _, _) = Boilerplate.load_universe [url] in
-	let mdf = Common.Mdf.load_from_universe univ in
+	let mdf = Mdf.load_from_universe univ in
 	(univ, mdf)
 end;;
 
-open Common
-open CudfAdd
+let original_version p =
+	Cudf.lookup_package_property p "number";;
 
-let search_package (u, mdf) re =
+let get_packages ?filter (u, mdf) =
+	Cudf.get_packages ?filter u;;
+
+let search_packages (u, mdf) re =
   let rex = Pcre.regexp re in
    Cudf.get_packages 
     ~filter:(fun p -> Pcre.pmatch ~rex (Cudf_types_pp.string_of_pkgname p.Cudf.package))
 		u
 ;;
 
+(* TODO: optimise to use mdf *)
 let trim (u, mdf) = 
   let u' = Algo.Depsolver.trim u in
-  (u', Common.Mdf.load_from_universe u')
+  (u', Mdf.load_from_universe u')
 ;;
 
-let cone ?maxdepth ?conjunctive (u, mdf) pl : Cudf.package list =
+let cone ?maxdepth ?conjunctive (_, mdf) pl : Cudf.package list =
   let maps = mdf.Mdf.maps in
   let idlist = List.map maps.map#vartoint pl in
-  let closure = Algo.Depsolver_int.dependency_closure ?maxdepth ?conjunctive mdf idlist in
+  let closure =
+		Algo.Depsolver_int.dependency_closure ?maxdepth ?conjunctive mdf idlist in
   List.map maps.map#inttovar closure
 ;;
 
-let rev_cone ?maxdepth (u, mdf) pl : Cudf.package list =
+let rev_cone ?maxdepth (_, mdf) pl : Cudf.package list =
   let maps = mdf.Mdf.maps in
   let idlist = List.map maps.map#vartoint pl in
-  let reverse = Depsolver_int.reverse_dependencies mdf in
-  let closure = Depsolver_int.reverse_dependency_closure ?maxdepth reverse idlist in
+  let reverse = Algo.Depsolver_int.reverse_dependencies mdf in
+  let closure =
+		Algo.Depsolver_int.reverse_dependency_closure ?maxdepth reverse idlist in
   List.map maps.map#inttovar closure
 ;;
 
-let filter_packages f (u, mdf) =
+let filter_packages f (u, _) =
 	List.rev (Cudf.fold_packages (fun acc p -> if f p then p::acc else acc) [] u)
 ;;
 
@@ -60,7 +69,7 @@ let provides_set (u, mdf) p =
 	) PS.empty p.Cudf.provides
 ;;
 
-let conflicts_set (u, mdf) p =
+let conflicts_set (u, _) p =
 	List.fold_left (fun acc (cn, cv) ->
 		List.fold_left (fun acc' c ->
 			PS.add c acc'
@@ -80,7 +89,7 @@ let conflicts_set (u, mdf) p =
 (* load a universe from a Debian Packages file *)
 let u = load "deb:///var/lib/apt/lists/ftp.be.debian.org_debian_dists_squeeze_main_binary-amd64_Packages";;
 (* all packages whose names starts with ocaml *)
-let ocamlunits= search_package u "^ocaml";;
+let ocamlunits= search_packages u "^ocaml";;
 (* union of the cones of 2 OCaml packages *)
 let c12 = let (a::b::_) = ocamlunits in cone u [a;b];;
 (* packages with self conflicts on provides *)
@@ -90,6 +99,6 @@ let ul = Cudf.get_packages (fst u);;
 let cl = List.map (fun p -> (p,cone u [p])) ul;;
 let conesizes = List.map 
    (fun (p,cone) -> 
-   (p.Cudf.package,Cudf.lookup_package_property p "number", List.length cone)) 
+   (p.Cudf.package,original_version p, List.length cone)) 
    cl;;
  *)
