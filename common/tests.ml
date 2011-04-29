@@ -17,7 +17,7 @@ let test_deb_local =
   "deb local" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
       Input.parse_uri "deb://Packages.gz" 
-    in assert_equal true (protocol = "deb" && path = "Packages.gz")
+    in assert_equal true (protocol = Url.Deb && path = "Packages.gz")
   ) 
 ;;
 
@@ -25,7 +25,7 @@ let test_deb_path =
   "deb path" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
       Input.parse_uri "deb:///var/lib/Packages.gz" 
-    in assert_equal true (protocol = "deb" && path = "/var/lib/Packages.gz")
+    in assert_equal true (protocol = Url.Deb && path = "/var/lib/Packages.gz")
   )
 ;;
 
@@ -33,15 +33,15 @@ let test_hdlist =
   "hdlist" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
       Input.parse_uri "hdlist://path/to/file" 
-    in assert_equal true (protocol = "hdlist" && path = "path/to/file")
+    in assert_equal true (protocol = Url.Hdlist && path = "path/to/file")
   )
 ;;
 
 let test_synth =
-  "synth" >:: (fun _ ->
+  "synthesis" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
-      Input.parse_uri "synth://path/to/file" 
-    in assert_equal true (protocol = "synth" && path = "path/to/file")
+      Input.parse_uri "synthesis://path/to/file" 
+    in assert_equal true (protocol = Url.Synthesis && path = "path/to/file")
   )
 ;;
 
@@ -49,7 +49,7 @@ let test_cudf =
   "cudf" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
       Input.parse_uri "cudf://path/to/file" 
-    in assert_equal true (protocol = "cudf" && path = "path/to/file")
+    in assert_equal true (protocol = Url.Cudf && path = "path/to/file")
   )
 ;;
 
@@ -57,22 +57,22 @@ let test_sqlite =
   "sqlite" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
       Input.parse_uri "sqlite:///path/to/file" 
-    in assert_equal true (protocol = "sqlite" && path = "/path/to/file")
+    in assert_equal true (protocol = Url.Sqlite && path = "/path/to/file")
   ) 
 ;;
 
 let test_pgsql =
   "pgsql" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
-      Input.parse_uri "pgsql://test:tester@localhost:10/dbname?query=lalalal&v2=k2"
+      Input.parse_uri "pgsql://test:tester@localhost:10/dbname?query=lalalal;v2=k2"
     in assert_equal true (
-      protocol = "pgsql" && 
+      protocol = Url.Pgsql && 
       userOpt = Some "test" &&
       passOpt = Some "tester" &&
       hostOpt = Some "localhost" &&
       portOpt = Some "10" &&
       path = "dbname" &&
-      queryOpt = Some "lalalal"
+      queryOpt = Some "lalalal;v2=k2"
     )
   ) 
 ;;

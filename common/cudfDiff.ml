@@ -30,30 +30,21 @@ let to_set univ l =
   ) Cudf_set.empty l
 ;;
 
-(* the list of all packages (versions) that were installed before
- * but not now *)
-let removed univ sol pkgname =
-  let were_installed = to_set univ (Cudf.get_installed univ pkgname) in
-  let are_installed = to_set univ (Cudf.get_installed sol pkgname) in
-  Cudf_set.diff were_installed are_installed
-
-(* the list of all packages (versions) that were not installed before
- * but are installed now *)
-let installed univ sol pkgname =
-  let were_installed = to_set univ (Cudf.get_installed univ pkgname) in
-  let are_installed = to_set univ (Cudf.get_installed sol pkgname) in
-  Cudf_set.diff are_installed were_installed
-
 (* for each pkgname I've the list of all versions that were installed, removed
  * or left unchanged *)
 let diff univ sol =
   let pkgnames = CudfAdd.pkgnames univ in
   let h = Hashtbl.create (StringSet.cardinal pkgnames) in
   StringSet.iter (fun pkgname ->
-    let a = CudfAdd.to_set (Cudf.lookup_packages univ pkgname) in
-    let r = removed univ sol pkgname in
-    let i = installed univ sol pkgname in
-    let u = Cudf_set.diff a (Cudf_set.union r i) in
+    let were_installed = to_set univ (Cudf.get_installed univ pkgname) in
+    let are_installed = to_set univ (Cudf.get_installed sol pkgname) in
+    let r = Cudf_set.diff were_installed are_installed in
+    let i = Cudf_set.diff are_installed were_installed in
+
+    let old_packages = to_set univ (Cudf.lookup_packages univ pkgname) in
+    let new_packages = to_set univ (Cudf.lookup_packages sol pkgname) in
+    let u = Cudf_set.inter old_packages new_packages in
+
     let s = { removed = r ; installed = i ; unchanged = u } in
     Hashtbl.add h pkgname s
   ) pkgnames ;

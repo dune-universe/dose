@@ -158,7 +158,7 @@ let main () =
   in
   *)
 
-  (* XXX we should use a named pipe for in and out i or a tmp file *)
+  (* XXX we should use a named pipe for in and out or a tmp file *)
   let infile = "/tmp/cudf_req" in
   let outfile = "/tmp/cudf_sol" in
 
@@ -174,7 +174,7 @@ let main () =
   let criteria = choose_criteria request in
   let cmd = Printf.sprintf "%s %s %s %s" solver infile outfile criteria in
   let debug = exec cmd in
-  Printf.eprintf "%s\n%s\n%!" cmd debug; 
+  info "%s\n%s\n%!" cmd debug; 
   Util.Timer.stop timer4 ();
 
   Util.Timer.start timer5;
@@ -182,19 +182,17 @@ let main () =
   let (_,sol,_) = Cudf_parser.parse cudf_parser in
   let diff = CudfDiff.diff (Cudf.load_universe cudfpkglist) (Cudf.load_universe sol) in
   Hashtbl.iter (fun pkgname s ->
-    if CudfAdd.Cudf_set.is_empty s.CudfDiff.unchanged then begin
-      let inst = s.CudfDiff.installed in
-      let rem = s.CudfDiff.removed in
-      match CudfAdd.Cudf_set.is_empty inst, CudfAdd.Cudf_set.is_empty rem with
-      |false,true ->
-          Format.printf "Install: %a@." pp_pkg (inst,univ)
-      |true,false ->
-          Format.printf "Remove: %a@." pp_pkg (rem,univ)
-      |false,false ->
-          Format.printf "Remove: %a@." pp_pkg (rem,univ);
-          Format.printf "Install: %a@." pp_pkg (inst,univ)
-      |true,true -> fatal "soldiff fatal error"
-    end
+    let inst = s.CudfDiff.installed in
+    let rem = s.CudfDiff.removed in
+    match CudfAdd.Cudf_set.is_empty inst, CudfAdd.Cudf_set.is_empty rem with
+    |false,true ->
+        Format.printf "Install: %a@." pp_pkg (inst,univ)
+    |true,false ->
+        Format.printf "Remove: %a@." pp_pkg (rem,univ)
+    |false,false ->
+        Format.printf "Remove: %a@." pp_pkg (rem,univ);
+        Format.printf "Install: %a@." pp_pkg (inst,univ)
+    |true,true -> ()
   ) diff;
   Util.Timer.stop timer5 ();
 ;;
