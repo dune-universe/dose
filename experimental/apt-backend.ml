@@ -72,7 +72,7 @@ let exec cmd =
 ;;
 
 let solver_dir = 
-  try Sys.getenv("CUDFSOLVERS") with Not_found -> "/usr/lib/cudf/solvers"
+  try Sys.getenv("CUDFSOLVERS") with Not_found -> "/usr/share/cudf/solvers"
 
 let pp_pkg fmt (s,univ) = 
   let p = CudfAdd.Cudf_set.choose s in
@@ -96,6 +96,22 @@ let choose_criteria request =
     paranoid
 ;;
 
+let parse_solver filename =
+  let name = ref "" in
+  let version = ref "" in
+  let ic = open_in filename in
+  begin try while true do
+    let l = input_line ic in
+    try 
+      Scanf.sscanf l "exec: %s " (fun s -> name := s);
+      Scanf.sscanf l "cudf-version: %s " (fun s -> version := s);
+    with Scanf.Scan_failure _ -> ()
+  done with End_of_file -> () end;
+  close_in ic;
+  if !name = "" then fatal "cannot read %s" filename
+  else (!name,!version)
+;;
+
 let main () =
   let timer1 = Util.Timer.create "parsing" in
   let timer2 = Util.Timer.create "conversion" in
@@ -109,13 +125,12 @@ let main () =
   ["parsing";"cudfio";"conversion";"solver";"solution"];
 
   let solver =
-    let name = 
-      if OptParse.Opt.is_set Options.solver then
-        OptParse.Opt.get Options.solver
-      else
-        Filename.basename(Sys.argv.(0))
-    in 
-    Filename.concat (Filename.concat solver_dir name) name
+    if OptParse.Opt.is_set Options.solver then
+      let f = OptParse.Opt.get Options.solver in
+      Filename.concat solver_dir f
+    else
+      let f = Filename.basename(Sys.argv.(0)) in
+      fst(parse_solver (Filename.concat solver_dir f))
   in
 
   let ch = 
