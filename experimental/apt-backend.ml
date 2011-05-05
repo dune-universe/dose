@@ -241,7 +241,7 @@ let main () =
         else []
       in
       let diff = CudfDiff.diff universe (Cudf.load_universe sol) in
-      let empty = ref false in
+      let empty = ref true in
       Hashtbl.iter (fun pkgname s ->
         let inst = s.CudfDiff.installed in
         let rem = s.CudfDiff.removed in
@@ -262,7 +262,7 @@ let main () =
         |true,true -> ()
       ) diff;
       if !empty then 
-        print_progress ~i:100 "the best solution is the empty solution"
+        print_progress ~i:100 "No packages to remove or install"
     end with Cudf.Constraint_violation s ->
       print_error ("(CUDF) Malformed solution: "^s)
   end;
