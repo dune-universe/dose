@@ -1,5 +1,6 @@
 open Common
 open CudfAdd
+open Algo
 
 module Package =
 struct
@@ -34,9 +35,22 @@ let search_packages (u, mdf) re =
 		u
 ;;
 
-(* TODO: optimise to use mdf *)
 let trim (u, mdf) = 
-  let u' = Algo.Depsolver.trim u in
+	let trimmed_pkgs = ref [] in
+	let callback (res, req) =
+	begin
+		match res with
+		| Diagnostic_int.Success _ ->
+			begin
+				match req with
+				| Diagnostic_int.Sng p ->
+						trimmed_pkgs := (mdf.Mdf.maps.map#inttovar p)::!trimmed_pkgs
+				| _ -> assert false
+			end
+		| Diagnostic_int.Failure _ -> ()
+	end in
+  ignore (Depsolver_int.univcheck ~callback mdf);
+	let u' = Cudf.load_universe !trimmed_pkgs in
   (u', Mdf.load_from_universe u')
 ;;
 
@@ -44,16 +58,16 @@ let cone ?maxdepth ?conjunctive (_, mdf) pl : Cudf.package list =
   let maps = mdf.Mdf.maps in
   let idlist = List.map maps.map#vartoint pl in
   let closure =
-		Algo.Depsolver_int.dependency_closure ?maxdepth ?conjunctive mdf idlist in
+		Depsolver_int.dependency_closure ?maxdepth ?conjunctive mdf idlist in
   List.map maps.map#inttovar closure
 ;;
 
 let rev_cone ?maxdepth (_, mdf) pl : Cudf.package list =
   let maps = mdf.Mdf.maps in
   let idlist = List.map maps.map#vartoint pl in
-  let reverse = Algo.Depsolver_int.reverse_dependencies mdf in
+  let reverse = Depsolver_int.reverse_dependencies mdf in
   let closure =
-		Algo.Depsolver_int.reverse_dependency_closure ?maxdepth reverse idlist in
+		Depsolver_int.reverse_dependency_closure ?maxdepth reverse idlist in
   List.map maps.map#inttovar closure
 ;;
 
@@ -77,6 +91,24 @@ let conflicts_set (u, _) p =
 	) PS.empty p.Cudf.conflicts
 ;;
 
+(* XXX it probably would be advisable to initialise the solver while loading *)
+let check (u, mdf) (* slv *) p =
+	let req = Diagnostic_int.Sng (mdf.Mdf.maps.map#vartoint p) in
+	let slv = Depsolver_int.init_solver mdf.Mdf.index in
+	let res = Depsolver_int.solve slv req in
+		match res with
+		| Diagnostic_int.Success _ -> true
+		| Diagnostic_int.Failure _ -> false
+;;	
+
+let check_together (u, mdf) l =
+	let req = Diagnostic_int.Lst (List.map mdf.Mdf.maps.map#vartoint l) in
+	let slv = Depsolver_int.init_solver mdf.Mdf.index in
+	let res = Depsolver_int.solve slv req in
+		match res with
+		| Diagnostic_int.Success _ -> true
+		| Diagnostic_int.Failure _ -> false
+;;
 
 (* TODO: add
  - impactset
