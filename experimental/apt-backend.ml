@@ -30,11 +30,13 @@ module Options = struct
   let outfile = StdOpt.str_option ()
   let solfile = StdOpt.str_option ()
   let solver = StdOpt.str_option ()
+  let criteria = StdOpt.str_option ()
 
   open OptParser
   add options ~long_name:"univfile" ~help:"dump the cudf universe" outfile;
   add options ~long_name:"solfile" ~help:"dump the cudf solution" solfile;
   add options ~short_name:'s' ~long_name:"solver" ~help:"external solver" solver;
+  add options ~short_name:'c' ~long_name:"criteria" ~help:"optimization criteria" criteria;
 
 end
 
@@ -86,14 +88,17 @@ let pp_pkg fmt (s,univ) =
 
 (* TODO: the criteria should be computed on the fly w.r.t. strict pinning and
  * preferences *)
-let choose_criteria request = 
+let choose_criteria ?(criteria=None) request = 
   let paranoid = "-removed,-changed" in
   let upgrade = "-notuptodate,-removed,-changed" in
-  let trendy = "-removed,-notuptodate,-unmet_recommends,-new" in
-  if request.Edsp.upgrade || request.Edsp.distupgrade then
-    upgrade
-  else
-    paranoid
+  let trendy = "-removed,-notuptodate,-unsat_recommends,-new" in
+  match criteria with
+  |None when (request.Edsp.upgrade || request.Edsp.distupgrade) -> upgrade
+  |None -> paranoid
+  |Some "trendy" -> trendy
+  |Some "paranoid" -> paranoid
+  |Some "upgrade" -> upgrade
+  |Some c -> c
 ;;
 
 let parse_solver filename =
@@ -110,6 +115,22 @@ let parse_solver filename =
   close_in ic;
   if !name = "" then fatal "cannot read %s" filename
   else (!name,!version)
+;;
+
+let check_fail s =
+  let ic = open_in s in
+  try begin
+    let l = input_line ic in
+    try l = "FAIL"
+    with Scanf.Scan_failure _ -> false
+  end with End_of_file -> false
+
+let check_empty s =
+  not(Sys.file_exists s) || (Unix.stat s).Unix.st_size = 0
+
+let print_error s =
+  Format.printf "Error: %f@." (Unix.time ());
+  Format.printf "Message: %s@." s
 ;;
 
 let main () =
@@ -160,7 +181,13 @@ let main () =
       p
     ) pkglist 
   in
-  let universe = Cudf.load_universe cudfpkglist in
+  let universe = 
+    try Cudf.load_universe cudfpkglist
+    with Cudf.Constraint_violation s -> begin
+      print_error ("(CUDF) Malformed universe "^s);
+      exit 0
+    end
+  in
   let cudf_request = make_request request in
   let cudf = (default_preamble,universe,cudf_request) in
   Util.Timer.stop timer2 ();
@@ -186,29 +213,40 @@ let main () =
   Util.Timer.stop timer3 ();
 
   Util.Timer.start timer4;
-  let criteria = choose_criteria request in
+  let cmdline_criteria = OptParse.Opt.opt (Options.criteria) in
+  let criteria = choose_criteria ~criteria:cmdline_criteria request in
   let cmd = Printf.sprintf "%s %s %s %s" solver infile outfile criteria in
   let debug = exec cmd in
   info "%s\n%s\n%!" cmd debug; 
   Util.Timer.stop timer4 ();
 
   Util.Timer.start timer5;
-  let cudf_parser = Cudf_parser.from_file outfile in
-  let (_,sol,_) = Cudf_parser.parse cudf_parser in
-  let diff = CudfDiff.diff (Cudf.load_universe cudfpkglist) (Cudf.load_universe sol) in
-  Hashtbl.iter (fun pkgname s ->
-    let inst = s.CudfDiff.installed in
-    let rem = s.CudfDiff.removed in
-    match CudfAdd.Cudf_set.is_empty inst, CudfAdd.Cudf_set.is_empty rem with
-    |false,true ->
-        Format.printf "Install: %a@." pp_pkg (inst,univ)
-    |true,false ->
-        Format.printf "Remove: %a@." pp_pkg (rem,univ)
-    |false,false ->
-        Format.printf "Remove: %a@." pp_pkg (rem,univ);
-        Format.printf "Install: %a@." pp_pkg (inst,univ)
-    |true,true -> ()
-  ) diff;
+  if check_empty outfile then () (* the best solution is the empty solution *)
+  else if check_fail outfile then
+    print_error "(UNSAT) No Solutions according to the give preferences"
+  else begin
+    try begin
+      let cudf_parser = Cudf_parser.from_file outfile in
+      let (_,sol,_) = Cudf_parser.parse cudf_parser in
+      let diff = CudfDiff.diff universe (Cudf.load_universe sol) in
+      Hashtbl.iter (fun pkgname s ->
+        let inst = s.CudfDiff.installed in
+        let rem = s.CudfDiff.removed in
+        match CudfAdd.Cudf_set.is_empty inst, CudfAdd.Cudf_set.is_empty rem with
+        |false,true ->
+            Format.printf "Install: %a@." pp_pkg (inst,univ)
+        |true,false ->
+            Format.printf "Remove: %a@." pp_pkg (rem,univ)
+        |false,false ->
+            Format.printf "Remove: %a@." pp_pkg (rem,univ);
+            Format.printf "Install: %a@." pp_pkg (inst,univ)
+        |true,true -> ()
+      ) diff;
+    end with Cudf.Constraint_violation s -> begin
+      print_error ("(CUDF) Malformed solution: "^s);
+      exit 0
+    end
+  end;
   Util.Timer.stop timer5 ();
 ;;
 
