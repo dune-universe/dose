@@ -92,13 +92,14 @@ let choose_criteria ?(criteria=None) request =
   let paranoid = "-removed,-changed" in
   let upgrade = "-notuptodate,-removed,-changed" in
   let trendy = "-removed,-notuptodate,-unsat_recommends,-new" in
-  match criteria with
-  |None when (request.Edsp.upgrade || request.Edsp.distupgrade) -> upgrade
-  |None -> paranoid
-  |Some "trendy" -> trendy
-  |Some "paranoid" -> paranoid
-  |Some "upgrade" -> upgrade
-  |Some c -> c
+  match criteria,request.Edsp.preferences with
+  |None,s when s <> "" -> s
+  |None,_ when (request.Edsp.upgrade || request.Edsp.distupgrade) -> upgrade
+  |None,_ -> paranoid
+  |Some "trendy",_ -> trendy
+  |Some "paranoid",_ -> paranoid
+  |Some "upgrade",_ -> upgrade
+  |Some c,_ -> c
 ;;
 
 let parse_solver filename =
@@ -125,12 +126,17 @@ let check_fail s =
     with Scanf.Scan_failure _ -> false
   end with End_of_file -> false
 
-let check_empty s =
-  not(Sys.file_exists s) || (Unix.stat s).Unix.st_size = 0
-
 let print_error s =
   Format.printf "Error: %f@." (Unix.time ());
-  Format.printf "Message: %s@." s
+  Format.printf "Message: %s@." s;
+  exit 0
+;;
+
+let print_progress ?i msg =
+  Format.printf "Progress: %f@." (Unix.time ());
+  if not(Option.is_none i) then
+    Format.printf "Percentage: %d@." (Option.get i);
+  Format.printf "Message: %s@." msg
 ;;
 
 let main () =
@@ -221,31 +227,44 @@ let main () =
   Util.Timer.stop timer4 ();
 
   Util.Timer.start timer5;
-  if check_empty outfile then () (* the best solution is the empty solution *)
+  if not(Sys.file_exists outfile) then 
+    print_error "(CRASH) Solution file not found"
   else if check_fail outfile then
     print_error "(UNSAT) No Solutions according to the give preferences"
   else begin
     try begin
-      let cudf_parser = Cudf_parser.from_file outfile in
-      let (_,sol,_) = Cudf_parser.parse cudf_parser in
+      let sol = 
+        if (Unix.stat outfile).Unix.st_size <> 0 then
+          let cudf_parser = Cudf_parser.from_file outfile in
+          let (_,sol,_) = Cudf_parser.parse cudf_parser in
+          sol
+        else []
+      in
       let diff = CudfDiff.diff universe (Cudf.load_universe sol) in
+      let empty = ref false in
       Hashtbl.iter (fun pkgname s ->
         let inst = s.CudfDiff.installed in
         let rem = s.CudfDiff.removed in
         match CudfAdd.Cudf_set.is_empty inst, CudfAdd.Cudf_set.is_empty rem with
-        |false,true ->
+        |false,true -> begin
+            empty := false;
             Format.printf "Install: %a@." pp_pkg (inst,univ)
-        |true,false ->
+        end
+        |true,false -> begin
+            empty := false;
             Format.printf "Remove: %a@." pp_pkg (rem,univ)
-        |false,false ->
+        end
+        |false,false -> begin
+            empty := false;
             Format.printf "Remove: %a@." pp_pkg (rem,univ);
             Format.printf "Install: %a@." pp_pkg (inst,univ)
+        end
         |true,true -> ()
       ) diff;
-    end with Cudf.Constraint_violation s -> begin
-      print_error ("(CUDF) Malformed solution: "^s);
-      exit 0
-    end
+      if !empty then 
+        print_progress ~i:100 "the best solution is the empty solution"
+    end with Cudf.Constraint_violation s ->
+      print_error ("(CUDF) Malformed solution: "^s)
   end;
   Util.Timer.stop timer5 ();
 ;;
