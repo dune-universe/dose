@@ -56,19 +56,19 @@ let trim (u, mdf) =
 
 let cone ?maxdepth ?conjunctive (_, mdf) pl : Cudf.package list =
   let maps = mdf.Mdf.maps in
-  let idlist = List.map maps.map#vartoint pl in
+  let idlist = List.rev_map maps.map#vartoint pl in
   let closure =
 		Depsolver_int.dependency_closure ?maxdepth ?conjunctive mdf idlist in
-  List.map maps.map#inttovar closure
+  List.rev_map maps.map#inttovar closure
 ;;
 
 let rev_cone ?maxdepth (_, mdf) pl : Cudf.package list =
   let maps = mdf.Mdf.maps in
-  let idlist = List.map maps.map#vartoint pl in
+  let idlist = List.rev_map maps.map#vartoint pl in
   let reverse = Depsolver_int.reverse_dependencies mdf in
   let closure =
 		Depsolver_int.reverse_dependency_closure ?maxdepth reverse idlist in
-  List.map maps.map#inttovar closure
+  List.rev_map maps.map#inttovar closure
 ;;
 
 let filter_packages f (u, _) =
@@ -102,12 +102,22 @@ let check (u, mdf) (* slv *) p =
 ;;	
 
 let check_together (u, mdf) l =
-	let req = Diagnostic_int.Lst (List.map mdf.Mdf.maps.map#vartoint l) in
+	let req = Diagnostic_int.Lst (List.rev_map mdf.Mdf.maps.map#vartoint l) in
 	let slv = Depsolver_int.init_solver mdf.Mdf.index in
 	let res = Depsolver_int.solve slv req in
 		match res with
 		| Diagnostic_int.Success _ -> true
 		| Diagnostic_int.Failure _ -> false
+;;
+
+let install (u, mdf) l =
+	let req = Diagnostic_int.Lst (List.rev_map mdf.Mdf.maps.map#vartoint l) in
+	let slv = Depsolver_int.init_solver mdf.Mdf.index in
+	let res = Depsolver_int.solve slv req in
+		match res with
+		| Diagnostic_int.Success f -> List.rev_map mdf.Mdf.maps.map#inttovar
+				(f ~all:false ())
+		| Diagnostic_int.Failure _ -> []
 ;;
 
 (* TODO: add
