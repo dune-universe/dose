@@ -126,18 +126,32 @@ let check_fail s =
     with Scanf.Scan_failure _ -> false
   end with End_of_file -> false
 
+let timestamp () =
+  let tm = Unix.localtime (Unix.time ()) in
+  Printf.sprintf "%04d-%02d-%02d %02d:%02d:%02d"
+    (tm.Unix.tm_year + 1900)
+    (tm.Unix.tm_mon + 1)
+    tm.Unix.tm_mday
+    tm.Unix.tm_hour
+    tm.Unix.tm_min
+    tm.Unix.tm_sec
+;;
+
+
 let print_error s =
-  Format.printf "Error: %f@." (Unix.time ());
+  Format.printf "Error: %s@." (timestamp ());
   Format.printf "Message: %s@." s;
   exit 0
 ;;
 
 let print_progress ?i msg =
-  Format.printf "Progress: %f@." (Unix.time ());
+  Format.printf "Progress: %s@." (timestamp ());
   if not(Option.is_none i) then
     Format.printf "Percentage: %d@." (Option.get i);
-  Format.printf "Message: %s@." msg
+  if msg <> "" then
+    Format.printf "Message: %s@." msg
 ;;
+
 
 let main () =
   let timer1 = Util.Timer.create "parsing" in
@@ -262,7 +276,9 @@ let main () =
         |true,true -> ()
       ) diff;
       if !empty then 
-        print_progress ~i:100 "No packages to remove or install"
+        print_progress ~i:100 "No packages removed or installed"
+      else
+        print_progress ~i:100 ""
     end with Cudf.Constraint_violation s ->
       print_error ("(CUDF) Malformed solution: "^s)
   end;
