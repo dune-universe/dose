@@ -31,12 +31,14 @@ module Options = struct
   let solfile = StdOpt.str_option ()
   let solver = StdOpt.str_option ()
   let criteria = StdOpt.str_option ()
+  let explain = StdOpt.store_true ()
 
   open OptParser
   add options ~long_name:"univfile" ~help:"dump the cudf universe" outfile;
   add options ~long_name:"solfile" ~help:"dump the cudf solution" solfile;
   add options ~short_name:'s' ~long_name:"solver" ~help:"external solver" solver;
   add options ~short_name:'c' ~long_name:"criteria" ~help:"optimization criteria" criteria;
+  add options ~short_name:'e' ~long_name:"explain" ~help:"summary" explain;
 
 end
 
@@ -46,14 +48,27 @@ let norm s =
   with Not_found -> s
 ;;
 
-let make_request request = 
-  (* XXX add here the semantic translation for autoremove, strict-pinning
-   * and friends in req_extra *)
-  {Cudf.default_request with
-  Cudf.request_id = request.Edsp.request;
-  Cudf.install = List.map (fun (n,c) -> (norm n,None)) request.Edsp.install;
-  Cudf.remove = List.map (fun (n,c) -> (norm n,None)) request.Edsp.remove;
-  }
+let make_request universe request = 
+  let select_packages l = List.map (fun (n,c) -> (norm n,None)) l in
+  if request.Edsp.upgrade || request.Edsp.distupgrade then
+    let to_upgrade = function
+      |[] ->
+        let filter pkg = pkg.Cudf.installed in
+        let l = Cudf.get_packages ~filter universe in
+        List.map (fun pkg -> (pkg.Cudf.package,None)) l
+      |l -> List.map (fun (n,c) -> (norm n,None)) l
+    in
+    {Cudf.default_request with 
+    Cudf.request_id = request.Edsp.request;
+    Cudf.upgrade = to_upgrade request.Edsp.install;
+    Cudf.remove = select_packages request.Edsp.remove;
+    }
+  else
+    {Cudf.default_request with
+    Cudf.request_id = request.Edsp.request;
+    Cudf.install = select_packages request.Edsp.install;
+    Cudf.remove = select_packages request.Edsp.remove;
+    }
 ;;
 
 let rec input_all_lines acc chan =
@@ -91,8 +106,8 @@ let pp_pkg fmt (s,univ) =
   Format.fprintf fmt "Architecture: %s\n" pkg.Packages.architecture;
 ;;
 
-(* TODO: the criteria should be computed on the fly w.r.t. strict pinning and
- * preferences *)
+(* TODO: strict pinning *)
+(* TODO: add a configuration file to define trendy and paranoid ? *)
 let choose_criteria ?(criteria=None) request = 
   let paranoid = "-removed,-changed" in
   let upgrade = "-notuptodate,-removed,-changed" in
@@ -213,7 +228,7 @@ let main () =
       exit 0
     end
   in
-  let cudf_request = make_request request in
+  let cudf_request = make_request universe request in
   let cudf = (default_preamble,universe,cudf_request) in
   Util.Timer.stop timer2 ();
   (*
@@ -280,10 +295,22 @@ let main () =
         end
         |true,true -> ()
       ) diff;
+
+      if OptParse.Opt.get Options.explain then begin
+        Format.printf "Summary:";
+        Format.printf "Unchanged: %d" 0;
+        Format.printf "Installed: (%d) %s" 0 "";
+        Format.printf "Removed: (%d) %s" 0 "";
+        Format.printf "Upgraded: (%d) %s" 0 "";
+        Format.printf "Downgraded: (%d) %s" 0 "";
+      end;
+        
       if !empty then 
         print_progress ~i:100 "No packages removed or installed"
+        (*
       else
         print_progress ~i:100 ""
+        *)
     end with Cudf.Constraint_violation s ->
       print_error ("(CUDF) Malformed solution: "^s)
   end;

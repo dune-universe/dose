@@ -151,10 +151,10 @@ let parse_packages_fields stanza_parser par =
     end
 ;;
 
-let parse_package_stanza default_arch extras par = 
+let parse_package_stanza filter default_arch extras par = 
   let aux par = 
     let parse_arch = parse_architecture default_arch in
-    Some {
+    let p = {
         name = parse_s ~err:"(MISSING NAME)" parse_name "Package" par;
         version = parse_s ~err:"(MISSING VERSION)" parse_version "Version" par;
         architecture = parse_s ~err:"(MISSING ARCH)" parse_arch "Architecture" par;
@@ -174,12 +174,19 @@ let parse_package_stanza default_arch extras par =
         provides = parse_s ~opt:[] ~multi:true parse_conj "Provides" par;
         extras = parse_e extras par;
     }
+    in 
+    if Option.is_none filter then Some p
+    else if (Option.get filter) p then Some(p) else None
   in parse_packages_fields aux par
 ;;
 
 (** parse a debian Packages file from the channel [ch] *)
-let parse_packages_in ?(default_arch=None) ?(extras=[]) ch =
-  let parse_packages = Format822.parse_822_iter (parse_package_stanza default_arch extras) in
+let parse_packages_in ?filter ?(default_arch=None) ?(extras=[]) ch =
+  let parse_packages = 
+    Format822.parse_822_iter (
+      parse_package_stanza filter default_arch extras
+    ) 
+  in
   parse_packages (Format822.start_from_channel ch)
 
 (**/**)
@@ -224,13 +231,13 @@ let default_extras = [
 ]
 
 (** input_raw [file] : parse a debian Packages file from [file] *)
-let input_raw ?(default_arch=None) ?(extras=[]) = 
+let input_raw ?filter ?(default_arch=None) ?(extras=[]) = 
   let module M = Format822.RawInput(Set) in
   let extras = default_extras @ extras in
-  M.input_raw (parse_packages_in ~default_arch ~extras)
+  M.input_raw (parse_packages_in ?filter ~default_arch ~extras)
 
 (** input_raw_ch ch : parse a debian Packages file from channel [ch] *)
-let input_raw_ch ?(default_arch=None) ?(extras=[]) = 
+let input_raw_ch ?(filter=None) ?(default_arch=None) ?(extras=[]) = 
   let module M = Format822.RawInput(Set) in
   let extras = default_extras @ extras in
-  M.input_raw_ch (parse_packages_in ~default_arch ~extras)
+  M.input_raw_ch (parse_packages_in ?filter ~default_arch ~extras)

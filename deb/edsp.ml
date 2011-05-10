@@ -87,7 +87,21 @@ let input_raw_ch ch =
         |None -> fatal "empty request (document does not start with a request)"
         |Some r -> r
   in
-  let pkglist = Packages.parse_packages_in ~extras ch in
+  (* XXX: not convinced that this is the correct level to put this filter *)
+  let pkglist = 
+    if request.strict_pin then
+      let filter pkg = 
+        try
+          let s = Packages.assoc "APT-Candidate" pkg.Packages.extras in
+          Packages.parse_bool "APT-Candidate" s
+        with Not_found -> 
+          fatal "Package %s does not have a mandatory APT-Candidate field"
+          pkg.Packages.name 
+      in
+      Packages.parse_packages_in ~filter ~extras ch 
+    else
+      Packages.parse_packages_in ~extras ch
+  in
   (request,pkglist)
 ;;
 

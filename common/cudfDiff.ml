@@ -57,6 +57,12 @@ type t =
   |Up of Cudf_set.t (* upgraded *)
   |Dw of Cudf_set.t (* downgraded *)
 
+(* 
+   [all] : all versions of a package in the universe . 
+   [s] : the set of version for version of a package in a solution 
+   returns a list that contains for each version its status : installed, 
+   removed, upgraded, etc
+*)
 let uniqueversion all s =
   let l = ref [] in
   let i = Cudf_set.filter (fun pkg -> pkg.Cudf.installed) all in
@@ -88,4 +94,14 @@ let uniqueversion all s =
   end;
   !l
 ;;
+
+(*
+let summary univ diff =
+  let names = CudfAdd.pkgnames univ in
+  StringSet.iter (fun pkgname ->
+    let all = CudfAdd.to_set (Cudf.lookup_packages univ pkgname) in
+    let s = Hashtbl.find diff pkgname in
+    let l = CudfDiff.uniqueversion all s in
+  ) names;
+*)
 
