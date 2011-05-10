@@ -110,11 +110,11 @@ let exec cmd =
   begin match stat with
     |Unix.WEXITED 0 -> ()
     |Unix.WEXITED i ->
-        print_error "command '%s'\nfailed with code %d" cmd i
+        print_error (Printf.sprintf "command '%s' failed with code %d" cmd i)
     |Unix.WSIGNALED i ->
-        print_error "command '%s'\nkilled by signal %d" cmd i 
+        print_error (Printf.sprintf "command '%s' killed by signal %d" cmd i)
     |Unix.WSTOPPED i ->
-        print_error "command '%s'\nstopped by signal %d" cmd i
+        print_error (Printf.sprintf "command '%s' stopped by signal %d" cmd i)
   end;
   String.concat "\n" lines
 ;;
