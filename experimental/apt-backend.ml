@@ -42,6 +42,32 @@ module Options = struct
 
 end
 
+let timestamp () =
+  let tm = Unix.localtime (Unix.time ()) in
+  Printf.sprintf "%04d-%02d-%02d %02d:%02d:%02d"
+    (tm.Unix.tm_year + 1900)
+    (tm.Unix.tm_mon + 1)
+    tm.Unix.tm_mday
+    tm.Unix.tm_hour
+    tm.Unix.tm_min
+    tm.Unix.tm_sec
+;;
+
+
+let print_error s =
+  Format.printf "Error: %s@." (timestamp ());
+  Format.printf "Message: %s@." s;
+  exit 0
+;;
+
+let print_progress ?i msg =
+  Format.printf "Progress: %s@." (timestamp ());
+  if not(Option.is_none i) then
+    Format.printf "Percentage: %d@." (Option.get i);
+  if msg <> "" then
+    Format.printf "Message: %s@." msg
+;;
+
 (* XXX : Multi-arch Hack *)
 let norm s = 
   try Str.string_before s (String.index s ':') 
@@ -145,33 +171,6 @@ let check_fail s =
     try l = "FAIL"
     with Scanf.Scan_failure _ -> false
   end with End_of_file -> false
-
-let timestamp () =
-  let tm = Unix.localtime (Unix.time ()) in
-  Printf.sprintf "%04d-%02d-%02d %02d:%02d:%02d"
-    (tm.Unix.tm_year + 1900)
-    (tm.Unix.tm_mon + 1)
-    tm.Unix.tm_mday
-    tm.Unix.tm_hour
-    tm.Unix.tm_min
-    tm.Unix.tm_sec
-;;
-
-
-let print_error s =
-  Format.printf "Error: %s@." (timestamp ());
-  Format.printf "Message: %s@." s;
-  exit 0
-;;
-
-let print_progress ?i msg =
-  Format.printf "Progress: %s@." (timestamp ());
-  if not(Option.is_none i) then
-    Format.printf "Percentage: %d@." (Option.get i);
-  if msg <> "" then
-    Format.printf "Message: %s@." msg
-;;
-
 
 let main () =
   let timer1 = Util.Timer.create "parsing" in
