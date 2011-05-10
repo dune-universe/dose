@@ -40,7 +40,12 @@ module Options = struct
 
 end
 
-let norm s = Str.string_before s (String.index s ':') ;;
+(* XXX : Multi-arch Hack *)
+let norm s = 
+  try Str.string_before s (String.index s ':') 
+  with Not_found -> s
+;;
+
 let make_request request = 
   (* XXX add here the semantic translation for autoremove, strict-pinning
    * and friends in req_extra *)
