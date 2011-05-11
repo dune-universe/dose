@@ -54,10 +54,12 @@ let timestamp () =
 ;;
 
 
-let print_error s =
-  Format.printf "Error: %s@." (timestamp ());
-  Format.printf "Message: %s@." s;
-  exit 0
+let print_error fmt =
+  Printf.kprintf (fun s -> 
+    Format.printf "Error: %s@." (timestamp ());
+    Format.printf "Message: %s@." s;
+    exit 0
+  ) fmt
 ;;
 
 let print_progress ?i msg =
@@ -110,11 +112,11 @@ let exec cmd =
   begin match stat with
     |Unix.WEXITED 0 -> ()
     |Unix.WEXITED i ->
-        print_error (Printf.sprintf "command '%s' failed with code %d" cmd i)
+        print_error "command '%s' failed with code %d" cmd i
     |Unix.WSIGNALED i ->
-        print_error (Printf.sprintf "command '%s' killed by signal %d" cmd i)
+        print_error "command '%s' killed by signal %d" cmd i
     |Unix.WSTOPPED i ->
-        print_error (Printf.sprintf "command '%s' stopped by signal %d" cmd i)
+        print_error "command '%s' stopped by signal %d" cmd i
   end;
   String.concat "\n" lines
 ;;
@@ -222,10 +224,8 @@ let main () =
   in
   let universe = 
     try Cudf.load_universe cudfpkglist
-    with Cudf.Constraint_violation s -> begin
-      print_error ("(CUDF) Malformed universe "^s);
-      exit 0
-    end
+    with Cudf.Constraint_violation s ->
+      print_error "(CUDF) Malformed universe %s" s;
   in
   let cudf_request = make_request universe request in
   let cudf = (default_preamble,universe,cudf_request) in
@@ -311,7 +311,7 @@ let main () =
         print_progress ~i:100 ""
         *)
     end with Cudf.Constraint_violation s ->
-      print_error ("(CUDF) Malformed solution: "^s)
+      print_error "(CUDF) Malformed solution: %s" s
   end;
   Util.Timer.stop timer5 ();
 ;;
