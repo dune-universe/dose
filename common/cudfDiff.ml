@@ -38,10 +38,6 @@ let diff univ sol =
     let are_installed = to_set univ (Cudf.get_installed sol pkgname) in
     let r = Cudf_set.diff were_installed are_installed in
     let i = Cudf_set.diff are_installed were_installed in
-
-    let old_packages = to_set univ (Cudf.lookup_packages univ pkgname) in
-    let new_packages = to_set univ (Cudf.lookup_packages sol pkgname) in
-
     let s = { removed = r ; installed = i } in
     Hashtbl.add h pkgname s
   ) pkgnames ;

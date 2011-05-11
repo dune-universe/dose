@@ -119,26 +119,13 @@ let pp_pkg_list fmt (l,univ) =
     String.concat ", "
     (List.map (fun p ->
       let pkg = Hashtbl.find univ (p.Cudf.package,p.Cudf.version) in
-      Printf.sprintf "%s [%s %s]" 
-      pkg.Packages.name 
-      pkg.Packages.version
-      pkg.Packages.architecture
+      Printf.sprintf "%s" pkg.Packages.name
     ) l)
   )
 ;;
 
 let pp_pkg_list_tran fmt (l,univ) =
-  Format.fprintf fmt "%s" (
-    String.concat ", "
-    (List.map (fun (p,q) ->
-      let pkg_p = Hashtbl.find univ (p.Cudf.package,p.Cudf.version) in
-      let pkg_q = Hashtbl.find univ (q.Cudf.package,q.Cudf.version) in
-      Printf.sprintf "%s [%s -> %s]" 
-      pkg_p.Packages.name 
-      pkg_p.Packages.version
-      pkg_q.Packages.version
-    ) l)
-  )
+  pp_pkg_list fmt (List.map snd l,univ)
 ;;
 
 
