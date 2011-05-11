@@ -101,24 +101,6 @@ let rec input_all_lines acc chan =
   try input_all_lines ((input_line chan)::acc) chan
   with End_of_file -> acc
 
-let exec cmd =
-  let env = Unix.environment () in
-  let (cin,cout,cerr) = Unix.open_process_full cmd env in
-  let lines_cin = input_all_lines [] cin in
-  let lines = input_all_lines lines_cin cerr in
-  let stat = Unix.close_process_full (cin,cout,cerr) in
-  begin match stat with
-    |Unix.WEXITED 0 -> ()
-    |Unix.WEXITED i ->
-        print_error "command '%s' failed with code %d" cmd i
-    |Unix.WSIGNALED i ->
-        print_error "command '%s' killed by signal %d" cmd i
-    |Unix.WSTOPPED i ->
-        print_error "command '%s' stopped by signal %d" cmd i
-  end;
-  String.concat "\n" lines
-;;
-
 let solver_dir = 
   try Sys.getenv("CUDFSOLVERS") with Not_found -> "/usr/share/cudf/solvers"
 
@@ -130,6 +112,19 @@ let pp_pkg fmt (s,univ) =
   Format.fprintf fmt "Package: %s\n" pkg.Packages.name;
   Format.fprintf fmt "Version: %s\n" pkg.Packages.version;
   Format.fprintf fmt "Architecture: %s\n" pkg.Packages.architecture;
+;;
+
+let pp_pkg_list fmt (l,univ) =
+  Format.fprintf fmt "%s" (
+    String.concat ", "
+    (List.map (fun p ->
+      let pkg = Hashtbl.find univ (p.Cudf.package,p.Cudf.version) in
+      Printf.sprintf "%s [%s:%s]" 
+      pkg.Packages.name 
+      pkg.Packages.version
+      pkg.Packages.architecture
+    ) l)
+  )
 ;;
 
 (* TODO: add a configuration file to define trendy and paranoid ? *)
@@ -250,6 +245,14 @@ let main () =
   close_out oc ;
   Util.Timer.stop timer3 ();
 
+  if OptParse.Opt.get Options.dump then begin
+    info "dump universe in  /tmp/cudf-solver.universe.dump";
+    let oc = open_out "/tmp/cudf-solver.universe.dump" in
+    let fmt = Format.formatter_of_out_channel oc in
+    Format.fprintf fmt "%a" Cudf_printer.pp_cudf cudf;
+    close_out oc
+  end;
+
   Util.Timer.start timer4;
   let lines_cin = input_all_lines [] cin in
   let lines = input_all_lines lines_cin cerr in
@@ -304,12 +307,21 @@ let main () =
       ) diff;
 
       if OptParse.Opt.get Options.explain then begin
-        Format.printf "Summary:";
-        Format.printf "Unchanged: %d" 0;
-        Format.printf "Installed: (%d) %s" 0 "";
-        Format.printf "Removed: (%d) %s" 0 "";
-        Format.printf "Upgraded: (%d) %s" 0 "";
-        Format.printf "Downgraded: (%d) %s" 0 "";
+        let (i,u,d,r,un) = CudfDiff.summary universe diff in
+        Format.printf "Summary:@.";
+        (* Format.printf "Unchanged: %d@." un; *)
+        if i <> [] then
+          Format.printf "Installed: (%d) %a@." 
+          (List.length i) pp_pkg_list (i,univ);
+        if r <> [] then 
+          Format.printf "Removed: (%d) %a@." 
+          (List.length r) pp_pkg_list (r,univ);
+        if u <> [] then 
+          Format.printf "Upgraded: (%d) %a@." 
+          (List.length u) pp_pkg_list (u,univ);
+        if d <> [] then 
+          Format.printf "Downgraded: (%d) %a@." 
+          (List.length d) pp_pkg_list (d,univ);
       end;
         
       if !empty then 

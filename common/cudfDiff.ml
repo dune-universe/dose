@@ -95,13 +95,23 @@ let uniqueversion all s =
   !l
 ;;
 
-(*
 let summary univ diff =
+  let i = ref [] in
+  let u = ref [] in
+  let d = ref [] in
+  let r = ref [] in
+  let un = ref 0 in
   let names = CudfAdd.pkgnames univ in
   StringSet.iter (fun pkgname ->
     let all = CudfAdd.to_set (Cudf.lookup_packages univ pkgname) in
     let s = Hashtbl.find diff pkgname in
-    let l = CudfDiff.uniqueversion all s in
+    List.iter (function 
+      |In s -> i := (Cudf_set.elements s) @ !i
+      |Up s -> u := (Cudf_set.elements s) @ !u
+      |Dw s -> d := (Cudf_set.elements s) @ !d
+      |Rm s -> r := (Cudf_set.elements s) @ !r
+      |Un s -> un := (Cudf_set.cardinal s) + !un
+    )(uniqueversion all s)
   ) names;
-*)
-
+  (!i,!u,!d,!r,!un)
+;;

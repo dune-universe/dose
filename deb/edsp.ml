@@ -94,9 +94,7 @@ let input_raw_ch ch =
         try
           let s = Packages.assoc "APT-Candidate" pkg.Packages.extras in
           Packages.parse_bool "APT-Candidate" s
-        with Not_found -> 
-          fatal "Package %s does not have a mandatory APT-Candidate field"
-          pkg.Packages.name 
+        with Not_found -> false
       in
       Packages.parse_packages_in ~filter ~extras ch 
     else
