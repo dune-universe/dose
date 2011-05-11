@@ -27,15 +27,13 @@ module Options = struct
   let options = OptParser.make ~description
   include Boilerplate.MakeOptions(struct let options = options end)
 
-  let outfile = StdOpt.str_option ()
-  let solfile = StdOpt.str_option ()
+  let dump = StdOpt.store_true ()
   let solver = StdOpt.str_option ()
   let criteria = StdOpt.str_option ()
   let explain = StdOpt.store_true ()
 
   open OptParser
-  add options ~long_name:"univfile" ~help:"dump the cudf universe" outfile;
-  add options ~long_name:"solfile" ~help:"dump the cudf solution" solfile;
+  add options ~short_name:'d' ~long_name:"dump" ~help:"dump the cudf universe and solution" dump;
   add options ~short_name:'s' ~long_name:"solver" ~help:"external solver" solver;
   add options ~short_name:'c' ~long_name:"criteria" ~help:"optimization criteria" criteria;
   add options ~short_name:'e' ~long_name:"explain" ~help:"summary" explain;
@@ -134,7 +132,6 @@ let pp_pkg fmt (s,univ) =
   Format.fprintf fmt "Architecture: %s\n" pkg.Packages.architecture;
 ;;
 
-(* TODO: strict pinning *)
 (* TODO: add a configuration file to define trendy and paranoid ? *)
 let choose_criteria ?(criteria=None) request = 
   let paranoid = "-removed,-changed" in
@@ -166,13 +163,13 @@ let parse_solver filename =
   else (!name,!version)
 ;;
 
-let check_fail s =
-  let ic = open_in s in
+let check_fail file =
+  let ic = open_in file in
   try begin
     let l = input_line ic in
-    try l = "FAIL"
-    with Scanf.Scan_failure _ -> false
-  end with End_of_file -> false
+    try (close_in ic ; l = "FAIL")
+    with Scanf.Scan_failure _ -> (close_in ic ; false)
+  end with End_of_file -> (close_in ic ; false)
 
 let main () =
   let timer1 = Util.Timer.create "parsing" in
@@ -230,45 +227,56 @@ let main () =
   let cudf_request = make_request universe request in
   let cudf = (default_preamble,universe,cudf_request) in
   Util.Timer.stop timer2 ();
-  (*
-  let oc =
-    if OptParse.Opt.is_set Options.outfile then
-      open_out (OptParse.Opt.get Options.outfile)
-    else
-      stdout
-  in
-  *)
 
-  (* XXX we should use a named pipe for in and out or a tmp file *)
-  let infile = "/tmp/cudf_req" in
-  let outfile = "/tmp/cudf_sol" in
+  let solver_in = "/tmp/cudf-solver.unvierse.pipe" in
+  if Sys.file_exists solver_in then Sys.remove solver_in;
+  Unix.mkfifo solver_in 0o600;
 
-  let oc = open_out infile in
-  
+  let solver_out = "/tmp/cudf-solver.solution" in
+  if Sys.file_exists solver_out then Sys.remove solver_out;
+
+  let cmdline_criteria = OptParse.Opt.opt (Options.criteria) in
+  let criteria = choose_criteria ~criteria:cmdline_criteria request in
+  let cmd = Printf.sprintf "%s %s %s %s" solver solver_in solver_out criteria in
+
+  let env = Unix.environment () in
+  let (cin,cout,cerr) = Unix.open_process_full cmd env in
+
   Util.Timer.start timer3;
+  let solver_in_fd = Unix.openfile solver_in [Unix.O_WRONLY ; Unix.O_SYNC] 0 in
+  let oc = Unix.out_channel_of_descr solver_in_fd in
   let fmt = Format.formatter_of_out_channel oc in
   Format.fprintf fmt "%a" Cudf_printer.pp_cudf cudf;
-  if oc <> stdout then close_out oc ;
+  close_out oc ;
   Util.Timer.stop timer3 ();
 
   Util.Timer.start timer4;
-  let cmdline_criteria = OptParse.Opt.opt (Options.criteria) in
-  let criteria = choose_criteria ~criteria:cmdline_criteria request in
-  let cmd = Printf.sprintf "%s %s %s %s" solver infile outfile criteria in
-  let debug = exec cmd in
+  let lines_cin = input_all_lines [] cin in
+  let lines = input_all_lines lines_cin cerr in
+  let stat = Unix.close_process_full (cin,cout,cerr) in
+  begin match stat with
+    |Unix.WEXITED 0 -> ()
+    |Unix.WEXITED i ->
+        print_error "command '%s' failed with code %d" cmd i
+    |Unix.WSIGNALED i ->
+        print_error "command '%s' killed by signal %d" cmd i
+    |Unix.WSTOPPED i ->
+        print_error "command '%s' stopped by signal %d" cmd i
+  end;
+  let debug = String.concat "\n" lines in
   info "%s\n%s\n%!" cmd debug; 
   Util.Timer.stop timer4 ();
 
   Util.Timer.start timer5;
-  if not(Sys.file_exists outfile) then 
+  if not(Sys.file_exists solver_out) then 
     print_error "(CRASH) Solution file not found"
-  else if check_fail outfile then
+  else if check_fail solver_out then
     print_error "(UNSAT) No Solutions according to the give preferences"
   else begin
     try begin
       let sol = 
-        if (Unix.stat outfile).Unix.st_size <> 0 then
-          let cudf_parser = Cudf_parser.from_file outfile in
+        if (Unix.stat solver_out).Unix.st_size <> 0 then
+          let cudf_parser = Cudf_parser.from_file solver_out in
           let (_,sol,_) = Cudf_parser.parse cudf_parser in
           sol
         else []
@@ -306,10 +314,6 @@ let main () =
         
       if !empty then 
         print_progress ~i:100 "No packages removed or installed"
-        (*
-      else
-        print_progress ~i:100 ""
-        *)
     end with Cudf.Constraint_violation s ->
       print_error "(CUDF) Malformed solution: %s" s
   end;
