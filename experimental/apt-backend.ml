@@ -119,13 +119,28 @@ let pp_pkg_list fmt (l,univ) =
     String.concat ", "
     (List.map (fun p ->
       let pkg = Hashtbl.find univ (p.Cudf.package,p.Cudf.version) in
-      Printf.sprintf "%s [%s:%s]" 
+      Printf.sprintf "%s [%s %s]" 
       pkg.Packages.name 
       pkg.Packages.version
       pkg.Packages.architecture
     ) l)
   )
 ;;
+
+let pp_pkg_list_tran fmt (l,univ) =
+  Format.fprintf fmt "%s" (
+    String.concat ", "
+    (List.map (fun (p,q) ->
+      let pkg_p = Hashtbl.find univ (p.Cudf.package,p.Cudf.version) in
+      let pkg_q = Hashtbl.find univ (q.Cudf.package,q.Cudf.version) in
+      Printf.sprintf "%s [%s -> %s]" 
+      pkg_p.Packages.name 
+      pkg_p.Packages.version
+      pkg_q.Packages.version
+    ) l)
+  )
+;;
+
 
 (* TODO: add a configuration file to define trendy and paranoid ? *)
 let choose_criteria ?(criteria=None) request = 
@@ -307,23 +322,28 @@ let main () =
       ) diff;
 
       if OptParse.Opt.get Options.explain then begin
-        let (i,u,d,r,un) = CudfDiff.summary universe diff in
-        Format.printf "Summary:@.";
-        (* Format.printf "Unchanged: %d@." un; *)
+        let (i,u,d,r) = CudfDiff.summary universe diff in
+        Format.printf "Summary: " ;
         if i <> [] then
-          Format.printf "Installed: (%d) %a@." 
-          (List.length i) pp_pkg_list (i,univ);
+          Format.printf "%d to install " (List.length i);
+        if r <> [] then
+          Format.printf "%d to remove " (List.length r);
+        if u <> [] then
+          Format.printf "%d to upgrade " (List.length u);
+        if d <> [] then
+          Format.printf "%d to downupgrade " (List.length d);
+        Format.printf " @.";
+
+        if i <> [] then
+          Format.printf "Installed: %a@." pp_pkg_list (i,univ);
         if r <> [] then 
-          Format.printf "Removed: (%d) %a@." 
-          (List.length r) pp_pkg_list (r,univ);
+          Format.printf "Removed: %a@." pp_pkg_list (r,univ);
         if u <> [] then 
-          Format.printf "Upgraded: (%d) %a@." 
-          (List.length u) pp_pkg_list (u,univ);
+          Format.printf "Upgraded: %a@." pp_pkg_list_tran (u,univ);
         if d <> [] then 
-          Format.printf "Downgraded: (%d) %a@." 
-          (List.length d) pp_pkg_list (d,univ);
+          Format.printf "Downgraded: %a@." pp_pkg_list_tran (d,univ);
       end;
-        
+     
       if !empty then 
         print_progress ~i:100 "No packages removed or installed"
     end with Cudf.Constraint_violation s ->
