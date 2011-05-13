@@ -23,7 +23,7 @@ let fatal fmt = Util.make_fatal "apt-get backend" fmt
 
 module Options = struct
   open OptParse
-  let description = "apt-get backend (EDSP v. 0.3)"
+  let description = "apt-get backend (EDSP v. 0.4)"
   let options = OptParser.make ~description
   include Boilerplate.MakeOptions(struct let options = options end)
 
@@ -225,12 +225,12 @@ let main () =
   let cudf = (default_preamble,universe,cudf_request) in
   Util.Timer.stop timer2 ();
 
-  let solver_in = "/tmp/cudf-solver.unvierse.pipe" in
-  if Sys.file_exists solver_in then Sys.remove solver_in;
+
+  let uuid = Util.uuid () in
+  let solver_in = Printf.sprintf "/tmp/%s.pipe" uuid in
   Unix.mkfifo solver_in 0o600;
 
-  let solver_out = "/tmp/cudf-solver.solution" in
-  if Sys.file_exists solver_out then Sys.remove solver_out;
+  let solver_out = Printf.sprintf "/tmp/%s.solution" uuid in
 
   let cmdline_criteria = OptParse.Opt.opt (Options.criteria) in
   let criteria = choose_criteria ~criteria:cmdline_criteria request in
@@ -337,6 +337,8 @@ let main () =
       print_error "(CUDF) Malformed solution: %s" s
   end;
   Util.Timer.stop timer5 ();
+  Sys.remove solver_in;
+  Sys.remove solver_out;
 ;;
 
 main ();;
