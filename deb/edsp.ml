@@ -91,10 +91,19 @@ let input_raw_ch ch =
   let pkglist = 
     if request.strict_pin then
       let filter pkg = 
-        try
-          let s = Packages.assoc "APT-Candidate" pkg.Packages.extras in
-          Packages.parse_bool "APT-Candidate" s
-        with Not_found -> false
+        let inst () =
+          try
+            Packages.parse_bool "Installed"
+            (Packages.assoc "Installed" pkg.Packages.extras)
+          with Not_found -> false
+        in
+        let candidate () =
+          try
+            let s = Packages.assoc "APT-Candidate" pkg.Packages.extras in
+            Packages.parse_bool "APT-Candidate" s
+          with Not_found -> false
+        in
+        (inst ()) || (candidate ())
       in
       Packages.parse_packages_in ~filter ~extras ch 
     else
