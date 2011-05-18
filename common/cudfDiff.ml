@@ -103,7 +103,7 @@ let summary univ diff =
     if not (Option.is_none l.u) then
       u := (Option.get l.u) :: !u;
     if not (Option.is_none l.d) then
-      u := (Option.get l.d) :: !d;
+      d := (Option.get l.d) :: !d;
   ) names;
   (!i,!u,!d,!r)
 ;;

@@ -42,7 +42,14 @@ let default_request = {
   preferences = ""
 }
 
-let parse_conj _ s = Format822.list_parser ~sep:" " Format822.parse_constr s
+let parse_req s = 
+  match String.nsplit s "=" with
+  |[n] -> (n,None)
+  |[n;v] -> (n,Some("=",v))
+  |_ -> assert false
+;;
+
+let parse_conj _ s = Format822.list_parser ~sep:" " parse_req s
 
 let parse_request_stanza par =
   let aux par =

@@ -74,15 +74,24 @@ let norm s =
   with Not_found -> s
 ;;
 
-let make_request universe request = 
-  let select_packages l = List.map (fun (n,c) -> (norm n,None)) l in
+let make_request tables universe request = 
+  let constr cs = 
+    match CudfAdd.cudfop cs with
+    |None -> None
+    |Some (c,v) -> Some (c,Debian.Debcudf.get_cudf_version tables ("",v))
+  in
+  let select_packages l =
+    List.map (fun (n,c) -> 
+      (norm n,constr c)
+    ) l 
+  in
   if request.Edsp.upgrade || request.Edsp.distupgrade then
     let to_upgrade = function
       |[] ->
         let filter pkg = pkg.Cudf.installed in
         let l = Cudf.get_packages ~filter universe in
         List.map (fun pkg -> (pkg.Cudf.package,None)) l
-      |l -> List.map (fun (n,c) -> (norm n,None)) l
+      |l -> select_packages l
     in
     {Cudf.default_request with 
     Cudf.request_id = request.Edsp.request;
@@ -221,7 +230,7 @@ let main () =
     with Cudf.Constraint_violation s ->
       print_error "(CUDF) Malformed universe %s" s;
   in
-  let cudf_request = make_request universe request in
+  let cudf_request = make_request tables universe request in
   let cudf = (default_preamble,universe,cudf_request) in
   Util.Timer.stop timer2 ();
 
@@ -318,7 +327,7 @@ let main () =
         if u <> [] then
           Format.printf "%d to upgrade " (List.length u);
         if d <> [] then
-          Format.printf "%d to downupgrade " (List.length d);
+          Format.printf "%d to downgrade " (List.length d);
         Format.printf " @.";
 
         if i <> [] then
