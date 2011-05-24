@@ -40,28 +40,16 @@ module Options = struct
 
 end
 
-let timestamp () =
-  let tm = Unix.localtime (Unix.time ()) in
-  Printf.sprintf "%04d-%02d-%02d %02d:%02d:%02d"
-    (tm.Unix.tm_year + 1900)
-    (tm.Unix.tm_mon + 1)
-    tm.Unix.tm_mday
-    tm.Unix.tm_hour
-    tm.Unix.tm_min
-    tm.Unix.tm_sec
-;;
-
-
 let print_error fmt =
   Printf.kprintf (fun s -> 
-    Format.printf "Error: %s@." (timestamp ());
+    Format.printf "Error: %s@." (Util.timestamp ());
     Format.printf "Message: %s@." s;
     exit 0
   ) fmt
 ;;
 
 let print_progress ?i msg =
-  Format.printf "Progress: %s@." (timestamp ());
+  Format.printf "Progress: %s@." (Util.timestamp ());
   if not(Option.is_none i) then
     Format.printf "Percentage: %d@." (Option.get i);
   if msg <> "" then
@@ -128,7 +116,10 @@ let pp_pkg_list fmt (l,univ) =
     String.concat ", "
     (List.map (fun p ->
       let pkg = Hashtbl.find univ (p.Cudf.package,p.Cudf.version) in
-      Printf.sprintf "%s" pkg.Packages.name
+      Printf.sprintf "%s=%s/%s" 
+      pkg.Packages.name 
+      pkg.Packages.version
+      pkg.Packages.architecture
     ) l)
   )
 ;;
