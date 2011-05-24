@@ -86,8 +86,10 @@ let _ = dispatch begin function
        let cppfl = split (env_var "CPPFLAGS") ' ' in
 
        List.iter begin fun (lib,dir) ->
-         flag ["ocaml"; "link"; "c_use_"^lib; "byte"] & S[A"-custom"; A"-cclib"; A("-l"^lib)];
-         flag ["ocaml"; "link"; "c_use_"^lib; "native"] & S[A"-cclib"; A("-l"^lib); A"-ccopt"; A(env_var "LDFLAGS")];
+         flag ["ocaml"; "link"; "c_use_"^lib; "byte"] & S[A"-custom"; A"-cclib";
+         A("-l"^lib); A"-cclib"; A"-lrpmio"];
+         flag ["ocaml"; "link"; "c_use_"^lib; "native"] & S[A"-cclib";
+         A("-l"^lib); A"-cclib"; A"-lrpmio"; A"-ccopt"; A(env_var "LDFLAGS")];
          dep ["ocaml"; "compile"; "c_use_"^lib ] & ["lib"^lib^"_stubs.a"];
          dep ["ocaml"; "link"; "c_use_"^lib] & ["lib"^lib^"_stubs.a"];
          flag ["c"; "compile"] & S(List.flatten (List.map (fun v -> [A"-ccopt"; A(v)]) cppfl));

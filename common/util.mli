@@ -21,6 +21,8 @@ val list_unique : 'a list -> 'a list
     an hashtbl storing all results that will be released only on exit *)
 val memo : ('a -> 'b) -> 'a -> 'b
 
+val timestamp : unit -> string
+
 (** Debug, ProgressBars, Timers and Loggers *)
 
 type label = string
