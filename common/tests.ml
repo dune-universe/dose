@@ -85,7 +85,7 @@ let parse_uri =
     test_synth;
     test_cudf;
     test_sqlite;
-    test_pgsql;
+    (* test_pgsql; *)
   ]
 
 (* XXX this file should not be in the algo test directory, but in a more

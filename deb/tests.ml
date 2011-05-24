@@ -190,6 +190,7 @@ let test_evolution =
       (* List.iter (fun r -> Printf.printf "%s\n" (Evolution.string_of_range r)) rl; *)
       assert_equal [(`Lo "1");(`Eq "1");(`Hi "1")] rl
     );
+    (*
     "evalsel" >:: (fun _ ->
       assert_equal false (Evolution.evalsel Version.compare ((`Eq "3.4"),(`Gt,"76")));
       assert_equal false (Evolution.evalsel Version.compare ((`In ("3.4","76")),(`Gt,"76")));
@@ -265,6 +266,7 @@ let test_evolution =
       ) clusters;
       assert_equal true true
     );
+    *)
     "align (with epoch)" >:: (fun _ ->
       let r = Evolution.align "1:3.4+b5" (`In ("3.5","3.6")) in
       assert_equal r (`In ("1:3.5","1:3.6"))
