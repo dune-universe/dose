@@ -15,27 +15,34 @@ module PS = Set.Make(Package);;
      which is necessary to quickly perform operations on the dependency graph
 *)
 
+let list_to_set l =
+	List.fold_left (fun acc p -> PS.add p acc) PS.empty l;;
+
+let set_to_list s =
+	PS.elements s;;
+
 let load url =
 begin
 	let (univ, _, _) = Boilerplate.load_universe [url] in
 	let mdf = Mdf.load_from_universe univ in
-	(univ, mdf)
+	let slv = Depsolver_int.init_solver mdf.Mdf.index in
+	(univ, mdf, slv)
 end;;
 
 let original_version p =
 	Cudf.lookup_package_property p "number";;
 
-let get_packages ?filter (u, mdf) =
-	Cudf.get_packages ?filter u;;
+let get_packages ?filter (u, _, _) =
+	list_to_set (Cudf.get_packages ?filter u);;
 
-let search_packages (u, mdf) re =
+let search_packages (u, _, _) re =
   let rex = Pcre.regexp re in
-   Cudf.get_packages 
+   list_to_set (Cudf.get_packages 
     ~filter:(fun p -> Pcre.pmatch ~rex (Cudf_types_pp.string_of_pkgname p.Cudf.package))
-		u
+		u)
 ;;
 
-let trim (u, mdf) = 
+let trim (u, mdf, _) = 
 	let trimmed_pkgs = ref [] in
 	let callback (res, req) =
 	begin
@@ -51,31 +58,36 @@ let trim (u, mdf) =
 	end in
   ignore (Depsolver_int.univcheck ~callback mdf);
 	let u' = Cudf.load_universe !trimmed_pkgs in
-  (u', Mdf.load_from_universe u')
+	let mdf' = Mdf.load_from_universe u' in
+	let slv' = Depsolver_int.init_solver mdf'.Mdf.index in
+  (u', mdf', slv')
 ;;
 
-let cone ?maxdepth ?conjunctive (_, mdf) pl : Cudf.package list =
+let cone ?maxdepth ?conjunctive (_, mdf, _) ps =
   let maps = mdf.Mdf.maps in
-  let idlist = List.rev_map maps.map#vartoint pl in
+  let idlist = List.rev_map maps.map#vartoint (set_to_list ps) in
   let closure =
 		Depsolver_int.dependency_closure ?maxdepth ?conjunctive mdf idlist in
-  List.rev_map maps.map#inttovar closure
+  list_to_set (List.rev_map maps.map#inttovar closure)
 ;;
 
-let rev_cone ?maxdepth (_, mdf) pl : Cudf.package list =
+let rev_cone ?maxdepth (_, mdf, _) ps =
   let maps = mdf.Mdf.maps in
-  let idlist = List.rev_map maps.map#vartoint pl in
+  let idlist = List.rev_map maps.map#vartoint (set_to_list ps) in
   let reverse = Depsolver_int.reverse_dependencies mdf in
   let closure =
 		Depsolver_int.reverse_dependency_closure ?maxdepth reverse idlist in
-  List.rev_map maps.map#inttovar closure
+  list_to_set (List.rev_map maps.map#inttovar closure)
 ;;
 
-let filter_packages f (u, _) =
-	List.rev (Cudf.fold_packages (fun acc p -> if f p then p::acc else acc) [] u)
+let filter_packages f (u, _, _) =
+	Cudf.fold_packages (fun acc p ->
+		if f p then PS.add p acc
+		else acc
+	) PS.empty u
 ;;
 
-let provides_set (u, mdf) p =
+let provides_set (u, mdf, _) p =
 	List.fold_left (fun acc (pn, pv) ->
 		List.fold_left (fun acc' p' ->
 			PS.add p' acc'
@@ -83,7 +95,7 @@ let provides_set (u, mdf) p =
 	) PS.empty p.Cudf.provides
 ;;
 
-let conflicts_set (u, _) p =
+let conflicts_set (u, _, _) p =
 	List.fold_left (fun acc (cn, cv) ->
 		List.fold_left (fun acc' c ->
 			PS.add c acc'
@@ -92,32 +104,29 @@ let conflicts_set (u, _) p =
 ;;
 
 (* XXX it probably would be advisable to initialise the solver while loading *)
-let check (u, mdf) (* slv *) p =
+let check (u, mdf, slv) p =
 	let req = Diagnostic_int.Sng (mdf.Mdf.maps.map#vartoint p) in
-	let slv = Depsolver_int.init_solver mdf.Mdf.index in
 	let res = Depsolver_int.solve slv req in
 		match res with
 		| Diagnostic_int.Success _ -> true
 		| Diagnostic_int.Failure _ -> false
 ;;	
 
-let check_together (u, mdf) l =
-	let req = Diagnostic_int.Lst (List.rev_map mdf.Mdf.maps.map#vartoint l) in
-	let slv = Depsolver_int.init_solver mdf.Mdf.index in
+let check_together (u, mdf, slv) s =
+	let req = Diagnostic_int.Lst (List.rev_map mdf.Mdf.maps.map#vartoint (set_to_list s)) in
 	let res = Depsolver_int.solve slv req in
 		match res with
 		| Diagnostic_int.Success _ -> true
 		| Diagnostic_int.Failure _ -> false
 ;;
 
-let install (u, mdf) l =
-	let req = Diagnostic_int.Lst (List.rev_map mdf.Mdf.maps.map#vartoint l) in
-	let slv = Depsolver_int.init_solver mdf.Mdf.index in
+let install (u, mdf, slv) s =
+	let req = Diagnostic_int.Lst (List.rev_map mdf.Mdf.maps.map#vartoint (set_to_list s)) in
 	let res = Depsolver_int.solve slv req in
 		match res with
-		| Diagnostic_int.Success f -> List.rev_map mdf.Mdf.maps.map#inttovar
-				(f ~all:false ())
-		| Diagnostic_int.Failure _ -> []
+		| Diagnostic_int.Success f -> list_to_set (List.rev_map mdf.Mdf.maps.map#inttovar
+				(f ~all:false ()))
+		| Diagnostic_int.Failure _ -> PS.empty
 ;;
 
 (* TODO: add
