@@ -63,7 +63,8 @@ let _ = dispatch begin function
    | After_rules ->
 
        (* When one link an OCaml library/binary/package, one should use -linkpkg *)
-       flag ["ocaml"; "link"] & A"-linkpkg";
+       flag ["ocaml"; "link"; "native"] & A"-linkpkg";
+       flag ["ocaml"; "link"; "byte"] & A"-linkpkg";
 
        (* For each ocamlfind package one inject the -package option when
         * compiling, computing dependencies, generating documentation and
@@ -86,7 +87,7 @@ let _ = dispatch begin function
        let cppfl = split (env_var "CPPFLAGS") ' ' in
 
        List.iter begin fun (lib,dir) ->
-         flag ["ocaml"; "link"; "c_use_"^lib; "byte"] & S[A"-custom"; A"-cclib";
+         flag ["ocaml"; "link"; "c_use_"^lib; "byte"] & S[A"-cclib";
          A("-l"^lib); A"-cclib"; A"-lrpmio"];
          flag ["ocaml"; "link"; "c_use_"^lib; "native"] & S[A"-cclib";
          A("-l"^lib); A"-cclib"; A"-lrpmio"; A"-ccopt"; A(env_var "LDFLAGS")];

@@ -17,6 +17,10 @@ else
   UNINSTALL=$(OCAMLFIND) remove -destdir $(LIBDIR)
 endif
 
+ifeq ("@OCAML_OS_TYPE@","freebsd")
+  LDFLAGS=-fstack-protector
+endif
+
 OCAMLBUILD=@OCAMLBUILD@
 #ocamlbest
 ifeq ("@OCAMLBEST@","opt")

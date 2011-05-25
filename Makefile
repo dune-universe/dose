@@ -15,10 +15,10 @@ DIST_EXCLUDE = debian libcudf deb/tests rpm/tests common/tests algo/tests deb/li
 	experimental
 
 all: lib
-	CPPFLAGS="$(CPPFLAGS)" LDFLAGS="-fstack-protector" $(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
+	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
 
 lib:
-	CPPFLAGS="$(CPPFLAGS)" LDFLAGS="-fstack-protector" $(OCAMLBUILD) $(OBFLAGS) $(LIBS)
+	$(OCAMLBUILD) $(OBFLAGS) $(LIBS)
 
 clean:
 	$(OCAMLBUILD) $(OBFLAGS) -clean
@@ -61,35 +61,39 @@ test:
 
 INSTALL_STUFF = META
 
-INSTALL_STUFF += $(wildcard _build/algo/*.cma _build/algo/*.cmxa _build/algo/algo.a _build/algo/*.o)
-INSTALL_STUFF += $(wildcard _build/common/*.cma _build/common/*.cmxa _build/common/common.a _build/common/*.o)
-INSTALL_STUFF += $(wildcard _build/deb/*.cma _build/deb/*.cmxa _build/deb/debian.a _build/deb/*.o)
-INSTALL_STUFF += $(wildcard _build/rpm/*.cma _build/rpm/*.cmxa _build/rpm/rpm.a _build/rpm/*.o)
-INSTALL_STUFF += $(wildcard _build/db/*.cma _build/db/*.cmxa _build/db/db.a _build/db/*.o)
-INSTALL_STUFF += $(wildcard _build/algo/*.cmi) $(wildcard _build/algo/*.mli)
-INSTALL_STUFF += $(wildcard _build/common/*.cmi) $(wildcard _build/common/*.mli)
-INSTALL_STUFF += $(wildcard _build/deb/*.cmi) $(wildcard _build/deb/*.mli)
-INSTALL_STUFF += $(wildcard _build/rpm/*.cmi) $(wildcard _build/rpm/*.mli)
-INSTALL_STUFF += $(wildcard _build/db/*.cmi) $(wildcard _build/db/*.mli)
+INSTALL_STUFF += $(wildcard _build/algo/algo.cm* _build/algo/algo.[oa]})
+INSTALL_STUFF += $(wildcard _build/common/common.cm* _build/common/common.[oa])
+INSTALL_STUFF += $(wildcard _build/deb/debian.cm* _build/deb/debian.[oa])
+INSTALL_STUFF += $(wildcard _build/rpm/rpm.cm* _build/rpm/rpm.[oa])
+INSTALL_STUFF += $(wildcard _build/eclispe/eclispe.cm* _build/eclispe/eclispe.[oa])
 
 install:
 	# install libraries
 	test -d $(LIBDIR) || mkdir -p $(LIBDIR)
 	$(INSTALL) -patch-version $(VERSION) $(NAME) $(INSTALL_STUFF)
+	test -d $(LIBDIR)/stublibs || mkdir -p $(LIBDIR)/stublibs
+	cp $(wildcard _build/rpm/dllrpm_stubs.so) $(LIBDIR)/stublibs/
+
+        # eclipse and rpm to add ...
+	for f in algo common deb ; do \
+	  test -d  $(LIBDIR)/$(NAME)/$$f/ || mkdir -p  $(LIBDIR)/$(NAME)/$$f/ ; \
+	  cp -f _build/$$f/*.mli $(LIBDIR)/$(NAME)/$$f/ ;\
+	done
 
 	# install applications
 	test -d $(BINDIR) || mkdir -p $(BINDIR)
 	cd _build/applications ; \
 	for f in $$(ls *.$(OCAMLBEST)) ; do \
-	  cp $$f $(BINDIR)/$${f%.$(OCAMLBEST)}; \
+	  cp $$f $(BINDIR)/$${f%.$(OCAMLBEST)} ; \
 	done
 
 uninstall:
-	$(UNINSTALL) $(NAME) $(INSTALL_STUFF)
+	rm -Rf $(LIBDIR)/dose3
+	rm $(LIBDIR)/stublibs/dllrpm_stubs.so
 
 	for f in $$(ls *.$(OCAMLBEST)) ; do \
-	  if [ -f $(BINDIR)/$${f%.$(OCAMLBEST)}; ] ; then \
-	    rm $(BINDIR)/$${f%.$(OCAMLBEST)}; \
+	  if [ -f $(BINDIR)/$${f%.$(OCAMLBEST)} ]; then \
+	    rm $(BINDIR)/$${f%.$(OCAMLBEST)} ; \
 	  fi \
 	done
 

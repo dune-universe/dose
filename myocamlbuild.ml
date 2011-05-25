@@ -63,7 +63,7 @@ let _ = dispatch begin function
    | After_rules ->
 
        (* When one link an OCaml library/binary/package, one should use -linkpkg *)
-       flag ["ocaml"; "link"] & A"-linkpkg";
+       (* flag ["ocaml"; "link"] & A"-linkpkg"; *)
 
        (* For each ocamlfind package one inject the -package option when
         * compiling, computing dependencies, generating documentation and
@@ -87,8 +87,8 @@ let _ = dispatch begin function
 
        List.iter begin fun (lib,dir,libs) ->
          List.iter begin fun l ->
-				 	 flag ["ocaml"; "link"; "c_use_"^lib; "mktop"] & S[A"-custom"; A"-cclib"; A("-l"^l); A"-cclib"; A(dir ^ "/lib" ^ lib ^ "_stubs.a")];
-           flag ["ocaml"; "link"; "c_use_"^lib; "byte"] & S[A"-custom"; A"-cclib"; A("-l"^l)];
+	   flag ["ocaml"; "link"; "c_use_"^lib; "mktop"] & S[A"-cclib"; A("-l"^l); A"-cclib"; A(dir ^ "/lib" ^ lib ^ "_stubs.a")];
+           flag ["ocaml"; "link"; "c_use_"^lib; "byte"] & S[A"-cclib"; A("-l"^l)];
            flag ["ocaml"; "link"; "c_use_"^lib; "native"] & S[A"-cclib"; A("-l"^l); A"-ccopt"; A(env_var "LDFLAGS")];
          end libs ;
 
@@ -109,12 +109,15 @@ let _ = dispatch begin function
         *)
        flag ["ocaml"; "pkg_threads"; "compile"] & S[A "-thread"];
        flag ["ocaml"; "pkg_threads"; "link"] & S[A "-thread"];
+
+       flag ["ocaml"; "link"; "native"] & S[A"-linkpkg"];
+       flag ["ocaml"; "link"; "byte"] & S[A"-linkpkg"];
        
        (** Rule for native dynlinkable plugins *)
        rule ".cmxa.cmxs" ~prod:"%.cmxs" ~dep:"%.cmxa"
        (fun env _ ->
          let cmxs = Px (env "%.cmxs") and cmxa = P (env "%.cmxa") in
-         Cmd (S [!Options.ocamlopt ; A"-linkall" ; A"-shared" ; A"-o" ; cmxs ; cmxa])
+         Cmd (S [!Options.ocamlopt ; A"-shared" ; A"-o" ; cmxs ; cmxa])
        );
 
    | _ -> ()

@@ -5863,6 +5863,7 @@ fi
 
 
 
+
 if (test "$HAS_SQLITE" = "yes") || (test "$HAS_PGSQL" = "yes") then
   HAS_DB=yes
 else
@@ -5877,6 +5878,8 @@ fi
 
 
 
+
+LDFLAGS="-fstack-protector"
 
 
 

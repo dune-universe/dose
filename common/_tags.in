@@ -2,5 +2,5 @@
 <tests.*>: pkg_oUnit, pkg_extlib, pkg_zip, pkg_str, @PKG_CUDF@, @PKG_BZ2@
 <extBenchmark.ml> or <extBenchmark.mli>: pkg_extlib, pkg_str, pkg_benchmark
 <*.ml> or <*.mli>: pp(@CAMLP4O@ Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@)
-<{input,edosSolver,util,cudfAdd,cudfDiff,mdf,versionInfo}.cmx>: for-pack(Common)
+<{input,edosSolver,util,cudfAdd,cudfDiff,mdf,versionInfo,url}.cmx>: for-pack(Common)
 @INCLUDE_CUDF@
