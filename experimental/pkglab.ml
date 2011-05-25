@@ -9,17 +9,18 @@ struct
 	let compare = Cudf.(<%)
 end;;
 module PS = Set.Make(Package);;
-
-(*** [load] reads a source of package metadata from [url] and returns a universe
-     together with the efficient internal representation (in mdf format) 
-     which is necessary to quickly perform operations on the dependency graph
-*)
+open PS;;
 
 let list_to_set l =
 	List.fold_left (fun acc p -> PS.add p acc) PS.empty l;;
 
 let set_to_list s =
 	PS.elements s;;
+
+(*** [load] reads a source of package metadata from [url] and returns a universe
+     together with the efficient internal representation (in mdf format) 
+     which is necessary to quickly perform operations on the dependency graph
+*)
 
 let load url =
 begin
@@ -36,13 +37,15 @@ let get_packages ?filter (u, _, _) =
 	list_to_set (Cudf.get_packages ?filter u);;
 
 let search_packages (u, _, _) re =
+begin
   let rex = Pcre.regexp re in
-   list_to_set (Cudf.get_packages 
+  list_to_set (Cudf.get_packages 
     ~filter:(fun p -> Pcre.pmatch ~rex (Cudf_types_pp.string_of_pkgname p.Cudf.package))
 		u)
-;;
+end;;
 
 let trim (u, mdf, _) = 
+begin
 	let trimmed_pkgs = ref [] in
 	let callback (res, req) =
 	begin
@@ -61,77 +64,84 @@ let trim (u, mdf, _) =
 	let mdf' = Mdf.load_from_universe u' in
 	let slv' = Depsolver_int.init_solver mdf'.Mdf.index in
   (u', mdf', slv')
-;;
+end;;
 
 let cone ?maxdepth ?conjunctive (_, mdf, _) ps =
+begin
   let maps = mdf.Mdf.maps in
   let idlist = List.rev_map maps.map#vartoint (set_to_list ps) in
   let closure =
 		Depsolver_int.dependency_closure ?maxdepth ?conjunctive mdf idlist in
   list_to_set (List.rev_map maps.map#inttovar closure)
-;;
+end;;
 
 let rev_cone ?maxdepth (_, mdf, _) ps =
+begin
   let maps = mdf.Mdf.maps in
   let idlist = List.rev_map maps.map#vartoint (set_to_list ps) in
   let reverse = Depsolver_int.reverse_dependencies mdf in
   let closure =
 		Depsolver_int.reverse_dependency_closure ?maxdepth reverse idlist in
   list_to_set (List.rev_map maps.map#inttovar closure)
-;;
+end;;
 
 let filter_packages f (u, _, _) =
 	Cudf.fold_packages (fun acc p ->
 		if f p then PS.add p acc
 		else acc
-	) PS.empty u
-;;
+	) PS.empty u;;
 
 let provides_set (u, mdf, _) p =
 	List.fold_left (fun acc (pn, pv) ->
 		List.fold_left (fun acc' p' ->
 			PS.add p' acc'
 		) acc (mdf.who_provides (pn, (pv :> Cudf_types.constr)))
-	) PS.empty p.Cudf.provides
-;;
+	) PS.empty p.Cudf.provides;;
 
 let conflicts_set (u, _, _) p =
 	List.fold_left (fun acc (cn, cv) ->
 		List.fold_left (fun acc' c ->
 			PS.add c acc'
 		) acc (Cudf.lookup_packages ~filter:cv u cn)
-	) PS.empty p.Cudf.conflicts
-;;
+	) PS.empty p.Cudf.conflicts;;
 
-(* XXX it probably would be advisable to initialise the solver while loading *)
 let check (u, mdf, slv) p =
+begin
 	let req = Diagnostic_int.Sng (mdf.Mdf.maps.map#vartoint p) in
 	let res = Depsolver_int.solve slv req in
 		match res with
 		| Diagnostic_int.Success _ -> true
 		| Diagnostic_int.Failure _ -> false
-;;	
+end;;	
 
 let check_together (u, mdf, slv) s =
+begin
 	let req = Diagnostic_int.Lst (List.rev_map mdf.Mdf.maps.map#vartoint (set_to_list s)) in
 	let res = Depsolver_int.solve slv req in
 		match res with
 		| Diagnostic_int.Success _ -> true
 		| Diagnostic_int.Failure _ -> false
-;;
+end;;
 
 let install (u, mdf, slv) s =
+begin
 	let req = Diagnostic_int.Lst (List.rev_map mdf.Mdf.maps.map#vartoint (set_to_list s)) in
 	let res = Depsolver_int.solve slv req in
 		match res with
 		| Diagnostic_int.Success f -> list_to_set (List.rev_map mdf.Mdf.maps.map#inttovar
 				(f ~all:false ()))
 		| Diagnostic_int.Failure _ -> PS.empty
-;;
+end;;
+
+let is_strong_dep (_, mdf, slv) p1 p2 =
+begin
+	let i1 = mdf.Mdf.maps.map#vartoint p1 in
+	let i2 = mdf.Mdf.maps.map#vartoint p2 in
+	Strongdeps_int.strong_depends slv i1 i2
+end;;
 
 (* TODO: add
  - impactset
- - strongdeps
  - strongconflicts
  - enregistrement pour stateful time optimization
  *) 
