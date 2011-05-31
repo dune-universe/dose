@@ -1,5 +1,4 @@
-
-AC_INIT(dose3, 2.9.3, pietro.abate@pps.jussieu.fr)
+AC_INIT(dose3, 2.9.4, pietro.abate@pps.jussieu.fr)
 
 AC_PROG_OCAML
 if test "$OCAMLC" = "no"; then
@@ -95,7 +94,7 @@ if test "$HAS_RPM" = "yes" ; then
   AC_CHECK_HEADERS([rpm/rpmtypes.h],,AC_MSG_ERROR([missing rpmtypes.h]))
   INCLUDE_RPM="<rpm>: include"
   CONFIG_RPM="-DHASRPM"
-  LINK_RPM="<*.native> or <*.top>: c_use_rpm"
+  LINK_RPM="<*.byte> or <*.native> or <*.top>: c_use_rpm"
 fi
 
 AC_ARG_WITH(sqlite,
@@ -228,6 +227,7 @@ else
 fi
 
 
+
 AC_SUBST(TAGS_PGSQL)
 AC_SUBST(PKG_PGSQL)
 AC_SUBST(MLPACK_PGSQL)
@@ -276,9 +276,19 @@ AC_SUBST(CFLAGS)
 AC_SUBST(CPPFLAGS)
 AC_SUBST(LDFLAGS)
 
+AC_ARG_WITH(experimental,
+        [ --with-xperimental ],
+        BUILD_EXP=yes,
+        BUILD_EXP=no)
+if test "$BUILD_EXP" = "yes" ; then
+  AC_CONFIG_FILES([
+    experimental/Makefile
+    experimental/_tags
+  ])
+fi
+
 AC_CONFIG_FILES([
   Makefile.config
-  experimental/Makefile
   META
   db/db.mlpack
   db/_tags
@@ -289,7 +299,6 @@ AC_CONFIG_FILES([
   algo/algo.mlpack
   common/_tags
   applications/_tags
-  experimental/_tags
   applications/boilerplates/_tags
   common/versionInfo.ml
   doc/manpages/buildcheck.1

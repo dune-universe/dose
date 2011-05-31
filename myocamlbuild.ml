@@ -11,9 +11,6 @@
 (**************************************************************************)
 
 open Ocamlbuild_plugin
-open Command (* no longer needed for OCaml >= 3.10.2 *)
-
-let clibs = [("rpm","rpm",["rpm";"rpmio"])]
 
 (* these functions are not really officially exported *)
 let run_and_read = Ocamlbuild_pack.My_unix.run_and_read
@@ -31,28 +28,8 @@ let find_syntaxes () = ["camlp4o"; "camlp4r"]
 (* ocamlfind command *)
 let ocamlfind x = S[A"ocamlfind"; x]
 
-let split s ch =
-  let x = ref [] in
-  let rec go s =
-    try
-      let pos = String.index s ch in
-       x := (String.before s pos)::!x;
-      go (String.after s (pos + 1))
-    with
-      Not_found -> s::!x
-  in
-  go s
-
-let env_var x =
-  try
-    Sys.getenv x
-  with Not_found -> ""
-
 let _ = dispatch begin function
    | Before_options ->
-       (* by using Before_options one let command line options have an higher priority *)
-       (* on the contrary using After_options will guarantee to have the higher priority *)
-
        (* override default commands by ocamlfind ones *)
        Options.ocamlc     := ocamlfind & A"ocamlc";
        Options.ocamlopt   := ocamlfind & A"ocamlopt";
@@ -62,12 +39,6 @@ let _ = dispatch begin function
 
    | After_rules ->
 
-       (* When one link an OCaml library/binary/package, one should use -linkpkg *)
-       (* flag ["ocaml"; "link"] & A"-linkpkg"; *)
-
-       (* For each ocamlfind package one inject the -package option when
-        * compiling, computing dependencies, generating documentation and
-        * linking. *)
        List.iter begin fun pkg ->
          flag ["ocaml"; "compile";  "pkg_"^pkg] & S[A"-package"; A pkg];
          flag ["ocaml"; "ocamldep"; "pkg_"^pkg] & S[A"-package"; A pkg];
@@ -83,42 +54,58 @@ let _ = dispatch begin function
          flag ["ocaml"; "doc";      "syntax_"^syntax] & S[A"-syntax"; A syntax];
        end (find_syntaxes ());
   
-       let cppfl = split (env_var "CPPFLAGS") ' ' in
+       dep ["ocaml"; "compile"; "c_use_rpm" ] & ["rpm/dllrpm_stubs.so"];
+       (*
+       flag ["ocaml"; "link"; "c_use_rpm"; "byte"] & 
+       S[
+         A"-cclib"; A"-lrpm";
+         A"-cclib"; A"-lrpmio"; 
+         A"-ccopt"; A"-Lrpm";
+         A"-dllib"; A"rpm/dllrpm_stubs.so"
+       ];
+       *)
+(*
+       flag ["ocaml"; "link"; "c_use_rpm" ; "byte"] & 
+       S[
+         A"-custom";
+         A"-cclib"; A"-lrpm"; 
+         A"-cclib"; A"-lrpmio"; 
+         A"-dllpath"; A"rpm";
+         A"-dllib"; A"-lrpm_stubs"
+       ];
+*)
 
-       List.iter begin fun (lib,dir,libs) ->
-         List.iter begin fun l ->
-	   flag ["ocaml"; "link"; "c_use_"^lib; "mktop"] & S[A"-cclib"; A("-l"^l); A"-cclib"; A(dir ^ "/lib" ^ lib ^ "_stubs.a")];
-           flag ["ocaml"; "link"; "c_use_"^lib; "byte"] & S[A"-cclib"; A("-l"^l)];
-           flag ["ocaml"; "link"; "c_use_"^lib; "native"] & S[A"-cclib"; A("-l"^l); A"-ccopt"; A(env_var "LDFLAGS")];
-         end libs ;
+      flag ["ocaml"; "link"; "c_use_rpm"; "native";] & S[
+         A"-ccopt"; A"-Lrpm";
+         A"-cclib"; A"-lrpm_stubs";
+         A"-cclib"; A"-lrpm";
+         A"-cclib"; A"-lrpmio"; 
+       ]; 
+       flag ["ocaml"; "link"; "c_use_rpm"; "byte";] & S[
+         A"-ccopt"; A"-Lrpm";
+         A"-cclib"; A"-lrpm_stubs";
+         A"-cclib"; A"-lrpm";
+         A"-cclib"; A"-lrpmio"; 
+         A"-custom"
+       ];
+       flag ["ocaml"; "link"; "program"] & S[A"-linkpkg"];
 
-         dep ["ocaml"; "link"; "c_use_"^lib] & [dir^"/lib"^lib^"_stubs.a"];
-         (* Make sure the C pieces and built... *)
-         dep ["ocaml"; "compile"; "c_use_"^lib ] & [dir^"/lib"^lib^"_stubs.a"];
-
-         flag ["c"; "compile"] & S(List.flatten (List.map (fun v -> [A"-ccopt"; A(v)]) cppfl));
-       end clibs ;
-
-       (* The default "thread" tag is not compatible with ocamlfind.
-          Indeed, the default rules add the "threads.cma" or "threads.cmxa"
-          options when using this tag. When using the "-linkpkg" option with
-          ocamlfind, this module will then be added twice on the command line.
-       
-          To solve this, one approach is to add the "-thread" option when using
-          the "threads" package using the previous plugin.
-        *)
        flag ["ocaml"; "pkg_threads"; "compile"] & S[A "-thread"];
        flag ["ocaml"; "pkg_threads"; "link"] & S[A "-thread"];
 
-       flag ["ocaml"; "link"; "native"] & S[A"-linkpkg"];
-       flag ["ocaml"; "link"; "byte"] & S[A"-linkpkg"];
-       
+      
        (** Rule for native dynlinkable plugins *)
        rule ".cmxa.cmxs" ~prod:"%.cmxs" ~dep:"%.cmxa"
        (fun env _ ->
          let cmxs = Px (env "%.cmxs") and cmxa = P (env "%.cmxa") in
          Cmd (S [!Options.ocamlopt ; A"-shared" ; A"-o" ; cmxs ; cmxa])
        );
+
+       (* for the moment we leave it this way, but this rule should be
+        * specific to rpm.cm* *)
+       flag ["ocamlmklib";] & S[ A"-lrpm"; A"-lrpmio"; ];
+
+
 
    | _ -> ()
 end

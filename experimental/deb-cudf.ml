@@ -61,11 +61,15 @@ let main () =
       stdout
   in
 
+  Cudf_printer.pp_preamble oc preamble;
+  Cudf_printer.pp_packages oc pkglist;
+  if oc <> stdout then close_out oc
+(*
   let fmt = Format.formatter_of_out_channel oc in
   Format.fprintf fmt "%a@." Cudf_printer.pp_preamble preamble;
   List.iter (Format.fprintf fmt "%a@." Cudf_printer.pp_package) pkglist ;
   if oc <> stdout then close_out oc ;
-
+*)
 ;;
 
 main ();;

@@ -213,9 +213,7 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
   in
 
   if dump then
-    List.iter (fun pkg ->
-      Format.printf "%a@." Cudf_printer.pp_package pkg
-    ) pkglist ;
+    Cudf_printer.pp_packages stdout pkglist;
 
   let universe = Cudf.load_universe pkglist in
 

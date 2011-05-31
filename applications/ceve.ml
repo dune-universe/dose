@@ -194,7 +194,7 @@ ELSE
 END
       |"cnf" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~enc:Depsolver.Cnf u)
       |"dimacs" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~enc:Depsolver.Dimacs u)
-      |"pp" -> Cudf_printer.pp_universe (Format.formatter_of_out_channel oc) u
+      |"pp" -> Cudf_printer.pp_universe oc u
       |"table" ->
 IFDEF HASOCAMLGRAPH THEN
         Printf.fprintf oc "%d\t%d\t%d\n"

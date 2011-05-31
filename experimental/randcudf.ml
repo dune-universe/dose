@@ -148,7 +148,7 @@ let create_cudf (preamble,universe,request)  =
     end 
     else stdout
   in
-  Cudf_printer.pp_cudf (Format.formatter_of_out_channel oc) (preamble,universe,request);
+  Cudf_printer.pp_cudf oc (preamble,universe,request);
   if oc <> stdout then close_out oc
 ;;
 
@@ -171,7 +171,7 @@ let main () =
     if not(OptParse.Opt.is_set Options.status) && (List.length posargs) > 0 then
       let f = 
         match Boilerplate.filter None [] posargs with
-        |("cudf",[f]) -> Boilerplate.unpack f
+        |(Url.Cudf,[f]) -> Boilerplate.unpack f
         |_ -> (Printf.eprintf "No status provided. I expect a cudf\n" ; exit 1)
       in
       let preamble, pkglist, _ = Boilerplate.parse_cudf f in
@@ -187,7 +187,7 @@ let main () =
       in
       let l = 
         match Boilerplate.filter None [] posargs with
-        |("deb", l) ->
+        |(Url.Deb, l) ->
             let filelist = List.map Boilerplate.unpack l in
             Debian.Packages.input_raw filelist
         |_ -> (Printf.eprintf "Only deb files are supported\n" ; exit 1)

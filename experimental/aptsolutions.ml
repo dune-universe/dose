@@ -50,10 +50,10 @@ let main () =
 
   let (preamble,universe) =
     match Input.parse_uri doc with
-    |("cudf",(_,_,_,_,file),_) -> begin
+    |(Url.Cudf,(_,_,_,_,file),_) -> begin
       let p, u, _ = Boilerplate.parse_cudf file in (p,u)
     end
-    |(s,_,_) -> fatal "%s Not supported" s
+    |(_,_,_) -> fatal "Only Cudf is supported"
   in
 
   let (install,remove) =
@@ -132,9 +132,9 @@ let main () =
 
   let l = Hashtbl.fold (fun k v acc -> if v.Cudf.installed then v::acc else acc) t [] in
   if not (Option.is_none preamble) then
-      print_endline (Cudf_printer.string_of_preamble (Option.get preamble));
+      Cudf_printer.pp_preamble stdout (Option.get preamble);
 
-  print_endline (Cudf_printer.string_of_packages l)
+  Cudf_printer.pp_packages stdout l
 ;;
     
 main ();;

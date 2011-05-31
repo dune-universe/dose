@@ -29,10 +29,10 @@ module Options = struct
   add options ~short_name:'c' ~long_name:"cudf"  ~help:"print the cudf solution (if any)" cudf;
 end
 
-let pp_solution fmt = function
+let pp_solution oc = function
   |{Diagnostic.result = Diagnostic.Success (f);} ->
       let is = f ~all:true () in
-      Format.fprintf fmt "%a" Cudf_printer.pp_packages is
+      Cudf_printer.pp_packages oc is
   |_ -> assert false
 
 let main () =
@@ -50,8 +50,8 @@ let main () =
       if Diagnostic.is_solution r then begin
         if OptParse.Opt.get Options.cudf then
           if not(Option.is_none p) then 
-            Format.printf "%a\n" Cudf_printer.pp_preamble (Option.get p);
-          Format.printf "%a" pp_solution r
+            Cudf_printer.pp_preamble stdout (Option.get p);
+          pp_solution stdout r
         end
       ;
       if not(Diagnostic.is_solution r && OptParse.Opt.get Options.cudf) then begin

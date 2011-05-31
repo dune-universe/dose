@@ -70,7 +70,7 @@ let main () =
       open_out (Filename.concat dirname ("res.cudf"))
     end else stdout
   in
-  Cudf_printer.pp_packages (Format.formatter_of_out_channel oc) pkglist
+  Cudf_printer.pp_packages oc pkglist
 ;;
 
 main ();;

@@ -227,6 +227,7 @@ let main () =
 
 
   let uuid = Util.uuid () in
+  Printf.eprintf "%s\n%!" uuid;
   let solver_in = Printf.sprintf "/tmp/%s.pipe" uuid in
   Unix.mkfifo solver_in 0o600;
 
@@ -235,6 +236,7 @@ let main () =
   let cmdline_criteria = OptParse.Opt.opt (Options.criteria) in
   let criteria = choose_criteria ~criteria:cmdline_criteria request in
   let cmd = Printf.sprintf "%s %s %s %s" solver solver_in solver_out criteria in
+  Printf.eprintf "%s\n%!" cmd;
 
   let env = Unix.environment () in
   let (cin,cout,cerr) = Unix.open_process_full cmd env in
@@ -242,16 +244,14 @@ let main () =
   Util.Timer.start timer3;
   let solver_in_fd = Unix.openfile solver_in [Unix.O_WRONLY ; Unix.O_SYNC] 0 in
   let oc = Unix.out_channel_of_descr solver_in_fd in
-  let fmt = Format.formatter_of_out_channel oc in
-  Format.fprintf fmt "%a" Cudf_printer.pp_cudf cudf;
+  Cudf_printer.pp_cudf oc cudf;
   close_out oc ;
   Util.Timer.stop timer3 ();
 
   if OptParse.Opt.get Options.dump then begin
     info "dump universe in  /tmp/cudf-solver.universe.dump";
     let oc = open_out "/tmp/cudf-solver.universe.dump" in
-    let fmt = Format.formatter_of_out_channel oc in
-    Format.fprintf fmt "%a" Cudf_printer.pp_cudf cudf;
+    Cudf_printer.pp_cudf oc cudf;
     close_out oc
   end;
 
