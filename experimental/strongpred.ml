@@ -361,7 +361,7 @@ let prediction sdgraph (universe1,from_cudf,to_cudf) =
 
   let fmt = Format.std_formatter in
   if OptParse.Opt.get Options.clustered then
-    let source_clusters = Debian.Debutil.group_by_source universe in
+    let source_clusters = Debian.Debutil.cluster universe in
     if OptParse.Opt.is_set Options.packages then begin
       (* by source, but just a selection *)
       let pkglist = OptParse.Opt.get Options.packages in

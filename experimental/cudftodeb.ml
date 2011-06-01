@@ -76,19 +76,18 @@ let string_of pp arg =
   Format.pp_print_flush buf_formatter ();
   Buffer.contents buf
 
-let pp_value fmt (v : Cudf_types.typed_value ) = match v with
-  | (`Int i | `Posint i | `Nat i) -> Cudf_types_pp.pp_int fmt i
-  | `Bool b -> Cudf_types_pp.pp_bool fmt b
-  | (`String s | `Pkgname s | `Ident s | `Enum (_, s)) -> Cudf_types_pp.pp_string fmt s
-  | `Vpkg p -> pp_vpkg fmt p
-  | `Vpkglist l -> pp_vpkglist fmt l
-  | `Vpkgformula f -> pp_vpkgformula fmt f
-  | _ -> assert false
-
 let string_of_vpkg = string_of pp_vpkg
 let string_of_vpkglist = string_of pp_vpkglist
 let string_of_vpkgformula = string_of pp_vpkgformula
-let string_of_value = string_of pp_value
+
+let string_of_value (v : Cudf_types.typed_value ) = match v with
+  | (`Int i | `Posint i | `Nat i) -> Cudf_types_pp.string_of_int i
+  | `Bool b -> Cudf_types_pp.string_of_bool b
+  | (`String s | `Pkgname s | `Ident s | `Enum (_, s)) -> s
+  | `Vpkg p -> string_of_vpkg p
+  | `Vpkglist l -> string_of_vpkglist l
+  | `Vpkgformula f -> string_of_vpkgformula f
+  | _ -> assert false
 
 let pp_package fmt pkg =
   let pp = pp_property fmt in
@@ -219,7 +218,6 @@ let convert universe req =
 ;;
 
 let main () =
-  at_exit (fun () -> Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
 

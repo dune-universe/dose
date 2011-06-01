@@ -96,7 +96,7 @@ let main () =
     in
     Printf.fprintf outch "name, str, rev_str, dir, rev_dir, diff\n";
     List.iter (fun (p,diff,rs,s,rd,d) ->
-      let pkg = CudfAdd.print_package p in
+      let pkg = CudfAdd.string_of_package p in
       Printf.fprintf outch "%s , %d, %d, %d, %d, %d\n" pkg s rs d rd diff
     ) (List.sort ~cmp:(fun (_,x,_,_,_,_) (_,y,_,_,_,_) -> y - x) l);
     close_out outch

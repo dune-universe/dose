@@ -198,7 +198,9 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
       List.iter (fun pkg ->
         let (pn,pv) = (pkg.Debian.Packages.name, getv pkg.Debian.Packages.version) in
         let p = Cudf.lookup_package universe (pn,pv) in
-        Format.fprintf fmt "%a@," Cudf_printer.pp_package p
+        let o = IO.output_string () in
+        Cudf_printer.pp_io_package o p;
+        Format.fprintf fmt "%s@," (IO.close_out o)
       ) cluster;
       Format.fprintf fmt "@]@,";
     end;
