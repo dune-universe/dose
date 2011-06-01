@@ -131,9 +131,10 @@ let main () =
   ) install ;
 
   let l = Hashtbl.fold (fun k v acc -> if v.Cudf.installed then v::acc else acc) t [] in
-  if not (Option.is_none preamble) then
+  if not (Option.is_none preamble) then begin
       Cudf_printer.pp_preamble stdout (Option.get preamble);
-
+      Printf.fprintf stdout "\n"
+  end;
   Cudf_printer.pp_packages stdout l
 ;;
     

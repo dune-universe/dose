@@ -35,6 +35,7 @@ TARGETS= \
 		 applications/distcheck.$(OCAMLBEST) \
 		 applications/deb-buildcheck.$(OCAMLBEST) \
 		 applications/ceve.$(OCAMLBEST) \
+		 applications/apt-backend.$(OCAMLBEST) \
 
 EXPERIMENTAL= \
 		 experimental/deb-cudf.$(OCAMLBEST) \
@@ -43,9 +44,10 @@ EXPERIMENTAL= \
 		 experimental/cudf-diff.$(OCAMLBEST)
 
 LIBS= \
-	  common/common.$(OCAMLLIBBEST) \
-	  deb/debian.$(OCAMLLIBBEST) \
-	  algo/algo.$(OCAMLLIBBEST)
+	common/common.$(OCAMLLIBBEST) common/common.a \
+	deb/debian.$(OCAMLLIBBEST) deb/debian.a \
+	algo/algo.$(OCAMLLIBBEST) algo/algo.a \
+	eclipse/eclipse.$(OCAMLLIBBEST) eclipse/eclipse.a 
 
 #we always compile bytecode libraries
 ifeq ("@OCAMLBEST@","opt")
@@ -86,7 +88,7 @@ endif
 #rpm support
 ifeq ("@HAS_RPM@","yes")
 #  TARGETS += applications/rpm-cudf.$(OCAMLBEST)
-  LIBS += rpm/rpm.$(OCAMLLIBBEST)
+  LIBS += rpm/rpm.$(OCAMLLIBBEST) rpm/rpm.a
 #  TEST_RPM=rpm
 endif
 

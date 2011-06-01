@@ -42,13 +42,13 @@ let main () =
 
   let l =
      match Input.parse_uri uri with
-     |("hdlist",(_,_,_,_,file),_) -> begin
+     |(Url.Hdlist,(_,_,_,_,file),_) -> begin
        if OptParse.Opt.get Options.dump_hdlist then
          (Hdlists.dump Format.std_formatter file ; exit(0))
        else
          Packages.Hdlists.input_raw [file]
      end
-     |("synth",(_,_,_,_,file),_) -> begin
+     |(Url.Synthesis,(_,_,_,_,file),_) -> begin
          Packages.Synthesis.input_raw [file]
      end
      |_ -> failwith "Not supported"
@@ -70,6 +70,8 @@ let main () =
       open_out (Filename.concat dirname ("res.cudf"))
     end else stdout
   in
+  Cudf_printer.pp_preamble oc Rpm.Rpmcudf.preamble;
+  Printf.fprintf oc "\n";
   Cudf_printer.pp_packages oc pkglist
 ;;
 

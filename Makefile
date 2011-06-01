@@ -61,11 +61,11 @@ test:
 
 INSTALL_STUFF = META
 
-INSTALL_STUFF += $(wildcard _build/algo/algo.cm* _build/algo/algo.[oa]})
-INSTALL_STUFF += $(wildcard _build/common/common.cm* _build/common/common.[oa])
-INSTALL_STUFF += $(wildcard _build/deb/debian.cm* _build/deb/debian.[oa])
-INSTALL_STUFF += $(wildcard _build/rpm/rpm.cm* _build/rpm/rpm.[oa])
-INSTALL_STUFF += $(wildcard _build/eclispe/eclispe.cm* _build/eclispe/eclispe.[oa])
+INSTALL_STUFF += $(filter-out _build/algo/algo.cmx _build/algo/algo.mlpack,$(wildcard _build/algo/algo.*))
+INSTALL_STUFF += $(filter-out _build/common/common.cmx _build/common/common.mlpack, $(wildcard _build/common/common.*))
+INSTALL_STUFF += $(filter-out _build/deb/debian.cmx _build/deb/debian.mlpack,$(wildcard _build/deb/debian.*))
+INSTALL_STUFF += $(filter-out _build/rpm/rpm.cmx _build/rpm/rpm.mlpack,$(wildcard _build/rpm/rpm.*))
+INSTALL_STUFF += $(filter-out _build/eclipse/eclipse.cmx _build/eclipse/eclipse.mlpack,$(wildcard _build/eclipse/eclipse.*))
 
 install:
 	# install libraries
