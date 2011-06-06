@@ -136,6 +136,8 @@ let choose_criteria ?(criteria=None) request =
   let upgrade = "-notuptodate,-removed,-changed" in
   let trendy = "-removed,-notuptodate,-unsat_recommends,-new" in
   match criteria,request.Edsp.preferences with
+  |None,"paranoid" -> paranoid
+  |None,"trendy" -> trendy
   |None,s when s <> "" -> s
   |None,_ when (request.Edsp.upgrade || request.Edsp.distupgrade) -> upgrade
   |None,_ -> paranoid

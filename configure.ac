@@ -1,4 +1,4 @@
-AC_INIT(dose3, 2.9.6, pietro.abate@pps.jussieu.fr)
+AC_INIT(dose3, 2.9.7, pietro.abate@pps.jussieu.fr)
 
 AC_PROG_OCAML
 if test "$OCAMLC" = "no"; then
