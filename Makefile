@@ -10,6 +10,16 @@ all: lib
 
 DOSELIBS = _build/doselibs
 
+libcudf/cudf.%:
+	$(OCAMLBUILD) $(OBFLAGS) libcudf/cudf.$*
+	@mkdir -p $(DOSELIBS)
+	@cp _build/libcudf/*.cmi $(DOSELIBS)
+	@for i in _build/libcudf/cudf.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	  if [ -e $$i ]; then \
+	  cp $$i $(DOSELIBS) ; \
+	  fi ; \
+	done
+
 common/common.%:
 	$(OCAMLBUILD) $(OBFLAGS) common/common.$*
 	@mkdir -p $(DOSELIBS)

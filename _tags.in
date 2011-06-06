@@ -1,5 +1,6 @@
 <*/*.ml> or <*/*.mli>: pp(camlp4o Camlp4MacroParser.cmo)
-<*/*.ml> or <*/*.mli>: package(extlib), package(cudf), package(pcre)
+<*/*.ml> or <*/*.mli>: package(extlib), @PKG_CUDF@, package(pcre)
+
 <doseparse/boilerplate.ml>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
 <doseparse/boilerplateNorpm.ml>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
 
@@ -16,7 +17,7 @@
 <eclipse/*.cmx>: for-pack(Eclipse)
 <rpm/*.cmx>: for-pack(Rpm)
 
-<applications/*>: package(extlib), package(cudf), package(pcre), package(str), package(unix), @PKG_OCAMLGRAPH@, @PKG_ZIP@, @PKG_BZ2@
+<applications/*>: package(extlib), @PKG_CUDF@, package(pcre), package(str), package(unix), @PKG_OCAMLGRAPH@, @PKG_ZIP@, @PKG_BZ2@
 
 <applications/apt-backend.*>: use_common, use_debian, use_eclipse, use_boilerplateNoRpm
 <applications/distcheck.*>: use_common, use_debian, @USE_RPM@, use_eclipse, use_algo, use_boilerplate

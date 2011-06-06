@@ -27,15 +27,13 @@ if test "$HAS_LIBCUDF" = "yes" ; then
   if (test "$OCAML_PKG_cudf" = "no"); then
     AC_MSG_NOTICE([you asked to use an external libcudf, but ocamlfind cannot find it])
     AC_MSG_NOTICE([using local libcudf instead])
-    PKG_CUDF=pkg_
-    INCLUDE_CUDF="<libcudf>: include"
+    PKG_CUDF=use_cudf
   else
-    PKG_CUDF=pkg_cudf
+    PKG_CUDF="package(cudf)"
   fi
 else
   AC_MSG_NOTICE([using local libcudf])
-  PKG_CUDF=pkg_
-  INCLUDE_CUDF="<libcudf>: include"
+  PKG_CUDF=use_cudf
 fi
 
 AC_CHECK_OCAML_PKG([extlib])
@@ -171,7 +169,7 @@ if test "$HAS_CURL" = "yes" ; then
   if test "$OCAML_PKG_curl" = "no"; then
    AC_MSG_ERROR([Please install OCaml findlib module 'curl'.])
   fi
-  PKG_CURL=pkg_curl
+  PKG_CURL="package(curl)"
 else
   PKG_CURL=pkg_
 fi

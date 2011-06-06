@@ -31,13 +31,21 @@ else
   OCAMLLIBBEST=cma
 endif
 
+LIBS=
 TARGETS= \
                  applications/distcheck.$(OCAMLBEST) \
                  applications/deb-buildcheck.$(OCAMLBEST) \
                  applications/ceve.$(OCAMLBEST) \
                  applications/apt-backend.$(OCAMLBEST) \
 
-LIBS = common/common.$(OCAMLLIBBEST) common/common.a
+ifeq ("@HAS_LIBCUDF@","no")
+  LIBS += libcudf/cudf.$(OCAMLLIBBEST) libcudf/cudf.a
+  ifeq ("@OCAMLBEST@","opt")
+    LIBS += libcudf/cudf.cma
+  endif
+endif
+
+LIBS += common/common.$(OCAMLLIBBEST) common/common.a
 LIBS += debian/debian.$(OCAMLLIBBEST) debian/debian.a
 LIBS += rpm/rpm.$(OCAMLLIBBEST) rpm/rpm.a
 LIBS += eclipse/eclipse.$(OCAMLLIBBEST) eclipse/eclipse.a
@@ -60,11 +68,6 @@ ifeq ("@HAS_RPM@","yes")
   ifeq ("@OCAMLBEST@","opt")
     LIBS += doseparse/boilerplate.cma
   endif
-endif
-
-#external libcudf, then we build the check tool in-house
-ifeq ("@HAS_LIBCUDF@","no")
-  TARGETS += libcudf/main_cudf_check.$(OCAMLBEST)
 endif
 
 #database support

@@ -50,7 +50,7 @@ let to_set l = List.fold_right Cudf_set.add l Cudf_set.empty
 
 let add_properties preamble l =
   List.fold_left (fun pre prop ->
-    {pre with Cudf.property = prop :: pre.Cudf.property}
+    {pre with Cudf.property = prop :: pre.Cudf.property }
   ) preamble l
 
 let buf = Buffer.create 1024

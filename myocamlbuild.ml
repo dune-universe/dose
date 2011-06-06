@@ -3,12 +3,12 @@ open Ocamlbuild_plugin;;
 
 let modules_dirs = [
   "common";"debian";"eclipse";"rpm";"db";"algo";
-  "doseparse"; "applications";"experimental"
+  "doseparse"; "applications";"experimental"; "libcudf"
 ];;
 
 let libraries = [
-  "common";"debian";"eclipse";"rpm";"db";"algo";
-  "boilerplate"; "boilerplateNoRpm"
+  "cudf"; "common";"debian";"eclipse";"rpm";"db";"algo";
+  "boilerplate"; "boilerplateNoRpm";
 ];;
 
 let doselibs = "doselibs" ;;
