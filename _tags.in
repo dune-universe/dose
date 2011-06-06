@@ -6,9 +6,9 @@
 
 <debian/*.{ml,mli}>: use_common
 <rpm/*.ml> or <rpm/*.mli>: use_common
-<algo/*.ml> or <algo/*.mli>: package(ocamlgraph), use_common
+<algo/*.ml> or <algo/*.mli>: use_common, @PKG_OCAMLGRAPH@
 <eclipse/*.ml> or <eclipse/*.mli>: use_common, use_debian
-<doseparse/boilerplate.ml>: use_common, @USE_RPM@, use_debian, use_eclipse
+<doseparse/boilerplate.ml>: use_common, use_debian, use_eclipse, @USE_RPM@
 <doseparse/boilerplateNoRpm.ml>: use_common, use_debian, use_eclipse
 
 <common/*.cmx>: for-pack(Common)
@@ -17,12 +17,22 @@
 <eclipse/*.cmx>: for-pack(Eclipse)
 <rpm/*.cmx>: for-pack(Rpm)
 
-<applications/*>: package(extlib), @PKG_CUDF@, package(pcre), package(str), package(unix), @PKG_OCAMLGRAPH@, @PKG_ZIP@, @PKG_BZ2@
+<applications/*> or <experimental/*>: use_common, use_debian, use_eclipse
+<applications/*> or <experimental/*>: package(extlib), package(pcre), package(str), package(unix)
+<applications/*> or <experimental/*>: @PKG_CUDF@, @PKG_OCAMLGRAPH@, @PKG_ZIP@, @PKG_BZ2@
 
-<applications/apt-backend.*>: use_common, use_debian, use_eclipse, use_boilerplateNoRpm
-<applications/distcheck.*>: use_common, use_debian, @USE_RPM@, use_eclipse, use_algo, use_boilerplate
-<applications/deb-buildcheck.*>: use_common, use_debian, use_eclipse, use_algo, use_boilerplateNoRpm
-<applications/ceve.*>: use_common, use_debian, use_eclipse, @USE_RPM@, use_algo, use_boilerplate
-<applications/strong-conflicts.*>: use_common, use_debian, use_eclipse, @USE_RPM@, use_algo, use_boilerplate
-<applications/strong-deps.*>: use_common, use_debian, use_eclipse, use_algo, @USE_RPM@, use_boilerplate
-<applications/smallworld.*>: use_common, use_debian, use_eclipse, @USE_RPM@, use_algo, use_boilerplate
+<applications/apt-backend.*>: use_boilerplateNoRpm
+<applications/deb-buildcheck.*>: use_algo, use_boilerplateNoRpm
+
+<applications/distcheck.*>: @USE_RPM@, use_algo, use_boilerplate
+<applications/ceve.*>: @USE_RPM@, use_algo, use_boilerplate
+<applications/strong-conflicts.*>: @USE_RPM@, use_algo, use_boilerplate
+<applications/strong-deps.*>: use_algo, @USE_RPM@, use_boilerplate
+<applications/smallworld.*>: @USE_RPM@, use_algo, use_boilerplate
+
+<experimental/strong-deps.*>: use_boilerplate
+<experimental/deb-cudf.*>: use_boilerplateNoRpm
+<experimental/aptsolutions.*>: use_boilerplateNoRpm
+<experimental/edsp-cudf.*>: use_boilerplateNoRpm
+<experimental/dominators-graph.*>: use_boilerplate, use_algo
+

@@ -51,6 +51,7 @@ LIBS += rpm/rpm.$(OCAMLLIBBEST) rpm/rpm.a
 LIBS += eclipse/eclipse.$(OCAMLLIBBEST) eclipse/eclipse.a
 LIBS += algo/algo.$(OCAMLLIBBEST) algo/algo.a
 LIBS += doseparse/boilerplateNoRpm.$(OCAMLLIBBEST) doseparse/boilerplateNoRpm.a
+LIBS += doseparse/boilerplate.$(OCAMLLIBBEST) doseparse/boilerplate.a
 
 #we always compile bytecode libraries
 ifeq ("@OCAMLBEST@","opt")
@@ -59,15 +60,12 @@ ifeq ("@OCAMLBEST@","opt")
   LIBS += rpm/rpm.cma
   LIBS += eclipse/eclipse.cma
   LIBS += algo/algo.cma
+  LIBS += doseparse/boilerplate.cma
 endif
 
 #rpm support
 ifeq ("@HAS_RPM@","yes")
   LIBS += rpm/rpm.$(OCAMLLIBBEST) rpm/rpm.a
-  LIBS += doseparse/boilerplate.$(OCAMLLIBBEST) doseparse/boilerplate.a
-  ifeq ("@OCAMLBEST@","opt")
-    LIBS += doseparse/boilerplate.cma
-  endif
 endif
 
 #database support

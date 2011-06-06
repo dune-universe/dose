@@ -15,6 +15,7 @@
 open ExtLib
 open ExtString
 open Common
+module Boilerplate = BoilerplateNoRpm
 
 module Options = struct
   open OptParse

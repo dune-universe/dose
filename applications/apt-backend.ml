@@ -136,6 +136,7 @@ let choose_criteria ?(criteria=None) request =
   let upgrade = "-notuptodate,-removed,-changed" in
   let trendy = "-removed,-notuptodate,-unsat_recommends,-new" in
   match criteria,request.Edsp.preferences with
+  |None,"paranoid" when (request.Edsp.upgrade || request.Edsp.distupgrade) -> upgrade
   |None,"paranoid" -> paranoid
   |None,"trendy" -> trendy
   |None,s when s <> "" -> s
@@ -230,7 +231,7 @@ let main () =
 
 
   let uuid = Util.uuid () in
-  Printf.eprintf "%s\n%!" uuid;
+  (* Printf.eprintf "%s\n%!" uuid; *)
   let solver_in = Printf.sprintf "/tmp/%s.pipe" uuid in
   Unix.mkfifo solver_in 0o600;
 
@@ -239,7 +240,7 @@ let main () =
   let cmdline_criteria = OptParse.Opt.opt (Options.criteria) in
   let criteria = choose_criteria ~criteria:cmdline_criteria request in
   let cmd = Printf.sprintf "%s %s %s %s" solver solver_in solver_out criteria in
-  Printf.eprintf "%s\n%!" cmd;
+  (* Printf.eprintf "%s\n%!" cmd; *)
 
   let env = Unix.environment () in
   let (cin,cout,cerr) = Unix.open_process_full cmd env in

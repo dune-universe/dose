@@ -91,8 +91,11 @@ if test "$HAS_RPM" = "yes" ; then
   AC_CHECK_HEADERS([rpm/rpmio.h],,AC_MSG_ERROR([missing rpmio.h]))
   AC_CHECK_HEADERS([rpm/rpmtypes.h],,AC_MSG_ERROR([missing rpmtypes.h]))
   CONFIG_RPM="-DHASRPM"
-  USE_RPM="use_rpm"
+  USE_RPM=use_rpm
+else
+  USE_RPM=use_
 fi
+
 
 AC_ARG_WITH(sqlite,
         [ --with-sqlite ],

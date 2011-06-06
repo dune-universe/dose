@@ -5446,8 +5446,11 @@ fi
 done
 
   CONFIG_RPM="-DHASRPM"
-  USE_RPM="use_rpm"
+  USE_RPM=use_rpm
+else
+  USE_RPM=use_
 fi
+
 
 
 # Check whether --with-sqlite was given.
