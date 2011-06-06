@@ -13,8 +13,10 @@
 open ExtLib
 open Debian
 open Common
+open Algo
 module Src = Debian.Sources
 module Deb = Debian.Packages
+module Boilerplate = BoilerplateNoRpm
 
 module Options = struct
   open OptParse

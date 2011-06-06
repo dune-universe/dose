@@ -2,53 +2,86 @@ include Makefile.config
 
 DIST_DIR = $(NAME)-$(VERSION)
 DIST_TARBALL = $(DIST_DIR).tar.gz
-DEBSRC = $(filter-out deb/myocamlbuild.ml deb/version.ml deb/format822.ml, $(wildcard deb/*.ml deb/*.mli))
-DBSRC = $(filter-out db/myocamlbuild.ml, $(wildcard db/*.ml db/*.mli))
-ALGOSRC = $(filter-out algo/myocamlbuild.ml algo/statistics.ml,$(wildcard algo/*.ml algo/*.mli))
-APPSRC = $(filter-out applications/myocamlbuild.ml, $(wildcard applications/*.ml applications/*.mli))
-RPMSRC = $(filter-out rpm/myocamlbuild.ml, $(wildcard rpm/*.ml rpm/*.mli rpm/*.h rpm/*.c))
-COMSRC = $(filter-out common/myocamlbuild.ml common/edosSolver.ml common/edosSolver.mli common/util.ml,\
-				 $(wildcard common/*.ml common/*.mli))
-# stuff not not put in a distribution tarball
-DIST_EXCLUDE = debian libcudf deb/tests rpm/tests common/tests algo/tests deb/libcudf rpm/libcudf \
-	eclipse/libcudf algo/libcudf common/libcudf applications/libcudf applications/tests \
-	experimental
+
+OBFLAGS = -use-ocamlfind -classic-display
 
 all: lib
 	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
 
-lib:
-	$(OCAMLBUILD) $(OBFLAGS) $(LIBS)
+DOSELIBS = _build/doselibs
+
+common/common.%:
+	$(OCAMLBUILD) $(OBFLAGS) common/common.$*
+	mkdir -p $(DOSELIBS)
+	for i in _build/common/common.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	  if [ -e $$i ]; then \
+	  cp $$i $(DOSELIBS) ; \
+	  fi ; \
+	done
+
+algo/algo.%:
+	$(OCAMLBUILD) $(OBFLAGS) algo/algo.$*
+	for i in _build/algo/algo.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	  if [ -e $$i ]; then \
+	  cp $$i $(DOSELIBS) ; \
+	  fi ; \
+	done
+
+debian/debian.%:
+	$(OCAMLBUILD) $(OBFLAGS) debian/debian.$*
+	for i in _build/debian/debian.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	  if [ -e $$i ]; then \
+	  cp $$i $(DOSELIBS) ; \
+	  fi ; \
+	done
+
+rpm/rpm.%:
+	$(OCAMLBUILD) $(OBFLAGS) rpm/rpm.$*
+	for i in _build/rpm/rpm.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	  if [ -e $$i ]; then \
+	  cp $$i $(DOSELIBS) ; \
+	  fi ; \
+	done
+
+eclipse/eclipse.%:
+	$(OCAMLBUILD) $(OBFLAGS) eclipse/eclipse.$*
+	for i in _build/eclipse/eclipse.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	  if [ -e $$i ]; then \
+	  cp $$i $(DOSELIBS) ; \
+	  fi ; \
+	done
+
+doseparse/boilerplate.%:
+	$(OCAMLBUILD) $(OBFLAGS) doseparse/boilerplate.$*
+	for i in _build/doseparse/boilerplate.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	  if [ -e $$i ]; then \
+	  cp $$i $(DOSELIBS) ; \
+	  fi ; \
+	done
+
+doseparse/boilerplateNoRpm.%:
+	$(OCAMLBUILD) $(OBFLAGS) doseparse/boilerplateNoRpm.$*
+	for i in _build/doseparse/boilerplateNoRpm.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	  if [ -e $$i ]; then \
+	  cp $$i $(DOSELIBS) ; \
+	  fi ; \
+	done
+
+lib: $(LIBS)
 
 clean:
-	$(OCAMLBUILD) $(OBFLAGS) -clean
-	@cd deb ; $(OCAMLBUILD) $(OBFLAGS) -clean 
-	@cd rpm ; $(OCAMLBUILD) $(OBFLAGS) -clean
-	@cd eclipse ; $(OCAMLBUILD) $(OBFLAGS) -clean
-	@cd db ; $(OCAMLBUILD) $(OBFLAGS) -clean
-	@cd algo ; $(OCAMLBUILD) $(OBFLAGS) -clean
-	@cd applications ; $(OCAMLBUILD) $(OBFLAGS) -clean
-	@echo ""
+	$(OCAMLBUILD) -clean
 
 distclean: clean
 	rm -Rf Makefile.config aclocal.m4 config.log config.status autom4te.cache/
-	rm _tags
-	rm algo/_tags algo/algo.mlpack
-	rm applications/_tags
-	rm applications/boilerplates/_tags
-	rm common/_tags common/versionInfo.ml
-	rm db/_tags db/db.mlpack
-	rm deb/_tags
-	rm rpm/_tags
-	rm eclipse/_tags
+	rm algo/algo.mlpack
+	rm common/versionInfo.ml
+	rm db/db.mlpack
 	rm META
 
-_build/%:
+$(DOSELIBS)/%:
 	$(OCAMLBUILD) $(OBFLAGS) $*
 	@touch $@
-
-headers: header.txt .headache.conf
-	headache -h header.txt -c .headache.conf $(ALGOSRC) $(DEBSRC) $(DBSRC) $(APPSRC) $(RPMSRC) $(COMSRC)
 
 test:
 	@for i in $(TESTS); do\
@@ -59,20 +92,19 @@ test:
 		cd .. ;\
 	done
 
-INSTALL_STUFF = META
+# stuff not not put in a distribution tarball
+DIST_EXCLUDE = libcudf $(wildcard */tests) experimental
 
-INSTALL_STUFF += $(filter-out _build/algo/algo.cmx _build/algo/algo.mlpack,$(wildcard _build/algo/algo.*))
-INSTALL_STUFF += $(filter-out _build/common/common.cmx _build/common/common.mlpack, $(wildcard _build/common/common.*))
-INSTALL_STUFF += $(filter-out _build/deb/debian.cmx _build/deb/debian.mlpack,$(wildcard _build/deb/debian.*))
-INSTALL_STUFF += $(filter-out _build/rpm/rpm.cmx _build/rpm/rpm.mlpack,$(wildcard _build/rpm/rpm.*))
-INSTALL_STUFF += $(filter-out _build/eclipse/eclipse.cmx _build/eclipse/eclipse.mlpack,$(wildcard _build/eclipse/eclipse.*))
+
+INSTALL_STUFF = META
+INSTALL_STUFF += $(wildcard $(DOSELIBS)/*)
 
 install:
 	# install libraries
 	test -d $(LIBDIR) || mkdir -p $(LIBDIR)
 	$(INSTALL) -patch-version $(VERSION) $(NAME) $(INSTALL_STUFF)
 	test -d $(LIBDIR)/stublibs || mkdir -p $(LIBDIR)/stublibs
-	cp $(wildcard _build/rpm/dllrpm_stubs.so) $(LIBDIR)/stublibs/
+	cp _build/rpm/dllrpm_stubs.so $(LIBDIR)/stublibs/
 
         # eclipse and rpm to add ...
 	for f in algo common deb ; do \

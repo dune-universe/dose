@@ -12,6 +12,7 @@
 
 open ExtLib
 open Common
+open Algo
 
 module Options = struct
   open OptParse
@@ -96,7 +97,7 @@ let main () =
     in
     Printf.fprintf outch "name, #str-out, #str-in, #dir-out, #dir-in, diff\n";
     List.iter (fun (p,diff,rs,s,rd,d) ->
-      let pkg = CudfAdd.print_package p in
+      let pkg = CudfAdd.string_of_package p in
       Printf.fprintf outch "%s , %d, %d, %d, %d, %d\n" pkg rs s rd d diff
     ) (List.sort ~cmp:(fun (_,x,_,_,_,_) (_,y,_,_,_,_) -> y - x) l);
     close_out outch

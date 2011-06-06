@@ -59,7 +59,7 @@ if test "$HAS_ZIP" = "yes" ; then
    AC_MSG_ERROR([Please install OCaml findlib module 'zip'.])
   fi
   CONFIG_ZIP="-DHASZIP"
-  PKG_ZIP=pkg_zip
+  PKG_ZIP="package(zip)"
   ZIP=zip
 else
   PKG_ZIP=pkg_
@@ -76,7 +76,7 @@ if test "$HAS_BZ2" = "yes" ; then
    AC_MSG_ERROR([Please install OCaml findlib module 'bz2'.])
   fi
   CONFIG_BZ2="-DHASBZ2"
-  PKG_BZ2=pkg_bz2
+  PKG_BZ2="package(bz2)"
   BZ2=bz2
 else
   PKG_BZ2=pkg_
@@ -92,9 +92,8 @@ if test "$HAS_RPM" = "yes" ; then
   AC_CHECK_HEADERS([rpm/rpmlib.h],,AC_MSG_ERROR([missing rpmlib.h]))
   AC_CHECK_HEADERS([rpm/rpmio.h],,AC_MSG_ERROR([missing rpmio.h]))
   AC_CHECK_HEADERS([rpm/rpmtypes.h],,AC_MSG_ERROR([missing rpmtypes.h]))
-  INCLUDE_RPM="<rpm>: include"
   CONFIG_RPM="-DHASRPM"
-  LINK_RPM="<*.byte> or <*.native> or <*.top>: c_use_rpm"
+  USE_RPM="use_rpm"
 fi
 
 AC_ARG_WITH(sqlite,
@@ -155,7 +154,7 @@ if test "$HAS_OCAMLGRAPH" = "yes" ; then
   if test $(echo "$TMPVERSION < 1.5" | bc) -eq 1; then
       AC_MSG_ERROR([found ocamlgraph with version $TMPVERSION (<= 1.5 is required )])
   fi
-  PKG_OCAMLGRAPH=pkg_ocamlgraph
+  PKG_OCAMLGRAPH="package(ocamlgraph)"
   MLPACK_OCAMLGRAPH="Defaultgraphs Statistics Dominators Strongdeps Strongdeps_int Strongconflicts Strongconflicts_int"
   CONFIG_OCAMLGRAPH="-DHASOCAMLGRAPH"
 else
@@ -227,6 +226,7 @@ else
 fi
 
 
+AC_SUBST(USE_RPM)
 
 AC_SUBST(TAGS_PGSQL)
 AC_SUBST(PKG_PGSQL)
@@ -283,28 +283,19 @@ AC_ARG_WITH(experimental,
 if test "$BUILD_EXP" = "yes" ; then
   AC_CONFIG_FILES([
     experimental/Makefile
-    experimental/_tags
   ])
 fi
 
 AC_CONFIG_FILES([
   Makefile.config
+  _tags
   META
   db/db.mlpack
-  db/_tags
-  algo/_tags
-  rpm/_tags
-  deb/_tags
-  eclipse/_tags
   algo/algo.mlpack
-  common/_tags
-  applications/_tags
-  applications/boilerplates/_tags
   common/versionInfo.ml
   doc/manpages/buildcheck.1
   doc/manpages/ceve.1
   doc/manpages/distcheck.1
-  _tags
 ])
 AC_OUTPUT
 

@@ -14,6 +14,7 @@
 
 open ExtLib
 open Common
+open Algo
 
 module Options = struct
   open OptParse

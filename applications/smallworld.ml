@@ -14,6 +14,7 @@
   http://en.wikipedia.org/wiki/Small-world_network *)
 
 open Common
+open Algo
 
 module Options = struct
   open OptParse

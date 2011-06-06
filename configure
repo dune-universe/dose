@@ -628,6 +628,7 @@ TAGS_SQLITE
 MLPACK_PGSQL
 PKG_PGSQL
 TAGS_PGSQL
+USE_RPM
 OCAML_PKG_benchmark
 HAS_BENCHMARK
 OCAML_PKG_oUnit
@@ -4154,7 +4155,7 @@ $as_echo "not found" >&6; }
    as_fn_error $? "Please install OCaml findlib module 'zip'." "$LINENO" 5
   fi
   CONFIG_ZIP="-DHASZIP"
-  PKG_ZIP=pkg_zip
+  PKG_ZIP="package(zip)"
   ZIP=zip
 else
   PKG_ZIP=pkg_
@@ -4198,7 +4199,7 @@ $as_echo "not found" >&6; }
    as_fn_error $? "Please install OCaml findlib module 'bz2'." "$LINENO" 5
   fi
   CONFIG_BZ2="-DHASBZ2"
-  PKG_BZ2=pkg_bz2
+  PKG_BZ2="package(bz2)"
   BZ2=bz2
 else
   PKG_BZ2=pkg_
@@ -5446,9 +5447,8 @@ fi
 
 done
 
-  INCLUDE_RPM="<rpm>: include"
   CONFIG_RPM="-DHASRPM"
-  LINK_RPM="<*.byte> or <*.native> or <*.top>: c_use_rpm"
+  USE_RPM="use_rpm"
 fi
 
 
@@ -5636,7 +5636,7 @@ $as_echo "not found" >&6; }
   if test $(echo "$TMPVERSION < 1.5" | bc) -eq 1; then
       as_fn_error $? "found ocamlgraph with version $TMPVERSION (<= 1.5 is required )" "$LINENO" 5
   fi
-  PKG_OCAMLGRAPH=pkg_ocamlgraph
+  PKG_OCAMLGRAPH="package(ocamlgraph)"
   MLPACK_OCAMLGRAPH="Defaultgraphs Statistics Dominators Strongdeps Strongdeps_int Strongconflicts Strongconflicts_int"
   CONFIG_OCAMLGRAPH="-DHASOCAMLGRAPH"
 else
@@ -5867,6 +5867,7 @@ fi
 
 
 
+
 if (test "$HAS_SQLITE" = "yes") || (test "$HAS_PGSQL" = "yes") then
   HAS_DB=yes
 else
@@ -5897,11 +5898,11 @@ else
 fi
 
 if test "$BUILD_EXP" = "yes" ; then
-  ac_config_files="$ac_config_files experimental/Makefile experimental/_tags"
+  ac_config_files="$ac_config_files experimental/Makefile"
 
 fi
 
-ac_config_files="$ac_config_files Makefile.config META db/db.mlpack db/_tags algo/_tags rpm/_tags deb/_tags eclipse/_tags algo/algo.mlpack common/_tags applications/_tags applications/boilerplates/_tags common/versionInfo.ml doc/manpages/buildcheck.1 doc/manpages/ceve.1 doc/manpages/distcheck.1 _tags"
+ac_config_files="$ac_config_files Makefile.config _tags META db/db.mlpack algo/algo.mlpack common/versionInfo.ml doc/manpages/buildcheck.1 doc/manpages/ceve.1 doc/manpages/distcheck.1"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6621,24 +6622,15 @@ for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
     "experimental/Makefile") CONFIG_FILES="$CONFIG_FILES experimental/Makefile" ;;
-    "experimental/_tags") CONFIG_FILES="$CONFIG_FILES experimental/_tags" ;;
     "Makefile.config") CONFIG_FILES="$CONFIG_FILES Makefile.config" ;;
+    "_tags") CONFIG_FILES="$CONFIG_FILES _tags" ;;
     "META") CONFIG_FILES="$CONFIG_FILES META" ;;
     "db/db.mlpack") CONFIG_FILES="$CONFIG_FILES db/db.mlpack" ;;
-    "db/_tags") CONFIG_FILES="$CONFIG_FILES db/_tags" ;;
-    "algo/_tags") CONFIG_FILES="$CONFIG_FILES algo/_tags" ;;
-    "rpm/_tags") CONFIG_FILES="$CONFIG_FILES rpm/_tags" ;;
-    "deb/_tags") CONFIG_FILES="$CONFIG_FILES deb/_tags" ;;
-    "eclipse/_tags") CONFIG_FILES="$CONFIG_FILES eclipse/_tags" ;;
     "algo/algo.mlpack") CONFIG_FILES="$CONFIG_FILES algo/algo.mlpack" ;;
-    "common/_tags") CONFIG_FILES="$CONFIG_FILES common/_tags" ;;
-    "applications/_tags") CONFIG_FILES="$CONFIG_FILES applications/_tags" ;;
-    "applications/boilerplates/_tags") CONFIG_FILES="$CONFIG_FILES applications/boilerplates/_tags" ;;
     "common/versionInfo.ml") CONFIG_FILES="$CONFIG_FILES common/versionInfo.ml" ;;
     "doc/manpages/buildcheck.1") CONFIG_FILES="$CONFIG_FILES doc/manpages/buildcheck.1" ;;
     "doc/manpages/ceve.1") CONFIG_FILES="$CONFIG_FILES doc/manpages/ceve.1" ;;
     "doc/manpages/distcheck.1") CONFIG_FILES="$CONFIG_FILES doc/manpages/distcheck.1" ;;
-    "_tags") CONFIG_FILES="$CONFIG_FILES _tags" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

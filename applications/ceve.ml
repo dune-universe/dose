@@ -14,6 +14,7 @@
 open Cudf
 open ExtLib
 open Common
+open Algo
 
 let debug fmt = Util.make_debug "Ceve" fmt
 let info fmt = Util.make_info "Ceve" fmt

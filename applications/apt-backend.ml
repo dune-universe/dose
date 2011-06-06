@@ -15,6 +15,7 @@
 open ExtLib
 open Common
 open Debian
+module Boilerplate = BoilerplateNoRpm
 
 let info fmt = Util.make_info "apt-get backend" fmt
 let warning fmt = Util.make_warning "apt-get backend" fmt
