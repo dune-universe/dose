@@ -3,7 +3,7 @@ include Makefile.config
 DIST_DIR = $(NAME)-$(VERSION)
 DIST_TARBALL = $(DIST_DIR).tar.gz
 
-OBFLAGS = -use-ocamlfind -classic-display
+OBFLAGS = -use-ocamlfind #-classic-display
 
 all: lib
 	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
@@ -12,8 +12,8 @@ DOSELIBS = _build/doselibs
 
 common/common.%:
 	$(OCAMLBUILD) $(OBFLAGS) common/common.$*
-	mkdir -p $(DOSELIBS)
-	for i in _build/common/common.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	@mkdir -p $(DOSELIBS)
+	@for i in _build/common/common.{cmx,cmxa,cmxs,a,cmi,cma}; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
 	  fi ; \
@@ -21,7 +21,7 @@ common/common.%:
 
 algo/algo.%:
 	$(OCAMLBUILD) $(OBFLAGS) algo/algo.$*
-	for i in _build/algo/algo.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	@for i in _build/algo/algo.{cmx,cmxa,cmxs,a,cmi,cma}; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
 	  fi ; \
@@ -29,7 +29,7 @@ algo/algo.%:
 
 debian/debian.%:
 	$(OCAMLBUILD) $(OBFLAGS) debian/debian.$*
-	for i in _build/debian/debian.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	@for i in _build/debian/debian.{cmx,cmxa,cmxs,a,cmi,cma}; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
 	  fi ; \
@@ -37,7 +37,7 @@ debian/debian.%:
 
 rpm/rpm.%:
 	$(OCAMLBUILD) $(OBFLAGS) rpm/rpm.$*
-	for i in _build/rpm/rpm.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	@for i in _build/rpm/rpm.{cmx,cmxa,cmxs,a,cmi,cma}; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
 	  fi ; \
@@ -45,7 +45,7 @@ rpm/rpm.%:
 
 eclipse/eclipse.%:
 	$(OCAMLBUILD) $(OBFLAGS) eclipse/eclipse.$*
-	for i in _build/eclipse/eclipse.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	@for i in _build/eclipse/eclipse.{cmx,cmxa,cmxs,a,cmi,cma}; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
 	  fi ; \
@@ -53,7 +53,7 @@ eclipse/eclipse.%:
 
 doseparse/boilerplate.%:
 	$(OCAMLBUILD) $(OBFLAGS) doseparse/boilerplate.$*
-	for i in _build/doseparse/boilerplate.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	@for i in _build/doseparse/boilerplate.{cmx,cmxa,cmxs,a,cmi,cma}; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
 	  fi ; \
@@ -61,7 +61,7 @@ doseparse/boilerplate.%:
 
 doseparse/boilerplateNoRpm.%:
 	$(OCAMLBUILD) $(OBFLAGS) doseparse/boilerplateNoRpm.$*
-	for i in _build/doseparse/boilerplateNoRpm.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	@for i in _build/doseparse/boilerplateNoRpm.{cmx,cmxa,cmxs,a,cmi,cma}; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
 	  fi ; \
