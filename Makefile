@@ -88,6 +88,7 @@ distclean: clean
 	rm common/versionInfo.ml
 	rm db/db.mlpack
 	rm META
+	rm -f doc/manpages/*.1
 
 $(DOSELIBS)/%:
 	$(OCAMLBUILD) $(OBFLAGS) $*
