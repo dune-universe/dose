@@ -14,66 +14,74 @@ libcudf/cudf.%:
 	$(OCAMLBUILD) $(OBFLAGS) libcudf/cudf.$*
 	@mkdir -p $(DOSELIBS)
 	@cp _build/libcudf/*.cmi $(DOSELIBS)
-	@for i in _build/libcudf/cudf.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	@for i in _build/libcudf/cudf.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
+	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
 	  fi ; \
 	done
 
 common/common.%:
 	$(OCAMLBUILD) $(OBFLAGS) common/common.$*
 	@mkdir -p $(DOSELIBS)
-	@for i in _build/common/common.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	@for i in _build/common/common.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
+	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
 	  fi ; \
 	done
 
 algo/algo.%:
 	$(OCAMLBUILD) $(OBFLAGS) algo/algo.$*
-	@for i in _build/algo/algo.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	@for i in _build/algo/algo.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
+	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
 	  fi ; \
 	done
 
 debian/debian.%:
 	$(OCAMLBUILD) $(OBFLAGS) debian/debian.$*
-	@for i in _build/debian/debian.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	@for i in _build/debian/debian.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
+	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
 	  fi ; \
 	done
 
 rpm/rpm.%:
 	$(OCAMLBUILD) $(OBFLAGS) rpm/rpm.$*
-	@for i in _build/rpm/rpm.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	@for i in _build/rpm/rpm.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
+	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
 	  fi ; \
 	done
 
 eclipse/eclipse.%:
 	$(OCAMLBUILD) $(OBFLAGS) eclipse/eclipse.$*
-	@for i in _build/eclipse/eclipse.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	@for i in _build/eclipse/eclipse.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
+	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
 	  fi ; \
 	done
 
 doseparse/boilerplate.%:
 	$(OCAMLBUILD) $(OBFLAGS) doseparse/boilerplate.$*
-	@for i in _build/doseparse/boilerplate.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	@for i in _build/doseparse/boilerplate.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
+	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
 	  fi ; \
 	done
 
 doseparse/boilerplateNoRpm.%:
 	$(OCAMLBUILD) $(OBFLAGS) doseparse/boilerplateNoRpm.$*
-	@for i in _build/doseparse/boilerplateNoRpm.{cmx,cmxa,cmxs,a,cmi,cma}; do \
+	@for i in _build/doseparse/boilerplateNoRpm.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
+	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
 	  fi ; \
 	done
 
