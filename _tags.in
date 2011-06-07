@@ -1,13 +1,16 @@
 <*/*.ml> or <*/*.mli>: pp(camlp4o Camlp4MacroParser.cmo)
 <*/*.ml> or <*/*.mli>: package(extlib), @PKG_CUDF@, package(pcre)
 
-<doseparse/boilerplate.ml>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
 <doseparse/boilerplateNorpm.ml>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
+<doseparse/boilerplate.ml>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
 
+<{common,algo}/*.{ml,mli}>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
+
+<common/*.{ml,mli}>: @PKG_ZIP@, @PKG_BZ2@
 <debian/*.{ml,mli}>: use_common
-<rpm/*.ml> or <rpm/*.mli>: use_common
-<algo/*.ml> or <algo/*.mli>: use_common, @PKG_OCAMLGRAPH@
-<eclipse/*.ml> or <eclipse/*.mli>: use_common, use_debian
+<rpm/*.{ml,mli}>: use_common
+<algo/*.{ml,mli}>: use_common, @PKG_OCAMLGRAPH@
+<eclipse/*.{ml,mli}>: use_common, use_debian
 <doseparse/boilerplate.ml>: use_common, use_debian, use_eclipse, @USE_RPM@
 <doseparse/boilerplateNoRpm.ml>: use_common, use_debian, use_eclipse
 
