@@ -126,7 +126,7 @@ install:
 	cp _build/rpm/dllrpm_stubs.so $(LIBDIR)/stublibs/
 
         # eclipse and rpm to add ...
-	for f in algo common deb ; do \
+	for f in algo common debian ; do \
 	  test -d  $(LIBDIR)/$(NAME)/$$f/ || mkdir -p  $(LIBDIR)/$(NAME)/$$f/ ; \
 	  cp -f _build/$$f/*.mli $(LIBDIR)/$(NAME)/$$f/ ;\
 	done
