@@ -36,7 +36,7 @@ TARGETS= \
                  applications/distcheck.$(OCAMLBEST) \
                  applications/deb-buildcheck.$(OCAMLBEST) \
                  applications/ceve.$(OCAMLBEST) \
-                 applications/apt-backend.$(OCAMLBEST) \
+                 applications/apt-cudf.$(OCAMLBEST) \
 
 ifeq ("@HAS_LIBCUDF@","no")
   LIBS += libcudf/cudf.$(OCAMLLIBBEST) libcudf/cudf.a

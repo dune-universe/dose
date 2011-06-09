@@ -24,7 +24,7 @@
 <applications/*> or <experimental/*>: package(extlib), package(pcre), package(str), package(unix)
 <applications/*> or <experimental/*>: @PKG_CUDF@, @PKG_OCAMLGRAPH@, @PKG_ZIP@, @PKG_BZ2@
 
-<applications/apt-backend.*>: use_boilerplateNoRpm
+<applications/apt-cudf.*>: use_boilerplateNoRpm
 <applications/deb-buildcheck.*>: use_algo, use_boilerplateNoRpm
 
 <applications/distcheck.*>: @USE_RPM@, use_algo, use_boilerplate
