@@ -185,6 +185,18 @@ let check_fail file =
     with Scanf.Scan_failure _ -> (close_in ic ; false)
   end with End_of_file -> (close_in ic ; false)
 
+(** see mktemp(1) for the syntax of [tmp_pattern] *)
+let mktmpdir tmp_pattern =
+  let ic =
+    Unix.open_process_in (Printf.sprintf "mktemp --tmpdir -d %s" tmp_pattern) in
+  let path = input_line ic in
+  ignore (Unix.close_process_in ic);
+  path
+
+let rmtmpdir path =
+  if String.exists path "apt-cudf" then (* safe guard, sort of *)
+    ignore (Unix.system (Printf.sprintf "rm -rf %s" path))
+
 let main () =
   let timer1 = Util.Timer.create "parsing" in
   let timer2 = Util.Timer.create "conversion" in
@@ -251,18 +263,16 @@ let main () =
   let cudf = (default_preamble,universe,cudf_request) in
   Util.Timer.stop timer2 ();
 
-
-  let uuid = Util.uuid () in
-  (* Printf.eprintf "%s\n%!" uuid; *)
-  let solver_in = Printf.sprintf "/tmp/%s.pipe" uuid in
+  let tmpdir = mktmpdir "tmp.apt-cudf.XXXXXXXXXX" in
+  at_exit (fun () -> rmtmpdir tmpdir);
+  let solver_in = Filename.concat tmpdir "in-cudf" in
   Unix.mkfifo solver_in 0o600;
-
-  let solver_out = Printf.sprintf "/tmp/%s.solution" uuid in
+  let solver_out = Filename.concat tmpdir "out-cudf" in
 
   let cmdline_criteria = OptParse.Opt.opt (Options.criteria) in
   let criteria = choose_criteria ~criteria:cmdline_criteria request in
   let cmd = interpolate_solver_pat exec_pat solver_in solver_out criteria in
-  (* Printf.eprintf "CMD %s\n%!" cmd; *)
+  Printf.eprintf "CMD %s\n%!" cmd;
 
   let env = Unix.environment () in
   let (cin,cout,cerr) = Unix.open_process_full cmd env in
