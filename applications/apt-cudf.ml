@@ -148,16 +148,16 @@ let choose_criteria ?(criteria=None) request =
   |Some c,_ -> c
 ;;
 
-let parse_solver filename =
+let parse_solver_spec filename =
   let (exec, version) = (ref "", ref "") in
   begin try
     let ic = open_in filename in
     while true do
       let l = input_line ic in
-      if String.starts_with l "exec:" then
-	Scanf.sscanf l "exec: %s " (fun s -> exec := s)
-      else if String.starts_with l "cudf-version:" then
-	Scanf.sscanf l "cudf-version: %s " (fun s -> version := s);
+      if String.starts_with l "exec: " then
+        exec := String.strip (snd (String.split l " "))
+      else if String.starts_with l "cudf-version: " then
+        Scanf.sscanf l "cudf-version: %s " (fun s -> version := s);
     done;
     close_in ic
     with
@@ -167,9 +167,14 @@ let parse_solver filename =
         fatal "parse error while reading CUDF solver specification %s: %s"
 	  filename err
   end;
-  if !exec = "" || !version = ""
-  then fatal "incomplete CUDF solver specification %s" filename
-  else (!exec,!version)
+  if !exec = "" || !version = "" then
+    fatal "incomplete CUDF solver specification %s" filename;
+  if not (String.exists !exec "$in" && String.exists !exec "$out"
+          && String.exists !exec "$pref") then
+    fatal
+      "Incomplete solver specification %s: one or more of $in, $out, $pref is missing in exec line"
+      filename;
+  (!exec,!version)
 ;;
 
 let check_fail file =
@@ -192,13 +197,22 @@ let main () =
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers)
   ["parsing";"cudfio";"conversion";"solver";"solution"];
 
-  let solver =
+  (* Solver "exec:" line. Contains three named wildcards to be interpolated:
+     "$in", "$out", and "$pref"; corresponding to, respectively, input CUDF
+     document, output CUDF universe, user preferences. *)
+  let exec_pat =
     if OptParse.Opt.is_set Options.solver then
       let f = OptParse.Opt.get Options.solver in
       Filename.concat solver_dir f
     else
       let f = Filename.basename(Sys.argv.(0)) in
-      fst(parse_solver (Filename.concat solver_dir f))
+      fst (parse_solver_spec (Filename.concat solver_dir f))
+  in
+  let interpolate_solver_pat exec cudf_in cudf_out pref =
+    let _, exec = String.replace ~str:exec ~sub:"$in"   ~by:cudf_in  in
+    let _, exec = String.replace ~str:exec ~sub:"$out"  ~by:cudf_out in
+    let _, exec = String.replace ~str:exec ~sub:"$pref" ~by:pref     in
+    exec
   in
 
   let ch = 
@@ -247,8 +261,8 @@ let main () =
 
   let cmdline_criteria = OptParse.Opt.opt (Options.criteria) in
   let criteria = choose_criteria ~criteria:cmdline_criteria request in
-  let cmd = Printf.sprintf "%s %s %s %s" solver solver_in solver_out criteria in
-  (* Printf.eprintf "%s\n%!" cmd; *)
+  let cmd = interpolate_solver_pat exec_pat solver_in solver_out criteria in
+  (* Printf.eprintf "CMD %s\n%!" cmd; *)
 
   let env = Unix.environment () in
   let (cin,cout,cerr) = Unix.open_process_full cmd env in
@@ -342,7 +356,7 @@ let main () =
         if d <> [] then 
           Format.printf "Downgraded: %a@." pp_pkg_list_tran (d,univ);
       end;
-     
+      
       if !empty then 
         print_progress ~i:100 "No packages removed or installed"
     end with Cudf.Constraint_violation s ->
