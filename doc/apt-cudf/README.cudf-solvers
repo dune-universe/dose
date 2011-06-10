@@ -35,10 +35,11 @@ Allowed properties are:
   corresponding CUDF solver
 
 - **exec:** (mandatory) command line that should be used to invoke the CUDF
-  solver meant to be interpreted, after interpolation, by `/bin/sh`. The
-  command line must contain 3 wildcards, each one occurring only once: "$in",
-  "$out", "$pref". All wildcards will be replaced before invoking the CUDF
-  solver as follows:
+  solver meant to be interpreted, after interpolation, by `/bin/sh` (warning:
+  that also means that no special treatment of shell meta characters is done,
+  you've been warned). The command line must contain 3 wildcards, each one
+  occurring only once: "$in", "$out", "$pref". All wildcards will be replaced
+  before invoking the CUDF solver as follows:
 
   - **$in:** file name of the input CUDF document for the solver. The file must
     be read sequentially by the solver only once and cannot be lseek()-ed;
