@@ -272,7 +272,7 @@ let main () =
   let cmdline_criteria = OptParse.Opt.opt (Options.criteria) in
   let criteria = choose_criteria ~criteria:cmdline_criteria request in
   let cmd = interpolate_solver_pat exec_pat solver_in solver_out criteria in
-  Printf.eprintf "CMD %s\n%!" cmd;
+  (* Printf.eprintf "CMD %s\n%!" cmd; *)
 
   let env = Unix.environment () in
   let (cin,cout,cerr) = Unix.open_process_full cmd env in
