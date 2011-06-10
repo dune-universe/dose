@@ -149,25 +149,27 @@ let choose_criteria ?(criteria=None) request =
 ;;
 
 let parse_solver filename =
-  let name = ref "" in
-  let version = ref "" in
-  let ic = open_in filename in
+  let (exec, version) = (ref "", ref "") in
   begin try
+    let ic = open_in filename in
     while true do
       let l = input_line ic in
       if String.starts_with l "exec:" then
-	Scanf.sscanf l "exec: %s " (fun s -> name := s)
+	Scanf.sscanf l "exec: %s " (fun s -> exec := s)
       else if String.starts_with l "cudf-version:" then
-	Scanf.sscanf l "cudf-version: %s " (fun s -> name := s);
-    done
-    with End_of_file -> ()
+	Scanf.sscanf l "cudf-version: %s " (fun s -> version := s);
+    done;
+    close_in ic
+    with
+      | Sys_error _ -> fatal "cannot parse CUDF solver specification %s" filename
+      | End_of_file -> ()
       | Scanf.Scan_failure err ->
-        print_error "parse error while reading CUDF solver registry %s: %s"
+        fatal "parse error while reading CUDF solver specification %s: %s"
 	  filename err
   end;
-  close_in ic;
-  if !name = "" then fatal "cannot read %s" filename
-  else (!name,!version)
+  if !exec = "" || !version = ""
+  then fatal "incomplete CUDF solver specification %s" filename
+  else (!exec,!version)
 ;;
 
 let check_fail file =
