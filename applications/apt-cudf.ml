@@ -152,13 +152,19 @@ let parse_solver filename =
   let name = ref "" in
   let version = ref "" in
   let ic = open_in filename in
-  begin try while true do
-    let l = input_line ic in
-    try 
-      Scanf.sscanf l "exec: %s " (fun s -> name := s);
-      Scanf.sscanf l "cudf-version: %s " (fun s -> version := s);
-    with Scanf.Scan_failure _ -> ()
-  done with End_of_file -> () end;
+  begin try
+    while true do
+      let l = input_line ic in
+      if String.starts_with l "exec:" then
+	Scanf.sscanf l "exec: %s " (fun s -> name := s)
+      else if String.starts_with l "cudf-version:" then
+	Scanf.sscanf l "cudf-version: %s " (fun s -> name := s);
+    done
+    with End_of_file -> ()
+      | Scanf.Scan_failure err ->
+        print_error "parse error while reading CUDF solver registry %s: %s"
+	  filename err
+  end;
   close_in ic;
   if !name = "" then fatal "cannot read %s" filename
   else (!name,!version)
