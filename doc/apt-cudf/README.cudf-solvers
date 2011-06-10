@@ -1,17 +1,19 @@
 CUDF solver specification
 =========================
 
-Several CUDF solvers can be installed at once on any given system.
+Several CUDF solvers may be installed at teh same time on any given
+system.
 
-Each solver must come together a "CUDF solver specification" file. CUDF solver
-specifications must be installed under `/usr/share/cudf/solvers/`, one file per
-solver.
+Each solver must come together a "CUDF solver specification" file. The
+CUDF solver specification files must be installed under
+`/usr/share/cudf/solvers/`, one file per solver.
 
-The CUDF solver specification file must carry the same name of the solver. CUDF
-solver names must be formed using only alphanumeric ASCII characters, dashes,
-and underscores; solver names must start with a lowercase ASCII letter. The
-special name `internal` is reserved (for APT internal solver) and shall not be
-used.
+The name of a CUDF solver specification file must be formed using only
+alphanumeric ASCII characters, dashes, and underscores, and must start
+with a lowercase ASCII letter. The special name `internal` is reserved
+(for the APT internal solver) and shall not be used. The name of this
+file may hence be used as a unique identifier of the solver it
+describes.
 
 A list of installed CUDF solvers can therefore be obtained by looking at the
 content of `usr/share/cudf/solvers`. E.g.:
@@ -52,7 +54,8 @@ Allowed properties are:
 - **cudf-version:** (mandatory) version of the CUDF standard supported by the
   CUDF solver
 
-A sample CUDF solver specification is given below:
+A sample CUDF solver specification, describing the solver 'ssolve',
+is given below:
 
         $ cat /usr/share/cudf/solvers/ssolve
         description: super solver that will blow your mind
