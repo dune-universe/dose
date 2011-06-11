@@ -21,45 +21,64 @@ type source = {
   name : name;
   version : version;
   binary : vpkg list;
+  architecture : architecture list;
   build_depends : (vpkg * (bool * architecture) list) list list;
   build_depends_indep : (vpkg * (bool * architecture) list) list list;
   build_conflicts : (vpkg * (bool * architecture) list) list;
   build_conflicts_indep : (vpkg * (bool * architecture) list) list;
-  architecture : architecture list
 }
 
-let parse_name = parse_package
-let parse_arch s = String.nsplit s " " (* Str.split (Str.regexp " ") s *)
-let parse_version s = parse_version s
-let parse_binary s = parse_vpkglist parse_constr s
-let parse_cnf s = parse_vpkgformula parse_builddeps s
-let parse_conj s = parse_vpkglist parse_builddeps s
+let default_source = {
+  name = "";
+  version = "";
+  architecture = [];
+  binary = [];
+  build_depends = [];
+  build_depends_indep = [];
+  build_conflicts = [];
+  build_conflicts_indep = [];
+}
+
+let parse_s = Format822.parse_s
+let parse_name _ s = Format822.parse_package s
+let parse_version _ s = Format822.parse_version s
+let parse_arch _ s = String.nsplit s " "
+let parse_binary _ s = Format822.list_parser ~sep:"," Format822.parse_constr s
+let parse_conj _ s = Format822.parse_vpkglist Format822.parse_builddeps s
+let parse_cnf _ s = Format822.parse_vpkgformula Format822.parse_builddeps s
 
 (* Relationships between source and binary packages
  * http://www.debian.org/doc/debian-policy/ch-relationships.html
  * Build-Depends, Build-Depends-Indep, Build-Conflicts, Build-Conflicts-Indep
 *)
-let parse_sources_fields par =
-  let parse_s f field = f (single_line field (List.assoc field par)) in
-  let parse_m f field = f (String.concat " " (List.assoc field par)) in
-  let exec () =
-      {
-        name = parse_s parse_name "package";
-        version = parse_s parse_version "version";
-        architecture = parse_s parse_arch "architecture";
-        binary = (try parse_m parse_binary "binary" with Not_found -> []);
-        build_depends = (try parse_m parse_cnf "build-depends" with Not_found -> []);
-        build_depends_indep = (try parse_m parse_cnf "build-depends-indep" with Not_found -> []);
-        build_conflicts = (try parse_m parse_conj "build-conflicts" with Not_found -> []);
-        build_conflicts_indep = (try parse_m parse_conj "build-conflicts-indep" with Not_found -> []);
-      }
-  in
-  try Some (exec ()) with Not_found -> None (* this package doesn't either have version or name *)
+let parse_package_stanza filter par =
+  let aux par = 
+    let p = {
+        name = parse_s ~err:"(MISSING NAME)" parse_name "Package" par;
+        version = parse_s ~err:"(MISSING VERSION)" parse_version "Version" par;
+        architecture = parse_s ~err:"(MISSING ARCH)" parse_arch "Architecture" par;
+        binary = parse_s ~opt:[] ~multi:true parse_binary "Binary" par; 
+        build_depends = parse_s ~opt:[] ~multi:true parse_cnf "Build-Depends" par; 
+        build_depends_indep =
+          parse_s ~opt:[] ~multi:true parse_cnf "Build-Depends-Indep" par;
+        build_conflicts = parse_s ~opt:[] ~multi:true parse_conj "Build-Conflicts" par;
+        build_conflicts_indep = 
+          parse_s ~opt:[] ~multi:true parse_conj "Build-Conflicts-Indep" par 
+    }
+    in
+    if Option.is_none filter then Some p
+    else if (Option.get filter) p then Some(p) else None
+  in Format822.parse_packages_fields aux par
+;;
 
 (** parse a debian Sources file from channel *)
 let parse_sources_in ch =
-  let parse_packages = parse_822_iter parse_sources_fields in
-  parse_packages (start_from_channel ch)
+  let parse_packages =
+    Format822.parse_822_iter (
+      parse_package_stanza None
+    )
+  in
+  parse_packages (Format822.start_from_channel ch)
 
 (** parse a debian Sources file *)
 let input_raw =

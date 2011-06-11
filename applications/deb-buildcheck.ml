@@ -64,7 +64,7 @@ let main () =
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
 
   if not(OptParse.Opt.is_set Options.architecture) then 
-    fatal "--architecture must be specified";
+    fatal "--arch must be specified";
 
   let pkglist = Deb.input_raw [List.hd posargs] in
   let srclist = 

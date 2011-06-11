@@ -63,6 +63,7 @@ let default_package = {
 exception ParseError of string * string
 exception IgnorePackage of string
 
+let parse_s = Format822.parse_s
 let parse_name _ s = Format822.parse_package s
 let parse_version _ s = Format822.parse_version s
 let parse_source _ s = Format822.parse_source s
@@ -100,55 +101,12 @@ let parse_architecture default_arch _ arch =
         )
 ;;
 
-let rec assoc (n : string) = function
-  |(k,v)::_ when k = n -> v
-  |_::t -> assoc n t
-  |[] -> raise Not_found
-;;
-
-(* opt = None && err = None -> Not_found : this is for extras
- * opt = None && err = Some s -> ParseError s :
- * opt = Some s -> return s *)
-let parse_s ?opt ?err ?(multi=false) f field par =
-  let delayed_f () =
-    let line =
-      let s = assoc field par in
-      if multi then String.concat " " s
-      else Format822.single_line field s
-    in
-    f field line
-  in
-  if Option.is_none opt then
-    try delayed_f ()
-    with Not_found -> 
-      if Option.is_none err then raise Not_found
-      else raise (ParseError (field,(Option.get err)^" (no default declared)"))
-  else
-    try delayed_f ()
-    with Not_found -> Option.get opt
-;;
-
 (* parse extra fields parse_f returns a string *)
 let parse_e extras par =
   List.filter_map (fun (field, parse_f) ->
       try Some (field,parse_f par)
       with Not_found -> None
   ) extras
-;;
-
-let parse_packages_fields stanza_parser par =
-  try stanza_parser par
-  with 
-    |ParseError (f,s) -> begin
-      List.iter (fun (k,v) -> Printf.eprintf "%s: %s\n%!" k (String.concat " " v)) par;
-      Printf.eprintf "Parse Error in field %s : %s" f s;
-      None
-    end
-    |IgnorePackage s -> begin
-      List.iter (fun (k,v) -> Printf.eprintf "%s: %s\n%!" k (String.concat " " v)) par;
-      Printf.eprintf "Package Ignored : %s" s;
-      None
-    end
 ;;
 
 let parse_package_stanza filter default_arch extras par = 
@@ -177,7 +135,7 @@ let parse_package_stanza filter default_arch extras par =
     in 
     if Option.is_none filter then Some p
     else if (Option.get filter) p then Some(p) else None
-  in parse_packages_fields aux par
+  in Format822.parse_packages_fields aux par
 ;;
 
 (** parse a debian Packages file from the channel [ch] *)

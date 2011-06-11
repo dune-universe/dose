@@ -197,6 +197,54 @@ let parse_package ?(check=false) s =
 ;;
 
 (*****************************************************)
+let rec assoc (n : string) = function
+  |(k,v)::_ when k = n -> v
+  |_::t -> assoc n t
+  |[] -> raise Not_found
+;;
+
+exception ParseError of string * string
+exception IgnorePackage of string
+
+(* opt = None && err = None -> Not_found : this is for extras
+ * opt = None && err = Some s -> ParseError s :
+ * opt = Some s -> return s *)
+let parse_s ?opt ?err ?(multi=false) f field par =
+  let delayed_f () =
+    let line =
+      let s = assoc field par in
+      if multi then String.concat " " s
+      else single_line field s
+    in
+    f field line
+  in
+  if Option.is_none opt then
+    try delayed_f ()
+    with Not_found ->
+      if Option.is_none err then raise Not_found
+      else raise (ParseError (field,(Option.get err)^" (no default declared)"))
+  else
+    try delayed_f ()
+    with Not_found -> Option.get opt
+;;
+
+let parse_packages_fields stanza_parser par =
+  try stanza_parser par
+  with
+    |ParseError (f,s) -> begin
+      List.iter (fun (k,v) -> Printf.eprintf "%s: %s\n%!" k (String.concat " " v)) par;
+      Printf.eprintf "Parse Error in field %s : %s" f s;
+      None
+    end
+    |IgnorePackage s -> begin
+      List.iter (fun (k,v) -> Printf.eprintf "%s: %s\n%!" k (String.concat " " v)) par;
+      Printf.eprintf "Package Ignored : %s" s;
+      None
+    end
+;;
+
+
+(*****************************************************)
 
 let parse_constr_aux ?(check=true) vers s =
   let name = cur s in

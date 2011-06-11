@@ -227,7 +227,7 @@ let add_extra extras tables pkg =
   let l =
     List.filter_map (fun (debprop, (cudfprop,v)) ->
       try 
-        let s = Packages.assoc debprop pkg.extras in
+        let s = Format822.assoc debprop pkg.extras in
         let typ = Cudf_types.type_of_typedecl v in
         Some (cudfprop, Cudf_types_pp.parse_value typ s)
       with Not_found -> None
@@ -252,7 +252,7 @@ let add_inst inst pkg =
   if inst then true 
   else
     try
-      match String.nsplit (Packages.assoc "Status" pkg.extras) " " with
+      match String.nsplit (Format822.assoc "Status" pkg.extras) " " with
       |[_;_;"installed"] -> true
       | _ -> false
     with Not_found -> false

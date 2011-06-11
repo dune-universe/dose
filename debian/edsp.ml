@@ -49,21 +49,22 @@ let parse_req s =
   |_ -> assert false
 ;;
 
+let parse_s = Format822.parse_s
 let parse_conj _ s = Format822.list_parser ~sep:" " parse_req s
 
 let parse_request_stanza par =
   let aux par =
     Some {
-      request = Packages.parse_s ~err:"(Malformed REQUEST)" Packages.parse_string "Request" par;
-      install = Packages.parse_s ~opt:[] parse_conj "Install" par;
-      remove = Packages.parse_s ~opt:[] parse_conj "Remove" par;
-      upgrade = Packages.parse_s ~opt:false Packages.parse_bool "Upgrade" par;
-      distupgrade = Packages.parse_s ~opt:false Packages.parse_bool "Dist-Upgrade" par;
-      autoremove = Packages.parse_s ~opt:false Packages.parse_bool "Autoremove" par;
-      strict_pin = Packages.parse_s ~opt:true Packages.parse_bool "Strict-Pinning" par;
-      preferences = Packages.parse_s ~opt:"" Packages.parse_string "Preferences" par;
+      request = parse_s ~err:"(Malformed REQUEST)" Packages.parse_string "Request" par;
+      install = parse_s ~opt:[] parse_conj "Install" par;
+      remove = parse_s ~opt:[] parse_conj "Remove" par;
+      upgrade = parse_s ~opt:false Packages.parse_bool "Upgrade" par;
+      distupgrade = parse_s ~opt:false Packages.parse_bool "Dist-Upgrade" par;
+      autoremove = parse_s ~opt:false Packages.parse_bool "Autoremove" par;
+      strict_pin = parse_s ~opt:true Packages.parse_bool "Strict-Pinning" par;
+      preferences = parse_s ~opt:"" Packages.parse_string "Preferences" par;
     }
-  in Packages.parse_packages_fields aux par
+  in Format822.parse_packages_fields aux par
 ;;
 
 let parse_installed par = Packages.parse_s Packages.parse_bool_s "Installed" par ;;
@@ -101,12 +102,12 @@ let input_raw_ch ch =
         let inst () =
           try
             Packages.parse_bool "Installed"
-            (Packages.assoc "Installed" pkg.Packages.extras)
+            (Format822.assoc "Installed" pkg.Packages.extras)
           with Not_found -> false
         in
         let candidate () =
           try
-            let s = Packages.assoc "APT-Candidate" pkg.Packages.extras in
+            let s = Format822.assoc "APT-Candidate" pkg.Packages.extras in
             Packages.parse_bool "APT-Candidate" s
           with Not_found -> false
         in
@@ -134,7 +135,7 @@ let tocudf tables pkg =
   let inst =
     try
       Packages.parse_bool "Installed"
-      (Packages.assoc "Installed" pkg.Packages.extras)
+      (Format822.assoc "Installed" pkg.Packages.extras)
     with Not_found -> false
   in
   Debcudf.tocudf tables ~inst ~extras:extras_tocudf pkg 
