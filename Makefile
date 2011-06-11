@@ -5,7 +5,7 @@ DIST_TARBALL = $(DIST_DIR).tar.gz
 
 OBFLAGS = -use-ocamlfind #-classic-display
 
-all: lib
+all: lib man
 	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
 
 DOSELIBS = _build/doselibs
@@ -86,6 +86,11 @@ doseparse/boilerplateNoRpm.%:
 	done
 
 lib: $(LIBS)
+
+man: doc/manpages/apt-cudf.1
+
+doc/manpages/apt-cudf.1: doc/manpages/apt-cudf.pod
+	pod2man --section 8 --release "$(NAME) $(VERSION)" $< > $@
 
 clean:
 	$(OCAMLBUILD) -clean

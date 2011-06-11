@@ -1,0 +1,38 @@
+=head1 NAME
+
+apt-cudf - CUDF solver integration for APT
+
+=head1 SYNOPSIS
+
+=over
+
+=item B<solvername>
+
+=back
+
+=head1 DESCRIPTION
+
+apt-cudf translates back and forth among a CUDF-based dependency solver and the
+protocol used by APT to talk with external dependency solvers. apt-cudf
+therefore allows to use any CUDF solver as an external solver for APT.
+
+apt-cudf relies on its C<argv[0]> name to find the CUDF solver to invoke.  In
+common setups, you should have a CUDF solver specification file under
+F</usr/share/cudf/solvers/> for each installed CUDF solver. To use one such
+solver with APT, you should create a symbolic link pointing to
+F</usr/bin/apt-cudf> under F</usr/lib/apt/solvers/> and call it with the name
+of the CUDF solver you want to use.
+
+=head1 SEE ALSO
+
+apt-get(8), update-cudf-solvers(8),
+L<README.cudf-solvers|file:///usr/share/doc/apt-cudf/README.cudf-solvers>,
+L<README.Debian|file:///usr/share/doc/apt-cudf/README.Debian>
+
+=head1 AUTHOR
+
+Copyright: (C) 2011 Stefano Zacchiroli <zack@debian.org>
+
+License: GNU Lesser General Public License (GPL), version 3 or above
+
+=cut
