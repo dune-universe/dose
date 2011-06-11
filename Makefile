@@ -92,10 +92,10 @@ clean:
 
 distclean: clean
 	rm -Rf Makefile.config aclocal.m4 config.log config.status autom4te.cache/
-	rm algo/algo.mlpack
-	rm common/versionInfo.ml
-	rm db/db.mlpack
-	rm META
+	rm -f algo/algo.mlpack
+	rm -f common/versionInfo.ml
+	rm -f db/db.mlpack
+	rm -f _tags META
 	rm -f doc/manpages/*.1
 
 $(DOSELIBS)/%:
