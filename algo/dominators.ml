@@ -45,17 +45,6 @@ let _scons (graph,pkg) =
 let impactset graph pkg = Util.memo _impactset (graph,pkg)
 let scons graph pkg = Util.memo _scons (graph,pkg)
 
-let stats max = 
-  let curr = ref 0 in
-  let step = 10 in
-  fun i ->
-    incr curr;
-    if !curr >= step then begin
-      debug "Done %d out of %d" i max;
-      curr := 0
-    end
-;;
-
 (* the dominators are computed on the strong dependency graph
  * with transitive archs *)
 let dominators ?relative graph = 
@@ -66,14 +55,12 @@ let dominators ?relative graph =
   Util.Progress.set_total dombar (G.nb_vertex graph);
   Util.Timer.start domtimer;
   let i = ref 0 in
-  let stats = stats (G.nb_vertex graph) in
   let domgraph = G.create () in
   G.iter_vertex (fun p ->
     G.add_vertex domgraph p;
     Util.Progress.progress dombar;
     let isp = impactset graph p in
     let sconsp = scons graph p in
-    stats !i; incr i;
     G.iter_succ (fun q ->
       if p <> q then
       begin
