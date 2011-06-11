@@ -46,7 +46,7 @@ ifeq ("@HAS_LIBCUDF@","no")
 endif
 
 LIBS += common/common.$(OCAMLLIBBEST) common/common.a
-LIBS += debian/debian.$(OCAMLLIBBEST) debian/debian.a
+LIBS += deb/debian.$(OCAMLLIBBEST) deb/debian.a
 LIBS += rpm/rpm.$(OCAMLLIBBEST) rpm/rpm.a
 LIBS += eclipse/eclipse.$(OCAMLLIBBEST) eclipse/eclipse.a
 LIBS += algo/algo.$(OCAMLLIBBEST) algo/algo.a
@@ -56,7 +56,7 @@ LIBS += doseparse/boilerplate.$(OCAMLLIBBEST) doseparse/boilerplate.a
 #we always compile bytecode libraries
 ifeq ("@OCAMLBEST@","opt")
   LIBS += common/common.cma
-  LIBS += debian/debian.cma
+  LIBS += deb/debian.cma
   LIBS += rpm/rpm.cma
   LIBS += eclipse/eclipse.cma
   LIBS += algo/algo.cma

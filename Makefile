@@ -40,9 +40,9 @@ algo/algo.%:
 	  fi ; \
 	done
 
-debian/debian.%:
-	$(OCAMLBUILD) $(OBFLAGS) debian/debian.$*
-	@for i in _build/debian/debian.*; do \
+deb/debian.%:
+	$(OCAMLBUILD) $(OBFLAGS) deb/debian.$*
+	@for i in _build/deb/debian.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
 	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
@@ -131,7 +131,7 @@ install:
 	cp _build/rpm/dllrpm_stubs.so $(LIBDIR)/stublibs/
 
         # eclipse and rpm to add ...
-	for f in algo common debian ; do \
+	for f in algo common deb ; do \
 	  test -d  $(LIBDIR)/$(NAME)/$$f/ || mkdir -p  $(LIBDIR)/$(NAME)/$$f/ ; \
 	  cp -f _build/$$f/*.mli $(LIBDIR)/$(NAME)/$$f/ ;\
 	done

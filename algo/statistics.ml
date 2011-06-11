@@ -44,24 +44,24 @@ module Make (G: Sig.G) = struct
     g2
   ;;
 
-	let clustering_coefficient graph vertex =
-		let neighbours = G.succ graph vertex in
-		let n = List.length neighbours in
-		if n = 0 then 0.0
-		else if n = 1 then 1.0
-		else
-		let n_edges = List.fold_left (fun old_sum v ->
-			old_sum + (List.fold_left (fun old_sum' v' ->
-				if G.mem_edge graph v v' && v <> v'
-				then old_sum' + 1
-				else old_sum' 	
-			) 0 neighbours)
-		) 0 neighbours 
-		and max_edges = if G.is_directed then n * (n-1) else n * (n-1) / 2
-  in
-	float_of_int n_edges /. float_of_int max_edges	
+  let clustering_coefficient graph vertex =
+    let neighbours = G.succ graph vertex in
+    let n = List.length neighbours in
+    if n = 0 then 0.0
+    else if n = 1 then 1.0
+    else
+    let n_edges = List.fold_left (fun old_sum v ->
+            old_sum + (List.fold_left (fun old_sum' v' ->
+                    if G.mem_edge graph v v' && v <> v'
+                    then old_sum' + 1
+                    else old_sum' 	
+            ) 0 neighbours)
+    ) 0 neighbours 
+    and max_edges = if G.is_directed then n * (n-1) else n * (n-1) / 2
+  in 
+  float_of_int n_edges /. float_of_int max_edges	
 
-	let average_distance graph vertex = 
+  let average_distance graph vertex = 
     let rec add_successors distance visited vertices =
       (* Add successors breadth-first, we want the shortest path we can find *)
       let succs = ref [] in 

@@ -15,10 +15,6 @@
 (*  library, see the COPYING file for more information.                   *)
 (**************************************************************************)
 
-val debug : ('a, unit, string, unit) format4 -> 'a
-val info : ('a, unit, string, unit) format4 -> 'a
-val warning : ('a, unit, string, unit) format4 -> 'a
-
 open ExtLib
 
 type constr = Cudf_types.relop * Cudf_types.version

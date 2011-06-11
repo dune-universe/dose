@@ -7,7 +7,7 @@
 <{common,algo}/*.{ml,mli}>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
 
 <common/*.{ml,mli}>: @PKG_ZIP@, @PKG_BZ2@
-<debian/*.{ml,mli}>: use_common
+<deb/*.{ml,mli}>: use_common
 <rpm/*.{ml,mli}>: use_common
 <algo/*.{ml,mli}>: use_common, @PKG_OCAMLGRAPH@
 <eclipse/*.{ml,mli}>: use_common, use_debian
@@ -16,7 +16,7 @@
 
 <common/*.cmx>: for-pack(Common)
 <algo/*.cmx>: for-pack(Algo)
-<debian/*.cmx>: for-pack(Debian)
+<deb/*.cmx>: for-pack(Debian)
 <eclipse/*.cmx>: for-pack(Eclipse)
 <rpm/*.cmx>: for-pack(Rpm)
 
