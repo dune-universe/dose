@@ -23,6 +23,46 @@ solver with APT, you should create a symbolic link pointing to
 F</usr/bin/apt-cudf> under F</usr/lib/apt/solvers/> and call it with the name
 of the CUDF solver you want to use.
 
+=head1 OPTIONS
+
+=over 4
+
+=item -v
+
+=item --verbose
+
+Print debugging information during operation. Can be repeated.
+
+=item -h
+
+=item --help
+
+Show usage information and exit.
+
+=item --version
+
+Show program's version and exit.
+
+=item -d
+
+=item --dump
+
+Dump the cudf universe and solution
+
+=item -s <solver>
+
+=item --solver <solver>
+
+Specify the external solver to use.
+
+=item -e
+
+=item --explain
+
+Print a human-readable summary of the solution.
+
+=back
+
 =head1 SEE ALSO
 
 apt-get(8), update-cudf-solvers(8),
@@ -32,6 +72,8 @@ L<README.Debian|file:///usr/share/doc/apt-cudf/README.Debian>
 =head1 AUTHOR
 
 Copyright: (C) 2011 Stefano Zacchiroli <zack@debian.org>
+
+Copyright: (C) 2011 Pietro Abate <pietro.abate@pps.jussieu.fr>
 
 License: GNU Lesser General Public License (GPL), version 3 or above
 
