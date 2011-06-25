@@ -54,7 +54,6 @@ let dominators ?relative graph =
 
   Util.Progress.set_total dombar (G.nb_vertex graph);
   Util.Timer.start domtimer;
-  let i = ref 0 in
   let domgraph = G.create () in
   G.iter_vertex (fun p ->
     G.add_vertex domgraph p;

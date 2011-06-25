@@ -17,6 +17,20 @@ if test "$OCAMLFIND" = "no"; then
  AC_MSG_ERROR([You must install OCaml findlib (the ocamlfind command)])
 fi
 
+#defaults
+
+USE_RPM=use_
+PKG_SQLITE=pkg_
+PKG_PGSQL=pkg_
+PKG_BZ2=pkg_
+PKG_ZIP=pkg_
+PKG_XML=pkg_
+PKG_CUDF=use_cudf
+PKG_OCAMLGRAPH=pkg_
+PKG_CURL=pkg_
+PKG_OUNIT=pkg_
+PKG_BENCHMARK=pkg_
+
 AC_ARG_WITH(libcudf,
         [ --without-libcudf ],
         HAS_LIBCUDF=no,
@@ -33,7 +47,6 @@ if test "$HAS_LIBCUDF" = "yes" ; then
   fi
 else
   AC_MSG_NOTICE([using local libcudf])
-  PKG_CUDF=use_cudf
 fi
 
 AC_CHECK_OCAML_PKG([extlib])
@@ -59,8 +72,6 @@ if test "$HAS_ZIP" = "yes" ; then
   CONFIG_ZIP="-DHASZIP"
   PKG_ZIP="package(zip)"
   ZIP=zip
-else
-  PKG_ZIP=pkg_
 fi
 
 AC_ARG_WITH(bz2,
@@ -76,26 +87,39 @@ if test "$HAS_BZ2" = "yes" ; then
   CONFIG_BZ2="-DHASBZ2"
   PKG_BZ2="package(bz2)"
   BZ2=bz2
-else
-  PKG_BZ2=pkg_
 fi
-                             
-AC_ARG_WITH(rpm,
-        [ --with-rpm ],
-        HAS_RPM=yes,
-        HAS_RPM=no)
-AC_SUBST(HAS_RPM)
-if test "$HAS_RPM" = "yes" ; then
+
+AC_HEADER_STDC
+
+AC_ARG_WITH(rpm4,
+        [ --with-rpm4 ],
+        HAS_RPM4=yes,
+        HAS_RPM4=no)
+if test "$HAS_RPM4" = "yes" ; then
   AC_MSG_NOTICE([RPM support enabled])
   AC_CHECK_HEADERS([rpm/rpmlib.h],,AC_MSG_ERROR([missing rpmlib.h]))
   AC_CHECK_HEADERS([rpm/rpmio.h],,AC_MSG_ERROR([missing rpmio.h]))
   AC_CHECK_HEADERS([rpm/rpmtypes.h],,AC_MSG_ERROR([missing rpmtypes.h]))
   CONFIG_RPM="-DHASRPM"
-  USE_RPM=use_rpm
-else
-  USE_RPM=use_
+  USE_RPM="use_rpm, use_rpm4"
 fi
 
+AC_ARG_WITH(rpm5,
+        [ --with-rpm5 ],
+        HAS_RPM5=yes,
+        HAS_RPM5=no)
+if test "$HAS_RPM5" = "yes"; then
+  AC_MSG_NOTICE([RPM 5 support enabled])
+  CFLAGS="-I/usr/include/rpm"
+  #LDFLAG="-Lrpm -Lrpmio"
+#  AC_CHECK_HEADERS([rpm/rpmtypes.h],,AC_MSG_ERROR([missing rpmiotypes.h]))
+#  AC_CHECK_HEADERS([rpm/rpmgi.h],,AC_MSG_ERROR([missing rpmgi.h]))
+#  AC_CHECK_HEADERS([rpm/rpmio.h],,AC_MSG_ERROR([missing rpmio.h]))
+#  AC_CHECK_HEADERS([rpm/rpm46compat.h],,AC_MSG_ERROR([missing rpm46compat.h]))
+#  AC_CHECK_HEADERS([rpm/rpm4compat.h],,AC_MSG_ERROR([missing rpm4compat.h]))
+  CONFIG_RPM="-DHASRPM"
+  USE_RPM="use_rpm, use_rpm5"
+fi
 
 AC_ARG_WITH(sqlite,
         [ --with-sqlite ],
@@ -115,8 +139,6 @@ if test "$HAS_SQLITE" = "yes" ; then
   MLPACK_SQLITE=Sqlite
   CONFIG_DBBACKEND="-DSQLITE"
   CONFIG_DB="-DHASDB"
-else
-  PKG_SQLITE=pkg_
 fi
 
 AC_ARG_WITH(postgresql,
@@ -137,8 +159,6 @@ if test "$HAS_PGSQL" = "yes" ; then
   MLPACK_PGSQL=Pgsql
   CONFIG_DBBACKEND="$CONFIG_DBBACKEND -DPGSQL"
   CONFIG_DB="-DHASDB"
-else
-  PKG_PGSQL=pkg_
 fi
 
 AC_ARG_WITH(ocamlgraph,
@@ -158,8 +178,6 @@ if test "$HAS_OCAMLGRAPH" = "yes" ; then
   PKG_OCAMLGRAPH="package(ocamlgraph)"
   MLPACK_OCAMLGRAPH="Defaultgraphs Statistics Dominators Strongdeps Strongdeps_int Strongconflicts Strongconflicts_int"
   CONFIG_OCAMLGRAPH="-DHASOCAMLGRAPH"
-else
-  PKG_OCAMLGRAPH=pkg_
 fi
 
 AC_ARG_WITH(curl,
@@ -173,8 +191,6 @@ if test "$HAS_CURL" = "yes" ; then
    AC_MSG_ERROR([Please install OCaml findlib module 'curl'.])
   fi
   PKG_CURL="package(curl)"
-else
-  PKG_CURL=pkg_
 fi
 
 AC_ARG_WITH(xml,
@@ -192,8 +208,6 @@ if test "$HAS_XML" = "yes" ; then
    AC_MSG_ERROR([Please install OCaml findlib module 'xml-light'.])
   fi
   PKG_XML="pkg_expat, pkg_xml-light"
-else
-  PKG_XML=pkg_
 fi
 
 AC_ARG_WITH(oUnit,
@@ -207,8 +221,6 @@ if test "$HAS_OUNIT" = "yes" ; then
    AC_MSG_ERROR([Please install OCaml findlib module 'oUnit'.])
   fi
   PKG_OUNIT="pkg_oUnit"
-else
-  PKG_OUNIT=pkg_
 fi
 
 AC_ARG_WITH(benchmark,
@@ -222,12 +234,8 @@ if test "$HAS_BENCHMARK" = "yes" ; then
    AC_MSG_ERROR([Please install OCaml findlib module 'benchmark'.])
   fi
   PKG_BENCHMARK="pkg_benchmark"
-else
-  PKG_BENCHMARK=pkg_
 fi
 
-
-AC_SUBST(USE_RPM)
 
 AC_SUBST(TAGS_PGSQL)
 AC_SUBST(PKG_PGSQL)
@@ -253,6 +261,8 @@ AC_SUBST(BZ2)
 AC_SUBST(LINK_RPM)
 AC_SUBST(CONFIG_RPM)
 AC_SUBST(INCLUDE_RPM)
+AC_SUBST(USE_RPM)
+
 AC_SUBST(INCLUDE_CUDF)
 AC_SUBST(PKG_CUDF)
 

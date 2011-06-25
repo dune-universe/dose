@@ -13,6 +13,7 @@
 <eclipse/*.{ml,mli}>: use_common, use_debian
 <doseparse/boilerplate.ml>: use_common, use_debian, use_eclipse, @USE_RPM@
 <doseparse/boilerplateNoRpm.ml>: use_common, use_debian, use_eclipse
+<rpm/librpm_stubs.*>: @USE_RPM@
 
 <common/*.cmx>: for-pack(Common)
 <algo/*.cmx>: for-pack(Algo)
@@ -37,5 +38,6 @@
 <experimental/deb-cudf.*>: use_boilerplateNoRpm
 <experimental/aptsolutions.*>: use_boilerplateNoRpm
 <experimental/edsp-cudf.*>: use_boilerplateNoRpm
+<experimental/rpm-cudf.*>: @USE_RPM@, use_boilerplate
 <experimental/dominators-graph.*>: @USE_RPM@, use_boilerplate, use_algo
 

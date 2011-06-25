@@ -39,6 +39,8 @@ let _ = dispatch begin function
          A"-cclib"; A"-lrpmio";
          A"-custom"
        ];
+       flag ["c"; "use_rpm5" ] & S[ A"-ccopt"; A"-I/usr/include/rpm"; A"-ccopt"; A"-DRPM5" ];
+       flag ["c"; "use_rpm4" ] & S[ A"-ccopt"; A"-I/usr/include/rpm"; A"-ccopt"; A"-DRPM4" ];
        dep ["ocaml"; "compile"; "use_rpm" ] & ["rpm/dllrpm_stubs.so"];
        flag ["ocamlmklib"] & S[ A"-lrpm"; A"-lrpmio"; ];
    | _ -> ()

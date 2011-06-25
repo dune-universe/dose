@@ -18,9 +18,30 @@
 #include <unistd.h>
 #include <string.h>
 
+#ifdef RPM4
 #include <rpm/rpmtypes.h>
 #include <rpm/rpmlib.h>
 #include <rpm/header.h>
+#endif
+
+#ifdef RPM5
+#include <stdint.h>
+
+#include <rpm/rpm46compat.h>
+
+//#define _RPMGI_INTERNAL
+#include <rpmtypes.h>
+#include <rpmio.h>
+#include <rpmtag.h>
+#include <rpmdb.h>
+
+/* ocamlc sets this variable but it is not compatible 
+ * with fts.h */
+#undef __USE_FILE_OFFSET64 
+#include <rpmgi.h>
+
+typedef const void * rpm_constdata_t;
+#endif
 
 #include <caml/mlvalues.h>
 #include <caml/memory.h>
@@ -174,7 +195,9 @@ char * tag_to_string (int32_t tag) {
       res = "source";
       break;
     default:
-      asprintf (&res, "%d", tag);
+      if (asprintf (&res, "%d", tag) < 0) {
+        caml_failwith (strerror (errno));
+      };
       break;
   }
   return res;
@@ -192,12 +215,11 @@ value assoc ( char* str, int32_t tag, int32_t type, rpm_constdata_t data, int32_
       tmp = strdup((char *) data);
       break;
     case RPM_INT16_TYPE:
-#if RPM_FORMAT_VERSION >= 5
-    case RPM_UINT16_TYPE:
-#endif
       stra = (char **) malloc (count * sizeof (char *));
       for (i = 0; i < count; i++) {
-        asprintf (&stra[i], "%u", (((uint16_t *) data) [i]));
+        if (asprintf (&stra[i], "%u", (((uint16_t *) data) [i])) < 0) {
+          caml_failwith (strerror (errno));
+        };
       }
       tmp = join_strings (stra, ",", count);
 			for(i = 0 ; i<count ; i++)
@@ -206,7 +228,9 @@ value assoc ( char* str, int32_t tag, int32_t type, rpm_constdata_t data, int32_
     case RPM_INT32_TYPE:
       stra = (char **) malloc (count * sizeof (char *));
       for (i = 0; i < count; i++) {
-        asprintf (&stra[i], "%d", (((int32_t *) data) [i]));
+        if (asprintf (&stra[i], "%d", (((int32_t *) data) [i])) < 0) {
+          caml_failwith (strerror (errno));
+        };
       }
       tmp = join_strings (stra, ",", count);
 			for(i = 0 ; i<count ; i++)
@@ -246,16 +270,13 @@ value rpm_parse_paragraph (value fd) {
 
   Header header;
   HeaderIterator iter;
+
   struct rpmtd_s td;
-
-  FD_t _fd;
-
   tl = Val_emptylist;
-  _fd = fd_val(fd);
+  FD_t _fd = fd_val(fd);
 
   header = headerRead(_fd, HEADER_MAGIC_YES);
-  if (header == NULL) 
-    CAMLreturn(Val_none);
+  if (header == NULL) CAMLreturn(Val_none); // end of file
 
   iter = headerInitIterator(header);
   while (headerNext(iter, &td)) {
@@ -294,46 +315,22 @@ value rpm_parse_paragraph (value fd) {
     rpmtdFreeData(&td);
   }
   if (iter != NULL) headerFreeIterator(iter);
-  if (header != NULL) headerFree (header);
+  if (header != NULL) (void) headerFree (header);
   CAMLreturn(Val_some(tl));
-}
-
-value rpm_parse_hdlists (value fd) {
-  CAMLparam1 ( fd );
-  CAMLlocal3 ( hd, tl, tll);
-
-  Header header;
-  HeaderIterator iter;
-  struct rpmtd_s td;
-
-  FD_t _fd;
-
-  _fd = fd_val(fd);
-  tll = Val_emptylist;
-
-  header = headerRead(_fd, HEADER_MAGIC_YES);
-  if (header == NULL) 
-    CAMLreturn(tll);
-
-  while ((iter = headerInitIterator(header)) != NULL) {
-    tl = Val_emptylist;
-    while (headerNext(iter, &td)) {
-      hd = assoc(tag_to_string(td.tag),td.tag,td.type,td.data,td.count);
-      tl = append(hd,tl);
-      rpmtdFreeData(&td);
-    }
-    headerFreeIterator(iter);
-    tll = append(tl,tll);
-  }
-
-  if (header != NULL) headerFree (header);
-  CAMLreturn(tll);
 }
 
 value rpm_open_hdlist (value file_name) {
   CAMLparam1 (file_name);
   CAMLlocal1 (result);
   FD_t fd;
+
+#ifdef RPM5
+  rpmts ts = rpmtsCreate();
+  rpmtsSetVSFlags(ts, 
+      _RPMVSF_NOSIGNATURES | RPMVSF_NOHDRCHK |
+      _RPMVSF_NOPAYLOAD | _RPMVSF_NOHEADER
+  );
+#endif
 
   fd = Fopen (String_val (file_name), "r");
   if (!fd) caml_failwith (strerror (errno));

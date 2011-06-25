@@ -611,6 +611,7 @@ MLPACK_OCAMLGRAPH
 HAS_DB
 PKG_CUDF
 INCLUDE_CUDF
+USE_RPM
 INCLUDE_RPM
 CONFIG_RPM
 LINK_RPM
@@ -628,7 +629,6 @@ TAGS_SQLITE
 MLPACK_PGSQL
 PKG_PGSQL
 TAGS_PGSQL
-USE_RPM
 OCAML_PKG_benchmark
 HAS_BENCHMARK
 OCAML_PKG_oUnit
@@ -653,7 +653,6 @@ CPPFLAGS
 LDFLAGS
 CFLAGS
 CC
-HAS_RPM
 OCAML_PKG_bz2
 HAS_BZ2
 OCAML_PKG_zip
@@ -729,7 +728,8 @@ enable_option_checking
 with_libcudf
 with_zip
 with_bz2
-with_rpm
+with_rpm4
+with_rpm5
 with_sqlite
 with_postgresql
 with_ocamlgraph
@@ -1361,7 +1361,8 @@ Optional Packages:
  --without-libcudf
  --with-zip
  --with-bz2
- --with-rpm
+ --with-rpm4
+ --with-rpm5
  --with-sqlite
  --with-postgresql
  --with-ocamlgraph
@@ -1536,6 +1537,48 @@ fi
 
 } # ac_fn_c_try_cpp
 
+# ac_fn_c_try_run LINENO
+# ----------------------
+# Try to link conftest.$ac_ext, and return whether this succeeded. Assumes
+# that executables *can* be run.
+ac_fn_c_try_run ()
+{
+  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
+  if { { ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
+$as_echo "$ac_try_echo"; } >&5
+  (eval "$ac_link") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; } && { ac_try='./conftest$ac_exeext'
+  { { case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
+$as_echo "$ac_try_echo"; } >&5
+  (eval "$ac_try") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then :
+  ac_retval=0
+else
+  $as_echo "$as_me: program exited with status $ac_status" >&5
+       $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+       ac_retval=$ac_status
+fi
+  rm -rf conftest.dSYM conftest_ipa8_conftest.oo
+  eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
+  as_fn_set_status $ac_retval
+
+} # ac_fn_c_try_run
+
 # ac_fn_c_check_header_mongrel LINENO HEADER VAR INCLUDES
 # -------------------------------------------------------
 # Tests whether HEADER exists, giving a warning if it cannot be compiled using
@@ -1626,48 +1669,6 @@ fi
   eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
 
 } # ac_fn_c_check_header_mongrel
-
-# ac_fn_c_try_run LINENO
-# ----------------------
-# Try to link conftest.$ac_ext, and return whether this succeeded. Assumes
-# that executables *can* be run.
-ac_fn_c_try_run ()
-{
-  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
-  if { { ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
-$as_echo "$ac_try_echo"; } >&5
-  (eval "$ac_link") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; } && { ac_try='./conftest$ac_exeext'
-  { { case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
-$as_echo "$ac_try_echo"; } >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; }; then :
-  ac_retval=0
-else
-  $as_echo "$as_me: program exited with status $ac_status" >&5
-       $as_echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-       ac_retval=$ac_status
-fi
-  rm -rf conftest.dSYM conftest_ipa8_conftest.oo
-  eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
-  as_fn_set_status $ac_retval
-
-} # ac_fn_c_try_run
 
 # ac_fn_c_check_header_compile LINENO HEADER VAR INCLUDES
 # -------------------------------------------------------
@@ -4010,6 +4011,20 @@ if test "$OCAMLFIND" = "no"; then
  as_fn_error $? "You must install OCaml findlib (the ocamlfind command)" "$LINENO" 5
 fi
 
+#defaults
+
+USE_RPM=use_
+PKG_SQLITE=pkg_
+PKG_PGSQL=pkg_
+PKG_BZ2=pkg_
+PKG_ZIP=pkg_
+PKG_XML=pkg_
+PKG_CUDF=use_cudf
+PKG_OCAMLGRAPH=pkg_
+PKG_CURL=pkg_
+PKG_OUNIT=pkg_
+PKG_BENCHMARK=pkg_
+
 
 # Check whether --with-libcudf was given.
 if test "${with_libcudf+set}" = set; then :
@@ -4056,7 +4071,6 @@ $as_echo "$as_me: using local libcudf instead" >&6;}
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: using local libcudf" >&5
 $as_echo "$as_me: using local libcudf" >&6;}
-  PKG_CUDF=use_cudf
 fi
 
 
@@ -4155,8 +4169,6 @@ $as_echo "not found" >&6; }
   CONFIG_ZIP="-DHASZIP"
   PKG_ZIP="package(zip)"
   ZIP=zip
-else
-  PKG_ZIP=pkg_
 fi
 
 
@@ -4199,23 +4211,9 @@ $as_echo "not found" >&6; }
   CONFIG_BZ2="-DHASBZ2"
   PKG_BZ2="package(bz2)"
   BZ2=bz2
-else
-  PKG_BZ2=pkg_
 fi
 
-
-# Check whether --with-rpm was given.
-if test "${with_rpm+set}" = set; then :
-  withval=$with_rpm; HAS_RPM=yes
-else
-  HAS_RPM=no
-fi
-
-
-if test "$HAS_RPM" = "yes" ; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: RPM support enabled" >&5
-$as_echo "$as_me: RPM support enabled" >&6;}
-  ac_ext=c
+ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
@@ -5386,7 +5384,19 @@ $as_echo "#define STDC_HEADERS 1" >>confdefs.h
 
 fi
 
-# On IRIX 5.3, sys/types and inttypes.h are conflicting.
+
+
+# Check whether --with-rpm4 was given.
+if test "${with_rpm4+set}" = set; then :
+  withval=$with_rpm4; HAS_RPM4=yes
+else
+  HAS_RPM4=no
+fi
+
+if test "$HAS_RPM4" = "yes" ; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: RPM support enabled" >&5
+$as_echo "$as_me: RPM support enabled" >&6;}
+  # On IRIX 5.3, sys/types and inttypes.h are conflicting.
 for ac_header in sys/types.h sys/stat.h stdlib.h string.h memory.h strings.h \
 		  inttypes.h stdint.h unistd.h
 do :
@@ -5446,11 +5456,30 @@ fi
 done
 
   CONFIG_RPM="-DHASRPM"
-  USE_RPM=use_rpm
-else
-  USE_RPM=use_
+  USE_RPM="use_rpm, use_rpm4"
 fi
 
+
+# Check whether --with-rpm5 was given.
+if test "${with_rpm5+set}" = set; then :
+  withval=$with_rpm5; HAS_RPM5=yes
+else
+  HAS_RPM5=no
+fi
+
+if test "$HAS_RPM5" = "yes"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: RPM 5 support enabled" >&5
+$as_echo "$as_me: RPM 5 support enabled" >&6;}
+  CFLAGS="-I/usr/include/rpm"
+  #LDFLAG="-Lrpm -Lrpmio"
+#  AC_CHECK_HEADERS([rpm/rpmtypes.h],,AC_MSG_ERROR([missing rpmiotypes.h]))
+#  AC_CHECK_HEADERS([rpm/rpmgi.h],,AC_MSG_ERROR([missing rpmgi.h]))
+#  AC_CHECK_HEADERS([rpm/rpmio.h],,AC_MSG_ERROR([missing rpmio.h]))
+#  AC_CHECK_HEADERS([rpm/rpm46compat.h],,AC_MSG_ERROR([missing rpm46compat.h]))
+#  AC_CHECK_HEADERS([rpm/rpm4compat.h],,AC_MSG_ERROR([missing rpm4compat.h]))
+  CONFIG_RPM="-DHASRPM"
+  USE_RPM="use_rpm, use_rpm5"
+fi
 
 
 # Check whether --with-sqlite was given.
@@ -5520,8 +5549,6 @@ $as_echo "not found" >&6; }
   MLPACK_SQLITE=Sqlite
   CONFIG_DBBACKEND="-DSQLITE"
   CONFIG_DB="-DHASDB"
-else
-  PKG_SQLITE=pkg_
 fi
 
 
@@ -5592,8 +5619,6 @@ $as_echo "not found" >&6; }
   MLPACK_PGSQL=Pgsql
   CONFIG_DBBACKEND="$CONFIG_DBBACKEND -DPGSQL"
   CONFIG_DB="-DHASDB"
-else
-  PKG_PGSQL=pkg_
 fi
 
 
@@ -5640,8 +5665,6 @@ $as_echo "not found" >&6; }
   PKG_OCAMLGRAPH="package(ocamlgraph)"
   MLPACK_OCAMLGRAPH="Defaultgraphs Statistics Dominators Strongdeps Strongdeps_int Strongconflicts Strongconflicts_int"
   CONFIG_OCAMLGRAPH="-DHASOCAMLGRAPH"
-else
-  PKG_OCAMLGRAPH=pkg_
 fi
 
 
@@ -5682,8 +5705,6 @@ $as_echo "not found" >&6; }
    as_fn_error $? "Please install OCaml findlib module 'curl'." "$LINENO" 5
   fi
   PKG_CURL="package(curl)"
-else
-  PKG_CURL=pkg_
 fi
 
 
@@ -5751,8 +5772,6 @@ $as_echo "not found" >&6; }
    as_fn_error $? "Please install OCaml findlib module 'xml-light'." "$LINENO" 5
   fi
   PKG_XML="pkg_expat, pkg_xml-light"
-else
-  PKG_XML=pkg_
 fi
 
 
@@ -5793,8 +5812,6 @@ $as_echo "not found" >&6; }
    as_fn_error $? "Please install OCaml findlib module 'oUnit'." "$LINENO" 5
   fi
   PKG_OUNIT="pkg_oUnit"
-else
-  PKG_OUNIT=pkg_
 fi
 
 
@@ -5835,8 +5852,6 @@ $as_echo "not found" >&6; }
    as_fn_error $? "Please install OCaml findlib module 'benchmark'." "$LINENO" 5
   fi
   PKG_BENCHMARK="pkg_benchmark"
-else
-  PKG_BENCHMARK=pkg_
 fi
 
 

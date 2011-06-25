@@ -24,7 +24,6 @@ type t
 external _open_in : string -> t = "rpm_open_hdlist"
 external _close_in : t -> unit = "rpm_close_hdlist"
 external parse_paragraph : t -> ( string * string ) list option = "rpm_parse_paragraph"
-external parse : t -> ( string * string ) list list = "rpm_parse_hdlists"
 
 let decode_flags f =
   match int_of_string f land 15 with
@@ -53,7 +52,7 @@ let dump_raw ppf s par =
           String.concat ","
           (List.map (fun f -> string_of_rel(decode_flags f)) (Str.split_delim (Str.regexp ",") v))
         )
-    |(k,v) -> Printf.sprintf "%s: %s" k v 
+    |(k,v) -> Printf.sprintf "%s: %s%!" k v 
   ) (List.rev par))
   )
 
