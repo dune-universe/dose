@@ -109,11 +109,9 @@ $(DOSELIBS)/%:
 
 test:
 	@for i in $(TESTS); do\
-		cd $$i ;\
 		echo "#######TESTING $$i" ;\
-		$(OCAMLBUILD) $(OBFLAGS) tests.$(OCAMLBEST) ;\
+		$(OCAMLBUILD) $(OBFLAGS) $$i/tests.$(OCAMLBEST) ;\
 		./tests.$(OCAMLBEST) ;\
-		cd .. ;\
 	done
 
 # stuff not not put in a distribution tarball

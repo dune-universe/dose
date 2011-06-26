@@ -13,6 +13,11 @@
 open OUnit
 open Common
 
+let test_dir = "common/tests"
+(* XXX this file should not be in the algo test directory, but in a more
+ * central location *)
+let f_legacy = "algo/tests/legacy.cudf"
+
 let test_deb_local =
   "deb local" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
@@ -87,10 +92,6 @@ let parse_uri =
     test_sqlite;
     (* test_pgsql; *)
   ]
-
-(* XXX this file should not be in the algo test directory, but in a more
- * central location *)
-let f_legacy = "../algo/tests/legacy.cudf"
 
 module S = CudfAdd.Cudf_set
 

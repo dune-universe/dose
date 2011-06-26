@@ -6,7 +6,11 @@
 
 <{common,algo}/*.{ml,mli}>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
 
-<deb/tests.*>: package(oUnit), package(extlib), @PKG_CUDF@, package(pcre), use_common, use_debian, package(zip), package(str),  package(bz2)
+<*/tests.*>: package(oUnit), package(extlib), @PKG_CUDF@, package(pcre), use_common, use_debian, package(zip), package(str),  package(bz2)
+
+<deb/tests.*>: use_debian
+<rpm/tests.*>: @USE_RPM@, use_algo, package(ocamlgraph)
+<algo/tests.*>: use_algo, package(ocamlgraph)
 
 <common/*.{ml,mli}>: @PKG_ZIP@, @PKG_BZ2@
 <deb/*.{ml,mli}>: use_common
