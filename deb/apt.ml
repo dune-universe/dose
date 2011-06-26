@@ -81,7 +81,7 @@ type apt_req =
   |Upgrade of string option
   |DistUpgrade of string option
 
-let parse_pkg_only s = `Pkg(Packages.parse_name s)
+let parse_pkg_only s = `Pkg(Packages.parse_name (Format822.dummy_loc,s))
 
 let distro_re = Str.regexp "^\\([^=/]*\\)*/[ \t]*\\(.*\\)$"
 let version_re = Str.regexp "^\\([^=]*\\)*=[ \t]*\\(.*\\)$"
@@ -89,13 +89,13 @@ let parse_pkg_req suite s =
   try 
     if Str.string_match distro_re s 0 then
       `PkgDst(
-        Packages.parse_name(Str.matched_group 1 s),
+        Packages.parse_name(Format822.dummy_loc,Str.matched_group 1 s),
         Str.matched_group 2 s
       )
     else if Str.string_match version_re s 0 then
       `PkgVer(
-        Packages.parse_name (Str.matched_group 1 s),
-        Packages.parse_version (Str.matched_group 2 s)
+        Packages.parse_name (Format822.dummy_loc,Str.matched_group 1 s),
+        Packages.parse_version (Format822.dummy_loc,Str.matched_group 2 s)
       )
     else begin match suite with
     |None -> parse_pkg_only s
@@ -208,7 +208,7 @@ let parse_pref_labels s =
 let general_re = Str.regexp "^[ \t]*\\*[ \t]*$"
 let parse_pref_package s =
   if Str.string_match general_re s 0 then Pref.Star
-  else Pref.Package (Packages.parse_name s)
+  else Pref.Package (Packages.parse_name (Format822.dummy_loc,s))
 
 let pin_re = Str.regexp "^\\([A-Za-z]+\\)[ \t]+\\(.*\\)$"
 let parse_pin s =

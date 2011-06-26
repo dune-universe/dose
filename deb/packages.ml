@@ -14,7 +14,6 @@
 
 open ExtLib
 open Common
-(* open Format822 *)
 
 let debug fmt = Util.make_debug "Debian.Packages" fmt
 let info fmt = Util.make_info "Debian.Packages" fmt
@@ -32,8 +31,8 @@ type package = {
   depends : Format822.vpkgformula ;
   pre_depends : Format822.vpkgformula ;
   recommends : Format822.vpkgformula ;
-  suggests : Format822.vpkglist;
-  enhances : Format822.vpkglist;
+  suggests : Format822.vpkgformula;
+  enhances : Format822.vpkgformula;
   conflicts : Format822.vpkglist;
   breaks : Format822.vpkglist;
   replaces : Format822.vpkglist;
@@ -77,16 +76,23 @@ let rec packages_parser stanza_parser acc p =
 ;;
 
 let parse_from_file stanza_parser fname =
-      Format822.parser_wrapper fname stanza_parser packages_parser
+  try
+    Format822.parser_wrapper fname stanza_parser packages_parser
+  with Format822.Syntax_error (_msg, (startpos, endpos)) ->
+    failwith (Printf.sprintf "Parse error on file %s:%s--%s:\n%s" fname
+    (Format822.pp_lpos startpos) (Format822.pp_lpos endpos) _msg)
 
 let parse_from_ch stanza_parser ic =
-      Format822.parser_wrapper_ch ic stanza_parser packages_parser
+  try
+    Format822.parser_wrapper_ch ic stanza_parser packages_parser
+  with Format822.Syntax_error (_msg, (startpos, endpos)) ->
+    failwith (Printf.sprintf "Parse error in input channel %s--%s:\n%s"
+    (Format822.pp_lpos startpos) (Format822.pp_lpos endpos) _msg) 
 
-exception Type_error of string
-
-let lexbuf_wrapper type_parser s =
+let lexbuf_wrapper type_parser (_loc,s) =
   try type_parser Packages_lexer.token_deb (Lexing.from_string s) 
-  with Format822.Syntax_error (_msg, loc) -> raise (Type_error s) 
+  with Format822.Syntax_error (_msg, _) ->
+   raise (Format822.Syntax_error (s, _loc))
 ;;
 
 let parse_name = lexbuf_wrapper Packages_parser.pkgname_top ;; 
@@ -113,7 +119,7 @@ exception IgnorePackage of string
  * opt = None && err = Some s -> ParseError s :
  * opt = Some s -> return s *)
 let parse_s ?opt ?err ?(multi=false) f field par =
-  try f (snd(assoc field par))
+  try f (assoc field par)
   with Not_found ->
     if Option.is_none opt then
       if Option.is_none err then raise Not_found
@@ -123,22 +129,14 @@ let parse_s ?opt ?err ?(multi=false) f field par =
 
 (* parse and convert to a specific type *)
 let parse_bool = function
-  |("Yes"|"yes"|"True" |"true") -> true
-  |("No" |"no" |"False"|"false") -> false (* this one usually is not there *)
-  |s -> raise (Format822.Type_error ("wrong value : "^ s))
+  |(_,("Yes"|"yes"|"True" |"true")) -> true
+  |(_,("No" |"no" |"False"|"false")) -> false (* this one usually is not there *)
+  |(_,s) -> raise (Format822.Type_error ("wrong value : "^ s))
 
-let parse_string s = s
-let parse_int s = int_of_string s
+let parse_string (_,s) = s
+let parse_int (_,s) = int_of_string s
 
-(* parse and return a string -> for extra fields *)
-let parse_bool_s = function
-  |("Yes"|"yes"|"true" |"True") -> "true"
-  |("No" |"no" |"false"|"False") -> "false" (* this one usually is not there *)
-  |s -> raise (Format822.Type_error ("wrong value : "^ s))
-
-let parse_int_s s = string_of_int(int_of_string s)
-
-let parse_architecture default_arch arch =
+let parse_architecture default_arch (_,arch) =
   match default_arch with
   |None -> arch
   |Some default_arch ->
@@ -174,8 +172,8 @@ let parse_package_stanza filter default_arch extras par =
       depends = parse_s ~opt:[] ~multi:true parse_vpkgformula "Depends" par;
       pre_depends = parse_s ~opt:[] ~multi:true parse_vpkgformula "Pre-Depends" par;
       recommends = parse_s ~opt:[] ~multi:true parse_vpkgformula "Recommends" par;
-      suggests = parse_s ~opt:[] ~multi:true parse_vpkglist "Suggests" par;
-      enhances = parse_s ~opt:[] ~multi:true parse_vpkglist "Enhances" par;
+      suggests = parse_s ~opt:[] ~multi:true parse_vpkgformula "Suggests" par;
+      enhances = parse_s ~opt:[] ~multi:true parse_vpkgformula "Enhances" par;
       conflicts = parse_s ~opt:[] ~multi:true parse_vpkglist "Conflicts" par;
       breaks = parse_s ~opt:[] ~multi:true parse_vpkglist "Breaks" par;
       replaces = parse_s ~opt:[] ~multi:true parse_vpkglist "Replaces" par;

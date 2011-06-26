@@ -40,12 +40,13 @@ let parse_multiarch = function
 %type <Format822.builddepslist> builddepslist_top
 
 %type <Format822.vpkglist> request_top
+%type <Format822.architecture list> archlist_top
 
 %start pkgname_top version_top
 %start multiarch_top source_top
 %start vpkg_top vpkglist_top vpkgformula_top
 %start builddepsformula_top builddepslist_top
-%start request_top
+%start request_top archlist_top
 
 %%
 
@@ -63,19 +64,25 @@ builddepsformula_top: builddepsformula EOL { $1 } ;
 builddepslist_top: builddepslist EOL { $1 } ;
 
 request_top: reqlist EOL { $1 } ;
+archlist_top: archlist EOL { $1 } ;
+buildarchlist_top: archlist EOL { $1 } ;
+
+/**************************************/ 
 
 pkgname: IDENT { $1 } ;
 version: IDENT { $1 } ;
 multiarch: IDENT { parse_multiarch $1 }
 
 source:
-  |IDENT                            { ($1,None) }
-  |IDENT LBRACKET version RBRACKET  { ($1,Some ($3)) }
+  |IDENT                        { ($1,None) }
+  |IDENT LPAREN version RPAREN  { ($1,Some ($3)) }
 
 relop:
   | RELOP       { $1 }
   | EQ          { "=" }
 ;
+
+/**************************************/ 
 
 constr:
   |                            { None }
@@ -104,9 +111,11 @@ or_formula:
   | vpkg PIPE or_formula        { $1 :: $3 }
 ;
 
+/**************************************/ 
+
 buidldep:
   |vpkg                            { ($1,[]) }
-  |vpkg LBRACKET archlist RBRACKET { ($1,$3) }
+  |vpkg LBRACKET buildarchlist RBRACKET { ($1,$3) }
 ;
 
 builddepslist:
@@ -129,18 +138,36 @@ builddeps_or_formula:
   | buidldep PIPE builddeps_or_formula   { $1 :: $3 }
 ;
 
-arch:
+/**************************************/ 
+
+buildarch:
   | BANG IDENT             { (false,$2) }
   | IDENT                  { (true,$1)  }
+;
+
+buildarchlist:
+  |             { [] }
+  | buildarchlist_ne { $1 }
+;
+
+buildarchlist_ne:
+  | buildarch                       { [ $1 ] }
+  | buildarch buildarchlist_ne      { $1 :: $2 }
+;
+
+/**************************************/ 
+
 archlist:
   |             { [] }
   | archlist_ne { $1 }
 ;
 
 archlist_ne:
-  | arch                   { [ $1 ] }
-  | arch archlist_ne      { $1 :: $2 }
+  | IDENT                   { [ $1 ] }
+  | IDENT archlist_ne       { $1 :: $2 }
 ;
+
+/**************************************/ 
 
 req:
   |pkgname             { ($1,None) }
@@ -156,14 +183,15 @@ reqlist_ne:
   | req reqlist_ne      { $1 :: $2 }
 ;
 
+
+
 %%
 
 let error_wrapper f lexer lexbuf =
   let syntax_error msg =
     raise (Format822.Syntax_error (msg, Format822.loc_of_lexbuf lexbuf)) 
   in
-  try f lexer lexbuf
-  with
+  try f lexer lexbuf with
   |Parsing.Parse_error -> syntax_error "parse error"
   |Failure _m when String.starts_with _m "lexing" -> syntax_error "lexer error"
   |Format822.Type_error _ -> syntax_error "type error"
@@ -173,4 +201,4 @@ let version_top = error_wrapper version_top
 let vpkg_top = error_wrapper vpkg_top
 let vpkglist_top = error_wrapper vpkglist_top
 let vpkgformula_top = error_wrapper vpkgformula_top
-
+let source_top = error_wrapper source_top

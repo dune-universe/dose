@@ -44,8 +44,8 @@ let default_package = {
 
 let parse_s = Debian.Packages.parse_s
 let parse_e = Debian.Packages.parse_e
-let parse_name s = s
-let parse_version s = Version.parse_version s
+let parse_name (_,s) = s
+let parse_version (_,s) = Version.parse_version s
 let parse_vpkg = Debian.Packages.parse_vpkg
 let parse_vpkgformula = Debian.Packages.parse_vpkgformula
 let parse_vpkglist = Debian.Packages.parse_vpkglist

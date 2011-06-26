@@ -15,8 +15,11 @@ open Debian
 open Common
 open Cudf
 
-let f_packages = "tests/Packages" ;;
-let f_release = "tests/Release" ;;
+let test_dir = "deb/tests"
+
+let f_packages = Filename.concat test_dir "Packages" ;;
+let f_release = Filename.concat test_dir "Release" ;;
+let f_discriminants = Filename.concat test_dir "discriminants" ;;
 
 (* XXX TODO:
   * add test for default arch
@@ -114,7 +117,7 @@ let rec assert_delay_stub l =
 ;;
 
 let test_cluster =
-  let packagelist = Packages.input_raw ["tests/discriminants"] in
+  let packagelist = Packages.input_raw [f_discriminants] in
   let clusters = Debutil.cluster packagelist in
   "cluster" >::: [
     "groups" >:: (fun _ -> 
@@ -148,7 +151,7 @@ let test_cluster =
 
 
 let test_evolution =
-  let packagelist = Packages.input_raw ["tests/discriminants"] in
+  let packagelist = Packages.input_raw [f_discriminants] in
   let constraints_table = Evolution.constraints packagelist in
   let clusters = Debutil.cluster packagelist in
   "evolution" >::: [

@@ -65,13 +65,24 @@ let parse_request_stanza par =
   }
 ;;
 
-let parse_installed par = Packages.parse_s Packages.parse_bool_s "Installed" par ;;
-let parse_hold par = Packages.parse_s Packages.parse_bool_s "Hold" par ;;
-let parse_apt_id par = Packages.parse_s ~err:"(MISSING APT-ID)" Packages.parse_string "APT-ID" par ;;
-let parse_apt_pin par = Packages.parse_s ~err:"(MISSING APT-Pin)" Packages.parse_int_s "APT-Pin" par ;;
-let parse_automatic par = Packages.parse_s Packages.parse_bool_s "APT-Automatic" par ;;
-let parse_candidate par = Packages.parse_s Packages.parse_bool_s "APT-Candidate" par ;;
-let parse_section par = Packages.parse_s Packages.parse_string "Section" par ;;
+let parse_string (_,s) = s
+
+(* parse and return a string -> for extra fields *)
+let parse_bool_s = function
+  |(_,("Yes"|"yes"|"true" |"True")) -> "true"
+  |(_,("No" |"no" |"false"|"False")) -> "false" (* this one usually is not there *)
+  |(_,s) -> raise (Format822.Type_error ("wrong value : "^ s))
+
+let parse_int_s (_,s) = string_of_int(int_of_string s)
+
+let parse_installed = Packages.parse_s parse_bool_s "Installed"
+let parse_hold = Packages.parse_s parse_bool_s "Hold"
+let parse_apt_id = Packages.parse_s ~err:"(MISSING APT-ID)" parse_string "APT-ID"
+let parse_apt_pin = Packages.parse_s ~err:"(MISSING APT-Pin)" parse_int_s "APT-Pin"
+let parse_automatic = Packages.parse_s parse_bool_s "APT-Automatic"
+let parse_candidate = Packages.parse_s parse_bool_s "APT-Candidate"
+let parse_section = Packages.parse_s parse_string "Section"
+;;
 
 let input_raw_ch ch =
   (* (field,opt,err,multi,parsing function) *)
@@ -93,15 +104,18 @@ let input_raw_ch ch =
   (* XXX: not convinced that this is the correct level to put this filter *)
   let pkglist = 
     if request.strict_pin then
+      let _loc = Format822.dummy_loc in
       let filter pkg = 
         let inst () =
           try
-            Packages.parse_bool (Packages.assoc "Installed" pkg.Packages.extras)
+            let v = Packages.assoc "Installed" pkg.Packages.extras in
+            Packages.parse_bool (_loc,v)
           with Not_found -> false
         in
         let candidate () =
           try
-            Packages.parse_bool (Packages.assoc "APT-Candidate" pkg.Packages.extras)
+            let v = Packages.assoc "APT-Candidate" pkg.Packages.extras in
+            Packages.parse_bool (_loc,v)
           with Not_found -> false
         in
         (inst ()) || (candidate ())
@@ -127,7 +141,9 @@ let extras_tocudf =
 let tocudf tables pkg =
   let inst =
     try
-      Packages.parse_bool (Packages.assoc "Installed" pkg.Packages.extras)
+      let _loc = Format822.dummy_loc in
+      let v = Packages.assoc "Installed" pkg.Packages.extras in
+      Packages.parse_bool (_loc,v)
     with Not_found -> false
   in
   Debcudf.tocudf tables ~inst ~extras:extras_tocudf pkg 

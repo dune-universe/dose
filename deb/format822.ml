@@ -32,10 +32,11 @@ let parser_wrapper fname stanza_parser parser822 =
   let p = { lexbuf = Lexing.from_channel ic ; fname = fname } in
   finally (fun () -> close_in ic ; close p) (parser822 stanza_parser []) p
 
+(* since somebody else provides the channel, we do not close it here *)
 let parser_wrapper_ch ic stanza_parser parser822 =
   let f s n = try IO.input ic s 0 n with IO.No_more_input -> 0 in
   let p = { lexbuf = Lexing.from_function f ; fname = "" } in
-  finally (fun () -> IO.close_in ic ; close p) (parser822 stanza_parser []) p
+  finally (fun () -> close p) (parser822 stanza_parser []) p
 
 type name = string
 type version = string

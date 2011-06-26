@@ -38,14 +38,12 @@ let default_source = {
 }
 
 let parse_s = Packages.parse_s
-let parse_name s = Packages.parse_name s
-let parse_version s = Packages.parse_version s
-let parse_arch s = String.nsplit s " "
-let parse_binary s = Packages.parse_vpkglist s
-let parse_builddepslist s = 
-  Packages.lexbuf_wrapper Packages_parser.builddepslist_top s
-let parse_builddepsformula s = 
-  Packages.lexbuf_wrapper Packages_parser.builddepsformula_top s
+let parse_name = Packages.parse_name
+let parse_version = Packages.parse_version
+let parse_arch = Packages.lexbuf_wrapper Packages_parser.archlist_top
+let parse_binary = Packages.parse_vpkglist
+let parse_builddepslist = Packages.lexbuf_wrapper Packages_parser.builddepslist_top
+let parse_builddepsformula = Packages.lexbuf_wrapper Packages_parser.builddepsformula_top
 
 (* Relationships between source and binary packages
  * http://www.debian.org/doc/debian-policy/ch-relationships.html
