@@ -91,12 +91,23 @@ exception IgnorePackage of string
  * opt = None && err = Some s -> ParseError s :
  * opt = Some s -> return s *)
 let parse_s ?opt ?err ?(multi=false) f field par =
-  try f (assoc field par)
+  try 
+    let (_loc,s) = (assoc field par) in
+    (* Printf.eprintf "%s: %s\n%!" field s; *)
+    f (_loc,s) 
   with Not_found ->
     if Option.is_none opt then
       if Option.is_none err then raise Not_found
       else raise (ParseError (field,(Option.get err)^" (no default declared)"))
     else Option.get opt
+;;
+
+(* parse extra fields parse_f returns a string *)
+let parse_e extras par =
+  List.filter_map (fun (field, parse_f) ->
+      try Some (field,parse_f par)
+      with Not_found -> None
+  ) extras
 ;;
 
 (* parse and convert to a specific type *)
@@ -119,14 +130,6 @@ let parse_architecture default_arch (_,arch) =
           arch default_arch
           )
         )
-;;
-
-(* parse extra fields parse_f returns a string *)
-let parse_e extras par =
-  List.filter_map (fun (field, parse_f) ->
-      try Some (field,parse_f par)
-      with Not_found -> None
-  ) extras
 ;;
 
 let parse_package_stanza filter default_arch extras par =

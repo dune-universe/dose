@@ -42,13 +42,6 @@ let default_request = {
   preferences = ""
 }
 
-let parse_req s = 
-  match String.nsplit s "=" with
-  |[n] -> (n,None)
-  |[n;v] -> (n,Some("=",v))
-  |_ -> assert false
-;;
-
 let parse_s = Packages.parse_s
 let parse_string (_,s) = s
 let parse_int_s (_,s) = string_of_int(int_of_string s)
@@ -81,52 +74,56 @@ let parse_automatic = parse_s parse_bool_s "APT-Automatic"
 let parse_candidate = parse_s parse_bool_s "APT-Candidate"
 let parse_section = parse_s parse_string "Section"
 
-let input_raw_ch ic =
-  (* (field,opt,err,multi,parsing function) *)
-  let extras = [
-    ("Installed", parse_installed);
-    ("Hold", parse_hold);
-    ("APT-ID", parse_apt_id);
-    ("APT-Pin", parse_apt_pin);
-    ("APT-Candidate", parse_candidate);
-    ("APT-Automatic", parse_automatic);
-    ("Section", parse_section);
-    ]
-  in
-  let request = 
-    let parse p =
-      match Format822_parser.stanza_822 Format822_lexer.token_822 p.Format822.lexbuf with
-      |None -> None
-      |Some stanza -> parse_request_stanza stanza
+(* (field,opt,err,multi,parsing function) *)
+let extras = [
+  ("Installed", parse_installed);
+  ("Hold", parse_hold);
+  ("APT-ID", parse_apt_id);
+  ("APT-Pin", parse_apt_pin);
+  ("APT-Candidate", parse_candidate);
+  ("APT-Automatic", parse_automatic);
+  ("Section", parse_section);
+  ]
+
+let rec packages_parser ?(request=false) (req,acc) p =
+  let filter pkg = 
+    let _loc = Format822.dummy_loc in
+    let inst () =
+      try
+        let v = Packages.assoc "Installed" pkg.Packages.extras in
+        Packages.parse_bool (_loc,v)
+      with Not_found -> false
     in
-    match Format822.parse_from_ch parse ic with
-    |Some s -> s
-    |_ -> fatal "empty request"
+    let candidate () =
+      try
+        let v = Packages.assoc "APT-Candidate" pkg.Packages.extras in
+        Packages.parse_bool (_loc,v)
+      with Not_found -> false
+    in
+    (inst ()) || (candidate ())
   in
-  (* XXX: not convinced that this is the correct level to put this filter *)
-  let pkglist = 
-    if request.strict_pin then
-      let _loc = Format822.dummy_loc in
-      let filter pkg = 
-        let inst () =
-          try
-            let v = Packages.assoc "Installed" pkg.Packages.extras in
-            Packages.parse_bool (_loc,v)
-          with Not_found -> false
-        in
-        let candidate () =
-          try
-            let v = Packages.assoc "APT-Candidate" pkg.Packages.extras in
-            Packages.parse_bool (_loc,v)
-          with Not_found -> false
-        in
-        (inst ()) || (candidate ())
-      in
-      Packages.parse_packages_in ~filter ~extras ic
-    else
-      Packages.parse_packages_in ~extras ic
-  in
-  (request,pkglist)
+  match Format822_parser.stanza_822 Format822_lexer.token_822 p.Format822.lexbuf with
+  |None -> (req,acc)
+  |Some stanza when request = true -> begin
+      match (parse_request_stanza stanza) with
+      |None -> fatal "empty request"
+      |Some req -> packages_parser (req,acc) p
+  end
+  |Some stanza when req.strict_pin = true -> begin
+    match (Packages.parse_package_stanza None None extras stanza) with
+    |None -> (req,acc)
+    |Some st -> packages_parser (req,st::acc) p
+  end
+  |Some stanza when req.strict_pin = false -> begin
+    match (Packages.parse_package_stanza None None extras stanza) with
+    |None -> (req,acc)
+    |Some st -> packages_parser (req,st::acc) p
+  end
+  |_ -> assert false
+;;
+
+let input_raw_ch ic =
+  Format822.parse_from_ch (packages_parser ~request:true (default_request,[])) ic
 ;;
 
 let extras_tocudf =
