@@ -27,7 +27,8 @@ autoconf
 ./configure
 make
 
---with-rpm
+--with-rpm4
+--with-rpm5
 --with-xml
 --with-ocamlgraph
 --with-sqlite
@@ -49,7 +50,7 @@ an independently installed version of libcudf you'll need version >=
 programs.
 
 Example:
-./configure --without-libcudf --with-xml --with-curl --with-ocamlgraph --with-zip --with-oUnit --with-bz2 --with-rpm --with-experimental
+./configure --without-libcudf --with-xml --with-curl --with-ocamlgraph --with-zip --with-oUnit --with-bz2 --with-rpm4 --with-experimental
 
 Compiling applications
 ----------------------
