@@ -48,8 +48,8 @@ let parse_int_s (_,s) = string_of_int(int_of_string s)
 let parse_req s = Packages.lexbuf_wrapper Packages_parser.request_top s
 
 let parse_request_stanza par =
-  Some {
-    request = parse_s ~err:"(Malformed REQUEST)" parse_string "Request" par;
+  {
+    request = parse_s ~err:"(Empty REQUEST)" parse_string "Request" par;
     install = parse_s ~opt:[] parse_req "Install" par;
     remove = parse_s ~opt:[] parse_req "Remove" par;
     upgrade = parse_s ~opt:false Packages.parse_bool "Upgrade" par;
@@ -85,6 +85,7 @@ let extras = [
   ("Section", parse_section);
   ]
 
+(* parse the entire file while filtering out unwanted stanzas *)
 let rec packages_parser ?(request=false) (req,acc) p =
   let filter pkg = 
     let _loc = Format822.dummy_loc in
@@ -100,23 +101,21 @@ let rec packages_parser ?(request=false) (req,acc) p =
         Packages.parse_bool (_loc,v)
       with Not_found -> false
     in
-    (inst ()) || (candidate ())
+    ((inst ()) || (candidate ()))
   in
   match Format822_parser.stanza_822 Format822_lexer.token_822 p.Format822.lexbuf with
-  |None -> (req,acc)
-  |Some stanza when request = true -> begin
-      match (parse_request_stanza stanza) with
-      |None -> fatal "empty request"
-      |Some req -> packages_parser (req,acc) p
-  end
+  |None -> (req,acc) (* end of file *)
+  |Some stanza when request = true -> 
+      let req = parse_request_stanza stanza in
+      packages_parser (req,acc) p
   |Some stanza when req.strict_pin = true -> begin
-    match (Packages.parse_package_stanza None None extras stanza) with
-    |None -> (req,acc)
+    match (Packages.parse_package_stanza (Some(filter)) None extras stanza) with
+    |None -> packages_parser (req,acc) p
     |Some st -> packages_parser (req,st::acc) p
   end
   |Some stanza when req.strict_pin = false -> begin
     match (Packages.parse_package_stanza None None extras stanza) with
-    |None -> (req,acc)
+    |None -> assert false (* this is not possible in this branch *)
     |Some st -> packages_parser (req,st::acc) p
   end
   |_ -> assert false

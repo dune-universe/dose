@@ -69,11 +69,7 @@ let make_request tables universe request =
     |None -> None
     |Some (c,v) -> Some (c,Debian.Debcudf.get_cudf_version tables ("",v))
   in
-  let select_packages l =
-    List.map (fun (n,c) -> 
-      (norm n,constr c)
-    ) l 
-  in
+  let select_packages l = List.map (fun (n,c) -> (norm n,constr c)) l in
   if request.Edsp.upgrade || request.Edsp.distupgrade then
     let to_upgrade = function
       |[] ->

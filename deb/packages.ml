@@ -114,7 +114,7 @@ let parse_e extras par =
 let parse_bool = function
   |(_,("Yes"|"yes"|"True" |"true")) -> true
   |(_,("No" |"no" |"False"|"false")) -> false (* this one usually is not there *)
-  |(_,s) -> raise (Format822.Type_error ("wrong value : "^ s))
+  |(_,s) -> assert false (*raise (Format822.Type_error ("wrong value : "^ s))*)
 
 let parse_string (_,s) = s
 let parse_int (_,s) = int_of_string s
@@ -160,6 +160,7 @@ let parse_package_stanza filter default_arch extras par =
   else if (Option.get filter) p then Some(p) else None
 ;;
 
+(* parse the entire file while filtering out unwanted stanzas *)
 let rec packages_parser stanza_parser acc p =
   match Format822_parser.stanza_822 Format822_lexer.token_822 p.Format822.lexbuf with
   |None -> acc

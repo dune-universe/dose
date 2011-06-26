@@ -34,7 +34,10 @@ let parser_wrapper_ch ic _parser = _parser (from_channel ic)
 
 let parse_from_ch _parser ic =
   try parser_wrapper_ch ic _parser
-  with Syntax_error (_msg, (startpos, endpos)) ->
+  with 
+  |Syntax_error (_msg, (startpos, endpos)) ->
+    fatal "Syntax error lines %s--%s:\n%s" (pp_lpos startpos) (pp_lpos endpos) _msg
+  | Parse_error_822 (_msg, (startpos, endpos)) ->
     fatal "Parse error lines %s--%s:\n%s" (pp_lpos startpos) (pp_lpos endpos) _msg
 
 type name = string

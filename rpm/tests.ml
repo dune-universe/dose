@@ -15,7 +15,9 @@ open OUnit
 open Common
 open Algo
 
-let hdlist = "tests/hdlist" ;;
+let test_dir = "rpm/tests"
+
+let hdlist = Filename.concat test_dir "hdlist" ;;
 let row_rpm = Rpm.Packages.Hdlists.input_raw [hdlist] ;;
 let tables =  Rpm.Rpmcudf.init_tables row_rpm ;;
 let pkglist = List.map (Rpm.Rpmcudf.tocudf tables) row_rpm ;;
