@@ -20,7 +20,10 @@ module Boilerplate = BoilerplateNoRpm
 
 module Options = struct
   open OptParse
-  let description = "Report the broken packages in a debian source list"
+  let description =
+    "Report the broken packages in a debian source list. \
+     You must provide a Debian Packages file and \
+     a Debian Sources file in this order"
   let options = OptParser.make ~description
   include Boilerplate.MakeOptions(struct let options = options end)
 
@@ -33,7 +36,7 @@ module Options = struct
   let distribution = StdOpt.str_option ()
   let release = StdOpt.str_option ()
   let suite = StdOpt.str_option ()
-  let outfile = StdOpt.str_option ()
+  let dump = StdOpt.str_option ()
 
   open OptParser
   add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
@@ -48,7 +51,7 @@ module Options = struct
   add options ~long_name:"suite" ~help:"Set the release name" suite;
   add options ~long_name:"arch" ~help:"Set the default architecture" architecture;
 
-  add options ~short_name:'o' ~long_name:"outfile" ~help:"output file" outfile;
+  add options ~long_name:"dump" ~help:"dump the cudf file" dump;
 end
 
 let debug fmt = Util.make_debug "Buildcheck" fmt
@@ -66,10 +69,22 @@ let main () =
   if not(OptParse.Opt.is_set Options.architecture) then 
     fatal "--arch must be specified";
 
-  let pkglist = Deb.input_raw [List.hd posargs] in
-  let srclist = 
-    let l = Src.input_raw (List.tl posargs) in
-    Src.sources2packages (OptParse.Opt.get Options.architecture) l 
+  let pkglist, srclist =
+    match posargs with
+    |[] | [_] -> fatal 
+      "You must provide a list of Debian Packages files and \
+       a Debian Sources file"
+    |l -> 
+        begin match List.rev l with
+        |h::t ->
+          let srclist =
+            let l = Src.input_raw [h] in
+            Src.sources2packages (OptParse.Opt.get Options.architecture) l
+          in
+          let pkglist = Deb.input_raw t in
+          (pkglist,srclist)
+        |_ -> failwith "Impossible"
+        end
   in
   let tables = Debcudf.init_tables (srclist @ pkglist) in
  
@@ -94,13 +109,8 @@ let main () =
   let success = OptParse.Opt.get Options.successes in
   let explain = OptParse.Opt.get Options.explain in
   let summary = OptParse.Opt.get Options.summary in
-  let fmt =
-    if OptParse.Opt.is_set Options.outfile then
-      let oc = open_out (OptParse.Opt.get Options.outfile) in
-      Format.formatter_of_out_channel oc
-    else
-      Format.std_formatter
-  in
+  let fmt = Format.std_formatter in
+
   let results = Diagnostic.default_result universe_size in
 
   if OptParse.Opt.is_set Options.distribution then
@@ -132,6 +142,12 @@ let main () =
 
   if summary then
     Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
+
+  if OptParse.Opt.is_set Options.dump then begin
+    let oc = open_out (OptParse.Opt.get Options.dump) in
+    info "Dumping Cudf file";
+    Cudf_printer.pp_universe oc universe
+  end
 
 ;;
 

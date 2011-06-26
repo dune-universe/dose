@@ -29,7 +29,7 @@ let blank = [ ' ' '\t' ]
 let ident = (letter | digit | '-')+
 
 rule token_822 = parse
-  | (ident as field) ':' ' '
+  | (ident as field) ':' blank*
     ([^'\n']* as rest)          { FIELD(field, (get_range lexbuf, rest)) }
   | ' ' ([^'\n']* as rest)      { CONT(get_range lexbuf, rest) }
   | '#' [^'\n']* ('\n'|eof)     { token_822 lexbuf }

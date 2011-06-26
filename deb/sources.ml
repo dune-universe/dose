@@ -66,7 +66,8 @@ let parse_package_stanza filter par =
   }
   in
   if Option.is_none filter then Some p
-  else if (Option.get filter) p then Some(p) else None
+  else if (Option.get filter) p then Some(p) 
+  else None
 ;;
 
 (** parse a debian Sources file from channel *)
