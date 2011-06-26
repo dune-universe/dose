@@ -26,6 +26,7 @@ type package = {
   name : name ;
   version : version;
   architecture : string;
+  multiarch : string;
   essential : bool;
   source : (name * version option) ;
   depends : vpkg list list;
@@ -45,6 +46,7 @@ let default_package = {
   name = "";
   version = "";
   architecture = "";
+  multiarch = "";
   essential = false;
   depends = [];
   source = ("",None);
@@ -101,6 +103,14 @@ let parse_architecture default_arch _ arch =
         )
 ;;
 
+let parse_multiarch _ = function
+  |("None"|"none") -> "None"
+  |("Allowed"|"allowed") -> "Allowed"
+  |("Foreign"|"foreign") -> "Foreign"
+  |("Same"|"Same") -> "Same"
+  |s -> fatal "Field Multi-Arch has a wrong value : %s" s
+;;
+
 (* parse extra fields parse_f returns a string *)
 let parse_e extras par =
   List.filter_map (fun (field, parse_f) ->
@@ -116,6 +126,7 @@ let parse_package_stanza filter default_arch extras par =
         name = parse_s ~err:"(MISSING NAME)" parse_name "Package" par;
         version = parse_s ~err:"(MISSING VERSION)" parse_version "Version" par;
         architecture = parse_s ~err:"(MISSING ARCH)" parse_arch "Architecture" par;
+        multiarch = parse_s ~opt:"None" parse_multiarch "Multi-Arch" par;
         source = parse_s ~opt:("",None) parse_source "Source" par;
 
         essential = parse_s ~opt:false parse_bool "Essential" par;
