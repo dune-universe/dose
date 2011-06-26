@@ -19,6 +19,17 @@ let parse_multiarch = function
   |("Same"|"same") -> "Same"
   |s -> raise (Format822.Type_error ("Field Multi-Arch has a wrong value : "^ s))
 
+let parse_request s =
+  try 
+    let i = String.index s ':' in
+    let slen = String.length s in
+    let name = String.sub s 0 i in
+    let nlen = String.length name in
+    let arch = String.sub s (nlen + 1) (slen - nlen -1 ) in
+    (name,Some arch)
+  with Not_found -> (s,None)
+;;
+
 %}
 
 %token <string> IDENT RELOP
@@ -39,7 +50,7 @@ let parse_multiarch = function
 %type <Format822.builddepsformula> builddepsformula_top
 %type <Format822.builddepslist> builddepslist_top
 
-%type <Format822.vpkglist> request_top
+%type <Format822.vpkgreq list> request_top
 %type <Format822.architecture list> archlist_top
 
 %start pkgname_top version_top
@@ -169,8 +180,8 @@ archlist_ne:
 /**************************************/ 
 
 req:
-  |pkgname             { ($1,None) }
-  |pkgname EQ version  { ($1,Some("=",$3)) }
+  |pkgname             { let (n,a) = parse_request $1 in (n,a,None) }
+  |pkgname EQ version  { let (n,a) = parse_request $1 in (n,a,Some("=",$3)) }
 
 reqlist:
   |            { [] }

@@ -22,8 +22,8 @@ let fatal fmt = Util.make_fatal "Debian.Edsp" fmt
 
 type request = {
   request : string;
-  install : Format822.vpkglist;
-  remove : Format822.vpkglist;
+  install : Format822.vpkgreq list;
+  remove : Format822.vpkgreq list;
   autoremove : bool;
   upgrade : bool;
   distupgrade : bool;

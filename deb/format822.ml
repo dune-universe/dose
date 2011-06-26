@@ -56,6 +56,8 @@ type builddep = (vpkg * (bool * architecture) list)
 type builddepslist = builddep list
 type builddepsformula = builddep list list
 
+type vpkgreq = (name * architecture option * constr option)
+
 module RawInput ( Set : Set.S ) = struct
   let input_raw parse files =
     let timer = Util.Timer.create "Debian.Format822.input_raw" in

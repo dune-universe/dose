@@ -57,19 +57,14 @@ let print_progress ?i msg =
     Format.printf "Message: %s@." msg
 ;;
 
-(* XXX : Multi-arch Hack *)
-let norm s = 
-  try Str.string_before s (String.index s ':') 
-  with Not_found -> s
-;;
-
 let make_request tables universe request = 
   let constr cs = 
     match CudfAdd.cudfop cs with
     |None -> None
     |Some (c,v) -> Some (c,Debian.Debcudf.get_cudf_version tables ("",v))
   in
-  let select_packages l = List.map (fun (n,c) -> (norm n,constr c)) l in
+  (*** XXX a here is the option architecture *)
+  let select_packages l = List.map (fun (n,a,c) -> (n,constr c)) l in
   if request.Edsp.upgrade || request.Edsp.distupgrade then
     let to_upgrade = function
       |[] ->
