@@ -14,18 +14,16 @@
 
 open ExtLib
 open Common
-open Format822
 
-type architecture = string
 type source = {
-  name : name;
-  version : version;
-  binary : vpkg list;
-  architecture : architecture list;
-  build_depends : (vpkg * (bool * architecture) list) list list;
-  build_depends_indep : (vpkg * (bool * architecture) list) list list;
-  build_conflicts : (vpkg * (bool * architecture) list) list;
-  build_conflicts_indep : (vpkg * (bool * architecture) list) list;
+  name : Format822.name;
+  version : Format822.version;
+  binary : Format822.vpkg list;
+  architecture : Format822.architecture list;
+  build_depends : Format822.builddepsformula;
+  build_depends_indep : Format822.builddepsformula;
+  build_conflicts : Format822.builddepslist;
+  build_conflicts_indep : Format822.builddepslist;
 }
 
 let default_source = {
@@ -39,46 +37,44 @@ let default_source = {
   build_conflicts_indep = [];
 }
 
-let parse_s = Format822.parse_s
-let parse_name _ s = Format822.parse_package s
-let parse_version _ s = Format822.parse_version s
-let parse_arch _ s = String.nsplit s " "
-let parse_binary _ s = Format822.list_parser ~sep:"," Format822.parse_constr s
-let parse_conj _ s = Format822.parse_vpkglist Format822.parse_builddeps s
-let parse_cnf _ s = Format822.parse_vpkgformula Format822.parse_builddeps s
+let parse_s = Packages.parse_s
+let parse_name s = Packages.parse_name s
+let parse_version s = Packages.parse_version s
+let parse_arch s = String.nsplit s " "
+let parse_binary s = Packages.parse_vpkglist s
+let parse_builddepslist s = 
+  Packages.lexbuf_wrapper Packages_parser.builddepslist_top s
+let parse_builddepsformula s = 
+  Packages.lexbuf_wrapper Packages_parser.builddepsformula_top s
 
 (* Relationships between source and binary packages
  * http://www.debian.org/doc/debian-policy/ch-relationships.html
  * Build-Depends, Build-Depends-Indep, Build-Conflicts, Build-Conflicts-Indep
 *)
 let parse_package_stanza filter par =
-  let aux par = 
-    let p = {
-        name = parse_s ~err:"(MISSING NAME)" parse_name "Package" par;
-        version = parse_s ~err:"(MISSING VERSION)" parse_version "Version" par;
-        architecture = parse_s ~err:"(MISSING ARCH)" parse_arch "Architecture" par;
-        binary = parse_s ~opt:[] ~multi:true parse_binary "Binary" par; 
-        build_depends = parse_s ~opt:[] ~multi:true parse_cnf "Build-Depends" par; 
-        build_depends_indep =
-          parse_s ~opt:[] ~multi:true parse_cnf "Build-Depends-Indep" par;
-        build_conflicts = parse_s ~opt:[] ~multi:true parse_conj "Build-Conflicts" par;
-        build_conflicts_indep = 
-          parse_s ~opt:[] ~multi:true parse_conj "Build-Conflicts-Indep" par 
-    }
-    in
-    if Option.is_none filter then Some p
-    else if (Option.get filter) p then Some(p) else None
-  in Format822.parse_packages_fields aux par
+  let p = {
+      name = parse_s ~err:"(MISSING NAME)" parse_name "Package" par;
+      version = parse_s ~err:"(MISSING VERSION)" parse_version "Version" par;
+      architecture = parse_s ~err:"(MISSING ARCH)" parse_arch "Architecture" par;
+      binary = parse_s ~opt:[] ~multi:true parse_binary "Binary" par; 
+      build_depends = 
+        parse_s ~opt:[] ~multi:true parse_builddepsformula "Build-Depends" par; 
+      build_depends_indep =
+        parse_s ~opt:[] ~multi:true parse_builddepsformula "Build-Depends-Indep" par;
+      build_conflicts = 
+        parse_s ~opt:[] ~multi:true parse_builddepslist "Build-Conflicts" par;
+      build_conflicts_indep = 
+        parse_s ~opt:[] ~multi:true parse_builddepslist "Build-Conflicts-Indep" par 
+  }
+  in
+  if Option.is_none filter then Some p
+  else if (Option.get filter) p then Some(p) else None
 ;;
 
 (** parse a debian Sources file from channel *)
-let parse_sources_in ch =
-  let parse_packages =
-    Format822.parse_822_iter (
-      parse_package_stanza None
-    )
-  in
-  parse_packages (Format822.start_from_channel ch)
+let parse_sources_in ic =
+    Packages.parse_from_ch (parse_package_stanza None) ic
+;;
 
 (** parse a debian Sources file *)
 let input_raw =

@@ -22,8 +22,8 @@ let fatal fmt = Util.make_fatal "Debian.Edsp" fmt
 
 type request = {
   request : string;
-  install : Format822.vpkg list;
-  remove : Format822.vpkg list;
+  install : Format822.vpkglist;
+  remove : Format822.vpkglist;
   autoremove : bool;
   upgrade : bool;
   distupgrade : bool;
@@ -49,22 +49,20 @@ let parse_req s =
   |_ -> assert false
 ;;
 
-let parse_s = Format822.parse_s
-let parse_conj _ s = Format822.list_parser ~sep:" " parse_req s
+let parse_s = Packages.parse_s
+let parse_req s = Packages.lexbuf_wrapper Packages_parser.request_top s
 
 let parse_request_stanza par =
-  let aux par =
-    Some {
-      request = parse_s ~err:"(Malformed REQUEST)" Packages.parse_string "Request" par;
-      install = parse_s ~opt:[] parse_conj "Install" par;
-      remove = parse_s ~opt:[] parse_conj "Remove" par;
-      upgrade = parse_s ~opt:false Packages.parse_bool "Upgrade" par;
-      distupgrade = parse_s ~opt:false Packages.parse_bool "Dist-Upgrade" par;
-      autoremove = parse_s ~opt:false Packages.parse_bool "Autoremove" par;
-      strict_pin = parse_s ~opt:true Packages.parse_bool "Strict-Pinning" par;
-      preferences = parse_s ~opt:"" Packages.parse_string "Preferences" par;
-    }
-  in Format822.parse_packages_fields aux par
+  Some {
+    request = parse_s ~err:"(Malformed REQUEST)" Packages.parse_string "Request" par;
+    install = parse_s ~opt:[] parse_req "Install" par;
+    remove = parse_s ~opt:[] parse_req "Remove" par;
+    upgrade = parse_s ~opt:false Packages.parse_bool "Upgrade" par;
+    distupgrade = parse_s ~opt:false Packages.parse_bool "Dist-Upgrade" par;
+    autoremove = parse_s ~opt:false Packages.parse_bool "Autoremove" par;
+    strict_pin = parse_s ~opt:true Packages.parse_bool "Strict-Pinning" par;
+    preferences = parse_s ~opt:"" Packages.parse_string "Preferences" par;
+  }
 ;;
 
 let parse_installed par = Packages.parse_s Packages.parse_bool_s "Installed" par ;;
@@ -88,12 +86,9 @@ let input_raw_ch ch =
     ]
   in
   let request = 
-    match Format822.parse_paragraph (Format822.start_from_channel ch) with 
-    |None -> fatal "empty request (empty document)"
-    |Some par -> 
-        match parse_request_stanza par with
-        |None -> fatal "empty request (document does not start with a request)"
-        |Some r -> r
+    match Packages.parse_from_ch parse_request_stanza ch with 
+    |[r] -> r
+    |_ -> fatal "empty request (empty document)"
   in
   (* XXX: not convinced that this is the correct level to put this filter *)
   let pkglist = 
@@ -101,14 +96,12 @@ let input_raw_ch ch =
       let filter pkg = 
         let inst () =
           try
-            Packages.parse_bool "Installed"
-            (Format822.assoc "Installed" pkg.Packages.extras)
+            Packages.parse_bool (Packages.assoc "Installed" pkg.Packages.extras)
           with Not_found -> false
         in
         let candidate () =
           try
-            let s = Format822.assoc "APT-Candidate" pkg.Packages.extras in
-            Packages.parse_bool "APT-Candidate" s
+            Packages.parse_bool (Packages.assoc "APT-Candidate" pkg.Packages.extras)
           with Not_found -> false
         in
         (inst ()) || (candidate ())
@@ -134,8 +127,7 @@ let extras_tocudf =
 let tocudf tables pkg =
   let inst =
     try
-      Packages.parse_bool "Installed"
-      (Format822.assoc "Installed" pkg.Packages.extras)
+      Packages.parse_bool (Packages.assoc "Installed" pkg.Packages.extras)
     with Not_found -> false
   in
   Debcudf.tocudf tables ~inst ~extras:extras_tocudf pkg 

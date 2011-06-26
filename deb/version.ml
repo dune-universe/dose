@@ -8,10 +8,10 @@
 (*  exception to the GNU Lesser General Public License applies to this    *)
 (*  library, see the COPYING file for more information.                   *)
 (**************************************************************************)
-
+(*
 let fatal fmt = Common.Util.make_fatal "Debian.Version" fmt
 let info fmt = Common.Util.make_info "Debian.Version" fmt
-
+*)
 (* cannibalized from ocamldeb *)
 
 let is_digit = function
@@ -129,9 +129,10 @@ let compare_special x y =
 ;;
 
 (* -1 : x < y *)
-(** According to APT's behaviour, 5.002 and 5.2 are equivalent version numbers.  This means that
-  * the Debian ordering is not a proper order on strings but a preorder.  This means that it is
-  * not possible to use version string-indexed hashtables, as we may get duplicate entries.
+(** According to APT's behaviour, 5.002 and 5.2 are equivalent version numbers.
+ * This means that the Debian ordering is not a proper order on strings but a
+ * preorder.  This means that it is not possible to use version string-indexed
+ * hashtables, as we may get duplicate entries.
   *)
 
 let compare_numeric_decimal x y =

@@ -1,6 +1,10 @@
+Format822_lexer
+Format822_parser
+Packages_lexer
+Packages_parser
 Packages
-Sources
 Apt
+Sources
 Version
 Format822
 Debcudf

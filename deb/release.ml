@@ -13,7 +13,6 @@
 (** Representation of a debian release files *) 
 
 open ExtLib
-open Format822
 
 type release = {
   origin : string;
@@ -45,27 +44,24 @@ let default_release = {
     sha256 = []
 }
 
-let parse_release_in ch =
-  let parse_release_fields par =
-    let parse field =
-      try (single_line field (List.assoc field par))
-      with Not_found -> ""
-    in
-    {
-      origin = parse "origin";
-      label = parse "label";
-      suite = parse "suite";
-      version = parse "version";
-      codename = parse "codename";
-      date = parse "date";
-      architecture = parse "architectures";
-      component = parse "components";
-      description = parse "description";
-      md5sums = [];
-      sha1 = [];
-      sha256 = []
-    }
-  in
-  match parse_paragraph (start_from_channel ch) with
-  |None -> default_release
-  |Some par -> parse_release_fields par
+let parse field par = try snd(Packages.assoc field par) with Not_found -> ""
+
+let parse_release_stanza par =
+  Some {
+    origin = parse "Origin" par;
+    label = parse "Label" par;
+    suite = parse "Suite" par;
+    version = parse "Version" par;
+    codename = parse "Codename" par;
+    date = parse "Date" par;
+    architecture = parse "Architectures" par;
+    component = parse "Components" par;
+    description = parse "Description" par;
+    md5sums = [];
+    sha1 = [];
+    sha256 = []
+  }
+
+let parse_packages_in ?filter ?(default_arch=None) ?(extras=[]) ic =
+    Packages.parse_from_ch parse_release_stanza ic
+;;

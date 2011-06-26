@@ -13,7 +13,6 @@
 (** Apt command line parsing *)
 
 open ExtLib
-open Format822
 open Common
 
 let debug fmt = Util.make_debug "Debian.Apt" fmt
@@ -82,7 +81,7 @@ type apt_req =
   |Upgrade of string option
   |DistUpgrade of string option
 
-let parse_pkg_only s = `Pkg(parse_package s)
+let parse_pkg_only s = `Pkg(Packages.parse_name s)
 
 let distro_re = Str.regexp "^\\([^=/]*\\)*/[ \t]*\\(.*\\)$"
 let version_re = Str.regexp "^\\([^=]*\\)*=[ \t]*\\(.*\\)$"
@@ -90,13 +89,13 @@ let parse_pkg_req suite s =
   try 
     if Str.string_match distro_re s 0 then
       `PkgDst(
-        parse_package(Str.matched_group 1 s),
+        Packages.parse_name(Str.matched_group 1 s),
         Str.matched_group 2 s
       )
     else if Str.string_match version_re s 0 then
       `PkgVer(
-        parse_package(Str.matched_group 1 s),
-        (* Packages.parse_version *)(Str.matched_group 2 s)
+        Packages.parse_name (Str.matched_group 1 s),
+        Packages.parse_version (Str.matched_group 2 s)
       )
     else begin match suite with
     |None -> parse_pkg_only s
@@ -209,7 +208,7 @@ let parse_pref_labels s =
 let general_re = Str.regexp "^[ \t]*\\*[ \t]*$"
 let parse_pref_package s =
   if Str.string_match general_re s 0 then Pref.Star
-  else Pref.Package (parse_package s)
+  else Pref.Package (Packages.parse_name s)
 
 let pin_re = Str.regexp "^\\([A-Za-z]+\\)[ \t]+\\(.*\\)$"
 let parse_pin s =
@@ -223,6 +222,7 @@ let parse_pin s =
 
 let parse_priority s = int_of_string s
 
+(*
 let parse_preferences_fields p =
   let parse f field = f (single_line field (List.assoc field p)) in
   try
@@ -238,4 +238,4 @@ let parse_preferences_fields p =
 let parse_preferences_in ch =
   let parse_preferences_rec = parse_822_iter parse_preferences_fields in
   parse_preferences_rec (start_from_channel ch)
-
+*)
