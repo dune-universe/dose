@@ -50,7 +50,7 @@ let parse_vpkg = Debian.Packages.parse_vpkg
 let parse_vpkgformula = Debian.Packages.parse_vpkgformula
 let parse_vpkglist = Debian.Packages.parse_vpkglist
 
-let parse_packages_stanza extras par =
+let parse_package_stanza extras par =
   let extras = (* "status":: *) extras in
   Some
     {
@@ -63,11 +63,12 @@ let parse_packages_stanza extras par =
       suggests = parse_s ~opt:[] ~multi:true parse_vpkglist "suggests" par;
       extras = parse_e extras par;
     }
-;;
 
 let parse_packages_in ?(extras=[]) ic =
-  Debian.Packages.parse_from_ch (parse_packages_stanza extras) ic
-;;
+  let stanza_parser = parse_package_stanza extras in
+  Debian.Format822.parse_from_ch (
+    Debian.Packages.packages_parser stanza_parser []
+  ) ic
 
 (**/**)
 module Set = struct

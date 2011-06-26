@@ -65,7 +65,6 @@ builddepslist_top: builddepslist EOL { $1 } ;
 
 request_top: reqlist EOL { $1 } ;
 archlist_top: archlist EOL { $1 } ;
-buildarchlist_top: archlist EOL { $1 } ;
 
 /**************************************/ 
 
@@ -195,6 +194,7 @@ let error_wrapper f lexer lexbuf =
   |Parsing.Parse_error -> syntax_error "parse error"
   |Failure _m when String.starts_with _m "lexing" -> syntax_error "lexer error"
   |Format822.Type_error _ -> syntax_error "type error"
+  |_ -> assert false
 
 let pkgname_top = error_wrapper pkgname_top
 let version_top = error_wrapper version_top
@@ -202,3 +202,4 @@ let vpkg_top = error_wrapper vpkg_top
 let vpkglist_top = error_wrapper vpkglist_top
 let vpkgformula_top = error_wrapper vpkgformula_top
 let source_top = error_wrapper source_top
+let request_top = error_wrapper request_top

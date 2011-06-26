@@ -50,11 +50,13 @@ let parse_req s =
 ;;
 
 let parse_s = Packages.parse_s
+let parse_string (_,s) = s
+let parse_int_s (_,s) = string_of_int(int_of_string s)
 let parse_req s = Packages.lexbuf_wrapper Packages_parser.request_top s
 
 let parse_request_stanza par =
   Some {
-    request = parse_s ~err:"(Malformed REQUEST)" Packages.parse_string "Request" par;
+    request = parse_s ~err:"(Malformed REQUEST)" parse_string "Request" par;
     install = parse_s ~opt:[] parse_req "Install" par;
     remove = parse_s ~opt:[] parse_req "Remove" par;
     upgrade = parse_s ~opt:false Packages.parse_bool "Upgrade" par;
@@ -65,26 +67,21 @@ let parse_request_stanza par =
   }
 ;;
 
-let parse_string (_,s) = s
-
 (* parse and return a string -> for extra fields *)
 let parse_bool_s = function
   |(_,("Yes"|"yes"|"true" |"True")) -> "true"
   |(_,("No" |"no" |"false"|"False")) -> "false" (* this one usually is not there *)
   |(_,s) -> raise (Format822.Type_error ("wrong value : "^ s))
 
-let parse_int_s (_,s) = string_of_int(int_of_string s)
+let parse_installed = parse_s parse_bool_s "Installed"
+let parse_hold = parse_s parse_bool_s "Hold"
+let parse_apt_id = parse_s ~err:"(MISSING APT-ID)" parse_string "APT-ID"
+let parse_apt_pin = parse_s ~err:"(MISSING APT-Pin)" parse_int_s "APT-Pin"
+let parse_automatic = parse_s parse_bool_s "APT-Automatic"
+let parse_candidate = parse_s parse_bool_s "APT-Candidate"
+let parse_section = parse_s parse_string "Section"
 
-let parse_installed = Packages.parse_s parse_bool_s "Installed"
-let parse_hold = Packages.parse_s parse_bool_s "Hold"
-let parse_apt_id = Packages.parse_s ~err:"(MISSING APT-ID)" parse_string "APT-ID"
-let parse_apt_pin = Packages.parse_s ~err:"(MISSING APT-Pin)" parse_int_s "APT-Pin"
-let parse_automatic = Packages.parse_s parse_bool_s "APT-Automatic"
-let parse_candidate = Packages.parse_s parse_bool_s "APT-Candidate"
-let parse_section = Packages.parse_s parse_string "Section"
-;;
-
-let input_raw_ch ch =
+let input_raw_ch ic =
   (* (field,opt,err,multi,parsing function) *)
   let extras = [
     ("Installed", parse_installed);
@@ -97,9 +94,14 @@ let input_raw_ch ch =
     ]
   in
   let request = 
-    match Packages.parse_from_ch parse_request_stanza ch with 
-    |[r] -> r
-    |_ -> fatal "empty request (empty document)"
+    let parse p =
+      match Format822_parser.stanza_822 Format822_lexer.token_822 p.Format822.lexbuf with
+      |None -> None
+      |Some stanza -> parse_request_stanza stanza
+    in
+    match Format822.parse_from_ch parse ic with
+    |Some s -> s
+    |_ -> fatal "empty request"
   in
   (* XXX: not convinced that this is the correct level to put this filter *)
   let pkglist = 
@@ -120,9 +122,9 @@ let input_raw_ch ch =
         in
         (inst ()) || (candidate ())
       in
-      Packages.parse_packages_in ~filter ~extras ch 
+      Packages.parse_packages_in ~filter ~extras ic
     else
-      Packages.parse_packages_in ~extras ch
+      Packages.parse_packages_in ~extras ic
   in
   (request,pkglist)
 ;;

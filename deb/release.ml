@@ -63,5 +63,4 @@ let parse_release_stanza par =
   }
 
 let parse_packages_in ?filter ?(default_arch=None) ?(extras=[]) ic =
-    Packages.parse_from_ch parse_release_stanza ic
-;;
+  Format822.parse_from_ch (Packages.packages_parser parse_release_stanza []) ic

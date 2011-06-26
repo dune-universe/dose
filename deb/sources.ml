@@ -72,8 +72,8 @@ let parse_package_stanza filter par =
 
 (** parse a debian Sources file from channel *)
 let parse_sources_in ic =
-    Packages.parse_from_ch (parse_package_stanza None) ic
-;;
+  let stanza_parser = parse_package_stanza None in
+  Format822.parse_from_ch (Packages.packages_parser stanza_parser []) ic
 
 (** parse a debian Sources file *)
 let input_raw =

@@ -19,24 +19,23 @@ let pp_lpos {
   pos_cnum = cnum
 } = Printf.sprintf "%d:%d" lnum (cnum - bol)
 
-exception Parse_error_822 of string * loc       (* <msg, loc> *)
-exception Syntax_error of string * loc          (* <msg, loc> *)
+exception Parse_error_822 of string * loc       (* <msg, file, loc> *)
+exception Syntax_error of string * loc          (* <msg, file, loc> *)
 exception Type_error of string
 
 type deb_parser = { lexbuf: Lexing.lexbuf ; fname: string }
 
-let close p = ()
-
-let parser_wrapper fname stanza_parser parser822 =
-  let ic = open_in fname in
-  let p = { lexbuf = Lexing.from_channel ic ; fname = fname } in
-  finally (fun () -> close_in ic ; close p) (parser822 stanza_parser []) p
+let from_channel ic =
+  let f s n = try IO.input ic s 0 n with IO.No_more_input -> 0 in
+  { lexbuf = Lexing.from_function f ; fname = "from-input-channel" }
 
 (* since somebody else provides the channel, we do not close it here *)
-let parser_wrapper_ch ic stanza_parser parser822 =
-  let f s n = try IO.input ic s 0 n with IO.No_more_input -> 0 in
-  let p = { lexbuf = Lexing.from_function f ; fname = "" } in
-  finally (fun () -> close p) (parser822 stanza_parser []) p
+let parser_wrapper_ch ic _parser = _parser (from_channel ic)
+
+let parse_from_ch _parser ic =
+  try parser_wrapper_ch ic _parser
+  with Syntax_error (_msg, (startpos, endpos)) ->
+    fatal "Parse error lines %s--%s:\n%s" (pp_lpos startpos) (pp_lpos endpos) _msg
 
 type name = string
 type version = string

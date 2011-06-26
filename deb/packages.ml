@@ -61,54 +61,26 @@ let default_package = {
   priority = "";
 }
 
-let rec packages_parser stanza_parser acc p =
-  try
-    match Format822_parser.stanza_822 Format822_lexer.token_822 p.Format822.lexbuf with
-    |None -> acc
-    |Some stanza -> begin
-        match (stanza_parser stanza) with
-        |None -> packages_parser stanza_parser acc p
-        |Some st -> packages_parser stanza_parser (st::acc) p
-    end
-  with Format822.Parse_error_822 (msg, (startpos, endpos)) ->
-    failwith (Printf.sprintf "Parse error on file %s:%s--%s" p.Format822.fname
-      (Format822.pp_lpos startpos) (Format822.pp_lpos endpos))
-;;
-
-let parse_from_file stanza_parser fname =
-  try
-    Format822.parser_wrapper fname stanza_parser packages_parser
-  with Format822.Syntax_error (_msg, (startpos, endpos)) ->
-    failwith (Printf.sprintf "Parse error on file %s:%s--%s:\n%s" fname
-    (Format822.pp_lpos startpos) (Format822.pp_lpos endpos) _msg)
-
-let parse_from_ch stanza_parser ic =
-  try
-    Format822.parser_wrapper_ch ic stanza_parser packages_parser
-  with Format822.Syntax_error (_msg, (startpos, endpos)) ->
-    failwith (Printf.sprintf "Parse error in input channel %s--%s:\n%s"
-    (Format822.pp_lpos startpos) (Format822.pp_lpos endpos) _msg) 
-
+(* here the _loc is taken from the the caller and not from the parser *)
 let lexbuf_wrapper type_parser (_loc,s) =
   try type_parser Packages_lexer.token_deb (Lexing.from_string s) 
   with Format822.Syntax_error (_msg, _) ->
    raise (Format822.Syntax_error (s, _loc))
-;;
 
-let parse_name = lexbuf_wrapper Packages_parser.pkgname_top ;; 
-let parse_version = lexbuf_wrapper Packages_parser.version_top ;;
-let parse_multiarch = lexbuf_wrapper Packages_parser.multiarch_top ;;
-let parse_source = lexbuf_wrapper Packages_parser.source_top ;;
-let parse_vpkg = lexbuf_wrapper Packages_parser.vpkg_top ;;
-let parse_vpkglist = lexbuf_wrapper Packages_parser.vpkglist_top ;;
-let parse_vpkgformula = lexbuf_wrapper Packages_parser.vpkgformula_top ;;
-let parse_binarylist = lexbuf_wrapper Packages_parser.vpkglist_top ;;
+let parse_name = lexbuf_wrapper Packages_parser.pkgname_top
+let parse_version = lexbuf_wrapper Packages_parser.version_top
+let parse_multiarch = lexbuf_wrapper Packages_parser.multiarch_top
+let parse_source = lexbuf_wrapper Packages_parser.source_top
+let parse_vpkg = lexbuf_wrapper Packages_parser.vpkg_top
+let parse_vpkglist = lexbuf_wrapper Packages_parser.vpkglist_top
+let parse_vpkgformula = lexbuf_wrapper Packages_parser.vpkgformula_top
+let parse_binarylist = lexbuf_wrapper Packages_parser.vpkglist_top
 
 (**************************************)
 
 let rec assoc (n : string) = function
   |(k,v)::_ when k = n -> v
-  |_::t -> assoc n t
+  |(k,_)::t -> assoc n t
   |[] -> raise Not_found
 ;;
 
@@ -185,9 +157,18 @@ let parse_package_stanza filter default_arch extras par =
   else if (Option.get filter) p then Some(p) else None
 ;;
 
+let rec packages_parser stanza_parser acc p =
+  match Format822_parser.stanza_822 Format822_lexer.token_822 p.Format822.lexbuf with
+  |None -> acc
+  |Some stanza -> begin
+      match (stanza_parser stanza) with
+      |None -> packages_parser stanza_parser acc p
+      |Some st -> packages_parser stanza_parser (st::acc) p
+  end
+
 let parse_packages_in ?filter ?(default_arch=None) ?(extras=[]) ic =
-  parse_from_ch (parse_package_stanza filter default_arch extras) ic
-;;
+  let stanza_parser = parse_package_stanza filter default_arch extras in
+  Format822.parse_from_ch (packages_parser stanza_parser []) ic
 
 (**/**)
 let id p = (p.name,p.version,p.architecture)
