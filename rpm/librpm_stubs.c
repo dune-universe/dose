@@ -21,6 +21,7 @@
 #ifdef RPM4
 #include <rpm/rpmtypes.h>
 #include <rpm/rpmlib.h>
+#include <rpmtag.h>
 #include <rpm/header.h>
 #endif
 
@@ -102,105 +103,6 @@ char* join_strings(char *strings[], char* sep, int count) {
   }
 
   return result;
-}
-
-char * tag_to_string (int32_t tag) {
-  char *res = "";
-  switch (tag) {
-    case RPMTAG_NAME:
-      res = "package";
-      break;
-    case RPMTAG_VERSION:
-      res = "version";
-      break;
-    case RPMTAG_RELEASE:
-      res = "release";
-      break;
-    case RPMTAG_EPOCH:
-      res = "epoch";
-      break;
-
-    case RPMTAG_REQUIRENAME:
-      res = "requirename";
-      break;
-    case RPMTAG_REQUIREVERSION:
-      res = "requireversion";
-      break;
-    case RPMTAG_REQUIREFLAGS:
-      res = "requireflags";
-      break;
-
-    case RPMTAG_PROVIDENAME:
-      res = "providename";
-      break;
-    case RPMTAG_PROVIDEVERSION:
-      res = "provideversion";
-      break;
-    case RPMTAG_PROVIDEFLAGS:
-      res = "provideflags";
-      break;
-
-    case RPMTAG_CONFLICTNAME:
-      res = "conflictname";
-      break;
-    case RPMTAG_CONFLICTVERSION:
-      res = "conflictversion";
-      break;
-    case RPMTAG_CONFLICTFLAGS:
-      res = "conflictflags";
-      break;
-
-    case RPMTAG_OBSOLETENAME:
-      res = "obsoletename";
-      break;
-    case RPMTAG_OBSOLETEVERSION:
-      res = "obsoleteversion";
-      break;
-    case RPMTAG_OBSOLETEFLAGS:
-      res = "obsoleteflags";
-      break;
-
-    case RPMTAG_ARCH:
-      res = "arch";
-      break;
-
-    case RPMTAG_DIRINDEXES:
-      res = "dirindexes";
-      break;
-    case RPMTAG_BASENAMES:
-      res = "basenames";
-      break;
-    case RPMTAG_DIRNAMES:
-      res = "dirnames";
-      break;
-
-
-    case RPMTAG_FILEMODES:
-      res = "filemodes";
-      break;
-    case RPMTAG_FILEMD5S:
-      res = "filemd5s";
-      break;
-    case RPMTAG_RPMVERSION:
-      res = "rpmversion";
-      break;
-
-    case RPMTAG_ARCHIVESIZE:
-      res = "asize";
-      break;
-    case RPMTAG_SIZE:
-      res = "size";
-      break;
-    case RPMTAG_SOURCERPM:
-      res = "source";
-      break;
-    default:
-      if (asprintf (&res, "%d", tag) < 0) {
-        caml_failwith (strerror (errno));
-      };
-      break;
-  }
-  return res;
 }
 
 value assoc ( char* str, int32_t tag, int32_t type, rpm_constdata_t data, int32_t count) {
@@ -306,7 +208,7 @@ value rpm_parse_paragraph (value fd) {
       case RPMTAG_DIRINDEXES:
       case RPMTAG_DIRNAMES:
       case RPMTAG_FILEMODES:
-        hd = assoc(tag_to_string(td.tag),td.tag,td.type,td.data,td.count);
+        hd = assoc(rpmTagGetName(td.tag),td.tag,td.type,td.data,td.count);
         tl = append(hd,tl);
         break;
       default:
