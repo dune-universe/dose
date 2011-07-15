@@ -64,3 +64,11 @@ Some application might benefit from a fine-tune of the ocaml garbage collector.
 You migth try to set the following values before running your application:
 OCAMLRUNPARAM=s=4M,i=32M,o=150
 
+Install
+-------
+
+./configure --prefix=/path/to/ 
+make
+make install
+
+by default dose is installed in /usr/local/
