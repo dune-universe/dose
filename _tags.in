@@ -1,7 +1,7 @@
 <*/*.ml> or <*/*.mli>: pp(camlp4o Camlp4MacroParser.cmo)
 <*/*.ml> or <*/*.mli>: package(extlib), @PKG_CUDF@, package(pcre)
 
-<doseparse/boilerplateNorpm.ml>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
+<doseparse/boilerplateNoRpm.ml>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
 <doseparse/boilerplate.ml>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
 
 <{common,algo}/*.{ml,mli}>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
