@@ -21,17 +21,16 @@ let warning fmt = Util.make_warning "Rpm.Packages" fmt
 type name = string
 type version = string
 type rel = [ `Lt | `Leq | `Eq | `Geq | `Gt | `ALL ]
-type vpkg = (string * (rel * string))
-type veqpkg = (string * (rel * string))
+type vpkg = (string * (rel * string) option)
 
 type package = {
   name : name ;
   version : version;
-  depends : vpkg list list;
+  depends : vpkg list;
   conflicts : vpkg list;
   obsoletes : vpkg list;
-  provides : veqpkg list;
-  files : (vpkg * bool) list;  (* the file and whether it is a directory *)
+  provides : vpkg list;
+  files : string list;  (* the file and whether it is a directory *)
   extras : (string * string) list;
 }
 
@@ -81,13 +80,13 @@ module Hdlists = struct
     try
       Some (
         {
-          name = parse_name par;
-          version = parse_version par;
-          depends = (try depend_list par with Not_found -> []);
-          conflicts = (try list_deps "conflict" par with Not_found -> []);
-          obsoletes = (try list_deps "obsolete" par with Not_found -> []);
-          provides = (try provide_list par with Not_found -> []);
-          files = (try fileprovide par with Not_found -> []);
+          name = get_string "Package" par;
+          version = get_string "Version" par;
+          depends = get_deplist ~opt:true "Requires" par;
+          conflicts = get_deplist ~opt:true "Conflicts" par;
+          obsoletes = get_deplist ~opt:true "Obsoletes" par;
+          provides = get_deplist ~opt:true "Provides" par;
+          files = get_list ~opt:true "Files" par;
           extras = [];
         }
       )
@@ -120,15 +119,15 @@ module Synthesis = struct
     |s -> (Printf.eprintf "Invalid op %s" s ; assert false)
 
   let parse_op = function
-    |"*" -> (`ALL,"")
-    |"ALL" -> (`ALL,"")
+    |"*" -> None
+    |"ALL" -> None
     |sel ->
-        try Scanf.sscanf sel "%s %s" (fun op v -> (rel_of_string op,v))
+        try Some(Scanf.sscanf sel "%s %s" (fun op v -> (rel_of_string op,v)))
         with End_of_file -> (Printf.eprintf "Invalid op %s" sel ; assert false)
 
   let parse_vpkg vpkg =
     try Scanf.sscanf vpkg "%[^[][%[^]]]" (fun n sel -> (n,parse_op sel))
-    with End_of_file -> (vpkg,(`ALL,""))
+    with End_of_file -> (vpkg,None)
 
   let parse_deps l = List.unique (List.map parse_vpkg l)
 
@@ -155,7 +154,6 @@ module Synthesis = struct
   exception Eof
 
   let rec parse_paragraph pkg ch =
-    let parse_deps_ll l = List.map (fun x -> [x]) (parse_deps l) in
     let line =
       try IO.read_line ch
       with IO.No_more_input -> raise Eof | End_of_file -> assert false
@@ -163,7 +161,7 @@ module Synthesis = struct
     try
       match List.tl (Pcre.split ~rex:(Pcre.regexp "@") line) with
       |"provides"::l -> parse_paragraph {pkg with provides = parse_deps l} ch
-      |"requires"::l -> parse_paragraph {pkg with depends = parse_deps_ll l} ch
+      |"requires"::l -> parse_paragraph {pkg with depends = parse_deps l} ch
       |"obsoletes"::l -> parse_paragraph {pkg with obsoletes = parse_deps l} ch
       |"conflicts"::l -> parse_paragraph {pkg with conflicts = parse_deps l} ch
       |"summary"::l -> parse_paragraph pkg ch

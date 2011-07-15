@@ -19,7 +19,9 @@
 <eclipse/*.{ml,mli}>: use_common, use_debian
 <doseparse/boilerplate.ml>: use_common, use_debian, use_eclipse, @USE_RPM@
 <doseparse/boilerplateNoRpm.ml>: use_common, use_debian, use_eclipse
-<rpm/librpm_stubs.*>: @USE_RPM@
+<rpm/librpm4_stubs.*>: use_rpm, use_rpm4
+<rpm/librpm5_stubs.*>: use_rpm, use_rpm5
+<rpm/rpm.{cma,cmx,cmxa,cmxs}>: @USE_RPM@
 
 <common/*.cmx>: for-pack(Common)
 <algo/*.cmx>: for-pack(Algo)

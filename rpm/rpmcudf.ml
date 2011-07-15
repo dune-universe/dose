@@ -47,14 +47,14 @@ let init_tables pkglist =
   let temp_files = Hashtbl.create (10 * (List.length pkglist)) in
 
   let add_list t k = function
-    |(`ALL,_) -> ()
-    |(`Eq,v) ->
+    |None -> ()
+    |Some(`Eq,v) ->
       let l =
         try Hashtbl.find t k with Not_found ->
         (let l = ref [] in Hashtbl.add t k l; l)
       in
       l := (`Eq,v) :: !l
-    |(sel,v) ->
+    |Some(sel,v) ->
       let l =
         try Hashtbl.find t k with Not_found ->
         (let l = ref [] in Hashtbl.add t k l; l)
@@ -72,27 +72,25 @@ let init_tables pkglist =
   in
 
   List.iter (fun pkg ->
-    add_units (pkg.Packages.name,(`Eq,pkg.Packages.version));
+    add_units (pkg.Packages.name,Some(`Eq,pkg.Packages.version));
     List.iter add_units pkg.Packages.provides ;
-    List.iter (fun ((file,_),_) ->
-        Hashtbl.add temp_files file (pkg.Packages.name,pkg.Packages.version)
+    List.iter (fun file ->
+      Hashtbl.add temp_files file (pkg.Packages.name,pkg.Packages.version)
     ) pkg.Packages.files
   ) pkglist
   ;
 
   List.iter (fun pkg ->
-    List.iter (function 
-      |(_,false) -> () (* no conflicts with directories *)
-      |((file,_),true) ->
-        List.iter (fun (n,v) ->
-          let (pn,pv) = (pkg.Packages.name,pkg.Packages.version) in
-          if (n,v) <> (pn,pv) then
-            Hashtbl.add tables.fileconflicts (pn,pv) (n,v)
-        ) (Hashtbl.find_all temp_files file)
+    List.iter (fun file ->
+      List.iter (fun (n,v) ->
+        let (pn,pv) = (pkg.Packages.name,pkg.Packages.version) in
+        if (n,v) <> (pn,pv) then
+          Hashtbl.add tables.fileconflicts (pn,pv) (n,v)
+      ) (Hashtbl.find_all temp_files file)
     ) pkg.Packages.files ;
 
     List.iter (fun (name,sel) -> add_files name) pkg.Packages.conflicts ;
-    List.iter (List.iter (fun (name,sel) -> add_files name)) pkg.Packages.depends 
+    List.iter (fun (name,sel) -> add_files name) pkg.Packages.depends 
   ) pkglist
   ;
 
@@ -142,8 +140,8 @@ let expand tables l =
   in
   List.flatten (
     List.map (function
-      |(name,(`ALL,_)) -> [CudfAdd.encode name,None]
-      |(name,sel) ->
+      |(name,None) -> [CudfAdd.encode name,None]
+      |(name,Some sel) ->
         match
           List.map (fun v ->
             (CudfAdd.encode name,Some(`Eq,v))
@@ -201,7 +199,7 @@ let tocudf tables ?(extras=[]) ?(inst=false) pkg =
       ) l with
       |[] -> None 
       |l -> Some l
-    ) pkg.Packages.depends
+    ) [pkg.Packages.depends]
   in
   let name = CudfAdd.encode pkg.Packages.name in
   let version = get_cudf_version tables (n,v) in

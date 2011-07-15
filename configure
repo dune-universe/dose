@@ -5463,7 +5463,7 @@ if test "$HAS_RPM5" = "yes"; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: RPM 5 support enabled" >&5
 $as_echo "$as_me: RPM 5 support enabled" >&6;}
   CFLAGS="-I/usr/include/rpm"
-  #LDFLAG="-Lrpm -Lrpmio"
+  LDFLAG="-Lrpm -Lrpmio"
   for ac_header in rpm/rpmio.h
 do :
   ac_fn_c_check_header_mongrel "$LINENO" "rpm/rpmio.h" "ac_cv_header_rpm_rpmio_h" "$ac_includes_default"
@@ -5478,20 +5478,7 @@ fi
 
 done
 
-  for ac_header in rpm/rpmgi.h
-do :
-  ac_fn_c_check_header_mongrel "$LINENO" "rpm/rpmgi.h" "ac_cv_header_rpm_rpmgi_h" "$ac_includes_default"
-if test "x$ac_cv_header_rpm_rpmgi_h" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_RPM_RPMGI_H 1
-_ACEOF
-
-else
-  as_fn_error $? "missing rpmgi.h" "$LINENO" 5
-fi
-
-done
-
+#  AC_CHECK_HEADERS([rpm/rpmgi.h],,AC_MSG_ERROR([missing rpmgi.h]))
 #  AC_CHECK_HEADERS([rpm/rpm46compat.h],,AC_MSG_ERROR([missing rpm46compat.h]))
 #  AC_CHECK_HEADERS([rpm/rpm4compat.h],,AC_MSG_ERROR([missing rpm4compat.h]))
   CONFIG_RPM="-DHASRPM"
