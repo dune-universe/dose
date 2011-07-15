@@ -105,6 +105,7 @@ if test "$HAS_RPM4" = "yes" ; then
   AC_CHECK_HEADERS([rpm/rpmtypes.h],,AC_MSG_ERROR([missing rpmtypes.h]))
   CONFIG_RPM="-DHASRPM"
   USE_RPM="use_rpm, use_rpm4"
+  HAS_RPM="yes"
 fi
 
 AC_ARG_WITH(rpm5,
@@ -121,6 +122,7 @@ if test "$HAS_RPM5" = "yes"; then
 #  AC_CHECK_HEADERS([rpm/rpm4compat.h],,AC_MSG_ERROR([missing rpm4compat.h]))
   CONFIG_RPM="-DHASRPM"
   USE_RPM="use_rpm, use_rpm5"
+  HAS_RPM="yes"
 fi
 
 AC_ARG_WITH(sqlite,

@@ -5447,6 +5447,7 @@ done
 
   CONFIG_RPM="-DHASRPM"
   USE_RPM="use_rpm, use_rpm4"
+  HAS_RPM="yes"
 fi
 
 
@@ -5494,6 +5495,7 @@ done
 #  AC_CHECK_HEADERS([rpm/rpm4compat.h],,AC_MSG_ERROR([missing rpm4compat.h]))
   CONFIG_RPM="-DHASRPM"
   USE_RPM="use_rpm, use_rpm5"
+  HAS_RPM="yes"
 fi
 
 
@@ -6511,7 +6513,7 @@ esac
 
 cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1
 # Files that config.status was made for.
-config_files="`echo $ac_config_files`"
+config_files="$ac_config_files"
 
 _ACEOF
 
