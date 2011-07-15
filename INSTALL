@@ -71,4 +71,4 @@ Install
 make
 make install
 
-by default dose is installed in /usr/local/
+by default dose is installed in /usr/local/{lib,bin} 

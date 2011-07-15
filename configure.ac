@@ -18,7 +18,6 @@ if test "$OCAMLFIND" = "no"; then
 fi
 
 #defaults
-
 USE_RPM=use_
 PKG_SQLITE=pkg_
 PKG_PGSQL=pkg_

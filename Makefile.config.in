@@ -6,16 +6,15 @@ CPPFLAGS=@CPPFLAGS@
 LDFLAGS=@LDFLAGS@
 
 OCAMLFIND=@OCAMLFIND@
-DESTDIR=@prefix@
-LIBDIR=$(DESTDIR)@OCAMLLIB@
-BINDIR=$(DESTDIR)/usr/bin
-ifeq ($(DESTDIR),)
-  INSTALL=$(OCAMLFIND) install
-  UNINSTALL=$(OCAMLFIND) remove
-else
-  INSTALL=$(OCAMLFIND) install -destdir $(LIBDIR)
-  UNINSTALL=$(OCAMLFIND) remove -destdir $(LIBDIR)
-endif
+
+exec_prefix=@prefix@
+
+#LIBDIR=@OCAMLLIB@
+LIBDIR=@libdir@/ocaml
+BINDIR=@bindir@
+
+INSTALL=$(OCAMLFIND) install -destdir $(LIBDIR)
+UNINSTALL=$(OCAMLFIND) remove -destdir $(LIBDIR)
 
 ifeq ("@OCAML_OS_TYPE@","freebsd")
   LDFLAGS += -fstack-protector

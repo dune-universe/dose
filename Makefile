@@ -142,7 +142,7 @@ install:
 	done
 
 uninstall:
-	rm -Rf $(LIBDIR)/dose3
+	rm -Rf $(LIBDIR)/$(NAME)
 	rm $(LIBDIR)/stublibs/dllrpm_stubs.so
 
 	for f in $$(ls *.$(OCAMLBEST)) ; do \
