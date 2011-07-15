@@ -91,13 +91,16 @@ fi
 
 AC_HEADER_STDC
 
+RPMPATH="-I/usr/include/rpm"
+CFLAGS="$CFLAGS $RPMPATH"
+CPPFLAGS="$CPPFLAGS $RPMPATH"
+
 AC_ARG_WITH(rpm4,
         [ --with-rpm4 ],
         HAS_RPM4=yes,
         HAS_RPM4=no)
 if test "$HAS_RPM4" = "yes" ; then
   AC_MSG_NOTICE([RPM support enabled])
-  AC_CHECK_HEADERS([rpm/rpmlib.h],,AC_MSG_ERROR([missing rpmlib.h]))
   AC_CHECK_HEADERS([rpm/rpmio.h],,AC_MSG_ERROR([missing rpmio.h]))
   AC_CHECK_HEADERS([rpm/rpmtypes.h],,AC_MSG_ERROR([missing rpmtypes.h]))
   CONFIG_RPM="-DHASRPM"
@@ -112,9 +115,8 @@ if test "$HAS_RPM5" = "yes"; then
   AC_MSG_NOTICE([RPM 5 support enabled])
   CFLAGS="-I/usr/include/rpm"
   #LDFLAG="-Lrpm -Lrpmio"
-#  AC_CHECK_HEADERS([rpm/rpmtypes.h],,AC_MSG_ERROR([missing rpmiotypes.h]))
-#  AC_CHECK_HEADERS([rpm/rpmgi.h],,AC_MSG_ERROR([missing rpmgi.h]))
-#  AC_CHECK_HEADERS([rpm/rpmio.h],,AC_MSG_ERROR([missing rpmio.h]))
+  AC_CHECK_HEADERS([rpm/rpmio.h],,AC_MSG_ERROR([missing rpmio.h]))
+  AC_CHECK_HEADERS([rpm/rpmgi.h],,AC_MSG_ERROR([missing rpmgi.h]))
 #  AC_CHECK_HEADERS([rpm/rpm46compat.h],,AC_MSG_ERROR([missing rpm46compat.h]))
 #  AC_CHECK_HEADERS([rpm/rpm4compat.h],,AC_MSG_ERROR([missing rpm4compat.h]))
   CONFIG_RPM="-DHASRPM"

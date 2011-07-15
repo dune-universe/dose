@@ -5385,6 +5385,10 @@ $as_echo "#define STDC_HEADERS 1" >>confdefs.h
 fi
 
 
+RPMPATH="-I/usr/include/rpm"
+CFLAGS="$CFLAGS $RPMPATH"
+CPPFLAGS="$CPPFLAGS $RPMPATH"
+
 
 # Check whether --with-rpm4 was given.
 if test "${with_rpm4+set}" = set; then :
@@ -5413,21 +5417,7 @@ fi
 done
 
 
-for ac_header in rpm/rpmlib.h
-do :
-  ac_fn_c_check_header_mongrel "$LINENO" "rpm/rpmlib.h" "ac_cv_header_rpm_rpmlib_h" "$ac_includes_default"
-if test "x$ac_cv_header_rpm_rpmlib_h" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_RPM_RPMLIB_H 1
-_ACEOF
-
-else
-  as_fn_error $? "missing rpmlib.h" "$LINENO" 5
-fi
-
-done
-
-  for ac_header in rpm/rpmio.h
+for ac_header in rpm/rpmio.h
 do :
   ac_fn_c_check_header_mongrel "$LINENO" "rpm/rpmio.h" "ac_cv_header_rpm_rpmio_h" "$ac_includes_default"
 if test "x$ac_cv_header_rpm_rpmio_h" = xyes; then :
@@ -5472,9 +5462,34 @@ if test "$HAS_RPM5" = "yes"; then
 $as_echo "$as_me: RPM 5 support enabled" >&6;}
   CFLAGS="-I/usr/include/rpm"
   #LDFLAG="-Lrpm -Lrpmio"
-#  AC_CHECK_HEADERS([rpm/rpmtypes.h],,AC_MSG_ERROR([missing rpmiotypes.h]))
-#  AC_CHECK_HEADERS([rpm/rpmgi.h],,AC_MSG_ERROR([missing rpmgi.h]))
-#  AC_CHECK_HEADERS([rpm/rpmio.h],,AC_MSG_ERROR([missing rpmio.h]))
+  for ac_header in rpm/rpmio.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "rpm/rpmio.h" "ac_cv_header_rpm_rpmio_h" "$ac_includes_default"
+if test "x$ac_cv_header_rpm_rpmio_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_RPM_RPMIO_H 1
+_ACEOF
+
+else
+  as_fn_error $? "missing rpmio.h" "$LINENO" 5
+fi
+
+done
+
+  for ac_header in rpm/rpmgi.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "rpm/rpmgi.h" "ac_cv_header_rpm_rpmgi_h" "$ac_includes_default"
+if test "x$ac_cv_header_rpm_rpmgi_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_RPM_RPMGI_H 1
+_ACEOF
+
+else
+  as_fn_error $? "missing rpmgi.h" "$LINENO" 5
+fi
+
+done
+
 #  AC_CHECK_HEADERS([rpm/rpm46compat.h],,AC_MSG_ERROR([missing rpm46compat.h]))
 #  AC_CHECK_HEADERS([rpm/rpm4compat.h],,AC_MSG_ERROR([missing rpm4compat.h]))
   CONFIG_RPM="-DHASRPM"
@@ -6496,7 +6511,7 @@ esac
 
 cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1
 # Files that config.status was made for.
-config_files="$ac_config_files"
+config_files="`echo $ac_config_files`"
 
 _ACEOF
 
