@@ -42,7 +42,7 @@ ifeq ("@HAS_LIBCUDF@","no")
   endif
 endif
 
-BYTELIBS = common/common.cma deb/debian.cma rpm/rpm.cma eclipse/eclipse.cma algo/algo.cma doseparse/boilerplateNoRpm.cma
+BYTELIBS = common/common.cma deb/debian.cma rpm/rpm.cma eclipse/eclipse.cma algo/algo.cma doseparse/boilerplateNoRpm.cma doseparse/boilerplate.cma
 
 ALIBS = $(BYTELIBS:%.cma=%.a)
 ifeq ("@OCAMLBEST@","opt")
@@ -56,10 +56,8 @@ LIBS += $(OPTLIBS)
 #rpm support
 ifeq ("@HAS_RPM@","yes")
   LIBS += rpm/rpm.cma rpm/rpm.a
-  LIBS += doseparse/boilerplate.cma
   ifeq ("@OCAMLBEST@","opt")
     LIBS += rpm/rpm.cmxa rpm/rpm.cmxs
-    LIBS += doseparse/boilerplate.cmxa doseparse/boilerplate.cmxs
   endif
 endif
 
