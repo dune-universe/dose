@@ -19,6 +19,7 @@ fi
 
 #defaults
 USE_RPM=use_
+HAS_RPM=no
 PKG_SQLITE=pkg_
 PKG_PGSQL=pkg_
 PKG_BZ2=pkg_
@@ -104,7 +105,7 @@ if test "$HAS_RPM4" = "yes" ; then
   AC_CHECK_HEADERS([rpm/rpmtypes.h],,AC_MSG_ERROR([missing rpmtypes.h]))
   CONFIG_RPM="-DHASRPM"
   USE_RPM="use_rpm, use_rpm4"
-  HAS_RPM="yes"
+  HAS_RPM=yes
 fi
 
 AC_ARG_WITH(rpm5,
@@ -121,7 +122,7 @@ if test "$HAS_RPM5" = "yes"; then
 #  AC_CHECK_HEADERS([rpm/rpm4compat.h],,AC_MSG_ERROR([missing rpm4compat.h]))
   CONFIG_RPM="-DHASRPM"
   USE_RPM="use_rpm, use_rpm5"
-  HAS_RPM="yes"
+  HAS_RPM=yes
 fi
 
 AC_ARG_WITH(sqlite,
@@ -265,6 +266,7 @@ AC_SUBST(LINK_RPM)
 AC_SUBST(CONFIG_RPM)
 AC_SUBST(INCLUDE_RPM)
 AC_SUBST(USE_RPM)
+AC_SUBST(HAS_RPM)
 
 AC_SUBST(INCLUDE_CUDF)
 AC_SUBST(PKG_CUDF)

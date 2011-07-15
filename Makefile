@@ -126,9 +126,8 @@ install:
 	test -d $(LIBDIR) || mkdir -p $(LIBDIR)
 	$(INSTALL) -patch-version $(VERSION) $(NAME) $(INSTALL_STUFF)
 	test -d $(LIBDIR)/stublibs || mkdir -p $(LIBDIR)/stublibs
-	cp _build/rpm/dllrpm_stubs.so $(LIBDIR)/stublibs/
 
-        # eclipse and rpm to add ...
+	# eclipse and rpm to add ...
 	for f in algo common deb ; do \
 	  test -d  $(LIBDIR)/$(NAME)/$$f/ || mkdir -p  $(LIBDIR)/$(NAME)/$$f/ ; \
 	  cp -f _build/$$f/*.mli $(LIBDIR)/$(NAME)/$$f/ ;\
@@ -140,6 +139,10 @@ install:
 	for f in $$(ls *.$(OCAMLBEST)) ; do \
 	  cp $$f $(BINDIR)/$${f%.$(OCAMLBEST)} ; \
 	done
+
+	if [ -e _build/rpm/dllrpm_stubs.so ]; then \
+	  cp _build/rpm/dllrpm_stubs.so $(LIBDIR)/stublibs/ ;\
+	fi
 
 uninstall:
 	rm -Rf $(LIBDIR)/$(NAME)

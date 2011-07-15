@@ -611,6 +611,7 @@ MLPACK_OCAMLGRAPH
 HAS_DB
 PKG_CUDF
 INCLUDE_CUDF
+HAS_RPM
 USE_RPM
 INCLUDE_RPM
 CONFIG_RPM
@@ -4013,6 +4014,7 @@ fi
 
 #defaults
 USE_RPM=use_
+HAS_RPM=no
 PKG_SQLITE=pkg_
 PKG_PGSQL=pkg_
 PKG_BZ2=pkg_
@@ -5446,7 +5448,7 @@ done
 
   CONFIG_RPM="-DHASRPM"
   USE_RPM="use_rpm, use_rpm4"
-  HAS_RPM="yes"
+  HAS_RPM=yes
 fi
 
 
@@ -5494,7 +5496,7 @@ done
 #  AC_CHECK_HEADERS([rpm/rpm4compat.h],,AC_MSG_ERROR([missing rpm4compat.h]))
   CONFIG_RPM="-DHASRPM"
   USE_RPM="use_rpm, use_rpm5"
-  HAS_RPM="yes"
+  HAS_RPM=yes
 fi
 
 
@@ -5869,6 +5871,7 @@ $as_echo "not found" >&6; }
   fi
   PKG_BENCHMARK="pkg_benchmark"
 fi
+
 
 
 
