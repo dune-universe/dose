@@ -28,28 +28,26 @@ let _ = dispatch begin function
        ;
 
        flag ["ocaml"; "compile"] & S[A"-ccopt"; A"-O9"];
-       flag ["c"; "use_rpm" ] & S[ A"-ccopt"; A"-I/usr/include/rpm"; A"-ccopt"; A"-O2" ];
 
        dep ["ocaml"; "use_rpm5"; "compile"] & ["rpm/dllrpm5_stubs.so"];
        dep ["ocaml"; "use_rpm4"; "compile"] & ["rpm/dllrpm4_stubs.so"];
 
        flag ["ocaml"; "use_rpm"; "link"] & S[
-         A"-ccopt"; A"-Lrpm";
          A"-cclib"; A"-lrpm";
-         A"-cclib"; A"-lrpmio";
+         A"-cclib"; A"-lrpmio"; 
        ];
        flag ["ocaml"; "use_rpm5"; "link"; "library"] & S[
-         A"-cclib"; A"-lrpm5_stubs";
+         A"-ccopt"; A"-Lrpm"; A"-cclib"; A"-lrpm5_stubs";
        ];
        flag ["ocaml"; "use_rpm4"; "link"; "library"] & S[
-         A"-cclib"; A"-lrpm4_stubs";
+         A"-ccopt"; A"-Lrpm"; A"-cclib"; A"-lrpm4_stubs";
        ];
-(*
-       flag ["ocaml"; "link"; "use_rpm5"; "byte"] & S[
-         A"-custom"
-       ];
-*)
-       (* flag ["ocamlmklib"] & S[ A"-lrpm"; A"-lrpmio"; ]; *)
+       flag ["ocaml"; "use_rpm"; "link"; "program"; "byte"] & S[ A"-custom" ];
+
+       flag ["c"; "use_rpm"] & S[ A"-ccopt"; A"-I/usr/include/rpm"; A"-ccopt"; A"-O2" ];
+       (*
+       flag ["ocamlmklib"] & S[ A"-Lrpm"; A"-lrpm4_stubs"];
+       *)
 
        flag ["ocaml"; "pkg_threads"; "compile"] (S[A "-thread"]);
        flag ["ocaml"; "pkg_threads"; "link"] (S[A "-thread"]);

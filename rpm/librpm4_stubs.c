@@ -223,3 +223,10 @@ value rpm_close_hdlist (value fd) {
   CAMLreturn(Val_unit);
 }
 
+value rpm_vercmp ( value x, value y ) {
+  CAMLparam2 ( x , y );
+  CAMLlocal1 ( res );
+  res = rpmvercmp ( (char *) x , (char *) y );
+  CAMLreturn (Val_int(res));
+}
+
