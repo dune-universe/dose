@@ -199,7 +199,7 @@ let tocudf tables ?(extras=[]) ?(inst=false) pkg =
       ) l with
       |[] -> None 
       |l -> Some l
-    ) [pkg.Packages.depends]
+    ) (List.map (fun d -> [d]) pkg.Packages.depends)
   in
   let name = CudfAdd.encode pkg.Packages.name in
   let version = get_cudf_version tables (n,v) in

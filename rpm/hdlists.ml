@@ -101,7 +101,6 @@ let dump_raw ppf s par =
       List.iter (function
         |(n,None) -> Format.fprintf ppf "%s: %s\n@." f n
         |(n,Some(i,v)) -> 
-            let v = "" in
             let op = string_of_rel (decode_flags i) in
             Format.fprintf ppf "%s: %s %s %s \n@." f n op v
       ) datalist

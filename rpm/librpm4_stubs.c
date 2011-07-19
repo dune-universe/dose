@@ -45,7 +45,7 @@ void raise_Eof () {
 #define VARIANT_L 1
 #define VARIANT_D 2
 
-static inline value Val_some( value v ) {
+CAMLprim value Val_some( value v ) {
   CAMLparam1( v );
   CAMLlocal1( some );
   some = caml_alloc(1, 0);
@@ -53,24 +53,23 @@ static inline value Val_some( value v ) {
   CAMLreturn(some);
 }
 
-static inline value tuple( value a, value b) {
+CAMLprim value tuple( value a, value b) {
   CAMLparam2( a, b );
-  CAMLlocal1( tuple );
-
-  tuple = caml_alloc_tuple(2);
-
-  Store_field( tuple, 0, a );
-  Store_field( tuple, 1, b );
-
-  CAMLreturn(tuple);
+  CAMLlocal1( res );
+  res = caml_alloc_tuple(2);
+  Store_field (res, 0, a);
+  Store_field (res, 1, b);
+  CAMLreturn(res);
 }
 
-static inline value append( value hd, value tl ) {
+CAMLprim value append( value hd, value tl ) {
   CAMLparam2( hd , tl );
-  CAMLreturn(tuple( hd, tl ));
+  CAMLlocal1( res );
+  res = tuple( hd, tl );
+  CAMLreturn(res);
 }
 
-static inline value string_variant(value s) {
+CAMLprim value string_variant(value s) {
   CAMLparam1( s );
   CAMLlocal1( v );
   v = caml_alloc(1, VARIANT_S);
@@ -78,7 +77,7 @@ static inline value string_variant(value s) {
   CAMLreturn(v);
 }
 
-static inline value list_variant_L(value l) {
+CAMLprim value list_variant_L(value l) {
   CAMLparam1( l );
   CAMLlocal1( v );
   v = caml_alloc(1, VARIANT_L);
@@ -86,7 +85,7 @@ static inline value list_variant_L(value l) {
   CAMLreturn(v);
 }
 
-static inline value list_variant_D(value l) {
+CAMLprim value list_variant_D(value l) {
   CAMLparam1( l );
   CAMLlocal1( v );
   v = caml_alloc(1, VARIANT_D);
@@ -94,39 +93,39 @@ static inline value list_variant_D(value l) {
   CAMLreturn(v);
 }
 
-value get_deps(Header h, rpmTag tag) {
+CAMLprim value get_deps(Header h, rpmTag tag) {
   CAMLparam0 ();
-  CAMLlocal2( hd, tl );
-  CAMLlocal1( constr );
-  tl = Val_emptylist;
-  constr = Val_none;
+  CAMLlocal4( hd, tl, constr, t );
+  CAMLlocal1( tmp );
   const char *name, *version;
   rpmsenseFlags flag;
 
-  rpmds deps;
-  deps = rpmdsNew(h, tag, 0);
+  tl = Val_emptylist;
+  constr = Val_none;
+  const rpmds deps = rpmdsNew(h, tag, 0);
   while (rpmdsNext(deps) != -1) {
-    printf(" %s\n",rpmdsDNEVR(deps));
-    constr = Val_none;
 
     flag = rpmdsFlags(deps);
     if (!(flag & RPMSENSE_RPMLIB)) {
       name = rpmdsN(deps);
+      constr = Val_none;
       if ((flag & RPMSENSE_EQUAL) ||
           (flag & RPMSENSE_LESS) ||
           (flag & RPMSENSE_GREATER)) {
         if ((version = rpmdsEVR(deps)) != NULL) {
-          printf("%s %d %s\n",name,flag,version);
-          constr = Val_some(tuple(caml_copy_int32(flag),caml_copy_string(version)));
+          tmp = caml_copy_string(version);
+          t = tuple(Val_int(flag),tmp);
+          constr = Val_some(t);
         }
       }
-      hd = tuple(caml_copy_string(name),constr);
+      tmp = caml_copy_string(name);
+      hd = tuple(tmp,constr);
       tl = append(hd,tl);
     }
   };
-  rpmdsFree(deps);
+  (void) rpmdsFree(deps);
 
-  CAMLreturn(list_variant_D(tl));
+  CAMLreturn(tl);
 }
 
 value get_filedeps(Header h) {
@@ -178,19 +177,34 @@ value rpm_parse_paragraph (value fd) {
   hd = tuple(k,v);
   tl = append(hd,tl);
 
-  k = caml_copy_string("Depends");
+  k = caml_copy_string("Requires");
   v = get_deps(h,RPMTAG_REQUIRENAME);
-  hd = tuple(k,v);
+  hd = tuple(k,list_variant_D(v));
   tl = append(hd,tl);
 
   k = caml_copy_string("Provides");
   v = get_deps(h,RPMTAG_PROVIDENAME);
-  hd = tuple(k,v);
+  hd = tuple(k,list_variant_D(v));
+  tl = append(hd,tl);
+
+  k = caml_copy_string("Suggests");
+  v = get_deps(h,RPMTAG_SUGGESTSNAME);
+  hd = tuple(k,list_variant_D(v));
+  tl = append(hd,tl);
+
+  k = caml_copy_string("Enhances");
+  v = get_deps(h,RPMTAG_ENHANCESNAME);
+  hd = tuple(k,list_variant_D(v));
   tl = append(hd,tl);
 
   k = caml_copy_string("Conflicts");
   v = get_deps(h,RPMTAG_CONFLICTNAME);
-  hd = tuple(k,v);
+  hd = tuple(k,list_variant_D(v));
+  tl = append(hd,tl);
+
+  k = caml_copy_string("Obsoletes");
+  v = get_deps(h,RPMTAG_REQUIRENAME);
+  hd = tuple(k,list_variant_D(v));
   tl = append(hd,tl);
 
   k = caml_copy_string("Files");
