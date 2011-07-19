@@ -189,10 +189,11 @@ let tocudf tables ?(extras=[]) ?(inst=false) pkg =
    * on the package itself and dependencies on packages provided by the same
    * package *)
   let depends = 
+    let _deps = pkg.Packages.obsoletes @ pkg.Packages.provides in
     List.filter_map (fun l ->
       match List.filter (fun (n,s) ->
         not(n = pkg.Packages.name) &&
-        not (List.exists(fun (x,_) -> x = n ) pkg.Packages.provides) && 
+        not (List.exists(fun (x,_) -> x = n ) _deps) && 
         not(List.mem n (
           Hashtbl.find_all tables.files (pkg.Packages.name,pkg.Packages.version))
         )
@@ -207,12 +208,13 @@ let tocudf tables ?(extras=[]) ?(inst=false) pkg =
     Cudf.package = name ;
     Cudf.version = version ;
     Cudf.keep = add_keep pkg;
-    Cudf.depends = load_depends tables depends ;
+    Cudf.depends = List.unique ( load_depends tables depends ) ;
     Cudf.conflicts = List.unique (
       (load_conflicts tables pkg.Packages.conflicts) (* @
       (load_fileconflicts tables (n,v)) *)
     );
     Cudf.provides = List.unique (
+      (* (load_provides (n,v) tables pkg.Packages.obsoletes) @ *)
       (load_provides (n,v) tables pkg.Packages.provides) @
       (load_filesprovides tables (n,v)) 
     );

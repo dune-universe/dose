@@ -127,17 +127,15 @@ CAMLprim value get_deps(Header h, rpmTag tag) {
   constr = Val_none;
   const rpmds deps = rpmdsNew(h, tag, 0);
   while (rpmdsNext(deps) != -1) {
-    //printf(" %s\n",rpmdsDNEVR(deps));
 
     flag = rpmdsFlags(deps);
-    if (!(flag & RPMSENSE_RPMLIB)) {
+    if (!(flag & RPMSENSE_RPMLIB) && !(flag & RPMSENSE_MISSINGOK)) {
       name = rpmdsN(deps);
       constr = Val_none;
       if ((flag & RPMSENSE_EQUAL) || 
           (flag & RPMSENSE_LESS) ||
           (flag & RPMSENSE_GREATER)) {
         if ((version = rpmdsEVR(deps)) != NULL) {
-          //printf("%s %d %s\n",name,flag,version);
           tmp = caml_copy_string(version);
           t = tuple(Val_int(flag),tmp);
           constr = Val_some(t);

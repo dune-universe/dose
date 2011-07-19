@@ -106,7 +106,7 @@ CAMLprim value get_deps(Header h, rpmTag tag) {
   while (rpmdsNext(deps) != -1) {
 
     flag = rpmdsFlags(deps);
-    if (!(flag & RPMSENSE_RPMLIB)) {
+    if (!(flag & RPMSENSE_RPMLIB) && !(flag & RPMSENSE_MISSINGOK)) {
       name = rpmdsN(deps);
       constr = Val_none;
       if ((flag & RPMSENSE_EQUAL) ||
@@ -186,7 +186,7 @@ value rpm_parse_paragraph (value fd) {
   v = get_deps(h,RPMTAG_PROVIDENAME);
   hd = tuple(k,list_variant_D(v));
   tl = append(hd,tl);
-
+/*
   k = caml_copy_string("Suggests");
   v = get_deps(h,RPMTAG_SUGGESTSNAME);
   hd = tuple(k,list_variant_D(v));
@@ -196,14 +196,14 @@ value rpm_parse_paragraph (value fd) {
   v = get_deps(h,RPMTAG_ENHANCESNAME);
   hd = tuple(k,list_variant_D(v));
   tl = append(hd,tl);
-
+*/
   k = caml_copy_string("Conflicts");
   v = get_deps(h,RPMTAG_CONFLICTNAME);
   hd = tuple(k,list_variant_D(v));
   tl = append(hd,tl);
 
   k = caml_copy_string("Obsoletes");
-  v = get_deps(h,RPMTAG_REQUIRENAME);
+  v = get_deps(h,RPMTAG_OBSOLETENAME);
   hd = tuple(k,list_variant_D(v));
   tl = append(hd,tl);
 
