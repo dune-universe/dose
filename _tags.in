@@ -43,7 +43,8 @@
 <applications/smallworld.*>: @USE_RPM@, use_algo, use_boilerplate
 <applications/tests.*>: @USE_RPM@, use_algo, use_boilerplate
 
-<experimental/strong-deps.*>: use_boilerplate
+<experimental/strong-deps.*>: @USE_RPM@, use_algo, use_boilerplate
+<experimental/randcudf.*>: use_algo, use_boilerplateNoRpm
 <experimental/deb-cudf.*>: use_boilerplateNoRpm
 <experimental/aptsolutions.*>: use_boilerplateNoRpm
 <experimental/edsp-cudf.*>: use_boilerplateNoRpm
