@@ -177,11 +177,10 @@ value rpm_parse_paragraph (value _gi) {
   hd = tuple(k,v);
   tl = append(hd,tl);
 
-  //he->tag = RPMTAG_VERSION;
-  he->tag = RPMTAG_NVRA;
-  (void) headerGet(h, he, 0);
   k = caml_copy_string("Version");
-  tmp = caml_copy_string(he->p.str);
+  rpmds ds = rpmdsThis(h, RPMTAG_PROVIDEVERSION, 0);
+  tmp = caml_copy_string(rpmdsEVR(ds));
+  ds = rpmdsFree(ds);
   v = string_variant(tmp);
   hd = tuple(k,v);
   tl = append(hd,tl);
