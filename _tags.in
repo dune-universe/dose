@@ -41,6 +41,7 @@
 <applications/strong-conflicts.*>: @USE_RPM@, use_algo, use_boilerplate
 <applications/strong-deps.*>: use_algo, @USE_RPM@, use_boilerplate
 <applications/smallworld.*>: @USE_RPM@, use_algo, use_boilerplate
+<applications/tests.*>: @USE_RPM@, use_algo, use_boilerplate
 
 <experimental/strong-deps.*>: use_boilerplate
 <experimental/deb-cudf.*>: use_boilerplateNoRpm

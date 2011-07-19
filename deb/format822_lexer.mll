@@ -20,7 +20,7 @@
     (start_pos, end_pos)
   
   let raise_error lexbuf c =
-    let msg = Printf.sprintf "unexpected RFC 822 token : %c" c in
+    let msg = Printf.sprintf "unexpected RFC 822 token : '%c'" c in
     let loc = (lexbuf.Lexing.lex_start_p, lexbuf.Lexing.lex_curr_p) in
     raise (Format822.Parse_error_822 (msg,loc))
 
@@ -36,8 +36,8 @@ let ident = (letter | digit | '-')+
 rule token_822 = parse
   | (ident as field) ':' blank*
     ([^'\n']* as rest)          { FIELD(field, (get_range lexbuf, rest)) }
-  | ' ' ([^'\n']* as rest)      { CONT(get_range lexbuf, rest) }
-  | '#' [^'\n']* ('\n'|eof)     { token_822 lexbuf }
+  | blank ([^'\n']* as rest)      { CONT(get_range lexbuf, rest) }
+(*  | '#' [^'\n']* ('\n'|eof)     { token_822 lexbuf } *)
   | blank* '\n'                 { Lexing.new_line lexbuf; EOL }
   | eof                         { EOF }
   | _ as c                      { raise_error lexbuf c }

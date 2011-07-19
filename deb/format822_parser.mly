@@ -2,7 +2,7 @@
 /*  libCUDF - CUDF (Common Upgrade Description Format/ manipulation library  */
 /*  Copyright (C/ 2009-2011  Stefano Zacchiroli <zack@pps.jussieu.fr>        */
 /*                                                                           */
-/*  Adapted for Dose3                                                        */
+/*  Adapted for Dose3 pietro.abate@pps.jussieu.fr                            */
 /*                                                                           */
 /*  This library is free software: you can redistribute it and/or modify     */
 /*  it under the terms of the GNU Lesser General Public License as           */
