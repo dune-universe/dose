@@ -151,6 +151,42 @@ CAMLprim value get_deps(Header h, rpmTag tag) {
   CAMLreturn(tl);
 }
 
+char * headerGetEVR(Header h) {
+    const char * V = NULL;
+    const char * R = NULL;
+    size_t nb = 0;
+    char * EVR, * t;
+    char E[10];
+
+    HE_t he = (HE_t)memset(alloca(sizeof(*he)), 0, sizeof(*he));
+
+    he->tag = RPMTAG_EPOCH;
+    (void) headerGet(h, he, 0);
+    rpmuint32_t epoch = (he->p.ui32p ? he->p.ui32p[0] : 0);
+    (void) _free(he->p.ptr);
+    sprintf(E,"%d:",epoch);
+
+    (void) headerNEVRA(h, NULL, NULL, &V, &R, NULL);
+
+    //if (E)      nb += strlen(E) + 1;
+    nb += strlen(E) + 1;
+    if (V)      nb += strlen(V);
+    if (R)      nb += strlen(R) + 1;
+
+    nb++;
+    EVR = t = malloc(nb);
+    *t = '\0';
+    //if (E)      t = stpcpy( stpcpy(t, E), ":");
+    t = stpcpy( t, E);
+    if (V)      t = stpcpy( t, V);
+    if (R)      t = stpcpy( stpcpy(t, "-"), R);
+
+    // E = _free(E);
+    V = _free(V);
+    R = _free(R);
+    return EVR;
+}
+
 #define gi_val(v) ((rpmgi)(Field((v), 0)))
 
 value rpm_parse_paragraph (value _gi) {
@@ -176,11 +212,8 @@ value rpm_parse_paragraph (value _gi) {
   tl = append(hd,tl);
 
   k = caml_copy_string("Version");
-  rpmds ds = rpmdsThis(h, RPMTAG_PROVIDEVERSION, 0);
-  tmp = caml_copy_string(rpmdsEVR(ds));
-  ds = rpmdsFree(ds);
-  v = string_variant(tmp);
-  hd = tuple(k,v);
+  tmp = caml_copy_string(headerGetEVR(h));
+  hd = tuple(k,string_variant(tmp));
   tl = append(hd,tl);
 
   he->tag = RPMTAG_ARCH;
@@ -292,4 +325,3 @@ value rpm_EVRcmp ( value x, value y ) {
   res = rpmEVRcmp ( (char *) x , (char *) y );
   CAMLreturn (Val_int(res));
 }
-
