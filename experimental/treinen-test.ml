@@ -15,6 +15,8 @@
 open ExtLib
 open Common
 open Cudf
+open Algo
+module Boilerplate=BoilerplateNoRpm
 
 module Options = struct
   open OptParse

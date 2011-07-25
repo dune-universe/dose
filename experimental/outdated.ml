@@ -16,6 +16,8 @@
 
 open ExtLib
 open Common
+open Algo
+module Boilerplate=BoilerplateNoRpm
 
 let debug fmt = Util.make_debug "Outdated" fmt
 let info fmt = Util.make_info "Outdated" fmt

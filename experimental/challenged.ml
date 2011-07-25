@@ -15,6 +15,7 @@
 open ExtLib
 open Common
 open Algo
+module Boilerplate = BoilerplateNoRpm
 
 let predbar = Util.Progress.create "challenged" ;;
 let info fmt = Util.make_info "challenged" fmt

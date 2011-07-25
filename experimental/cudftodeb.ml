@@ -3,6 +3,7 @@
 open Cudf
 open ExtLib
 open Common
+module Boilerplate=BoilerplateNoRpm
 
 module Options = struct
   open OptParse

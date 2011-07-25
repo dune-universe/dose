@@ -51,3 +51,10 @@
 <experimental/rpm-cudf.*>: @USE_RPM@, use_boilerplate
 <experimental/dominators-graph.*>: @USE_RPM@, use_boilerplate, use_algo
 
+<experimental/strongpreds.*>: @USE_RPM@, use_algo, use_boilerplate
+<experimental/challenged.*>: use_algo, use_boilerplateNoRpm
+<experimental/outdated.*>: use_algo, use_boilerplateNoRpm
+<experimental/cudftodeb.*>: use_boilerplateNoRpm
+<experimental/smallworld.*>: @USE_RPM@, use_boilerplate, use_algo
+<experimental/cudf-solver.*>: use_algo, use_boilerplateNoRpm
+<experimental/treinen-test.*>: use_algo, use_boilerplateNoRpm
