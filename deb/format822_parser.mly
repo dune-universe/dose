@@ -17,7 +17,7 @@
 open ExtLib
 exception Dup_stanza
 
-let join (r1, v) (r2, cont) = Format822.extend_loc r1 r2, v ^ cont
+let join (r1, v) (r2, cont) = (Format822.extend_loc r1 r2, v ^ cont)
 
 %}
 

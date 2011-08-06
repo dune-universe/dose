@@ -81,7 +81,6 @@ module RawInput ( Set : Set.S ) = struct
     let s =
       info "Parsing debian packages...";
       let l = parse ch in
-      let _ = Input.close_ch ch in
       List.fold_left (fun s x -> Set.add x s) Set.empty l
     in
     info "total debian packages %n" (Set.cardinal s);

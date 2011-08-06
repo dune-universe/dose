@@ -174,7 +174,7 @@ let renumber (universe,from_cudf,to_cudf) =
   let new_to_cudf (p,v) = (p,2 * (snd(to_cudf (p,v)))) in 
   {
     universe = new_universe;
-    from_cudf = Util.memo new_from_cudf;
+    from_cudf = (* Util.memo *) new_from_cudf;
     to_cudf = new_to_cudf;
     constraints = constr
   }

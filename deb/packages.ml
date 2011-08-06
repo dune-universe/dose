@@ -93,20 +93,27 @@ exception IgnorePackage of string
 let parse_s ?opt ?err ?(multi=false) f field par =
   try 
     let (_loc,s) = (assoc field par) in
-    (* Printf.eprintf "%s: %s\n%!" field s; *)
     f (_loc,s) 
   with Not_found ->
     if Option.is_none opt then
       if Option.is_none err then raise Not_found
-      else raise (ParseError (field,(Option.get err)^" (no default declared)"))
+      else begin
+        let (_,((startpos,endpos),_)) = List.hd par in
+        let s = 
+          Printf.sprintf "%s--%s" 
+          (Format822.pp_lpos startpos) 
+          (Format822.pp_lpos endpos)
+        in
+        raise (ParseError (field,(Option.get err)^" (no default declared) " ^ s))
+      end
     else Option.get opt
 ;;
 
 (* parse extra fields parse_f returns a string *)
 let parse_e extras par =
   List.filter_map (fun (field, parse_f) ->
-      try Some (field,parse_f par)
-      with Not_found -> None
+    try Some (field,parse_f par)
+    with Not_found -> None
   ) extras
 ;;
 
@@ -134,7 +141,7 @@ let parse_architecture default_arch (_,arch) =
 
 let parse_package_stanza filter default_arch extras par =
   let parse_arch = parse_architecture default_arch in
-  let p = {
+  let p () = {
       name = parse_s ~err:"(MISSING NAME)" parse_name "Package" par;
       version = parse_s ~err:"(MISSING VERSION)" parse_version "Version" par;
       architecture = parse_s ~err:"(MISSING ARCH)" parse_arch "Architecture" par;
@@ -156,9 +163,23 @@ let parse_package_stanza filter default_arch extras par =
       extras = parse_e extras par;
   }
   in
-  if Option.is_none filter then Some p
-  else if (Option.get filter) p then Some(p) else None
+  if Option.is_none filter then Some (p ())
+  else if (Option.get filter) par then Some(p ()) else None
 ;;
+
+let status_filter par =
+  try
+    let (_,s) = (assoc "Status" par) in
+    match String.nsplit s " " with
+    |[_;_;"installed"] -> true
+    |_ -> false
+  with Not_found -> false
+
+let arch_filter archlist par =
+  try
+    let (_,s) = (assoc "Architecture" par) in
+    List.mem s archlist
+  with Not_found -> false
 
 (* parse the entire file while filtering out unwanted stanzas *)
 let rec packages_parser stanza_parser acc p =
@@ -195,14 +216,7 @@ let merge status packages =
     end else assert false
   in
   let h = Hashtbl.create (List.length status) in
-  List.iter (fun p ->
-    try
-      match String.nsplit (assoc "Status" p.extras) " " with
-      |[_;_;"installed"] -> Hashtbl.add h (id p) p
-      |_ -> ()
-    with Not_found -> ()
-  ) status
-  ;
+  List.iter (fun p -> Hashtbl.add h (id p) p) status ;
   let ps =
     List.fold_left (fun acc p ->
       try Set.add (merge_aux p (Hashtbl.find h (id p))) acc
@@ -213,6 +227,8 @@ let merge status packages =
 
 let default_extras = [
   ("Status", (fun l -> snd(assoc "Status" l)));
+  ("Size", (fun l -> snd(assoc "Size" l)));
+  ("Installed-Size", (fun l -> snd(assoc "Installed-Size" l)));
 ]
 
 (** input_raw [file] : parse a debian Packages file from [file] *)
@@ -222,7 +238,7 @@ let input_raw ?filter ?(default_arch=None) ?(extras=[]) =
   M.input_raw (parse_packages_in ?filter ~default_arch ~extras)
 
 (** input_raw_ch ch : parse a debian Packages file from channel [ch] *)
-let input_raw_ch ?(filter=None) ?(default_arch=None) ?(extras=[]) =
+let input_raw_ch ?filter ?(default_arch=None) ?(extras=[]) =
   let module M = Format822.RawInput(Set) in
   let extras = default_extras @ extras in
   M.input_raw_ch (parse_packages_in ?filter ~default_arch ~extras)

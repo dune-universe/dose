@@ -162,11 +162,11 @@ let main () =
 
   (* raw -> cudf *)
   let (preamble,pkglist) = 
+    let extras_properties =
+      [("Size", ("size", `Nat (Some 0)));
+       ("Installed-Size", ("installedsize", `Nat (Some 0)))]
+    in
     let default_preamble =
-      let extras_properties =
-        [("Size", ("size", `Nat (Some 0)));
-         ("Installed-Size", ("installedsize", `Nat (Some 0)))]
-      in
       let l = List.map snd extras_properties in
       CudfAdd.add_properties Debian.Debcudf.preamble l
     in
@@ -184,7 +184,8 @@ let main () =
       (* we assume the status file is alwasy in dpkg format ! *)
       let status =
         if OptParse.Opt.is_set Options.status then 
-          Boilerplate.read_deb (OptParse.Opt.get Options.status)
+          Boilerplate.read_deb ~filter:Debian.Packages.status_filter
+          (OptParse.Opt.get Options.status)
         else []
       in
       let l = 
@@ -194,7 +195,7 @@ let main () =
             Debian.Packages.input_raw filelist
         |_ -> (Printf.eprintf "Only deb files are supported\n" ; exit 1)
       in
-      let (pkglist,_,_) = Boilerplate.deb_load_list ~status l in
+      let (pkglist,_,_) = Boilerplate.deb_load_list ~extras:extras_properties ~status l in
       (default_preamble, pkglist)
   in
 

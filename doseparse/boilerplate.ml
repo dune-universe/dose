@@ -129,9 +129,9 @@ let argv2 l = argv_ (fun a -> (a.(0),a.(1))) l
 let argv3 l = argv_ (fun a -> (a.(0),a.(1),a.(2))) l
 
 (** read a debian Packages file - compressed or not *)
-let read_deb ?(extras=[]) s =
-  let ch = Input.open_file s in
-  let l = Debian.Packages.parse_packages_in ~extras ch in
+let read_deb ?filter ?(extras=[]) fname =
+  let ch = Input.open_file fname in
+  let l = Debian.Packages.input_raw_ch ?filter ~extras ch in
   let _ = Input.close_ch ch in
   l
 
@@ -257,16 +257,16 @@ let rec filter opt_scheme acc uris =
 let unpack (_,(_,_,_,_,file),_) = file
 
 (** parse a list of uris of the same type and return a cudf packages list *)
-let parse_input ?(default_arch=None) ?(extras=[]) uris =
+let parse_input ?default_arch ?(extras=[]) uris =
   match filter None [] uris with
   |(Url.Cudf,[(Url.Cudf,(_,_,_,_,file),_)]) ->
       cudf_load_list file
   |(Url.Deb, []) ->
-      let l = Debian.Packages.input_raw_ch ~default_arch (IO.input_channel stdin) in
+      let l = Debian.Packages.input_raw_ch ?default_arch (IO.input_channel stdin) in
       deb_load_list ~extras l
   |(Url.Deb, l) ->
       let filelist = List.map unpack l in
-      let l = Debian.Packages.input_raw ~default_arch filelist in
+      let l = Debian.Packages.input_raw ?default_arch filelist in
       deb_load_list ~extras l
   |(Url.Eclipse, l) ->
       let filelist = List.map unpack l in
@@ -319,20 +319,20 @@ END
 ;;
 
 (** parse and merge a list of files into a cudf package list *)
-let load_list ?(default_arch=None) ?(extras=[]) uris =
+let load_list ?default_arch ?(extras=[]) uris =
   info "Parsing and normalizing..." ;
   let timer = Util.Timer.create "Parsing and normalizing" in
   Util.Timer.start timer;
-  let u = parse_input ~default_arch ~extras uris in
+  let u = parse_input ?default_arch ~extras uris in
   Util.Timer.stop timer u
 ;;
 
 (** parse and merge a list of files into a cudf universe *)
-let load_universe ?(default_arch=None) ?(extras=[]) uris =
+let load_universe ?default_arch ?(extras=[]) uris =
   info "Parsing and normalizing..." ;
   let timer = Util.Timer.create "Parsing and normalizing" in
   Util.Timer.start timer;
-  let (l,f,t) = parse_input ~default_arch ~extras uris in
+  let (l,f,t) = parse_input ?default_arch ~extras uris in
   let u = (Cudf.load_universe l, f, t) in
   Util.Timer.stop timer u
 ;;

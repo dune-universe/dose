@@ -37,6 +37,11 @@ module Options = struct
   ~help:"Set the default architecture" architecture;
 end
 
+let debug fmt = Util.make_debug "Deb-Check" fmt
+let info fmt = Util.make_info "Deb-Check" fmt
+let warning fmt = Util.make_warning "Deb-Check" fmt
+let fatal fmt = Util.make_fatal "Deb-Check" fmt
+
 (* ========================================= *)
 
 let main () =
@@ -48,9 +53,11 @@ let main () =
   let (preamble, pkglist, from_cudf) =
     let status =
       if OptParse.Opt.is_set Options.status then
-        Boilerplate.read_deb (OptParse.Opt.get Options.status)
+        Boilerplate.read_deb ~filter:Packages.status_filter 
+        (OptParse.Opt.get Options.status)
       else []
     in
+    info "status %d" (List.length status);
     let l = Debian.Packages.input_raw ~default_arch posargs in
     let (pkglist,from_cudf,_) = Boilerplate.deb_load_list ~status l in
     (Debian.Debcudf.preamble, pkglist, from_cudf)

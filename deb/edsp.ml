@@ -87,18 +87,21 @@ let extras = [
 
 (* parse the entire file while filtering out unwanted stanzas *)
 let rec packages_parser ?(request=false) (req,acc) p =
-  let filter pkg = 
-    let _loc = Format822.dummy_loc in
-    let inst () =
-      try
-        let v = Packages.assoc "Installed" pkg.Packages.extras in
-        Packages.parse_bool (_loc,v)
-      with Not_found -> false
+  let filter par = 
+    let match_field f p =
+      match Packages.assoc f p with
+      |(_,("Yes"|"yes"|"True" |"true")) -> true
+      |(_,("No" |"no" |"False"|"false")) -> false
+      |_ -> false
     in
-    let candidate () =
-      try
-        let v = Packages.assoc "APT-Candidate" pkg.Packages.extras in
-        Packages.parse_bool (_loc,v)
+
+
+    let inst () =
+      try match_field "Installed" par
+      with Not_found -> false
+    in 
+    let candidate () = 
+      try match_field "APT-Candidate" par
       with Not_found -> false
     in
     ((inst ()) || (candidate ()))
