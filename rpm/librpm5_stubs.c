@@ -210,7 +210,12 @@ value rpm_parse_paragraph (value _gi) {
   v = string_variant(tmp);
   hd = tuple(k,v);
   tl = append(hd,tl);
-
+/*
+  k = caml_copy_string("Version");
+  tmp = caml_copy_string(headerGetEVR(h));
+  hd = tuple(k,string_variant(tmp));
+  tl = append(hd,tl);
+*/
   k = caml_copy_string("Version");
   tmp = caml_copy_string(headerGetEVR(h));
   hd = tuple(k,string_variant(tmp));
