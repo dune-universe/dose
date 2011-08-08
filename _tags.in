@@ -58,3 +58,5 @@
 <experimental/smallworld.*>: @USE_RPM@, use_boilerplate, use_algo
 <experimental/cudf-solver.*>: use_algo, use_boilerplateNoRpm
 <experimental/treinen-test.*>: use_algo, use_boilerplateNoRpm
+
+<experimental/dudftocudf/*>: use_common, use_debian, use_eclipse, package(extlib), package(pcre), package(str), package(unix), @PKG_CUDF@, @PKG_ZIP@, @PKG_BZ2@, @PKG_CURL@, @PKG_XML@, use_boilerplateNoRpm

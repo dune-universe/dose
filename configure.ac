@@ -211,7 +211,7 @@ if test "$HAS_XML" = "yes" ; then
   if test "$OCAML_PKG_xml-light" = "no"; then
    AC_MSG_ERROR([Please install OCaml findlib module 'xml-light'.])
   fi
-  PKG_XML="pkg_expat, pkg_xml-light"
+  PKG_XML="package(expat), package(xml-light)"
 fi
 
 AC_ARG_WITH(oUnit,

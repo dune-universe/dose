@@ -12,6 +12,7 @@
 
 open ExtLib
 open Common
+module Boilerplate = BoilerplateNoRpm
 
 let debug fmt = Util.make_debug "dudf-extract" fmt
 let info fmt = Util.make_info "dudf-extract" fmt

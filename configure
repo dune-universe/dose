@@ -5776,7 +5776,7 @@ $as_echo "not found" >&6; }
   if test "$OCAML_PKG_xml-light" = "no"; then
    as_fn_error $? "Please install OCaml findlib module 'xml-light'." "$LINENO" 5
   fi
-  PKG_XML="pkg_expat, pkg_xml-light"
+  PKG_XML="package(expat), package(xml-light)"
 fi
 
 
@@ -6502,7 +6502,7 @@ esac
 
 cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1
 # Files that config.status was made for.
-config_files="`echo $ac_config_files`"
+config_files="$ac_config_files"
 
 _ACEOF
 

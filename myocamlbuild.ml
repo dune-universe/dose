@@ -3,7 +3,8 @@ open Ocamlbuild_plugin;;
 
 let modules_dirs = [
   "common";"deb";"eclipse";"rpm";"db";"algo";
-  "doseparse"; "applications";"experimental"; "libcudf"
+  "doseparse"; "applications";"experimental"; "libcudf";
+  "experimental/dudftocudf"
 ];;
 
 let libraries = [
