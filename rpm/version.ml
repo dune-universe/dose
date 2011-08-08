@@ -70,13 +70,6 @@ let parse_version s =
         "version '%a' not ending with an alphanumeric character@?"
         pr_version (epoch, version, release);
     end;
-    (*
-    Printf.eprintf "%s == %d :: %s :: %s\n"
-    s
-    (if Option.is_none epoch then 0 else Option.get epoch)
-    version
-    (if Option.is_none release then "" else Option.get release) ;
-    *)
     (epoch, version, release)
   end
 

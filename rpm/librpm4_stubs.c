@@ -146,8 +146,8 @@ value get_filedeps(Header h) {
 
 #define fd_val(v) ((FD_t)(Field((v), 0)))
 
-value rpm_parse_paragraph (value fd) {
-  const char *s;
+CAMLprim value rpm_parse_paragraph (value fd) {
+  char *s;
   CAMLparam1 ( fd );
   CAMLlocal2 ( hd, tl );
   CAMLlocal2 ( k, v);
@@ -161,20 +161,50 @@ value rpm_parse_paragraph (value fd) {
 
   k = caml_copy_string("Package");
   s = headerGetAsString(h,RPMTAG_NAME);
-  v = string_variant(caml_copy_string(s));
-  hd = tuple(k,v);
+  v = caml_copy_string(s);
+  hd = tuple(k,string_variant(v));
+  tl = append(hd,tl);
+/*
+  uint32_t e;
+  k = caml_copy_string("Epoch");
+  e = headerGetNumber(h, RPMTAG_EPOCH);
+  (void) sprintf(s,"%d",e);
+  v = caml_copy_string(s);
+  hd = tuple(k,string_variant(v));
   tl = append(hd,tl);
 
+//this is a mandriva specific tag...
+#define RPMTAG_DISTEPOCH 1218
+  k = caml_copy_string("DistEpoch");
+  e = headerGetNumber(h, RPMTAG_DISTEPOCH);
+  (void) sprintf(s,"%d",e);
+  v = caml_copy_string(s);
+  hd = tuple(k,string_variant(v));
+  tl = append(hd,tl);
+
+  k = caml_copy_string("VersionString");
+  s = headerGetAsString(h, RPMTAG_VERSION);
+  v = caml_copy_string(s);
+  free(s);
+  hd = tuple(k,string_variant(v));
+  tl = append(hd,tl);
+
+  k = caml_copy_string("Release");
+  s = headerGetAsString(h, RPMTAG_RELEASE);
+  v = caml_copy_string(s);
+  hd = tuple(k,string_variant(v));
+  tl = append(hd,tl);
+*/
   k = caml_copy_string("Version");
-  s = headerGetEVR(h, NULL);
-  v = string_variant(caml_copy_string(s));
-  hd = tuple(k,v);
+  s = headerGetAsString(h, RPMTAG_EVR);
+  v = caml_copy_string(s);
+  hd = tuple(k,string_variant(v));
   tl = append(hd,tl);
 
   k = caml_copy_string("Architecture");
   s = headerGetAsString(h,RPMTAG_ARCH);
-  v = string_variant(caml_copy_string(s));
-  hd = tuple(k,v);
+  v = caml_copy_string(s);
+  hd = tuple(k,string_variant(v));
   tl = append(hd,tl);
 
   k = caml_copy_string("Requires");
@@ -186,7 +216,7 @@ value rpm_parse_paragraph (value fd) {
   v = get_deps(h,RPMTAG_PROVIDENAME);
   hd = tuple(k,list_variant_D(v));
   tl = append(hd,tl);
-/*
+
   k = caml_copy_string("Suggests");
   v = get_deps(h,RPMTAG_SUGGESTSNAME);
   hd = tuple(k,list_variant_D(v));
@@ -196,7 +226,7 @@ value rpm_parse_paragraph (value fd) {
   v = get_deps(h,RPMTAG_ENHANCESNAME);
   hd = tuple(k,list_variant_D(v));
   tl = append(hd,tl);
-*/
+
   k = caml_copy_string("Conflicts");
   v = get_deps(h,RPMTAG_CONFLICTNAME);
   hd = tuple(k,list_variant_D(v));
@@ -217,7 +247,7 @@ value rpm_parse_paragraph (value fd) {
   CAMLreturn(tl);
 }
 
-value rpm_open_hdlist (value file_name) {
+CAMLprim value rpm_open_hdlist (value file_name) {
   CAMLparam1 (file_name);
   CAMLlocal1 (result);
   FD_t fd;
@@ -231,16 +261,66 @@ value rpm_open_hdlist (value file_name) {
   CAMLreturn(result);
 }
 
-value rpm_close_hdlist (value fd) {
+CAMLprim value rpm_close_hdlist (value fd) {
   CAMLparam1 (fd);
   Fclose (fd_val(fd));
   CAMLreturn(Val_unit);
 }
 
-value rpm_vercmp ( value x, value y ) {
+CAMLprim value rpm_vercmp ( value x, value y ) {
   CAMLparam2 ( x , y );
   CAMLlocal1 ( res );
   res = rpmvercmp ( (char *) x , (char *) y );
   CAMLreturn (Val_int(res));
 }
 
+/*
+value rpm_EVRcmp ( value x, value y ) {
+  CAMLparam2 ( x , y );
+  CAMLlocal1 ( res );
+  res = rpmEVRcmp ( (char *) x , (char *) y );
+  CAMLreturn (Val_int(res));
+}
+
+int rpmVersionCompare(Header first, Header second)
+{
+    // Missing epoch becomes zero here, which is what we want
+    uint32_t epochOne = headerGetNumber(first, RPMTAG_EPOCH);
+    uint32_t epochTwo = headerGetNumber(second, RPMTAG_EPOCH);
+    int rc;
+
+    if (epochOne < epochTwo)
+        return -1;
+    else if (epochOne > epochTwo)
+        return 1;
+
+    rc = rpmvercmp(headerGetString(first, RPMTAG_VERSION),
+                   headerGetString(second, RPMTAG_VERSION));
+    if (rc)
+        return rc;
+
+    return rpmvercmp(headerGetString(first, RPMTAG_RELEASE),
+                     headerGetString(second, RPMTAG_RELEASE));
+}
+*/
+/*
+CAMLprim value rpm_parseEVR ( value s ) {
+  CAMLparam1 ( s );
+  CAMLlocal3 ( e, v , r );
+  CAMLlocal1( res );
+  char *aEVR = (char *) s;
+  const char *aE, *aV, *aR;
+
+  parseEVR(aEVR, &aE, &aV, &aR);
+  e = caml_copy_string(aE);
+  v = caml_copy_string(aV);
+  r = caml_copy_string(aR);
+
+  res = caml_alloc_tuple(3);
+  Store_field (res, 0, e);
+  Store_field (res, 1, v);
+  Store_field (res, 2, r);
+
+  CAMLreturn (res);
+}
+*/
