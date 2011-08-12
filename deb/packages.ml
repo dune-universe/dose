@@ -79,7 +79,7 @@ let parse_binarylist = lexbuf_wrapper Packages_parser.vpkglist_top
 (**************************************)
 
 let rec assoc (n : string) = function
-  |(k,v)::_ when k = n -> v
+  |(k,v)::_ when (String.lowercase k) = (String.lowercase n) -> v
   |(k,_)::t -> assoc n t
   |[] -> raise Not_found
 ;;
@@ -100,7 +100,8 @@ let parse_s ?opt ?err ?(multi=false) f field par =
       else begin
         let (_,((startpos,endpos),_)) = List.hd par in
         let s = 
-          Printf.sprintf "%s--%s" 
+          Printf.sprintf "%s : %s--%s" 
+          (Format822.pp_posfname startpos)
           (Format822.pp_lpos startpos) 
           (Format822.pp_lpos endpos)
         in
@@ -166,7 +167,11 @@ let parse_package_stanza filter default_arch extras par =
       extras = parse_e extras par;
   }
   in
-  if Option.is_none filter then Some (p ())
+  if Option.is_none filter then 
+    begin try Some (p ())
+    with IgnorePackage s ->
+      (warning "%s" s; None)
+    end
   else if (Option.get filter) par then Some(p ()) else None
 ;;
 

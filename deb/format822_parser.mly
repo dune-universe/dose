@@ -24,12 +24,19 @@ let join (r1, v) (r2, cont) = (Format822.extend_loc r1 r2, v ^ cont)
 %token <string * (Format822.loc * string)> FIELD
 %token <Format822.loc * string> CONT
 %token EOL EOF
+%token PGPHEAD
 %type <(string * (Format822.loc * string)) list list> doc_822
 %type <(string * (Format822.loc * string)) list option> stanza_822
-%start doc_822 stanza_822
+%type <(string * (Format822.loc * string)) list option> doc_822_sign
+%start doc_822 doc_822_sign stanza_822
 
 
 %%
+
+doc_822_sign:
+  PGPHEAD eols field eols stanza_822 { $5 }
+  | stanza_822 { $1 }
+;
 
 doc_822:
   | stanzas             { $1 }

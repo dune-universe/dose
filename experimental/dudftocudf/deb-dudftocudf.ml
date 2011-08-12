@@ -243,20 +243,23 @@ let make_universe pl =
   let universe = 
     List.flatten (
       List.map (fun (_,fname,_,cdata) ->
-        let i = Str.search_backward (Str.regexp "_Release") fname (String.length fname) in
+        info "aa %s" fname;
+        let i = Str.search_backward (Str.regexp "_") fname (String.length fname) in
         let s = Str.string_before fname i in
+        info "vvv %s" s;
         let release = 
           let ch = IO.input_string cdata in
           let r = Debian.Release.parse_release_in ch in
           let _ = IO.close_in ch in
-          match r with Some s -> s | None -> assert false
-
+          match r with Some r -> r | None -> Debian.Release.default_release
         in
         let cl =
           List.find_all (fun (_,fname,_,_) ->
+            info "fff %s" fname;
             Str.string_match (Str.regexp ("^"^s^".*_Packages$")) fname 0
           ) packagelist
         in
+        info "2.2";
         List.map (fun (_,fname,_,cdata) ->
           fl := fname :: !fl ;
           (release,cdata)
@@ -264,13 +267,16 @@ let make_universe pl =
       ) releaselist
     )
   in
+  info "3";
   let without_release = 
     let l = 
       List.find_all (fun (_,fname,_,_) ->
+        info "4 %s" fname;
         not(List.mem fname !fl)
       ) packagelist
     in 
     List.map (fun (_,fname,_,cdata) ->
+      info "5 %s" fname;
       warning "Package List without Release. %s" fname;
       (Debian.Release.default_release,cdata)
     ) l

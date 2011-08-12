@@ -12,6 +12,14 @@ let dummy_loc: loc = Lexing.dummy_pos, Lexing.dummy_pos
 let extend_loc (r1_start, _r1_end) (_r2_start, r2_end) = (r1_start, r2_end)
 let loc_of_lexbuf b = (b.Lexing.lex_start_p, b.Lexing.lex_curr_p)
 
+let pp_posfname {
+  Lexing.pos_fname = _fname;
+  pos_lnum = lnum;
+  pos_bol = bol;
+  pos_cnum = cnum
+} = Printf.sprintf "%s" _fname
+
+
 let pp_lpos {
   Lexing.pos_fname = _fname;
   pos_lnum = lnum;

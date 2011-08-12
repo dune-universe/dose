@@ -34,10 +34,16 @@ let blank = [ ' ' '\t' ]
 let ident = (letter | digit | '-')+
 
 rule token_822 = parse
+  | "-----BEGIN PGP SIGNED MESSAGE-----" { PGPHEAD }
+  | "-----BEGIN PGP SIGNATURE-----" { pgpsingature lexbuf }
   | (ident as field) ':' blank*
     ([^'\n']* as rest)          { FIELD(field, (get_range lexbuf, rest)) }
-  | blank ([^'\n']* as rest)      { CONT(get_range lexbuf, rest) }
+  | blank ([^'\n']* as rest)    { CONT(get_range lexbuf, rest) }
 (*  | '#' [^'\n']* ('\n'|eof)     { token_822 lexbuf } *)
   | blank* '\n'                 { Lexing.new_line lexbuf; EOL }
   | eof                         { EOF }
   | _ as c                      { raise_error lexbuf c }
+and pgpsingature = parse
+    | "-----END PGP SIGNATURE-----"  { token_822 lexbuf    }
+    | _                              { pgpsingature lexbuf }
+

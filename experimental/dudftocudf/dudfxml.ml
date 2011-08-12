@@ -152,10 +152,13 @@ let pkgget ?(cachedir=".dudf") ?compression url =
     with Failure _ -> begin close_out outch; Unix.unlink filename; exit 1 end ;
     close_out outch;
   end;
-  let inch = Input.open_file filename in
-  let s = IO.read_all inch in
-  Input.close_ch inch;
-  s
+  if (Unix.stat filename).Unix.st_size = 0 then ""
+  else begin
+    let inch = Input.open_file filename in
+    let s = IO.read_all inch in
+    Input.close_ch inch;
+    s
+  end
 ;;
 
 (* ========================================= *)
