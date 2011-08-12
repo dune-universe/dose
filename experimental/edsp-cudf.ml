@@ -32,21 +32,16 @@ module Options = struct
 
 end
 
-(* XXX : Multi-arch Hack *)
-let norm s = 
-  try Str.string_before s (String.index s ':') 
-  with Not_found -> s
-;;
-
 let make_request universe request = 
-  let select_packages l = List.map (fun (n,c) -> (norm n,None)) l in
+  let select_packages l = List.map (fun (n,_,c) -> (n,None)) l in
   if request.Edsp.upgrade || request.Edsp.distupgrade then
+    (* XXX we must take into account mult-arch requests. ignore atm *)
     let to_upgrade = function
       |[] ->
         let filter pkg = pkg.Cudf.installed in
         let l = Cudf.get_packages ~filter universe in
         List.map (fun pkg -> (pkg.Cudf.package,None)) l
-      |l -> List.map (fun (n,c) -> (norm n,None)) l
+      |l -> List.map (fun (n,_,c) -> (n,None)) l
     in
     {Cudf.default_request with 
     Cudf.request_id = request.Edsp.request;

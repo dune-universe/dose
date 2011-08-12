@@ -44,23 +44,30 @@ let default_release = {
     sha256 = []
 }
 
-let parse field par = try snd(Packages.assoc field par) with Not_found -> ""
-
 let parse_release_stanza par =
-  Some {
-    origin = parse "Origin" par;
-    label = parse "Label" par;
-    suite = parse "Suite" par;
-    version = parse "Version" par;
-    codename = parse "Codename" par;
-    date = parse "Date" par;
-    architecture = parse "Architectures" par;
-    component = parse "Components" par;
-    description = parse "Description" par;
+  {
+    origin = Packages.parse_s Packages.parse_string "Origin" par;
+    label = Packages.parse_s Packages.parse_string "Label" par;
+    suite = Packages.parse_s Packages.parse_string "Suite" par;
+    version = Packages.parse_s Packages.parse_string "Version" par;
+    codename = Packages.parse_s Packages.parse_string "Codename" par;
+    date = Packages.parse_s Packages.parse_string "Date" par;
+    architecture = Packages.parse_s Packages.parse_string "Architectures" par;
+    component = Packages.parse_s Packages.parse_string "Components" par;
+    description = Packages.parse_s Packages.parse_string "Description" par;
     md5sums = [];
     sha1 = [];
     sha256 = []
   }
 
-let parse_packages_in ?filter ?(default_arch=None) ?(extras=[]) ic =
-  Format822.parse_from_ch (Packages.packages_parser parse_release_stanza []) ic
+let rec release_parser stanza_parser p =
+  match Format822_parser.stanza_822 Format822_lexer.token_822 p.Format822.lexbuf with
+  |None -> None
+  |Some stanza -> Some(stanza_parser stanza)
+  (*
+      let st = stanza_parser stanza in
+      release_parser stanza_parser (st::acc) p
+      *)
+
+let parse_release_in ic =
+  Format822.parse_from_ch (release_parser parse_release_stanza) ic

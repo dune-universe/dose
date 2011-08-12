@@ -22,6 +22,8 @@ module Deb = Debian.Packages
 
 module L = Xml.LazyList 
 
+module Boilerplate = BoilerplateNoRpm
+
 module Options = struct
   open OptParse
   let description = "Convert Debian Dudf files to Cudf format"
@@ -126,7 +128,7 @@ module AptPref = struct
 
   let parse ?tr s =
     let ch = IO.input_string s in
-    let l = Debian.Apt.parse_preferences_in (fun x -> x) ch in
+    let l = Debian.Apt.parse_preferences_in ch in
     let pref = List.fold_left mapf dummypref l in
     { pref with target_release = tr }
 
@@ -247,7 +249,8 @@ let make_universe pl =
           let ch = IO.input_string cdata in
           let r = Debian.Release.parse_release_in ch in
           let _ = IO.close_in ch in
-          r
+          match r with Some s -> s | None -> assert false
+
         in
         let cl =
           List.find_all (fun (_,fname,_,_) ->
@@ -313,8 +316,6 @@ let main () =
 
   info "parse xml";
 
-  let id x = x in
-
   let dudfdoc = Dudfxml.parse input_file in
 
   if not(Pcre.pmatch ~rex:(Pcre.regexp "[Dd]ebian") dudfdoc.distribution) then begin
@@ -346,7 +347,7 @@ let main () =
     ("Installed-Size", ("installedsize", `Nat (Some 0)));
     ("Maintainer", ("maintainer", `String (Some "")))]
   in
-  let extras = List.map fst extras_property in
+  let extras = List.map (fun(f,_) -> (f,None)) extras_property in
 
   info "parse all packages";
   Util.Progress.set_total progressbar (List.length packagelist);
@@ -362,7 +363,7 @@ let main () =
     List.fold_left (fun acc (release,contents) ->
       Util.Progress.progress progressbar ;
       let ch = IO.input_string contents in
-      let l = Deb.parse_packages_in  ~default_arch ~extras id ch in
+      let l = Deb.parse_packages_in ~default_arch ~extras ch in
       let _ = IO.close_in ch in
       List.fold_left (fun s pkg -> 
         Hashtbl.add infoH (pkg.Deb.name,pkg.Deb.version) release ;
@@ -375,7 +376,7 @@ let main () =
   info "installed packages";
   let installed_packages =
     let ch = IO.input_string status in
-    let l = Deb.parse_packages_in ~extras id ch in
+    let l = Deb.parse_packages_in ~filter:Deb.status_filter ch in
     let _ = IO.close_in ch in
     l
   in
@@ -474,7 +475,7 @@ let main () =
     let l = List.map snd extras_property in
     CudfAdd.add_properties Debian.Debcudf.preamble (p::l)
   in
-  Cudf_printer.pp_cudf (Format.formatter_of_out_channel oc) (preamble, universe, request)
+  Cudf_printer.pp_cudf oc (preamble, universe, request)
 ;;
 
 main ();;

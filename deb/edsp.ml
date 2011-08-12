@@ -76,34 +76,29 @@ let parse_section = parse_s parse_string "Section"
 
 (* (field,opt,err,multi,parsing function) *)
 let extras = [
-  ("Installed", parse_installed);
-  ("Hold", parse_hold);
-  ("APT-ID", parse_apt_id);
-  ("APT-Pin", parse_apt_pin);
-  ("APT-Candidate", parse_candidate);
-  ("APT-Automatic", parse_automatic);
-  ("Section", parse_section);
+  ("Installed", Some parse_installed);
+  ("Hold", Some parse_hold);
+  ("APT-ID", Some parse_apt_id);
+  ("APT-Pin", Some parse_apt_pin);
+  ("APT-Candidate", Some parse_candidate);
+  ("APT-Automatic", Some parse_automatic);
+  ("Section", Some parse_section);
   ]
 
 (* parse the entire file while filtering out unwanted stanzas *)
 let rec packages_parser ?(request=false) (req,acc) p =
   let filter par = 
     let match_field f p =
-      match Packages.assoc f p with
-      |(_,("Yes"|"yes"|"True" |"true")) -> true
-      |(_,("No" |"no" |"False"|"false")) -> false
-      |_ -> false
-    in
-
-
-    let inst () =
-      try match_field "Installed" par
-      with Not_found -> false
-    in 
-    let candidate () = 
-      try match_field "APT-Candidate" par
+      try 
+        begin match Packages.assoc f p with
+        |(_,("Yes"|"yes"|"True" |"true")) -> true
+        |(_,("No" |"no" |"False"|"false")) -> false
+        |_ -> false
+        end
       with Not_found -> false
     in
+    let inst () = match_field "Installed" par in 
+    let candidate () = match_field "APT-Candidate" par in
     ((inst ()) || (candidate ()))
   in
   match Format822_parser.stanza_822 Format822_lexer.token_822 p.Format822.lexbuf with

@@ -109,11 +109,17 @@ let parse_s ?opt ?err ?(multi=false) f field par =
     else Option.get opt
 ;;
 
+let parse_string (_,s) = s
+let parse_int (_,s) = int_of_string s
+
 (* parse extra fields parse_f returns a string *)
 let parse_e extras par =
-  List.filter_map (fun (field, parse_f) ->
-    try Some (field,parse_f par)
-    with Not_found -> None
+  List.filter_map (fun (field, p) ->
+    try begin 
+      match p with 
+      |None -> Some(field,parse_s parse_string field par)
+      |Some parse_f -> Some (field,parse_f par)
+    end with Not_found -> None
   ) extras
 ;;
 
@@ -122,9 +128,6 @@ let parse_bool = function
   |(_,("Yes"|"yes"|"True" |"true")) -> true
   |(_,("No" |"no" |"False"|"false")) -> false (* this one usually is not there *)
   |(_,s) -> assert false (*raise (Format822.Type_error ("wrong value : "^ s))*)
-
-let parse_string (_,s) = s
-let parse_int (_,s) = int_of_string s
 
 let parse_architecture default_arch (_,arch) =
   match default_arch with
@@ -226,9 +229,9 @@ let merge status packages =
   Set.elements ps
 
 let default_extras = [
-  ("Status", (fun l -> snd(assoc "Status" l)));
-  ("Size", (fun l -> snd(assoc "Size" l)));
-  ("Installed-Size", (fun l -> snd(assoc "Installed-Size" l)));
+  ("Status", None);
+  ("Size", None);
+  ("Installed-Size", None);
 ]
 
 (** input_raw [file] : parse a debian Packages file from [file] *)
