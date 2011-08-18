@@ -137,7 +137,7 @@ let read_deb ?filter ?(extras=[]) fname =
 
 (** transform a list of debian control stanza into a cudf packages list *)
 let deb_load_list ?(extras=[]) ?(status=[]) l =
-  let l = Debian.Packages.merge status l in
+  let l = if status = [] then l else Debian.Packages.merge status l in
   let tables = Debian.Debcudf.init_tables l in
   let pkglist = List.map (Debian.Debcudf.tocudf ~extras tables) l in
   let from_cudf (p,i) = (p,Debian.Debcudf.get_real_version tables (p,i)) in

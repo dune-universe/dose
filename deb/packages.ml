@@ -221,7 +221,7 @@ let merge status packages =
         essential = p1.essential || p2.essential;
         extras = List.unique (p1.extras @ p2.extras)
       }
-    end else assert false
+    end else fatal "Something went wrong while merging status+packages"
   in
   let h = Hashtbl.create (List.length status) in
   List.iter (fun p -> Hashtbl.add h (id p) p) status ;
