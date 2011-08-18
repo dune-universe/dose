@@ -238,6 +238,7 @@ let add_extra extras tables pkg =
   List.filter_map (function
     |(_,`Vpkglist []) -> None
     |(_,`Vpkgformula []) -> None
+    |(_,`String "") -> None
     |e -> Some e
   )
   [priority; architecture; number;

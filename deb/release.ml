@@ -23,6 +23,8 @@ type release = {
   date: string;
   architecture: string;
   component : string;
+  notauto: bool;
+  autoup: bool;
   description: string;
   md5sums: (string * string * string) list;
   sha1: (string * string * string) list;
@@ -38,6 +40,8 @@ let default_release = {
     date = "";
     architecture = "";
     component = "";
+    notauto = false;
+    autoup = false;
     description = "";
     md5sums = [];
     sha1 = [];
@@ -54,6 +58,8 @@ let parse_release_stanza par =
     date = Packages.parse_s ~opt:"" Packages.parse_string "Date" par;
     architecture = Packages.parse_s ~opt:"" Packages.parse_string "Architectures" par;
     component = Packages.parse_s ~opt:"" Packages.parse_string "Components" par;
+    notauto = Packages.parse_s ~opt:false Packages.parse_bool "NotAutomatic" par;
+    autoup = Packages.parse_s ~opt:false Packages.parse_bool "ButAutomaticUpgrades" par;
     description = Packages.parse_s ~opt:"" Packages.parse_string "Description" par;
     md5sums = [];
     sha1 = [];

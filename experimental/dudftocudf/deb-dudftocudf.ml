@@ -181,13 +181,31 @@ module AptPref = struct
   let assign_priority preferences info package =
     match get_priority preferences info package with
     |None ->
+        (* XXXXXXXXX *)
       begin match preferences.target_release,info with
-      |(Some _, None) | (None,_) ->
+      |(_, None) ->
           if package.Cudf.installed then 100 else 500
+      |(None, Some info) ->
+          let na = info.Debian.Release.notauto in
+          let up = info.Debian.Release.autoup in
+          let ins = package.Cudf.installed in
+          begin match na,up,ins with
+          |true,false,_ -> 1 
+          |true,true,_ -> 100 
+          |false,_,true -> 100 
+          |false,_,false -> 500
+          end
       |Some tr, Some info ->
-          if package.Cudf.installed then 100 else
-          if not (tr = info.Debian.Release.suite) then 500
-          else 990
+          let na = info.Debian.Release.notauto in
+          let up = info.Debian.Release.autoup in
+          let ins = package.Cudf.installed in
+          begin match na,up,ins with
+          |true,false,_ -> 1 
+          |true,true,_ -> 100 
+          |false,_,true -> 100 
+          |false,_,false when not (tr = info.Debian.Release.suite ) -> 500
+          |false,_,false -> 990
+          end
       end
     |Some p -> p
 
@@ -196,7 +214,7 @@ module AptPref = struct
     |l ->
         let (i,p) =
           List.fold_left (fun (a,p) pkg ->
-            let b = int_of_string (Cudf.lookup_package_property pkg "priority") in
+            let b = int_of_string (Cudf.lookup_package_property pkg "pin-priority") in
             if a >= b then (a,p) else (b,pkg)
           ) (min_int,Cudf.default_package) l
         in if i = min_int then fatal "Cannot find a max_priority" else p
@@ -243,23 +261,19 @@ let make_universe pl =
   let universe = 
     List.flatten (
       List.map (fun (_,fname,_,cdata) ->
-        info "aa %s" fname;
         let i = Str.search_backward (Str.regexp "_") fname (String.length fname) in
         let s = Str.string_before fname i in
-        info "vvv %s" s;
         let release = 
           let ch = IO.input_string cdata in
           let r = Debian.Release.parse_release_in ch in
           let _ = IO.close_in ch in
-          match r with Some r -> r | None -> Debian.Release.default_release
+          match r with Some r -> r | None -> assert false
         in
         let cl =
           List.find_all (fun (_,fname,_,_) ->
-            info "fff %s" fname;
             Str.string_match (Str.regexp ("^"^s^".*_Packages$")) fname 0
           ) packagelist
         in
-        info "2.2";
         List.map (fun (_,fname,_,cdata) ->
           fl := fname :: !fl ;
           (release,cdata)
@@ -267,16 +281,13 @@ let make_universe pl =
       ) releaselist
     )
   in
-  info "3";
   let without_release = 
     let l = 
       List.find_all (fun (_,fname,_,_) ->
-        info "4 %s" fname;
         not(List.mem fname !fl)
       ) packagelist
     in 
     List.map (fun (_,fname,_,cdata) ->
-      info "5 %s" fname;
       warning "Package List without Release. %s" fname;
       (Debian.Release.default_release,cdata)
     ) l
@@ -369,7 +380,7 @@ let main () =
     List.fold_left (fun acc (release,contents) ->
       Util.Progress.progress progressbar ;
       let ch = IO.input_string contents in
-      let l = Deb.parse_packages_in ~default_arch ~extras ch in
+      let l = Deb.input_raw_ch ~default_arch ~extras ch in
       let _ = IO.close_in ch in
       List.fold_left (fun s pkg -> 
         Hashtbl.add infoH (pkg.Deb.name,pkg.Deb.version) release ;
@@ -382,7 +393,7 @@ let main () =
   info "installed packages";
   let installed_packages =
     let ch = IO.input_string status in
-    let l = Deb.parse_packages_in ~filter:Deb.status_filter ch in
+    let l = Deb.input_raw_ch ~filter:Deb.status_filter ch in
     let _ = IO.close_in ch in
     l
   in
@@ -398,10 +409,14 @@ let main () =
   let pl =
     List.map (fun pkg ->
       Util.Progress.progress progressbar ;
-      let info = try Some(Hashtbl.find infoH (pkg.Deb.name,pkg.Deb.version)) with Not_found -> None in
+      let info =
+        try 
+          Some(Hashtbl.find infoH (pkg.Deb.name,pkg.Deb.version)) 
+        with Not_found -> None
+      in
       let cudfpkg = Debian.Debcudf.tocudf tables ~extras:extras_property pkg in
       let priority = AptPref.assign_priority preferences info cudfpkg in
-      let cudfpkg = add_extra ("priority", `Int priority) cudfpkg in
+      let cudfpkg = add_extra ("pin-priority", `Int priority) cudfpkg in
       cudfpkg
     ) l
   in
@@ -433,7 +448,11 @@ let main () =
             end
           in
           let number = Cudf.lookup_package_property pkg "number" in
-          (pkg.Cudf.package,Some(`Eq,Debian.Debcudf.get_cudf_version tables (pkg.Cudf.package,number)))
+          (pkg.Cudf.package,
+            Some(`Eq,
+              Debian.Debcudf.get_cudf_version tables (pkg.Cudf.package,number)
+            )
+          )
     in
     let request_id =
       if OptParse.Opt.is_set Options.problemid then OptParse.Opt.get Options.problemid
@@ -477,7 +496,7 @@ let main () =
     end else stdout
   in
   let preamble =
-    let p = ("priority",(`Int (Some 500))) in
+    let p = ("pin-priority",(`Int (Some 500))) in
     let l = List.map snd extras_property in
     CudfAdd.add_properties Debian.Debcudf.preamble (p::l)
   in

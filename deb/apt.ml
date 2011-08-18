@@ -111,7 +111,7 @@ let parse_request_apt s =
   if not (String.exists s "apt-get") then fatal "Not a valid apt-get command" ;
   let s = String.slice ~first:((String.find s "apt-get")) s in
   let suite = ref None in
-  (* XXX we parse a log of options, but we do not handle them ... *)
+  (* XXX we parse a lot of options, but we do not handle them ... *)
   let options = [
     ("-t", Arg.String (fun l -> suite := Some(l)), "");
     ("-s", Arg.Unit (fun _ -> ()), "");
@@ -142,7 +142,7 @@ let parse_request_aptitude s =
   if not (String.exists s "aptitude") then fatal "Not a valid aptitude command" ;
   let s = String.slice ~first:((String.find s "aptitude")) s in
   let suite = ref None in
-  (* XXX we parse a log of options, but we do not handle them ... *)
+  (* XXX we parse a lot of options, but we do not handle them ... *)
   let options = [
     ("-t", Arg.String (fun l -> suite := Some(l)), ""); (* default suite *)
     ("-s", Arg.Unit (fun _ -> ()), "");

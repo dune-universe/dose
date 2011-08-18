@@ -27,6 +27,7 @@ type package = {
   architecture : string;
   multiarch : string;
   essential : bool;
+  priority : string;
   source : (Format822.name * Format822.version option) ;
   depends : Format822.vpkgformula ;
   pre_depends : Format822.vpkgformula ;
@@ -38,7 +39,6 @@ type package = {
   replaces : Format822.vpkglist;
   provides : Format822.vpkglist;
   extras : (string * string) list;
-  priority : string;
 }
 
 let default_package = {
@@ -47,6 +47,7 @@ let default_package = {
   architecture = "";
   multiarch = "";
   essential = false;
+  priority = "";
   depends = [];
   source = ("",None);
   pre_depends = [];
@@ -58,7 +59,6 @@ let default_package = {
   replaces = [];
   provides = [];
   extras = [];
-  priority = "";
 }
 
 (* here the _loc is taken from the the caller and not from the parser *)
