@@ -401,8 +401,9 @@ let main () =
   info "union";
   let l = Deb.merge installed_packages (Deb.Set.elements all_packages) in
   let tables = Debian.Debcudf.init_tables l in
-  let add_extra (k,v) pkg =
-    { pkg with Cudf.pkg_extra = (k,v) :: pkg.Cudf.pkg_extra } in
+  let add_pin_priority v pkg =
+    let k = "pin-priority-"^(string_of_int v) in
+    { pkg with Cudf.pkg_extra = (k,`Int 1) :: pkg.Cudf.pkg_extra } in
 
   info "convert";
   Util.Progress.set_total progressbar (List.length l); 
@@ -416,7 +417,7 @@ let main () =
       in
       let cudfpkg = Debian.Debcudf.tocudf tables ~extras:extras_property pkg in
       let priority = AptPref.assign_priority preferences info cudfpkg in
-      let cudfpkg = add_extra ("pin-priority", `Int priority) cudfpkg in
+      let cudfpkg = add_pin_priority priority cudfpkg in
       cudfpkg
     ) l
   in
@@ -496,9 +497,12 @@ let main () =
     end else stdout
   in
   let preamble =
-    let p = ("pin-priority",(`Int (Some 500))) in
+    let p1   = ("pin-priority-1"  ,(`Int (Some 0))) in
+    let p100 = ("pin-priority-100",(`Int (Some 0))) in
+    let p500 = ("pin-priority-500",(`Int (Some 0))) in
+    let p990 = ("pin-priority-990",(`Int (Some 0))) in
     let l = List.map snd extras_property in
-    CudfAdd.add_properties Debian.Debcudf.preamble (p::l)
+    CudfAdd.add_properties Debian.Debcudf.preamble (p1::p100::p500::p990::l)
   in
   Cudf_printer.pp_cudf oc (preamble, universe, request)
 ;;
