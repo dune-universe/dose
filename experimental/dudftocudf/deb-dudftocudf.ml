@@ -401,7 +401,9 @@ let main () =
   info "union";
   let l = Deb.merge installed_packages (Deb.Set.elements all_packages) in
   let tables = Debian.Debcudf.init_tables l in
+  let priorities = ref [] in
   let add_pin_priority v pkg =
+    if not(List.mem v !priorities) then priorities := v :: !priorities ;
     let k = "pin-priority-"^(string_of_int v) in
     { pkg with Cudf.pkg_extra = (k,`Int 1) :: pkg.Cudf.pkg_extra } in
 
@@ -497,12 +499,11 @@ let main () =
     end else stdout
   in
   let preamble =
-    let p1   = ("pin-priority-1"  ,(`Int (Some 0))) in
-    let p100 = ("pin-priority-100",(`Int (Some 0))) in
-    let p500 = ("pin-priority-500",(`Int (Some 0))) in
-    let p990 = ("pin-priority-990",(`Int (Some 0))) in
     let l = List.map snd extras_property in
-    CudfAdd.add_properties Debian.Debcudf.preamble (p1::p100::p500::p990::l)
+    CudfAdd.add_properties Debian.Debcudf.preamble (
+    List.fold_left (fun l' v -> 
+      ("pin-priority-"^(string_of_int v),(`Int (Some 0)))::l'
+    ) l !priorities)
   in
   Cudf_printer.pp_cudf oc (preamble, universe, request)
 ;;
