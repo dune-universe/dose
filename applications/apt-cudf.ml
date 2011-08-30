@@ -336,15 +336,14 @@ let main () =
         end
         |true,true -> ()
       ) diff;
-      if Hashtbl.length diff = 0 then begin
+
+      (* always specify version of the packages in the request *)
         List.iter (fun (n,_,_) ->
           match Cudf.get_installed soluniv n with
           |[pkg] -> 
             Format.printf "Install: %a@." pp_pkg (CudfAdd.Cudf_set.singleton pkg,univ)
           |_ -> ()
-        ) request.Edsp.install
-      end ;
-
+        ) request.Edsp.install;
 
       if OptParse.Opt.get Options.explain then begin
         let (i,u,d,r) = CudfDiff.summary universe diff in
