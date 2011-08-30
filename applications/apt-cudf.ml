@@ -17,10 +17,10 @@ open Common
 open Debian
 module Boilerplate = BoilerplateNoRpm
 
-let info fmt = Util.make_info "apt-get backend" fmt
-let warning fmt = Util.make_warning "apt-get backend" fmt
-let debug fmt = Util.make_debug "apt-get backend" fmt
-let fatal fmt = Util.make_fatal "apt-get backend" fmt
+let info fmt = Util.make_info "apt-cudf backend" fmt
+let warning fmt = Util.make_warning "apt-cudf backend" fmt
+let debug fmt = Util.make_debug "apt-cudf backend" fmt
+let fatal fmt = Util.make_fatal "apt-cudf backend" fmt
 
 module Options = struct
   open OptParse
@@ -184,6 +184,7 @@ let mktmpdir tmp_pattern =
   ignore (Unix.close_process_in ic);
   path
 
+(* XXX this function scares me... what if I manage to create a path = "/" *)
 let rmtmpdir path =
   if String.exists path "apt-cudf" then (* safe guard, sort of *)
     ignore (Unix.system (Printf.sprintf "rm -rf %s" path))
@@ -313,7 +314,8 @@ let main () =
           sol
         else []
       in
-      let diff = CudfDiff.diff universe (Cudf.load_universe sol) in
+      let soluniv = Cudf.load_universe sol in
+      let diff = CudfDiff.diff universe soluniv in
       let empty = ref true in
       Hashtbl.iter (fun pkgname s ->
         let inst = s.CudfDiff.installed in
@@ -334,6 +336,15 @@ let main () =
         end
         |true,true -> ()
       ) diff;
+      if Hashtbl.length diff = 0 then begin
+        List.iter (fun (n,_,_) ->
+          match Cudf.get_installed soluniv n with
+          |[pkg] -> 
+            Format.printf "Install: %a@." pp_pkg (CudfAdd.Cudf_set.singleton pkg,univ)
+          |_ -> ()
+        ) request.Edsp.install
+      end ;
+
 
       if OptParse.Opt.get Options.explain then begin
         let (i,u,d,r) = CudfDiff.summary universe diff in
