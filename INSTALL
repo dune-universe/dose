@@ -37,7 +37,7 @@ make
 --with-bz2
 --with-oUnit
 --with-curl
---with-experimental
+--with-experimental (not working at the moment?)
 
 libcudf is included in the source tree of dose3 available by svn but
 not in the dose3 release tarball. By default dose3 uses the system
@@ -46,11 +46,9 @@ tree you can specify --without-libcudf as configure option. If using
 an independently installed version of libcudf you'll need version >=
 0.5.99.
 
---with-experimental configure the enviroment to build experimental 
-programs.
 
 Example:
-./configure --without-libcudf --with-xml --with-curl --with-ocamlgraph --with-zip --with-oUnit --with-bz2 --with-rpm4 --with-experimental
+./configure --without-libcudf --with-xml --with-curl --with-ocamlgraph --with-zip --with-oUnit --with-bz2 --with-rpm4 
 
 Compiling applications
 ----------------------
@@ -63,6 +61,12 @@ $ocamlbuild $app.native
 Some application might benefit from a fine-tune of the ocaml garbage collector.
 You migth try to set the following values before running your application:
 OCAMLRUNPARAM=s=4M,i=32M,o=150
+
+Compiling experimental applications
+-----------------------------------
+From the dose top level directory, for instance to compile outdated.ml:
+
+$ocamlbuild -use-ocamlfind experimental/outdated.native
 
 Install
 -------
