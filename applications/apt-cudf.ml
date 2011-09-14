@@ -58,13 +58,23 @@ let print_progress ?i msg =
 ;;
 
 let make_request tables universe request = 
+(*** FIXME: remove after testing 
   let constr cs = 
     match CudfAdd.cudfop cs with
     |None -> None
     |Some (c,v) -> Some (c,Debian.Debcudf.get_cudf_version tables ("",v))
   in
+ *)
   (*** XXX a here is the option architecture *)
-  let select_packages l = List.map (fun (n,a,c) -> (n,constr c)) l in
+  let get_candidate n = (*** FIXME: should capture errors here, when package not found! *)
+    let cl = Cudf.lookup_packages universe n in 
+    List.find 
+      (fun pkg -> 
+	try (Cudf.lookup_package_property pkg "apt-candidate") = "true"
+	with Not_found -> false) cl
+  in	
+  (* always specify the version of the packages on the request *)
+  let select_packages l = List.map (fun (n,a,c) -> (n,Some(`Eq,(get_candidate n).Cudf.version))) l in
   if request.Edsp.upgrade || request.Edsp.distupgrade then
     let to_upgrade = function
       |[] ->
@@ -336,14 +346,6 @@ let main () =
         end
         |true,true -> ()
       ) diff;
-
-      (* always specify version of the packages in the request *)
-        List.iter (fun (n,_,_) ->
-          match Cudf.get_installed soluniv n with
-          |[pkg] -> 
-            Format.printf "Install: %a@." pp_pkg (CudfAdd.Cudf_set.singleton pkg,univ)
-          |_ -> ()
-        ) request.Edsp.install;
 
       if OptParse.Opt.get Options.explain then begin
         let (i,u,d,r) = CudfDiff.summary universe diff in
