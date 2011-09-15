@@ -55,8 +55,8 @@ Compiling applications
 In order to compile the a selection of applications do "make". To
 compile specific application
 
-$cd applications/
-$ocamlbuild $app.native
+$ocamlbuild -use-ocamlfind applications/$app.native
+$ocamlbuild -use-ocamlfind experimental/$app.native
 
 Some application might benefit from a fine-tune of the ocaml garbage collector.
 You migth try to set the following values before running your application:
