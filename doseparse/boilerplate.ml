@@ -336,29 +336,3 @@ let load_universe ?default_arch ?(extras=[]) uris =
   let u = (Cudf.load_universe l, f, t) in
   Util.Timer.stop timer u
 ;;
-
-(*
-(* XXX to refactor in Borilerplate.ml *)
-let parse uri =
-  Printf.eprintf "Parsing and normalizing...%!" ;
-  let timer = Common.Util.Timer.create "Parsing and normalizing" in
-  Common.Util.Timer.start timer;
-  let pkglist =
-    match Input.parse_uri uri with
-    |("deb",(_,_,_,_,file),_) -> begin
-      let l = Debian.Packages.input_raw [file] in
-      let tables = Debian.Debcudf.init_tables l in
-      List.map (Debian.Debcudf.tocudf tables) l
-    end
-    |("cudf",(_,_,_,_,file),_) -> begin
-      let _, l, _ = Boilerplate.parse_cudf file in l
-    end
-    |_ -> failwith "Not supported"
-  in
-  ignore(Common.Util.Timer.stop timer ());
-  Printf.eprintf "done\n%!" ;
-  pkglist
-;;
-*)
-
-

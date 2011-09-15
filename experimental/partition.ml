@@ -17,16 +17,22 @@ open Algo
 
 type res = Yes | No | Unknown
 
-module Options =
-struct
+module Boilerplate = BoilerplateNoRpm
+
+let info fmt = Util.make_info "edsp-cudf" fmt
+let warning fmt = Util.make_warning "edsp-cudf" fmt
+let debug fmt = Util.make_debug "edsp-cudf" fmt
+let fatal fmt = Util.make_fatal "edsp-cudf" fmt
+
+module Options = struct
   open OptParse
-  let debug = StdOpt.store_true ()
 
   let description = "Partition the dependency graph in clusters of coinstallable packages"
-  let options = OptParser.make ~description:description ()
+  let options = OptParser.make ~description
+  include Boilerplate.MakeOptions(struct let options = options end)
 
   open OptParser
-  add options ~long_name:"debug" ~help:"Print debug information" debug;
+
 end
 
 (* XXX to refactor in Borilerplate.ml *)
@@ -36,12 +42,12 @@ let parse uri =
   Common.Util.Timer.start timer;
   let pkglist =
     match Input.parse_uri uri with
-    |("deb",(_,_,_,_,file),_) -> begin
+    |(Url.Deb,(_,_,_,_,file),_) -> begin
       let l = Debian.Packages.input_raw [file] in
       let tables = Debian.Debcudf.init_tables l in
       List.map (Debian.Debcudf.tocudf tables) l
     end
-    |("cudf",(_,_,_,_,file),_) -> begin
+    |(Url.Cudf,(_,_,_,_,file),_) -> begin
       let _, l, _ = Boilerplate.parse_cudf file in l
     end
     |_ -> failwith "Not supported"
@@ -446,9 +452,8 @@ let buddy_check solver mdf cg a p ll =
 let cmp l1 l2 = (List.length l2) - (List.length l1)
 
 let main () =
-  at_exit (fun () -> Common.Util.dump Format.err_formatter);
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  if OptParse.Opt.get Options.debug then Boilerplate.enable_debug () ;
+  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Buddy.bdd_init ();
   let pkglist = match posargs with [uri] -> parse uri | _ -> assert false in
   let mdf = Mdf.load_from_list pkglist in
@@ -476,12 +481,12 @@ let main () =
       Printf.printf
         "(%d or %d) package %s (# components %d) (# cone %d) %!\n"
         !c (List.length pt) 
-        (CudfAdd.print_package (maps.CudfAdd.map#inttovar p)) (List.length ll)
+        (CudfAdd.string_of_package (maps.CudfAdd.map#inttovar p)) (List.length ll)
         (List.length (Depsolver_int.dependency_closure mdf [p]))
       ;
       if buddy_check solver mdf cg a p ll then begin
         a.(p) <- Yes ;
-        Printf.printf "%s is always installable\n%!" (CudfAdd.print_package (maps.CudfAdd.map#inttovar p))
+        Printf.printf "%s is always installable\n%!" (CudfAdd.string_of_package (maps.CudfAdd.map#inttovar p))
       end
       else begin
         a.(p) <- No;
