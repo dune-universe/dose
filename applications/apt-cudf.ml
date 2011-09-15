@@ -58,23 +58,22 @@ let print_progress ?i msg =
 ;;
 
 let make_request tables universe request = 
-(*** FIXME: remove after testing 
-  let constr cs = 
-    match CudfAdd.cudfop cs with
-    |None -> None
-    |Some (c,v) -> Some (c,Debian.Debcudf.get_cudf_version tables ("",v))
-  in
- *)
   (*** XXX a here is the option architecture *)
-  let get_candidate n = (*** FIXME: should capture errors here, when package not found! *)
-    let cl = Cudf.lookup_packages universe n in 
-    List.find 
-      (fun pkg -> 
-	try (Cudf.lookup_package_property pkg "apt-candidate") = "true"
-	with Not_found -> false) cl
-  in	
   (* always specify the version of the packages on the request *)
-  let select_packages l = List.map (fun (n,a,c) -> (n,Some(`Eq,(get_candidate n).Cudf.version))) l in
+  let select_packages l = 
+    List.map (fun (n,a,c) -> 
+      let candidate = 
+        try
+          List.find (fun pkg -> 
+            try (Cudf.lookup_package_property pkg "apt-candidate") = "true"
+            with Not_found -> false
+          ) (Cudf.lookup_packages universe n)
+        with Not_found -> 
+          print_error "Package %s does not have a suitable candidate" n
+      in
+      (n,Some(`Eq,candidate.Cudf.version))
+    ) l 
+  in
   if request.Edsp.upgrade || request.Edsp.distupgrade then
     let to_upgrade = function
       |[] ->
@@ -130,7 +129,6 @@ let pp_pkg_list_tran fmt (l,univ) =
   pp_pkg_list fmt (List.map snd l,univ)
 ;;
 
-
 (* TODO: add a configuration file to define trendy and paranoid ? *)
 let choose_criteria ?(criteria=None) request = 
   let paranoid = "-removed,-changed" in
@@ -162,17 +160,17 @@ let parse_solver_spec filename =
     done;
     close_in ic
     with
-      | Sys_error _ -> fatal "cannot parse CUDF solver specification %s" filename
+      | Sys_error _ -> print_error "cannot parse CUDF solver specification %s" filename
       | End_of_file -> ()
       | Scanf.Scan_failure err ->
-        fatal "parse error while reading CUDF solver specification %s: %s"
+        print_error "parse error while reading CUDF solver specification %s: %s"
 	  filename err
   end;
   if !exec = "" || !version = "" then
-    fatal "incomplete CUDF solver specification %s" filename;
+    print_error "incomplete CUDF solver specification %s" filename;
   if not (String.exists !exec "$in" && String.exists !exec "$out"
           && String.exists !exec "$pref") then
-    fatal
+    print_error
       "Incomplete solver specification %s: one or more of $in, $out, $pref is missing in exec line"
       filename;
   (!exec,!version)
