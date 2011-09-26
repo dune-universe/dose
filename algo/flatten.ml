@@ -1,3 +1,7 @@
+(* Copyright (C) 2005-2011 Jerome Vouillon
+ * GPL 2 
+ * code taken from http://coinst.irill.org/
+ * *)
 
 open ExtLib
 open Common

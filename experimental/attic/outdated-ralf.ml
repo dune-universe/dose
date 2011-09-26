@@ -17,6 +17,7 @@
 
 open Debian
 open Common
+open Algo
 open Diagnostic
 
 let debug fmt = Util.make_debug "" fmt
@@ -24,6 +25,8 @@ let info fmt = Util.make_info "" fmt
 let warning fmt = Util.make_warning "" fmt
 
 let debug_switch = false
+
+module Boilerplate = BoilerplateNoRpm
 
 module Options = struct
   open OptParse
@@ -670,10 +673,10 @@ let main () =
   
   begin
     if OptParse.Opt.is_set Options.cudf_output then
-      let ch=open_out (OptParse.Opt.get Options.cudf_output)
+      let ch = open_out (OptParse.Opt.get Options.cudf_output)
       in begin
 	output_string ch "preamble: \nproperty: number: string\n\n";
-	Cudf_printer.pp_universe (Format.formatter_of_out_channel ch) universe;
+        Cudf_printer.pp_packages ch (List.sort compare completed_package_list);
 	close_out ch
       end
   end;

@@ -215,7 +215,7 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
   in
 
   if dump then
-    Cudf_printer.pp_packages stdout pkglist;
+    Cudf_printer.pp_packages stdout (List.sort pkglist);
 
   let universe = Cudf.load_universe pkglist in
 
