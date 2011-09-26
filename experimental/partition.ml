@@ -316,6 +316,8 @@ let conflict_table cc =
 ;;
 
 (* associate a list of connected components to each package *)
+(* we add only packages that are in the reverse dependencies of
+ * a conflict. all the others are not interesting for this analysis *)
 let package_table a mdf reverse cg ct =
   let h = Hashtbl.create (UG.nb_vertex cg) in
   let rev_clo pid = Depsolver_int.reverse_dependency_closure reverse [pid] in
@@ -471,7 +473,6 @@ let main () =
   let a = Array.make (Array.length index) Unknown in
   let pt = package_table a mdf reverse_t cg ct in
   (* XXX mark all packages with no conflicts to Yes *)
-  let hard = ref [] in
   let c = ref 0 in
   List.iter (function 
     |(p,_) when a.(p) = Yes -> incr c;
@@ -479,14 +480,15 @@ let main () =
       let ll = List.unique (build_cc_list mdf pt a p) in 
       incr c;
       Printf.printf
-        "(%d or %d) package %s (# components %d) (# cone %d) %!\n"
+        "(%d of %d) package %s (# components %d) (# cone %d) %!\n"
         !c (List.length pt) 
         (CudfAdd.string_of_package (maps.CudfAdd.map#inttovar p)) (List.length ll)
         (List.length (Depsolver_int.dependency_closure mdf [p]))
       ;
       if buddy_check solver mdf cg a p ll then begin
         a.(p) <- Yes ;
-        Printf.printf "%s is always installable\n%!" (CudfAdd.string_of_package (maps.CudfAdd.map#inttovar p))
+        Printf.printf "%s is always installable\n%!" 
+          (CudfAdd.string_of_package (maps.CudfAdd.map#inttovar p))
       end
       else begin
         a.(p) <- No;
@@ -496,6 +498,8 @@ let main () =
   ) pt 
   ;
   let buddy = Array.fold_left (fun acc v -> if v = Yes then acc + 1 else acc) 0 a in
+  let unknown = Array.fold_left (fun acc v -> if v = Unknown then acc + 1 else acc) 0 a in
+  let notbuddy = Array.fold_left (fun acc v -> if v = No then acc + 1 else acc) 0 a in
   let all = 
     let l = ref S.empty in 
     Array.iteri (fun i v -> if v = Yes then l := S.add i !l) a ; !l  
@@ -506,11 +510,10 @@ let main () =
   else 
     print_endline "error"; 
   
-  Printf.printf "Total : %d , hard : %d , elim : %d , buddy : %d\n%!" 
-  (List.length pt) 
-  (List.length !hard) 
-  ((List.length pt) - (List.length !hard) - buddy) 
-  buddy
+  Printf.printf "Total : %d , not buddy : %d - buddy : %d\n%!" 
+  (List.length pkglist)
+  notbuddy
+  ( buddy + unknown )
 ;;
 
 main () ;;

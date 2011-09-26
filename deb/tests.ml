@@ -206,7 +206,7 @@ let test_evolution =
       let assert_delay = assert_delay_stub [ ] in
       let constr = [(`Gt,"76")] in
       let vl = ["3.4";"76"] in
-      let discr = Evolution.discriminant vl constr in
+      let discr = Evolution.discriminant evalsel vl constr in
       List.iter (fun (target,equiv) -> 
         Printf.eprintf "(3) %s\n%!" (Evolution.string_of_range target);
         List.iter (fun k ->

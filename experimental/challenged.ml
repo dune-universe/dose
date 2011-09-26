@@ -157,8 +157,8 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
       ) ([],[]) cluster
     in
     version_acc := versionlist @ !version_acc;
-    Hashtbl.add worktable (sn,version) (cluster,List.unique
-    versionlist,List.unique constr)
+    Hashtbl.add worktable (sn,version) 
+    (cluster,List.unique versionlist,List.unique constr)
     ) l
   in
 
@@ -206,23 +206,31 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
       Format.fprintf fmt "@]@,";
     end;
     Format.fprintf fmt "@[<v 1>analysis:@,";
-    List.iter (fun (target,equiv) ->
-      let migrationlist = Debian.Evolution.migrate cluster target in
-      let future = upgrade tables universe migrationlist in
+    List.iter (function 
+      (* remove this one to show results that are equivalent to do nothing *)
+      | (target,[]) when target = (`Eq sv) -> ()
+      | (target,equiv) when List.mem (`Eq sv) (target::equiv) -> ()
+      | (target,equiv) ->
+          let (target,equiv) = 
+            if target = (`Eq sv)
+            then (List.hd equiv,target::(List.tl equiv))
+            else (target,equiv)
+          in
+          let migrationlist = Debian.Evolution.migrate cluster target in
+          let future = upgrade tables universe migrationlist in
 
-      Format.fprintf fmt "target: %s @," (Debian.Evolution.string_of_range target);
-      Format.fprintf fmt "equiv: %s@," (String.concat " , " (List.map (Debian.Evolution.string_of_range) equiv));
+          Format.fprintf fmt "target: %s @," (Debian.Evolution.string_of_range target);
+          Format.fprintf fmt "equiv: %s@," (String.concat " , " (List.map (Debian.Evolution.string_of_range) equiv));
 
-      let callback d = 
-        if verbose then Diagnostic.fprintf ~failure:true ~explain:true fmt d 
-      in
-      if verbose then
-        Format.fprintf fmt "distcheck: @,";
+          let callback d = 
+            if verbose then Diagnostic.fprintf ~failure:true ~explain:true fmt d 
+          in
+          if verbose then
+            Format.fprintf fmt "distcheck: @,";
 
-      let i = Depsolver.univcheck ~callback future in
-      Format.fprintf fmt "broken: %d@," i;
-      Format.fprintf fmt "@,";
-      
+          let i = Depsolver.univcheck ~callback future in
+          Format.fprintf fmt "broken: %d@," i;
+          Format.fprintf fmt "@,";
     ) discr;
     Format.fprintf fmt "@]@]@,---@.";
   ) worktable ;
