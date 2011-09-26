@@ -14,7 +14,6 @@ open ExtLib
 open Debian
 open Common
 open Algo
-open Diagnostic
 
 module Options = struct
   open OptParse

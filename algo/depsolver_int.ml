@@ -118,7 +118,6 @@ let init_solver ?(buffer=false) ?(proxy_size=0) ?closure index =
   (* add conflicts *)
   let exec_conflicts map constraints pkg_id1 pkg =
     try
-      let conjunction = pkg.Mdf.conflicts in
       let x = S.lit_of_var (map#vartoint pkg_id1) false in 
       List.iter (fun (_, pkg_id2) ->
         if pkg_id1 <> pkg_id2 then begin
@@ -126,13 +125,13 @@ let init_solver ?(buffer=false) ?(proxy_size=0) ?closure index =
             incr num_conflicts;
             S.add_rule constraints [|x; y|] [Diagnostic_int.Conflict(pkg_id1, pkg_id2)]
         end
-      ) conjunction
+      ) pkg.Mdf.conflicts
     with Not_found -> begin
       (* ignore conflicts that are not in the closure.
        * if nobody depends on a conflict package, then it is irrelevant.
        * This requires a leap of faith in the user ability to build an
        * appropriate closure. If the closure is wrong, you are on your own *)
-      debug "init_solver : Conflict for package %s not in the universe" pkg.Mdf.pkg.Cudf.package;
+      debug "init_solver : Conflict of package %s not in the universe" pkg.Mdf.pkg.Cudf.package;
       ()
     end
   in

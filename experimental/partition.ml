@@ -418,7 +418,7 @@ let buddy_check solver mdf cg a p ll =
       ) l ;
   *)
       let gl = List.map (fun xl -> (filter cg !xl)) l in
-      if List.exists (fun g -> UG.nb_vertex g > 70) gl then begin
+(*      if List.exists (fun g -> UG.nb_vertex g > 70) gl then begin
         List.iteri (fun i g ->
           let outch = open_out (Printf.sprintf "%d%d.dot" p i) in
           (* D.output_graph outch g ; *)
@@ -428,7 +428,7 @@ let buddy_check solver mdf cg a p ll =
         ) gl ; 
         (* (hard := (p,ll) :: !hard ; *)  false
       end
-      else begin
+      else i*) begin
         let sgl = List.sort ~cmp:(fun c1 c2 -> (UG.nb_vertex c1) - (UG.nb_vertex c2)) gl in
         let misl =
           List.map (fun g ->
@@ -496,10 +496,21 @@ let main () =
   ) pt 
   ;
   let buddy = Array.fold_left (fun acc v -> if v = Yes then acc + 1 else acc) 0 a in
-  let all = let l = ref S.empty in Array.iteri (fun i v -> if v = Yes then l := S.add i !l) a ; !l  in
-  (if install solver a [all] then print_endline "Success" else print_endline "error" ); 
+  let all = 
+    let l = ref S.empty in 
+    Array.iteri (fun i v -> if v = Yes then l := S.add i !l) a ; !l  
+  in
+  
+  if install solver a [all] then 
+    print_endline "Success" 
+  else 
+    print_endline "error"; 
+  
   Printf.printf "Total : %d , hard : %d , elim : %d , buddy : %d\n%!" 
-  (List.length pt) (List.length !hard) ((List.length pt) - (List.length !hard) - buddy) buddy
+  (List.length pt) 
+  (List.length !hard) 
+  ((List.length pt) - (List.length !hard) - buddy) 
+  buddy
 ;;
 
 main () ;;
