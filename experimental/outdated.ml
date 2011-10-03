@@ -55,7 +55,7 @@ module Options = struct
 end
 
 let sync (sn,sv,v) p =
-  let cn = "src/"^sn^"/"^sv in
+  let cn = CudfAdd.encode ("src/"^sn^"/"^sv) in
   {p with
     Cudf.provides = (cn, Some (`Eq, v))::p.Cudf.provides;
     Cudf.conflicts = (cn, Some (`Neq, v))::p.Cudf.conflicts;
@@ -68,7 +68,7 @@ let dummy pkg number version =
    version = version;
    conflicts = pkg.Cudf.conflicts;
    provides = pkg.Cudf.provides;
-   pkg_extra = [("number",`String number)]
+   pkg_extra = [("number",`String number);("architecture",`String "dummy")]
   }
 ;;
 
@@ -215,8 +215,12 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
   in
 
   if dump then
-    Cudf_printer.pp_packages stdout (List.sort pkglist);
-
+    begin
+      Cudf_printer.pp_preamble stdout Debian.Debcudf.preamble;
+      print_newline ();
+      Cudf_printer.pp_packages stdout (List.sort pkglist);
+    end;
+      
   let universe = Cudf.load_universe pkglist in
 
   Hashtbl.clear worktable;
