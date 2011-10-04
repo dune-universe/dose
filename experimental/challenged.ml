@@ -194,17 +194,22 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
     Util.Progress.progress predbar;
     let discr = Debian.Evolution.discriminant (evalsel getv) vl constr in
     Format.fprintf fmt "@[<v 1>source: %s %s@," sn sv;
-    if verbose then begin
-      Format.fprintf fmt "@[<v 1>clusters:@,";
-      List.iter (fun pkg ->
-        let (pn,pv) = (pkg.Debian.Packages.name, getv pkg.Debian.Packages.version) in
-        let p = Cudf.lookup_package universe (pn,pv) in
-        let o = IO.output_string () in
-        Cudf_printer.pp_io_package o p;
-        Format.fprintf fmt "%s@," (IO.close_out o)
-      ) cluster;
-      Format.fprintf fmt "@]@,";
+    (*
+    if false then begin
+      let pp fmt pkg = 
+        let pp_io_property fmt (n, s) = Format.fprintf fmt "%s: %s@," n s in
+        Cudf_printer.pp_package_gen pp_io_property fmt pkg
+      in
+      let pp_list = Diagnostic.pp_list pp in
+      let cudf_cluster = 
+        List.map (fun pkg -> 
+          let (pn,pv) = (pkg.Debian.Packages.name, getv pkg.Debian.Packages.version) in
+          Cudf.lookup_package universe (pn,pv) 
+        ) cluster
+      in
+      Format.fprintf fmt "@[<v 1>clusters:@,%a@]@," pp_list cudf_cluster
     end;
+    *)
     Format.fprintf fmt "@[<v 1>analysis:@,";
     List.iter (function 
       (* remove this one to show results that are equivalent to do nothing *)
@@ -233,6 +238,7 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
           Format.fprintf fmt "@,";
     ) discr;
     Format.fprintf fmt "@]@]@,---@.";
+    Format.print_flush ();
   ) worktable ;
   Format.fprintf fmt "@]@.";
 

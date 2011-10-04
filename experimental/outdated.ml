@@ -185,15 +185,6 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
       CudfAdd.to_set (
         Hashtbl.fold (fun (sn,version) (cluster,vl,constr) acc0 ->
           let discr = Debian.Evolution.discriminant (evalsel getv) vl constr in
-          (*
-          debug "cluster: %s %s\n" sn version;
-          debug "all version: %s\n" (String.concat "," vl);
-          List.iter (fun (target,equiv) ->
-            debug "target: %s\n" (Debian.Evolution.string_of_range target);
-            debug "equivs: %s\n" (String.concat ";" (List.map Debian.Evolution.string_of_range equiv));
-          ) discr;
-          debug "\n";
-          *)
           let sync_index = ref 1 in
           let acc0 = 
             (* by assumption all packages in a cluster are syncronized *)
