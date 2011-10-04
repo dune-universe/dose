@@ -214,12 +214,11 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
     in CudfAdd.Cudf_set.elements s
   in
 
-  if dump then
-    begin
-      Cudf_printer.pp_preamble stdout Debian.Debcudf.preamble;
-      print_newline ();
-      Cudf_printer.pp_packages stdout (List.sort pkglist);
-    end;
+  if dump then begin
+    Cudf_printer.pp_preamble stdout Debian.Debcudf.preamble;
+    print_newline ();
+    Cudf_printer.pp_packages stdout (List.sort pkglist);
+  end;
       
   let universe = Cudf.load_universe pkglist in
 
@@ -228,12 +227,13 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
 
   let pp pkg =
     let v = 
-      if (pkg.Cudf.version mod 2) = 1 then
-        Debian.Debcudf.get_real_version tables 
-        (pkg.Cudf.package,pkg.Cudf.version)
-      else
-        Debian.Debcudf.get_real_version tables 
-        (pkg.Cudf.package,pkg.Cudf.version - 1)
+      try Cudf.lookup_package_property pkg "number"
+      with Not_found ->
+        if (pkg.Cudf.version mod 2) = 1 then
+          Debian.Debcudf.get_real_version tables 
+          (pkg.Cudf.package,pkg.Cudf.version)
+        else
+          fatal "Real package without Debian Version"
     in
     let l =
       List.filter_map (fun k ->
