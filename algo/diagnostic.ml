@@ -147,7 +147,7 @@ let rec pp_list pp fmt = function
 
 let create_pathlist root deps =
   let dl = List.map (function Dependency x -> x |_ -> assert false) deps in
-  build_paths dl root
+  build_paths (List.unique dl) root
 
 let pp_dependencies pp fmt pathlist =
   let rec aux fmt = function

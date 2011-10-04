@@ -3,11 +3,6 @@
   a small release tarball with a restricted number of unit tests) 
   Wed Jun 30 2010 Pietro Abate <pietro.abate@pps.jussieu.fr>
 
-- fix ocamlbuild to imply -DHASRPM only when using c_use_rpm in _tags
-  and remove -I rpm when building debian binaries / -I deb when building
-  rpm binaries
-  Thu Jun 17 2010 Pietro Abate <pietro.abate@pps.jussieu.fr>
-
 - fix common/EdosSolver documentation. For some reason only part of it is
   actually generated
   Thu Jun 17 2010 Pietro Abate <pietro.abate@pps.jussieu.fr>
@@ -44,3 +39,10 @@
 - implement a debdistcheck that builds the sat problem directly from 
   debian Packages without passing through cudf and friends
 ** WONTFIX
+
+- fix ocamlbuild to imply -DHASRPM only when using c_use_rpm in _tags
+  and remove -I rpm when building debian binaries / -I deb when building
+  rpm binaries
+  Thu Jun 17 2010 Pietro Abate <pietro.abate@pps.jussieu.fr>
+*** DONE !
+
