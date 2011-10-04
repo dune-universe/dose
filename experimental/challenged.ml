@@ -188,6 +188,24 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
 
   (* computing *)
   let fmt = Format.std_formatter in
+  let pp pkg =
+    let v =
+      try Cudf.lookup_package_property pkg "number"
+      with Not_found ->
+        if (pkg.Cudf.version mod 2) = 1 then
+          Debian.Debcudf.get_real_version tables
+          (pkg.Cudf.package,pkg.Cudf.version)
+        else
+          fatal "Real package without Debian Version"
+    in
+    let l =
+      List.filter_map (fun k ->
+        try Some(k,Cudf.lookup_package_property pkg k)
+        with Not_found -> None
+      ) ["architecture";"source";"sourceversion";"equivs"]
+    in (pkg.Cudf.package,v,l)
+  in
+
   Format.fprintf fmt "@[<v 1>report:@,";
   Format.fprintf fmt "broken packages reference: %d@," brokenref;
   Hashtbl.iter (fun (sn,sv) (cluster,vl,constr) ->
@@ -228,7 +246,7 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
           Format.fprintf fmt "equiv: %s@," (String.concat " , " (List.map (Debian.Evolution.string_of_range) equiv));
 
           let callback d = 
-            if verbose then Diagnostic.fprintf ~failure:true ~explain:true fmt d 
+            if verbose then Diagnostic.fprintf ~pp ~failure:true ~explain:true fmt d 
           in
           if verbose then
             Format.fprintf fmt "distcheck: @,";
