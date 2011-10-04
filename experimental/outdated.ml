@@ -62,13 +62,18 @@ let sync (sn,sv,v) p =
   }
 ;;
 
-let dummy pkg number version =
+let dummy pkg number equivs version =
   {Cudf.default_package with
    Cudf.package = pkg.Cudf.package;
    version = version;
-   conflicts = pkg.Cudf.conflicts;
+   (* conflicts = pkg.Cudf.conflicts; *)
+   conflicts = [(pkg.Cudf.package, None)];
    provides = pkg.Cudf.provides;
-   pkg_extra = [("number",`String number);("architecture",`String "dummy")]
+   pkg_extra = [
+     ("number",`String number);
+     ("architecture",`String "dummy");
+     ("equivs", `String (String.concat "," equivs))
+   ]
   }
 ;;
 
@@ -180,6 +185,15 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
       CudfAdd.to_set (
         Hashtbl.fold (fun (sn,version) (cluster,vl,constr) acc0 ->
           let discr = Debian.Evolution.discriminant (evalsel getv) vl constr in
+          (*
+          debug "cluster: %s %s\n" sn version;
+          debug "all version: %s\n" (String.concat "," vl);
+          List.iter (fun (target,equiv) ->
+            debug "target: %s\n" (Debian.Evolution.string_of_range target);
+            debug "equivs: %s\n" (String.concat ";" (List.map Debian.Evolution.string_of_range equiv));
+          ) discr;
+          debug "\n";
+          *)
           let sync_index = ref 1 in
           let acc0 = 
             (* by assumption all packages in a cluster are syncronized *)
@@ -198,12 +212,14 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
                 let target = Debian.Evolution.align pkg.Debian.Packages.version target in
                 let newv = version_of_target getv target in
                 let number = Debian.Evolution.string_of_range target in
+                let equivs = List.map Debian.Evolution.string_of_range equiv in
 
-                if newv > pv then begin
+                if (newv > pv) || 
+                  (List.mem (`Eq pkg.Debian.Packages.version) equiv) then begin
                   if List.length cluster > 1 then
-                    (sync (sn,version,!sync_index) (dummy p number newv))::acc3
+                    (sync (sn,version,!sync_index) (dummy p number equivs newv))::acc3
                   else
-                    (dummy p number newv)::acc3
+                    (dummy p number equivs newv)::acc3
                 end else acc3
 
               ) acc2 cluster
@@ -239,7 +255,7 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
       List.filter_map (fun k ->
         try Some(k,Cudf.lookup_package_property pkg k)
         with Not_found -> None
-      ) ["architecture";"source";"sourceversion"]
+      ) ["architecture";"source";"sourceversion";"equivs"]
     in (pkg.Cudf.package,v,l)
   in
 
