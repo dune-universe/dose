@@ -158,7 +158,10 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
    * I create a package with version 1 and I put it in a
    * cluster by itself *)
   Hashtbl.iter (fun name constr -> match (name,constr) with
+    (* we ignore all real packages with an associated list of constraints *)
     |(name,h::t) when (Hashtbl.mem realpackages name) -> ()
+    (* we create a dummy package for each real package with no constraints
+     * and for all package names not associated to a real package *)
     |(name,_) ->
         let vl = Debian.Evolution.all_versions constr in
         let pkg = {
