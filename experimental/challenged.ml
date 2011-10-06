@@ -240,7 +240,8 @@ let challenged
       List.map (fun (c,v) -> Printf.sprintf "%s" v) constr
       )
     );
-    let discr = Debian.Evolution.discriminant (evalsel getv) vl constr in
+    let discr = Debian.Evolution.discriminant ~bottom:true (evalsel getv) vl constr in
+    debug "Discriminants: %d" (List.length discr);
     (*
       if cluster then begin
       let pp fmt pkg = 
