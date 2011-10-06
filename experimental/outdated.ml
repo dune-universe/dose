@@ -36,6 +36,7 @@ module Options = struct
   let architecture = StdOpt.str_option ()
   let checkonly = Boilerplate.pkglist_option ()
   let brokenlist = StdOpt.store_true ()
+  let summary = StdOpt.store_true ()
   let dump = StdOpt.store_true ()
 
   open OptParser
@@ -47,6 +48,10 @@ module Options = struct
   
   add options ~short_name:'b' 
   ~help:"Print the list of broken packages" brokenlist;
+
+  add options ~short_name:'s' 
+  ~help:"Print summary of broken packages" summary;
+
 
   add options ~long_name:"dump"
   ~help:"Dump the cudf package list" dump;
@@ -78,7 +83,7 @@ let dummy pkg number equivs version =
 ;;
 
 let extract_epochs vl =
-  List.unique (
+  Util.list_unique (
     List.fold_left (fun acc v ->
       let (e,_,_,_) = Debian.Version.split v in
       e :: acc
@@ -122,7 +127,12 @@ let version_of_target getv = function
   |`Lo v |`In (_,v) -> (getv v) - 1
 ;;
 
-let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
+let outdated 
+  ?(dump=false) 
+  ?(verbose=false) 
+  ?(summary=false) 
+  ?(clusterlist=None) repository =
+
   let worktable = Hashtbl.create 1024 in
   let version_acc = ref [] in
   let constraints_table = Debian.Evolution.constraints repository in
@@ -149,34 +159,34 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
       ) ([],[]) cluster
     in
     version_acc := versionlist @ !version_acc;
-    Hashtbl.add worktable (sn,version) (cluster,List.unique
-    versionlist,List.unique constr)
+    let k = (sn,version) in
+    let v = (cluster,versionlist,constr) in
+    Hashtbl.add worktable k v
     ) l
   ) clusters;
 
   (* for each package name, that is not a real package,
    * I create a package with version 1 and I put it in a
    * cluster by itself *)
-  Hashtbl.iter (fun name constr -> match (name,constr) with
-    (* we ignore all real packages with an associated list of constraints *)
-    |(name,h::t) when (Hashtbl.mem realpackages name) -> ()
-    (* we create a dummy package for each real package with no constraints
-     * and for all package names not associated to a real package *)
-    |(name,_) ->
-        let vl = Debian.Evolution.all_versions constr in
-        let pkg = {
-          Debian.Packages.default_package with 
-          Debian.Packages.name = name;
-          version = "1";
-          } 
-        in
-        let cluster = [pkg] in
-        version_acc := vl @ !version_acc;
-        Hashtbl.add worktable (name,"") (cluster,vl,constr)
+  Hashtbl.iter (fun name constr ->
+    let v = 
+      try (Hashtbl.find realpackages name)^"+dummy"
+      with Not_found -> "1"
+    in
+    let vl = Debian.Evolution.all_versions constr in
+    let pkg = {
+      Debian.Packages.default_package with 
+      Debian.Packages.name = name;
+      version = v;
+      } 
+    in
+    let cluster = [pkg] in
+    version_acc := (v::vl) @ !version_acc;
+    Hashtbl.add worktable (name,v) (cluster,vl,constr)
   ) constraints_table;
 
   Hashtbl.clear realpackages;
-  let versionlist = Util.list_unique ("1"::!version_acc) in
+  let versionlist = Util.list_unique (!version_acc) in
 
   info "Total Names: %d" (Hashtbl.length worktable);
   info "Total versions: %d" (List.length versionlist);
@@ -187,6 +197,8 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
     let s = 
       CudfAdd.to_set (
         Hashtbl.fold (fun (sn,version) (cluster,vl,constr) acc0 ->
+          let vl = Util.list_unique vl in
+          let constr = Util.list_unique constr in
           let discr = Debian.Evolution.discriminant (evalsel getv) vl constr in
           let sync_index = ref 1 in
           let acc0 = 
@@ -197,29 +209,26 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
             ) acc0 cluster
           in
           List.fold_left (fun acc1 (target,equiv) ->
-            List.fold_left (fun acc2 target ->
-              incr sync_index;
-              List.fold_left (fun acc3 pkg ->
-                let p = Debian.Debcudf.tocudf tables pkg in
-                let pv = p.Cudf.version in
+            incr sync_index;
+            List.fold_left (fun acc2 pkg ->
+              let p = Debian.Debcudf.tocudf tables pkg in
+              let pv = p.Cudf.version in
 
-                let target = Debian.Evolution.align pkg.Debian.Packages.version target in
-                let newv = version_of_target getv target in
-                let number = Debian.Evolution.string_of_range target in
-                let equivs = List.map Debian.Evolution.string_of_range equiv in
+              let target = Debian.Evolution.align pkg.Debian.Packages.version target in
+              let newv = version_of_target getv target in
+              let number = Debian.Evolution.string_of_range target in
+              let equivs = List.map Debian.Evolution.string_of_range equiv in
 
-                if (newv > pv) || 
-                  (List.mem (`Eq pkg.Debian.Packages.version) equiv) then begin
-                  if List.length cluster > 1 then
-                    (sync (sn,version,!sync_index) (dummy p number equivs newv))::acc3
-                  else
-                    (dummy p number equivs newv)::acc3
-                end else acc3
-
-              ) acc2 cluster
-            ) acc1 ([target]) (* we do not consider equivalent discriminants *)
+              if (newv > pv) || 
+                (List.mem (`Eq pkg.Debian.Packages.version) equiv) then begin
+                if List.length cluster > 1 then
+                  (sync (sn,version,!sync_index) (dummy p number equivs newv))::acc2
+                else
+                  (dummy p number equivs newv)::acc2
+              end else acc2
+            ) acc1 cluster
           ) acc0 discr
-        ) worktable []
+        ) worktable [] 
       )
     in CudfAdd.Cudf_set.elements s
   in
@@ -231,6 +240,7 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
   end;
       
   let universe = Cudf.load_universe pkglist in
+  let universe_size = Cudf.universe_size universe in
 
   Hashtbl.clear worktable;
   Hashtbl.clear constraints_table;
@@ -255,14 +265,22 @@ let outdated ?(dump=false) ?(verbose=false) ?(clusterlist=None) repository =
 
   let fmt = Format.std_formatter in
   Format.fprintf fmt "@[<v 1>report:@,";
+
+  let results = Diagnostic.default_result universe_size in
   let callback d = 
+    if summary then Diagnostic.collect results d ;
     if verbose then 
       Diagnostic.fprintf ~pp ~failure:true ~explain:true fmt d 
   in
+
   let i = Depsolver.univcheck ~callback universe in
-  Format.fprintf fmt "total-packages: %d@," (List.length pkglist);
+
+  Format.fprintf fmt "total-packages: %d@," universe_size;
   Format.fprintf fmt "total-broken: %d@," i;
   Format.fprintf fmt "@]@.";
+
+  if summary then
+        Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
 ;; 
 
 
@@ -278,11 +296,12 @@ let main () =
 
   (* let clusterlist = OptParse.Opt.opt Options.checkonly in *)
   let verbose = OptParse.Opt.get Options.brokenlist in
+  let summary = OptParse.Opt.get Options.summary in
   let dump = OptParse.Opt.get Options.dump in
 
   let default_arch = OptParse.Opt.opt Options.architecture in
   let packagelist = Debian.Packages.input_raw ~default_arch args in
-  ignore(outdated ~verbose ~dump packagelist) 
+  ignore(outdated ~summary ~verbose ~dump packagelist) 
 
 ;;
 

@@ -279,10 +279,12 @@ let pp_summary ?(pp=default_pp) () fmt result =
   in
   let l = List.sort ~cmp:(fun (_,l1) (_,l2) -> (List.length l1) - (List.length l2)) l in
 
+  Format.fprintf fmt "@[";
   Format.fprintf fmt "missing-packages: %d@." result.missing;
   Format.fprintf fmt "conflict-packages: %d@." result.conflict;
   Format.fprintf fmt "unique-missing-packages: %d@." result.unique_missing;
   Format.fprintf fmt "unique-conflict-packages: %d@." result.unique_conflict;
+  Format.fprintf fmt "@]";
 
   Format.fprintf fmt "@[<v 1>summary:@," ;
   pp_list (pp_summary_row pp) fmt l;
