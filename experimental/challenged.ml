@@ -30,11 +30,25 @@ module Options = struct
 
   let checkonly = Boilerplate.pkglist_option ()
   let brokenlist = StdOpt.store_true ()
+  let downgrades = StdOpt.store_true ()
+  let cluster = StdOpt.store_true ()
   open OptParser ;;
 
-  add options ~long_name:"select" ~help:"Check only these package ex. (sn1,sv1),(sn2,sv2)" checkonly;
-  add options ~short_name:'b' ~help:"Print the list of broken packages" brokenlist;
+  add options ~long_name:"select"
+    ~help:"Check only these package ex. (sn1,sv1),(sn2,sv2)" checkonly;
+  add options ~long_name:"broken" ~short_name:'b' 
+    ~help:"Print the list of broken packages" brokenlist;
+  add options ~long_name:"downgrade" ~short_name:'d' 
+    ~help:"Check package downgrades" downgrades;
+  add options ~short_name:'c' 
+    ~help:"Print the list of packages in a cluster" cluster;
+
 end
+
+let pkgset u = 
+  Cudf.fold_packages (fun s p -> 
+    CudfAdd.Cudf_set.add p s
+  ) CudfAdd.Cudf_set.empty u
 
 let exclude pkgset pl =
   let sl = CudfAdd.to_set pl in
@@ -49,13 +63,8 @@ let dummy pkg number version =
    pkg_extra = [("number",`String number)]
   }
 
-let upgrade tables universe migrationlist =
+let upgrade tables pkgset universe migrationlist =
   let getv v = Debian.Debcudf.get_cudf_version tables ("",v) in
-  let pkgset = 
-    Cudf.fold_packages (fun s p -> 
-      CudfAdd.Cudf_set.add p s
-    ) CudfAdd.Cudf_set.empty universe 
-  in
   let to_add = 
     List.fold_left (fun l ((pkg,_),target) ->
       let orig = getv pkg.Debian.Packages.version in
@@ -130,11 +139,46 @@ let version_of_target getv = function
   |`Lo v |`In (_,v) -> (getv v) - 1
 ;;
 
+let lesser_or_equal getv target v =
+  let v1 = version_of_target getv target in
+  v1 <= (getv v)
+;;
+
+let pp tables pkg =
+  let v =
+    try Cudf.lookup_package_property pkg "number"
+    with Not_found ->
+      if (pkg.Cudf.version mod 2) = 1 then
+        Debian.Debcudf.get_real_version tables
+        (pkg.Cudf.package,pkg.Cudf.version)
+      else
+        fatal "Real package without Debian Version"
+  in
+  let l =
+    List.filter_map (fun k ->
+      try Some(k,Cudf.lookup_package_property pkg k)
+      with Not_found -> None
+    ) ["architecture";"source";"sourceversion";"equivs"]
+  in (pkg.Cudf.package,v,l)
+
+let string_of_relop = function
+  |`Eq -> "="
+  |`Neq -> "!="
+  |`Geq -> ">="
+  |`Gt -> ">>"
+  |`Leq -> "<="
+  |`Lt -> "<<"
+
 (* repository are real packages, 
  * packagelist are cudf packages, 
  * cluster are real packages,
  * future are cudf packages *)
-let challenged ?(verbose=false) ?(clusterlist=None) repository =
+let challenged 
+  ?(downgrades=false) 
+  ?(broken=false) 
+  ?(cluster=false)
+  ?(clusterlist=None) 
+  repository =
   let predmap = Hashtbl.create 1023 in
   
   (* distribution specific *)
@@ -146,14 +190,14 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
     List.iter (fun (version,cluster) ->
     let (versionlist, constr) =
       let clustervl = List.map (fun pkg -> pkg.Debian.Packages.version) cluster in
-      List.fold_left (fun (vl,cl) pkg ->
+      List.fold_left (fun (_vl,_cl) pkg ->
         let pn = pkg.Debian.Packages.name in
         let constr = Debian.Evolution.all_constraints constraints_table pn in
         let vl = clustervl@(Debian.Evolution.all_versions constr) in
         let el = (extract_epochs vl) in
         let tvl = add_normalize vl in
         let versionlist = add_epochs el tvl in
-        (versionlist @ vl, constr @ cl)
+        (versionlist @ _vl, constr @ _cl)
       ) ([],[]) cluster
     in
     version_acc := versionlist @ !version_acc;
@@ -177,9 +221,10 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
   let versionlist = Util.list_unique !version_acc in
   let tables = Debian.Debcudf.init_tables ~step:2 ~versionlist repository in
   let getv v = Debian.Debcudf.get_cudf_version tables ("",v) in
+  let pp = pp tables in
   let pkglist = List.map (Debian.Debcudf.tocudf tables) repository in
   let universe = Cudf.load_universe pkglist in
-  let brokenref = Depsolver.univcheck universe in
+  let pkgset = pkgset universe in
 
   Util.Progress.set_total predbar (Hashtbl.length worktable);
 
@@ -187,33 +232,17 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
   info "Total versions: %d" (List.length versionlist);
 
   (* computing *)
-  let fmt = Format.std_formatter in
-  let pp pkg =
-    let v =
-      try Cudf.lookup_package_property pkg "number"
-      with Not_found ->
-        if (pkg.Cudf.version mod 2) = 1 then
-          Debian.Debcudf.get_real_version tables
-          (pkg.Cudf.package,pkg.Cudf.version)
-        else
-          fatal "Real package without Debian Version"
-    in
-    let l =
-      List.filter_map (fun k ->
-        try Some(k,Cudf.lookup_package_property pkg k)
-        with Not_found -> None
-      ) ["architecture";"source";"sourceversion";"equivs"]
-    in (pkg.Cudf.package,v,l)
-  in
-
-  Format.fprintf fmt "@[<v 1>report:@,";
-  Format.fprintf fmt "broken packages reference: %d@," brokenref;
   Hashtbl.iter (fun (sn,sv) (cluster,vl,constr) ->
+    debug "source: %s %s" sn sv;
     Util.Progress.progress predbar;
+    debug "Versions: %s" (String.concat ";" vl);
+    debug "Constraints: %s" (String.concat " ; " (
+      List.map (fun (c,v) -> Printf.sprintf "%s" v) constr
+      )
+    );
     let discr = Debian.Evolution.discriminant (evalsel getv) vl constr in
-    Format.fprintf fmt "@[<v 1>source: %s %s@," sn sv;
     (*
-    if false then begin
+      if cluster then begin
       let pp fmt pkg = 
         let pp_io_property fmt (n, s) = Format.fprintf fmt "%s: %s@," n s in
         Cudf_printer.pp_package_gen pp_io_property fmt pkg
@@ -226,39 +255,37 @@ let challenged ?(verbose=false) ?(clusterlist=None) repository =
         ) cluster
       in
       Format.fprintf fmt "@[<v 1>clusters:@,%a@]@," pp_list cudf_cluster
-    end;
-    *)
-    Format.fprintf fmt "@[<v 1>analysis:@,";
+      end;
+      *)
     List.iter (function 
       (* remove this one to show results that are equivalent to do nothing *)
-      | (target,[]) when target = (`Eq sv) -> ()
-      | (target,equiv) when List.mem (`Eq sv) (target::equiv) -> ()
+      | (target,equiv) when not(downgrades) && (lesser_or_equal getv target sv) ->
+          debug "target: %s" (Debian.Evolution.string_of_range target);
+          debug "equiv: %s" (String.concat " , " (
+            List.map (Debian.Evolution.string_of_range) equiv
+            ));
+          debug "ignored"
       | (target,equiv) ->
-          let (target,equiv) = 
-            if target = (`Eq sv)
-            then (List.hd equiv,target::(List.tl equiv))
-            else (target,equiv)
-          in
+          debug "Considering target %s" (Debian.Evolution.string_of_range target);
           let migrationlist = Debian.Evolution.migrate cluster target in
-          let future = upgrade tables universe migrationlist in
-
-          Format.fprintf fmt "target: %s @," (Debian.Evolution.string_of_range target);
-          Format.fprintf fmt "equiv: %s@," (String.concat " , " (List.map (Debian.Evolution.string_of_range) equiv));
+          let future = upgrade tables pkgset universe migrationlist in
+          debug "target: %s" (Debian.Evolution.string_of_range target);
+          debug "equiv: %s" (String.concat " , " (
+            List.map (Debian.Evolution.string_of_range) equiv
+            ));
 
           let callback d = 
-            if verbose then Diagnostic.fprintf ~pp ~failure:true ~explain:true fmt d 
+            let fmt = Format.std_formatter in
+            if broken then Diagnostic.fprintf ~pp ~failure:true ~explain:true fmt d 
           in
-          if verbose then
-            Format.fprintf fmt "distcheck: @,";
-
+          if broken then Format.printf "distcheck: @,";
           let i = Depsolver.univcheck ~callback future in
-          Format.fprintf fmt "broken: %d@," i;
-          Format.fprintf fmt "@,";
+          if broken then Format.printf "@.";
+
+          debug "broken: %d" i;
+          Hashtbl.add predmap ((sn,sv),(target,equiv)) i
     ) discr;
-    Format.fprintf fmt "@]@]@,---@.";
-    Format.print_flush ();
   ) worktable ;
-  Format.fprintf fmt "@]@.";
 
   predmap
 ;;
@@ -269,12 +296,19 @@ let main () =
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress) ["challenged"] ;
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) [];
   let clusterlist = OptParse.Opt.opt Options.checkonly in 
-  let verbose = OptParse.Opt.get Options.brokenlist in
-  let pred = challenged ~verbose ~clusterlist (Debian.Packages.input_raw args) in 
-  Hashtbl.iter (fun (_,(sn,sv),target) broken ->
-    Format.printf "upgrading cluster %s %s@." sn sv;
-    Format.printf "to target %s@." (Debian.Evolution.string_of_range target);
-    Format.printf "breaks %d packages@.@." broken
+  let broken = OptParse.Opt.get Options.brokenlist in
+  let cluster = OptParse.Opt.get Options.cluster in
+  let downgrades = OptParse.Opt.get Options.downgrades in
+  let l = (Debian.Packages.input_raw args) in
+  let pred = challenged ~downgrades ~broken ~cluster ~clusterlist l in
+  Hashtbl.iter (fun ((sn,sv),(target,equiv)) broken ->
+    Format.printf "cluster: %s %s@." sn sv;
+    Format.printf "target: %s@." (Debian.Evolution.string_of_range target);
+    Format.printf "equivs: %s@," (String.concat " , " (
+      List.map (Debian.Evolution.string_of_range) equiv
+    ));
+    Format.printf "breaks: %d@." broken;
+    Format.printf "---@."
   ) pred
 ;;
 

@@ -186,7 +186,8 @@ let print_error pp root fmt l =
           Format.fprintf fmt "@]"
         end else
           Format.fprintf fmt "@,@]"
-    (* only two failures reasons. Dependency describe the dependency chain to a failure witness *)
+    (* only two failures reasons. Dependency describe the 
+     * dependency chain to a failure witness *)
     |_ -> assert false 
   in
   pp_list pp_reason fmt res;
