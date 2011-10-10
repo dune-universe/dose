@@ -155,12 +155,12 @@ let outdated
           (vl @ _vl,constr @ _cl)
         ) ([],[]) cluster
       in
-      let (versionlist, constr) =
-        (Util.list_unique versionlist,Util.list_unique constr)
-      in
       let all_epochs = extract_epochs versionlist in
       let all_norm = add_normalize versionlist in
       let versionlist = add_epochs all_epochs all_norm in
+      let (versionlist, constr) =
+        (Util.list_unique versionlist,Util.list_unique constr)
+      in
       version_acc := versionlist @ !version_acc;
       Hashtbl.add worktable (sn,version) (cluster,versionlist,constr)
     ) l
@@ -200,8 +200,6 @@ let outdated
     let s = 
       CudfAdd.to_set (
         Hashtbl.fold (fun (sn,version) (cluster,vl,constr) acc0 ->
-          let vl = Util.list_unique vl in
-          let constr = Util.list_unique constr in
           let discr = Debian.Evolution.discriminant (evalsel getv) vl constr in
           let sync_index = ref 1 in
           let acc0 = 

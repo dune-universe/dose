@@ -141,9 +141,12 @@ let version_of_target getv = function
   |`Lo v |`In (_,v) -> (getv v) - 1
 ;;
 
-let lesser_or_equal getv target v =
-  let v1 = version_of_target getv target in
-  v1 <= (getv v)
+let lesser_or_equal getv targets v =
+  let v2 = getv v in
+  List.for_all (fun target ->
+    let v1 = version_of_target getv target in
+    v1 <= v2
+  ) targets
 ;;
 
 let pp tables pkg =
@@ -199,12 +202,12 @@ let challenged
           (vl @ _vl,constr @ _cl)
         ) ([],[]) cluster
       in
-      let (versionlist, constr) =
-        (Util.list_unique versionlist,Util.list_unique constr) 
-      in
       let all_epochs = extract_epochs versionlist in
       let all_norm = add_normalize versionlist in
       let versionlist = add_epochs all_epochs all_norm in
+      let (versionlist, constr) =
+        (Util.list_unique versionlist,Util.list_unique constr) 
+      in
       version_acc := versionlist @ !version_acc;
       Hashtbl.add worktable (sn,version) (cluster,versionlist,constr)
     ) l
@@ -264,7 +267,8 @@ let challenged
       *)
     List.iter (function 
       (* remove this one to show results that are equivalent to do nothing *)
-      | (target,equiv) when not(downgrades) && (lesser_or_equal getv target sv) ->
+      | (target,equiv) when not(downgrades) && 
+          (lesser_or_equal getv (target::equiv) sv) ->
           debug "target: %s" (Debian.Evolution.string_of_range target);
           debug "equiv: %s" (String.concat " , " (
             List.map (Debian.Evolution.string_of_range) equiv
