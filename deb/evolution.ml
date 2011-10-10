@@ -85,6 +85,7 @@ let constraints packagelist =
   let constraints_table = Hashtbl.create (List.length packagelist) in
   List.iter (fun pkg ->
     conj_iter constraints_table pkg.Packages.conflicts ;
+    conj_iter constraints_table pkg.Packages.breaks ;
     conj_iter constraints_table pkg.Packages.provides ;
     cnf_iter constraints_table pkg.Packages.depends
   ) packagelist

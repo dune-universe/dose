@@ -190,18 +190,21 @@ let challenged
   let constraints_table = Debian.Evolution.constraints repository in
   let cluster_iter (sn,sv) l =
     List.iter (fun (version,cluster) ->
-    let (versionlist, constr) =
-      let clustervl = List.map (fun pkg -> pkg.Debian.Packages.version) cluster in
-      List.fold_left (fun (_vl,_cl) pkg ->
-        let pn = pkg.Debian.Packages.name in
-        let constr = Debian.Evolution.all_constraints constraints_table pn in
-        let vl = clustervl@(Debian.Evolution.all_versions constr) in
-        let el = (extract_epochs vl) in
-        let tvl = add_normalize vl in
-        let versionlist = add_epochs el tvl in
-        (versionlist @ _vl, constr @ _cl)
-      ) ([],[]) cluster
-    in
+      let (versionlist, constr) =
+        List.fold_left (fun (_vl,_cl) pkg ->
+          let pn = pkg.Debian.Packages.name in
+          let pv = pkg.Debian.Packages.version in
+          let constr = Debian.Evolution.all_constraints constraints_table pn in
+          let vl = pv::(Debian.Evolution.all_versions constr) in
+          (vl @ _vl,constr @ _cl)
+        ) ([],[]) cluster
+      in
+      let all_epochs = extract_epochs versionlist in
+      let all_norm = add_normalize versionlist in
+      let versionlist = add_epochs all_epochs all_norm in
+      let (versionlist, constr) =
+        (Util.list_unique versionlist,Util.list_unique constr) 
+      in
     version_acc := versionlist @ !version_acc;
 
     worktable := ((sn,version),(cluster,List.unique versionlist,List.unique constr)):: !worktable
@@ -236,6 +239,7 @@ let challenged
   (* computing *)
   let predmap = 
     Parmap.parmap ~ncores:(OptParse.Opt.get Options.ncores) (fun ((sn,sv),(cluster,vl,constr)) ->
+      let timed=Unix.gettimeofday() in
       let predmap' = ref [] in
       debug "source: %s %s" sn sv;
       Util.Progress.progress predbar;
@@ -293,6 +297,7 @@ let challenged
             debug "broken: %d" i;
             predmap' :=  (((sn,sv),(target,equiv)),i):: !predmap'
       ) discr;
+      Printf.eprintf "<%s, %s>: %f\n" sn sv (Unix.gettimeofday() -. timed);
       !predmap' (* return predmap fragment *)
     ) (Parmap.L !worktable);
   in List.concat predmap
