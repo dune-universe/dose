@@ -143,27 +143,30 @@ let outdated
   let clusters = Debian.Debutil.cluster repository in
   (* for each cluster, I associate to it its discriminants,
    * cluster name and binary version *)
-  Hashtbl.iter (fun (sn,sv) l ->
+  let cluster_iter (sn,sv) l =
     List.iter (fun (version,cluster) ->
-    let (versionlist, constr) =
-      let clustervl = List.map (fun pkg -> pkg.Debian.Packages.version) cluster in
-      List.fold_left (fun (vl,cl) pkg ->
-        Hashtbl.add realpackages pkg.Debian.Packages.name version;
-        let pn = pkg.Debian.Packages.name in
-        let constr = Debian.Evolution.all_constraints constraints_table pn in
-        let vl = clustervl@(Debian.Evolution.all_versions constr) in
-        let el = (extract_epochs vl) in
-        let tvl = add_normalize vl in
-        let versionlist = add_epochs el tvl in
-        (versionlist @ vl, constr @ cl)
-      ) ([],[]) cluster
-    in
-    version_acc := versionlist @ !version_acc;
-    let k = (sn,version) in
-    let v = (cluster,versionlist,constr) in
-    Hashtbl.add worktable k v
+      let (versionlist, constr) =
+        List.fold_left (fun (_vl,_cl) pkg ->
+          let pn = pkg.Debian.Packages.name in
+          let pv = pkg.Debian.Packages.version in
+          Hashtbl.add realpackages pn pv;
+          let constr = Debian.Evolution.all_constraints constraints_table pn in
+          let vl = pv::(Debian.Evolution.all_versions constr) in
+          (vl @ _vl,constr @ _cl)
+        ) ([],[]) cluster
+      in
+      let (versionlist, constr) =
+        (Util.list_unique versionlist,Util.list_unique constr)
+      in
+      let all_epochs = extract_epochs versionlist in
+      let all_norm = add_normalize versionlist in
+      let versionlist = add_epochs all_epochs all_norm in
+      version_acc := versionlist @ !version_acc;
+      Hashtbl.add worktable (sn,version) (cluster,versionlist,constr)
     ) l
-  ) clusters;
+  in
+
+  Hashtbl.iter cluster_iter clusters;
 
   (* for each package name, that is not a real package,
    * I create a package with version 1 and I put it in a

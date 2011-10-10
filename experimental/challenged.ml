@@ -114,7 +114,9 @@ let add_epochs el vl =
 let add_normalize vl =
   List.fold_left (fun acc v ->
     let (e,u,r,b) = Debian.Version.split v in
-    (Debian.Version.concat ("",u,r,""))::v::acc
+    let n1 = Debian.Version.concat ("",u,r,"") in
+    let n2 = Debian.Version.concat ("",u,r,b) in
+    n1::n2::v::acc
   ) [] vl
 
 let evalsel getv target constr =
@@ -188,21 +190,23 @@ let challenged
   let constraints_table = Debian.Evolution.constraints repository in
   let cluster_iter (sn,sv) l =
     List.iter (fun (version,cluster) ->
-    let (versionlist, constr) =
-      let clustervl = List.map (fun pkg -> pkg.Debian.Packages.version) cluster in
-      List.fold_left (fun (_vl,_cl) pkg ->
-        let pn = pkg.Debian.Packages.name in
-        let constr = Debian.Evolution.all_constraints constraints_table pn in
-        let vl = clustervl@(Debian.Evolution.all_versions constr) in
-        let el = (extract_epochs vl) in
-        let tvl = add_normalize vl in
-        let versionlist = add_epochs el tvl in
-        (versionlist @ _vl, constr @ _cl)
-      ) ([],[]) cluster
-    in
-    version_acc := versionlist @ !version_acc;
-    Hashtbl.add worktable (sn,version) 
-    (cluster,List.unique versionlist,List.unique constr)
+      let (versionlist, constr) =
+        List.fold_left (fun (_vl,_cl) pkg ->
+          let pn = pkg.Debian.Packages.name in
+          let pv = pkg.Debian.Packages.version in
+          let constr = Debian.Evolution.all_constraints constraints_table pn in
+          let vl = pv::(Debian.Evolution.all_versions constr) in
+          (vl @ _vl,constr @ _cl)
+        ) ([],[]) cluster
+      in
+      let (versionlist, constr) =
+        (Util.list_unique versionlist,Util.list_unique constr) 
+      in
+      let all_epochs = extract_epochs versionlist in
+      let all_norm = add_normalize versionlist in
+      let versionlist = add_epochs all_epochs all_norm in
+      version_acc := versionlist @ !version_acc;
+      Hashtbl.add worktable (sn,version) (cluster,versionlist,constr)
     ) l
   in
 
