@@ -187,7 +187,7 @@ let challenged
   let predmap = Hashtbl.create 1023 in
   
   (* distribution specific *)
-  let worktable = Hashtbl.create 1024 in
+  let worktable = ref [] in
   let clusters = Debian.Debutil.cluster repository in
   let version_acc = ref [] in
   let constraints_table = Debian.Evolution.constraints repository in
@@ -209,7 +209,7 @@ let challenged
         (Util.list_unique versionlist,Util.list_unique constr) 
       in
       version_acc := versionlist @ !version_acc;
-      Hashtbl.add worktable (sn,version) (cluster,versionlist,constr)
+      worktable := ((sn,sv,version),(cluster,versionlist,constr))::!worktable
     ) l
   in
 
@@ -233,14 +233,15 @@ let challenged
   let universe = Cudf.load_universe pkglist in
   let pkgset = pkgset universe in
 
-  Util.Progress.set_total predbar (Hashtbl.length worktable);
+  Util.Progress.set_total predbar (List.length !worktable);
 
-  info "Total Names: %d" (Hashtbl.length worktable);
+  info "Total Names: %d" (List.length !worktable);
   info "Total versions: %d" (List.length versionlist);
 
   (* computing *)
-  Hashtbl.iter (fun (sn,sv) (cluster,vl,constr) ->
-    debug "source: %s %s" sn sv;
+  List.iter (fun ((sn,sv,version),(cluster,vl,constr)) ->
+    debug "source: %s %s" sn version;
+    if sv <> version then debug "subclusterof: %s %s" sn sv;
     Util.Progress.progress predbar;
     debug "Versions: %s" (String.concat ";" vl);
     debug "Constraints: %s" (String.concat " ; " (
@@ -268,7 +269,7 @@ let challenged
     List.iter (function 
       (* remove this one to show results that are equivalent to do nothing *)
       | (target,equiv) when not(downgrades) && 
-          (lesser_or_equal getv (target::equiv) sv) ->
+          (lesser_or_equal getv (target::equiv) version) ->
           debug "target: %s" (Debian.Evolution.string_of_range target);
           debug "equiv: %s" (String.concat " , " (
             List.map (Debian.Evolution.string_of_range) equiv
@@ -292,9 +293,9 @@ let challenged
           if broken then Format.printf "@.";
 
           debug "broken: %d" i;
-          Hashtbl.add predmap ((sn,sv),(target,equiv)) i
+          Hashtbl.add predmap ((sn,sv,version),(target,equiv)) i
     ) discr;
-  ) worktable ;
+  ) !worktable ;
 
   predmap
 ;;
@@ -310,8 +311,9 @@ let main () =
   let downgrades = OptParse.Opt.get Options.downgrades in
   let l = (Debian.Packages.input_raw args) in
   let pred = challenged ~downgrades ~broken ~cluster ~clusterlist l in
-  Hashtbl.iter (fun ((sn,sv),(target,equiv)) broken ->
-    Format.printf "cluster: %s %s@." sn sv;
+  Hashtbl.iter (fun ((sn,sv,version),(target,equiv)) broken ->
+    Format.printf "cluster: %s %s@." sn version;
+    if sv <> version then Format.printf "subclusterof: %s %s@." sn sv;
     Format.printf "target: %s@." (Debian.Evolution.string_of_range target);
     Format.printf "equivs: %s@," (String.concat " , " (
       List.map (Debian.Evolution.string_of_range) equiv

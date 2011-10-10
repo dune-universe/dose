@@ -84,6 +84,7 @@ let cnf_iter t ll = List.iter (conj_iter t) ll
 let constraints packagelist =
   let constraints_table = Hashtbl.create (List.length packagelist) in
   List.iter (fun pkg ->
+    add_unique constraints_table pkg.Packages.name None;
     conj_iter constraints_table pkg.Packages.conflicts ;
     conj_iter constraints_table pkg.Packages.breaks ;
     conj_iter constraints_table pkg.Packages.provides ;
