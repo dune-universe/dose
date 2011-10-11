@@ -117,7 +117,9 @@ let add_epochs el vl =
 let add_normalize vl =
   List.fold_left (fun acc v ->
     let (e,u,r,b) = Debian.Version.split v in
-    (Debian.Version.concat ("",u,r,""))::v::acc
+    let n1 = Debian.Version.concat ("",u,r,"") in
+    let n2 = Debian.Version.concat ("",u,r,b) in
+    n1::n2::v::acc
   ) [] vl
 
 let evalsel getv target constr =
@@ -142,9 +144,12 @@ let version_of_target getv = function
   |`Lo v |`In (_,v) -> (getv v) - 1
 ;;
 
-let lesser_or_equal getv target v =
-  let v1 = version_of_target getv target in
-  v1 <= (getv v)
+let lesser_or_equal getv targets v =
+  let v2 = getv v in
+  List.for_all (fun target ->
+    let v1 = version_of_target getv target in
+    v1 <= v2
+  ) targets
 ;;
 
 let pp tables pkg =
@@ -268,7 +273,8 @@ let challenged
         *)
       List.iter (function 
         (* remove this one to show results that are equivalent to do nothing *)
-        | (target,equiv) when not(downgrades) && (lesser_or_equal getv target sv) ->
+        | (target,equiv) when not(downgrades) &&
+            (lesser_or_equal getv (target::equiv) sv) ->
             debug "target: %s" (Debian.Evolution.string_of_range target);
             debug "equiv: %s" (String.concat " , " (
               List.map (Debian.Evolution.string_of_range) equiv
@@ -297,7 +303,7 @@ let challenged
             debug "broken: %d" i;
             predmap' :=  (((sn,sv),(target,equiv)),i):: !predmap'
       ) discr;
-      Printf.eprintf "<%s, %s>: %f\n" sn sv (Unix.gettimeofday() -. timed);
+      Printf.eprintf "<%s, %s>: %f\n%!" sn sv (Unix.gettimeofday() -. timed);
       !predmap' (* return predmap fragment *)
     ) (Parmap.L !worktable);
   in List.concat predmap
