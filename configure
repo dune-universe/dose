@@ -619,6 +619,9 @@ LINK_RPM
 BZ2
 PKG_BZ2
 CONFIG_BZ2
+PARMAP
+PKG_PARMAP
+CONFIG_PARMAP
 ZIP
 PKG_ZIP
 CONFIG_ZIP
@@ -630,6 +633,16 @@ TAGS_SQLITE
 MLPACK_PGSQL
 PKG_PGSQL
 TAGS_PGSQL
+EGREP
+GREP
+CPP
+OBJEXT
+EXEEXT
+ac_ct_CC
+CPPFLAGS
+LDFLAGS
+CFLAGS
+CC
 OCAML_PKG_benchmark
 HAS_BENCHMARK
 OCAML_PKG_oUnit
@@ -644,20 +657,12 @@ HAS_OCAMLGRAPH
 OCAML_PKG_postgresql
 OCAML_PKG_json_static
 OCAML_PKG_sqlite3
-EGREP
-GREP
-CPP
-OBJEXT
-EXEEXT
-ac_ct_CC
-CPPFLAGS
-LDFLAGS
-CFLAGS
-CC
 OCAML_PKG_bz2
 HAS_BZ2
 OCAML_PKG_zip
 HAS_ZIP
+OCAML_PKG_parmap
+HAS_PARMAP
 OCAML_PKG_pcre
 OCAML_PKG_extlib
 OCAML_PKG_cudf
@@ -727,10 +732,9 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 with_libcudf
+with_parmap
 with_zip
 with_bz2
-with_rpm4
-with_rpm5
 with_sqlite
 with_postgresql
 with_ocamlgraph
@@ -738,6 +742,8 @@ with_curl
 with_xml
 with_oUnit
 with_benchmark
+with_rpm4
+with_rpm5
 with_experimental
 '
       ac_precious_vars='build_alias
@@ -1360,10 +1366,9 @@ Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
  --without-libcudf
+ --with-parmap
  --with-zip
  --with-bz2
- --with-rpm4
- --with-rpm5
  --with-sqlite
  --with-postgresql
  --with-ocamlgraph
@@ -1371,6 +1376,8 @@ Optional Packages:
  --with-xml
  --with-oUnit
  --with-benchmark
+ --with-rpm4
+ --with-rpm5
  --with-xperimental
 
 Some influential environment variables:
@@ -4019,6 +4026,7 @@ PKG_SQLITE=pkg_
 PKG_PGSQL=pkg_
 PKG_BZ2=pkg_
 PKG_ZIP=pkg_
+PKG_PARMAP=pkg_
 PKG_XML=pkg_
 PKG_CUDF=use_cudf
 PKG_OCAMLGRAPH=pkg_
@@ -4131,6 +4139,49 @@ if test "$OCAML_PKG_pcre" = "no"; then
 fi
 
 
+# Check whether --with-parmap was given.
+if test "${with_parmap+set}" = set; then :
+  withval=$with_parmap; HAS_PARMAP=yes
+else
+  HAS_PARMAP=no
+fi
+
+
+if test "$HAS_PARMAP" = "yes" ; then
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package parmap" >&5
+$as_echo_n "checking for OCaml findlib package parmap... " >&6; }
+
+  unset found
+  unset pkg
+  found=no
+  for pkg in parmap  ; do
+    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+      OCAML_PKG_parmap=$pkg
+      found=yes
+      break
+    fi
+  done
+  if test "$found" = "no" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+    OCAML_PKG_parmap=no
+  fi
+
+
+
+  if test "$OCAML_PKG_parmap" = "no"; then
+   as_fn_error $? "Please install OCaml findlib module 'parmap'." "$LINENO" 5
+  fi
+  CONFIG_PARMAP="-DHASPARMAP"
+  PKG_PARMAP="package(parmap)"
+  PARMAP=parmap
+fi
+
+
+
 # Check whether --with-zip was given.
 if test "${with_zip+set}" = set; then :
   withval=$with_zip; HAS_ZIP=yes
@@ -4212,6 +4263,379 @@ $as_echo "not found" >&6; }
   CONFIG_BZ2="-DHASBZ2"
   PKG_BZ2="package(bz2)"
   BZ2=bz2
+fi
+
+
+# Check whether --with-sqlite was given.
+if test "${with_sqlite+set}" = set; then :
+  withval=$with_sqlite; HAS_SQLITE=yes
+else
+  HAS_SQLITE=no
+fi
+
+if test "$HAS_SQLITE" = "yes" ; then
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package sqlite3" >&5
+$as_echo_n "checking for OCaml findlib package sqlite3... " >&6; }
+
+  unset found
+  unset pkg
+  found=no
+  for pkg in sqlite3  ; do
+    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+      OCAML_PKG_sqlite3=$pkg
+      found=yes
+      break
+    fi
+  done
+  if test "$found" = "no" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+    OCAML_PKG_sqlite3=no
+  fi
+
+
+
+  if test "$OCAML_PKG_sqlite3" = "no"; then
+   as_fn_error $? "Please install OCaml findlib module 'sqlite3'." "$LINENO" 5
+  fi
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package json-static" >&5
+$as_echo_n "checking for OCaml findlib package json-static... " >&6; }
+
+  unset found
+  unset pkg
+  found=no
+  for pkg in json-static  ; do
+    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+      OCAML_PKG_json_static=$pkg
+      found=yes
+      break
+    fi
+  done
+  if test "$found" = "no" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+    OCAML_PKG_json_static=no
+  fi
+
+
+
+  if test "$OCAML_PKG_json-static" = "no"; then
+   as_fn_error $? "Please install OCaml findlib module 'json-static'." "$LINENO" 5
+  fi
+  TAGS_SQLITE=sqlite
+  PKG_SQLITE="pkg_sqlite3, pkg_json-static"
+  MLPACK_SQLITE=Sqlite
+  CONFIG_DBBACKEND="-DSQLITE"
+  CONFIG_DB="-DHASDB"
+fi
+
+
+# Check whether --with-postgresql was given.
+if test "${with_postgresql+set}" = set; then :
+  withval=$with_postgresql; HAS_PGSQL=yes
+else
+  HAS_PGSQL=no
+fi
+
+if test "$HAS_PGSQL" = "yes" ; then
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package postgresql" >&5
+$as_echo_n "checking for OCaml findlib package postgresql... " >&6; }
+
+  unset found
+  unset pkg
+  found=no
+  for pkg in postgresql  ; do
+    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+      OCAML_PKG_postgresql=$pkg
+      found=yes
+      break
+    fi
+  done
+  if test "$found" = "no" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+    OCAML_PKG_postgresql=no
+  fi
+
+
+
+  if test "$OCAML_PKG_postgresql" = "no"; then
+   as_fn_error $? "Please install OCaml findlib module 'postgresql'." "$LINENO" 5
+  fi
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package json-static" >&5
+$as_echo_n "checking for OCaml findlib package json-static... " >&6; }
+
+  unset found
+  unset pkg
+  found=no
+  for pkg in json-static  ; do
+    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+      OCAML_PKG_json_static=$pkg
+      found=yes
+      break
+    fi
+  done
+  if test "$found" = "no" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+    OCAML_PKG_json_static=no
+  fi
+
+
+
+  if test "$OCAML_PKG_json-static" = "no"; then
+   as_fn_error $? "Please install OCaml findlib module 'json-static'." "$LINENO" 5
+  fi
+  TAGS_PGSQL=pgsql
+  PKG_PGSQL="pkg_postgresql, pkg_json-static, pkg_threads"
+  MLPACK_PGSQL=Pgsql
+  CONFIG_DBBACKEND="$CONFIG_DBBACKEND -DPGSQL"
+  CONFIG_DB="-DHASDB"
+fi
+
+
+# Check whether --with-ocamlgraph was given.
+if test "${with_ocamlgraph+set}" = set; then :
+  withval=$with_ocamlgraph; HAS_OCAMLGRAPH=yes
+else
+  HAS_OCAMLGRAPH=no
+fi
+
+
+if test "$HAS_OCAMLGRAPH" = "yes" ; then
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package ocamlgraph" >&5
+$as_echo_n "checking for OCaml findlib package ocamlgraph... " >&6; }
+
+  unset found
+  unset pkg
+  found=no
+  for pkg in ocamlgraph  ; do
+    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+      OCAML_PKG_ocamlgraph=$pkg
+      found=yes
+      break
+    fi
+  done
+  if test "$found" = "no" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+    OCAML_PKG_ocamlgraph=no
+  fi
+
+
+
+  if test "$OCAML_PKG_ocamlgraph" = "no"; then
+   as_fn_error $? "Please install OCaml findlib module 'ocamlgraph'." "$LINENO" 5
+  fi
+  TMPVERSION=`$OCAMLFIND query -format %v ocamlgraph`
+  if test $(echo "$TMPVERSION < 1.5" | bc) -eq 1; then
+      as_fn_error $? "found ocamlgraph with version $TMPVERSION (<= 1.5 is required )" "$LINENO" 5
+  fi
+  PKG_OCAMLGRAPH="package(ocamlgraph)"
+  MLPACK_OCAMLGRAPH="Defaultgraphs Statistics Dominators Strongdeps Strongdeps_int Strongconflicts Strongconflicts_int"
+  CONFIG_OCAMLGRAPH="-DHASOCAMLGRAPH"
+fi
+
+
+# Check whether --with-curl was given.
+if test "${with_curl+set}" = set; then :
+  withval=$with_curl; HAS_CURL=yes
+else
+  HAS_CURL=no
+fi
+
+
+if test "$HAS_CURL" = "yes" ; then
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package curl" >&5
+$as_echo_n "checking for OCaml findlib package curl... " >&6; }
+
+  unset found
+  unset pkg
+  found=no
+  for pkg in curl  ; do
+    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+      OCAML_PKG_curl=$pkg
+      found=yes
+      break
+    fi
+  done
+  if test "$found" = "no" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+    OCAML_PKG_curl=no
+  fi
+
+
+
+  if test "$OCAML_PKG_curl" = "no"; then
+   as_fn_error $? "Please install OCaml findlib module 'curl'." "$LINENO" 5
+  fi
+  PKG_CURL="package(curl)"
+fi
+
+
+# Check whether --with-xml was given.
+if test "${with_xml+set}" = set; then :
+  withval=$with_xml; HAS_XML=yes
+else
+  HAS_XML=no
+fi
+
+
+if test "$HAS_XML" = "yes" ; then
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package expat" >&5
+$as_echo_n "checking for OCaml findlib package expat... " >&6; }
+
+  unset found
+  unset pkg
+  found=no
+  for pkg in expat  ; do
+    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+      OCAML_PKG_expat=$pkg
+      found=yes
+      break
+    fi
+  done
+  if test "$found" = "no" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+    OCAML_PKG_expat=no
+  fi
+
+
+
+  if test "$OCAML_PKG_expat" = "no"; then
+   as_fn_error $? "Please install OCaml findlib module 'expat'." "$LINENO" 5
+  fi
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package xml-light" >&5
+$as_echo_n "checking for OCaml findlib package xml-light... " >&6; }
+
+  unset found
+  unset pkg
+  found=no
+  for pkg in xml-light  ; do
+    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+      OCAML_PKG_xml_light=$pkg
+      found=yes
+      break
+    fi
+  done
+  if test "$found" = "no" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+    OCAML_PKG_xml_light=no
+  fi
+
+
+
+  if test "$OCAML_PKG_xml-light" = "no"; then
+   as_fn_error $? "Please install OCaml findlib module 'xml-light'." "$LINENO" 5
+  fi
+  PKG_XML="package(expat), package(xml-light)"
+fi
+
+
+# Check whether --with-oUnit was given.
+if test "${with_oUnit+set}" = set; then :
+  withval=$with_oUnit; HAS_OUNIT=yes
+else
+  HAS_OUNIT=no
+fi
+
+
+if test "$HAS_OUNIT" = "yes" ; then
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package oUnit" >&5
+$as_echo_n "checking for OCaml findlib package oUnit... " >&6; }
+
+  unset found
+  unset pkg
+  found=no
+  for pkg in oUnit  ; do
+    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+      OCAML_PKG_oUnit=$pkg
+      found=yes
+      break
+    fi
+  done
+  if test "$found" = "no" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+    OCAML_PKG_oUnit=no
+  fi
+
+
+
+  if test "$OCAML_PKG_oUnit" = "no"; then
+   as_fn_error $? "Please install OCaml findlib module 'oUnit'." "$LINENO" 5
+  fi
+  PKG_OUNIT="pkg_oUnit"
+fi
+
+
+# Check whether --with-benchmark was given.
+if test "${with_benchmark+set}" = set; then :
+  withval=$with_benchmark; HAS_BENCHMARK=yes
+else
+  HAS_BENCHMARK=no
+fi
+
+
+if test "$HAS_BENCHMARK" = "yes" ; then
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package benchmark" >&5
+$as_echo_n "checking for OCaml findlib package benchmark... " >&6; }
+
+  unset found
+  unset pkg
+  found=no
+  for pkg in benchmark  ; do
+    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+      OCAML_PKG_benchmark=$pkg
+      found=yes
+      break
+    fi
+  done
+  if test "$found" = "no" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+    OCAML_PKG_benchmark=no
+  fi
+
+
+
+  if test "$OCAML_PKG_benchmark" = "no"; then
+   as_fn_error $? "Please install OCaml findlib module 'benchmark'." "$LINENO" 5
+  fi
+  PKG_BENCHMARK="pkg_benchmark"
 fi
 
 ac_ext=c
@@ -5487,377 +5911,9 @@ done
 fi
 
 
-# Check whether --with-sqlite was given.
-if test "${with_sqlite+set}" = set; then :
-  withval=$with_sqlite; HAS_SQLITE=yes
-else
-  HAS_SQLITE=no
-fi
 
-if test "$HAS_SQLITE" = "yes" ; then
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package sqlite3" >&5
-$as_echo_n "checking for OCaml findlib package sqlite3... " >&6; }
 
-  unset found
-  unset pkg
-  found=no
-  for pkg in sqlite3  ; do
-    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
-$as_echo "found" >&6; }
-      OCAML_PKG_sqlite3=$pkg
-      found=yes
-      break
-    fi
-  done
-  if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-    OCAML_PKG_sqlite3=no
-  fi
-
-
-
-  if test "$OCAML_PKG_sqlite3" = "no"; then
-   as_fn_error $? "Please install OCaml findlib module 'sqlite3'." "$LINENO" 5
-  fi
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package json-static" >&5
-$as_echo_n "checking for OCaml findlib package json-static... " >&6; }
-
-  unset found
-  unset pkg
-  found=no
-  for pkg in json-static  ; do
-    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
-$as_echo "found" >&6; }
-      OCAML_PKG_json_static=$pkg
-      found=yes
-      break
-    fi
-  done
-  if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-    OCAML_PKG_json_static=no
-  fi
-
-
-
-  if test "$OCAML_PKG_json-static" = "no"; then
-   as_fn_error $? "Please install OCaml findlib module 'json-static'." "$LINENO" 5
-  fi
-  TAGS_SQLITE=sqlite
-  PKG_SQLITE="pkg_sqlite3, pkg_json-static"
-  MLPACK_SQLITE=Sqlite
-  CONFIG_DBBACKEND="-DSQLITE"
-  CONFIG_DB="-DHASDB"
-fi
-
-
-# Check whether --with-postgresql was given.
-if test "${with_postgresql+set}" = set; then :
-  withval=$with_postgresql; HAS_PGSQL=yes
-else
-  HAS_PGSQL=no
-fi
-
-if test "$HAS_PGSQL" = "yes" ; then
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package postgresql" >&5
-$as_echo_n "checking for OCaml findlib package postgresql... " >&6; }
-
-  unset found
-  unset pkg
-  found=no
-  for pkg in postgresql  ; do
-    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
-$as_echo "found" >&6; }
-      OCAML_PKG_postgresql=$pkg
-      found=yes
-      break
-    fi
-  done
-  if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-    OCAML_PKG_postgresql=no
-  fi
-
-
-
-  if test "$OCAML_PKG_postgresql" = "no"; then
-   as_fn_error $? "Please install OCaml findlib module 'postgresql'." "$LINENO" 5
-  fi
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package json-static" >&5
-$as_echo_n "checking for OCaml findlib package json-static... " >&6; }
-
-  unset found
-  unset pkg
-  found=no
-  for pkg in json-static  ; do
-    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
-$as_echo "found" >&6; }
-      OCAML_PKG_json_static=$pkg
-      found=yes
-      break
-    fi
-  done
-  if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-    OCAML_PKG_json_static=no
-  fi
-
-
-
-  if test "$OCAML_PKG_json-static" = "no"; then
-   as_fn_error $? "Please install OCaml findlib module 'json-static'." "$LINENO" 5
-  fi
-  TAGS_PGSQL=pgsql
-  PKG_PGSQL="pkg_postgresql, pkg_json-static, pkg_threads"
-  MLPACK_PGSQL=Pgsql
-  CONFIG_DBBACKEND="$CONFIG_DBBACKEND -DPGSQL"
-  CONFIG_DB="-DHASDB"
-fi
-
-
-# Check whether --with-ocamlgraph was given.
-if test "${with_ocamlgraph+set}" = set; then :
-  withval=$with_ocamlgraph; HAS_OCAMLGRAPH=yes
-else
-  HAS_OCAMLGRAPH=no
-fi
-
-
-if test "$HAS_OCAMLGRAPH" = "yes" ; then
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package ocamlgraph" >&5
-$as_echo_n "checking for OCaml findlib package ocamlgraph... " >&6; }
-
-  unset found
-  unset pkg
-  found=no
-  for pkg in ocamlgraph  ; do
-    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
-$as_echo "found" >&6; }
-      OCAML_PKG_ocamlgraph=$pkg
-      found=yes
-      break
-    fi
-  done
-  if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-    OCAML_PKG_ocamlgraph=no
-  fi
-
-
-
-  if test "$OCAML_PKG_ocamlgraph" = "no"; then
-   as_fn_error $? "Please install OCaml findlib module 'ocamlgraph'." "$LINENO" 5
-  fi
-  TMPVERSION=`$OCAMLFIND query -format %v ocamlgraph`
-  if test $(echo "$TMPVERSION < 1.5" | bc) -eq 1; then
-      as_fn_error $? "found ocamlgraph with version $TMPVERSION (<= 1.5 is required )" "$LINENO" 5
-  fi
-  PKG_OCAMLGRAPH="package(ocamlgraph)"
-  MLPACK_OCAMLGRAPH="Defaultgraphs Statistics Dominators Strongdeps Strongdeps_int Strongconflicts Strongconflicts_int"
-  CONFIG_OCAMLGRAPH="-DHASOCAMLGRAPH"
-fi
-
-
-# Check whether --with-curl was given.
-if test "${with_curl+set}" = set; then :
-  withval=$with_curl; HAS_CURL=yes
-else
-  HAS_CURL=no
-fi
-
-
-if test "$HAS_CURL" = "yes" ; then
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package curl" >&5
-$as_echo_n "checking for OCaml findlib package curl... " >&6; }
-
-  unset found
-  unset pkg
-  found=no
-  for pkg in curl  ; do
-    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
-$as_echo "found" >&6; }
-      OCAML_PKG_curl=$pkg
-      found=yes
-      break
-    fi
-  done
-  if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-    OCAML_PKG_curl=no
-  fi
-
-
-
-  if test "$OCAML_PKG_curl" = "no"; then
-   as_fn_error $? "Please install OCaml findlib module 'curl'." "$LINENO" 5
-  fi
-  PKG_CURL="package(curl)"
-fi
-
-
-# Check whether --with-xml was given.
-if test "${with_xml+set}" = set; then :
-  withval=$with_xml; HAS_XML=yes
-else
-  HAS_XML=no
-fi
-
-
-if test "$HAS_XML" = "yes" ; then
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package expat" >&5
-$as_echo_n "checking for OCaml findlib package expat... " >&6; }
-
-  unset found
-  unset pkg
-  found=no
-  for pkg in expat  ; do
-    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
-$as_echo "found" >&6; }
-      OCAML_PKG_expat=$pkg
-      found=yes
-      break
-    fi
-  done
-  if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-    OCAML_PKG_expat=no
-  fi
-
-
-
-  if test "$OCAML_PKG_expat" = "no"; then
-   as_fn_error $? "Please install OCaml findlib module 'expat'." "$LINENO" 5
-  fi
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package xml-light" >&5
-$as_echo_n "checking for OCaml findlib package xml-light... " >&6; }
-
-  unset found
-  unset pkg
-  found=no
-  for pkg in xml-light  ; do
-    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
-$as_echo "found" >&6; }
-      OCAML_PKG_xml_light=$pkg
-      found=yes
-      break
-    fi
-  done
-  if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-    OCAML_PKG_xml_light=no
-  fi
-
-
-
-  if test "$OCAML_PKG_xml-light" = "no"; then
-   as_fn_error $? "Please install OCaml findlib module 'xml-light'." "$LINENO" 5
-  fi
-  PKG_XML="package(expat), package(xml-light)"
-fi
-
-
-# Check whether --with-oUnit was given.
-if test "${with_oUnit+set}" = set; then :
-  withval=$with_oUnit; HAS_OUNIT=yes
-else
-  HAS_OUNIT=no
-fi
-
-
-if test "$HAS_OUNIT" = "yes" ; then
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package oUnit" >&5
-$as_echo_n "checking for OCaml findlib package oUnit... " >&6; }
-
-  unset found
-  unset pkg
-  found=no
-  for pkg in oUnit  ; do
-    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
-$as_echo "found" >&6; }
-      OCAML_PKG_oUnit=$pkg
-      found=yes
-      break
-    fi
-  done
-  if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-    OCAML_PKG_oUnit=no
-  fi
-
-
-
-  if test "$OCAML_PKG_oUnit" = "no"; then
-   as_fn_error $? "Please install OCaml findlib module 'oUnit'." "$LINENO" 5
-  fi
-  PKG_OUNIT="pkg_oUnit"
-fi
-
-
-# Check whether --with-benchmark was given.
-if test "${with_benchmark+set}" = set; then :
-  withval=$with_benchmark; HAS_BENCHMARK=yes
-else
-  HAS_BENCHMARK=no
-fi
-
-
-if test "$HAS_BENCHMARK" = "yes" ; then
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package benchmark" >&5
-$as_echo_n "checking for OCaml findlib package benchmark... " >&6; }
-
-  unset found
-  unset pkg
-  found=no
-  for pkg in benchmark  ; do
-    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
-$as_echo "found" >&6; }
-      OCAML_PKG_benchmark=$pkg
-      found=yes
-      break
-    fi
-  done
-  if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-    OCAML_PKG_benchmark=no
-  fi
-
-
-
-  if test "$OCAML_PKG_benchmark" = "no"; then
-   as_fn_error $? "Please install OCaml findlib module 'benchmark'." "$LINENO" 5
-  fi
-  PKG_BENCHMARK="pkg_benchmark"
-fi
 
 
 

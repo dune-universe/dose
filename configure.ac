@@ -24,6 +24,7 @@ PKG_SQLITE=pkg_
 PKG_PGSQL=pkg_
 PKG_BZ2=pkg_
 PKG_ZIP=pkg_
+PKG_PARMAP=pkg_
 PKG_XML=pkg_
 PKG_CUDF=use_cudf
 PKG_OCAMLGRAPH=pkg_
@@ -59,6 +60,22 @@ if test "$OCAML_PKG_pcre" = "no"; then
  AC_MSG_ERROR([Please install OCaml findlib module 'pcre'.])
 fi
 
+AC_ARG_WITH(parmap,
+        [ --with-parmap ],
+        HAS_PARMAP=yes,
+        HAS_PARMAP=no)
+AC_SUBST(HAS_PARMAP)
+if test "$HAS_PARMAP" = "yes" ; then
+  AC_CHECK_OCAML_PKG([parmap])
+  if test "$OCAML_PKG_parmap" = "no"; then
+   AC_MSG_ERROR([Please install OCaml findlib module 'parmap'.])
+  fi
+  CONFIG_PARMAP="-DHASPARMAP"
+  PKG_PARMAP="package(parmap)"
+  PARMAP=parmap
+fi
+
+
 AC_ARG_WITH(zip,
         [ --with-zip ],
         HAS_ZIP=yes,
@@ -87,42 +104,6 @@ if test "$HAS_BZ2" = "yes" ; then
   CONFIG_BZ2="-DHASBZ2"
   PKG_BZ2="package(bz2)"
   BZ2=bz2
-fi
-
-AC_HEADER_STDC
-
-RPMPATH="-I/usr/include/rpm"
-CFLAGS="$CFLAGS $RPMPATH"
-CPPFLAGS="$CPPFLAGS $RPMPATH"
-
-AC_ARG_WITH(rpm4,
-        [ --with-rpm4 ],
-        HAS_RPM4=yes,
-        HAS_RPM4=no)
-if test "$HAS_RPM4" = "yes" ; then
-  AC_MSG_NOTICE([RPM support enabled])
-  AC_CHECK_HEADERS([rpm/rpmio.h],,AC_MSG_ERROR([missing rpmio.h]))
-  AC_CHECK_HEADERS([rpm/rpmtypes.h],,AC_MSG_ERROR([missing rpmtypes.h]))
-  CONFIG_RPM="-DHASRPM"
-  USE_RPM="use_rpm, use_rpm4"
-  HAS_RPM=yes
-fi
-
-AC_ARG_WITH(rpm5,
-        [ --with-rpm5 ],
-        HAS_RPM5=yes,
-        HAS_RPM5=no)
-if test "$HAS_RPM5" = "yes"; then
-  AC_MSG_NOTICE([RPM 5 support enabled])
-  CFLAGS="-I/usr/include/rpm"
-  LDFLAG="-Lrpm -Lrpmio"
-  AC_CHECK_HEADERS([rpm/rpmio.h],,AC_MSG_ERROR([missing rpmio.h]))
-#  AC_CHECK_HEADERS([rpm/rpmgi.h],,AC_MSG_ERROR([missing rpmgi.h]))
-#  AC_CHECK_HEADERS([rpm/rpm46compat.h],,AC_MSG_ERROR([missing rpm46compat.h]))
-#  AC_CHECK_HEADERS([rpm/rpm4compat.h],,AC_MSG_ERROR([missing rpm4compat.h]))
-  CONFIG_RPM="-DHASRPM"
-  USE_RPM="use_rpm, use_rpm5"
-  HAS_RPM=yes
 fi
 
 AC_ARG_WITH(sqlite,
@@ -240,6 +221,43 @@ if test "$HAS_BENCHMARK" = "yes" ; then
   PKG_BENCHMARK="pkg_benchmark"
 fi
 
+AC_HEADER_STDC
+
+RPMPATH="-I/usr/include/rpm"
+CFLAGS="$CFLAGS $RPMPATH"
+CPPFLAGS="$CPPFLAGS $RPMPATH"
+
+AC_ARG_WITH(rpm4,
+        [ --with-rpm4 ],
+        HAS_RPM4=yes,
+        HAS_RPM4=no)
+if test "$HAS_RPM4" = "yes" ; then
+  AC_MSG_NOTICE([RPM support enabled])
+  AC_CHECK_HEADERS([rpm/rpmio.h],,AC_MSG_ERROR([missing rpmio.h]))
+  AC_CHECK_HEADERS([rpm/rpmtypes.h],,AC_MSG_ERROR([missing rpmtypes.h]))
+  CONFIG_RPM="-DHASRPM"
+  USE_RPM="use_rpm, use_rpm4"
+  HAS_RPM=yes
+fi
+
+AC_ARG_WITH(rpm5,
+        [ --with-rpm5 ],
+        HAS_RPM5=yes,
+        HAS_RPM5=no)
+if test "$HAS_RPM5" = "yes"; then
+  AC_MSG_NOTICE([RPM 5 support enabled])
+  CFLAGS="-I/usr/include/rpm"
+  LDFLAG="-Lrpm -Lrpmio"
+  AC_CHECK_HEADERS([rpm/rpmio.h],,AC_MSG_ERROR([missing rpmio.h]))
+#  AC_CHECK_HEADERS([rpm/rpmgi.h],,AC_MSG_ERROR([missing rpmgi.h]))
+#  AC_CHECK_HEADERS([rpm/rpm46compat.h],,AC_MSG_ERROR([missing rpm46compat.h]))
+#  AC_CHECK_HEADERS([rpm/rpm4compat.h],,AC_MSG_ERROR([missing rpm4compat.h]))
+  CONFIG_RPM="-DHASRPM"
+  USE_RPM="use_rpm, use_rpm5"
+  HAS_RPM=yes
+fi
+
+
 
 AC_SUBST(TAGS_PGSQL)
 AC_SUBST(PKG_PGSQL)
@@ -257,6 +275,10 @@ AC_SUBST(CONFIG_DB)
 AC_SUBST(CONFIG_ZIP)
 AC_SUBST(PKG_ZIP)
 AC_SUBST(ZIP)
+
+AC_SUBST(CONFIG_PARMAP)
+AC_SUBST(PKG_PARMAP)
+AC_SUBST(PARMAP)
 
 AC_SUBST(CONFIG_BZ2)
 AC_SUBST(PKG_BZ2)

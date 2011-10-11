@@ -32,7 +32,15 @@ module Options = struct
   let brokenlist = StdOpt.store_true ()
   let downgrades = StdOpt.store_true ()
   let cluster = StdOpt.store_true ()
+IFDEF HASPARMAP THEN
+  let ncores = StdOpt.int_option ~default:1 ()
+END
   open OptParser ;;
+
+IFDEF HASPARMAP THEN
+  add options ~long_name:"ncores"
+    ~help:"Number of cores to use on a multicore" ncores;
+END
 
   add options ~long_name:"select"
     ~help:"Check only these package ex. (sn1,sv1),(sn2,sv2)" checkonly;
@@ -187,7 +195,6 @@ let challenged
   ?(cluster=false)
   ?(clusterlist=None) 
   repository =
-  let predmap = Hashtbl.create 1023 in
   
   (* distribution specific *)
   let worktable = ref [] in
@@ -242,69 +249,77 @@ let challenged
   info "Total versions: %d" (List.length versionlist);
 
   (* computing *)
-  List.iter (fun ((sn,sv,version),(cluster,vl,constr)) ->
-    debug "source: %s %s" sn version;
-    if sv <> version then debug "subclusterof: %s %s" sn sv;
-    Util.Progress.progress predbar;
-    debug "Versions: %s" (String.concat ";" vl);
-    debug "Constraints: %s" (String.concat " ; " (
-      List.map (fun (c,v) -> Printf.sprintf "%s" v) constr
-      )
-    );
-    let discr = Debian.Evolution.discriminant ~bottom:true (evalsel getv) vl constr in
-    debug "Discriminants: %d" (List.length discr);
-    (*
+  let results = 
+    let map f l =
+IFDEF HASPARMAP THEN
+    let ncores = OptParse.Opt.get Options.ncores in
+    Parmap.parmap ~ncores f (Parmap.L l)
+ELSE
+    List.map f l
+END
+    in
+    map (fun ((sn,sv,version),(cluster,vl,constr)) ->
+      let cluster_results = ref [] in
+      debug "source: %s %s" sn version;
+      if sv <> version then debug "subclusterof: %s %s" sn sv;
+      Util.Progress.progress predbar;
+
+      debug "Versions: %s" (String.concat ";" vl);
+      debug "Constraints: %s" (String.concat " ; " (
+        List.map (fun (c,v) -> Printf.sprintf "%s" v) constr
+        )
+      );
+
+      let discr = Debian.Evolution.discriminant ~bottom:true (evalsel getv) vl constr in
+      debug "Discriminants: %d" (List.length discr);
+      (*
       if cluster then begin
-      let pp fmt pkg = 
-        let pp_io_property fmt (n, s) = Format.fprintf fmt "%s: %s@," n s in
-        Cudf_printer.pp_package_gen pp_io_property fmt pkg
-      in
-      let pp_list = Diagnostic.pp_list pp in
-      let cudf_cluster = 
-        List.map (fun pkg -> 
-          let (pn,pv) = (pkg.Debian.Packages.name, getv pkg.Debian.Packages.version) in
-          Cudf.lookup_package universe (pn,pv) 
-        ) cluster
-      in
-      Format.fprintf fmt "@[<v 1>clusters:@,%a@]@," pp_list cudf_cluster
+        let pp fmt pkg = 
+          let pp_io_property fmt (n, s) = Format.fprintf fmt "%s: %s@," n s in
+          Cudf_printer.pp_package_gen pp_io_property fmt pkg
+        in
+        let pp_list = Diagnostic.pp_list pp in
+        let cudf_cluster = 
+          List.map (fun pkg -> 
+            let (pn,pv) = (pkg.Debian.Packages.name, getv pkg.Debian.Packages.version) in
+            Cudf.lookup_package universe (pn,pv) 
+          ) cluster
+        in
+        Format.fprintf fmt "@[<v 1>clusters:@,%a@]@," pp_list cudf_cluster
       end;
       *)
-    List.iter (function 
-      (* remove this one to show results that are equivalent to do nothing *)
-      | (target,equiv) when not(downgrades) && 
-          (lesser_or_equal getv target equiv version) ->
-            if Util.Debug.is_enabled "challenged" then begin
+      List.iter (function 
+        (* remove this one to show results that are equivalent to do nothing *)
+        | (target,equiv) when not(downgrades) && 
+            (lesser_or_equal getv target equiv version) ->
               debug "target: %s" (Debian.Evolution.string_of_range target);
               debug "equiv: %s" (String.concat " , " (
                 List.map (Debian.Evolution.string_of_range) equiv
                 ));
               debug "ignored"
-            end
-      | (target,equiv) ->
-          if Util.Debug.is_enabled "challenged" then begin
+        | (target,equiv) ->
             debug "Considering target %s" (Debian.Evolution.string_of_range target);
             debug "target: %s" (Debian.Evolution.string_of_range target);
             debug "equiv: %s" (String.concat " , " (
               List.map (Debian.Evolution.string_of_range) equiv
               ));
-          end;
 
-          let migrationlist = Debian.Evolution.migrate cluster target in
-          let future = upgrade tables pkgset universe migrationlist in
-          let callback d = 
-            let fmt = Format.std_formatter in
-            if broken then Diagnostic.fprintf ~pp ~failure:true ~explain:true fmt d 
-          in
-          if broken then Format.printf "distcheck: @,";
-          let i = Depsolver.univcheck ~callback future in
-          if broken then Format.printf "@.";
+            let migrationlist = Debian.Evolution.migrate cluster target in
+            let future = upgrade tables pkgset universe migrationlist in
+            let callback d = 
+              let fmt = Format.std_formatter in
+              if broken then Diagnostic.fprintf ~pp ~failure:true ~explain:true fmt d 
+            in
+            if broken then Format.printf "distcheck: @,";
+            let i = Depsolver.univcheck ~callback future in
+            if broken then Format.printf "@.";
 
-          debug "broken: %d" i;
-          Hashtbl.add predmap ((sn,sv,version),(target,equiv)) i
-    ) discr;
-  ) !worktable ;
-
-  predmap
+            debug "broken: %d" i;
+            cluster_results := (((sn,sv,version),(target,equiv)),i)::!cluster_results ;
+      ) discr;
+      !cluster_results
+    ) !worktable
+  in List.concat results
 ;;
 
 let main () =
@@ -318,7 +333,7 @@ let main () =
   let downgrades = OptParse.Opt.get Options.downgrades in
   let l = (Debian.Packages.input_raw args) in
   let pred = challenged ~downgrades ~broken ~cluster ~clusterlist l in
-  Hashtbl.iter (fun ((sn,sv,version),(target,equiv)) broken ->
+  List.iter (fun (((sn,sv,version),(target,equiv)),broken) ->
     Format.printf "cluster: %s %s@." sn version;
     if sv <> version then Format.printf "subclusterof: %s %s@." sn sv;
     Format.printf "target: %s@." (Debian.Evolution.string_of_range target);
