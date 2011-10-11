@@ -135,29 +135,47 @@ let migrate packagelist target =
   List.map (fun pkg -> ((pkg,target),(align pkg.Packages.version target))) packagelist
 ;;
 
-(*
-let aa repository =
-  (* to be optimized !!! *)
-  let constraints_table = Debian.Evolution.constraints repository in
-  let clusters = Debian.Debutil.cluster repository in
-  Hashtbl.fold (fun (sn,sv) l acc0 ->
-    List.fold_left (fun acc1 (version,cluster) ->
-    let (versionlist, constr) =
-      (* all binary versions in the cluster *)
-      let clustervl = List.map (fun pkg -> pkg.Packages.version) cluster in
-      List.fold_left (fun (vl,cl) pkg ->
-        let pn = pkg.Packages.name in
-        let pv = pkg.Packages.version in
-        let constr = all_constraints constraints_table pn in
-        let vl = clustervl@(all_versions constr) in
-        let el = (extract_epochs vl) in
-        let tvl = add_normalize vl in
-        let versionlist = add_epochs el tvl in
-        (versionlist @ vl, constr @ cl)
-      ) ([],[]) cluster
-    in
-    (sn,version,cluster,List.unique versionlist,List.unique constr)::acc1
-    ) acc0 l
-  ) clusters []
+let extract_epochs vl =
+  Util.list_unique (
+    List.fold_left (fun acc v ->
+      let (e,_,_,_) = Version.split v in
+      e :: acc
+    ) [] vl
+  )
 ;;
-*)
+
+let add_epochs el vl =
+  List.fold_left (fun acc1 e ->
+    List.fold_left (fun acc2 v ->
+      match Version.split v with
+      |("",u,r,b) -> (Version.concat (e,u,r,b))::v::acc2
+      |_ -> v::acc2
+    ) acc1 vl
+  ) [] el
+;;
+
+let add_normalize vl =
+  List.fold_left (fun acc v ->
+    let (e,u,r,b) = Version.split v in
+    let n1 = Version.concat ("",u,r,"") in
+    let n2 = Version.concat ("",u,r,b) in
+    n1::n2::v::acc
+  ) [] vl
+;;
+
+let all_ver_constr constraints_table cluster =
+  let (versionlist, constr) =
+    List.fold_left (fun (_vl,_cl) pkg ->
+      let pn = pkg.Packages.name in
+      let pv = pkg.Packages.version in
+      let constr = all_constraints constraints_table pn in
+      let vl = pv::(all_versions constr) in
+      (vl @ _vl,constr @ _cl)
+    ) ([],[]) cluster
+  in
+  let all_epochs = extract_epochs versionlist in
+  let all_norm = add_normalize versionlist in
+  let versionlist = add_epochs all_epochs all_norm in
+  (Util.list_unique versionlist,Util.list_unique constr)
+;;
+

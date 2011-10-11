@@ -3,7 +3,7 @@ include Makefile.config
 DIST_DIR = $(NAME)-$(VERSION)
 DIST_TARBALL = $(DIST_DIR).tar.gz
 
-OBFLAGS = -use-ocamlfind #-classic-display
+OBFLAGS = -j 4 -use-ocamlfind #-classic-display
 
 all: lib man
 	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
