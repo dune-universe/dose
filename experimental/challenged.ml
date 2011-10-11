@@ -95,7 +95,7 @@ let add h k v =
 ;;
 
 let extract_epochs vl =
-  List.unique (
+  Util.list_unique (
     List.fold_left (fun acc v ->
       let (e,_,_,_) = Debian.Version.split v in
       e :: acc
@@ -141,12 +141,15 @@ let version_of_target getv = function
   |`Lo v |`In (_,v) -> (getv v) - 1
 ;;
 
-let lesser_or_equal getv targets v =
+let lesser_or_equal getv target equivs v =
+  let v1 = version_of_target getv target in
   let v2 = getv v in
-  List.for_all (fun target ->
-    let v1 = version_of_target getv target in
-    v1 <= v2
-  ) targets
+  if v1 <= v2 then true 
+  else
+    List.for_all (fun target ->
+      let v1 = version_of_target getv target in
+      v1 <= v2
+    ) equivs
 ;;
 
 let pp tables pkg =
@@ -269,21 +272,25 @@ let challenged
     List.iter (function 
       (* remove this one to show results that are equivalent to do nothing *)
       | (target,equiv) when not(downgrades) && 
-          (lesser_or_equal getv (target::equiv) version) ->
-          debug "target: %s" (Debian.Evolution.string_of_range target);
-          debug "equiv: %s" (String.concat " , " (
-            List.map (Debian.Evolution.string_of_range) equiv
-            ));
-          debug "ignored"
+          (lesser_or_equal getv target equiv version) ->
+            if Util.Debug.is_enabled "challenged" then begin
+              debug "target: %s" (Debian.Evolution.string_of_range target);
+              debug "equiv: %s" (String.concat " , " (
+                List.map (Debian.Evolution.string_of_range) equiv
+                ));
+              debug "ignored"
+            end
       | (target,equiv) ->
-          debug "Considering target %s" (Debian.Evolution.string_of_range target);
+          if Util.Debug.is_enabled "challenged" then begin
+            debug "Considering target %s" (Debian.Evolution.string_of_range target);
+            debug "target: %s" (Debian.Evolution.string_of_range target);
+            debug "equiv: %s" (String.concat " , " (
+              List.map (Debian.Evolution.string_of_range) equiv
+              ));
+          end;
+
           let migrationlist = Debian.Evolution.migrate cluster target in
           let future = upgrade tables pkgset universe migrationlist in
-          debug "target: %s" (Debian.Evolution.string_of_range target);
-          debug "equiv: %s" (String.concat " , " (
-            List.map (Debian.Evolution.string_of_range) equiv
-            ));
-
           let callback d = 
             let fmt = Format.std_formatter in
             if broken then Diagnostic.fprintf ~pp ~failure:true ~explain:true fmt d 

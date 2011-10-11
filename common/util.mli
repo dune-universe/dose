@@ -53,6 +53,8 @@ module type Messages = sig
 
   (** return the list of all labels known to the module *)
   val avalaible : unit -> label list
+
+  val is_enabled : label -> bool
 end
 
 (** Debug, Info and Warning messages are printed immediately on stderr. 

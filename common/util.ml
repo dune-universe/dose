@@ -66,6 +66,7 @@ module type Messages = sig
   val all_disabled : unit -> unit
   val all_enabled : unit -> unit
   val avalaible : unit -> label list
+  val is_enabled : label -> bool
 end
 
 (** Debug messages are printed immediately on stderr. 
@@ -106,6 +107,13 @@ module MakeMessages(X : sig val label : string end) = struct
   let avalaible () = Hashtbl.fold (fun k _ acc -> k::acc) messages []
   let all_enabled () = allenabled := true
   let all_disabled () = allenabled := false
+  let is_enabled s =
+    try let t = Hashtbl.find messages s in t.enabled
+    with Not_found -> begin
+      Printf.eprintf "Warning: debug label %s not found\n" s;
+      false
+    end
+
 end
 
 (* this way we can have the same label for different messages *)
