@@ -173,6 +173,10 @@ let init_solver ?(buffer=false) ?(proxy_size=0) ?closure index =
     ) closure
   end;
 
+  debug "n. disjunctions %d" !num_disjunctions;
+  debug "n. dependencies %d" !num_dependencies;
+  debug "n. conflicts %d" !num_conflicts;
+
   S.propagate constraints ;
   {
     constraints = constraints ;
