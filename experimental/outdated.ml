@@ -47,7 +47,7 @@ module Options = struct
   ~help:"Check only these package ex. (sn1,sv1),(sn2,sv2)" checkonly;
   
   add options ~short_name:'b' 
-  ~help:"Print the list of broken packages" brokenlist;
+  ~help:"Print the list of broken packages and exit" brokenlist;
 
   add options ~short_name:'s' 
   ~help:"Print summary of broken packages" summary;
@@ -171,7 +171,8 @@ let outdated
 
   let tables = Debian.Debcudf.init_tables ~step:2 ~versionlist repository in
   let getv v = Debian.Debcudf.get_cudf_version tables ("",v) in
-  let pkglist = 
+  let pkglist = ref [] in
+  let do_pkglist () = 
     let s = 
       CudfAdd.to_set (
         Hashtbl.fold (fun (sn,version) (cluster,vl,constr) acc0 ->
@@ -206,19 +207,23 @@ let outdated
           ) acc0 discr
         ) worktable [] 
       )
-    in CudfAdd.Cudf_set.elements s
+    in pkglist := (CudfAdd.Cudf_set.elements s)
   in
+  
+  do_pkglist ();
 
   if dump then begin
     Cudf_printer.pp_preamble stdout Debian.Debcudf.preamble;
     print_newline ();
-    Cudf_printer.pp_packages stdout (List.sort pkglist);
+    Cudf_printer.pp_packages stdout (List.sort !pkglist);
+    exit(0)
   end;
       
-  let universe = Cudf.load_universe pkglist in
+  let universe = Cudf.load_universe !pkglist in
   let universe_size = Cudf.universe_size universe in
   info "Total future: %d" universe_size;
 
+  pkglist := [];
   Hashtbl.clear worktable;
   Hashtbl.clear constraints_table;
 

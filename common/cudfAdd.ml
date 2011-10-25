@@ -95,8 +95,8 @@ let realversionmap pkglist =
   ) pkglist ;
   h
 
-let vartoint = Cudf.id_by_package 
-let inttovar = Cudf.package_by_id 
+let vartoint = Cudf.uid_by_package 
+let inttovar = Cudf.package_by_uid
 
 let pkgid p = (p.Cudf.package, p.Cudf.version)
 
@@ -108,52 +108,19 @@ let get_package_list h n = try !(Hashtbl.find h n) with Not_found -> []
 
 let normalize_set (l : int list) = Util.list_unique l
 
-(*
-let compute_conflicts pool =
-  let conflict_pairs = Hashtbl.create 1000 in
-  let conflicts = Hashtbl.create 1000 in
-  Array.iteri
-    (fun i p ->
-       List.iter
-         (fun n ->
-            let pair = (min n i, max n i) in
-            if n <> i && not (Hashtbl.mem conflict_pairs pair) then begin
-              Hashtbl.add conflict_pairs pair ();
-              add_to_package_list conflicts i n;
-              add_to_package_list conflicts n i
-            end)
-         (normalize_set
-            (List.flatten
-               (List.map (fun p -> resolve_package_dep pool p)
-                   p.Cudf.conflicts)))
-    ) pool.packages_by_num;
-  Array.init pool.size (fun i -> get_package_list conflicts i)
-
-let compute_deps dist =
-  Array.init dist.size (fun i ->
-    let p = dist.packages_by_num.(i) in
-    List.map (fun l ->
-      normalize_set
-        (List.flatten
-          (List.map (fun p -> resolve_package_dep dist p) l)
-        )
-      ) p.Cudf.depends
-  )
-*)
-
 let who_provides univ (pkgname,constr) = 
   let prol = Cudf.who_provides ~installed:false univ (pkgname,constr) in
   let pkgl = Cudf.lookup_packages ~filter:constr univ pkgname in
   pkgl @ (List.map fst prol)
 
 let resolve_package_dep univ (n, c) =
-  List.map (Cudf.id_by_package univ) (who_provides univ (n,c))
+  List.map (Cudf.uid_by_package univ) (who_provides univ (n,c))
 
 let resolve_deps_int univ vpkgs =
   normalize_set (List.flatten (List.map (resolve_package_dep univ) vpkgs))
 
 let resolve_deps univ vpkgs =
-  List.map (inttovar univ) (resolve_deps_int univ vpkgs)
+  List.map (Cudf.package_by_uid univ) (resolve_deps_int univ vpkgs)
 
 let who_depends univ pkg =
   List.map (resolve_deps univ) pkg.Cudf.depends
@@ -161,8 +128,8 @@ let who_depends univ pkg =
 let who_conflicts conflicts_packages univ pkg = 
   if (Hashtbl.length conflicts_packages) = 0 then
     fatal "you must use CudfAdd.init_conflicts before using who_conflicts";
-  let i = vartoint univ pkg in
-  List.map (inttovar univ) (get_package_list conflicts_packages i)
+  let i = Cudf.uid_by_package univ pkg in
+  List.map (Cudf.package_by_uid univ) (get_package_list conflicts_packages i)
 ;;
 
 let init_conflicts univ =
@@ -180,6 +147,19 @@ let init_conflicts univ =
     (resolve_deps_int univ p.Cudf.conflicts)
   ) univ;
   conflicts_packages
+;;
+
+let compute_pool universe = 
+  let size = Cudf.universe_size universe in
+  let conflicts = init_conflicts universe in
+  let c = Array.init size (fun i -> get_package_list conflicts i) in
+  let d =
+    Array.init size (fun i ->
+      let p = inttovar universe i in
+      List.map (resolve_deps_int universe) p.Cudf.depends
+    )
+  in
+  (d,c)
 ;;
 
 let not_allowed = Str.regexp  "[^a-zA-Z0-9@/+().-]" 
