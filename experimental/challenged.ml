@@ -118,21 +118,33 @@ let evalsel getv target constr =
   |`In (v1,v2) -> evalsel ((getv v2) - 1) constr
 ;;
 
-let version_of_target getv = function
-  |`Eq v -> getv v
-  |`Hi v -> (getv v) + 1
-  |`Lo v |`In (_,v) -> (getv v) - 1
+let strip v = 
+  let (e,v,u,b) = Debian.Version.split v in
+  Debian.Version.concat ("",v,u,b)
+
+let version_of_target ?(strip=(fun x -> x)) getv = function
+  |`Eq v -> getv (strip v)
+  |`Hi v -> (getv (strip v)) + 1
+  |`Lo v |`In (_,v) -> (getv (strip v)) - 1
 ;;
 
 let lesser_or_equal getv target equivs v =
-  let v1 = version_of_target getv target in
-  let v2 = getv v in
-  if v1 <= v2 then true 
-  else
-    List.for_all (fun target ->
-      let v1 = version_of_target getv target in
-      v1 <= v2
-    ) equivs
+  match Debian.Version.split v with
+  |("",_,_,_) ->
+      (* in this case the reference version is without epoch,
+       * hence no aligmement of the target. We want to exclude
+       * this version if it is less or equal then the reference
+       * version OR if the stripped target if less then the 
+       * reference version. The idea is to avoid to upgrade to
+       * any epoch:version, but only to epoch:version with
+       * version > reference version *)
+      if (version_of_target getv target) <= (getv v) then true
+      else (version_of_target ~strip getv target) < (getv v)
+  |_ -> 
+      (* in this case the target is going to be aligned and 
+       * we want to make sure that the stripped target version is
+       * greater or equal then the stripped reference version *)
+      (version_of_target ~strip getv target) <= (getv (strip v))
 ;;
 
 let pp tables pkg =
@@ -200,7 +212,6 @@ let challenged
 
   Util.Progress.set_total predbar (List.length !worktable);
 
-  info "Total Names: %d" (List.length !worktable);
   info "Total versions: %d" (List.length versionlist);
 
   (* computing *)

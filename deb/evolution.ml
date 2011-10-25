@@ -144,6 +144,15 @@ let extract_epochs vl =
   )
 ;;
 
+let add_normalize vl =
+  List.fold_left (fun acc v ->
+    let (e,u,r,b) = Version.split v in
+    let n1 = Version.concat ("",u,r,"") in
+    let n2 = Version.concat ("",u,r,b) in
+    n1::n2::v::acc
+  ) [] vl
+;;
+
 let add_epochs el vl =
   List.fold_left (fun acc1 e ->
     List.fold_left (fun acc2 v ->
@@ -152,15 +161,6 @@ let add_epochs el vl =
       |_ -> v::acc2
     ) acc1 vl
   ) [] el
-;;
-
-let add_normalize vl =
-  List.fold_left (fun acc v ->
-    let (e,u,r,b) = Version.split v in
-    let n1 = Version.concat ("",u,r,"") in
-    let n2 = Version.concat ("",u,r,b) in
-    n1::n2::v::acc
-  ) [] vl
 ;;
 
 let all_ver_constr constraints_table cluster =
