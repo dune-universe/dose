@@ -8,11 +8,12 @@
 
 <applications/*.ml> or <experimental/*.ml>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_PARMAP@)
 
-<*/tests.*>: package(oUnit), package(extlib), @PKG_CUDF@, package(pcre), use_common, use_debian, package(zip), package(str),  package(bz2)
+<*/tests.*>: package(oUnit), package(extlib), @PKG_CUDF@, package(pcre), package(zip), package(str),  package(bz2)
 
-<deb/tests.*>: use_debian
-<rpm/tests.*>: @USE_RPM@, use_algo, package(ocamlgraph)
-<algo/tests.*>: use_algo, package(ocamlgraph)
+<common/tests.*>: use_common
+<deb/tests.*>: use_common, use_debian
+<rpm/tests.*>: use_common, @USE_RPM@, use_algo, package(ocamlgraph)
+<algo/tests.*>: use_common, use_algo, package(ocamlgraph)
 
 <common/*.{ml,mli}>: @PKG_ZIP@, @PKG_BZ2@
 <deb/*.{ml,mli}>: use_common
