@@ -93,6 +93,7 @@ module type T = sig
   (** enable debug messages *)
   val debug : bool -> unit
 
+  val stats : state -> unit
 end
 
 (** functor *)
