@@ -20,8 +20,8 @@ let uuid () =
 (* This algorithm runs in O(n) . does not preserve ordering - 
    returns elements in reverse order *)
 (* XXX it would be nice to add a comparison function here... *)
-let list_unique l =
-  let seen = Hashtbl.create (2 * (List.length l)) in
+let list_unique l = 
+  let seen = Hashtbl.create (List.length l) in
   let rec add acc = function
     |hd :: tl when not (Hashtbl.mem seen hd) ->
         begin
@@ -31,7 +31,7 @@ let list_unique l =
     |_ :: tl -> add acc tl
     |[] -> acc
   in
-  (* List.rev *) add [] l
+  add [] l
 
 (* standard memoization function *)
 let memo f =

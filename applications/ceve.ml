@@ -104,7 +104,7 @@ let nr_conflicts maps univ =
 begin
   Cudf.fold_packages (fun acc p ->
     let cfl = List.filter (fun x -> not (x =% p))
-      (List.flatten (List.rev_map maps.CudfAdd.who_provides p.conflicts)) in
+      (List.flatten (List.rev_map (CudfAdd.who_provides maps) p.conflicts)) in
     debug "%s: %d conflicts" (Cudf_types_pp.string_of_pkgname p.package)
       (List.length cfl);
     List.iter (fun c ->
@@ -184,7 +184,6 @@ let main () =
   let output ll =
     List.iter (fun l ->
       let u = Cudf.load_universe l in
-      let m = CudfAdd.build_maps u in
       let oc = Options.output_ch () in
       begin match OptParse.Opt.get Options.output_ty with
       |"dot" -> 

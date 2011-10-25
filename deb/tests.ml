@@ -40,7 +40,6 @@ let packagelist = Packages.input_raw [f_packages] ;;
 let tables = Debcudf.init_tables packagelist ;;
 let cudf_list = List.map (Debcudf.tocudf ~extras:extras_properties tables) packagelist ;; 
 let universe = Cudf.load_universe cudf_list ;;
-let maps = CudfAdd.build_maps universe ;;
 
 let test_version = 
   "debian version parsing" >::: [
@@ -317,7 +316,7 @@ let test_virtual =
       try
         let ssmtp = Cudf.lookup_package universe ("ssmtp",8366) in
         let vpkg = ("mail-transport-agent--virtual",None) in
-        let provides = maps.CudfAdd.who_provides vpkg in
+        let provides = CudfAdd.who_provides universe vpkg in
         assert_equal true (List.exists ((=%) ssmtp) provides)
       with Not_found -> assert_failure "ssmtp version mismatch"
     );

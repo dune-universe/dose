@@ -265,8 +265,7 @@ let main () =
   let args = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress)
-  ["Depsolver_int.univcheck";"Depsolver_int.init_solver";
-  "CudfAdd.build_maps";"Mdf.__load"] ;
+  ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
 
   (* let clusterlist = OptParse.Opt.opt Options.checkonly in *)

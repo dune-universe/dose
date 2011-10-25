@@ -131,18 +131,18 @@ module SyntacticDependencyGraph = struct
   let depgraphbar = Util.Progress.create "SyntacticDependencyGraph.dependency_graph"
 
   (** Build the syntactic dependency graph from the give cudf universe *)
-  let dependency_graph universe =
+  let dependency_graph univ =
     let timer = Util.Timer.create "SyntacticDependencyGraph.dependency_graph" in
     Util.Timer.start timer;
-    let maps = CudfAdd.build_maps universe in
-    Util.Progress.set_total depgraphbar (Cudf.universe_size universe);
+    let conflicts = CudfAdd.init_conflicts univ in
+    Util.Progress.set_total depgraphbar (Cudf.universe_size univ);
     let gr = G.create () in
     Cudf.iter_packages (fun pkg ->
       Util.Progress.progress depgraphbar;
       let vpid = G.V.create (PkgV.Pkg pkg) in
       let c = ref 0 in
-      List.iter (fun l ->
-        match List.flatten (List.map maps.CudfAdd.who_provides l) with 
+      List.iter (fun vpkgs ->
+        match CudfAdd.resolve_deps univ vpkgs with 
         |[] -> ()
         |[p] ->
             let vp = G.V.create (PkgV.Pkg p) in
@@ -167,8 +167,8 @@ module SyntacticDependencyGraph = struct
           let vp = G.V.create (PkgV.Pkg p) in
           let edge = G.E.create vpid PkgE.Conflict vp in
           G.add_edge_e gr edge
-      ) (maps.CudfAdd.who_conflicts pkg)
-    ) universe
+      ) (CudfAdd.who_conflicts conflicts univ pkg)
+    ) univ
     ;
     Util.Timer.stop timer gr
   ;;
@@ -210,12 +210,11 @@ module PackageGraph = struct
   
   (** Build the dependency graph from the given cudf universe *)
   let dependency_graph universe =
-    let maps = CudfAdd.build_maps universe in
     let gr = G.create () in
     Cudf.iter_packages (fun pkg ->
       List.iter (fun l ->
         List.iter (G.add_edge gr pkg) 
-        (List.flatten (List.map maps.CudfAdd.who_provides l))
+        (List.flatten (List.map (CudfAdd.who_provides universe) l))
       ) pkg.Cudf.depends
     ) universe
     ;
@@ -223,12 +222,11 @@ module PackageGraph = struct
 
   (** Build the conflict graph from the given cudf universe *)
   let conflict_graph universe =
-    let maps = CudfAdd.build_maps universe in
     let gr = UG.create () in
     Cudf.iter_packages (fun pkg ->
       List.iter (fun (pkgname,constr) ->
         List.iter (UG.add_edge gr pkg)
-        (maps.CudfAdd.who_provides (pkgname,constr))
+        (CudfAdd.who_provides universe (pkgname,constr))
       ) pkg.Cudf.conflicts
     ) universe
     ;
@@ -331,17 +329,19 @@ module IntPkgGraph = struct
   end
 
   (** add to the graph all conjunctive dependencies of package id *)
-  let conjdepgraph_int ?(transitive=false) graph index id =
+  let conjdepgraph_int ?(transitive=false) graph maps id =
     G.add_vertex graph id;
-    List.iter (function
-      |(_,[p],_) when p <> id -> add_edge transitive graph id p
-      | _ -> ()
-    ) index.(id).Mdf.depends
+    let p = CudfAdd.inttovar maps id in
+    List.iter (fun l ->
+      match List.flatten (List.map (fun p -> CudfAdd.resolve_package_dep maps p) l) with
+      |[q] when q <> id -> add_edge transitive graph id q
+      |_ -> ()
+    ) p.Cudf.depends
 
   (** for all id \in idlist add to the graph all conjunctive dependencies *)
-  let conjdepgraph index idlist =
+  let conjdepgraph maps idlist =
     let graph = G.create ~size:(List.length idlist) () in
-    List.iter (conjdepgraph_int graph index) idlist ;
+    List.iter (conjdepgraph_int graph maps) idlist ;
     graph
 
   (** given a graph return the conjunctive dependency closure of the package id *)
@@ -360,14 +360,16 @@ module IntPkgGraph = struct
 
   (** Build the dependency graph from the given index. conjunctive and
       disjunctive dependencies are considered as equal *)
-  let dependency_graph index =
-    let size = Array.length index in
+  let dependency_graph universe =
+    let size = Cudf.universe_size universe in
     let graph = G.create ~size () in
     for id = 0 to size -1 do
       G.add_vertex graph id;
-      List.iter (fun (_,l,_) ->
-        List.iter (fun p -> if p <> id then G.add_edge graph id p) l
-      ) index.(id).Mdf.depends
+      let p = CudfAdd.inttovar universe id in
+      List.iter (fun l ->
+        let dl = List.flatten (List.map (CudfAdd.resolve_package_dep universe) l) in
+        List.iter (fun p -> if p <> id then G.add_edge graph id p) dl
+      ) p.Cudf.depends;
     done;
     graph
 
@@ -377,7 +379,7 @@ end
 (******************************************************)
 
 (** transform an integer graph in a cudf graph *)
-let intcudf index intgraph =
+let intcudf universe intgraph =
   let module PG = PackageGraph.G in
   let module SG = IntPkgGraph.G in
   let trasformtimer = Util.Timer.create "Defaultgraphs.intcudf" in
@@ -385,20 +387,20 @@ let intcudf index intgraph =
   let size = 25000 in
   let cudfgraph = PG.create ~size () in
   SG.iter_edges (fun x y ->
-    let p = index.(x) in
-    let q = index.(y) in
-    PG.add_edge cudfgraph p.Mdf.pkg q.Mdf.pkg
+    let p = CudfAdd.inttovar universe x in
+    let q = CudfAdd.inttovar universe y in
+    PG.add_edge cudfgraph p q
   ) intgraph ;
   SG.iter_vertex (fun v ->
-    let p = index.(v) in
-    PG.add_vertex cudfgraph p.Mdf.pkg
+    let p = CudfAdd.inttovar universe v in
+    PG.add_vertex cudfgraph p
   ) intgraph ;
   debug "cudfgraph: nodes %d , edges %d"
   (PG.nb_vertex cudfgraph) (PG.nb_edges cudfgraph);
   Util.Timer.stop trasformtimer cudfgraph
 
 (** transform a cudf graph into a integer graph *)
-let cudfint maps cudfgraph =
+let cudfint universe cudfgraph =
   let module PG = PackageGraph.G in
   let module SG = IntPkgGraph.G in
   let trasformtimer = Util.Timer.create "DefaultGraphs.cudfint" in
@@ -406,10 +408,11 @@ let cudfint maps cudfgraph =
   let intgraph = SG.create () in
   PG.iter_edges (fun x y ->
     SG.add_edge intgraph
-    (maps.CudfAdd.map#vartoint x) (maps.CudfAdd.map#vartoint y)
+    (CudfAdd.vartoint universe x) 
+    (CudfAdd.vartoint universe y)
   ) cudfgraph;
   PG.iter_vertex (fun v ->
-    SG.add_vertex intgraph (maps.CudfAdd.map#vartoint v)
+    SG.add_vertex intgraph (CudfAdd.vartoint universe v)
   ) cudfgraph;
   debug "intcudf: nodes %d , edges %d"
   (SG.nb_vertex intgraph) (SG.nb_edges intgraph);

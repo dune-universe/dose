@@ -23,18 +23,15 @@ let warning fmt = Util.make_warning "StrongDeps" fmt
 (** [strongdeps u l] build the strong dependency graph of all packages in 
     [l] wrt the universe [u] *)
 let strongdeps universe pkglist =
-  let mdf = Mdf.load_from_universe universe in
-  let maps = mdf.Mdf.maps in
-  let idlist = List.map maps.map#vartoint pkglist in
-  let g = Strongdeps_int.strongdeps mdf idlist in
-  Defaultgraphs.intcudf mdf.Mdf.index g
+  let idlist = List.map (CudfAdd.vartoint universe) pkglist in
+  let g = Strongdeps_int.strongdeps universe idlist in
+  Defaultgraphs.intcudf universe g
 
 (** [strongdeps_univ u] build the strong dependency graph of 
     all packages in the universe [u] *)
 let strongdeps_univ ?(transitive=true) universe =
-  let mdf = Mdf.load_from_universe universe in
-  let g = Strongdeps_int.strongdeps_univ ~transitive mdf in
-  Defaultgraphs.intcudf mdf.Mdf.index g
+  let g = Strongdeps_int.strongdeps_univ ~transitive universe in
+  Defaultgraphs.intcudf universe g
 
 (** compute the impact set of the node [q], that is the list of all 
     packages [p] that strong depends on [q] *)
@@ -44,21 +41,18 @@ let impactset graph q =
 
 (** compute the (transitive closure of) the conjunctive dependency graph *)
 let conjdeps_univ universe =
-  let mdf = Mdf.load_from_universe universe in
   let g = Defaultgraphs.IntPkgGraph.G.create () in
-  for id=0 to (Array.length mdf.Mdf.index)-1 do
-    Defaultgraphs.IntPkgGraph.conjdepgraph_int g mdf.Mdf.index id
+  for id=0 to (Cudf.universe_size universe) - 1 do
+    Defaultgraphs.IntPkgGraph.conjdepgraph_int g universe id
   done;
-  Defaultgraphs.intcudf mdf.Mdf.index g
+  Defaultgraphs.intcudf universe g
 
 (** compute the transitive closure of the conjunctive dependency graph 
     considering only packages in [pkglist] *)
 let conjdeps universe pkglist =
-  let mdf = Mdf.load_from_universe universe in
-  let maps = mdf.Mdf.maps in
-  let idlist = List.map maps.map#vartoint pkglist in
+  let idlist = List.map (CudfAdd.vartoint universe) pkglist in
   let g = Defaultgraphs.IntPkgGraph.G.create () in
   List.iter (fun id ->
-    Defaultgraphs.IntPkgGraph.conjdepgraph_int g mdf.Mdf.index id
+    Defaultgraphs.IntPkgGraph.conjdepgraph_int g universe id
   ) idlist ;
-  Defaultgraphs.intcudf mdf.Mdf.index g
+  Defaultgraphs.intcudf universe g

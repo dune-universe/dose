@@ -306,23 +306,22 @@ let rec remove_deps deps confl =
 
 let repository universe =
   let cmp : int -> int -> bool = (=) in
-  let maps = CudfAdd.build_maps universe in
   let size = Cudf.universe_size universe in
   let confl = Conflict.create size in
   let deps = PTbl.create size Formula._true in
   Cudf.iter_packages (fun p1 ->
-    let i = maps.CudfAdd.map#vartoint p1 in
+    let i = CudfAdd.vartoint universe p1 in
     List.iter (fun p2 ->
-      let j = maps.CudfAdd.map#vartoint p2 in
+      let j = CudfAdd.vartoint universe p2 in
       Conflict.add confl i j
-    ) (maps.CudfAdd.who_conflicts p1);
+    ) (CudfAdd.who_conflicts universe p1);
 
     let dll = 
       List.map (fun disjunction ->
         let dl =
           List.fold_left (fun l2 vpkg ->
-            let l = maps.CudfAdd.who_provides vpkg in
-            List.fold_left (fun acc i -> (maps.CudfAdd.map#vartoint i)::acc) l2 l
+            let l = CudfAdd.who_provides universe vpkg in
+            List.fold_left (fun acc i -> (CudfAdd.vartoint universe i)::acc) l2 l
           ) [] disjunction
         in 
         Formula.lit_disj (List.unique ~cmp dl)
@@ -330,14 +329,14 @@ let repository universe =
     in
     PTbl.set deps i (Formula.conjl dll)
   ) universe;
-  (maps,deps,confl)
+  (deps,confl)
 ;;
 
-let flatten_repository size (maps,deps,confl) =
+let flatten_repository size (deps,confl) =
   let flatten_deps = flatten_dependencies size deps confl in
   let flatten_deps = remove_self_conflicts flatten_deps confl in
   let flatten_deps = remove_redundant_conflicts flatten_deps confl in
   let flatten_deps = flatten_dependencies size flatten_deps confl in
   let flatten_deps = remove_deps flatten_deps confl in
-  (maps,flatten_deps,confl)
+  (flatten_deps,confl)
 ;;

@@ -14,7 +14,6 @@
 
 open ExtLib
 open Common
-open Mdf
 
 type reason =
   |Dependency of (int * Cudf_types.vpkg list * int list)

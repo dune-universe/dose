@@ -20,7 +20,7 @@ let warning fmt = Util.make_warning "Depsolver" fmt
 let fatal fmt = Util.make_fatal "Depsolver" fmt
 
 type solver = {
-  mdf : Mdf.universe ;
+  maps : Cudf.universe ;
   solver : Depsolver_int.solver
 }
 
@@ -33,16 +33,15 @@ let load ?(check=true) universe =
   in
   match is_consistent check universe with
   |true,None ->
-      let mdf = Mdf.load_from_universe universe in
-      let solver = Depsolver_int.init_solver mdf.Mdf.index in
-      { mdf = mdf ; solver = solver }
+      let solver = Depsolver_int.init_solver universe in
+      { maps = universe ; solver = solver }
   |false,Some(r) -> 
       fatal "%s"
       (Cudf_checker.explain_reason (r :> Cudf_checker.bad_solution_reason)) ;
   |_,_ -> assert false
 
-let reason maps =
-  let from_sat = maps.map#inttovar in
+let reason universe =
+  let from_sat = CudfAdd.inttovar universe in
   List.map (function
     |Diagnostic_int.Dependency(i,vl,il) ->
         Diagnostic.Dependency(from_sat i,vl,List.map from_sat il)
@@ -52,8 +51,8 @@ let reason maps =
         Diagnostic.Conflict(from_sat i,from_sat j)
   )
 
-let result maps result = 
-  let from_sat = maps.map#inttovar in
+let result universe result = 
+  let from_sat = CudfAdd.inttovar universe in
   match result with
   |Diagnostic_int.Success f_int ->
       Diagnostic.Success (fun ?(all=false) () ->
@@ -61,98 +60,87 @@ let result maps result =
           {(from_sat i) with Cudf.installed = true}
         ) (f_int ~all ())
       )
-  |Diagnostic_int.Failure f -> Diagnostic.Failure (fun () -> reason maps (f ()))
+  |Diagnostic_int.Failure f -> Diagnostic.Failure (fun () ->
+      reason universe (f ()))
 
-let request maps result = 
-  let from_sat = maps.map#inttovar in
+let request universe result = 
+  let from_sat = CudfAdd.inttovar universe in
   match result with
   |Diagnostic_int.Sng i -> Diagnostic.Package (from_sat i)
   |Diagnostic_int.Lst il -> Diagnostic.PackageList (List.map from_sat il)
 
-let diagnosis maps res req =
-  let result = result maps res in
-  let request = request maps req in
+let diagnosis universe res req =
+  let result = result universe res in
+  let request = request universe req in
   { Diagnostic.result = result ; request = request }
 
 let univcheck ?callback universe =
-  let mdf = Mdf.load_from_universe universe in
-  let maps = mdf.Mdf.maps in
   match callback with
-  |None -> Depsolver_int.univcheck mdf
+  |None -> Depsolver_int.univcheck universe
   |Some f ->
-      let callback_int (res,req) = f (diagnosis maps res req) in
-      Depsolver_int.univcheck ~callback:callback_int mdf
+      let callback_int (res,req) = f (diagnosis universe res req) in
+      Depsolver_int.univcheck ~callback:callback_int universe
 
 let listcheck ?callback universe pkglist =
-  let mdf = Mdf.load_from_universe universe in
-  let maps = mdf.Mdf.maps in
-  let idlist = List.map maps.map#vartoint pkglist in
+  let idlist = List.map (CudfAdd.vartoint universe) pkglist in
   match callback with
-  |None -> Depsolver_int.listcheck mdf idlist
+  |None -> Depsolver_int.listcheck universe idlist
   |Some f ->
-      let callback_int (res,req) = f (diagnosis maps res req) in
-      Depsolver_int.listcheck ~callback:callback_int mdf idlist
+      let callback_int (res,req) = f (diagnosis universe res req) in
+      Depsolver_int.listcheck ~callback:callback_int universe idlist
 
 let edos_install s pkg =
-  let maps = s.mdf.Mdf.maps in
-  let req = Diagnostic_int.Sng (maps.map#vartoint pkg) in
+  let req = Diagnostic_int.Sng (CudfAdd.vartoint s.maps pkg) in
   let res = Depsolver_int.solve s.solver req in
-  diagnosis maps res req
+  diagnosis s.maps res req
 
 let edos_coinstall s pkglist =
-  let maps = s.mdf.Mdf.maps in
-  let idlist = List.map maps.map#vartoint pkglist in
+  let idlist = List.map (CudfAdd.vartoint s.maps) pkglist in
   let req = Diagnostic_int.Lst idlist in
   let res = Depsolver_int.solve s.solver req in
-  diagnosis maps res req
+  diagnosis s.maps res req
 
 let trim universe =
   let trimmed_pkgs = ref [] in
   let callback d =
     if Diagnostic.is_solution d then
       match d.Diagnostic.request with
-      | Diagnostic.Package p -> trimmed_pkgs := p::!trimmed_pkgs
-      | _ -> assert false
+      |Diagnostic.Package p -> trimmed_pkgs := p::!trimmed_pkgs
+      |_ -> assert false
   in
   ignore (univcheck ~callback universe);
   Cudf.load_universe !trimmed_pkgs
 
-let dependency_closure ?maxdepth ?conjunctive universe pkglist =
-  let mdf = Mdf.load_from_universe universe in
-  let maps = mdf.Mdf.maps in
-  let idlist = List.map maps.map#vartoint pkglist in
-  let closure = Depsolver_int.dependency_closure ?maxdepth ?conjunctive mdf idlist in
-  List.map maps.map#inttovar closure
+let dependency_closure ?maxdepth ?conjunctive univ pkglist =
+  let idlist = List.map (CudfAdd.vartoint univ) pkglist in
+  let closure = Depsolver_int.dependency_closure ?maxdepth ?conjunctive univ idlist in
+  List.map (CudfAdd.inttovar univ) closure
 
-let reverse_dependencies universe =
-  let mdf = Mdf.load_from_universe universe in
-  let maps = mdf.Mdf.maps in
-  let rev = Depsolver_int.reverse_dependencies mdf in
+let reverse_dependencies univ =
+  let rev = Depsolver_int.reverse_dependencies univ in
   let h = Cudf_hashtbl.create (Array.length rev) in
   Array.iteri (fun i l ->
-    Cudf_hashtbl.add h (maps.map#inttovar i) (List.map maps.map#inttovar l)
+    Cudf_hashtbl.add h 
+      (CudfAdd.inttovar univ i) 
+      (List.map (CudfAdd.inttovar univ) l)
   ) rev ;
   h
 
-let reverse_dependency_closure ?maxdepth universe pkglist =
-  let mdf = Mdf.load_from_universe universe in
-  let maps = mdf.Mdf.maps in
-  let idlist = List.map maps.map#vartoint pkglist in
-  let reverse = Depsolver_int.reverse_dependencies mdf in
+let reverse_dependency_closure ?maxdepth univ pkglist =
+  let idlist = List.map (CudfAdd.vartoint univ) pkglist in
+  let reverse = Depsolver_int.reverse_dependencies univ in
   let closure = Depsolver_int.reverse_dependency_closure ?maxdepth reverse idlist in
-  List.map maps.map#inttovar closure
+  List.map (CudfAdd.inttovar univ) closure
 
 type enc = Cnf | Dimacs
 
-let output_clauses ?(enc=Cnf) universe =
-  let mdf = Mdf.load_from_universe universe in
-  let maps = mdf.Mdf.maps in
-  let solver = Depsolver_int.init_solver ~buffer:true mdf.Mdf.index in
+let output_clauses ?(enc=Cnf) univ =
+  let solver = Depsolver_int.init_solver ~buffer:true univ in
   let clauses = Depsolver_int.S.dump solver.Depsolver_int.constraints in
-  let buff = Buffer.create (Cudf.universe_size universe) in
+  let buff = Buffer.create (Cudf.universe_size univ) in
   let to_cnf dump =
     let str (v, p) = 
-      let pkg = maps.map#inttovar (abs v) in
+      let pkg = (CudfAdd.inttovar univ) (abs v) in
       let pol = if p then "" else "!" in
       Printf.sprintf "%s%s-%d" pol pkg.Cudf.package pkg.Cudf.version
     in
@@ -164,7 +152,7 @@ let output_clauses ?(enc=Cnf) universe =
   let to_dimacs dump =
     let str (v, p) =
       if p then Printf.sprintf "%d" v else Printf.sprintf "-%d" v in
-    let varnum = solver.Depsolver_int.nr_variables in
+    let varnum = Cudf.universe_size univ in
     let closenum = (List.length clauses) in
     Printf.bprintf buff "p cnf %d %d\n" varnum closenum;
     List.iter (fun l ->

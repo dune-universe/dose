@@ -85,15 +85,15 @@ let main () =
       else
         Defaultgraphs.PackageGraph.dependency_graph universe in
     let l = 
-    begin
       Defaultgraphs.PackageGraph.G.fold_vertex (fun p l ->
         let strongimpact = List.length (impactlist sdgraph p) in 
         let rev_strongimpact = List.length (rev_impactlist sdgraph p) in
         let directimpact = List.length (impactlist depgraph p) in
         let rev_directimpact = List.length (rev_impactlist depgraph p) in
-        (p,strongimpact - directimpact, rev_strongimpact, strongimpact, rev_directimpact, directimpact) :: l
+        (p,strongimpact - directimpact, 
+          rev_strongimpact, strongimpact, 
+          rev_directimpact, directimpact) :: l
       ) depgraph []
-      end
     in
     Printf.fprintf outch "name, #str-out, #str-in, #dir-out, #dir-in, diff\n";
     List.iter (fun (p,diff,rs,s,rd,d) ->
@@ -101,10 +101,17 @@ let main () =
       Printf.fprintf outch "%s , %d, %d, %d, %d, %d\n" pkg rs s rd d diff
     ) (List.sort ~cmp:(fun (_,x,_,_,_,_) (_,y,_,_,_,_) -> y - x) l);
     close_out outch
-  end
-  ;
-  let dump = if OptParse.Opt.get Options.dump then Some (mk_filename prefix ".dump" "data") else None in
-  let dot = if OptParse.Opt.get Options.dot then Some (mk_filename prefix ".dot" "graph") else None in
+  end ;
+  let dump = 
+    if OptParse.Opt.get Options.dump then 
+      Some (mk_filename prefix ".dump" "data") 
+    else None 
+  in
+  let dot = 
+    if OptParse.Opt.get Options.dot then 
+      Some (mk_filename prefix ".dot" "graph") 
+    else None 
+  in
   Defaultgraphs.StrongDepGraph.out 
     ~dump ~dot ~detrans:(OptParse.Opt.get Options.detrans) sdgraph
 ;;

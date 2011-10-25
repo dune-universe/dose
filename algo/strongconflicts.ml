@@ -27,8 +27,8 @@ end
 module CG = Graph.Imperative.Graph.ConcreteLabeled(PackageGraph.PkgV)(CflE)
 
 (* tempy. *)
-let reason maps =
-  let from_sat = maps.map#inttovar in
+let reason univ =
+  let from_sat = CudfAdd.inttovar univ in
   List.map (function
     |Diagnostic_int.Dependency(i,vl,il) ->
       Diagnostic.Dependency(from_sat i,vl,List.map from_sat il)
@@ -38,28 +38,29 @@ let reason maps =
       Diagnostic.Conflict(from_sat i,from_sat j)
   );;
 
-let cvt maps =
+let cvt univ =
   function
   | Strongconflicts_int.Explicit -> Explicit
   | Strongconflicts_int.Conjunctive -> Conjunctive
-  | Strongconflicts_int.Other l -> Other (reason maps l);;
+  | Strongconflicts_int.Other l -> Other (reason univ l);;
 
 (** strongconflicts return the list of all strong conflicts in universe.
     
     invariant: the universe must contain only edos-installable packages : see
     Depsolver.trim.
 *)
+
 let strongconflicts universe =
   let g = CG.create () in
-  let mdf = Mdf.load_from_universe (Depsolver.trim universe) in
-  let maps = mdf.Mdf.maps in
-  let ig = Strongconflicts_int.strongconflicts mdf (* idlist *) in
+  let universe  = Depsolver.trim universe in
+  let ig = Strongconflicts_int.strongconflicts universe in
+  let inttovar = CudfAdd.inttovar universe in
   (* convert output graph *)
-  ICG.iter_vertex (fun v -> CG.add_vertex g (maps.map#inttovar v)) ig;
+  ICG.iter_vertex (fun v -> CG.add_vertex g (inttovar v)) ig;
   ICG.iter_edges_e (fun (x, (x', y', l), y) ->
-    CG.add_edge_e g (maps.map#inttovar x,
-      (maps.map#inttovar x', maps.map#inttovar y', cvt maps l),
-      maps.map#inttovar y)
+    CG.add_edge_e g (inttovar x,
+      (inttovar x', inttovar y', cvt universe l),
+      inttovar y)
   ) ig;
   g
 

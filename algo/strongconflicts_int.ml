@@ -45,29 +45,30 @@ let sctimer = Util.Timer.create "Strongconflicts_int.main";;
 
 module S = Set.Make (struct type t = int let compare = Pervasives.compare end)
 
-let swap (p,q) = if p < q then (p,q) else (q,p) ;;
+let swap (p,q) = (min p q, max p q) ;;
 let to_set l = List.fold_right S.add l S.empty ;;
 
-let explicit mdf =
-  (* let cmp (x : int * int) (y : int * int) = x = y in *)
-  let index = mdf.Mdf.index in
-  let l = ref [] in
-  for i=0 to (Array.length index - 1) do
-    let pkg = index.(i) in
-    let conflicts = List.rev_map snd pkg.Mdf.conflicts in
+let explicit univ = 
+  let conflict_pairs = Hashtbl.create 1023 in
+  Cudf.iteri_packages (fun i p ->
     List.iter (fun j ->
-      l := swap(i,j):: !l
-    ) conflicts
-  done;
-  (* List.unique ~cmp !l *)
-  Util.list_unique !l
+      let pair = swap (i,j) in
+      if i <> j && not (Hashtbl.mem conflict_pairs pair) then
+        Hashtbl.add conflict_pairs pair ();
+    ) (CudfAdd.resolve_deps_int univ p.Cudf.conflicts)
+  ) univ;
+  conflict_pairs
 ;;
 
 let triangle reverse xpred ypred common =
   if not (S.is_empty common) then
     let xrest = S.diff xpred ypred in
     let yrest = S.diff ypred xpred in
-    let pred_pred = S.fold (fun z acc -> S.union (to_set reverse.(z)) acc) common S.empty in
+    let pred_pred = 
+      S.fold (fun z acc -> 
+        S.union (to_set reverse.(z)) acc
+      ) common S.empty 
+    in
     (S.subset xrest pred_pred) && (S.subset yrest pred_pred)
   else
     false
@@ -75,22 +76,21 @@ let triangle reverse xpred ypred common =
 (* [strongconflicts mdf] return the list of strong conflicts
    @param mdf
 *)
-let strongconflicts mdf =
-  let index = mdf.Mdf.index in
-  let solver = Depsolver_int.init_solver index in
-  let reverse = Depsolver_int.reverse_dependencies mdf in
-  let size = (Array.length index) in
+let strongconflicts univ =
+  let solver = Depsolver_int.init_solver univ in
+  let reverse = Depsolver_int.reverse_dependencies univ in
+  let size = Cudf.universe_size univ in
   let cache = IG.make size in
 
   Util.Timer.start sctimer;
   debug "Pre-seeding ...";
 
-  Util.Progress.set_total seedingbar (Array.length mdf.Mdf.index);
+  Util.Progress.set_total seedingbar size;
 
   let cg = SG.create ~size () in
   for i = 0 to (size - 1) do
     Util.Progress.progress seedingbar;
-    Defaultgraphs.IntPkgGraph.conjdepgraph_int cg index i ; 
+    Defaultgraphs.IntPkgGraph.conjdepgraph_int cg univ i ; 
     IG.add_vertex cache i
   done;
   (* we already add the transitive closure on the fly *)
@@ -106,8 +106,8 @@ let strongconflicts mdf =
   let i = ref 0 in
   let total = ref 0 in
 
-  let ex = explicit mdf in
-  let conflict_size = List.length ex in
+  let ex = explicit univ in
+  let conflict_size = Hashtbl.length ex in
 
   let try_add_edge stronglist p q x y =
     if not (IG.mem_edge cache p q) then begin
@@ -121,7 +121,7 @@ let strongconflicts mdf =
   in
 
   let strongraph = CG.create () in
-  Util.Progress.set_total localbar (List.length ex);
+  Util.Progress.set_total localbar conflict_size;
 
   (* The simplest algorithm. We iterate over all explicit conflicts, 
    * filtering out all couples that cannot possiby be in conflict
@@ -129,14 +129,14 @@ let strongconflicts mdf =
    * Then we iter over the reverse dependency closures of the selected 
    * conflict and we check all pairs that have not been considered before.
    * *)
-  List.iter (fun (x,y) -> 
+  Hashtbl.iter (fun (x,y) _ -> 
     incr i;
     Util.Progress.progress localbar;
 
     if not(IG.mem_edge cache x y) then begin
       let donei = ref 0 in
-      let pkg_x = index.(x) in
-      let pkg_y = index.(y) in
+      let pkg_x = CudfAdd.inttovar univ x in
+      let pkg_y = CudfAdd.inttovar univ y in
       let (a,b) =
         (to_set (Depsolver_int.reverse_dependency_closure reverse [x]),
         to_set (Depsolver_int.reverse_dependency_closure reverse [y])) in
@@ -145,9 +145,7 @@ let strongconflicts mdf =
       CG.add_edge_e strongraph (x, (x, y, Explicit), y);
 
       debug "(%d of %d) %s # %s ; Strong conflicts %d Tuples %d"
-      !i conflict_size
-      (pkg_x.Mdf.pkg.Cudf.package) 
-      (pkg_y.Mdf.pkg.Cudf.package)
+      !i conflict_size pkg_x.Cudf.package pkg_y.Cudf.package
       (CG.nb_edges strongraph)
       ((S.cardinal a) * (S.cardinal b));
 
@@ -170,15 +168,15 @@ let strongconflicts mdf =
       if (S.cardinal xpred = 1) && (S.cardinal ypred = 1) && (S.choose xpred = S.choose ypred) then
         let p = S.choose xpred in
         debug "triangle %s - %s (%s)" 
-          (CudfAdd.string_of_package pkg_x.Mdf.pkg)
-          (CudfAdd.string_of_package pkg_y.Mdf.pkg)
-          (CudfAdd.string_of_package index.(p).Mdf.pkg);
+          (CudfAdd.string_of_package pkg_x)
+          (CudfAdd.string_of_package pkg_y)
+          (CudfAdd.string_of_package (CudfAdd.inttovar univ p));
         try_add_edge strongraph p x x y; incr donei;
         try_add_edge strongraph p y x y; incr donei;
       else if triangle reverse xpred ypred common then
         debug "debconf triangle %s - %s"
-          (CudfAdd.string_of_package pkg_x.Mdf.pkg)
-          (CudfAdd.string_of_package pkg_y.Mdf.pkg)
+          (CudfAdd.string_of_package pkg_x)
+          (CudfAdd.string_of_package pkg_y)
       else
         S.iter (fun p ->
           S.iter (fun q ->
