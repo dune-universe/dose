@@ -69,6 +69,8 @@ let main () =
   in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
+  Boilerplate.enable_bars (OptParse.Opt.get Options.progress)
+    ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
   let default_arch = OptParse.Opt.opt Options.architecture in
   let (universe,from_cudf,to_cudf) = Boilerplate.load_universe ~default_arch posargs in
   let universe_size = Cudf.universe_size universe in
