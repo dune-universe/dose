@@ -654,16 +654,8 @@ module M (X : S) = struct
       ) (0,0,0) st.st_assign
     in
     Format.eprintf "Variables %d@." (Array.length st.st_assign);
-    (* Format.eprintf "Clauses %d@," (Array.length st.st_buffer); *)
     Format.eprintf "st_assign: True: %d False: %d Unknown: %d@." t f u;
-    Format.eprintf "st_level: %d@." (Array.length st.st_level);
-    Format.eprintf "st_seen_var: %d@." (Array.length st.st_seen_var);
-    Format.eprintf "st_refs %d@." (Array.length st.st_refs);
-    Format.eprintf "st_pinned %d@." (Array.length st.st_pinned);
     Format.eprintf "st_associated_vars %d@." (Array.length st.st_associated_vars);
-    Format.eprintf "st_cur_level %d@." st.st_cur_level;
-    Format.eprintf "st_min_level %d@." st.st_min_level;
-    Format.eprintf "st_seen %d@." st.st_seen;
     Format.eprintf "st_cost %d@." st.st_cost
 
 end

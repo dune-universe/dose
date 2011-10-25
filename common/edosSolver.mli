@@ -93,6 +93,7 @@ module type T = sig
   (** enable debug messages *)
   val debug : bool -> unit
 
+  (* print detailed information about the internal status of the solver *)
   val stats : state -> unit
 end
 
