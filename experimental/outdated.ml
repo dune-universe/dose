@@ -122,6 +122,19 @@ let outdated
    * cluster name and binary version *)
   let cluster_iter (sn,sv) l =
     List.iter (fun (version,cluster) ->
+      List.iter (fun pkg ->
+        let pn = pkg.Debian.Packages.name in
+        let pv = pkg.Debian.Packages.version in
+        if Hashtbl.mem constraints_table pn then begin
+          Hashtbl.add realpackages pn ();
+          let v = pv^"+aaaa-dummy" in
+          try 
+            let l = Hashtbl.find constraints_table pn in
+            Hashtbl.replace constraints_table pn ((`Eq,v)::l)
+          with Not_found ->
+            Hashtbl.add constraints_table pn [(`Eq,v)]
+        end
+      ) cluster;
       let (versionlist, constr) =
         Debian.Evolution.all_ver_constr constraints_table cluster
       in
@@ -136,24 +149,22 @@ let outdated
    * I create a package with version 1 and I put it in a
    * cluster by itself *)
   Hashtbl.iter (fun name constr ->
-    let v = 
-      try (Hashtbl.find realpackages name)^"+dummy"
-      with Not_found -> "1"
-    in
-    let vl = Debian.Evolution.all_versions constr in
-    let pkg = {
-      Debian.Packages.default_package with 
-      Debian.Packages.name = name;
-      version = v;
-      } 
-    in
-    let cluster = [pkg] in
-    version_acc := (v::vl) @ !version_acc;
-    Hashtbl.add worktable (name,v) (cluster,vl,constr)
+    if not(Hashtbl.mem realpackages name) then begin
+      let vl = Debian.Evolution.all_versions constr in
+      let pkg = {
+        Debian.Packages.default_package with 
+        Debian.Packages.name = name;
+        version = "1";
+        } 
+      in
+      let cluster = [pkg] in
+      version_acc := vl @ !version_acc;
+      Hashtbl.add worktable (name,"1") (cluster,vl,constr)
+    end
   ) constraints_table;
 
   Hashtbl.clear realpackages;
-  let versionlist = Util.list_unique (!version_acc) in
+  let versionlist = Util.list_unique ("1"::!version_acc) in
 
   info "Total Names: %d" (Hashtbl.length worktable);
   info "Total versions: %d" (List.length versionlist);
@@ -164,8 +175,8 @@ let outdated
     let s = 
       CudfAdd.to_set (
         Hashtbl.fold (fun (sn,version) (cluster,vl,constr) acc0 ->
-          let discr = Debian.Evolution.discriminant (evalsel getv) vl constr in
           let sync_index = ref 1 in
+          let discr = Debian.Evolution.discriminant (evalsel getv) vl constr in
           let acc0 = 
             (* by assumption all packages in a cluster are syncronized *)
             List.fold_left (fun l pkg ->
@@ -206,6 +217,7 @@ let outdated
       
   let universe = Cudf.load_universe pkglist in
   let universe_size = Cudf.universe_size universe in
+  info "Total future: %d" universe_size;
 
   Hashtbl.clear worktable;
   Hashtbl.clear constraints_table;
@@ -252,11 +264,9 @@ let outdated
 let main () =
   let args = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
-  (*
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress)
   ["Depsolver_int.univcheck";"Depsolver_int.init_solver";
   "CudfAdd.build_maps";"Mdf.__load"] ;
-  *)
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
 
   (* let clusterlist = OptParse.Opt.opt Options.checkonly in *)

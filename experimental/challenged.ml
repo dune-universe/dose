@@ -215,10 +215,9 @@ END
     in
     map (fun ((sn,sv,version),(cluster,vl,constr)) ->
       let cluster_results = ref [] in
+      Util.Progress.progress predbar;
       debug "source: %s %s" sn version;
       if sv <> version then debug "subclusterof: %s %s" sn sv;
-      Util.Progress.progress predbar;
-
       debug "Versions: %s" (String.concat ";" vl);
       debug "Constraints: %s" (String.concat " ; " (
         List.map (fun (c,v) -> Printf.sprintf "%s" v) constr
