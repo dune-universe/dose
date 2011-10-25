@@ -141,10 +141,6 @@ let init_solver ?(buffer=false) univ =
   debug "n. dependencies %d" !num_dependencies;
   debug "n. conflicts %d" !num_conflicts;
 
-  debug "n. disjunctions %d" !num_disjunctions;
-  debug "n. dependencies %d" !num_dependencies;
-  debug "n. conflicts %d" !num_conflicts;
-
   S.propagate constraints ;
 
   { constraints = constraints ; map = new intprojection 0 }
