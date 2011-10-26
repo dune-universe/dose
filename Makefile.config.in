@@ -33,10 +33,11 @@ TARGETS= \
    applications/ceve.$(OCAMLBEST) \
    applications/apt-cudf.$(OCAMLBEST) \
 
-BYTELIBS = common/common.cma deb/debian.cma rpm/rpm.cma eclipse/eclipse.cma algo/algo.cma doseparse/boilerplateNoRpm.cma doseparse/boilerplate.cma
-ALIBS = $(BYTELIBS:%.cma=%.a)
+BYTELIBS=
 OPTLIBS=
 CMXSLIBS=
+CMXSLIBS=
+ALIBS=
 
 ifeq ("@HAS_LIBCUDF@","no")
   BYTELIBS += libcudf/cudf.cma libcudf/cudf.a
@@ -45,6 +46,8 @@ ifeq ("@HAS_LIBCUDF@","no")
     CMXSLIBS += libcudf/cudf.cmxs
   endif
 endif
+
+BYTELIBS += common/common.cma deb/debian.cma rpm/rpm.cma eclipse/eclipse.cma algo/algo.cma doseparse/boilerplateNoRpm.cma doseparse/boilerplate.cma
 
 ifeq ("@OCAMLBEST@","opt")
   OPTLIBS += $(BYTELIBS:%.cma=%.cmxa) 
@@ -90,3 +93,5 @@ endif
 ifeq ("@HAS_OUNIT@","yes")
   TESTS= common deb algo $(TEST_DB) $(TEST_RPM)
 endif
+
+ALIBS = $(BYTELIBS:%.cma=%.a)

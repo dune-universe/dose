@@ -185,12 +185,12 @@ let challenged
   let version_acc = ref [] in
   let constraints_table = Debian.Evolution.constraints repository in
   let cluster_iter (sn,sv) l =
-    List.iter (fun (version,cluster) ->
+    List.iter (fun (version,realversion,cluster) ->
       let (versionlist, constr) = 
         Debian.Evolution.all_ver_constr constraints_table cluster 
       in
       version_acc := versionlist @ !version_acc;
-      worktable := ((sn,sv,version),(cluster,versionlist,constr))::!worktable
+      worktable := ((sn,sv,realversion),(cluster,versionlist,constr))::!worktable
     ) l
   in
 
@@ -236,8 +236,9 @@ END
       let startd=Unix.gettimeofday() in
       let cluster_results = ref [] in
       Util.Progress.progress predbar;
-      debug "source: %s %s" sn version;
-      if sv <> version then debug "subclusterof: %s %s" sn sv;
+      debug "\nsource: %s %s" sn sv;
+      if sv <> version then debug "subscluter: %s %s" sn version;
+      debug "clustersize %d" (List.length cluster);
       debug "Versions: %s" (String.concat ";" vl);
       debug "Constraints: %s" (String.concat " ; " (
         List.map (fun (c,v) -> Printf.sprintf "%s" v) constr

@@ -51,7 +51,6 @@ let range ?(bottom=false) vl =
    @param [highest] chooses the highest version as representative, if set to true,
                       and the lowest otherwise.
  *)
-
 let discriminant ?(bottom=false) ?(highest=true) evalsel vl constraints =
   let eval_constr = Hashtbl.create 17 in
   let constr_eval = Hashtbl.create 17 in

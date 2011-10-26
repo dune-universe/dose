@@ -37,21 +37,21 @@ let cluster packagelist =
     in
     try
       let h = Hashtbl.find th (source,sourceversion) in
-      try let l = Hashtbl.find h packageversion in l := pkg :: !l
+      try let (l,_) = Hashtbl.find h packageversion in l := pkg :: !l
       with Not_found -> 
         (* found the source, but not the package version *)
-        Hashtbl.add h packageversion (ref[pkg])
+        Hashtbl.add h packageversion (ref[pkg],pkg.Packages.version)
     with Not_found -> begin 
       (* didn't found the source *)
       let h = Hashtbl.create 17 in
-      Hashtbl.add h packageversion (ref[pkg]);
+      Hashtbl.add h packageversion (ref[pkg],pkg.Packages.version);
       Hashtbl.add th (source,sourceversion) h
     end
   ) packagelist ;
   let h = Hashtbl.create (List.length packagelist) in
   let i = ref 0 in
   Hashtbl.iter (fun (s,v) thv ->
-    let l = Hashtbl.fold (fun v {contents=l} acc -> (v,l)::acc) thv [] in
+    let l = Hashtbl.fold (fun v ({contents=l},rv) acc -> (v,rv,l)::acc) thv [] in
     i := !i + (List.length l);
     Hashtbl.add h (s,v) l
   ) th;
