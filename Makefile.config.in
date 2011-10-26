@@ -27,43 +27,43 @@ else
   OCAMLBEST=byte
 endif
 
-LIBS=
 TARGETS= \
    applications/distcheck.$(OCAMLBEST) \
    applications/deb-buildcheck.$(OCAMLBEST) \
    applications/ceve.$(OCAMLBEST) \
    applications/apt-cudf.$(OCAMLBEST) \
 
+BYTELIBS = common/common.cma deb/debian.cma rpm/rpm.cma eclipse/eclipse.cma algo/algo.cma doseparse/boilerplateNoRpm.cma doseparse/boilerplate.cma
+ALIBS = $(BYTELIBS:%.cma=%.a)
+OPTLIBS=
+CMXSLIBS=
+
 ifeq ("@HAS_LIBCUDF@","no")
-  LIBS += libcudf/cudf.cma libcudf/cudf.a
+  BYTELIBS += libcudf/cudf.cma libcudf/cudf.a
   ifeq ("@OCAMLBEST@","opt")
-    LIBS += libcudf/cudf.cmxa libcudf/cudf.cmxs
+    OPTLIBS += libcudf/cudf.cmxa
+    CMXSLIBS += libcudf/cudf.cmxs
   endif
 endif
 
-BYTELIBS = common/common.cma deb/debian.cma rpm/rpm.cma eclipse/eclipse.cma algo/algo.cma doseparse/boilerplateNoRpm.cma doseparse/boilerplate.cma
-
-ALIBS = $(BYTELIBS:%.cma=%.a)
 ifeq ("@OCAMLBEST@","opt")
-  OPTLIBS = $(BYTELIBS:%.cma=%.cmxa) $(BYTELIBS:%.cma=%.cmxs)
+  OPTLIBS += $(BYTELIBS:%.cma=%.cmxa) 
+  CMXSLIBS += $(BYTELIBS:%.cma=%.cmxs)
 endif
-
-LIBS += $(BYTELIBS) 
-LIBS += $(ALIBS) 
-LIBS += $(OPTLIBS)
 
 #rpm support
 ifeq ("@HAS_RPM@","yes")
-  LIBS += rpm/rpm.cma rpm/rpm.a
+  BYTELIBS += rpm/rpm.cma rpm/rpm.a
   ifeq ("@OCAMLBEST@","opt")
-    LIBS += rpm/rpm.cmxa rpm/rpm.cmxs
+    OPTLIBS += rpm/rpm.cmxa
+    CMXSLIBS += rpm/rpm.cmxs
   endif
 endif
 
 #database support
 ifeq ("@HAS_DB@","yes") 
   EXPERIMENTAL += experimental/db-cudf.$(OCAMLBEST)
-  LIBS += db/db.cma
+  BYTELIBS += db/db.cma
 #  TEST_DB=db
 endif
 

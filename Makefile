@@ -7,7 +7,10 @@ OBFLAGS := -j 10 -use-ocamlfind
 #OBFLAGS := $(OBFLAGS) -tag debug -tag profile
 #OBFLAGS := $(OBFLAGS) -classic-display
 
-all: lib man
+all: $(BYTELIBS) $(ALIBS) $(OPTLIBS) $(CMXSLIBS) man
+	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
+
+fast: $(OPTLIBS)
 	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
 
 DOSELIBS = _build/doselibs
@@ -86,8 +89,6 @@ doseparse/boilerplateNoRpm.%:
 	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
 	  fi ; \
 	done
-
-lib: $(LIBS)
 
 man: doc/manpages/apt-cudf.1
 
