@@ -14,6 +14,7 @@
 
 open ExtLib
 open Common
+
 open Algo
 module Boilerplate = BoilerplateNoRpm
 
@@ -34,12 +35,15 @@ module Options = struct
   let cluster = StdOpt.store_true ()
 IFDEF HASPARMAP THEN
   let ncores = StdOpt.int_option ~default:1 ()
+  let chunksize = StdOpt.int_option ()
 END
   open OptParser ;;
 
 IFDEF HASPARMAP THEN
   add options ~long_name:"ncores"
     ~help:"Number of cores to use on a multicore" ncores;
+  add options ~long_name:"chunksize"
+    ~help:"Size of each task executed by the workers (controls granularity)" chunksize;
 END
 
   add options ~long_name:"select"
@@ -219,12 +223,17 @@ let challenged
     let map f l =
 IFDEF HASPARMAP THEN
     let ncores = OptParse.Opt.get Options.ncores in
-    Parmap.parmap ~ncores f (Parmap.L l)
+    match OptParse.Opt.opt Options.chunksize with
+      None ->     
+	Parmap.parmap ~ncores f (Parmap.L l)
+    | Some chunksize ->       
+	Parmap.parmap ~ncores ~chunksize f (Parmap.L l)
 ELSE
     List.map f l
 END
     in
     map (fun ((sn,sv,version),(cluster,vl,constr)) ->
+      let startd=Unix.gettimeofday() in
       let cluster_results = ref [] in
       Util.Progress.progress predbar;
       debug "source: %s %s" sn version;
@@ -235,6 +244,10 @@ END
         )
       );
 
+      (* compute discriminants of vl
+         We use ~bottom:true to include in the discriminants a representative 
+         of the versions below the smalles element of vl
+       *)
       let discr = Debian.Evolution.discriminant ~bottom:true (evalsel getv) vl constr in
       debug "Discriminants: %d" (List.length discr);
       (*
@@ -282,6 +295,7 @@ END
             debug "broken: %d" i;
             cluster_results := (((sn,sv,version),(target,equiv)),i)::!cluster_results ;
       ) discr;
+      debug "<%s,%s> : %f" sn sv (Unix.gettimeofday() -. startd); 
       !cluster_results
     ) !worktable
   in List.concat results

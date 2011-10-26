@@ -41,9 +41,21 @@ let range ?(bottom=false) vl =
   aux [] (None,l)
 ;;
 
-let discriminant ?(bottom=false) evalsel vl constraints =
+(** [discriminants ?bottom ?ascending evalsel vl constraints]
+   returns the discriminants of the versions [vl] w.r.t.
+   the [constraints], using [evalsel] to determine whether a
+   a version satisfy a constraint.
+   For each discriminant, a canonical representative is given,
+   as well as the list of all other equivalent versions.
+   @param [bottom] set to true includes a version strictly smaller than all [vl] 
+   @param [highest] chooses the highest version as representative, if set to true,
+                      and the lowest otherwise.
+ *)
+
+let discriminant ?(bottom=false) ?(highest=true) evalsel vl constraints =
   let eval_constr = Hashtbl.create 17 in
   let constr_eval = Hashtbl.create 17 in
+  let candidates = range ~bottom vl in
   List.iter (fun target ->
     let eval = List.map (evalsel target) constraints in
     try
@@ -54,7 +66,7 @@ let discriminant ?(bottom=false) evalsel vl constraints =
       Hashtbl.add eval_constr eval target;
       Hashtbl.add constr_eval target []
     end
-  ) (range ~bottom vl) ;
+  ) (if highest then List.rev candidates else candidates) ;
   (Hashtbl.fold (fun k v acc -> (k,v)::acc) constr_eval [])
 ;;
 
