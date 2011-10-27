@@ -26,25 +26,35 @@ let fatal fmt = Util.make_fatal "Debutil" fmt
 (* actually it should be sourceversion -> list of list of clusters grouped by
  * version *)
 let cluster packagelist =
+  let drop_epoch v = let (_,v,r,b) = Version.split v in Version.concat ("",v,r,b) in
   let th = Hashtbl.create (List.length packagelist) in
   List.iter (fun pkg ->
     let packageversion = Version.normalize pkg.Packages.version in
+    let realversion = drop_epoch pkg.Packages.version in
     let (source, sourceversion) =
       match pkg.Packages.source with
-      |("",None) -> (pkg.Packages.name, packageversion)
-      |(n,None) -> (n, packageversion)
+      |("",None) -> (pkg.Packages.name, pkg.Packages.version)
+      |(n,None) -> (n, pkg.Packages.version)
       |(n,Some v) -> (n,v)
     in
     try
       let h = Hashtbl.find th (source,sourceversion) in
-      try let (l,_) = Hashtbl.find h packageversion in l := pkg :: !l
+      try let (l,hi_v) = Hashtbl.find h packageversion in 
+      l := pkg :: !l;
+      let new_hi =
+        if (Version.compare hi_v realversion) < 0
+        then hi_v 
+        else realversion
+      in       
+      (* keep the highest version of the cluster handy *)
+      Hashtbl.replace h packageversion (l,new_hi)
       with Not_found -> 
         (* found the source, but not the package version *)
-        Hashtbl.add h packageversion (ref[pkg],pkg.Packages.version)
+        Hashtbl.add h packageversion (ref[pkg],realversion)
     with Not_found -> begin 
       (* didn't found the source *)
       let h = Hashtbl.create 17 in
-      Hashtbl.add h packageversion (ref[pkg],pkg.Packages.version);
+      Hashtbl.add h packageversion (ref[pkg],realversion);
       Hashtbl.add th (source,sourceversion) h
     end
   ) packagelist ;
