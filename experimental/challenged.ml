@@ -133,6 +133,7 @@ let version_of_target ?(strip=(fun x -> x)) getv = function
 ;;
 
 let lesser_or_equal getv target equivs v =
+ let v_le_target =
   match Debian.Version.split v with
   |("",_,_,_) ->
       (* in this case the reference version is without epoch,
@@ -149,6 +150,7 @@ let lesser_or_equal getv target equivs v =
        * we want to make sure that the stripped target version is
        * greater or equal then the stripped reference version *)
       (version_of_target ~strip getv target) <= (getv (strip v))
+ in v_le_target || (List.mem (`Eq v) equivs) (* ignore targets equivalent to status quo *)
 ;;
 
 let pp tables pkg =
