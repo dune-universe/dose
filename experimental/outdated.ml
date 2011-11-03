@@ -19,10 +19,10 @@ open Common
 open Algo
 module Boilerplate=BoilerplateNoRpm
 
-let debug fmt = Util.make_debug "Outdated" fmt
-let info fmt = Util.make_info "Outdated" fmt
-let warning fmt = Util.make_warning "Outdated" fmt
-let fatal fmt = Util.make_fatal "Outdated" fmt
+let debug fmt = Util.make_debug __FILE__ fmt
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
+let fatal fmt = Util.make_fatal __FILE__ fmt
 
 module Options = struct
   open OptParse
@@ -47,14 +47,14 @@ module Options = struct
   ~help:"Check only these package ex. (sn1,sv1),(sn2,sv2)" checkonly;
   
   add options ~short_name:'b' 
-  ~help:"Print the list of broken packages and exit" brokenlist;
+  ~help:"Print the list of broken packages" brokenlist;
 
   add options ~short_name:'s' 
   ~help:"Print summary of broken packages" summary;
 
 
   add options ~long_name:"dump"
-  ~help:"Dump the cudf package list" dump;
+  ~help:"Dump the cudf package list and exit" dump;
 
 
 end
@@ -121,7 +121,7 @@ let outdated
   (* for each cluster, I associate to it its discriminants,
    * cluster name and binary version *)
   let cluster_iter (sn,sv) l =
-    List.iter (fun (version,cluster) ->
+    List.iter (fun (version,realversion,cluster) ->
       List.iter (fun pkg ->
         let pn = pkg.Debian.Packages.name in
         let pv = pkg.Debian.Packages.version in
