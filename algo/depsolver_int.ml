@@ -186,7 +186,7 @@ let pkgcheck callback solver failed tested id =
       |Diagnostic_int.Failure _  -> incr failed
     end ; res
   in
-  try
+  (* try *)
     let req = Diagnostic_int.Sng id in
     let res =
       Util.Progress.progress progressbar_univcheck;
@@ -212,7 +212,7 @@ let pkgcheck callback solver failed tested id =
     match callback with
     |None -> ()
     |Some f -> f (res,req)
-  with Not_found -> assert false
+  (* with Not_found -> assert false *)
 ;;
 
 (** [univcheck ?callback (mdf,solver)] check if all packages known by 

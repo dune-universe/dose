@@ -19,10 +19,7 @@ let info fmt = Util.make_info "Depsolver" fmt
 let warning fmt = Util.make_warning "Depsolver" fmt
 let fatal fmt = Util.make_fatal "Depsolver" fmt
 
-type solver = {
-  maps : Cudf.universe ;
-  solver : Depsolver_int.solver
-}
+type solver = Depsolver_int.solver
 
 (** 
  * @param check if the universe is consistent *)
@@ -32,9 +29,7 @@ let load ?(check=true) universe =
     else (true,None)
   in
   match is_consistent check universe with
-  |true,None ->
-      let solver = Depsolver_int.init_solver universe in
-      { maps = universe ; solver = solver }
+  |true,None -> Depsolver_int.init_solver universe 
   |false,Some(r) -> 
       fatal "%s"
       (Cudf_checker.explain_reason (r :> Cudf_checker.bad_solution_reason)) ;
@@ -89,16 +84,16 @@ let listcheck ?callback universe pkglist =
       let callback_int (res,req) = f (diagnosis universe res req) in
       Depsolver_int.listcheck ~callback:callback_int universe idlist
 
-let edos_install s pkg =
-  let req = Diagnostic_int.Sng (CudfAdd.vartoint s.maps pkg) in
-  let res = Depsolver_int.solve s.solver req in
-  diagnosis s.maps res req
+let edos_install univ solver pkg =
+  let req = Diagnostic_int.Sng (CudfAdd.vartoint univ pkg) in
+  let res = Depsolver_int.solve solver req in
+  diagnosis univ res req
 
-let edos_coinstall s pkglist =
-  let idlist = List.map (CudfAdd.vartoint s.maps) pkglist in
+let edos_coinstall univ solver pkglist =
+  let idlist = List.map (CudfAdd.vartoint univ) pkglist in
   let req = Diagnostic_int.Lst idlist in
-  let res = Depsolver_int.solve s.solver req in
-  diagnosis s.maps res req
+  let res = Depsolver_int.solve solver req in
+  diagnosis univ res req
 
 let trim universe =
   let trimmed_pkgs = ref [] in
@@ -196,5 +191,5 @@ let check_request (_,pkglist,request) =
   in
   let universe = Cudf.load_universe (dummy::pkglist) in
   let solver = load ~check:false universe in
-  edos_install solver dummy
+  edos_install universe solver dummy
 
