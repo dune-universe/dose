@@ -13,6 +13,9 @@ all: $(BYTELIBS) $(ALIBS) $(OPTLIBS) $(CMXSLIBS) man
 fast: $(OPTLIBS)
 	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
 
+apps:
+	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
+
 DOSELIBS = _build/doselibs
 
 libcudf/cudf.%:

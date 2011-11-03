@@ -34,10 +34,10 @@ module SO = IntPkgGraph.SO
     We check if it is possible to install p without q.  *)
 (* ATT: this function makes a copy of the solver to add a clause to it *)
 let strong_depends solver p q =
-  Depsolver_int.S.reset solver.Depsolver_int.constraints; 
+  Depsolver_int.S.reset solver; 
   let solver = Depsolver_int.copy_solver solver in 
-  let lit = Depsolver_int.S.lit_of_var (solver.Depsolver_int.map#vartoint q) false in
-  Depsolver_int.S.add_rule solver.Depsolver_int.constraints [|lit|] [];
+  let lit = Depsolver_int.S.lit_of_var q false in
+  Depsolver_int.S.add_rule solver [|lit|] [];
   match Depsolver_int.solve solver (Diagnostic_int.Sng p) with
   |Diagnostic_int.Failure _ -> true
   |Diagnostic_int.Success _ -> false

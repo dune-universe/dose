@@ -49,7 +49,7 @@ let solver = Depsolver.load universe ;;
 let test_install =
   "install" >:: (fun _ ->
     let bicycle = Cudf.lookup_package universe ("bicycle", 7) in
-    let d = Depsolver.edos_install solver bicycle in
+    let d = Depsolver.edos_install universe solver bicycle in
     match d.Diagnostic.result with
     |Diagnostic.Success _ -> assert_bool "pass" true
     |Diagnostic.Failure _ -> assert_failure "fail"
@@ -59,7 +59,7 @@ let test_coinstall =
   "coinstall" >:: (fun _ -> 
     let electric_engine1 = Cudf.lookup_package universe ("electric-engine",1) in
     let electric_engine2 = Cudf.lookup_package universe ("electric-engine",2) in
-    let d = Depsolver.edos_coinstall solver [electric_engine1;electric_engine2] in
+    let d = Depsolver.edos_coinstall universe solver [electric_engine1;electric_engine2] in
     match d.Diagnostic.result with
     |Diagnostic.Success f -> assert_failure "fail"
     |Diagnostic.Failure f -> assert_bool "pass" true
@@ -112,7 +112,7 @@ let test_conjunctive_dependency_closure =
 (*      print_endline (CudfAdd.print_package pkg);
       List.iter (fun pkg -> print_endline (CudfAdd.print_package pkg)) dcl;
       print_newline (); *)
-      let d = Depsolver.edos_coinstall solver (dcl) in
+      let d = Depsolver.edos_coinstall universe solver (dcl) in
       match d.Diagnostic.result with
       |Diagnostic.Success _ -> assert_bool "pass" true
       |Diagnostic.Failure _ -> Diagnostic.printf ~explain:true d; assert_failure "fail"

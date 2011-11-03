@@ -14,10 +14,10 @@ open ExtLib
 open Common
 open CudfAdd
 
-let debug fmt = Util.make_debug "Depsolver" fmt
-let info fmt = Util.make_info "Depsolver" fmt
-let warning fmt = Util.make_warning "Depsolver" fmt
-let fatal fmt = Util.make_fatal "Depsolver" fmt
+let debug fmt = Util.make_debug __FILE__ fmt
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
+let fatal fmt = Util.make_fatal __FILE__ fmt
 
 type solver = Depsolver_int.solver
 
@@ -42,8 +42,8 @@ let reason universe =
         Diagnostic.Dependency(from_sat i,vl,List.map from_sat il)
     |Diagnostic_int.Missing(i,vl) ->
         Diagnostic.Missing(from_sat i,vl)
-    |Diagnostic_int.Conflict(i,j) ->
-        Diagnostic.Conflict(from_sat i,from_sat j)
+    |Diagnostic_int.Conflict(i,j,vpkg) ->
+        Diagnostic.Conflict(from_sat i,from_sat j,vpkg)
   )
 
 let result universe result = 
@@ -131,7 +131,7 @@ type enc = Cnf | Dimacs
 
 let output_clauses ?(enc=Cnf) univ =
   let solver = Depsolver_int.init_solver ~buffer:true univ in
-  let clauses = Depsolver_int.S.dump solver.Depsolver_int.constraints in
+  let clauses = Depsolver_int.S.dump solver in
   let buff = Buffer.create (Cudf.universe_size univ) in
   let to_cnf dump =
     let str (v, p) = 

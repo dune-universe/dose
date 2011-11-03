@@ -22,49 +22,15 @@ let progressbar_init = Util.Progress.create "Depsolver_int.init_solver"
 let progressbar_univcheck = Util.Progress.create "Depsolver_int.univcheck"
 
 (** Message printers *)
-let debug fmt = Util.make_debug "Depsolver_int" fmt
-let info fmt = Util.make_info "Depsolver_int" fmt
-let warning fmt = Util.make_warning "Depsolver_int" fmt
+let debug fmt = Util.make_debug __FILE__ fmt
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
 
 module R = struct type reason = Diagnostic_int.reason end
 module S = EdosSolver.M(R)
 
-(** associate a sat solver variable to a package id
-    if size = 0 then the mapping is the identity function *)
-class intprojection size = object
-
-  val vartoint = Util.IntHashtbl.create (2 * size)
-  val inttovar = Array.create size 0
-  val mutable counter = 0
-
-  (** add a package id to the map *)
-  method add v =
-    if (size = 0) then assert false ;
-    if (counter > size - 1) then assert false;
-    debug "intprojection : var %d -> int %d" v counter;
-    Util.IntHashtbl.add vartoint v counter;
-    inttovar.(counter) <- v;
-    counter <- counter + 1
-
-  (** given a package id return a sat solver variable 
-      raise Not_found if the package id is not known *)
-  method vartoint v =
-    if size = 0 then v
-    else Util.IntHashtbl.find vartoint v
-      
-  (* given a sat solver variable return a package id *)
-  method inttovar i =
-    if size = 0 then i else begin
-      if (i > size - 1) then assert false;
-      inttovar.(i)
-    end
-end
-
 (** low level solver data type *)
-type solver = {
-  constraints : S.state ; (** the sat problem *)
-  map : intprojection;    (** map a package id to a sat solver variable *)
-}
+type solver = S.state (** the sat problem *)
 
 (** low level constraint solver initialization
  
@@ -83,12 +49,7 @@ let init_solver ?(buffer=false) univ =
     if (List.length l) = 0 then 
       S.add_rule constraints [|lit|] [Diagnostic_int.Missing(pkg_id,vpkgs)]
     else begin
-      let lits = 
-        List.filter_map (function
-          (* |id when id = pkg_id -> None *) (* self dependency *)
-          |id -> Some(S.lit_of_var id true)
-        ) l
-      in
+      let lits = List.map (fun id -> S.lit_of_var id true) l in
       num_disjunctions := !num_disjunctions + (List.length lits);
       S.add_rule constraints (Array.of_list (lit :: lits))
         [Diagnostic_int.Dependency (pkg_id, vpkgs, l)];
@@ -106,7 +67,7 @@ let init_solver ?(buffer=false) univ =
   in 
 
   let conflicts = Hashtbl.create 1023 in
-  let add_conflict constraints (i,j) =
+  let add_conflict constraints vpkg (i,j) =
     if i <> j then begin
       let pair = (min i j,max i j) in
       (* we get rid of simmetric conflicts *)
@@ -115,15 +76,22 @@ let init_solver ?(buffer=false) univ =
         Hashtbl.add conflicts pair ();
         let p = S.lit_of_var i false in
         let q = S.lit_of_var j false in
-        S.add_rule constraints [|p;q|] [Diagnostic_int.Conflict(i,j)];
+        S.add_rule constraints [|p;q|] [Diagnostic_int.Conflict(i,j,vpkg)];
       end
     end
   in
 
   let exec_conflicts constraints pkg_id pkg =
+    List.iter (fun vpkg ->
+      List.iter (fun id ->
+        add_conflict constraints vpkg (pkg_id, id)
+      ) (CudfAdd.resolve_package_dep univ vpkg)
+    ) pkg.Cudf.conflicts
+    (*
     List.iter (fun id -> 
       add_conflict constraints (pkg_id, id)
     ) (CudfAdd.resolve_deps_int univ pkg.Cudf.conflicts)
+*)
   in
 
   let size = Cudf.universe_size univ in
@@ -143,23 +111,22 @@ let init_solver ?(buffer=false) univ =
 
   S.propagate constraints ;
 
-  { constraints = constraints ; map = new intprojection 0 }
+  constraints
 ;;
 
 (** return a copy of the state of the solver *)
-let copy_solver solver =
-  { solver with constraints = S.copy solver.constraints }
+let copy_solver solver = S.copy solver
 
 (** low level call to the sat solver *)
 let solve solver request =
   (* XXX this function gets called a zillion times ! *)
-  S.reset solver.constraints;
+  S.reset solver;
 
   let result solve collect var =
-    if solve solver.constraints var then begin
+    if solve solver var then begin
       let get_assignent ?(all=false) () =
         let l = ref [] in
-        let a = S.assignment solver.constraints in
+        let a = S.assignment solver in
         for i = 0 to (Array.length a) - 1 do
           if a.(i) = S.True then l := i :: !l
         done;
@@ -168,7 +135,7 @@ let solve solver request =
       Diagnostic_int.Success(get_assignent)
     end
     else
-      let get_reasons () = collect solver.constraints var in
+      let get_reasons () = collect solver var in
       Diagnostic_int.Failure(get_reasons)
   in
 

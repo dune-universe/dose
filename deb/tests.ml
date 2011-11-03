@@ -133,7 +133,7 @@ let test_cluster =
 
       Hashtbl.iter (fun (sourcename, sourceversion) l ->
         (* Printf.eprintf "(1)cluster (%s,%s)\n%!" sourcename sourceversion; *)
-        List.iter (fun (version,cluster) ->
+        List.iter (fun (version,realversion,cluster) ->
           (* Printf.eprintf "(1)v %s\n%!" version; *)
           let l = List.map(fun pkg -> (pkg.Packages.name,pkg.Packages.version)) cluster in
           (*

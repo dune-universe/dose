@@ -52,10 +52,8 @@ module Options = struct
   add options ~short_name:'s' 
   ~help:"Print summary of broken packages" summary;
 
-
   add options ~long_name:"dump"
   ~help:"Dump the cudf package list and exit" dump;
-
 
 end
 
@@ -67,17 +65,18 @@ let sync (sn,sv,v) p =
   }
 ;;
 
-let dummy pkg number equivs version =
+let dummy (sn,sv) pkg number equivs version =
   {Cudf.default_package with
    Cudf.package = pkg.Cudf.package;
    version = version;
-   (* conflicts = pkg.Cudf.conflicts; *)
    conflicts = [(pkg.Cudf.package, None)];
    provides = pkg.Cudf.provides;
    pkg_extra = [
      ("number",`String number);
      ("architecture",`String "dummy");
-     ("equivs", `String (String.concat "," equivs))
+     ("equivs", `String (String.concat "," equivs));
+     ("source", `String sn);
+     ("sourceversion", `String number)
    ]
   }
 ;;
@@ -126,13 +125,14 @@ let outdated
         let pn = pkg.Debian.Packages.name in
         let pv = pkg.Debian.Packages.version in
         if Hashtbl.mem constraints_table pn then begin
-          Hashtbl.add realpackages pn ();
+          Hashtbl.add realpackages pn () (*;
           let v = pv^"+aaaa-dummy" in
           try 
             let l = Hashtbl.find constraints_table pn in
             Hashtbl.replace constraints_table pn ((`Eq,v)::l)
           with Not_found ->
             Hashtbl.add constraints_table pn [(`Eq,v)]
+*)
         end
       ) cluster;
       let (versionlist, constr) =
@@ -196,12 +196,13 @@ let outdated
               let number = Debian.Evolution.string_of_range target in
               let equivs = List.map Debian.Evolution.string_of_range equiv in
 
-              if (newv > pv) || 
-                (List.mem (`Eq pkg.Debian.Packages.version) equiv) then begin
+              if (newv > pv) (* || 
+                (List.mem (`Eq pkg.Debian.Packages.version) equiv) *) then begin
+                let d = dummy (sn,version) p number equivs newv in
                 if List.length cluster > 1 then
-                  (sync (sn,version,!sync_index) (dummy p number equivs newv))::acc2
+                  (sync (sn,version,!sync_index) d)::acc2
                 else
-                  (dummy p number equivs newv)::acc2
+                  d::acc2
               end else acc2
             ) acc1 cluster
           ) acc0 discr
@@ -228,21 +229,30 @@ let outdated
   Hashtbl.clear constraints_table;
 
   let pp pkg =
+    let p = 
+      if String.starts_with pkg.Cudf.package "src/" then
+        Printf.sprintf "Source conflict (%s)" pkg.Cudf.package
+      else pkg.Cudf.package
+    in
     let v = 
-      try Cudf.lookup_package_property pkg "number"
-      with Not_found ->
-        if (pkg.Cudf.version mod 2) = 1 then
-          Debian.Debcudf.get_real_version tables 
-          (pkg.Cudf.package,pkg.Cudf.version)
-        else
-          fatal "Real package without Debian Version"
+      if String.starts_with pkg.Cudf.package "src/" then 
+        string_of_int pkg.Cudf.version
+      else 
+        try Cudf.lookup_package_property pkg "number"
+        with Not_found ->
+          if (pkg.Cudf.version mod 2) = 1 then
+            Debian.Debcudf.get_real_version tables 
+            (pkg.Cudf.package,pkg.Cudf.version)
+          else
+            fatal "Real package without Debian Version"
     in
     let l =
       List.filter_map (fun k ->
         try Some(k,Cudf.lookup_package_property pkg k)
         with Not_found -> None
       ) ["architecture";"source";"sourceversion";"equivs"]
-    in (pkg.Cudf.package,v,l)
+    in
+    (p,v,l)
   in
 
   let fmt = Format.std_formatter in

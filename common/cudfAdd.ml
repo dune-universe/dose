@@ -143,8 +143,8 @@ let who_provides univ (pkgname,constr) =
   let pkgl = Cudf.lookup_packages ~filter:constr univ pkgname in
   pkgl @ (List.map fst prol)
 
-let resolve_package_dep univ (n, c) =
-  List.map (Cudf.uid_by_package univ) (who_provides univ (n,c))
+let resolve_package_dep univ vpkg =
+  List.map (Cudf.uid_by_package univ) (who_provides univ vpkg)
 
 let resolve_deps_int univ vpkgs =
   normalize_set (List.flatten (List.map (resolve_package_dep univ) vpkgs))
