@@ -78,8 +78,9 @@ let main () =
         begin match List.rev l with
         |h::t ->
           let srclist =
+            let archs = [OptParse.Opt.get Options.architecture] in
             let l = Src.input_raw [h] in
-            Src.sources2packages (OptParse.Opt.get Options.architecture) l
+            Src.sources2packages archs l
           in
           let pkglist = Deb.input_raw t in
           (pkglist,srclist)

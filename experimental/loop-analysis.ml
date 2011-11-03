@@ -56,36 +56,43 @@ module Options = struct
   add options ~long_name:"dump" ~help:"dump the cudf file" dump;
 end
 
-let tocudf tables ?(extras=[]) ?(inst=false) pkg =
-  if String.starts_with pkg.Pkg.name "src:" then 
-    { Cudf.default_package with
-      Cudf.package = CudfAdd.encode pkg.Pkg.name ;
-      Cudf.version = Debcudf.get_cudf_version tables (pkg.Pkg.name,pkg.Pkg.version) ;
+let tocudf tables s2p pkg =
+  let extras = [("srctype",("srctype",`String None))] in
+  let is_src s = 
+    try (List.assoc "srctype" pkg.Pkg.extras) = s 
+    with Not_found -> false in
+  if is_src "src" then
+    let provides = CudfAdd.get_package_list s2p pkg.Pkg.name in
+    let depends =
+      List.map (fun l ->
+        List.map (fun (n,c) -> ("bin"^Src.sep^n,c)
+        ) l
+      ) (pkg.Pkg.pre_depends @ pkg.Pkg.depends)
+    in
+    let p = {
+      Pkg.default_package with
+      Pkg.name = pkg.Pkg.name;
+      Pkg.version = pkg.Pkg.version;
+      Pkg.provides = List.map (fun n -> ("bin"^Src.sep^n,None) ) provides;
+      Pkg.depends = depends
     }
+    in Debcudf.tocudf tables ~extras p
   else
     let confl = pkg.Pkg.breaks @ pkg.Pkg.conflicts in
     let deps =
       let d = pkg.Pkg.pre_depends @ pkg.Pkg.depends in
-      if String.starts_with pkg.Pkg.name "srcf:" then d
+      if is_src "srcf" then d
       else 
         let (sn,sv) =
           match pkg.Pkg.source with
-          |("",None) -> ("src:" ^ pkg.Pkg.name,Some("=",pkg.Pkg.version))
-          |(s,None) -> ("src:" ^ s,Some("=",pkg.Pkg.version))
-          |(s,Some v) -> ("src:" ^ s,Some("=",v))
+          |("",None) -> ("src" ^ Src.sep ^ pkg.Pkg.name,Some("=",pkg.Pkg.version))
+          |(s,None) -> ("src" ^ Src.sep ^ s,Some("=",pkg.Pkg.version))
+          |(s,Some v) -> ("src" ^ Src.sep ^ s,Some("=",v))
         in
         [(sn,None)]::d
     in
-    { Cudf.default_package with
-      Cudf.package = CudfAdd.encode pkg.Pkg.name ;
-      Cudf.version = Debcudf.get_cudf_version tables (pkg.Pkg.name,pkg.Pkg.version) ;
-      Cudf.keep = Debcudf.add_essential pkg.Pkg.essential;
-      Cudf.depends = Debcudf.loadll tables deps;
-      Cudf.conflicts = Debcudf.loadlc tables pkg.Pkg.name confl;
-      Cudf.provides = Debcudf.loadlp tables pkg.Pkg.provides ;
-      Cudf.installed = Debcudf.add_inst inst pkg;
-      Cudf.pkg_extra = Debcudf.add_extra extras tables pkg ;
-    }
+    let p = { pkg with Pkg.depends = deps ; Pkg.conflicts = confl } in
+    Debcudf.tocudf tables ~extras p
 ;;
 
 let main () =
@@ -109,7 +116,7 @@ let main () =
     OptParse.Opt.set Options.targetarch (OptParse.Opt.get Options.buildarch);
   end;
 
-  let pkglist, srclist, srcfocus =
+  let binlist, srclist, srcfocus =
     match posargs with
     |[] | [_] -> fatal
       "You must provide a list of Debian Packages files and \
@@ -118,22 +125,34 @@ let main () =
         begin match List.rev l with
         |h::t ->
           let l = Src.input_raw [h] in
-          let arch = OptParse.Opt.get Options.buildarch in
-          let srcl = Src.sources2packages arch l in
-          let srcf = Src.sources2packages ~prefix:"srcf:" arch l in
+          let archs = ["linux-any";OptParse.Opt.get Options.buildarch] in
+          let srcl = Src.sources2packages archs l in
+          let srcf = Src.sources2packages ~src:"srcf" archs l in
           let pkgl = Pkg.input_raw t in
           (pkgl,srcl,srcf)
         |_ -> failwith "Impossible"
         end
   in
-  let tables = Debcudf.init_tables (srclist @ pkglist) in
-  let sl = List.map (fun pkg -> tocudf tables pkg) srclist in
-  let sf = List.fold_left (fun acc pkg -> (tocudf tables pkg)::acc) sl srcfocus in
-  let l = List.fold_left (fun acc pkg -> (tocudf tables pkg)::acc) sf pkglist in
+
+  let src2provds = Hashtbl.create (List.length srclist) in
+  List.iter (fun pkg ->
+    List.iter (fun (n,_) -> 
+      let (source,_) = Debutil.get_source pkg in 
+      CudfAdd.add_to_package_list src2provds ("src"^Src.sep^source) n
+    ) ((pkg.Pkg.name,None)::pkg.Pkg.provides)
+  ) binlist;
+
+  let tables = Debcudf.init_tables (srclist @ binlist) in
+  let tocudf__ = tocudf tables src2provds in
+  let sl = List.map (fun pkg -> tocudf__ pkg) srclist in
+  let sf = List.fold_left (fun acc pkg -> (tocudf__ pkg)::acc) sl srcfocus in
+  let pkglist = List.fold_left (fun acc pkg -> (tocudf__ pkg)::acc) sf binlist in
+
   let to_cudf = Debcudf.get_cudf_version tables in
   let from_cudf = Debcudf.get_real_version tables in
 
-  let universe = Cudf.load_universe l in
+  let universe = Cudf.load_universe pkglist in
+
   let universe_size = Cudf.universe_size universe in
   info "Total packages (source + binaries) %d" universe_size;
 
@@ -147,10 +166,11 @@ let main () =
     if OptParse.Opt.is_set Options.checkonly then
         List.flatten (
           List.map (function
-            |(p,None) -> Cudf.lookup_packages universe (CudfAdd.encode ("srcf:"^p))
+            |(p,None) ->
+                Cudf.lookup_packages universe (CudfAdd.encode ("srcf"^Src.sep^p))
             |(p,Some(c,v)) ->
-                let filter = Some(c,to_cudf (CudfAdd.encode ("srcf:"^p),v)) in
-                Cudf.lookup_packages ~filter universe (CudfAdd.encode ("srcf:"^p))
+                let filter = Some(c,to_cudf (CudfAdd.encode ("srcf"^Src.sep^p),v)) in
+                Cudf.lookup_packages ~filter universe (CudfAdd.encode ("srcf"^Src.sep^p))
           ) (OptParse.Opt.get Options.checkonly)
         )
     else sf

@@ -23,7 +23,7 @@ let fatal fmt = Util.make_fatal __FILE__ fmt
 type source = {
   name : Format822.name;
   version : Format822.version;
-  binary : Format822.vpkg list;
+  binary : Format822.name list;
   architecture : Format822.architecture list;
   build_depends : Format822.builddepsformula;
   build_depends_indep : Format822.builddepsformula;
@@ -46,7 +46,7 @@ let parse_s = Packages.parse_s
 let parse_name = Packages.parse_name
 let parse_version = Packages.parse_version
 let parse_arch = Packages.lexbuf_wrapper Packages_parser.archlist_top
-let parse_binary = Packages.parse_vpkglist
+let parse_binary s = List.map fst (Packages.parse_vpkglist s) (* hack XXX *)
 let parse_builddepslist = Packages.lexbuf_wrapper Packages_parser.builddepslist_top
 let parse_builddepsformula = Packages.lexbuf_wrapper Packages_parser.builddepsformula_top
 
@@ -86,17 +86,19 @@ let input_raw =
   let module M = Format822.RawInput(Set) in
   M.input_raw parse_sources_in
 
+let sep = ":" ;;
+
 (** transform a list of sources into dummy packages to be then converted to cudf *)
-let sources2packages ?(src="src:") ?(bin="") archs l =
+let sources2packages ?(src="src") archs l =
+  let archs = "all"::"any"::archs in
   (* as per policy, if the first arch restriction contains a !
    * then we assume that all archs on the lists are bang-ed.
    * cf: http://www.debian.org/doc/debian-policy/ch-relationships.html 7.1 *)
-
   let select = function
     |(v,(((false,_)::_) as al)) when 
-      List.for_all (fun (_,a) -> not(a = arch)) al -> Some v
+      List.for_all (fun (_,a) -> not(List.mem a archs)) al -> Some v
     |(v,(((true,_)::_) as al)) when 
-      List.exists (fun (_,a) -> a = arch) al -> Some v
+      List.exists (fun (_,a) -> List.mem a archs) al -> Some v
     |(v,[]) -> Some v
     |_ -> None
   in
@@ -108,21 +110,19 @@ let sources2packages ?(src="src:") ?(bin="") archs l =
       | l -> Some l
     ) ll
   in
+  let bins pkg = String.concat "," pkg.binary in
   List.filter_map (fun pkg ->
-    let archs = pkg.architecture in
-    if 
-      List.exists (fun a ->
-        |a = "all" || a = "any" || a = "linux-any" || a = arch
-      ) archs 
-    then
+    let pkgarchs = pkg.architecture in
+    if List.exists (fun a -> List.mem a archs) pkgarchs then
       Some (
       { Packages.default_package with
-        Packages.name = src ^ pkg.name ;
+        Packages.name = src ^ sep ^ pkg.name ;
         source = (pkg.name, Some pkg.version);
         version = pkg.version;
-        depends = depends bin (pkg.build_depends_indep @ pkg.build_depends);
-        conflicts = conflicts bin (pkg.build_conflicts_indep @ pkg.build_conflicts);
-        architecture = String.concat "," pkg.architecture
+        depends = depends (pkg.build_depends_indep @ pkg.build_depends);
+        conflicts = conflicts (pkg.build_conflicts_indep @ pkg.build_conflicts);
+        architecture = String.concat "," pkg.architecture;
+        extras = [("srctype",src);("bins",bins pkg)]
       }
       )
     else None

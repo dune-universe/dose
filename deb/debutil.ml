@@ -18,6 +18,12 @@ let info fmt = Util.make_info "Debutil" fmt
 let warning fmt = Util.make_warning "Debutil" fmt
 let fatal fmt = Util.make_fatal "Debutil" fmt
 
+let get_source pkg =
+  match pkg.Packages.source with
+  |("",None) -> (pkg.Packages.name, pkg.Packages.version)
+  |(n,None) -> (n, pkg.Packages.version)
+  |(n,Some v) -> (n,v)
+
 (** [group_by_source universe] returns a hashtbl that maps
     (source,sourceversion) -> to a packages list *)
 (* the idea is : if the normalized version of the package is equal to
@@ -31,12 +37,7 @@ let cluster packagelist =
   List.iter (fun pkg ->
     let packageversion = Version.normalize pkg.Packages.version in
     let realversion = drop_epoch pkg.Packages.version in
-    let (source, sourceversion) =
-      match pkg.Packages.source with
-      |("",None) -> (pkg.Packages.name, pkg.Packages.version)
-      |(n,None) -> (n, pkg.Packages.version)
-      |(n,Some v) -> (n,v)
-    in
+    let (source, sourceversion) = get_source pkg in
     try
       let h = Hashtbl.find th (source,sourceversion) in
       try let (l,hi_v) = Hashtbl.find h packageversion in 
