@@ -55,9 +55,10 @@ end
 
 (* -------------------------------- *)
 
-let debug fmt = Util.make_debug "RandCudf" fmt
-let info fmt = Util.make_info "RandCudf" fmt
-let warning fmt = Util.make_warning "RandCudf" fmt
+let debug fmt = Util.make_debug __FILE__ fmt
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
+let fatal fmt = Util.make_fatal __FILE__ fmt
 
 let get_random ?(ver=0.0) pkglist n =
   let a = Array.of_list pkglist in
