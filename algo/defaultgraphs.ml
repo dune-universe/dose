@@ -177,7 +177,8 @@ end
 
 (******************************************************)
 
-(** Imperative bidirectional graph. *)
+(** Imperative bidirectional graph for dependecies. *)
+(** Imperative unidirectional graph for conflicts. *)
 module PackageGraph = struct
 
   module PkgV = struct

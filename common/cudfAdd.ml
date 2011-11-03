@@ -15,7 +15,7 @@ module OCAMLSet = Set
 
 open ExtLib
 
-let fatal fmt = Util.make_fatal "CudfAdd" fmt
+let fatal fmt = Util.make_fatal __FILE__ fmt
 
 (* the id of a package *)
 let id pkg = (pkg.Cudf.package,pkg.Cudf.version)

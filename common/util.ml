@@ -80,6 +80,10 @@ module MakeMessages(X : sig val label : string end) = struct
   let allenabled = ref false
 
   let create ?(enabled=false) label =
+    let label = 
+      try Filename.chop_extension (Filename.basename label) 
+      with Invalid_argument _ -> label
+    in
     if not (Hashtbl.mem messages label) then
       { label = label ; enabled = enabled }
     else begin

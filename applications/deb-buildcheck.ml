@@ -54,10 +54,10 @@ module Options = struct
   add options ~long_name:"dump" ~help:"dump the cudf file" dump;
 end
 
-let debug fmt = Util.make_debug "Buildcheck" fmt
-let info fmt = Util.make_info "Buildcheck" fmt
-let warning fmt = Util.make_warning "Buildcheck" fmt
-let fatal fmt = Util.make_fatal "Buildcheck" fmt
+let debug fmt = Util.make_debug __FILE__ fmt
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
+let fatal fmt = Util.make_fatal __FILE__ fmt
 
 let timer = Util.Timer.create "Solver"
 

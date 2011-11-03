@@ -15,6 +15,11 @@
 open ExtLib
 open Common
 
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
+let debug fmt = Util.make_debug __FILE__ fmt
+let fatal fmt = Util.make_fatal __FILE__ fmt
+
 type source = {
   name : Format822.name;
   version : Format822.version;
@@ -82,34 +87,43 @@ let input_raw =
   M.input_raw parse_sources_in
 
 (** transform a list of sources into dummy packages to be then converted to cudf *)
-let sources2packages arch l =
+let sources2packages ?(src="src:") ?(bin="") archs l =
   (* as per policy, if the first arch restriction contains a !
    * then we assume that all archs on the lists are bang-ed.
    * cf: http://www.debian.org/doc/debian-policy/ch-relationships.html 7.1 *)
+
   let select = function
-    |(v,(((false,_)::_) as al)) when List.for_all (fun (_,a) -> not(a = arch)) al -> Some v
-    |(v,(((true,_)::_) as al)) when List.exists (fun (_,a) -> a = arch) al -> Some v
+    |(v,(((false,_)::_) as al)) when 
+      List.for_all (fun (_,a) -> not(a = arch)) al -> Some v
+    |(v,(((true,_)::_) as al)) when 
+      List.exists (fun (_,a) -> a = arch) al -> Some v
     |(v,[]) -> Some v
     |_ -> None
   in
   let conflicts l = List.filter_map select l in
-  let depends ll = List.filter_map (fun l ->
-    match List.filter_map select l with [] -> None | l -> Some l
+  let depends ll = 
+    List.filter_map (fun l ->
+      match List.filter_map select l with 
+      |[] -> None 
+      | l -> Some l
     ) ll
   in
   List.filter_map (fun pkg ->
     let archs = pkg.architecture in
-    if List.exists (fun a -> a = "all" || a = "any" || a = arch) archs then (
+    if 
+      List.exists (fun a ->
+        |a = "all" || a = "any" || a = "linux-any" || a = arch
+      ) archs 
+    then
       Some (
       { Packages.default_package with
-        Packages.name = "src:" ^ pkg.name ;
+        Packages.name = src ^ pkg.name ;
         source = (pkg.name, Some pkg.version);
         version = pkg.version;
-        depends = depends (pkg.build_depends_indep @ pkg.build_depends);
-        conflicts = conflicts (pkg.build_conflicts_indep @ pkg.build_conflicts);
+        depends = depends bin (pkg.build_depends_indep @ pkg.build_depends);
+        conflicts = conflicts bin (pkg.build_conflicts_indep @ pkg.build_conflicts);
         architecture = String.concat "," pkg.architecture
       }
       )
-    )
     else None
   ) l

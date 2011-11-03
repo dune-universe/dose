@@ -16,9 +16,9 @@ open ExtLib
 open Common
 open Algo
 
-let debug fmt = Util.make_debug "Ceve" fmt
-let info fmt = Util.make_info "Ceve" fmt
-let warning fmt = Util.make_warning "Ceve" fmt
+let debug fmt = Util.make_debug __FILE__ fmt
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
 
 IFDEF HASOCAMLGRAPH THEN
   module DGraph = Defaultgraphs.SyntacticDependencyGraph

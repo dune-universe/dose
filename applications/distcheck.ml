@@ -24,13 +24,13 @@ module Options = struct
   let successes = StdOpt.store_true ()
   let failures = StdOpt.store_true ()
   let explain = StdOpt.store_true ()
+  let summary = StdOpt.store_true ()
   let uuid = StdOpt.store_true ()
   let checkonly = Boilerplate.vpkglist_option ()
   let architecture = StdOpt.str_option ()
   let distribution = StdOpt.str_option ()
   let release = StdOpt.str_option ()
   let suite = StdOpt.str_option ()
-  let summary = StdOpt.store_true ()
   let outfile = StdOpt.str_option ()
 
   open OptParser
@@ -50,10 +50,10 @@ module Options = struct
   add options ~short_name:'o' ~long_name:"outfile" ~help:"output file" outfile;
 end
 
-let debug fmt = Util.make_debug "Distcheck" fmt
-let info fmt = Util.make_info "Distcheck" fmt
-let warning fmt = Util.make_warning "Distcheck" fmt
-let fatal fmt = Util.make_fatal "Distcheck" fmt
+let debug fmt = Util.make_debug __FILE__ fmt
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
+let fatal fmt = Util.make_fatal __FILE__ fmt
 
 let timer = Util.Timer.create "Solver" 
 

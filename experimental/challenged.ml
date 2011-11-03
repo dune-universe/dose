@@ -133,24 +133,25 @@ let version_of_target ?(strip=(fun x -> x)) getv = function
 ;;
 
 let lesser_or_equal getv target equivs v =
- let v_le_target =
-  match Debian.Version.split v with
-  |("",_,_,_) ->
-      (* in this case the reference version is without epoch,
-       * hence no aligmement of the target. We want to exclude
-       * this version if it is less or equal then the reference
-       * version OR if the stripped target if less then the 
-       * reference version. The idea is to avoid to upgrade to
-       * any epoch:version, but only to epoch:version with
-       * version > reference version *)
-      if (version_of_target getv target) <= (getv v) then true
-      else (version_of_target ~strip getv target) < (getv v)
-  |_ -> 
-      (* in this case the target is going to be aligned and 
-       * we want to make sure that the stripped target version is
-       * greater or equal then the stripped reference version *)
-      (version_of_target ~strip getv target) <= (getv (strip v))
- in v_le_target || (List.mem (`Eq v) equivs) (* ignore targets equivalent to status quo *)
+  let v_le_target =
+    match Debian.Version.split v with
+    |("",_,_,_) ->
+        (* in this case the reference version is without epoch,
+         * hence no aligmement of the target. We want to exclude
+         * this version if it is less or equal then the reference
+         * version OR if the stripped target if less then the 
+         * reference version. The idea is to avoid to upgrade to
+         * any epoch:version, but only to epoch:version with
+         * version > reference version *)
+        if (version_of_target getv target) <= (getv v) then true
+        else (version_of_target ~strip getv target) < (getv v)
+    |_ -> 
+        (* in this case the target is going to be aligned and 
+         * we want to make sure that the stripped target version is
+         * greater or equal then the stripped reference version *)
+        (version_of_target ~strip getv target) <= (getv (strip v))
+  in v_le_target || (List.mem (`Eq v) equivs) 
+  (* ignore targets equivalent to status quo *)
 ;;
 
 let pp tables pkg =

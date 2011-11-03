@@ -16,10 +16,10 @@ open ExtLib
 open Common
 open Packages
 
-let debug fmt = Util.make_debug "Debian.Debcudf" fmt
-let info fmt = Util.make_info "Debian.Debcudf" fmt
-let warning fmt = Util.make_warning "Debian.Debcudf" fmt
-let fatal fmt = Util.make_fatal "Debian.Debcudf" fmt
+let debug fmt = Util.make_debug __FILE__ fmt
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
+let fatal fmt = Util.make_fatal __FILE__ fmt
 
 type tables = {
   virtual_table : unit Util.StringHashtbl.t;
@@ -148,7 +148,7 @@ let get_real_version tables (package,cudfversion) =
     |l ->
         begin
           let v = List.fold_left min "999999:999999" l in
-          warning "version %s is equivalent to (%s)" v (String.concat "," l);
+          debug "version %s is equivalent to (%s)" v (String.concat "," l);
           v
         end
   with Not_found ->
@@ -259,16 +259,16 @@ let add_inst inst pkg =
     with Not_found -> false
 
 let tocudf tables ?(extras=[]) ?(inst=false) pkg =
-    { Cudf.default_package with
-      Cudf.package = CudfAdd.encode pkg.name ;
-      Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;
-      Cudf.keep = add_essential pkg.essential;
-      Cudf.depends = loadll tables (pkg.pre_depends @ pkg.depends);
-      Cudf.conflicts = loadlc tables pkg.name (pkg.breaks @ pkg.conflicts) ;
-      Cudf.provides = loadlp tables pkg.provides ;
-      Cudf.installed = add_inst inst pkg;
-      Cudf.pkg_extra = add_extra extras tables pkg ;
-    }
+  { Cudf.default_package with
+    Cudf.package = CudfAdd.encode pkg.name ;
+    Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;
+    Cudf.keep = add_essential pkg.essential;
+    Cudf.depends = loadll tables (pkg.pre_depends @ pkg.depends);
+    Cudf.conflicts = loadlc tables pkg.name (pkg.breaks @ pkg.conflicts) ;
+    Cudf.provides = loadlp tables pkg.provides ;
+    Cudf.installed = add_inst inst pkg;
+    Cudf.pkg_extra = add_extra extras tables pkg ;
+  }
 
 let lltocudf = loadll
 let ltocudf = loadl

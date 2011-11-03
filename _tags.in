@@ -51,6 +51,7 @@
 <experimental/deb-cudf.*>: use_boilerplateNoRpm
 <experimental/aptsolutions.*>: use_boilerplateNoRpm
 <experimental/edsp-cudf.*>: use_boilerplateNoRpm
+<experimental/loop-analysis.*>: use_boilerplateNoRpm, use_algo
 <experimental/rpm-cudf.*>: @USE_RPM@, use_boilerplate
 <experimental/dominators-graph.*>: @USE_RPM@, use_boilerplate, use_algo
 
