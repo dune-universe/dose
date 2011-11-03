@@ -221,6 +221,19 @@ module PackageGraph = struct
     ;
     gr
 
+  (** Build the dependency graph from the given list of packages *)
+  let dependency_graph_list universe pkglist =
+    let gr = G.create () in
+    List.iter (fun pkg ->
+      G.add_vertex gr pkg;
+      List.iter (fun l ->
+        List.iter (G.add_edge gr pkg) 
+        (List.flatten (List.map (CudfAdd.who_provides universe) l))
+      ) pkg.Cudf.depends
+    ) pkglist
+    ;
+    gr
+
   (** Build the conflict graph from the given cudf universe *)
   let conflict_graph universe =
     let gr = UG.create () in

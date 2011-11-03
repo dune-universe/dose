@@ -48,6 +48,36 @@ let to_set l = List.fold_right Cudf_set.add l Cudf_set.empty
 
 (** additional functions on Cudf data type.  *)
 
+let encode s =
+  let not_allowed = Str.regexp  "[^a-zA-Z0-9@/+().-]" in
+  let search s =
+    try (Str.search_forward not_allowed s 0) >= 0
+    with Not_found -> false
+  in
+  let make_hex chr = Printf.sprintf "%%%x" (Char.code chr) in
+  if search s then begin
+    let n = String.length s in
+    let b = Buffer.create n in
+    for i = 0 to n-1 do
+      let s' = String.of_char s.[i] in
+      if Str.string_match not_allowed s' 0 then
+        Buffer.add_string b (make_hex s.[i])
+      else
+        Buffer.add_string b s'
+    done;
+    Buffer.contents b
+  end else s
+
+let decode s =
+  let hex_re = Str.regexp "%[0-9a-f][0-9a-f]" in
+  let un s =
+    let s = Str.matched_string s in
+    let hex = String.sub s 1 2 in
+    let n = int_of_string ("0x" ^ hex) in
+    String.make 1 (Char.chr n)
+  in
+  Str.global_substitute hex_re un s
+
 let add_properties preamble l =
   List.fold_left (fun pre prop ->
     {pre with Cudf.property = prop :: pre.Cudf.property }
@@ -70,7 +100,7 @@ let pp_version fmt pkg =
   with Not_found -> Format.fprintf fmt "%d" pkg.Cudf.version
 
 let pp_package fmt pkg =
-  Format.fprintf fmt "%s (= %a)" pkg.Cudf.package pp_version pkg
+  Format.fprintf fmt "%s (= %a)" (decode pkg.Cudf.package) pp_version pkg
 
 let string_of_version = string_of pp_version
 let string_of_package = string_of pp_package
@@ -161,36 +191,6 @@ let compute_pool universe =
   in
   (d,c)
 ;;
-
-let not_allowed = Str.regexp  "[^a-zA-Z0-9@/+().-]" 
-let search s =
-  try (Str.search_forward not_allowed s 0) >= 0
-  with Not_found -> false
-
-let encode s =
-  let make_hex chr = Printf.sprintf "%%%x" (Char.code chr) in
-  if search s then begin
-    let n = String.length s in
-    let b = Buffer.create n in
-    for i = 0 to n-1 do
-      let s' = String.of_char s.[i] in
-      if Str.string_match not_allowed s' 0 then
-        Buffer.add_string b (make_hex s.[i])
-      else
-        Buffer.add_string b s'
-    done;
-    Buffer.contents b
-  end else s
-
-let decode s =
-  let hex_re = Str.regexp "%[0-9a-f][0-9a-f]" in
-  let un s =
-    let s = Str.matched_string s in
-    let hex = String.sub s 1 2 in
-    let n = int_of_string ("0x" ^ hex) in
-    String.make 1 (Char.chr n)
-  in
-  Str.global_substitute hex_re un s
 
 let cudfop = function
   |Some(("<<" | "<"),v) -> Some(`Lt,v)

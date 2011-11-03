@@ -122,7 +122,7 @@ let sources2packages ?(src="src") archs l =
         depends = depends (pkg.build_depends_indep @ pkg.build_depends);
         conflicts = conflicts (pkg.build_conflicts_indep @ pkg.build_conflicts);
         architecture = String.concat "," pkg.architecture;
-        extras = [("srctype",src);("bins",bins pkg)]
+        extras = [("type",src);("binaries",bins pkg)]
       }
       )
     else None
