@@ -175,7 +175,7 @@ dist: ./$(DIST_TARBALL)
 	@echo "Distribution tarball: ./$(DIST_TARBALL)"
 
 doc:
-	$(OCAMLBUILD) $(OBFLAGS) dose3.docdir/index.dot
-	$(OCAMLBUILD) $(OBFLAGS) dose3.docdir/index.html
+	$(OCAMLBUILD) $(OBFLAGS) dose3.docdir/index.html dose3.docdir/index.dot
+	dot -Grotate=0 -Tsvg -o dose3.docdir/index.svg dose3.docdir/index.dot
 
 .PHONY: all opt clean top-level headers test tags install uninstall dist doc
