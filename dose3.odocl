@@ -17,8 +17,10 @@ deb/Sources
 deb/Release
 deb/Apt
 deb/Format822
+deb/Evolution
+deb/Edsp
 #rpm/Packages
 #rpm/Hdlists
 #rpm/Version
-db/Backend
-db/Idbr
+#db/Backend
+#db/Idbr
