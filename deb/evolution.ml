@@ -47,8 +47,8 @@ let range ?(bottom=false) vl =
    a version satisfy a constraint.
    For each discriminant, a canonical representative is given,
    as well as the list of all other equivalent versions.
-   @param [bottom] set to true includes a version strictly smaller than all [vl] 
-   @param [highest] chooses the highest version as representative, if set to true,
+   @param bottom set to true includes a version strictly smaller than all [vl] 
+   @param highest chooses the highest version as representative, if set to true,
                       and the lowest otherwise.
  *)
 let discriminant ?(bottom=false) ?(highest=true) evalsel vl constraints =

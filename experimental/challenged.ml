@@ -314,7 +314,7 @@ let main () =
   let broken = OptParse.Opt.get Options.brokenlist in
   let cluster = OptParse.Opt.get Options.cluster in
   let downgrades = OptParse.Opt.get Options.downgrades in
-  let l = (Debian.Packages.input_raw args) in
+  let l = Debian.Packages.input_raw args in
   let pred = challenged ~downgrades ~broken ~cluster ~clusterlist l in
   List.iter (fun (((sn,sv,version),(target,equiv)),broken) ->
     Format.printf "cluster: %s %s@." sn version;

@@ -46,7 +46,6 @@ module Options = struct
   add options ~short_name:'f' ~long_name:"failures" ~help:"Only show failures" failures;
   add options ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" successes;
 
-
   add options ~long_name:"builarch" ~help:"Build Architecture" buildarch;
   add options ~long_name:"targetarch" ~help:"Target Architecture" targetarch;
   add options ~long_name:"dump" ~help:"dump the cudf file" dump;
