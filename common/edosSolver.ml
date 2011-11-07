@@ -91,7 +91,7 @@ module M (X : S) = struct
       mutable st_cost : int; (* Total computational cost so far *)
       st_print_var : Format.formatter -> int -> unit;
       mutable st_coherent : bool;
-      mutable st_buffer : (int * bool) list list option;
+      mutable st_buffer : (int * bool) list list;
     }
 
   let copy_clause p =
@@ -229,23 +229,17 @@ module M (X : S) = struct
   (****)
 
   let store st r =
-    match st.st_buffer with
-    |None -> ()
-    |Some b -> begin
-      let clause = Array.fold_left
-        (fun acc p ->
-           if pol_of_lit p then
-              (var_of_lit p, true)::acc
-           else
-              (var_of_lit p, false)::acc) 
-        [] r.lits in
-      st.st_buffer <- Some (clause::b)
-    end
+    let clause = 
+      Array.fold_left (fun acc p ->
+         if pol_of_lit p then
+            (var_of_lit p, true)::acc
+         else
+            (var_of_lit p, false)::acc
+      ) [] r.lits 
+    in
+    st.st_buffer <- (clause::st.st_buffer)
 
-  let dump st =
-    match st.st_buffer with 
-    |None -> []
-    |Some b -> List.rev_map (fun x -> List.rev x) b
+  let dump st = List.rev_map (fun x -> List.rev x) st.st_buffer
 
   (****)
 
@@ -546,37 +540,42 @@ module M (X : S) = struct
 
   let solve_lst st l = solve_lst_rec st [] l
 
-  let initialize_problem ?(print_var = (fun fmt -> Format.fprintf fmt "%d")) ?(buffer=false) n =
-    Gc.set { (Gc.get()) with
-      Gc.minor_heap_size = 4 * 1024 * 1024; (*4M*)
-      Gc.major_heap_increment = 32 * 1024 * 1024; (*32M*)
-      Gc.max_overhead = 150;
-    } ; (* let's fly ! *)
-    { st_assign = Array.make n Unknown;
-      st_reason = Array.make n None;
-      st_level = Array.make n (-1);
-      st_seen_var = Array.make n (-1);
-      st_refs = Array.make n 0;
-      st_pinned = Array.make n false;
-      (* to each literal, positive or negative, 
-       * we associate the list of rules where it appears *)
-      st_simpl_prop = Array.make (2 * n) LitMap.empty;
-      st_watched = Array.make (2 * n) [];
-      (* to each literal we associate the list of assiciated variables *)
-      st_associated_vars = Array.make (2 * n) [];
-      st_trail = [];
-      st_trail_lim = [];
-      st_prop_queue = Queue.create ();
-      st_cur_level = 0;
-      st_min_level = 0;
-      st_seen = 0;
-      st_var_queue_head = [];
-      st_var_queue = Queue.create ();
-      st_cost = 0;
-      st_print_var = print_var;
-      st_coherent = true;
-      st_buffer = if buffer then Some [] else None;
-    }
+  let debug b = debug := b
+  let set_buffer b = buffer := b
+
+  let initialize_problem 
+    ?(print_var = (fun fmt -> Format.fprintf fmt "%d")) ?(buffer=false) n =
+      if buffer then set_buffer true;
+      Gc.set { (Gc.get()) with
+        Gc.minor_heap_size = 4 * 1024 * 1024; (*4M*)
+        Gc.major_heap_increment = 32 * 1024 * 1024; (*32M*)
+        Gc.max_overhead = 150;
+      } ; (* let's fly ! *)
+      { st_assign = Array.make n Unknown;
+        st_reason = Array.make n None;
+        st_level = Array.make n (-1);
+        st_seen_var = Array.make n (-1);
+        st_refs = Array.make n 0;
+        st_pinned = Array.make n false;
+        (* to each literal, positive or negative, 
+         * we associate the list of rules where it appears *)
+        st_simpl_prop = Array.make (2 * n) LitMap.empty;
+        st_watched = Array.make (2 * n) [];
+        (* to each literal we associate the list of assiciated variables *)
+        st_associated_vars = Array.make (2 * n) [];
+        st_trail = [];
+        st_trail_lim = [];
+        st_prop_queue = Queue.create ();
+        st_cur_level = 0;
+        st_min_level = 0;
+        st_seen = 0;
+        st_var_queue_head = [];
+        st_var_queue = Queue.create ();
+        st_cost = 0;
+        st_print_var = print_var;
+        st_coherent = true;
+        st_buffer = [];
+      }
 
   let insert_simpl_prop st r p p' =
     let p = lit_neg p in
@@ -585,13 +584,13 @@ module M (X : S) = struct
 
   let add_bin_rule st lits p p' reasons =
     let r = { lits = [|p; p'|]; all_lits = lits; reasons = reasons } in
-    store st r ;
+    if !buffer then store st r ;
     insert_simpl_prop st r p p';
     insert_simpl_prop st r p' p
 
   let add_un_rule st lits p reasons =
     let r = { lits = [|p|]; all_lits = lits; reasons = reasons } in
-    store st r ;
+    if !buffer then store st r ;
     enqueue st p (Some r)
 
   let add_rule st lits reasons =
@@ -613,7 +612,7 @@ module M (X : S) = struct
     | _ -> let rule =
              { lits = lits; all_lits = all_lits; reasons = reasons } in
            let p = lit_neg rule.lits.(0) in let p' = lit_neg rule.lits.(1) in
-           store st rule ;
+           if !buffer then store st rule ;
            assert (val_of_lit st p <> False);
            assert (val_of_lit st p' <> False);
            st.st_watched.(p) <- rule :: st.st_watched.(p);
@@ -645,7 +644,6 @@ module M (X : S) = struct
 
   let assignment st = st.st_assign
 
-  let debug b = debug := b
 
   let stats st =
     let (t,f,u) =

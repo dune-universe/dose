@@ -18,7 +18,7 @@ let print_list fmt pr sep l =
 
 module Package = struct
   type t = int
-  let print maps fmt i = CudfAdd.pp_package fmt (maps.CudfAdd.map#inttovar i)
+  let print univ fmt i = CudfAdd.pp_package fmt (CudfAdd.inttovar univ i)
   let compare (x : int) y = compare x y
 end
 
@@ -40,9 +40,9 @@ end
 
 module Disj  = struct
   type t = PSet.t
-  let print maps fmt l =
+  let print univ fmt l =
     if PSet.is_empty l then Format.fprintf fmt "MISSING"
-    else print_set fmt (Package.print maps) " | " l
+    else print_set fmt (Package.print univ) " | " l
 
   let implies = PSet.subset
   let equiv = PSet.equal
@@ -67,7 +67,7 @@ end
 
 module Formula  = struct
   type t = Disj.t list
-  let print maps fmt = print_list fmt (Disj.print maps) ", "
+  let print univ fmt = print_list fmt (Disj.print univ) ", "
 
   let of_disj d = [d]
   let lit p = of_disj (Disj.lit p)
@@ -309,12 +309,12 @@ let repository universe =
   let size = Cudf.universe_size universe in
   let confl = Conflict.create size in
   let deps = PTbl.create size Formula._true in
-  Cudf.iter_packages (fun p1 ->
-    let i = CudfAdd.vartoint universe p1 in
+  let c = CudfAdd.init_conflicts universe in
+  Cudf.iteri_packages (fun i p1 ->
     List.iter (fun p2 ->
       let j = CudfAdd.vartoint universe p2 in
       Conflict.add confl i j
-    ) (CudfAdd.who_conflicts universe p1);
+    ) (CudfAdd.who_conflicts c universe p1);
 
     let dll = 
       List.map (fun disjunction ->
