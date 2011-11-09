@@ -36,6 +36,8 @@ module PTbl = struct
   let iteri f a = Array.iteri (fun i v -> f i v) a
   let map = Array.map
   let mapi f a = Array.mapi (fun i v -> f i v) a
+  let foldi f a acc = 
+    snd (Array.fold_right (fun v (i,acc) -> (i+1,f i v acc)) a (0,acc))
 end
 
 module Disj  = struct
@@ -64,6 +66,8 @@ module Disj  = struct
   let normalize d =  pset_map (fun i -> i) d
   let compare = PSet.compare
 end
+
+module CSet = Set.Make(Disj)
 
 module Formula  = struct
   type t = Disj.t list
