@@ -30,7 +30,7 @@ experimental/Outdated
 experimental/Challenged
 doseparse/BoilerplateNoRpm
 doseparse/Boilerplate
-rpm/Packages
+#rpm/Packages
 #rpm/Hdlists
 #rpm/Version
 #rpm/Rpmcudf
