@@ -100,11 +100,10 @@ ELSE
 END
 ;;
 
-let nr_conflicts maps univ =
-begin
+let nr_conflicts univ =
   Cudf.fold_packages (fun acc p ->
     let cfl = List.filter (fun x -> not (x =% p))
-      (List.flatten (List.rev_map (CudfAdd.who_provides maps) p.conflicts)) in
+      (List.flatten (List.rev_map (CudfAdd.who_provides univ) p.conflicts)) in
     debug "%s: %d conflicts" (Cudf_types_pp.string_of_pkgname p.package)
       (List.length cfl);
     List.iter (fun c ->
@@ -112,7 +111,7 @@ begin
     ) cfl;
     acc + (List.length cfl)
   ) 0 univ
-end;;
+;;
 
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
@@ -199,7 +198,7 @@ END
 IFDEF HASOCAMLGRAPH THEN
         Printf.fprintf oc "%d\t%d\t%d\n"
         (Cudf.universe_size u) (DGraph.G.nb_edges (DGraph.dependency_graph u))
-        (nr_conflicts m u)
+        (nr_conflicts u)
 ELSE
         failwith ("table not supported: needs ocamlgraph")
 END
