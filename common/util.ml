@@ -143,6 +143,10 @@ let make_fatal label =
   let l = Printf.sprintf "Fatal error in module %s: " label in
   Printf.kprintf (fun s -> Printf.eprintf "%s%s\n%!" l s; exit (-1))
 
+let debug fmt = make_debug __FILE__ fmt
+let info fmt = make_info __FILE__ fmt
+let warning fmt = make_warning __FILE__ fmt
+
 (** Printf bars are printed immediately on stderr.
  * they can be enabled or disabled (default) *)
 module Progress = struct
@@ -153,6 +157,7 @@ module Progress = struct
     mutable perc : int ;
     mutable rotation : int ;
     mutable enabled : bool ;
+    mutable unbounded : bool ;
   }
 
   let columns = 75 
@@ -160,27 +165,31 @@ module Progress = struct
   let rotate = "|/-\\"
   let bars = Hashtbl.create 10
 
-  let create ?(enabled=false) ?(total=0) s =
+  let create ?(enabled=false) ?(total=0) ?(unbounded=false) s =
     let c = {
       name = s;
       buffer = Buffer.create columns ;
-      total = total ;
+      total = if unbounded = true then 100 else total ;
       perc = 0 ;
       rotation = 0 ;
-      enabled = enabled }
+      enabled = enabled ;
+      unbounded = unbounded }
     in
     Hashtbl.add bars s c;
     c
 
   let enable s =
     try let t = Hashtbl.find bars s in t.enabled <- true
-    with Not_found ->
-      Printf.eprintf "Warning: Progress Bar %s not found\n" s
+    with Not_found -> warning "Progress Bar %s not found" s
 
   let available () = Hashtbl.fold (fun k _ acc -> k::acc) bars []
 
-  let set_total c total = c.total <- total
+  let set_total c total =
+    if c.unbounded = true then c.total <- total
+    else warning "%s is an unbounded progress bar. Cannot set total" c.name
+
   let reset c =
+    Printf.eprintf "\n%!";
     Buffer.clear c.buffer;
     c.perc <- 0;
     c.rotation <- 0
@@ -193,7 +202,8 @@ module Progress = struct
       Buffer.add_string c.buffer c.name;
       let f = floor (1000.0 *. (float c.perc) /. (float c.total)) in
       let f = f /. 10.0 in
-      if f = 100.0 then Buffer.add_string c.buffer full
+      if f = 100.0 && c.unbounded = false then 
+        Buffer.add_string c.buffer full
       else begin
         c.rotation <- (1 + c.rotation) land 3;
         Printf.bprintf c.buffer "%c %%%4.1f" rotate.[c.rotation] f
@@ -238,8 +248,7 @@ module Timer = struct
 
   let enable s =
     try let t = Hashtbl.find timers s in t.enabled <- true
-    with Not_found ->
-      Printf.eprintf "Warning: Timer %s not found\n" s
+    with Not_found -> warning "Timer %s not found" s
 
   let available () = Hashtbl.fold (fun k _ acc -> k::acc) timers []
 

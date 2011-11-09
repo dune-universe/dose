@@ -15,9 +15,9 @@
 open Graph
 open Common
 
-let debug fmt = Util.make_debug "Defaultgraphs" fmt
-let info fmt = Util.make_info "Defaultgraphs" fmt
-let warning fmt = Util.make_warning "Defaultgraphs" fmt
+let debug fmt = Util.make_debug __FILE__ fmt
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
 
 let tr_timer = Util.Timer.create "Defaultgraph.GraphOper.transitive_reduction"
 
