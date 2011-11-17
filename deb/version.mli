@@ -10,12 +10,8 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-(** Debian version comparison function. *)
-
-val equal : string -> string -> bool
-
-(** compare two debian versions *)
-val compare : string -> string -> int
+(** Functions for manipulating and comparing Debian version strings.
+    Compliant with Debian policy version 3.9.2. *)
 
 (** A string representing a debian version is parsed using the following
   bnf grammar.
@@ -26,17 +22,28 @@ val compare : string -> string -> int
    | upstream_version_no_colon_no_dash
    | epoch':'.upstream_version_no_dash
   epoch ::= [0-9]+
-  upstream_version ::= [a-zA-Z0-9.+-:]+
-  upstream_version_no_colon ::= [a-zA-Z0-9.+-]+
-  upstream_version_no_dash ::= [a-zA-Z0-9.+:]+
-  upstream_version_no_colon_no_dash ::= [a-zA-Z0-9.+]+
-  debian_revision ::= [a-zA-Z0-9+.]+
+  upstream_version ::= [a-zA-Z0-9.+-:~]+
+  upstream_version_no_colon ::= [a-zA-Z0-9.+-~]+
+  upstream_version_no_dash ::= [a-zA-Z0-9.+:~]+
+  upstream_version_no_colon_no_dash ::= [a-zA-Z0-9.+~]+
+  debian_revision ::= [a-zA-Z0-9+.~]+
   v}
  *)
 
-(* split the debian version into its components.
- * (epoch,upstream,revision,binnmu) = split v
- * v = epoch ^ ":" ^ upstream ^ "-" ^ revision ^ binnmu *)
+(** Comparising according to the debian comparison algorithm *)
+
+(** tell whether two strings define the same versions *)
+val equal : string -> string -> bool
+
+(** (compare x y) returns 0 if x is equal to y, a negative integer if x is less than y,
+     and a positive integer if x is greater than y. This is consistent with 
+     Pervasives.compare. *)
+val compare : string -> string -> int
+
+(** Decomposing and recomposing version strings *)
+(** split the debian version into its components.
+    (epoch,upstream,revision,binnmu) = split v
+    v = epoch ^ ":" ^ upstream ^ "-" ^ revision ^ binnmu *)
 val split : string -> (string * string * string * string)
 val concat : (string * string * string * string) -> string
 
