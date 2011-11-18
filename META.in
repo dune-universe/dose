@@ -5,30 +5,35 @@ archive(native) = "common.cmxa algo.cmxa debian.cmxa eclipse.cmxa rpm.cmxa"
 requires = "extlib, str, pcre, cudf, ocamlgraph, @ZIP@, @BZ2@"
 
 package "common" (
+version = "@PACKAGE_VERSION@"
 archive(byte) = "common.cma"
 archive(native) = "common.cmxa"
 requires = "extlib, str, pcre, cudf, @ZIP@, @BZ2@"
 )
 
 package "algo" (
+version = "@PACKAGE_VERSION@"
 archive(byte) = "algo.cma"
 archive(native) = "algo.cmxa"
 requires = "extlib, str, pcre, cudf, dose3.common"
 )
 
 package "debian" (
+version = "@PACKAGE_VERSION@"
 archive(byte) = "debian.cma"
 archive(native) = "debian.cmxa"
 requires = "extlib, str, pcre, cudf, dose3.common"
 )
 
 package "eclipse" (
+version = "@PACKAGE_VERSION@"
 archive(byte) = "eclipse.cma"
 archive(native) = "eclipse.cmxa"
 requires = "extlib, str, pcre, cudf, dose3.common, dose3.debian" 
 )
 
 package "rpm" (
+version = "@PACKAGE_VERSION@"
 archive(byte) = "rpm.cma"
 archive(native) = "rpm.cmxa"
 requires = "extlib, str, pcre, cudf, dose3.common"
