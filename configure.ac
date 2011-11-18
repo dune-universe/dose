@@ -19,6 +19,7 @@ fi
 
 #defaults
 USE_RPM=use_
+LINK_RPM=link_
 HAS_RPM=no
 PKG_SQLITE=pkg_
 PKG_PGSQL=pkg_

@@ -1,5 +1,7 @@
 #rules to compile all applications using ocamlfind
-<*.ml{i,}>: pp(camlp4o Camlp4MacroParser.cmo)
-<*>: package(dose3)
-<{ceve,distcheck}.*>: package(dose3.boilerplate)
-<{apt-cudf,deb-buildcheck}.*>: package(dose3.boilerplateNoRpm)
+#this is an example
+#
+#<*.ml{i,}>: pp(camlp4o Camlp4MacroParser.cmo)
+#<*>: package(dose3)
+#<{ceve,distcheck}.*>: package(dose3.boilerplate)
+#<{apt-cudf,deb-buildcheck}.*>: package(dose3.boilerplateNoRpm)
