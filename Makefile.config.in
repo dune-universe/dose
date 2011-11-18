@@ -8,10 +8,9 @@ LDFLAGS=@LDFLAGS@
 OCAMLFIND=@OCAMLFIND@
 
 exec_prefix=@prefix@
-
-#LIBDIR=@OCAMLLIB@
 LIBDIR=@libdir@/ocaml
 BINDIR=@bindir@
+LIBDIR=$(shell ocamlfind printconf destdir)
 
 INSTALL=$(OCAMLFIND) install -destdir $(LIBDIR)
 UNINSTALL=$(OCAMLFIND) remove -destdir $(LIBDIR)
@@ -45,6 +44,19 @@ ifeq ("@HAS_LIBCUDF@","no")
     OPTLIBS += libcudf/cudf.cmxa
     CMXSLIBS += libcudf/cudf.cmxs
   endif
+endif
+
+#AH I hate hacks !
+all: realall
+
+ifeq ("@HAS_LIBCUDF@","no")
+installcudf:
+	$(MAKE) -C libcudf all @OCAMLBEST@ install
+uninstallcudf:
+	$(MAKE) -C libcudf uninstall
+else
+installcudf:
+uninstallcudf:
 endif
 
 BYTELIBS += common/common.cma deb/debian.cma rpm/rpm.cma eclipse/eclipse.cma algo/algo.cma doseparse/boilerplateNoRpm.cma doseparse/boilerplate.cma

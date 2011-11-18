@@ -7,7 +7,7 @@ OBFLAGS := -j 10 -use-ocamlfind -classic-display
 #OBFLAGS := $(OBFLAGS) -tag debug -tag profile
 #OBFLAGS := $(OBFLAGS) -classic-display
 
-all: $(BYTELIBS) $(ALIBS) $(OPTLIBS) $(CMXSLIBS) man
+realall: $(BYTELIBS) $(ALIBS) $(OPTLIBS) $(CMXSLIBS) man
 	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
 
 fast: $(OPTLIBS)
@@ -123,42 +123,38 @@ test:
 # stuff not not put in a distribution tarball
 DIST_EXCLUDE = libcudf $(wildcard */tests) experimental
 
+INSTALL_STUFF_ = META
+INSTALL_STUFF_ += $(wildcard _build/doselibs/*.cma _build/doselibs/*.cmi)
+INSTALL_STUFF_ += $(wildcard _build/doselibs/*.cmxa _build/doselibs/*.cmxs)
+INSTALL_STUFF_ += $(wildcard _build/doselibs/*.a)
+INSTALL_STUFF_ += $(wildcard _build/*/*.mli)
+INSTALL_STUFF_ += $(wildcard _build/rpm/*.so _build/rpm/*.a)
 
-INSTALL_STUFF = META
-INSTALL_STUFF += $(wildcard $(DOSELIBS)/*)
+exclude_cudf = $(wildcard _build/doselibs/*cudf* _build/libcudf/*)
+INSTALL_STUFF = $(filter-out $(exclude_cudf), $(INSTALL_STUFF_))
 
-install:
-	# install libraries
+install: META installcudf
 	test -d $(LIBDIR) || mkdir -p $(LIBDIR)
-	$(INSTALL) -patch-version $(VERSION) $(NAME) $(INSTALL_STUFF)
 	test -d $(LIBDIR)/stublibs || mkdir -p $(LIBDIR)/stublibs
-
-	# eclipse and rpm to add ...
-	for f in algo common deb ; do \
-	  test -d  $(LIBDIR)/$(NAME)/$$f/ || mkdir -p  $(LIBDIR)/$(NAME)/$$f/ ; \
-	  cp -f _build/$$f/*.mli $(LIBDIR)/$(NAME)/$$f/ ;\
-	done
+	$(INSTALL) -patch-version $(VERSION) $(NAME) $(INSTALL_STUFF)
 
 	# install applications
-	test -d $(BINDIR) || mkdir -p $(BINDIR)
 	cd _build/applications ; \
+	install -d $(BINDIR) ; \
 	for f in $$(ls *.$(OCAMLBEST)) ; do \
-	  cp $$f $(BINDIR)/$${f%.$(OCAMLBEST)} ; \
+	  install -s $$f $(BINDIR)/$${f%.$(OCAMLBEST)} ; \
 	done
+	ln -s $(BINDIR)/distcheck $(BINDIR)/debcheck
+	ln -s $(BINDIR)/distcheck $(BINDIR)/rpmcheck
+	ln -s $(BINDIR)/distcheck $(BINDIR)/eclipsecheck
 
-	if [ -e _build/rpm/dllrpm_stubs.so ]; then \
-	  cp _build/rpm/dllrpm_stubs.so $(LIBDIR)/stublibs/ ;\
-	fi
-
-uninstall:
-	rm -Rf $(LIBDIR)/$(NAME)
-	rm $(LIBDIR)/stublibs/dllrpm_stubs.so
+uninstall: uninstallcudf
+	$(OCAMLFIND) remove -destdir $(LIBDIR) $(NAME)
 
 	for f in $$(ls *.$(OCAMLBEST)) ; do \
-	  if [ -f $(BINDIR)/$${f%.$(OCAMLBEST)} ]; then \
-	    rm $(BINDIR)/$${f%.$(OCAMLBEST)} ; \
-	  fi \
+	  rm -f $(BINDIR)/$${f%.$(OCAMLBEST)} ; \
 	done
+	rm -f $(BINDIR)/debcheck $(BINDIR)/rpmcheck $(BINDIR)/eclipsecheck
 
 dist: ./$(DIST_TARBALL)
 ./$(DIST_TARBALL):

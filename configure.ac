@@ -237,6 +237,7 @@ if test "$HAS_RPM4" = "yes" ; then
   AC_CHECK_HEADERS([rpm/rpmtypes.h],,AC_MSG_ERROR([missing rpmtypes.h]))
   CONFIG_RPM="-DHASRPM"
   USE_RPM="use_rpm, use_rpm4"
+  LINK_RPM="link_rpm4"
   HAS_RPM=yes
 fi
 
@@ -254,8 +255,15 @@ if test "$HAS_RPM5" = "yes"; then
 #  AC_CHECK_HEADERS([rpm/rpm4compat.h],,AC_MSG_ERROR([missing rpm4compat.h]))
   CONFIG_RPM="-DHASRPM"
   USE_RPM="use_rpm, use_rpm5"
+  LINK_RPM="link_rpm5"
   HAS_RPM=yes
 fi
+
+#AC_CHECK_HEADERS([sched.h],,AC_MSG_ERROR([missing sched.h]))
+#AC_CHECK_DECLS([sched_setaffinity], [], [], [[
+#                #define _GNU_SOURCE 1
+#                #include <sched.h>
+#                ]])
 
 
 
@@ -288,6 +296,7 @@ AC_SUBST(LINK_RPM)
 AC_SUBST(CONFIG_RPM)
 AC_SUBST(INCLUDE_RPM)
 AC_SUBST(USE_RPM)
+AC_SUBST(LINK_RPM)
 AC_SUBST(HAS_RPM)
 
 AC_SUBST(INCLUDE_CUDF)

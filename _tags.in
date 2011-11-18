@@ -1,10 +1,10 @@
-<*/*.ml> or <*/*.mli>: pp(camlp4o Camlp4MacroParser.cmo)
-<*/*.ml> or <*/*.mli>: package(extlib), @PKG_CUDF@, package(pcre)
+<*/*.ml{i,}>: pp(camlp4o Camlp4MacroParser.cmo)
+<*/*.ml{i,}>: package(extlib), @PKG_CUDF@, package(pcre)
 
 <doseparse/boilerplateNoRpm.ml>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
 <doseparse/boilerplate.ml>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
 
-<{common,algo}/*.{ml,mli}>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
+<{common,algo}/*.ml{i,}>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
 
 <applications/*.ml> or <experimental/*.ml>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_PARMAP@ @CONFIG_OCAMLGRAPH@)
 
@@ -15,16 +15,17 @@
 <rpm/tests.*>: use_common, @USE_RPM@, use_algo, package(ocamlgraph)
 <algo/tests.*>: use_common, use_algo, package(ocamlgraph)
 
-<common/*.{ml,mli}>: @PKG_ZIP@, @PKG_BZ2@
-<deb/*.{ml,mli}>: use_common
-<rpm/*.{ml,mli}>: use_common
-<algo/*.{ml,mli}>: use_common, @PKG_OCAMLGRAPH@
-<eclipse/*.{ml,mli}>: use_common, use_debian
+<common/*.ml{i,}>: @PKG_ZIP@, @PKG_BZ2@
+<deb/*.ml{i,}>: use_common
+<rpm/*.ml{i,}>: use_common
+<algo/*.ml{i,}>: use_common, @PKG_OCAMLGRAPH@
+<eclipse/*.ml{i,}>: use_common, use_debian
 <doseparse/boilerplate.ml>: use_common, use_debian, use_eclipse, @USE_RPM@
 <doseparse/boilerplateNoRpm.ml>: use_common, use_debian, use_eclipse
 <rpm/librpm4_stubs.*>: use_rpm, use_rpm4
 <rpm/librpm5_stubs.*>: use_rpm, use_rpm5
-<rpm/rpm.{cma,cmx,cmxa,cmxs}>: @USE_RPM@
+<rpm/rpm.cm{x,}a>: @USE_RPM@
+<rpm/rpm.cmxs>: @LINK_RPM@
 
 <common/*.cmx>: for-pack(Common)
 <algo/*.cmx>: for-pack(Algo)
@@ -32,9 +33,9 @@
 <eclipse/*.cmx>: for-pack(Eclipse)
 <rpm/*.cmx>: for-pack(Rpm)
 
-<applications/*> or <experimental/*>: use_common, use_debian, use_eclipse
-<applications/*> or <experimental/*>: package(extlib), package(pcre), package(str), package(unix)
-<applications/*> or <experimental/*>: @PKG_CUDF@, @PKG_OCAMLGRAPH@, @PKG_ZIP@, @PKG_BZ2@
+<{applications,experimental}/*>: use_common, use_debian, use_eclipse
+<{applications,experimental}/*>: package(extlib), package(pcre), package(str), package(unix)
+<{applications,experimental}/*>: @PKG_CUDF@, @PKG_OCAMLGRAPH@, @PKG_ZIP@, @PKG_BZ2@
 
 <applications/apt-cudf.*>: use_boilerplateNoRpm
 <applications/deb-buildcheck.*>: use_algo, use_boilerplateNoRpm

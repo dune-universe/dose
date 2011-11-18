@@ -5872,6 +5872,7 @@ done
 
   CONFIG_RPM="-DHASRPM"
   USE_RPM="use_rpm, use_rpm4"
+  LINK_RPM="link_rpm4"
   HAS_RPM=yes
 fi
 
@@ -5907,8 +5908,16 @@ done
 #  AC_CHECK_HEADERS([rpm/rpm4compat.h],,AC_MSG_ERROR([missing rpm4compat.h]))
   CONFIG_RPM="-DHASRPM"
   USE_RPM="use_rpm, use_rpm5"
+  LINK_RPM="link_rpm5"
   HAS_RPM=yes
 fi
+
+#AC_CHECK_HEADERS([sched.h],,AC_MSG_ERROR([missing sched.h]))
+#AC_CHECK_DECLS([sched_setaffinity], [], [], [[
+#                #define _GNU_SOURCE 1
+#                #include <sched.h>
+#                ]])
+
 
 
 

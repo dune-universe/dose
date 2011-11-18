@@ -1,3 +1,5 @@
+- remove all references to Str and move to Pcre
+
 - modify all test cases to check if the test file exists. If this is 
   the case, run the test, if not ignore the test. (this is to prepare
   a small release tarball with a restricted number of unit tests) 
