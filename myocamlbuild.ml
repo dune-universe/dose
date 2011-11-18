@@ -43,7 +43,9 @@ let _ = dispatch begin function
        flag ["ocaml"; "use_rpm4"; "link"; "library"] & S[
          A"-ccopt"; A"-Lrpm"; A"-cclib"; A"-lrpm4_stubs";
        ];
+       (*
        flag ["ocaml"; "use_rpm"; "link"; "program"; "byte"] & S[ A"-custom" ];
+       *)
 
        flag ["c"; "use_rpm"] & S[ A"-ccopt"; A"-I/usr/include/rpm"; A"-ccopt"; A"-O2" ];
        (*

@@ -64,6 +64,11 @@ let parse uri =
 module IG = Defaultgraphs.IntPkgGraph.G
 module UG = Graph.Imperative.Graph.Concrete(Defaultgraphs.IntPkgGraph.PkgV)
 
+module N = Graph.Oper.Neighbourhood(UG)
+module O = Graph.Oper.Make(Graph.Builder.I(UG))
+module S = N.Vertex_Set
+module GO = Defaultgraphs.GraphOper(UG)
+
 module DisplayF (G : Graph.Sig.I) =
   struct
     include G
@@ -82,10 +87,6 @@ module DisplayF (G : Graph.Sig.I) =
 module Display = DisplayF(UG)
 module D = Graph.Graphviz.Dot(Display)
 
-module N = Graph.Oper.Neighbourhood(UG)
-module O = Graph.Oper.Make(Graph.Builder.I(UG))
-module S = N.Vertex_Set
-module GO = Defaultgraphs.GraphOper(UG)
 
 type 'a llist = 'a cell Lazy.t
 and 'a cell = LList of 'a * 'a llist | Empty

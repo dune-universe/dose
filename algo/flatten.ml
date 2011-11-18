@@ -38,6 +38,7 @@ module PTbl = struct
   let mapi f a = Array.mapi (fun i v -> f i v) a
   let foldi f a acc = 
     snd (Array.fold_right (fun v (i,acc) -> (i+1,f i v acc)) a (0,acc))
+  let fold = Array.fold_right
 end
 
 module Disj  = struct

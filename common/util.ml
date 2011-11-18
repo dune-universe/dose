@@ -169,7 +169,7 @@ module Progress = struct
     let c = {
       name = s;
       buffer = Buffer.create columns ;
-      total = if unbounded = true then 100 else total ;
+      total = if unbounded then 100 else total ;
       perc = 0 ;
       rotation = 0 ;
       enabled = enabled ;
@@ -185,7 +185,7 @@ module Progress = struct
   let available () = Hashtbl.fold (fun k _ acc -> k::acc) bars []
 
   let set_total c total =
-    if c.unbounded = true then c.total <- total
+    if not c.unbounded then c.total <- total
     else warning "%s is an unbounded progress bar. Cannot set total" c.name
 
   let reset c =
@@ -202,7 +202,7 @@ module Progress = struct
       Buffer.add_string c.buffer c.name;
       let f = floor (1000.0 *. (float c.perc) /. (float c.total)) in
       let f = f /. 10.0 in
-      if f = 100.0 && c.unbounded = false then 
+      if f = 100.0 && not c.unbounded then 
         Buffer.add_string c.buffer full
       else begin
         c.rotation <- (1 + c.rotation) land 3;

@@ -168,7 +168,7 @@ let print_error pp root fmt l =
     |Conflict (i,j,vpkg) ->
         Format.fprintf fmt "@[<v 1>conflict:@,";
         Format.fprintf fmt "@[<v 1>pkg1:@,%a@," (pp_package ~source:true pp) i;
-        Format.fprintf fmt "culprit: %a@]@," (pp_vpkglist pp) [vpkg];
+        Format.fprintf fmt "unsat-conflitc: %a@]@," (pp_vpkglist pp) [vpkg];
         Format.fprintf fmt "@[<v 1>pkg2:@,%a@]" (pp_package ~source:true pp) j;
         if deps <> [] then begin
           let pl1 = create_pathlist root (Dependency(i,[],[])::deps) in
@@ -182,7 +182,8 @@ let print_error pp root fmt l =
           Format.fprintf fmt "@,@]"
     |Missing (i,vpkgs) ->
         Format.fprintf fmt "@[<v 1>missing:@,";
-        Format.fprintf fmt "@[<v 1>pkg:@,%a@]" (pp_dependency ~label:"missingdep" pp) (i,vpkgs);
+        Format.fprintf fmt "@[<v 1>pkg:@,%a@]" 
+          (pp_dependency ~label:"unsat-dependency" pp) (i,vpkgs);
         let pl = create_pathlist root (Dependency(i,vpkgs,[])::deps) in
         if pl <> [[]] then begin
           Format.fprintf fmt "@,@[<v 1>depchains:@,%a@]" (pp_dependencies pp) pl;
@@ -261,7 +262,7 @@ let pp_summary_row pp fmt = function
       Format.fprintf fmt "@]@]"
   |(Missing (i,vpkgs) ,pl) -> 
       Format.fprintf fmt "@[<v 1>missing:@,";
-      Format.fprintf fmt "@[<v 1>missingdep: %a@]@," (pp_vpkglist pp) vpkgs;
+      Format.fprintf fmt "@[<v 1>unsat-dependency: %a@]@," (pp_vpkglist pp) vpkgs;
       Format.fprintf fmt "@[<v 1>packages:@," ;
       pp_list (pp_package ~source:true pp) fmt pl;
       Format.fprintf fmt "@]@]"

@@ -123,16 +123,8 @@ let outdated
     List.iter (fun (version,realversion,cluster) ->
       List.iter (fun pkg ->
         let pn = pkg.Debian.Packages.name in
-        let pv = pkg.Debian.Packages.version in
         if Hashtbl.mem constraints_table pn then begin
-          Hashtbl.add realpackages pn () (*;
-          let v = pv^"+aaaa-dummy" in
-          try 
-            let l = Hashtbl.find constraints_table pn in
-            Hashtbl.replace constraints_table pn ((`Eq,v)::l)
-          with Not_found ->
-            Hashtbl.add constraints_table pn [(`Eq,v)]
-*)
+          Hashtbl.add realpackages pn ()
         end
       ) cluster;
       let (versionlist, constr) =
@@ -185,6 +177,7 @@ let outdated
                 (sync (sn,version,1) p)::l
             ) acc0 cluster
           in
+          (* the target version is always greater then all versions in equivs *)
           List.fold_left (fun acc1 (target,equiv) ->
             incr sync_index;
             List.fold_left (fun acc2 pkg ->
@@ -196,8 +189,7 @@ let outdated
               let number = Debian.Evolution.string_of_range target in
               let equivs = List.map Debian.Evolution.string_of_range equiv in
 
-              if (newv > pv) (* || 
-                (List.mem (`Eq pkg.Debian.Packages.version) equiv) *) then begin
+              if newv > pv then begin
                 let d = dummy (sn,version) p number equivs newv in
                 if List.length cluster > 1 then
                   (sync (sn,version,!sync_index) d)::acc2
@@ -280,7 +272,7 @@ let main () =
   let args = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress)
-  ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
+    ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
 
   (* let clusterlist = OptParse.Opt.opt Options.checkonly in *)
@@ -290,8 +282,7 @@ let main () =
 
   let default_arch = OptParse.Opt.opt Options.architecture in
   let packagelist = Debian.Packages.input_raw ~default_arch args in
-  ignore(outdated ~summary ~verbose ~dump packagelist) 
-
+  outdated ~summary ~verbose ~dump packagelist
 ;;
 
 main ();;
