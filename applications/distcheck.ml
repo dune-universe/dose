@@ -26,6 +26,7 @@ module Options = struct
   let explain = StdOpt.store_true ()
   let summary = StdOpt.store_true ()
   let uuid = StdOpt.store_true ()
+  let latest = StdOpt.store_true ()
   let checkonly = Boilerplate.vpkglist_option ()
   let architecture = StdOpt.str_option ()
   let distribution = StdOpt.str_option ()
@@ -41,11 +42,13 @@ module Options = struct
   add options ~long_name:"checkonly" ~help:"Check only these package" checkonly;
   add options ~long_name:"summary" ~help:"Print a detailed summary" summary;
 
+  add options ~long_name:"latest" ~help:"Check only the latest version of each package" latest;
+  add options ~short_name:'u' ~long_name:"uid" ~help:"Generate a unique identifier for the output document" uuid;
+
   add options ~long_name:"distrib" ~help:"Set the distribution" distribution;
   add options ~long_name:"release" ~help:"Set the release name" release;
   add options ~long_name:"suite" ~help:"Set the release name" suite;
   add options ~long_name:"arch" ~help:"Set the default architecture" architecture;
-  add options ~short_name:'u' ~long_name:"uid" ~help:"Generate a unique identifier for the output document" uuid;
 
   add options ~short_name:'o' ~long_name:"outfile" ~help:"output file" outfile;
 end
@@ -72,9 +75,25 @@ let main () =
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress)
     ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
   let default_arch = OptParse.Opt.opt Options.architecture in
-  let (universe,from_cudf,to_cudf) = Boilerplate.load_universe ~default_arch posargs in
-  let universe_size = Cudf.universe_size universe in
+  let (pkglist,from_cudf,to_cudf) = Boilerplate.load_list ~default_arch posargs in
   let pkglist = 
+    if OptParse.Opt.get Options.latest then
+      let h = Hashtbl.create (List.length pkglist) in
+      List.iter (fun p ->
+        try
+          let q = Hashtbl.find h p.Cudf.package in
+          if (CudfAdd.compare p q) > 0 then
+            Hashtbl.replace h p.Cudf.package p
+          else ()
+        with Not_found -> Hashtbl.add h p.Cudf.package p
+      ) pkglist;
+      Hashtbl.fold (fun _ v acc -> v::acc) h []
+    else
+      pkglist
+  in
+  let universe = Cudf.load_universe pkglist in
+  let universe_size = Cudf.universe_size universe in
+  let checklist = 
     if OptParse.Opt.is_set Options.checkonly then 
         List.flatten (
           List.map (function 
@@ -128,7 +147,7 @@ let main () =
   Util.Timer.start timer;
   let i =
     if OptParse.Opt.is_set Options.checkonly then 
-      Depsolver.listcheck ~callback universe pkglist
+      Depsolver.listcheck ~callback universe checklist
     else
       Depsolver.univcheck ~callback universe 
   in
@@ -137,7 +156,7 @@ let main () =
   if failure || success then Format.fprintf fmt "@]@.";
  
   let nb = universe_size in
-  let nf = List.length pkglist in
+  let nf = List.length checklist in
   Format.fprintf fmt "background-packages: %d@." nb;
   Format.fprintf fmt "foreground-packages: %d@." (if nf = 0 then nb else nf);
   Format.fprintf fmt "broken-packages: %d@." i;
