@@ -28,6 +28,9 @@ val edos_coinstall : Cudf.universe -> solver -> Cudf.package list -> Diagnostic.
 (** remove uninstallable packages from the universe *)
 val trim : Cudf.universe -> Cudf.universe
 
+(** return the list of the broken packages *)
+val find_broken : Cudf.universe -> Cudf.package list
+
 (** [univcheck solver] check if all packages in the 
     universe associated with the solver can be installed.
     Since not all packages

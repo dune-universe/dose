@@ -106,6 +106,17 @@ let trim universe =
   ignore (univcheck ~callback universe);
   Cudf.load_universe !trimmed_pkgs
 
+let find_broken universe =
+  let broken_pkgs = ref [] in
+  let callback d =
+    if not (Diagnostic.is_solution d) then
+      match d.Diagnostic.request with
+      |Diagnostic.Package p -> broken_pkgs := p::!broken_pkgs
+      |_ -> assert false
+  in
+  ignore (univcheck ~callback universe);
+  !broken_pkgs
+
 let dependency_closure ?maxdepth ?conjunctive univ pkglist =
   let idlist = List.map (CudfAdd.vartoint univ) pkglist in
   let closure = Depsolver_int.dependency_closure ?maxdepth ?conjunctive univ idlist in
