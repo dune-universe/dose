@@ -13,10 +13,10 @@
 open ExtLib
 open Common
 
-let debug fmt = Util.make_debug "Cudf-Diff" fmt
-let info fmt = Util.make_info "Cudf-Diff" fmt
-let warning fmt = Util.make_warning "Cudf-Diff" fmt
-let fatal fmt = Util.make_fatal "Cudf-Diff" fmt
+let debug fmt = Util.make_debug __FILE__ fmt
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
+let fatal fmt = Util.make_fatal __FILE__ fmt
 
 module Cudf_set = CudfAdd.Cudf_set
 module StringSet = CudfAdd.StringSet

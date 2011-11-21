@@ -163,60 +163,55 @@ let outdated
 
   let tables = Debian.Debcudf.init_tables ~step:2 ~versionlist repository in
   let getv v = Debian.Debcudf.get_cudf_version tables ("",v) in
-  let pkglist = ref [] in
-  let do_pkglist () = 
-    let s = 
-      CudfAdd.to_set (
-        Hashtbl.fold (fun (sn,version) (cluster,vl,constr) acc0 ->
-          let sync_index = ref 1 in
-          let discr = Debian.Evolution.discriminant (evalsel getv) vl constr in
-          let acc0 = 
-            (* by assumption all packages in a cluster are syncronized *)
-            List.fold_left (fun l pkg ->
-                let p = Debian.Debcudf.tocudf tables pkg in
-                (sync (sn,version,1) p)::l
-            ) acc0 cluster
-          in
-          (* the target version is always greater then all versions in equivs *)
-          List.fold_left (fun acc1 (target,equiv) ->
-            incr sync_index;
-            List.fold_left (fun acc2 pkg ->
+  let pkgset = 
+    CudfAdd.to_set (
+      Hashtbl.fold (fun (sn,version) (cluster,vl,constr) acc0 ->
+        let sync_index = ref 1 in
+        let discr = Debian.Evolution.discriminant (evalsel getv) vl constr in
+        let acc0 = 
+          (* by assumption all packages in a cluster are syncronized *)
+          List.fold_left (fun l pkg ->
               let p = Debian.Debcudf.tocudf tables pkg in
-              let pv = p.Cudf.version in
+              (sync (sn,version,1) p)::l
+          ) acc0 cluster
+        in
+        (* the target version is always greater then all versions in equivs *)
+        List.fold_left (fun acc1 (target,equiv) ->
+          incr sync_index;
+          List.fold_left (fun acc2 pkg ->
+            let p = Debian.Debcudf.tocudf tables pkg in
+            let pv = p.Cudf.version in
 
-              let target = Debian.Evolution.align pkg.Debian.Packages.version target in
-              let newv = version_of_target getv target in
-              let number = Debian.Evolution.string_of_range target in
-              let equivs = List.map Debian.Evolution.string_of_range equiv in
+            let target = Debian.Evolution.align pkg.Debian.Packages.version target in
+            let newv = version_of_target getv target in
+            let number = Debian.Evolution.string_of_range target in
+            let equivs = List.map Debian.Evolution.string_of_range equiv in
 
-              if newv > pv then begin
-                let d = dummy (sn,version) p number equivs newv in
-                if List.length cluster > 1 then
-                  (sync (sn,version,!sync_index) d)::acc2
-                else
-                  d::acc2
-              end else acc2
-            ) acc1 cluster
-          ) acc0 discr
-        ) worktable [] 
-      )
-    in pkglist := (CudfAdd.Cudf_set.elements s)
+            if newv > pv then begin
+              let d = dummy (sn,version) p number equivs newv in
+              if List.length cluster > 1 then
+                (sync (sn,version,!sync_index) d)::acc2
+              else
+                d::acc2
+            end else acc2
+          ) acc1 cluster
+        ) acc0 discr
+      ) worktable [] 
+    )
   in
+  let pkglist = (CudfAdd.Cudf_set.elements pkgset) in
   
-  do_pkglist ();
-
   if dump then begin
     Cudf_printer.pp_preamble stdout Debian.Debcudf.preamble;
     print_newline ();
-    Cudf_printer.pp_packages stdout (List.sort !pkglist);
+    Cudf_printer.pp_packages stdout (List.sort pkglist);
     exit(0)
   end;
       
-  let universe = Cudf.load_universe !pkglist in
+  let universe = Cudf.load_universe pkglist in
   let universe_size = Cudf.universe_size universe in
   info "Total future: %d" universe_size;
 
-  pkglist := [];
   Hashtbl.clear worktable;
   Hashtbl.clear constraints_table;
 

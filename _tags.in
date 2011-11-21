@@ -42,12 +42,11 @@
 
 <applications/distcheck.*>: @USE_RPM@, use_algo, use_boilerplate
 <applications/ceve.*>: @USE_RPM@, use_algo, use_boilerplate
-<applications/strong-conflicts.*>: @USE_RPM@, use_algo, use_boilerplate
-<applications/strong-deps.*>: use_algo, @USE_RPM@, use_boilerplate
 <applications/smallworld.*>: @USE_RPM@, use_algo, use_boilerplate
 <applications/tests.*>: @USE_RPM@, use_algo, use_boilerplate
+<applications/strong-deps.*>: @USE_RPM@, use_algo, use_boilerplate
 
-<experimental/strong-deps.*>: @USE_RPM@, use_algo, use_boilerplate
+<experimental/strong-conflicts.*>: @USE_RPM@, use_algo, use_boilerplate
 <experimental/randcudf.*>: use_algo, use_boilerplateNoRpm
 <experimental/deb-cudf.*>: use_boilerplateNoRpm
 <experimental/aptsolutions.*>: use_boilerplateNoRpm
