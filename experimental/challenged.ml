@@ -75,7 +75,7 @@ let dummy pkg number version =
    pkg_extra = [("number",`String number)]
   }
 
-let upgrade tables pkgset universe migrationlist =
+let upgrade tables pkgset universe broken migrationlist =
   let getv v = Debian.Debcudf.get_cudf_version tables ("",v) in
   let to_add = 
     List.fold_left (fun l ((pkg,_),target) ->
@@ -92,10 +92,11 @@ let upgrade tables pkgset universe migrationlist =
     ) [] migrationlist
   in
   let to_remove = 
-    List.map (fun ((pkg,_),_) -> 
+    List.fold_left (fun acc ((pkg,_),_) -> 
       let orig = getv pkg.Debian.Packages.version in
-      Cudf.lookup_package universe (pkg.Debian.Packages.name,orig) 
-    ) migrationlist 
+      let p = Cudf.lookup_package universe (pkg.Debian.Packages.name,orig) in
+      p::acc
+    ) broken migrationlist 
   in
   let universe_subset = exclude pkgset to_remove in
   Cudf.load_universe (to_add@universe_subset)
@@ -215,6 +216,7 @@ let challenged
   let pp = pp tables in
   let pkglist = List.map (Debian.Debcudf.tocudf tables) repository in
   let universe = Cudf.load_universe pkglist in
+  let brokenlist = Depsolver.find_broken universe in
   let pkgset = pkgset universe in
 
   Util.Progress.set_total predbar (List.length !worktable);
@@ -239,9 +241,9 @@ END
       let startd=Unix.gettimeofday() in
       let cluster_results = ref [] in
       Util.Progress.progress predbar;
-      debug "\nsource: %s %s" sn sv;
-      if sv <> version then debug "subscluter: %s %s" sn version;
-      debug "clustersize %d" (List.length cluster);
+      debug "\nSource: %s %s" sn sv;
+      if sv <> version then debug "Subscluter: %s %s" sn version;
+      debug "Clustersize: %d" (List.length cluster);
       debug "Versions: %s" (String.concat ";" vl);
       debug "Constraints: %s" (String.concat " ; " (
         List.map (fun (c,v) -> Printf.sprintf "%s" v) constr
@@ -274,29 +276,29 @@ END
         (* remove this one to show results that are equivalent to do nothing *)
         | (target,equiv) when not(downgrades) && 
             (lesser_or_equal getv target equiv version) ->
-              debug "target: %s" (Debian.Evolution.string_of_range target);
-              debug "equiv: %s" (String.concat " , " (
+              debug "Target: %s" (Debian.Evolution.string_of_range target);
+              debug "Equiv: %s" (String.concat " , " (
                 List.map (Debian.Evolution.string_of_range) equiv
                 ));
               debug "ignored"
         | (target,equiv) ->
             debug "Considering target %s" (Debian.Evolution.string_of_range target);
-            debug "target: %s" (Debian.Evolution.string_of_range target);
-            debug "equiv: %s" (String.concat " , " (
+            debug "Target: %s" (Debian.Evolution.string_of_range target);
+            debug "Equiv: %s" (String.concat " , " (
               List.map (Debian.Evolution.string_of_range) equiv
               ));
 
             let migrationlist = Debian.Evolution.migrate cluster target in
-            let future = upgrade tables pkgset universe migrationlist in
+            let future = upgrade tables pkgset universe brokenlist migrationlist in
             let callback d = 
               let fmt = Format.std_formatter in
               if broken then Diagnostic.fprintf ~pp ~failure:true ~explain:true fmt d 
             in
-            if broken then Format.printf "distcheck: @,";
+            if broken then Format.printf "Distcheck: @,";
             let i = Depsolver.univcheck ~callback future in
             if broken then Format.printf "@.";
 
-            debug "broken: %d" i;
+            debug "Broken: %d" i;
             cluster_results := (((sn,sv,version),(target,equiv)),i)::!cluster_results ;
       ) discr;
       debug "<%s,%s> : %f" sn sv (Unix.gettimeofday() -. startd); 
