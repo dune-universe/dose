@@ -31,6 +31,8 @@ TARGETS= \
    applications/deb-buildcheck.$(OCAMLBEST) \
    applications/ceve.$(OCAMLBEST) \
    applications/apt-cudf.$(OCAMLBEST) \
+   applications/outdated.$(OCAMLBEST) \
+   applications/challenged.$(OCAMLBEST) \
 
 BYTELIBS=
 OPTLIBS=

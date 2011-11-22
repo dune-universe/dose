@@ -15,9 +15,9 @@
 open ExtLib
 open Common
 
-let debug fmt = Util.make_debug "Eclipse.Packages" fmt
-let info fmt = Util.make_info "Eclipse.Packages" fmt
-let warning fmt = Util.make_warning "Eclipse.Packages" fmt
+let debug fmt = Util.make_debug __FILE__ fmt
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
 
 (** strip down version of the debian package format *)
 type package = {
@@ -64,7 +64,8 @@ let parse_package_stanza extras par =
       extras = parse_e extras par;
     }
 
-let parse_packages_in ?(extras=[]) ic =
+let parse_packages_in ?(extras=[]) file ic =
+  info "Parsing eclipse 822 file %s..." file;
   let stanza_parser = parse_package_stanza extras in
   Debian.Format822.parse_from_ch (
     Debian.Packages.packages_parser stanza_parser []

@@ -199,7 +199,8 @@ let rec packages_parser stanza_parser acc p =
       |Some st -> packages_parser stanza_parser (st::acc) p
   end
 
-let parse_packages_in ?filter ?(default_arch=None) ?(extras=[]) ic =
+let parse_packages_in ?filter ?(default_arch=None) ?(extras=[]) file ic =
+  info "Parsing Packages file %s..." file;
   let stanza_parser = parse_package_stanza filter default_arch extras in
   Format822.parse_from_ch (packages_parser stanza_parser []) ic
 

@@ -2,10 +2,10 @@
 open ExtLib
 open Common
 
-let debug fmt = Util.make_debug "Debian.Format822" fmt
-let info fmt = Util.make_info "Debian.Format822" fmt
-let warning fmt = Util.make_warning "Debian.Format822" fmt
-let fatal fmt = Util.make_fatal "Debian.Format822" fmt
+let debug fmt = Util.make_debug __FILE__ fmt
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
+let fatal fmt = Util.make_fatal __FILE__ fmt
 
 type loc = Lexing.position * Lexing.position
 let dummy_loc: loc = Lexing.dummy_pos, Lexing.dummy_pos
@@ -70,28 +70,26 @@ module RawInput ( Set : Set.S ) = struct
   let input_raw parse files =
     let timer = Util.Timer.create "Debian.Format822.input_raw" in
     Util.Timer.start timer;
-    if List.length files > 1 then info "Merging debian packages lists" ;
+    if List.length files > 1 then info "Merging repositories" ;
     let s =
       List.fold_left (fun acc file ->
-        info "Parsing debian file %s..." file;
         let ch = (Input.open_file file) in
-        let l = parse ch in
+        let l = parse file ch in
         let _ = Input.close_ch ch in
         List.fold_left (fun s x -> Set.add x s) acc l
       ) Set.empty files
     in
-    info "total Debian packages %n" (Set.cardinal s);
+    info "total packages %n" (Set.cardinal s);
     Util.Timer.stop timer (Set.elements s)
 
   let input_raw_ch parse ch =
     let timer = Util.Timer.create "Debian.Format822.input_raw_ch" in
     Util.Timer.start timer;
     let s =
-      info "Parsing debian packages...";
-      let l = parse ch in
+      let l = parse "" ch in
       List.fold_left (fun s x -> Set.add x s) Set.empty l
     in
-    info "total debian packages %n" (Set.cardinal s);
+    info "total packages %n" (Set.cardinal s);
     Util.Timer.stop timer (Set.elements s)
 end
 

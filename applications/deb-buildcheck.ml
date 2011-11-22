@@ -22,7 +22,7 @@ module Options = struct
   open OptParse
   let description =
     "Report the broken packages in a debian source list. \
-     You must provide a Debian Packages file and \
+     You must provide a (list of) Debian Packages file(s) and \
      a Debian Sources file in this order"
   let options = OptParser.make ~description
   include Boilerplate.MakeOptions(struct let options = options end)
@@ -77,6 +77,7 @@ let main () =
     |l -> 
         begin match List.rev l with
         |h::t ->
+          info "->>>>>>> Source %s" h;
           let srclist =
             let archs = [OptParse.Opt.get Options.architecture] in
             let l = Src.input_raw [h] in
