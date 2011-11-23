@@ -1,0 +1,83 @@
+=head1 NAME
+
+dose3-buildcheck - check installability of build-dependencies 
+
+=head1 SYNOPSIS
+
+=over 
+
+=item B<dose3-buildcheck> [options] I<binary-repositories> I<source-repository> 
+
+=back
+
+=head1 DESCRIPTION
+
+dose3-buildcheck determines, for a set of debian source package control
+stanzas, called the source repository, whether a build environment for the
+packages of the source repository can be installed by using packages from the
+binary repository. For this, only package meta-information is taken into
+account: build-dependencies and build-conflicts in the source package, and
+inter-package relationsships expressed in the binary repository. The constraint
+solving algorithm is complete, that is it finds a solution whenever there
+exists one, even for multiple disjunctive dependencies and deep package
+conflicts.  This problem is computationally infeasible in theory (that is,
+NP-complete), but can be solved very efficiently for package repositories that
+actually occur in practice. Installability of binary packages is analyzed
+according to their B<Depends>, B<Conflicts>, and B<Provides> fields with their
+meaning as of Debian policy version 3.9.0. B<Pre-depends> are treated like
+B<Depends>, and B<Breaks> are treated like B<Conflicts>. 
+
+=head1 Input Format
+
+The B<binary-repositories> argument is a list of filenames containing stanzas
+in the format of L<deb-control(5)>, separated by one blank line. For instance,
+the Packages files as found on a Debian mirror server, or in the directory
+I</var/lib/apt/lists/> of a Debian system, are suitable. The
+B<source-repository> argument is the name of a file containing debian source
+control stanzas, separated by one blank line. For instance, the Sources files
+as found on a Debian mirror server, or in the directory I</var/lib/apt/lists/>
+of a Debian system, are suitable. 
+
+=head1 OPTIONS
+
+=item B<-a --architecture > 
+
+Specify the architecture for which installability of build
+environments should be checked. This argument is (in the current version
+of this program) mandatory. 
+=item B<-f --failures> 
+
+Only show broken packages that fail
+the installability check. 
+=item B<-v --successes> 
+
+Only show packages that do not fail
+the installability check. 
+=item B<-e --explain> 
+
+Explain the results in more detail. 
+=item B<-v>
+
+Enable info / warnings / debug messages. This option may be repeated up
+to three times in order to increase verbosity. 
+=item B<-h, --help> 
+
+Display this list of options. 
+
+=head1 EXAMPLE
+Compute the list of source packages in Sources for which
+it is not possible to install a build environment on i386, assuming that
+the binary packages described in file Packages are available: 
+ dose3-builddebcheck --architecture i386 --failures --explain Packages Sources 
+
+=head1 AUTHOR
+The current version has been rewritten on the basis of the dose3 library by
+Pietro Abate; it replaces an earlier version that was  simply a wrapper for
+edos-distcheck.
+
+=head1 SEE ALSO
+L<B<deb-control>(5)>, L<B<dose3-distcheck>(1)> 
+
+<http://www.edos-project.org> is the home page of the EDOS project. 
+<http://www.mancoosi.org> is the home page of the Mancoosi project. 
+ 

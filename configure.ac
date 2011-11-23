@@ -341,11 +341,6 @@ AC_CONFIG_FILES([
   db/db.mlpack
   algo/algo.mlpack
   common/versionInfo.ml
-  doc/manpages/buildcheck.1
-  doc/manpages/ceve.1
-  doc/manpages/distcheck.1
-  doc/manpages/outdated.1
-  doc/manpages/challenged.1
 ])
 AC_OUTPUT
 

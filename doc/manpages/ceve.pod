@@ -1,0 +1,113 @@
+=head1 NAME
+
+ceve - parse package metadata 
+
+=head1 SYNOPSIS
+
+=over 
+
+=item B<ceve> [-h] [-v] [-e I<pkgspec>] [-c I<pkgspec>] [-r I<pkgspec>] [--depth=I<n>]I<> [-t I<format>] [-o I<filename>] I<input-spec> 
+
+=back
+
+=head1 DESCRIPTION
+
+Ceve is a generalized metadata parser. It reads package specifications,
+extracts package metadata from them, performs some manipulations, and outputs
+the package metadata in one of several formats. 
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<-h> 
+
+This option displays the help message. Can also be specified as B<--help>. 
+
+=item B<-v> 
+
+Be verbose. This option can be repeated for more verbosity. 
+
+=item B<-e >I<pkgspec> 
+
+Extract the transitive closure of packages connected (by conflict or
+dependency) to any of the packages that satisfy I<pkgspec>. Such a package
+specification is a list of packages (separated by a semicolon), where each
+package is specified as follows: (I<name>,I<version>).I<> This option can also
+be specified as --extract=I<pkgspec>.I<> 
+
+=item B<-c >I<pkgspec>
+
+Similar to the B<-c> option, but only uses the dependency relation to make
+the transitive closure. This option can also be specified as --cone=I<pkgspec>.I<>
+
+=item B<-r >I<pkgspec> 
+
+Similar to the B<-e> and B<-c> options, but uses the reverse dependency
+relation to make the transitive closure. This option can also be specified
+as --rcone=I<pkgspec>.I<> 
+
+=item B<--depth=>I<n> 
+
+In combination with the B<-e>, B<-c> or B<-r> options, this
+specifies the maximum depth for the transitive closure. 
+=item B<-t >I<format> 
+
+Specifies
+the output format to use. Possible values are B<dot> for a graph output in
+Dot/GraphViz format, B<cnf> for an output in CNF format, B<dimacs> for an output
+in the DIMACS format for CNF formulae, and B<pp> for a pretty-print output
+in an RFC 822-like format. This option can also be specified as --outtype=I<format>.I<>
+
+=item B<-o >I<filename> 
+
+Instead of stdout, send output to the file I<filename>. This option
+can also be specified as --outfile=I<filename>.I<> 
+=item I<input-spec> 
+
+This is a URL specifying
+both the input format and the file to get the input from. Possible schemes
+are: 
+=item *
+
+B<cudf> for cudf files 
+=item *
+
+B<deb> for Debian package files (possibly compressed
+with L<gzip(1)> or L<bzip2(1)>, depending on compile-time options for dose3) 
+=item *
+
+B<debstdin>
+for Debian package files read from standard input 
+=item *
+
+B<eclipse> for Eclipse (p2)
+package files 
+=item *
+
+B<pgsql> for PostgreSQL databasess 
+=item *
+
+B<sqlite> for sqlite databases
+
+=item *
+
+B<hdlist> for RPM hdlists 
+=item *
+
+B<synth> for urpmi synthesis hdlists 
+ Some examples
+of URLs: 
+ 
+=item *
+
+deb://Packages.gz (the Debian file packages.gz in the current directory)
+
+=item *
+
+cudf:///home/examples/cudf/test.cudf (the CUDF file /home/examples/cudf/test.cudf)
+
+=item *
+
+psql://user@db.mancoosi.org:723/packages (the database I<packages> on host I<db.mancoosi.org>
+on port 723, accessed as user I<user>) 

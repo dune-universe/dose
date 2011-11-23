@@ -26,8 +26,8 @@ deb/Debutil
 applications/Distcheck
 applications/Ceve
 applications/Apt-cudf
-experimental/Outdated
-experimental/Challenged
+applications/Outdated
+applications/Challenged
 doseparse/BoilerplateNoRpm
 doseparse/Boilerplate
 #rpm/Packages

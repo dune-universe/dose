@@ -93,10 +93,20 @@ doseparse/boilerplateNoRpm.%:
 	  fi ; \
 	done
 
-man: doc/manpages/apt-cudf.1
+POD = $(wildcard doc/manpages/*.pod)
+MAN = $(patsubst %.pod,%.1,$(POD))
+HTML = $(patsubst %.pod,%.html,$(POD))
 
-doc/manpages/apt-cudf.1: doc/manpages/apt-cudf.pod
-	pod2man --section 8 --release "$(NAME) $(VERSION)" $< > $@
+man: $(MAN)
+html: $(HTML)
+	mkdir -p dose3.docdir/manpages
+	cp doc/manpages/*.html dose3.docdir/manpages
+
+doc/manpages/%.1: doc/manpages/%.pod
+	pod2man --section 8 --release "$(NAME) $(VERSION)" doc/manpages/$*.pod > $@
+
+doc/manpages/%.html: doc/manpages/%.pod
+	pod2html doc/manpages/$*.pod > $@
 
 clean:
 	$(OCAMLBUILD) -clean
@@ -173,5 +183,6 @@ dist: ./$(DIST_TARBALL)
 doc:
 	$(OCAMLBUILD) $(OBFLAGS) dose3.docdir/index.html dose3.docdir/index.dot
 	dot -Grotate=0 -Tsvg -o dose3.docdir/index.svg dose3.docdir/index.dot
+	$(MAKE) html
 
 .PHONY: all opt clean top-level headers test tags install uninstall dist doc

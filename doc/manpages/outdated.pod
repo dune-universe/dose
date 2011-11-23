@@ -1,0 +1,70 @@
+=head1 NAME
+
+outdated - detect broken packages due to obsolete dependencies 
+
+=head1 SYNOPSIS
+
+B<outdated> [option] ... I<Packages file(s)> 
+
+=head1 DESCRIPTION
+
+B<outdated > identifies those broken packages that need special attention
+because of outdated meta-data, that is dependencies on a specific version of a
+package that was subsumed in the repository by a most recent version.  
+
+=head1 Input Specification
+
+The input of outdated is a list of Debian Packages files 
+
+=head1 Output Specification
+
+The output of outdated is in the yaml format. 
+
+=head1 OPTIONS
+
+=item B<-b> 
+
+Print the list of broken packages 
+
+=item B<-s> 
+
+Print summary of broken packages 
+
+=item B<--dump> 
+
+Dump the cudf package list and exit 
+
+=item B<--checkonly> 
+
+Select a subset of packages to check. By default all packages are checked. 
+
+=item B<-v> 
+
+Enable info / warnings / debug messages. This option may be repeated up to
+three times in order to increase verbosity.
+
+=item B<--progress> 
+
+Enable progress bars. 
+
+=item B<-h, --help> 
+
+Display this list of options. 
+
+=head1 EXAMPLE
+
+ outdated -v --progress -b Packages.bz2 > result.yaml 
+
+=head1 NOTE
+
+=head1 AUTHORS
+
+Pietro Abate and Ralf Treinen 
+
+=head1 SEE ALSO
+
+L<B<distcheck>(5)>
+L<B<challenged>(5)> 
+
+<http://www.mancoosi.org> is the home page of the Mancoosi project. 
+ 

@@ -6,10 +6,10 @@
 open ExtLib
 open Common
 
-let info fmt = Util.make_info "test" fmt
-let warning fmt = Util.make_warning "test" fmt
-let debug fmt = Util.make_debug "test" fmt
-let fatal fmt = Util.make_fatal "test" fmt
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
+let debug fmt = Util.make_debug __FILE__ fmt
+let fatal fmt = Util.make_fatal __FILE__ fmt
 
 let print_list fmt pr sep l =
   match l with
