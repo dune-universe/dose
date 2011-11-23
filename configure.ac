@@ -344,6 +344,8 @@ AC_CONFIG_FILES([
   doc/manpages/buildcheck.1
   doc/manpages/ceve.1
   doc/manpages/distcheck.1
+  doc/manpages/outdated.1
+  doc/manpages/challenged.1
 ])
 AC_OUTPUT
 

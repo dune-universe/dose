@@ -18,11 +18,11 @@ open Common
 open Algo
 module Boilerplate = BoilerplateNoRpm
 
-let predbar = Util.Progress.create "challenged" ;;
-let info fmt = Util.make_info "challenged" fmt
-let warning fmt = Util.make_warning "challenged" fmt
-let debug fmt = Util.make_debug "challenged" fmt
-let fatal fmt = Util.make_fatal "challenged" fmt
+let predbar = Util.Progress.create __FILE__ ;;
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
+let debug fmt = Util.make_debug __FILE__ fmt
+let fatal fmt = Util.make_fatal __FILE__ fmt
 
 module Options = struct
   open OptParse
@@ -46,7 +46,7 @@ IFDEF HASPARMAP THEN
     ~help:"Size of each task executed by the workers (controls granularity)" chunksize;
 END
 
-  add options ~long_name:"select"
+  add options ~long_name:"checkonly"
     ~help:"Check only these package ex. (sn1,sv1),(sn2,sv2)" checkonly;
   add options ~long_name:"broken" ~short_name:'b' 
     ~help:"Print the list of broken packages" brokenlist;

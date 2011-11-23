@@ -5990,7 +5990,7 @@ if test "$BUILD_EXP" = "yes" ; then
 
 fi
 
-ac_config_files="$ac_config_files Makefile.config _tags META db/db.mlpack algo/algo.mlpack common/versionInfo.ml doc/manpages/buildcheck.1 doc/manpages/ceve.1 doc/manpages/distcheck.1"
+ac_config_files="$ac_config_files Makefile.config _tags META db/db.mlpack algo/algo.mlpack common/versionInfo.ml doc/manpages/buildcheck.1 doc/manpages/ceve.1 doc/manpages/distcheck.1 doc/manpages/outdated.1 doc/manpages/challenged.1"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6719,6 +6719,8 @@ do
     "doc/manpages/buildcheck.1") CONFIG_FILES="$CONFIG_FILES doc/manpages/buildcheck.1" ;;
     "doc/manpages/ceve.1") CONFIG_FILES="$CONFIG_FILES doc/manpages/ceve.1" ;;
     "doc/manpages/distcheck.1") CONFIG_FILES="$CONFIG_FILES doc/manpages/distcheck.1" ;;
+    "doc/manpages/outdated.1") CONFIG_FILES="$CONFIG_FILES doc/manpages/outdated.1" ;;
+    "doc/manpages/challenged.1") CONFIG_FILES="$CONFIG_FILES doc/manpages/challenged.1" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac
