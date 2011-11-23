@@ -77,7 +77,6 @@ let main () =
     |l -> 
         begin match List.rev l with
         |h::t ->
-          info "->>>>>>> Source %s" h;
           let srclist =
             let archs = [OptParse.Opt.get Options.architecture] in
             let l = Src.input_raw [h] in
