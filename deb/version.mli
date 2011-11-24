@@ -40,6 +40,8 @@ val equal : string -> string -> bool
      Pervasives.compare. *)
 val compare : string -> string -> int
 
+
+
 (** Decomposing and recomposing version strings *)
 (** split the debian version into its components.
     (epoch,upstream,revision,binnmu) = split v
