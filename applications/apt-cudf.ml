@@ -215,7 +215,7 @@ let main () =
   let exec_pat =
     if OptParse.Opt.is_set Options.solver then
       let f = OptParse.Opt.get Options.solver in
-      Filename.concat solver_dir f
+      fst (parse_solver_spec (Filename.concat solver_dir f))
     else
       let f = Filename.basename(Sys.argv.(0)) in
       fst (parse_solver_spec (Filename.concat solver_dir f))
