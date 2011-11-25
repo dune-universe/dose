@@ -15,6 +15,9 @@ module OCAMLSet = Set
 
 open ExtLib
 
+let debug fmt = Util.make_debug __FILE__ fmt
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
 let fatal fmt = Util.make_fatal __FILE__ fmt
 
 (* the id of a package *)
@@ -157,7 +160,8 @@ let who_depends univ pkg =
 
 let who_conflicts conflicts_packages univ pkg = 
   if (Hashtbl.length conflicts_packages) = 0 then
-    fatal "you must use CudfAdd.init_conflicts before using who_conflicts";
+    warning "Either there are no conflicting packages in the universe or you
+CudfAdd.init_conflicts was not invoked before calling CudfAdd.who_conflicts";
   let i = Cudf.uid_by_package univ pkg in
   List.map (Cudf.package_by_uid univ) (get_package_list conflicts_packages i)
 ;;

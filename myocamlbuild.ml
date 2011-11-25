@@ -29,7 +29,14 @@ let _ = dispatch begin function
        ;
 
        (* add compilation flags for rpm *)
-       flag ["c"; "use_rpm"] & S[ A"-ccopt"; A"-I/usr/include/rpm"; A"-ccopt"; A"-O2" ];
+       flag ["c"; "use_rpm"; "compile"] & S[ 
+         A"-ccopt"; A"-I/usr/include/rpm"; 
+       ];
+
+       flag ["c"; "use_rpm"; "ocamlmklib"] & S[ 
+         A"-lrpm";
+         A"-lrpmio";
+       ];
 
        (* optimization to ocaml code *)
        flag ["ocaml"; "compile"] & S[A"-ccopt"; A"-O9"];
@@ -51,17 +58,18 @@ let _ = dispatch begin function
        flag ["link"; "ocaml"; "link_rpm5"] & S[A"rpm/librpm5_stubs.a"];
 
        flag ["ocaml"; "use_rpm5"; "link"; "library"; "byte"] & S[
-         A"-dllib"; A"-lrpm5_stubs"; (* A"-ccopt"; A"-Lrpm"; *)
+         A"-dllib"; A"-lrpm5_stubs";
        ];
+
        flag ["ocaml"; "use_rpm4"; "link"; "library"; "byte"] & S[
-         A"-dllib"; A"-lrpm4_stubs"; (* A"-ccopt"; A"-Lrpm"; *)
+         A"-dllib"; A"-lrpm4_stubs";
        ];
 
        flag ["ocaml"; "use_rpm5"; "link"; "library"; "native"] & S[
-         A"-cclib"; A"-lrpm5_stubs"; (* A"-ccopt"; A"-Lrpm"; *)
+         A"-cclib"; A"-lrpm5_stubs";
        ];
        flag ["ocaml"; "use_rpm4"; "link"; "library"; "native"] & S[
-         A"-cclib"; A"-lrpm4_stubs"; (* A"-ccopt"; A"-Lrpm"; *)
+         A"-cclib"; A"-lrpm4_stubs";
        ];
        
        flag ["ocaml"; "pkg_threads"; "compile"] (S[A "-thread"]);
