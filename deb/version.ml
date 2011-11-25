@@ -1,5 +1,6 @@
 (**************************************************************************)
-(*  Copyright (C) 2009  Jaap Boender <jaap.boender@pps.jussieu.fr>        *)
+(*  Copyright (C) 2009-2011  Jaap Boender <jaap.boender@pps.jussieu.fr>   *)
+(*                           and Ralf Treinen <treinen@pps.jussieu.fr>    *)
 (*                                                                        *)
 (*  This library is free software: you can redistribute it and/or modify  *)
 (*  it under the terms of the GNU Lesser General Public License as        *)
@@ -83,27 +84,25 @@ let compare_chunks x y =
     match (xi=xl,yi=yl) with (* which of x and y is exhausted? *)
       | true,true -> 0 
       | true,false -> 
-	if y.[yi]='~'
-	then 1 (* '~' is smaller than the empty string *)
-	else (* if y continues numerically than we have to continue by comparing numerically. In this case
-	      * the x part is interpreted as 0 (since empty). If the y part consists only of 0's
-	      * then both parts are equal, otherwise the y part is larger. If y continues non-numerically
-	      * then y is larger anyway, so we only have to skip 0's in the y part and check whether this
-	      * exhausts the y part.
-	      *)
-	  if (skip_zeros y yi) = yl then 0 else -1
+	  (* if y continues numerically than we have to continue by comparing numerically. In this case
+	   * the x part is interpreted as 0 (since empty). If the y part consists only of 0's
+	   * then both parts are equal, otherwise the y part is larger. If y continues non-numerically
+	   * then y is larger anyway, so we only have to skip 0's in the y part and check whether this
+	   * exhausts the y part.
+	   *)
+	let ys = skip_zeros y yi in if ys = yl then 0 else if y.[ys]='~' then 1 else -1
       | false,true -> (* symmetric to the preceding case *)
-	if x.[xi]='~' then -1 else if (skip_zeros x xi) = xl then 0 else 1
+	let xs = skip_zeros x xi in if xs = xl then 0 else if x.[xs]='~' then -1 else 1
       | false,false -> (* which of x and y continues numerically? *)
 	match (is_digit x.[xi], is_digit y.[yi]) with 
-	  | true,true -> (* both continue numerically. Skip leading zeros in the remaining part, 
+	  | true,true -> (* both continue numerically. Skip leading zeros in the remaining parts, 
 			  * and then continue by comparing numerically. *)
 	    compare_numerical (skip_zeros x xi) (skip_zeros y yi)
 	  | true,false -> (* '~' is smaller than any numeric part *)
 	    if y.[yi]='~' then 1 else -1
 	  | false,true -> (* '~' is smaller than any numeric part *)
 	    if x.[xi]='~' then -1 else 1
-	  | false,false -> (* continue comapring lexically *)
+	  | false,false -> (* continue comparing lexically *)
 	    let comp = compare_chars x.[xi] y.[yi]
 	    in if comp = 0 then loop_lexical (xi+1) (yi+1) else comp
   and compare_numerical xi yi =
@@ -155,7 +154,7 @@ let equal (x : string) (y : string) =
 (*********************************************************************************************)
 (************** splitting and recomposing version strings ************************************)
 
-(* remark concerning transition: from here on the code is untouched [RT *)
+(* remark concerning transition [RT]: from here on the code is untouched  *)
  
 let first_matching_char_from i f w =
   let m = String.length w in

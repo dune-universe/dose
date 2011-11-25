@@ -13,6 +13,25 @@
 (** Functions for manipulating and comparing Debian version strings.
     Compliant with Debian policy version 3.9.2. *)
 
+(** {2 Comparising according to the debian comparison algorithm} *)
+
+(** The following functions compare any two strings, that is these functions do not
+    check whether the arguments are really legal debian versions. If the arrguments
+    are debian version strings, then the result is as required by debian policy. Note that
+    two strings may be equivalent, that is denote the same debian version, even when they
+    differ in syntaxe, as for instance "0:1.2.00" and "1.02-0".
+*)
+
+(** Returns true iff the two strings define the same versions *)
+val equal : string -> string -> bool
+
+(** (compare x y) returns 0 if x is equal to y, a negative integer if x is less than y,
+     and a positive integer if x is greater than y. This is consistent with Pervasives.compare. *)
+val compare : string -> string -> int
+
+
+(** {2 Decomposing and recomposing version strings} *)
+
 (** A string representing a debian version is parsed using the following
   bnf grammar.
   {v
@@ -30,19 +49,6 @@
   v}
  *)
 
-(** Comparising according to the debian comparison algorithm *)
-
-(** tell whether two strings define the same versions *)
-val equal : string -> string -> bool
-
-(** (compare x y) returns 0 if x is equal to y, a negative integer if x is less than y,
-     and a positive integer if x is greater than y. This is consistent with 
-     Pervasives.compare. *)
-val compare : string -> string -> int
-
-
-
-(** Decomposing and recomposing version strings *)
 (** split the debian version into its components.
     (epoch,upstream,revision,binnmu) = split v
     v = epoch ^ ":" ^ upstream ^ "-" ^ revision ^ binnmu *)
