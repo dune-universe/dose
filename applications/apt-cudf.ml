@@ -339,7 +339,8 @@ let main () =
         end
         |false,false -> begin
             empty := false;
-            Format.printf "Remove: %a@." pp_pkg (rem,univ);
+(* Do not remove a package that just needs upgrading! *)
+(*            Format.printf "Remove: %a@." pp_pkg (rem,univ); *)
             Format.printf "Install: %a@." pp_pkg (inst,univ)
         end
         |true,true -> ()
