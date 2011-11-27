@@ -10,7 +10,7 @@ particular:
 After cloning the dose Git repo, just use the following to populate the
 submodules:
 
-    git submodules update
+    git submodule update
 
 See the git submodules documentation for more usage information [1,2].
 
