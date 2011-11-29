@@ -15,7 +15,7 @@ open Debian
 open Common
 open Cudf
 
-let test_dir = "deb/tests"
+let test_dir = "tests/deb"
 
 let f_packages = Filename.concat test_dir "Packages" ;;
 let f_release = Filename.concat test_dir "Release" ;;

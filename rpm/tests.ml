@@ -15,7 +15,7 @@ open OUnit
 open Common
 open Algo
 
-let test_dir = "rpm/tests"
+let test_dir = "tests/rpm"
 
 let hdlist = Filename.concat test_dir "hdlist" ;;
 let row_rpm = Rpm.Packages.Hdlists.input_raw [hdlist] ;;

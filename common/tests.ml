@@ -13,10 +13,11 @@
 open OUnit
 open Common
 
-let test_dir = "common/tests"
+let test_dir = "tests/common"
+
 (* XXX this file should not be in the algo test directory, but in a more
  * central location *)
-let f_legacy = "algo/tests/legacy.cudf"
+let f_legacy = "tests/algo/legacy.cudf"
 
 let test_deb_local =
   "deb local" >:: (fun _ ->

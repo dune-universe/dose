@@ -18,11 +18,11 @@ apps:
 
 DOSELIBS = _build/doselibs
 
-libcudf/cudf.%:
-	$(OCAMLBUILD) $(OBFLAGS) libcudf/cudf.$*
+cudf/cudf.%:
+	$(OCAMLBUILD) $(OBFLAGS) cudf/cudf.$*
 	@mkdir -p $(DOSELIBS)
-	@cp _build/libcudf/*.cmi $(DOSELIBS)
-	@for i in _build/libcudf/cudf.*; do \
+	@cp _build/cudf/*.cmi $(DOSELIBS)
+	@for i in _build/cudf/cudf.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
 	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
@@ -132,7 +132,7 @@ test:
 	done
 
 # stuff not not put in a distribution tarball
-DIST_EXCLUDE = libcudf $(wildcard */tests) experimental
+DIST_EXCLUDE = cudf tests $(wildcard */tests) experimental
 
 INSTALL_STUFF_ = META
 INSTALL_STUFF_ += $(wildcard _build/doselibs/*.cma _build/doselibs/*.cmi)
@@ -141,7 +141,7 @@ INSTALL_STUFF_ += $(wildcard _build/doselibs/*.a)
 INSTALL_STUFF_ += $(wildcard _build/*/*.mli)
 INSTALL_STUFF_ += $(wildcard _build/rpm/*.so _build/rpm/*.a)
 
-exclude_cudf = $(wildcard _build/doselibs/*cudf* _build/libcudf/*)
+exclude_cudf = $(wildcard _build/doselibs/*cudf* _build/cudf/*)
 INSTALL_STUFF = $(filter-out $(exclude_cudf), $(INSTALL_STUFF_))
 
 install: META installcudf

@@ -14,7 +14,7 @@ open ExtLib
 open OUnit
 open Common
 module S = CudfAdd.Cudf_set
-let test_dir = "algo/tests"
+let test_dir = "tests/algo"
 
 let f_legacy = Filename.concat test_dir "legacy.cudf"
 let f_legacy_sol = Filename.concat test_dir "legacy-sol.cudf"

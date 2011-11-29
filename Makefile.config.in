@@ -41,10 +41,10 @@ CMXSLIBS=
 ALIBS=
 
 ifeq ("@HAS_LIBCUDF@","no")
-  BYTELIBS += libcudf/cudf.cma libcudf/cudf.a
+  BYTELIBS += cudf/cudf.cma cudf/cudf.a
   ifeq ("@OCAMLBEST@","opt")
-    OPTLIBS += libcudf/cudf.cmxa
-    CMXSLIBS += libcudf/cudf.cmxs
+    OPTLIBS += cudf/cudf.cmxa
+    CMXSLIBS += cudf/cudf.cmxs
   endif
 endif
 
@@ -53,9 +53,9 @@ all: realall
 
 ifeq ("@HAS_LIBCUDF@","no")
 installcudf:
-	$(MAKE) -C libcudf all @OCAMLBEST@ install
+	$(MAKE) -C cudf all @OCAMLBEST@ install
 uninstallcudf:
-	$(MAKE) -C libcudf uninstall
+	$(MAKE) -C cudf uninstall
 else
 installcudf:
 uninstallcudf:
