@@ -69,6 +69,12 @@ From the dose top level directory, for instance to compile outdated.ml:
 
 $ocamlbuild -use-ocamlfind experimental/outdated.native
 
+Building the documentation
+--------------------------
+"make doc" builds the documentation. For this it is necessary to have
+configured with option --with-ocamlgraph. You also need to have
+installed "graphviz".
+
 Install
 -------
 
