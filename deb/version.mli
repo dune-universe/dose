@@ -25,8 +25,8 @@
 (** Returns true iff the two strings define the same versions *)
 val equal : string -> string -> bool
 
-(** (compare x y) returns 0 if x is equal to y, a negative integer if x is less than y,
-     and a positive integer if x is greater than y. This is consistent with Pervasives.compare. *)
+(** (compare x y) returns 0 if x is equal to y, -1 if x is smaller than y, and 1 if x is greater than y.
+    This is consistent with Pervasives.compare. *)
 val compare : string -> string -> int
 
 

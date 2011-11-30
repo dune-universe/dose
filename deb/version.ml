@@ -132,18 +132,20 @@ let compare_chunks x y =
 ;;
 
 let compare (x : string) (y : string) =
+  let normalize_comp_result x = if x=0 then 0 else if x < 0 then -1 else 1
+  in
   if x = y then 0
   else
     let (e1,rest1) = extract_epoch x 
     and (e2,rest2) = extract_epoch y in
     let e_comp = compare_chunks e1 e2 in 
-    if e_comp <> 0 then e_comp
+    if e_comp <> 0 then normalize_comp_result e_comp
     else
       let (u1,r1) = extract_revision rest1
       and (u2,r2) = extract_revision rest2 in
       let u_comp = compare_chunks u1 u2 in
-      if u_comp <> 0 then u_comp
-      else compare_chunks r1 r2
+      if u_comp <> 0 then normalize_comp_result u_comp
+      else normalize_comp_result (compare_chunks r1 r2)
 ;;
 
 let equal (x : string) (y : string) =
