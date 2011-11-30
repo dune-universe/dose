@@ -15,11 +15,11 @@ open Debian
 open Common
 open Cudf
 
-let test_dir = "tests/deb"
+let test_dir = "tests"
 
-let f_packages = Filename.concat test_dir "Packages" ;;
-let f_release = Filename.concat test_dir "Release" ;;
-let f_discriminants = Filename.concat test_dir "discriminants" ;;
+let f_packages = Filename.concat test_dir "DebianPackages/Packages" ;;
+let f_release = Filename.concat test_dir "DebianPackages/Release" ;;
+let f_discriminants = Filename.concat test_dir "deb/discriminants" ;;
 
 (* XXX TODO:
   * add test for default arch
