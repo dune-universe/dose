@@ -41,6 +41,65 @@ let tables = Debcudf.init_tables packagelist ;;
 let cudf_list = List.map (Debcudf.tocudf ~extras:extras_properties tables) packagelist ;; 
 let universe = Cudf.load_universe cudf_list ;;
 
+let version_test_cases = [
+  ("1.2-5.6","3.4-5.8",-1);      (* easy *)
+  ("1:2-3","2:2-3",-1);          (* period comparison - equal *)
+  ("1:2-3","1:2-3",0);           (* period comparison - less *)
+  ("2:2-3","1:2-3",1);           (* period comparison - greater *)
+  ("0:1.2-3","1.2-3",0);         (* period =0 when missing *)
+  ("000001:2-3","2:1",-1);       (* leading 0 in period *)
+  ("00:1","0000:1",0);           (* leading 0 in period *)
+  ("1",":1",0);                  (* epoch separator but no epoch *)
+  ("1a","1c",-1);                (* character ordering *)
+  ("1z","1A",1);                 (* character ordering *)
+  ("1Z","1.",-1);                (* character ordering *)
+  ("1.","1-",1);                 (* character ordering *)
+  ("1-","1+",-1);                (* character ordering *)
+  ("1~~","1~~a",-1);             (* tilde - example from policy *)
+  ("1~~a","1~",-1);              (* tilde - example from policy *)
+  ("1~","1",-1);                 (* tilde - example from policy *)
+  ("1","1a",-1);                 (* tilde - example from policy *)
+  ("000","00",0);                (* numerical comparison - zeros *)
+  ("1a000","1a",0);              (* empty string in numerical part counts as 0 *)
+  ("1-000","1",0);               (* empty string in numerical part counts as 0 *)
+  ("1.23","1.23~",1);            (* tilde after numerical part *)
+  ("1.2+a.3","1.2+a.3",0);       (* alternating lexical and numerical *)
+  ("1.2+a.3","1.2+aa.3",1);      (* alternating lexical and numerical *)
+  ("1.2+a.3","1.2+a~.3",1);      (* alternating lexical and numerical *)
+  ("05","000001",1);             (* skiping leading zeros *)
+  ("1a","1a00000~",1);
+  ("2:1","3:1",-1);              (* hierarchy of parts *)
+  ("2:1.1.1","2:1.1.2",-1);      (* hierarchy of parts *)
+  ("2:1.1-1.1","2:1.1-1.2",-1);  (* hierarchy of parts *)
+];;
+
+let dpkg_compare x y =
+  let c1 = Printf.sprintf "dpkg --compare-versions %s lt %s" x y in
+  let c2 = Printf.sprintf "dpkg --compare-versions %s eq %s" x y in
+  if (Sys.command c1) = 0 then -1
+  else if (Sys.command c2) = 0 then 0
+  else 1
+;;
+
+let test_version_comparison = 
+  "debian version comparison" >::: [
+    "" >:: (fun _ ->
+      (* we might want to execute these tests also on a non debian machine *)
+      let debian_machine = ref true in
+      List.iter (fun (v1,v2,res) ->
+        let dose_cmp = Version.compare v1 v2 in
+        let dpkg_cmp = if !debian_machine then dpkg_compare v1 v2 else res in
+        if dose_cmp <> dpkg_cmp then begin
+          Printf.eprintf "error version comparison %s %s\n" v1 v2;
+          Printf.eprintf "dpkg says %d\n" dpkg_cmp;
+          Printf.eprintf "dose says %d\n" dose_cmp
+        end;
+        assert_equal dose_cmp dpkg_cmp
+      ) version_test_cases
+    )
+  ]
+;;
+
 let test_version = 
   "debian version parsing" >::: [
     "splitting all" >:: (fun _ ->
@@ -345,7 +404,8 @@ let all =
     test_conflicts;
     test_version;
     test_cluster;
-    test_evolution
+    test_evolution;
+    test_version_comparison
   ]
 
 let main () =
