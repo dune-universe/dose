@@ -196,41 +196,11 @@ let strip_epoch_binnmu v =
 ;;
 
 (*********************************************************************************************)
-(* remark concerning transition [RT]: from here on the code is untouched  *)
+(* for the deprecated interface  *)
  
-let extract_string c x =
-  try
-    let di = String.rindex x c in
-    if di < String.length x - 1 then
-      let before = String.sub x 0 di in
-      let after = String.sub x (di + 1) (String.length x - di - 1) in
-      (before,after)
-    else
-      (x,"")
-  with
-  | Not_found -> (x,"")
-;;
-
-let split s =
-    let extract_epoch x =
-    try
-      let ci = String.index x ':' in
-      if ci < String.length x - 1 then
-	let epoch = String.sub x 0 ci
-	and rest = String.sub x (ci + 1) (String.length x - ci - 1)
-	in
-	(epoch,rest)
-      else
-	("",x)
-    with
-      | Not_found -> ("",x)
-    and extract_revision s = extract_string '-' s
-    and  extract_binnmu s = extract_string '+' s
-    in
-    let (epoch,rest) = extract_epoch s in
-    let (rest,binnmu) = extract_binnmu rest in
-    let (upstream,revision) = extract_revision rest in
-    (epoch,upstream,revision,binnmu)
+let split s = match decompose s with
+    | Native(e,u,b) -> (e,u,"",b)
+    | NonNative(e,u,r,b) -> (e,u,r,b)
 ;;
 
 let concat = function
@@ -244,8 +214,6 @@ let concat = function
   |(e,u,r,b) -> Printf.sprintf "%s:%s-%s+%s" e u r b (* 1:1.1-1+b1 *)
 ;;
 
-let normalize s = 
-  let (e,u,r,b) = split s in
-  concat ("",u,r,"")
-;; 
+let normalize = strip_epoch_binnmu
+
 
