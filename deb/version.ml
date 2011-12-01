@@ -198,44 +198,6 @@ let strip_epoch_binnmu v =
 (*********************************************************************************************)
 (* remark concerning transition [RT]: from here on the code is untouched  *)
  
-let first_matching_char_from i f w =
-  let m = String.length w in
-  let rec loop i =
-    if i = m then
-      raise Not_found
-    else
-      if f w.[i] then
-        i
-      else
-        loop (i + 1)
-  in
-  loop i
-;;
-
-let first_matching_char = first_matching_char_from 0;;
-
-let longest_matching_prefix f w =
-  try
-    let i = first_matching_char (fun c -> not (f c)) w in
-    String.sub w 0 i, String.sub w i (String.length w - i)
-  with
-  | Not_found -> (w,"")
-;;
-
-let extract_epoch x =
-  try
-    let ci = String.index x ':' in
-    if ci < String.length x - 1 then
-      let epoch = String.sub x 0 ci
-      and rest = String.sub x (ci + 1) (String.length x - ci - 1)
-      in
-      (epoch,rest)
-    else
-      ("",x)
-  with
-  | Not_found -> ("",x)
-;;
-
 let extract_string c x =
   try
     let di = String.rindex x c in
@@ -249,14 +211,26 @@ let extract_string c x =
   | Not_found -> (x,"")
 ;;
 
-let extract_revision s = extract_string '-' s
-let extract_binnmu s = extract_string '+' s
-
 let split s =
-  let (epoch,rest) = extract_epoch s in
-  let (rest,binnmu) = extract_binnmu rest in
-  let (upstream,revision) = extract_revision rest in
-  (epoch,upstream,revision,binnmu)
+    let extract_epoch x =
+    try
+      let ci = String.index x ':' in
+      if ci < String.length x - 1 then
+	let epoch = String.sub x 0 ci
+	and rest = String.sub x (ci + 1) (String.length x - ci - 1)
+	in
+	(epoch,rest)
+      else
+	("",x)
+    with
+      | Not_found -> ("",x)
+    and extract_revision s = extract_string '-' s
+    and  extract_binnmu s = extract_string '+' s
+    in
+    let (epoch,rest) = extract_epoch s in
+    let (rest,binnmu) = extract_binnmu rest in
+    let (upstream,revision) = extract_revision rest in
+    (epoch,upstream,revision,binnmu)
 ;;
 
 let concat = function
