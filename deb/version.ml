@@ -152,10 +152,50 @@ let equal (x : string) (y : string) =
   if x = y then true else (compare x y) = 0
 ;;
 
-
-(*********************************************************************************************)
 (************** splitting and recomposing version strings ************************************)
 
+type version_analysis =
+  | Native of string*string*string (* epoch,upstream,binnmu *)
+  | NonNative of string*string*string*string (* epoch,upstream,revision,binnmu *)
+;;
+
+let extract_binnmu v =
+  let binnmu_regexp = Pcre.regexp "^(.*)\\+(b[\\d]+)$"
+  in
+  try
+    let subs = Pcre.extract ~rex:binnmu_regexp v
+    in (subs.(1),subs.(2))
+  with Not_found -> (v,"")
+;;
+
+let decompose v =
+  let epoch,rest = extract_epoch v in
+  let upstream_complete,revision_complete = extract_revision rest in
+  if revision_complete = ""
+  then let upstream,binnmu = extract_binnmu upstream_complete in
+       Native(epoch,upstream,binnmu)
+  else let revision,binnmu = extract_binnmu revision_complete in
+       NonNative(epoch,upstream_complete,revision,binnmu)
+;;
+
+let compose = function 
+  | Native("",upstream,"") -> upstream
+  | Native(epoch,upstream,"") -> epoch^":"^upstream
+  | Native("",upstream,binnmu) -> upstream^"+"^binnmu
+  | Native(epoch,upstream,binnmu) -> epoch^":"^upstream^"+"^binnmu
+  | NonNative("",upstream,revision,"") -> upstream^"-"^revision
+  | NonNative(epoch,upstream,revision,"") -> epoch^":"^upstream^"-"^revision
+  | NonNative("",upstream,revision,binnmu) -> upstream^"-"^revision^"+"^binnmu
+  | NonNative(epoch,upstream,revision,binnmu) -> epoch^":"^upstream^"-"^revision^"+"^binnmu
+;;
+
+let strip_epoch_binnmu v =
+  match decompose v with
+    | Native(_,upstream,_) -> upstream
+    | NonNative(_,upstream,revision,_) -> upstream^"-"^revision
+;;
+
+(*********************************************************************************************)
 (* remark concerning transition [RT]: from here on the code is untouched  *)
  
 let first_matching_char_from i f w =
