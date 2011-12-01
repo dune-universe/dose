@@ -49,14 +49,14 @@ val compare : string -> string -> int
     from the upstream (if native version) or revision (if non-native vesion).
 *)
 type version_analysis =
-  | Native of string*string*string            (* epoch,upstream,binnmu *)
-  | NonNative of string*string*string*string  (* epoch,upstream,revision,binnmu *)
+  | Native of string*string*string            (** epoch,upstream,binnmu *)
+  | NonNative of string*string*string*string  (** epoch,upstream,revision,binnmu *)
 
 (** decompose a version string *)
 val decompose: string -> version_analysis
 
 (** recompose a decomposed version string. For all v: equal(v,compose(decompose v)) = true.
-    There may, however, be small syntactic difference between v and compose(decompose v) *)
+    There may, however, be small syntactic differences between v and compose(decompose v) *)
 val compose: version_analysis -> string 
 
 (** return a version without its epoch and without its binNMU part *)
