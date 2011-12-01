@@ -1,6 +1,7 @@
 (**************************************************************************************)
 (*  Copyright (C) 2009 Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
 (*  Copyright (C) 2009 Mancoosi Project                                               *)
+(*  Contributions: Ralf Treinen, 2011                                                 *)
 (*                                                                                    *)
 (*  This library is free software: you can redistribute it and/or modify              *)
 (*  it under the terms of the GNU Lesser General Public License as                    *)
