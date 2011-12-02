@@ -330,5 +330,5 @@ let main () =
   ) pred
 ;;
 
-main ();;
+Boilerplate.if_application __FILE__ main ;;
 

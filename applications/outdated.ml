@@ -262,7 +262,6 @@ let outdated
         Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
 ;; 
 
-
 let main () =
   let args = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
@@ -280,5 +279,5 @@ let main () =
   outdated ~summary ~verbose ~dump packagelist
 ;;
 
-main ();;
+Boilerplate.if_application __FILE__ main ;;
 
