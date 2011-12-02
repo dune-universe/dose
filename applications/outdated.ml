@@ -42,9 +42,9 @@ module Options = struct
   open OptParser
   add options ~short_name:'a' ~long_name:"architecture" 
   ~help:"Set the default architecture" architecture;
-
-  add options ~long_name:"select" 
-  ~help:"Check only these package ex. (sn1,sv1),(sn2,sv2)" checkonly;
+ 
+  add options ~long_name:"checkonly" 
+  ~help:"Check only these package" checkonly;
   
   add options ~short_name:'b' 
   ~help:"Print the list of broken packages" brokenlist;
@@ -103,11 +103,13 @@ let version_of_target getv = function
   |`Lo v |`In (_,v) -> (getv v) - 1
 ;;
 
+let timer = Util.Timer.create "Solver"
+
 let outdated 
   ?(dump=false) 
   ?(verbose=false) 
   ?(summary=false) 
-  ?(clusterlist=None) repository =
+  ?(checklist=None) repository =
 
   let worktable = Hashtbl.create 1024 in
   let version_acc = ref [] in
@@ -215,6 +217,14 @@ let outdated
   Hashtbl.clear worktable;
   Hashtbl.clear constraints_table;
 
+  let checklist =
+    if Option.is_none checklist then []
+    else
+      List.map (fun (p,v) ->
+        Cudf.lookup_package universe (p,getv v)
+      ) (Option.get checklist)
+  in
+
   let pp pkg =
     let p = 
       if String.starts_with pkg.Cudf.package "src/" then
@@ -252,7 +262,14 @@ let outdated
       Diagnostic.fprintf ~pp ~failure:true ~explain:true fmt d 
   in
 
-  let i = Depsolver.univcheck ~callback universe in
+  Util.Timer.start timer;
+  let i =
+    if checklist <> [] then
+      Depsolver.listcheck ~callback universe checklist
+    else
+      Depsolver.univcheck ~callback universe
+  in
+  ignore(Util.Timer.stop timer ());
 
   Format.fprintf fmt "total-packages: %d@," universe_size;
   Format.fprintf fmt "total-broken: %d@," i;
@@ -271,14 +288,14 @@ let main () =
     ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
 
-  (* let clusterlist = OptParse.Opt.opt Options.checkonly in *)
+  let checklist = OptParse.Opt.opt Options.checkonly in
   let verbose = OptParse.Opt.get Options.brokenlist in
   let summary = OptParse.Opt.get Options.summary in
   let dump = OptParse.Opt.get Options.dump in
 
   let default_arch = OptParse.Opt.opt Options.architecture in
   let packagelist = Debian.Packages.input_raw ~default_arch args in
-  ignore(outdated ~summary ~verbose ~dump packagelist)
+  ignore(outdated ~summary ~verbose ~dump ~checklist packagelist)
 ;;
 
 Boilerplate.if_application __FILE__ main ;;
