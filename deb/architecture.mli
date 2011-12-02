@@ -1,5 +1,5 @@
 (***************************************************************************)
-(*  Copyright (C) 2010 Ralf Treinen <ralf.treinen@pps.jussieu.fr>          *)
+(*  Copyright (C) 2010, 2011 Ralf Treinen <ralf.treinen@pps.jussieu.fr>    *)
 (*                                                                         *)
 (*  This library is free software: you can redistribute it and/or modify   *)
 (*  it under the terms of the GNU Lesser General Public License as         *)
@@ -11,12 +11,8 @@
 
 (** Debian architecture terms *)
 
-type architecture
+exception Architectures_inconsistent
 
-val architecture_of_string: string -> architecture
-val string_of_architecture: architecture -> string
-
-(** Unification of architecture strings *)
-exception Arch_unification_error of string
-val arch_unify: architecture -> architecture -> architecture
+val bin_unify: string -> string -> string
+val src_matches_bin: string -> string -> bool
 
