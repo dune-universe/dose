@@ -43,7 +43,7 @@
 <applications/distcheck.*>: @USE_RPM@, use_algo, use_boilerplate
 <applications/ceve.*>: @USE_RPM@, use_algo, use_boilerplate
 <applications/smallworld.*>: @USE_RPM@, use_algo, use_boilerplate
-<applications/tests.*>: @USE_RPM@, use_algo, use_boilerplate
+<applications/tests.*>: @USE_RPM@, use_algo, use_boilerplate, use_boilerplateNoRpm, @PKG_PARMAP@
 <applications/strong-deps.*>: @USE_RPM@, use_algo, use_boilerplate
 <applications/challenged.*>: use_algo, use_boilerplateNoRpm, @PKG_PARMAP@
 <applications/outdated.*>: use_algo, use_boilerplateNoRpm

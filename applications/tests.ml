@@ -16,24 +16,34 @@ open OUnit
 open Common
 open Algo
 
+let sid_pkg_list = Boilerplate.read_deb "tests/DebianPackages/sid.packages";;
+let lenny_pkg_list = Boilerplate.read_deb "tests/DebianPackages/lenny.packages";;
+let lenny_universe = Debian.Debcudf.load_universe lenny_pkg_list;;
+let sid_universe = Debian.Debcudf.load_universe sid_pkg_list;;
+
 let test_debian_distcheck_lenny =
   "debian_distcheck_lenny" >:: (fun _ ->
-    let ch = Input.open_file "tests/DebianPackages/lenny.packages" in
-    let l = Debian.Packages.parse_packages_in ch in
-    Input.close_ch ch;
-    let universe = Debian.Debcudf.load_universe l in
-    let i = Depsolver.univcheck universe in
+    let i = Depsolver.univcheck lenny_universe in
     assert_equal 0 i
   )
 
 let test_debian_distcheck_sid =
   "debian_distcheck_sid" >:: (fun _ ->
-    let ch = Input.open_file "tests/DebianPackages/sid.packages" in
-    let l = Debian.Packages.parse_packages_in ch in
-    Input.close_ch ch;
-    let universe = Debian.Debcudf.load_universe l in
-    let i = Depsolver.univcheck universe in
+    let i = Depsolver.univcheck sid_universe in
     assert_equal 143 i
+  )
+
+let test_outdated =
+  "test outdated" >:: (fun _ ->
+    let results = Outdated.outdated ~summary:true sid_pkg_list in
+    assert_equal 0 0 
+  )
+
+let test_challenged =
+  "test challenged" >:: (fun _ ->
+    let clusterlist = Boilerplate.parse_vpkg "" in
+    let results = Challenged.challenged ~clusterlist sid_pkg_list in
+    assert_equal 0 0 
   )
 
 let test_distcheck =

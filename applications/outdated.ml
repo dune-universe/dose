@@ -260,6 +260,8 @@ let outdated
 
   if summary then
         Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
+
+  results
 ;; 
 
 let main () =
@@ -276,7 +278,7 @@ let main () =
 
   let default_arch = OptParse.Opt.opt Options.architecture in
   let packagelist = Debian.Packages.input_raw ~default_arch args in
-  outdated ~summary ~verbose ~dump packagelist
+  ignore(outdated ~summary ~verbose ~dump packagelist)
 ;;
 
 Boilerplate.if_application __FILE__ main ;;
