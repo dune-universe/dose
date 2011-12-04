@@ -15,6 +15,7 @@
 open ExtLib
 
 type release = {
+  fname : string;
   origin : string;
   label : string;
   suite : string;
@@ -32,47 +33,48 @@ type release = {
 }
 
 let default_release = {
-    origin = "";
-    label = "";
-    suite = "";
-    version = "";
-    codename = "";
-    date = "";
-    architecture = "";
-    component = "";
-    notauto = false;
-    autoup = false;
-    description = "";
-    md5sums = [];
-    sha1 = [];
-    sha256 = []
+  fname = "";
+  origin = "";
+  label = "";
+  suite = "";
+  version = "";
+  codename = "";
+  date = "";
+  architecture = "";
+  component = "";
+  notauto = false;
+  autoup = false;
+  description = "";
+  md5sums = [];
+  sha1 = [];
+  sha256 = []
 }
 
-let parse_release_stanza par =
-  {
-    origin = Packages.parse_s ~opt:"" Packages.parse_string "Origin" par;
-    label = Packages.parse_s ~opt:"" Packages.parse_string "Label" par;
-    suite = Packages.parse_s ~opt:"" Packages.parse_string "Suite" par;
-    version = Packages.parse_s ~opt:"" Packages.parse_string "Version" par;
-    codename = Packages.parse_s ~opt:"" Packages.parse_string "Codename" par;
-    date = Packages.parse_s ~opt:"" Packages.parse_string "Date" par;
-    architecture = Packages.parse_s ~opt:"" Packages.parse_string "Architectures" par;
-    component = Packages.parse_s ~opt:"" Packages.parse_string "Components" par;
-    notauto = Packages.parse_s ~opt:false Packages.parse_bool "NotAutomatic" par;
-    autoup = Packages.parse_s ~opt:false Packages.parse_bool "ButAutomaticUpgrades" par;
-    description = Packages.parse_s ~opt:"" Packages.parse_string "Description" par;
-    md5sums = [];
-    sha1 = [];
-    sha256 = []
-  }
+let parse_release_stanza fname par = {
+  fname = Filename.basename (fname);
+  origin = Packages.parse_s ~opt:"" Packages.parse_string "Origin" par;
+  label = Packages.parse_s ~opt:"" Packages.parse_string "Label" par;
+  suite = Packages.parse_s ~opt:"" Packages.parse_string "Suite" par;
+  version = Packages.parse_s ~opt:"" Packages.parse_string "Version" par;
+  codename = Packages.parse_s ~opt:"" Packages.parse_string "Codename" par;
+  date = Packages.parse_s ~opt:"" Packages.parse_string "Date" par;
+  architecture = Packages.parse_s ~opt:"" Packages.parse_string "Architectures" par;
+  component = Packages.parse_s ~opt:"" Packages.parse_string "Components" par;
+  notauto = Packages.parse_s ~opt:false Packages.parse_bool "NotAutomatic" par;
+  autoup = Packages.parse_s ~opt:false Packages.parse_bool "ButAutomaticUpgrades" par;
+  description = Packages.parse_s ~opt:"" Packages.parse_string "Description" par;
+  md5sums = [];
+  sha1 = [];
+  sha256 = []
+}
 
-let release_parser stanza_parser p =
+let release_parser stanza_parser fname p =
   match
   Format822_parser.doc_822_sign 
     Format822_lexer.token_822 p.Format822.lexbuf 
   with 
-  |Some st -> Some (stanza_parser st)
+  |Some st -> Some (stanza_parser fname st)
   |None -> None
 
-let parse_release_in ic =
-  Format822.parse_from_ch (release_parser parse_release_stanza) ic
+let parse_release_in fname ic =
+  Format822.parse_from_ch (release_parser parse_release_stanza fname) ic

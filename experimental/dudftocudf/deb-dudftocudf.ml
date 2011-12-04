@@ -265,7 +265,7 @@ let make_universe pl =
         let s = Str.string_before fname i in
         let release = 
           let ch = IO.input_string cdata in
-          let r = Debian.Release.parse_release_in ch in
+          let r = Debian.Release.parse_release_in fname ch in
           let _ = IO.close_in ch in
           match r with Some r -> r | None -> assert false
         in
@@ -405,7 +405,24 @@ let main () =
   let add_pin_priority v pkg =
     if not(List.mem v !priorities) then priorities := v :: !priorities ;
     let k = "pin-priority-"^(string_of_int v) in
-    { pkg with Cudf.pkg_extra = (k,`Int 1) :: pkg.Cudf.pkg_extra } in
+    { pkg with Cudf.pkg_extra = (k,`Int 1) :: pkg.Cudf.pkg_extra } 
+  in
+
+  let add_suite info pkg =
+    match info with
+    |None -> pkg
+    |Some info ->
+        let s = 
+          if Filename.check_suffix info.Debian.Release.fname "_InRelease" then
+            Filename.chop_suffix info.Debian.Release.fname "_InRelease"
+          else if Filename.check_suffix info.Debian.Release.fname "_Release" then
+            Filename.chop_suffix info.Debian.Release.fname "_Release"
+          else info.Debian.Release.suite
+        in
+        let distribsuite = ("distribsuite",`String s) in
+        let suite = ("suite",`String info.Debian.Release.suite) in
+        { pkg with Cudf.pkg_extra = suite :: distribsuite :: pkg.Cudf.pkg_extra }
+  in
 
   info "convert";
   Util.Progress.set_total progressbar (List.length l); 
@@ -420,6 +437,7 @@ let main () =
       let cudfpkg = Debian.Debcudf.tocudf tables ~extras:extras_property pkg in
       let priority = AptPref.assign_priority preferences info cudfpkg in
       let cudfpkg = add_pin_priority priority cudfpkg in
+      let cudfpkg = add_suite info cudfpkg in
       cudfpkg
     ) l
   in
@@ -500,10 +518,14 @@ let main () =
   in
   let preamble =
     let l = List.map snd extras_property in
-    CudfAdd.add_properties Debian.Debcudf.preamble (
-    List.fold_left (fun l' v -> 
-      ("pin-priority-"^(string_of_int v),(`Int (Some 0)))::l'
-    ) l !priorities)
+    let pl =
+      List.fold_left (fun l' v -> 
+        ("pin-priority-"^(string_of_int v),(`Int (Some 0)))::l'
+      ) l !priorities
+    in
+    let suite = ("suite",`String (Some "local")) in
+    let distribsuite = ("distribsuite",`String (Some "unknown")) in
+    CudfAdd.add_properties Debian.Debcudf.preamble (suite :: distribsuite :: pl)
   in
   Cudf_printer.pp_cudf oc (preamble, universe, request)
 ;;
