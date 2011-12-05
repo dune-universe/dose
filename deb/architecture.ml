@@ -9,6 +9,7 @@
 (*  library, see the COPYING file for more information.                    *)
 (***************************************************************************)
 
+(*
 exception Architectures_inconsistent;;
 
 let bin_unify s1 s2 =
@@ -22,29 +23,32 @@ let bin_unify s1 s2 =
 (bin_unify "all" "all");;
 (bin_unify "amd64" "i386");;
 
-(* Debian Policy Manual version 3.9.1.0, 2010-07-26 :                      *)
-(* Section 11.1.1 Architecture wildcards                                   *)
-(* A package may specify an architecture wildcard. Architecture wildcards  *)
-(* are in the format any (which matches every architecture), os-any,       *)
-(* or any-cpu.                                                             *)
+*)
 
 open String;;
 
-let bin_matches_src b s =
-  let part_matches b s = (s="any" || s=b)
+let src_matches_arch source concrete =
+  let component_matches source concrete = (source="any" || source=concrete)
   in
-  if s="all" || s="any" || s=b then true
+  if source="all" || component_matches source concrete then true
   else
+    (* the source architecture must consist of two parts: os and cpu *)
     try
-      let i=index s '-' in
-      let sos=sub s 0 i
-      and scpu= sub s (i+1) ((length s)-i-1) in
+      let i=index source '-' in
+      let source_os=sub source 0 i
+      and source_cpu= sub source (i+1) ((length source)-i-1) in
+      (* If the concrete architecture also splits into OS and Host
+	 then components must match. Otherwise we have an implicit
+	 OS which is linux *)
       try
-	let j=index b '-' in
-	let bos=sub b 0 j
-	and bcpu=sub b (j+1) ((length b)-j-1)
-	in (part_matches bos sos) && (part_matches bcpu scpu)
-      with Not_found -> (sos="linux" || sos="any") && part_matches b scpu
+	let j=index concrete '-' in
+	let concrete_os=sub concrete 0 j
+	and concrete_cpu=sub concrete (j+1) ((length concrete)-j-1)
+	in (component_matches source_os concrete_os) &&
+	  (component_matches source_cpu concrete_cpu)
+      with Not_found -> 
+	(source_os="linux" || source_os="any") &&
+	  component_matches source_cpu concrete
     with Not_found -> false
 ;;
       

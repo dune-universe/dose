@@ -9,10 +9,14 @@
 (*  library, see the COPYING file for more information.                    *)
 (***************************************************************************)
 
-(** Debian architecture terms *)
+(** Debian architecture strings, as described in Section 5.6.8 of the 
+    Dbian policy. Compliant with Debian policy version 3.9.2 *)
 
-exception Architectures_inconsistent
-
-val bin_unify: string -> string -> string
-val src_matches_bin: string -> string -> bool
+(** check wether a source architecture string matches a concrete
+    architecture. The source architecture string may contain
+    architecture wildcards ("linux-any", "any-i386"), or be "any" or
+    "all". The concrete architecure is one that may be obtained by
+    running "dpkg-architecture -qDEB_HOST_ARCH").
+*)
+val src_matches_arch: string -> string -> bool
 
