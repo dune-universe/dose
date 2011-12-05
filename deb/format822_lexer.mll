@@ -35,7 +35,7 @@ let ident = (letter | digit | '-')+
 
 rule token_822 = parse
   | "-----BEGIN PGP SIGNED MESSAGE-----" { PGPHEAD }
-  | "-----BEGIN PGP SIGNATURE-----" { pgpsingature lexbuf }
+  | "-----BEGIN PGP SIGNATURE-----" { pgpsignature lexbuf }
   | (ident as field) ':' blank*
     ([^'\n']* as rest)          { FIELD(field, (get_range lexbuf, rest)) }
   | blank ([^'\n']* as rest)    { CONT(get_range lexbuf, rest) }
@@ -43,7 +43,7 @@ rule token_822 = parse
   | blank* '\n'                 { Lexing.new_line lexbuf; EOL }
   | eof                         { EOF }
   | _ as c                      { raise_error lexbuf c }
-and pgpsingature = parse
+and pgpsignature = parse
     | "-----END PGP SIGNATURE-----"  { token_822 lexbuf    }
-    | _                              { pgpsingature lexbuf }
+    | _                              { pgpsignature lexbuf }
 
