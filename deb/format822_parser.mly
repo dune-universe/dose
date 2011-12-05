@@ -56,7 +56,6 @@ blanklines:
 ;
 
 stanzas:
-  |                     { [] }
   | stanza EOF          { [ $1 ] }
   | stanza blanklines stanzas { $1 :: $3 }
 ;
