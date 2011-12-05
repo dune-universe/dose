@@ -40,7 +40,7 @@ rule token_822 = parse
     ([^'\n']* as rest)          { FIELD(field, (get_range lexbuf, rest)) }
   | blank ([^'\n']* as rest)    { CONT(get_range lexbuf, rest) }
 (*  | '#' [^'\n']* ('\n'|eof)     { token_822 lexbuf } *)
-  | blank* '\n'                 { Lexing.new_line lexbuf; EOL }
+  | blank* '\n'                 { Lexing.new_line lexbuf; BLANKLINE }
   | eof                         { EOF }
   | _ as c                      { raise_error lexbuf c }
 and pgpsignature = parse

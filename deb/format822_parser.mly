@@ -23,7 +23,7 @@ let join (r1, v) (r2, cont) = (Format822.extend_loc r1 r2, v ^ cont)
 
 %token <string * (Format822.loc * string)> FIELD
 %token <Format822.loc * string> CONT
-%token EOL EOF
+%token BLANKLINE EOF
 %token PGPHEAD
 %type <(string * (Format822.loc * string)) list list> doc_822
 %type <(string * (Format822.loc * string)) list option> stanza_822
@@ -34,31 +34,31 @@ let join (r1, v) (r2, cont) = (Format822.extend_loc r1 r2, v ^ cont)
 %%
 
 doc_822_sign:
-  PGPHEAD eols field eols stanza_822 { $5 }
+  | PGPHEAD blanklines field blanklines stanza_822 { $5 }
   | stanza_822 { $1 }
 ;
 
 doc_822:
   | stanzas             { $1 }
-  | eols stanzas        { $2 }
+  | blanklines stanzas  { $2 }
 ;
 
 stanza_822:
-  | stanza      { Some $1 }
-  | eols stanza { Some $2 }
-  | eols EOF    { None }
-  | EOF         { None }
+  | stanza            { Some $1 }
+  | blanklines stanza { Some $2 }
+  | blanklines EOF    { None }
+  | EOF               { None }
 ;
 
-eols:
-  | EOL         {}
-  | EOL eols    {}
+blanklines:
+  | BLANKLINE            {}
+  | BLANKLINE blanklines {}
 ;
 
 stanzas:
   |                     { [] }
   | stanza EOF          { [ $1 ] }
-  | stanza eols stanzas { $1 :: $3 }
+  | stanza blanklines stanzas { $1 :: $3 }
 ;
 
 stanza:
@@ -77,13 +77,13 @@ fields:
 ;
 
 field:
-  | FIELD EOL           { $1 }
-  | FIELD EOL linecont  { let k, v = $1 in k, (join v $3) }
+  | FIELD BLANKLINE           { $1 }
+  | FIELD BLANKLINE linecont  { let k, v = $1 in k, (join v $3) }
 ;
 
 linecont:
-  | CONT EOL            { $1 }
-  | CONT EOL linecont   { join $1 $3 }
+  | CONT BLANKLINE            { $1 }
+  | CONT BLANKLINE linecont   { join $1 $3 }
 ;
 
 %%
