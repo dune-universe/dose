@@ -34,7 +34,7 @@ let join (r1, v) (r2, cont) = (Format822.extend_loc r1 r2, v ^ cont)
 %%
 
 doc_822_sign:
-  | PGPHEAD blanklines field blanklines stanza_822 { $5 }
+  | PGPHEAD blanklines field BLANKLINE stanza_822 { $4 }
   | stanza_822 { $1 }
 ;
 
