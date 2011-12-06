@@ -16,8 +16,8 @@ open OUnit
 open Common
 open Algo
 
-let sid_pkg_list = Boilerplate.read_deb "tests/DebianPackages/sid.packages";;
-let lenny_pkg_list = Boilerplate.read_deb "tests/DebianPackages/lenny.packages";;
+let sid_pkg_list = Boilerplate.read_deb "tests/DebianPackages/sid.packages.bz2";;
+let lenny_pkg_list = Boilerplate.read_deb "tests/DebianPackages/lenny.packages.bz2";;
 let lenny_universe = Debian.Debcudf.load_universe lenny_pkg_list;;
 let sid_universe = Debian.Debcudf.load_universe sid_pkg_list;;
 

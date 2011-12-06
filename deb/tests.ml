@@ -18,7 +18,7 @@ open Cudf
 
 let test_dir = "tests"
 
-let f_packages = Filename.concat test_dir "DebianPackages/Packages" ;;
+let f_packages = Filename.concat test_dir "DebianPackages/Packages.bz2" ;;
 let f_release = Filename.concat test_dir "DebianPackages/Release" ;;
 let f_discriminants = Filename.concat test_dir "deb/discriminants" ;;
 
