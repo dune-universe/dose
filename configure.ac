@@ -158,9 +158,9 @@ if test "$HAS_OCAMLGRAPH" = "yes" ; then
    AC_MSG_ERROR([Please install OCaml findlib module 'ocamlgraph'.])
   fi
   TMPVERSION=`$OCAMLFIND query -format %v ocamlgraph`
-  if test $(echo "$TMPVERSION < 1.5" | bc) -eq 1; then
-      AC_MSG_ERROR([found ocamlgraph with version $TMPVERSION (<= 1.5 is required )])
-  fi
+#  if test $(echo "$TMPVERSION < 1.5" | bc) -eq 1; then
+#      AC_MSG_ERROR([found ocamlgraph with version $TMPVERSION (<= 1.5 is required )])
+#  fi
   PKG_OCAMLGRAPH="package(ocamlgraph)"
   MLPACK_OCAMLGRAPH="Defaultgraphs Statistics Dominators Strongdeps Strongdeps_int Strongconflicts Strongconflicts_int"
   CONFIG_OCAMLGRAPH="-DHASOCAMLGRAPH"

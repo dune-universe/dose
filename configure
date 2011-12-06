@@ -4444,9 +4444,9 @@ $as_echo "not found" >&6; }
    as_fn_error $? "Please install OCaml findlib module 'ocamlgraph'." "$LINENO" 5
   fi
   TMPVERSION=`$OCAMLFIND query -format %v ocamlgraph`
-  if test $(echo "$TMPVERSION < 1.5" | bc) -eq 1; then
-      as_fn_error $? "found ocamlgraph with version $TMPVERSION (<= 1.5 is required )" "$LINENO" 5
-  fi
+#  if test $(echo "$TMPVERSION < 1.5" | bc) -eq 1; then
+#      AC_MSG_ERROR([found ocamlgraph with version $TMPVERSION (<= 1.5 is required )])
+#  fi
   PKG_OCAMLGRAPH="package(ocamlgraph)"
   MLPACK_OCAMLGRAPH="Defaultgraphs Statistics Dominators Strongdeps Strongdeps_int Strongconflicts Strongconflicts_int"
   CONFIG_OCAMLGRAPH="-DHASOCAMLGRAPH"
