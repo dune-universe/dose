@@ -34,7 +34,7 @@ let parse_request s =
 
 %token <string> IDENT RELOP
 %token LBRACKET RBRACKET LPAREN RPAREN
-%token COMMA PIPE COLON EQ BANG
+%token COMMA PIPE EQ BANG
 %token EOL
 
 %type <Format822.name> pkgname_top
