@@ -100,3 +100,23 @@ strong-deps.native generates the strong dependency graph from a repository
 
 ./strong-deps.native --incr --dot graph.marshal cudf://algo/tests/strongdep-simple.cudf cudf://algo/tests/strongdep-conflict.cudf
 
+-----
+$cat zz
+ !h-1 i-1
+ !h-1 l-1
+ !g-1 e-1 f-1
+ !e-1 f-1
+ !e-1 a-1 b-1
+ !b-1 !a-1
+ !a-1 c-1 d-1
+$./cnftocudf.native zz > zz.cudf
+$./ceve.native -tcnf cudf://zz.cudf 
+ !h-1 i-1
+ !h-1 l-1
+ !g-1 e-1 f-1
+ !e-1 f-1
+ !e-1 a-1 b-1
+ !b-1 !a-1
+ !a-1 c-1 d-1
+
+
