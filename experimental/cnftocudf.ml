@@ -47,11 +47,19 @@ let split ?(neg=false) s =
         String.sub s 1 ((String.length s) - 1)
       else s
     in
-    let idx = (String.rindex s '-') in
-    let len = (String.length s) - (idx + 1) in
-    let n = String.sub s 0 idx in
-    let v = String.sub s (idx + 1) len in
-    (n,int_of_string v)
+    let idx = 
+      try (String.rindex s '-') 
+      with Not_found -> 0
+    in
+    if idx = 0 then (s,1)
+    else
+      let len = (String.length s) - (idx + 1) in
+      let n = String.sub s 0 idx in
+      let v = String.sub s (idx + 1) len in
+      try
+        (n,int_of_string v)
+      with Failure "int_of_string" ->
+        (s,1)
   with Not_found ->
     failwith (s ^ " is not a valid literal")
 ;;
@@ -59,7 +67,7 @@ let split ?(neg=false) s =
 let parse_line s =
   let lits = 
     List.map (function 
-      |s when s.[0] = '-' -> Neg (split ~neg:true s)
+      |s when s.[0] = '!' || s.[0] = '-' -> Neg (split ~neg:true s)
       |s -> Pos (split s)
     ) (String.nsplit s " ")
   in
