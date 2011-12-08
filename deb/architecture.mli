@@ -1,5 +1,5 @@
 (***************************************************************************)
-(*  Copyright (C) 2010 Ralf Treinen <ralf.treinen@pps.jussieu.fr>          *)
+(*  Copyright (C) 2010, 2011 Ralf Treinen <ralf.treinen@pps.jussieu.fr>    *)
 (*                                                                         *)
 (*  This library is free software: you can redistribute it and/or modify   *)
 (*  it under the terms of the GNU Lesser General Public License as         *)
@@ -9,14 +9,14 @@
 (*  library, see the COPYING file for more information.                    *)
 (***************************************************************************)
 
-(** Debian architecture terms *)
+(** Debian architecture strings, as described in Section 5.6.8 of the 
+    Dbian policy. Compliant with Debian policy version 3.9.2 *)
 
-type architecture
-
-val architecture_of_string: string -> architecture
-val string_of_architecture: architecture -> string
-
-(** Unification of architecture strings *)
-exception Arch_unification_error of string
-val arch_unify: architecture -> architecture -> architecture
+(** check wether a source architecture string matches a host
+    architecture. The source architecture string may contain
+    architecture wildcards ("linux-any", "any-i386"), or be "any" or
+    "all". The host architecure is one that may be obtained by
+    running "dpkg-architecture -qDEB_HOST_ARCH").
+*)
+val src_matches_arch: string -> string -> bool
 
