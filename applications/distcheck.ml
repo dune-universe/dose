@@ -111,7 +111,7 @@ let main () =
       List.filter_map (fun k ->
         try Some(k,Cudf.lookup_package_property pkg k)
         with Not_found -> None
-      ) ["architecture";"source";"sourceversion"]
+      ) ["architecture";"source";"sourcenumber"]
     in (p,v,l)
   in
   info "Solving..." ;

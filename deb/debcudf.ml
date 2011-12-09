@@ -206,7 +206,9 @@ let preamble =
     ("architecture",(`String None));
     ("priority",(`String (Some "")));
     ("source",(`String (Some ""))) ;
-    ("sourceversion",(`String (Some ""))) ]
+    ("sourcenumber",(`String (Some "")));
+    ("sourceversion",(`Int (Some 1))) ;
+    ]
   in
   CudfAdd.add_properties Cudf.default_preamble l
 
@@ -214,14 +216,15 @@ let add_extra extras tables pkg =
   let number = ("number",`String pkg.version) in
   let architecture = ("architecture",`String pkg.architecture) in
   let priority = ("priority",`String pkg.priority) in
-  let (source,sourceversion) =
+  let (source,sourcenumber,sourceversion) =
     let (n,v) =
       match pkg.source with
       |("",_) -> (pkg.name,pkg.version)
       |(n,None) -> (n,pkg.version)
       |(n,Some v) -> (n,v)
     in
-    ("source",`String n), ("sourceversion", `String v)
+    let cv = get_cudf_version tables ("",v) in
+    ("source",`String n), ("sourcenumber", `String v), ("sourceversion", `Int cv)
   in
   let l =
     List.filter_map (fun (debprop, (cudfprop,v)) ->
@@ -241,7 +244,7 @@ let add_extra extras tables pkg =
     |e -> Some e
   )
   [priority; architecture; number;
-   source; sourceversion; recommends; replaces]@ l
+  source; sourcenumber; sourceversion; recommends; replaces]@ l
 ;;
 
 let add_essential = function

@@ -56,7 +56,7 @@ let filter_map_results tables universe is =
     List.filter_map (fun pkg ->
       try
         let sn = Cudf.lookup_package_property pkg "source" in
-        let sv = Cudf.lookup_package_property pkg "sourceversion" in
+        let sv = Cudf.lookup_package_property pkg "sourcenumber" in
         Some((sn,sv),pkg)
       with Not_found -> None
     ) is

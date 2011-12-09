@@ -169,7 +169,7 @@ let pp tables pkg =
     List.filter_map (fun k ->
       try Some(k,Cudf.lookup_package_property pkg k)
       with Not_found -> None
-    ) ["architecture";"source";"sourceversion";"equivs"]
+    ) ["architecture";"source";"sourcenumber";"equivs"]
   in (pkg.Cudf.package,v,l)
 
 (* repository are real packages, 

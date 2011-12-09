@@ -76,7 +76,7 @@ let dummy (sn,sv) pkg number equivs version =
      ("architecture",`String "dummy");
      ("equivs", `String (String.concat "," equivs));
      ("source", `String sn);
-     ("sourceversion", `String number)
+     ("sourcenumber", `String number)
    ]
   }
 ;;
@@ -247,7 +247,7 @@ let outdated
       List.filter_map (fun k ->
         try Some(k,Cudf.lookup_package_property pkg k)
         with Not_found -> None
-      ) ["architecture";"source";"sourceversion";"equivs"]
+      ) ["architecture";"source";"sourcenumber";"equivs"]
     in
     (p,v,l)
   in
