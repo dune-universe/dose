@@ -11,7 +11,6 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-open Cudf
 open ExtLib
 open Common
 open Algo
@@ -101,8 +100,9 @@ END
 ;;
 
 let nr_conflicts univ =
+  let open Cudf in
   Cudf.fold_packages (fun acc p ->
-    let cfl = List.filter (fun x -> not (x =% p))
+    let cfl = List.filter (fun x -> not(x =% p))
       (List.flatten (List.rev_map (CudfAdd.who_provides univ) p.conflicts)) in
     debug "%s: %d conflicts" (Cudf_types_pp.string_of_pkgname p.package)
       (List.length cfl);

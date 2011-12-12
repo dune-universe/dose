@@ -176,5 +176,5 @@ let main () =
 
 ;;
 
-main ();;
+Boilerplate.if_application __FILE__ main ;;
 

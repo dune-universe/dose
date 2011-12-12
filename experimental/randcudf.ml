@@ -10,7 +10,6 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-open Cudf
 open ExtLib
 open Common
 open Algo

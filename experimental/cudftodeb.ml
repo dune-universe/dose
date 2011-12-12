@@ -1,9 +1,12 @@
 
 
-open Cudf
 open ExtLib
 open Common
-module Boilerplate=BoilerplateNoRpm
+module Boilerplate = BoilerplateNoRpm
+
+let debug fmt = Util.make_debug __FILE__ fmt
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
 
 module Options = struct
   open OptParse
@@ -16,10 +19,6 @@ module Options = struct
   open OptParser
   add options ~short_name:'a' ~long_name:"arch" ~help:"Set architecture" architecture;
 end
-
-let debug fmt = Util.make_debug "Cudftodeb" fmt
-let info fmt = Util.make_info "Cudftodeb" fmt
-let warning fmt = Util.make_warning "Cudftodeb" fmt
 
 let pp_pkgname fmt name = Format.fprintf fmt "%s" name
 let pp_version fmt ver = Format.fprintf fmt "%d" ver
