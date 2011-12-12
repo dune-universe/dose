@@ -20,7 +20,7 @@
     Compliant with Debian policy version 3.9.2. and Debian developers
     reference version 3.4.6 *)
 
-(** {2 Comparising of debian version strings} *)
+(** {2 Comparing debian version strings} *)
 
 (** The following functions compare any two strings, that is these
     functions do not check whether the arguments are really legal
@@ -41,7 +41,7 @@ val equal : string -> string -> bool
     [Pervasives.compare]. *)
 val compare : string -> string -> int
 
-(** {2 Decomposing and recomposing version strings} *)
+(** {2 Decomposing and recomposing debian version strings} *)
 
 (** Version strings may be the decomposed into epoch, upstream, and
     revision as described in debian policy section 5.6.12. An epoch is
@@ -80,15 +80,19 @@ val compose: version_analysis -> string
 (** return a version without its epoch and without its binNMU part *)
 val  strip_epoch_binnmu: string -> string
 
-(** {2 Decomposing and recomposing version strings} *)
-
-(** Attention: this interface is deprecated ! *)
+(** {2 Decomposing and recomposing version strings (deprecated interface)} *)
 
 (** split the debian version into its components.
     (epoch,upstream,revision,binnmu) = split v
-    v = epoch ^ ":" ^ upstream ^ "-" ^ revision ^ binnmu *)
+    v = epoch ^ ":" ^ upstream ^ "-" ^ revision ^ binnmu.
+
+    @deprecated [decompose] should be used instead. *)
 val split : string -> (string * string * string * string)
+
+(** @deprecated [recompose] should be used instead. *)
 val concat : (string * string * string * string) -> string
 
-(** chop the epoch and binnmu component from a version *)
+(** chop the epoch and binnmu component from a version.
+
+    @deprecated [strip_epoch_binnmu] should be used instead. *)
 val normalize : string -> string
