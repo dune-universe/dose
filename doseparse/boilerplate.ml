@@ -15,10 +15,10 @@
 open ExtLib
 open Common
 
-let debug fmt = Util.make_debug "Boilerplate" fmt
-let info fmt = Util.make_info "Boilerplate" fmt
-let warning fmt = Util.make_warning "Boilerplate" fmt
-let fatal fmt = Util.make_fatal "Boilerplate" fmt
+let debug fmt = Util.make_debug __FILE__ fmt
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
+let fatal fmt = Util.make_fatal __FILE__ fmt
 
 (*************************************************************)
 (* Options *)
@@ -73,6 +73,14 @@ let parse_pkg s =
 let pkglist_option ?default ?(metavar = "PKGLST") () =
   OptParse.Opt.value_option metavar default
   parse_pkg (fun _ s -> Printf.sprintf "invalid package list '%s'" s)
+;;
+
+let incr_str_list ?(default=Some []) ?(metavar = "STR") =
+  let acc = ref [] in 
+  let coerce s = acc := s :: !acc ; !acc in
+  fun () ->
+  OptParse.Opt.value_option metavar default coerce 
+  (fun _ s -> Printf.sprintf "Invalid String '%s'" s)
 ;;
 
 (* *************************************** *)
