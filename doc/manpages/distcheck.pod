@@ -54,27 +54,23 @@ file as input. To specify a hdlist file distcheck must be invoked with a
 file argument of the form hdlist:// 
 
 =head2 Eclipse
-The input is an 822 file containing
-the encoding of OSGi plugins  content.xml files. 
+The input is an 822 file containing the encoding of OSGi plugins  content.xml
+files. 
 
 =head1 OPTIONS
 
 =item B<-f --failures> 
 
-Only
-show broken packages that fail the installability check. 
+Only show broken packages that fail the installability check. 
 =item B<-v --successes> 
 
-Only
-show packages that do not fail the installability check. 
+Only show packages that do not fail the installability check. 
 =item B<-e --explain> 
 
-Explain
-the results in more detail. 
+Explain the results in more detail. 
 =item B<--checkonly> 
 
-Select a subset of packages to check.
-By default all packages are checked. 
+Select a subset of packages to check.  By default all packages are checked. 
 =item B<-v> 
 
 Enable info / warnings / debug messages.
@@ -97,22 +93,21 @@ packages are found to be installable. Hence, the exit code 2 can occur only
 when the --checkonly option is used. 
 
 =head1 EXAMPLE
-Check which packages in a particular
-distribution are not installable and why: 
-   debcheck --failures --explain
-< Packages 
- where Packages is the file pertaining to that distribution, as for instance
+Check which packages in a particular distribution are not installable and why: 
+
+   debcheck --failures --explain < Packages 
+
+where Packages is the file pertaining to that distribution, as for instance
 found in the directory B</var/lib/apt/lists>. 
 
 =head1 NOTE
-distcheck is a complete
-reimplementation of edos-debcheck, written for the EDOS project. 
+Distcheck is a complete reimplementation of edos-debcheck, written for the EDOS
+project. 
 
 =head1 AUTHOR
-The
-first version of debcheck had been written by jerome Vouillon for the EDOS
+The first version of debcheck was written by Jerome Vouillon for the EDOS
 project. The current version has been rewritten on the basis of the dose3
-library by Pietro Abate. 
+library by Pietro Abate.
 
 =head1 SEE ALSO
 L<B<deb-control>(5)> 
