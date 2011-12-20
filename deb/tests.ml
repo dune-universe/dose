@@ -20,7 +20,6 @@
 
 
 open OUnit
-open Debian
 open Common
 
 let test_dir = "tests"
