@@ -17,7 +17,7 @@ open Algo
 
 module Options = struct
   open OptParse
-  let description = "Report the broken packages in a package list"
+  let description = "Report the broken packages in a Packages list"
   let options = OptParser.make ~description
   include Boilerplate.MakeOptions(struct let options = options end)
 
@@ -33,6 +33,8 @@ module Options = struct
   let release = StdOpt.str_option ()
   let suite = StdOpt.str_option ()
   let outfile = StdOpt.str_option ()
+  let background = Boilerplate.incr_str_list ()
+  let foreground = Boilerplate.incr_str_list ()
 
   open OptParser
   add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
@@ -49,6 +51,12 @@ module Options = struct
   add options ~long_name:"release" ~help:"Set the release name" release;
   add options ~long_name:"suite" ~help:"Set the release name" suite;
   add options ~long_name:"arch" ~help:"Set the default architecture" architecture;
+
+  add options ~long_name:"fg" 
+  ~help:"Additional Packages lists that are checked and used for resolving dependencies (can be repeated)" foreground;
+
+  add options ~long_name:"bg" 
+  ~help:"Additional Packages lists that are NOT checked but used for resolving dependencies (can be repeated)" background;
 
   add options ~short_name:'o' ~long_name:"outfile" ~help:"output file" outfile;
 end
@@ -75,7 +83,11 @@ let main () =
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress)
     ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
   let default_arch = OptParse.Opt.opt Options.architecture in
-  let (pkglist,from_cudf,to_cudf) = Boilerplate.load_list ~default_arch posargs in
+  let fg = posargs @ (OptParse.Opt.get Options.foreground) in
+  let bg = OptParse.Opt.get Options.background in
+  let ((pkglist,fg_pkglist),from_cudf,to_cudf) =
+    Boilerplate.load_list ~default_arch (fg,bg)
+  in
   let pkglist = 
     if OptParse.Opt.get Options.latest then
       let h = Hashtbl.create (List.length pkglist) in
