@@ -85,9 +85,7 @@ let main () =
   let default_arch = OptParse.Opt.opt Options.architecture in
   let fg = posargs @ (OptParse.Opt.get Options.foreground) in
   let bg = OptParse.Opt.get Options.background in
-  let ((pkglist,fg_pkglist),from_cudf,to_cudf) =
-    Boilerplate.load_list ~default_arch (fg,bg)
-  in
+  let (pkglist,from_cudf,to_cudf) = Boilerplate.load_list ~default_arch fg in
   let pkglist = 
     if OptParse.Opt.get Options.latest then
       let h = Hashtbl.create (List.length pkglist) in
