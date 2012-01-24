@@ -85,10 +85,11 @@ let main () =
   let default_arch = OptParse.Opt.opt Options.architecture in
   let fg = posargs @ (OptParse.Opt.get Options.foreground) in
   let bg = OptParse.Opt.get Options.background in
-  let (pkglist,from_cudf,to_cudf) = Boilerplate.load_list ~default_arch fg in
-  let pkglist = 
+  let (pkgll, from_cudf,to_cudf) = Boilerplate.load_list ~default_arch [fg;bg] in
+  let (fg_pkglist, bg_pkglist) = match pkgll with [fg;bg] -> (fg,bg) | _ -> assert false in
+  let fg_pkglist = 
     if OptParse.Opt.get Options.latest then
-      let h = Hashtbl.create (List.length pkglist) in
+      let h = Hashtbl.create (List.length fg_pkglist) in
       List.iter (fun p ->
         try
           let q = Hashtbl.find h p.Cudf.package in
@@ -96,24 +97,28 @@ let main () =
             Hashtbl.replace h p.Cudf.package p
           else ()
         with Not_found -> Hashtbl.add h p.Cudf.package p
-      ) pkglist;
+      ) fg_pkglist;
       Hashtbl.fold (fun _ v acc -> v::acc) h []
     else
-      pkglist
+      fg_pkglist
   in
-  let universe = Cudf.load_universe pkglist in
+  let universe = 
+    let s = CudfAdd.to_set (fg_pkglist @ bg_pkglist) in
+    Cudf.load_universe (CudfAdd.Cudf_set.elements s) 
+  in
   let universe_size = Cudf.universe_size universe in
   let checklist = 
-    if OptParse.Opt.is_set Options.checkonly then 
-        List.flatten (
-          List.map (function 
-            |(p,None) -> Cudf.lookup_packages universe p
-            |(p,Some(c,v)) ->
-                let filter = Some(c,snd(to_cudf (p,v))) in
-                Cudf.lookup_packages ~filter universe p
-          ) (OptParse.Opt.get Options.checkonly)
-        )
-    else []
+    if OptParse.Opt.is_set Options.checkonly then begin
+      info "--checkonly specified, consider all packages as background packages";
+      List.flatten (
+        List.map (function 
+          |(p,None) -> Cudf.lookup_packages universe p
+          |(p,Some(c,v)) ->
+              let filter = Some(c,snd(to_cudf (p,v))) in
+              Cudf.lookup_packages ~filter universe p
+        ) (OptParse.Opt.get Options.checkonly)
+      )
+    end else []
   in
   let pp pkg =
     let (p,v) = from_cudf (pkg.Cudf.package,pkg.Cudf.version) in 
@@ -158,17 +163,25 @@ let main () =
   let i =
     if OptParse.Opt.is_set Options.checkonly then 
       Depsolver.listcheck ~callback universe checklist
-    else
-      Depsolver.univcheck ~callback universe 
+    else begin
+      if bg_pkglist = [] then
+        Depsolver.univcheck ~callback universe 
+      else
+        Depsolver.listcheck ~callback universe fg_pkglist
+    end
   in
   ignore(Util.Timer.stop timer ());
 
   if failure || success then Format.fprintf fmt "@]@.";
  
-  let nb = universe_size in
-  let nf = List.length checklist in
+  let n1 = List.length checklist in
+  let n2 = List.length fg_pkglist in
+  let n3 = List.length bg_pkglist in
+  let nf = if n1 != 0 then n1 else n2 in
+  let nb = if n1 != 0 then n2 + n3 else n3 in
   Format.fprintf fmt "background-packages: %d@." nb;
-  Format.fprintf fmt "foreground-packages: %d@." (if nf = 0 then nb else nf);
+  Format.fprintf fmt "foreground-packages: %d@." nf;
+  Format.fprintf fmt "total-packages: %d@." universe_size;
   Format.fprintf fmt "broken-packages: %d@." i;
  
   if summary then 
