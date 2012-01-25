@@ -349,11 +349,11 @@ let load_list ?default_arch ?(extras=[]) urilist =
 ;;
 
 (** parse and merge a list of files into a cudf universe *)
-let load_universe ?default_arch ?(extras=[]) urilist =
+let load_universe ?default_arch ?(extras=[]) uris =
   info "Parsing and normalizing..." ;
   let timer = Util.Timer.create "Parsing and normalizing" in
   Util.Timer.start timer;
-  let (cll,f,t) = parse_input ?default_arch ~extras urilist in
+  let (cll,f,t) = parse_input ?default_arch ~extras [uris] in
   let u = (Cudf.load_universe (List.flatten cll), f, t) in
   Util.Timer.stop timer u
 ;;
