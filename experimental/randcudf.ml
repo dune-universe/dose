@@ -13,6 +13,7 @@
 open ExtLib
 open Common
 open Algo
+open Cudf
 module Boilerplate = BoilerplateNoRpm
 
 module Options = struct
