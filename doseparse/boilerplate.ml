@@ -169,8 +169,8 @@ let eclipse_load_list ?(extras=[]) dll =
   (cll,from_cudf,to_cudf)
  
 (** transform a list of debian control stanza into a cudf universe *)
-let deb_load_universe ?(extras=[]) ll =
-  let (cll,f,t) = deb_load_list ~extras ll in
+let deb_load_universe ?(extras=[]) l =
+  let (cll,f,t) = deb_load_list ~extras [l] in
   (Cudf.load_universe (List.flatten cll), f, t)
 
 (* XXX double minded ... this code is kinda similar to the code in rpmcudf 
@@ -193,8 +193,8 @@ ELSE
 END
 
 (** transform a list of rpm control stanza into a cudf universe *)
-let rpm_load_universe ll =
-  let (cll,f,t) = rpm_load_list ll in
+let rpm_load_universe l =
+  let (cll,f,t) = rpm_load_list [l] in
   (Cudf.load_universe (List.flatten cll), f, t)
 
 (** parse a cudf file and return a triple (preamble,package list,request
