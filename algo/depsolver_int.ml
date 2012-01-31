@@ -32,14 +32,24 @@ module S = EdosSolver.M(R)
 (** low level solver data type *)
 type solver = S.state (** the sat problem *)
 
-(** low level constraint solver initialization
- 
-    @param buffer debug buffer to print out debug messages
-    @param closure init the solver with a subset of packages. This must be
-                   the **dependency closure** of the subset of packages.
-    @param index package index
- *)
-let init_solver ?(buffer=false) ?(closure=[]) univ =
+let init_pool univ =
+  Array.init (Cudf.universe_size univ) (fun id ->
+    let pkg = Cudf.package_by_uid univ id in
+    let dll = 
+      List.map (fun vpkgs ->
+        (vpkgs,CudfAdd.resolve_vpkgs_int univ vpkgs)
+      ) pkg.Cudf.depends 
+    in
+    let cl = 
+      List.map (fun vpkg ->
+        (vpkg,CudfAdd.resolve_vpkg_int univ vpkg)
+      ) pkg.Cudf.conflicts
+    in
+    (dll,cl)
+  )
+;;
+
+let init_solver_cache ?(buffer=false) ?(closure=[]) pool =
   let num_conflicts = ref 0 in
   let num_disjunctions = ref 0 in
   let num_dependencies = ref 0 in
@@ -58,12 +68,11 @@ let init_solver ?(buffer=false) ?(closure=[]) univ =
     end
   in
 
-  let exec_depends constraints pkg_id pkg =
-    List.iter (fun vpkgs ->
+  let exec_depends constraints pkg_id dll =
+    List.iter (fun (vpkgs,dl) ->
       incr num_dependencies;
-      add_depend constraints vpkgs pkg_id
-      (CudfAdd.resolve_vpkgs_int univ vpkgs)
-    ) pkg.Cudf.depends
+      add_depend constraints vpkgs pkg_id dl
+    ) dll
   in 
 
   let conflicts = Hashtbl.create 1023 in
@@ -81,31 +90,31 @@ let init_solver ?(buffer=false) ?(closure=[]) univ =
     end
   in
 
-  let exec_conflicts constraints pkg_id pkg =
-    List.iter (fun vpkg ->
+  let exec_conflicts constraints pkg_id cl =
+    List.iter (fun (vpkg,l) ->
       List.iter (fun id ->
         add_conflict constraints vpkg (pkg_id, id)
-      ) (CudfAdd.resolve_vpkg_int univ vpkg)
-    ) pkg.Cudf.conflicts
+      ) l
+    ) cl
   in
 
-  let size = Cudf.universe_size univ in
+  let size = Array.length pool in
   Util.Progress.set_total progressbar_init size ;
   let constraints = S.initialize_problem ~buffer size in
 
   if closure = [] then begin 
-    Cudf.iteri_packages (fun i p ->
+    Array.iteri (fun id (dll,cl) ->
       Util.Progress.progress progressbar_init;
-      exec_depends constraints i p;
-      exec_conflicts constraints i p;
-    ) univ;
+      exec_depends constraints id dll;
+      exec_conflicts constraints id cl;
+    ) pool;
   end
   else
-    List.iter (fun p ->
-      let i = CudfAdd.vartoint univ p in
+    List.iter (fun id ->
       Util.Progress.progress progressbar_init;
-      exec_depends constraints i p;
-      exec_conflicts constraints i p;
+      let (dll,cl) = pool.(id) in 
+      exec_depends constraints id dll;
+      exec_conflicts constraints id cl;
     ) closure;
     
 
@@ -118,6 +127,19 @@ let init_solver ?(buffer=false) ?(closure=[]) univ =
   S.propagate constraints ;
 
   constraints
+;;
+
+(** low level constraint solver initialization
+ 
+    @param buffer debug buffer to print out debug messages
+    @param closure init the solver with a subset of packages. This must be
+                   the **dependency closure** of the subset of packages.
+    @param index package index
+*)
+let init_solver ?(buffer=false) ?(closure=[]) univ =
+  let pool = init_pool univ in
+  let closure = List.map (Cudf.uid_by_package univ) closure in
+  init_solver_cache ~buffer ~closure pool
 ;;
 
 (** return a copy of the state of the solver *)
@@ -159,33 +181,31 @@ let pkgcheck callback solver failed tested id =
       |Diagnostic_int.Failure _  -> incr failed
     end ; res
   in
-  (* try *)
-    let req = Diagnostic_int.Sng id in
-    let res =
-      Util.Progress.progress progressbar_univcheck;
-      if not(tested.(id)) then begin
-        memo (tested,failed) (solve solver req)
-      end
-      else begin
-        (* this branch is true only if the package was previously
-         * added to the tested packages and therefore it is installable *)
-        (* if all = true then the solver is called again to provide the list
-         * of installed packages despite the fact the the package was already
-         * tested. This is done to provide one installation set for each package
-         * in the universe *)
-        let f ?(all=false) () =
-          if all then begin
-            match solve solver req with
-            |Diagnostic_int.Success(f_int) -> f_int ()
-            |Diagnostic_int.Failure _ -> assert false (* impossible *)
-          end else []
-        in Diagnostic_int.Success(f) 
-      end
-    in
-    match callback with
-    |None -> ()
-    |Some f -> f (res,req)
-  (* with Not_found -> assert false *)
+  let req = Diagnostic_int.Sng id in
+  let res =
+    Util.Progress.progress progressbar_univcheck;
+    if not(tested.(id)) then begin
+      memo (tested,failed) (solve solver req)
+    end
+    else begin
+      (* this branch is true only if the package was previously
+       * added to the tested packages and therefore it is installable *)
+      (* if all = true then the solver is called again to provide the list
+       * of installed packages despite the fact the the package was already
+       * tested. This is done to provide one installation set for each package
+       * in the universe *)
+      let f ?(all=false) () =
+        if all then begin
+          match solve solver req with
+          |Diagnostic_int.Success(f_int) -> f_int ()
+          |Diagnostic_int.Failure _ -> assert false (* impossible *)
+        end else []
+      in Diagnostic_int.Success(f) 
+    end
+  in
+  match callback with
+  |None -> ()
+  |Some f -> f (res,req)
 ;;
 
 (** [univcheck ?callback (mdf,solver)] check if all packages known by 
@@ -235,7 +255,6 @@ let listcheck ?callback univ idlist =
 
     @param mdf the package universe
 *)
-
 let reverse_dependencies univ =
   let size = Cudf.universe_size univ in
   let reverse = Array.create size [] in
@@ -251,6 +270,31 @@ let reverse_dependencies univ =
   ) univ;
   reverse
 
+let dependency_closure_cache ?(maxdepth=max_int) ?(conjunctive=false) pool idlist =
+  let size = Array.length pool in
+  let queue = Queue.create () in
+  let visited = Hashtbl.create (2 * (List.length idlist)) in
+  List.iter (fun e -> Queue.add (e,0) queue) (CudfAdd.normalize_set idlist);
+  while (Queue.length queue > 0) do
+    let (id,level) = Queue.take queue in
+    if not(Hashtbl.mem visited id) && level < maxdepth then begin
+      Hashtbl.add visited id ();
+      List.iter (function
+        |(_,[i]) when conjunctive = true ->
+          if not(Hashtbl.mem visited i) then
+            Queue.add (i,level+1) queue
+        |(_,dsj) when conjunctive = false ->
+          List.iter (fun i ->
+            if not(Hashtbl.mem visited i) then
+              if not(Hashtbl.mem visited i) then
+                Queue.add (i,level+1) queue
+          ) dsj
+        |_ -> ()
+      ) (fst(pool.(id)))
+    end
+  done;
+  Hashtbl.fold (fun k _ l -> k::l) visited []
+
 (** [dependency_closure index l] return the union of the dependency closure of
     all packages in [l] .
 
@@ -258,43 +302,11 @@ let reverse_dependencies univ =
     @param conjunctive consider only conjunctive dependencies (false by default)
     @param index the package universe
     @param l a subset of [index]
-
-    This function has in a memoization strategy.
 *)
-
-let dependency_closure ?(maxdepth=max_int) ?(conjunctive=false) univ =
-  let size = Cudf.universe_size univ in
-  let h = Hashtbl.create size in
-  fun idlist ->
-    try Hashtbl.find h (idlist,conjunctive,maxdepth)
-    with Not_found -> begin
-      let queue = Queue.create () in
-      let visited = Hashtbl.create (2 * (List.length idlist)) in
-      List.iter (fun e -> Queue.add (e,0) queue) (CudfAdd.normalize_set idlist);
-      while (Queue.length queue > 0) do
-        let (id,level) = Queue.take queue in
-        if not(Hashtbl.mem visited id) && level < maxdepth then begin
-          Hashtbl.add visited id ();
-          List.iter (function
-            |[p] when conjunctive = true ->
-              let i = CudfAdd.vartoint univ p in 
-              if not(Hashtbl.mem visited i) then
-                Queue.add (i,level+1) queue
-            |dsj when conjunctive = false ->
-              List.iter (fun p ->
-                let i = CudfAdd.vartoint univ p in 
-                if not(Hashtbl.mem visited i) then
-                  if not(Hashtbl.mem visited i) then
-                    Queue.add (i,level+1) queue
-              ) dsj
-            |_ -> ()
-          ) (CudfAdd.who_depends univ (CudfAdd.inttovar univ id))
-        end
-      done;
-      let result = Hashtbl.fold (fun k _ l -> k::l) visited [] in
-      Hashtbl.add h (idlist,conjunctive,maxdepth) result;
-      result
-    end
+let dependency_closure ?(maxdepth=max_int) ?(conjunctive=false) univ idlist =
+  let pool = init_pool univ in
+  dependency_closure_cache ~maxdepth ~conjunctive pool idlist
+;;
 
 (*    XXX : elements in idlist should be included only if because
  *    of circular dependencies *)

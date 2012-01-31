@@ -346,16 +346,16 @@ module IntPkgGraph = struct
   let conjdepgraph_int ?(transitive=false) graph univ id =
     G.add_vertex graph id;
     let p = CudfAdd.inttovar univ id in
-    List.iter (fun l ->
-      match List.flatten (List.map (CudfAdd.resolve_vpkg_int univ) l) with
+    List.iter (fun vpkgs ->
+      match CudfAdd.resolve_vpkgs_int univ vpkgs with
       |[q] when q <> id -> add_edge transitive graph id q
       |_ -> ()
     ) p.Cudf.depends
 
   (** for all id \in idlist add to the graph all conjunctive dependencies *)
-  let conjdepgraph maps idlist =
+  let conjdepgraph univ idlist =
     let graph = G.create ~size:(List.length idlist) () in
-    List.iter (conjdepgraph_int graph maps) idlist ;
+    List.iter (conjdepgraph_int graph univ) idlist;
     graph
 
   (** given a graph return the conjunctive dependency closure of the package id *)

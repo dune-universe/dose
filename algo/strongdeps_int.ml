@@ -52,11 +52,11 @@ let check_strong transitive graph solver p l =
   ) l
 
 (* true if at least one dependency is disjunctive *)
-let somedisj univ pkg = 
-  let depends = CudfAdd.who_depends univ pkg in
+let somedisj pool id = 
+  let depends = fst(pool.(id)) in
   if List.length depends > 0 then
     try
-      List.iter (function [_] -> () | _ -> raise Not_found) depends;
+      List.iter (function (_,[_]) -> () | _ -> raise Not_found) depends;
       false
     with Not_found -> true
   else false
@@ -66,25 +66,26 @@ let somedisj univ pkg =
  * any strong dependencies *)
 let strongdeps_int ?(transitive=true) graph univ l =
   let size = List.length l in
-
   if size > 0 then begin
+    let pool = Depsolver_int.init_pool univ in
     Util.Progress.set_total mainbar size;
     Util.Timer.start strongtimer;
-    List.iter (fun pkg ->
-      let closure = Depsolver.dependency_closure univ [pkg] in
-      let solver = Depsolver_int.init_solver ~closure univ in
-      let id = CudfAdd.vartoint univ pkg in
-      G.add_vertex graph id;
+    List.iter (fun id ->
       Util.Progress.progress mainbar;
-      if somedisj univ pkg then begin 
+      G.add_vertex graph id;
+      if somedisj pool id then begin 
+        let closure = Depsolver_int.dependency_closure_cache pool [id] in
+        let solver = Depsolver_int.init_solver_cache ~closure pool in
         match Depsolver_int.solve solver (Diagnostic_int.Sng id) with
         |Diagnostic_int.Failure(_) -> ()
-        |Diagnostic_int.Success(f) -> check_strong transitive graph solver id (f ())
+        |Diagnostic_int.Success(f) ->
+            check_strong transitive graph solver id (f ())
       end
     ) l ;
     Util.Progress.reset mainbar;
     ignore (Util.Timer.stop strongtimer ());
-    debug "strong dep graph: %d vertices, %d edges\n" (G.nb_vertex graph) (G.nb_edges graph);
+    debug "strong dep graph: %d nodes, %d edges\n" 
+    (G.nb_vertex graph) (G.nb_edges graph);
   end;
   graph
 ;;
@@ -93,41 +94,43 @@ module S = Set.Make (struct type t = int let compare = Pervasives.compare end)
 
 (* XXX this can be refactored in a better way ... *)
 let strongdeps ?(transitive=true) univ idlist =
-  let graph = G.create () in
   let size = List.length idlist in
+  let graph = G.create ~size () in
   Util.Progress.set_total conjbar size;
 
   Util.Timer.start conjtimer;
   let l = 
     List.fold_left (fun acc id ->
-      let pkg = CudfAdd.inttovar univ id in
       Util.Progress.progress conjbar;
       IntPkgGraph.conjdepgraph_int ~transitive graph univ id; 
-      pkg :: acc
+      id :: acc
     ) [] idlist
   in
   Util.Progress.reset conjbar;
   Util.Timer.stop conjtimer ();
+  info "conj dep graph: nodes %d , edges %d" (G.nb_vertex graph) (G.nb_edges graph);
   let g = strongdeps_int ~transitive graph univ l in
   if not transitive then SO.transitive_reduction g;
   g
 
 (* XXX this can be refactored in a better way ... *)
 let strongdeps_univ ?(transitive=true) univ =
-  let graph = G.create () in
-  Util.Progress.set_total conjbar (Cudf.universe_size univ);
+  let size = Cudf.universe_size univ in
+  let graph = G.create ~size () in
+  Util.Progress.set_total conjbar size;
 
   Util.Timer.start conjtimer;
   let l = 
     Cudf.fold_packages (fun acc pkg ->
-      let id = CudfAdd.vartoint univ pkg in
+      let id = Cudf.uid_by_package univ pkg in
       Util.Progress.progress conjbar;
       IntPkgGraph.conjdepgraph_int ~transitive graph univ id;
-      pkg :: acc
+      id :: acc
     ) [] univ
   in
   Util.Progress.reset conjbar;
   Util.Timer.stop conjtimer ();
+  info "conj dep graph: nodes %d , edges %d" (G.nb_vertex graph) (G.nb_edges graph);
   let g = strongdeps_int ~transitive graph univ l in
   if not transitive then SO.transitive_reduction g;
   g

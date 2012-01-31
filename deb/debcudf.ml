@@ -162,7 +162,7 @@ let loadl tables l =
       |None ->
           if (Util.StringHashtbl.mem tables.virtual_table name) &&
           (Util.StringHashtbl.mem tables.versioned_table name) then
-            [(encname, None);(encname^"--virtual", None)]
+            [(encname, None); (encname^"--virtual", None)]
           else
             [(encname, None)]
       |Some(op,v) ->

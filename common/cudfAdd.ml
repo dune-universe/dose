@@ -139,12 +139,18 @@ let add_to_package_list h n p =
 
 let get_package_list h n = try !(Hashtbl.find h n) with Not_found -> []
 
-let normalize_set (l : int list) = Util.list_unique l
+let unique l = 
+  List.rev (List.fold_left (fun results x -> 
+    if List.mem x results then results 
+    else x::results) [] l
+  )
+;;
+let normalize_set (l : int list) = unique l
 
 (* (pkgname,constr) -> pkg *)
 let who_provides univ (pkgname,constr) = 
-  let prol = Cudf.who_provides ~installed:false univ (pkgname,constr) in
   let pkgl = Cudf.lookup_packages ~filter:constr univ pkgname in
+  let prol = Cudf.who_provides ~installed:false univ (pkgname,constr) in
   pkgl @ (List.map fst prol)
 
 (* vpkg -> id list *)
@@ -162,7 +168,6 @@ let resolve_deps univ vpkgs =
 (* pkg -> pkg list list *)
 let who_depends univ pkg = 
   List.map (resolve_deps univ) pkg.Cudf.depends
-;;
 
 let who_conflicts conflicts_packages univ pkg = 
   if (Hashtbl.length conflicts_packages) = 0 then
@@ -189,7 +194,7 @@ let init_conflicts univ =
   conflicts_packages
 ;;
 
-(* XXX might be wrong ... package_id <> index ... *)
+(* here we assume that the id given by cudf is a sequential and dense *)
 let compute_pool universe = 
   let size = Cudf.universe_size universe in
   let conflicts = init_conflicts universe in

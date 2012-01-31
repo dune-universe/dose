@@ -239,6 +239,7 @@ module M (X : S) = struct
     in
     st.st_buffer <- (clause::st.st_buffer)
 
+  (* we reverse the list because we store literals in reverse order *)
   let dump st = List.rev_map (fun x -> List.rev x) st.st_buffer
 
   (****)

@@ -24,7 +24,7 @@ let warning fmt = Util.make_warning "StrongDeps" fmt
     [l] wrt the universe [u] *)
 let strongdeps ?(transitive=true) universe pkglist =
   let idlist = List.map (CudfAdd.vartoint universe) pkglist in
-  let g = Strongdeps_int.strongdeps universe idlist in
+  let g = Strongdeps_int.strongdeps ~transitive universe idlist in
   Defaultgraphs.intcudf universe g
 
 (** [strongdeps_univ u] build the strong dependency graph of 
