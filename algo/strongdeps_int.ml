@@ -34,8 +34,8 @@ module SO = IntPkgGraph.SO
     We check if it is possible to install p without q.  *)
 (* ATT: this function makes a copy of the solver to add a clause to it *)
 let strong_depends solver p q =
-  Depsolver_int.S.reset solver; 
-  let solver = Depsolver_int.copy_solver solver in 
+  Depsolver_int.S.reset solver;
+  let solver = Depsolver_int.copy_solver solver in
   let lit = Depsolver_int.S.lit_of_var q false in
   Depsolver_int.S.add_rule solver [|lit|] [];
   match Depsolver_int.solve solver (Diagnostic_int.Sng p) with
@@ -65,33 +65,34 @@ let somedisj univ pkg =
 (* each package has a node in the graph, even if it does not have  
  * any strong dependencies *)
 let strongdeps_int ?(transitive=true) graph univ l =
-  let available = l in
-  let size = List.length available in
+  let size = List.length l in
 
-  Util.Progress.set_total mainbar size;
-
-  Util.Timer.start strongtimer;
-  List.iter (fun (pkg,_,closure) ->
-    let id = CudfAdd.vartoint univ pkg in
-    G.add_vertex graph id;
-    Util.Progress.progress mainbar;
-    if somedisj univ pkg then begin
-      let solver = Depsolver_int.init_solver univ in
-      match Depsolver_int.solve solver (Diagnostic_int.Sng id) with
-      |Diagnostic_int.Failure(_) -> ()
-      |Diagnostic_int.Success(f) -> check_strong transitive graph solver id (f ())
-    end
-  ) available ;
-  Util.Progress.reset mainbar;
-  ignore (Util.Timer.stop strongtimer ());
-  debug "strong dep graph: %d vertices, %d edges\n" (G.nb_vertex graph) (G.nb_edges graph);
+  if size > 0 then begin
+    Util.Progress.set_total mainbar size;
+    Util.Timer.start strongtimer;
+    List.iter (fun pkg ->
+      let closure = Depsolver.dependency_closure univ [pkg] in
+      let solver = Depsolver_int.init_solver ~closure univ in
+      let id = CudfAdd.vartoint univ pkg in
+      G.add_vertex graph id;
+      Util.Progress.progress mainbar;
+      if somedisj univ pkg then begin 
+        match Depsolver_int.solve solver (Diagnostic_int.Sng id) with
+        |Diagnostic_int.Failure(_) -> ()
+        |Diagnostic_int.Success(f) -> check_strong transitive graph solver id (f ())
+      end
+    ) l ;
+    Util.Progress.reset mainbar;
+    ignore (Util.Timer.stop strongtimer ());
+    debug "strong dep graph: %d vertices, %d edges\n" (G.nb_vertex graph) (G.nb_edges graph);
+  end;
   graph
 ;;
 
 module S = Set.Make (struct type t = int let compare = Pervasives.compare end)
 
 (* XXX this can be refactored in a better way ... *)
-let strongdeps univ idlist =
+let strongdeps ?(transitive=true) univ idlist =
   let graph = G.create () in
   let size = List.length idlist in
   Util.Progress.set_total conjbar size;
@@ -101,14 +102,15 @@ let strongdeps univ idlist =
     List.fold_left (fun acc id ->
       let pkg = CudfAdd.inttovar univ id in
       Util.Progress.progress conjbar;
-      IntPkgGraph.conjdepgraph_int graph univ id; 
-      let closure = Depsolver_int.dependency_closure univ [id] in
-      (pkg,List.length closure,closure) :: acc
+      IntPkgGraph.conjdepgraph_int ~transitive graph univ id; 
+      pkg :: acc
     ) [] idlist
   in
   Util.Progress.reset conjbar;
   Util.Timer.stop conjtimer ();
-  strongdeps_int graph univ l
+  let g = strongdeps_int ~transitive graph univ l in
+  if not transitive then SO.transitive_reduction g;
+  g
 
 (* XXX this can be refactored in a better way ... *)
 let strongdeps_univ ?(transitive=true) univ =
@@ -117,20 +119,17 @@ let strongdeps_univ ?(transitive=true) univ =
 
   Util.Timer.start conjtimer;
   let l = 
-    let id = ref 0 in
     Cudf.fold_packages (fun acc pkg ->
+      let id = CudfAdd.vartoint univ pkg in
       Util.Progress.progress conjbar;
-      IntPkgGraph.conjdepgraph_int ~transitive graph univ !id;
-      let closure = Depsolver_int.dependency_closure univ [!id] in
-      incr id ;
-      (pkg,List.length closure,closure) :: acc
+      IntPkgGraph.conjdepgraph_int ~transitive graph univ id;
+      pkg :: acc
     ) [] univ
   in
   Util.Progress.reset conjbar;
   Util.Timer.stop conjtimer ();
   let g = strongdeps_int ~transitive graph univ l in
-  if not transitive then
-    SO.transitive_reduction g;
+  if not transitive then SO.transitive_reduction g;
   g
 
 (** return the impact set (list) of the node [q] in [graph] *)

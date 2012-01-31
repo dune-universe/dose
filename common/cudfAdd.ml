@@ -141,22 +141,28 @@ let get_package_list h n = try !(Hashtbl.find h n) with Not_found -> []
 
 let normalize_set (l : int list) = Util.list_unique l
 
+(* (pkgname,constr) -> pkg *)
 let who_provides univ (pkgname,constr) = 
   let prol = Cudf.who_provides ~installed:false univ (pkgname,constr) in
   let pkgl = Cudf.lookup_packages ~filter:constr univ pkgname in
   pkgl @ (List.map fst prol)
 
-let resolve_package_dep univ vpkg =
+(* vpkg -> id list *)
+let resolve_vpkg_int univ vpkg =
   List.map (Cudf.uid_by_package univ) (who_provides univ vpkg)
 
-let resolve_deps_int univ vpkgs =
-  normalize_set (List.flatten (List.map (resolve_package_dep univ) vpkgs))
+(* vpkg list -> id list *)
+let resolve_vpkgs_int univ vpkgs =
+  normalize_set (List.flatten (List.map (resolve_vpkg_int univ) vpkgs))
 
+(* vpkg list -> pkg list *)
 let resolve_deps univ vpkgs =
-  List.map (Cudf.package_by_uid univ) (resolve_deps_int univ vpkgs)
+  List.map (Cudf.package_by_uid univ) (resolve_vpkgs_int univ vpkgs)
 
-let who_depends univ pkg =
+(* pkg -> pkg list list *)
+let who_depends univ pkg = 
   List.map (resolve_deps univ) pkg.Cudf.depends
+;;
 
 let who_conflicts conflicts_packages univ pkg = 
   if (Hashtbl.length conflicts_packages) = 0 then
@@ -178,11 +184,12 @@ let init_conflicts univ =
         add_to_package_list conflicts_packages n i
       end
     )
-    (resolve_deps_int univ p.Cudf.conflicts)
+    (resolve_vpkgs_int univ p.Cudf.conflicts)
   ) univ;
   conflicts_packages
 ;;
 
+(* XXX might be wrong ... package_id <> index ... *)
 let compute_pool universe = 
   let size = Cudf.universe_size universe in
   let conflicts = init_conflicts universe in
@@ -190,7 +197,7 @@ let compute_pool universe =
   let d =
     Array.init size (fun i ->
       let p = inttovar universe i in
-      List.map (resolve_deps_int universe) p.Cudf.depends
+      List.map (resolve_vpkgs_int universe) p.Cudf.depends
     )
   in
   (d,c)

@@ -39,7 +39,7 @@ type solver = S.state (** the sat problem *)
                    the **dependency closure** of the subset of packages.
     @param index package index
  *)
-let init_solver ?(buffer=false) univ =
+let init_solver ?(buffer=false) ?(closure=[]) univ =
   let num_conflicts = ref 0 in
   let num_disjunctions = ref 0 in
   let num_dependencies = ref 0 in
@@ -62,7 +62,7 @@ let init_solver ?(buffer=false) univ =
     List.iter (fun vpkgs ->
       incr num_dependencies;
       add_depend constraints vpkgs pkg_id
-      (CudfAdd.resolve_deps_int univ vpkgs)
+      (CudfAdd.resolve_vpkgs_int univ vpkgs)
     ) pkg.Cudf.depends
   in 
 
@@ -85,24 +85,30 @@ let init_solver ?(buffer=false) univ =
     List.iter (fun vpkg ->
       List.iter (fun id ->
         add_conflict constraints vpkg (pkg_id, id)
-      ) (CudfAdd.resolve_package_dep univ vpkg)
+      ) (CudfAdd.resolve_vpkg_int univ vpkg)
     ) pkg.Cudf.conflicts
-    (*
-    List.iter (fun id -> 
-      add_conflict constraints (pkg_id, id)
-    ) (CudfAdd.resolve_deps_int univ pkg.Cudf.conflicts)
-*)
   in
 
   let size = Cudf.universe_size univ in
   Util.Progress.set_total progressbar_init size ;
   let constraints = S.initialize_problem ~buffer size in
 
-  Cudf.iteri_packages (fun i p ->
-    Util.Progress.progress progressbar_init;
-    exec_depends constraints i p;
-    exec_conflicts constraints i p;
-  ) univ;
+  if closure = [] then begin 
+    Cudf.iteri_packages (fun i p ->
+      Util.Progress.progress progressbar_init;
+      exec_depends constraints i p;
+      exec_conflicts constraints i p;
+    ) univ;
+  end
+  else
+    List.iter (fun p ->
+      let i = CudfAdd.vartoint univ p in
+      Util.Progress.progress progressbar_init;
+      exec_depends constraints i p;
+      exec_conflicts constraints i p;
+    ) closure;
+    
+
   Hashtbl.clear conflicts;
 
   debug "n. disjunctions %d" !num_disjunctions;

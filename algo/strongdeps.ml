@@ -22,7 +22,7 @@ let warning fmt = Util.make_warning "StrongDeps" fmt
 
 (** [strongdeps u l] build the strong dependency graph of all packages in 
     [l] wrt the universe [u] *)
-let strongdeps universe pkglist =
+let strongdeps ?(transitive=true) universe pkglist =
   let idlist = List.map (CudfAdd.vartoint universe) pkglist in
   let g = Strongdeps_int.strongdeps universe idlist in
   Defaultgraphs.intcudf universe g

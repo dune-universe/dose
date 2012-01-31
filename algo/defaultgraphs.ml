@@ -191,6 +191,7 @@ module PackageGraph = struct
   module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
   module UG = Imperative.Graph.Concrete(PkgV)
   module O = GraphOper(G)
+  module S = Set.Make(PkgV)
 
   module DisplayF (G : Sig.I) =
     struct
@@ -270,7 +271,6 @@ module PackageGraph = struct
     ) graph []
 
   module D = Graph.Graphviz.Dot(Display)
-  module S = Set.Make(PkgV)
 end
 
 (******************************************************)
@@ -343,11 +343,11 @@ module IntPkgGraph = struct
   end
 
   (** add to the graph all conjunctive dependencies of package id *)
-  let conjdepgraph_int ?(transitive=false) graph maps id =
+  let conjdepgraph_int ?(transitive=false) graph univ id =
     G.add_vertex graph id;
-    let p = CudfAdd.inttovar maps id in
+    let p = CudfAdd.inttovar univ id in
     List.iter (fun l ->
-      match List.flatten (List.map (fun p -> CudfAdd.resolve_package_dep maps p) l) with
+      match List.flatten (List.map (CudfAdd.resolve_vpkg_int univ) l) with
       |[q] when q <> id -> add_edge transitive graph id q
       |_ -> ()
     ) p.Cudf.depends
@@ -381,7 +381,7 @@ module IntPkgGraph = struct
       G.add_vertex graph id;
       let p = CudfAdd.inttovar universe id in
       List.iter (fun l ->
-        let dl = List.flatten (List.map (CudfAdd.resolve_package_dep universe) l) in
+        let dl = List.flatten (List.map (CudfAdd.resolve_vpkg_int universe) l) in
         List.iter (fun p -> if p <> id then G.add_edge graph id p) dl
       ) p.Cudf.depends;
     done;

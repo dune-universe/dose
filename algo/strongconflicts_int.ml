@@ -55,7 +55,7 @@ let explicit univ =
       let pair = swap (i,j) in
       if i <> j && not (Hashtbl.mem conflict_pairs pair) then
         Hashtbl.add conflict_pairs pair ();
-    ) (CudfAdd.resolve_deps_int univ p.Cudf.conflicts)
+    ) (CudfAdd.resolve_vpkgs_int univ p.Cudf.conflicts)
   ) univ;
   conflict_pairs
 ;;
