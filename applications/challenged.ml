@@ -18,7 +18,7 @@ open Common
 open Algo
 module Boilerplate = BoilerplateNoRpm
 
-let predbar = Util.Progress.create __FILE__ ;;
+let predbar = Util.Progress.create "challenged" ;;
 let info fmt = Util.make_info __FILE__ fmt
 let warning fmt = Util.make_warning __FILE__ fmt
 let debug fmt = Util.make_debug __FILE__ fmt
@@ -184,6 +184,7 @@ let challenged
   repository =
   
   (* distribution specific *)
+  let print_cluster = cluster in
   let worktable = ref [] in
   let clusters = Debian.Debutil.cluster repository in
   let version_acc = ref [] in
@@ -214,7 +215,7 @@ let challenged
   let tables = Debian.Debcudf.init_tables ~step:2 ~versionlist repository in
   let getv v = Debian.Debcudf.get_cudf_version tables ("",v) in
   let pp = pp tables in
-  let pkglist = List.map (Debian.Debcudf.tocudf tables) repository in
+  let pkglist = List.map (Debian.Debcudf.tocudf ~extras:[] tables) repository in
   let universe = Cudf.load_universe pkglist in
   let brokenlist = Depsolver.find_broken universe in
   let pkgset = pkgset universe in
@@ -256,8 +257,7 @@ END
        *)
       let discr = Debian.Evolution.discriminant ~bottom:true (evalsel getv) vl constr in
       debug "Discriminants: %d" (List.length discr);
-      (*
-      if cluster then begin
+      if print_cluster then begin
         let pp fmt pkg = 
           let pp_io_property fmt (n, s) = Format.fprintf fmt "%s: %s@," n s in
           Cudf_printer.pp_package_gen pp_io_property fmt pkg
@@ -269,9 +269,8 @@ END
             Cudf.lookup_package universe (pn,pv) 
           ) cluster
         in
-        Format.fprintf fmt "@[<v 1>clusters:@,%a@]@," pp_list cudf_cluster
+        Format.printf "@[<v 1>clusters:@,%a@]@," pp_list cudf_cluster
       end;
-      *)
       List.iter (function 
         (* remove this one to show results that are equivalent to do nothing *)
         | (target,equiv) when not(downgrades) && 

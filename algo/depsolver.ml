@@ -29,7 +29,7 @@ let load ?(check=true) universe =
     else (true,None)
   in
   match is_consistent check universe with
-  |true,None -> Depsolver_int.init_solver universe 
+  |true,None -> Depsolver_int.init_solver_univ universe 
   |false,Some(r) -> 
       fatal "%s"
       (Cudf_checker.explain_reason (r :> Cudf_checker.bad_solution_reason)) ;
@@ -141,8 +141,8 @@ let reverse_dependency_closure ?maxdepth univ pkglist =
 type enc = Cnf | Dimacs
 
 let output_clauses ?(enc=Cnf) univ =
-  let solver = Depsolver_int.init_solver ~buffer:true univ in
-  let clauses = Depsolver_int.S.dump solver in
+  let solver = Depsolver_int.init_solver_univ ~buffer:true univ in
+  let clauses = Depsolver_int.S.dump solver.Depsolver_int.constraints in
   let buff = Buffer.create (Cudf.universe_size univ) in
   let to_cnf dump =
     let str (v, p) = 

@@ -173,15 +173,15 @@ let outdated
         let acc0 = 
           (* by assumption all packages in a cluster are syncronized *)
           List.fold_left (fun l pkg ->
-              let p = Debian.Debcudf.tocudf tables pkg in
-              (sync (sn,version,1) p)::l
+            let p = Debian.Debcudf.tocudf ~extras:[] tables pkg in
+            (sync (sn,version,1) p)::l
           ) acc0 cluster
         in
         (* the target version is always greater then all versions in equivs *)
         List.fold_left (fun acc1 (target,equiv) ->
           incr sync_index;
           List.fold_left (fun acc2 pkg ->
-            let p = Debian.Debcudf.tocudf tables pkg in
+            let p = Debian.Debcudf.tocudf ~extras:[] tables pkg in
             let pv = p.Cudf.version in
 
             let target = Debian.Evolution.align pkg.Debian.Packages.version target in

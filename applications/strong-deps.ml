@@ -112,8 +112,10 @@ let main () =
       Some (mk_filename prefix ".dot" "graph") 
     else None 
   in
-  Defaultgraphs.StrongDepGraph.out 
-    ~dump ~dot ~detrans:(OptParse.Opt.get Options.detrans) sdgraph
+  if (OptParse.Opt.get Options.dump) || (OptParse.Opt.get Options.dot) then
+    Defaultgraphs.StrongDepGraph.out 
+      ~dump ~dot ~detrans:(OptParse.Opt.get Options.detrans) sdgraph
+
 ;;
 
 main ();;

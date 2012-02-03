@@ -162,7 +162,7 @@ let loadl tables l =
       |None ->
           if (Util.StringHashtbl.mem tables.virtual_table name) &&
           (Util.StringHashtbl.mem tables.versioned_table name) then
-            [(encname, None); (encname^"--virtual", None)]
+            [(encname, None);(encname^"--virtual", None)]
           else
             [(encname, None)]
       |Some(op,v) ->
@@ -212,7 +212,7 @@ let preamble =
   in
   CudfAdd.add_properties Cudf.default_preamble l
 
-let add_extra extras tables pkg =
+let add_extra_default extras tables pkg =
   let number = ("number",`String pkg.version) in
   let architecture = ("architecture",`String pkg.architecture) in
   let priority = ("priority",`String pkg.priority) in
@@ -260,7 +260,12 @@ let add_inst inst pkg =
       | _ -> false
     with Not_found -> false
 
-let tocudf tables ?(extras=[]) ?(inst=false) pkg =
+let add_extra extras tables pkg =
+  match extras with
+  |None -> []
+  |Some el -> add_extra_default el tables pkg
+
+let tocudf tables ?extras ?(inst=false) pkg =
   { Cudf.default_package with
     Cudf.package = CudfAdd.encode pkg.name ;
     Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;

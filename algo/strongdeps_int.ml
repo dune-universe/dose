@@ -23,9 +23,9 @@ let conjbar = Util.Progress.create "Strongdeps_int.conj"
 let strongtimer = Util.Timer.create "Strongdeps_int.strong"
 let conjtimer = Util.Timer.create "Strongdeps_int.conjdep"
 
-let debug fmt = Util.make_debug "Strongdeps_int" fmt
-let info fmt = Util.make_info "Strongdeps_int" fmt
-let warning fmt = Util.make_warning "Strongdeps_int" fmt
+let debug fmt = Util.make_debug __FILE__ fmt
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
 
 module G = IntPkgGraph.G
 module SO = IntPkgGraph.SO
@@ -34,10 +34,10 @@ module SO = IntPkgGraph.SO
     We check if it is possible to install p without q.  *)
 (* ATT: this function makes a copy of the solver to add a clause to it *)
 let strong_depends solver p q =
-  Depsolver_int.S.reset solver;
+  Depsolver_int.S.reset solver.Depsolver_int.constraints;
   let solver = Depsolver_int.copy_solver solver in
-  let lit = Depsolver_int.S.lit_of_var q false in
-  Depsolver_int.S.add_rule solver [|lit|] [];
+  let lit = Depsolver_int.S.lit_of_var (solver.Depsolver_int.map#vartoint q) false in
+  Depsolver_int.S.add_rule solver.Depsolver_int.constraints [|lit|] [];
   match Depsolver_int.solve solver (Diagnostic_int.Sng p) with
   |Diagnostic_int.Failure _ -> true
   |Diagnostic_int.Success _ -> false
@@ -53,7 +53,8 @@ let check_strong transitive graph solver p l =
 
 (* true if at least one dependency is disjunctive *)
 let somedisj pool id = 
-  let depends = fst(pool.(id)) in
+  let cudfpool = Depsolver_int.strip_cudf_pool pool in
+  let depends = fst(cudfpool.(id)) in
   if List.length depends > 0 then
     try
       List.iter (function (_,[_]) -> () | _ -> raise Not_found) depends;
@@ -65,28 +66,24 @@ let somedisj pool id =
 (* each package has a node in the graph, even if it does not have  
  * any strong dependencies *)
 let strongdeps_int ?(transitive=true) graph univ l =
-  let size = List.length l in
-  if size > 0 then begin
-    let pool = Depsolver_int.init_pool univ in
-    Util.Progress.set_total mainbar size;
-    Util.Timer.start strongtimer;
-    List.iter (fun id ->
-      Util.Progress.progress mainbar;
-      G.add_vertex graph id;
-      if somedisj pool id then begin 
-        let closure = Depsolver_int.dependency_closure_cache pool [id] in
-        let solver = Depsolver_int.init_solver_cache ~closure pool in
-        match Depsolver_int.solve solver (Diagnostic_int.Sng id) with
-        |Diagnostic_int.Failure(_) -> ()
-        |Diagnostic_int.Success(f) ->
-            check_strong transitive graph solver id (f ())
-      end
-    ) l ;
-    Util.Progress.reset mainbar;
-    ignore (Util.Timer.stop strongtimer ());
-    debug "strong dep graph: %d nodes, %d edges\n" 
-    (G.nb_vertex graph) (G.nb_edges graph);
-  end;
+  let cudfpool = Depsolver_int.init_pool_univ univ in
+  Util.Progress.set_total mainbar (List.length l);
+  Util.Timer.start strongtimer;
+  List.iter (fun id ->
+    Util.Progress.progress mainbar;
+    G.add_vertex graph id;
+    if somedisj cudfpool id then begin 
+      let closure = Depsolver_int.dependency_closure_cache cudfpool [id] in
+      let solver = Depsolver_int.init_solver_closure cudfpool closure in
+      match Depsolver_int.solve solver (Diagnostic_int.Sng id) with
+      |Diagnostic_int.Failure(_) -> ()
+      |Diagnostic_int.Success(f) ->
+          check_strong transitive graph solver id (f ())
+    end
+  ) l ;
+  Util.Progress.reset mainbar;
+  ignore (Util.Timer.stop strongtimer ());
+  debug "strong dep graph: %d nodes, %d edges\n" (G.nb_vertex graph) (G.nb_edges graph);
   graph
 ;;
 
@@ -108,7 +105,7 @@ let strongdeps ?(transitive=true) univ idlist =
   in
   Util.Progress.reset conjbar;
   Util.Timer.stop conjtimer ();
-  info "conj dep graph: nodes %d , edges %d" (G.nb_vertex graph) (G.nb_edges graph);
+  debug "conj dep graph: nodes %d , edges %d" (G.nb_vertex graph) (G.nb_edges graph);
   let g = strongdeps_int ~transitive graph univ l in
   if not transitive then SO.transitive_reduction g;
   g
@@ -130,7 +127,7 @@ let strongdeps_univ ?(transitive=true) univ =
   in
   Util.Progress.reset conjbar;
   Util.Timer.stop conjtimer ();
-  info "conj dep graph: nodes %d , edges %d" (G.nb_vertex graph) (G.nb_edges graph);
+  debug "conj dep graph: nodes %d , edges %d" (G.nb_vertex graph) (G.nb_edges graph);
   let g = strongdeps_int ~transitive graph univ l in
   if not transitive then SO.transitive_reduction g;
   g
