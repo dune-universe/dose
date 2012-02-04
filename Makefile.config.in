@@ -7,13 +7,21 @@ LDFLAGS=@LDFLAGS@
 
 OCAMLFIND=@OCAMLFIND@
 
+DESTDIR =
+ifeq ($(DESTDIR),)
 exec_prefix=@prefix@
-LIBDIR=@libdir@/ocaml
 BINDIR=@bindir@
 LIBDIR=$(shell ocamlfind printconf destdir)
 
 INSTALL=$(OCAMLFIND) install -destdir $(LIBDIR)
 UNINSTALL=$(OCAMLFIND) remove -destdir $(LIBDIR)
+else
+LIBDIR = $(DESTDIR)/$(shell ocamlc -where)
+BINDIR = $(DESTDIR)/usr/bin
+
+INSTALL = $(OCAMLFIND) install -destdir $(LIBDIR)
+UNINSTALL = $(OCAMLFIND) remove -destdir $(LIBDIR)
+endif
 
 ifeq ("@OCAML_OS_TYPE@","freebsd")
   LDFLAGS += -fstack-protector
