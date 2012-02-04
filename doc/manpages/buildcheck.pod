@@ -9,6 +9,7 @@ dose3-buildcheck - check installability of build-dependencies
 =item B<dose3-buildcheck> [options] I<binary-repositories> I<source-repository> 
 
 =back
+=cut
 
 =head1 DESCRIPTION
 
@@ -27,6 +28,8 @@ according to their B<Depends>, B<Conflicts>, and B<Provides> fields with their
 meaning as of Debian policy version 3.9.0. B<Pre-depends> are treated like
 B<Depends>, and B<Breaks> are treated like B<Conflicts>. 
 
+=cut
+
 =head1 Input Format
 
 The B<binary-repositories> argument is a list of filenames containing stanzas
@@ -38,45 +41,65 @@ control stanzas, separated by one blank line. For instance, the Sources files
 as found on a Debian mirror server, or in the directory I</var/lib/apt/lists/>
 of a Debian system, are suitable. 
 
+=cut
+
 =head1 OPTIONS
+
+=over 8
 
 =item B<-a --architecture > 
 
 Specify the architecture for which installability of build
 environments should be checked. This argument is (in the current version
 of this program) mandatory. 
+
 =item B<-f --failures> 
 
 Only show broken packages that fail
 the installability check. 
+
 =item B<-v --successes> 
 
 Only show packages that do not fail
 the installability check. 
+
 =item B<-e --explain> 
 
 Explain the results in more detail. 
+
 =item B<-v>
 
 Enable info / warnings / debug messages. This option may be repeated up
 to three times in order to increase verbosity. 
+
 =item B<-h, --help> 
 
 Display this list of options. 
 
+=back
+=cut
+
 =head1 EXAMPLE
+
 Compute the list of source packages in Sources for which
 it is not possible to install a build environment on i386, assuming that
 the binary packages described in file Packages are available: 
+
  dose3-builddebcheck --architecture i386 --failures --explain Packages Sources 
 
+=cut
+
 =head1 AUTHOR
+
 The current version has been rewritten on the basis of the dose3 library by
 Pietro Abate; it replaces an earlier version that was  simply a wrapper for
 edos-distcheck.
 
+=cut
+
 =head1 SEE ALSO
-L<B<deb-control>(5)>, L<B<dose3-distcheck>(1)> 
+L<B<deb-control>(5)>, 
+L<B<dose3-distcheck>(1)> 
 
 <http://www.edos-project.org> is the home page of the EDOS project. 
 <http://www.mancoosi.org> is the home page of the Mancoosi project. 

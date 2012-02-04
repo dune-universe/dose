@@ -6,6 +6,8 @@ outdated - detect broken packages due to obsolete dependencies
 
 B<outdated> [option] ... I<Packages file(s)> 
 
+=cut
+
 =head1 DESCRIPTION
 
 B<outdated > identifies those broken packages that need special attention
@@ -22,44 +24,48 @@ The output of outdated is in the yaml format.
 
 =head1 OPTIONS
 
-=item B<-b> 
+=over 8
 
+=item B<-b> 
 Print the list of broken packages 
 
 =item B<-s> 
-
 Print summary of broken packages 
 
 =item B<--dump> 
-
 Dump the cudf package list and exit 
 
 =item B<--checkonly> 
-
 Select a subset of packages to check. By default all packages are checked. 
 
 =item B<-v> 
-
 Enable info / warnings / debug messages. This option may be repeated up to
 three times in order to increase verbosity.
 
 =item B<--progress> 
-
 Enable progress bars. 
 
 =item B<-h, --help> 
-
 Display this list of options. 
+
+=back
+=cut
 
 =head1 EXAMPLE
 
  outdated -v --progress -b Packages.bz2 > result.yaml 
 
+=cut
+
 =head1 NOTE
+
+=cut
 
 =head1 AUTHORS
 
 Pietro Abate and Ralf Treinen 
+
+=cut
 
 =head1 SEE ALSO
 

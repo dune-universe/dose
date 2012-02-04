@@ -9,6 +9,7 @@ challenged - detect broken packages due to obsolete dependencies
 =item B<challenged> [options] I<Packages file(s)> 
 
 =back
+=cut
 
 =head1 DESCRIPTION
 
@@ -18,15 +19,23 @@ other packages in the repository. This tool would be particularly useful during
 the upgrade of a specific component to evaluate its impact on the software
 archive.
 
+=cut
+
 =head1 Input Specification
 
 The input of outdated is a list of Debian Packages files 
+
+=cut
 
 =head1 Output Specification
 
 The output of outdated is in the yaml format.
 
+=cut
+
 =head1 Options
+
+=over 8
 
 =item B<-b --broken> 
 
@@ -55,21 +64,26 @@ Enable progress bars.
 
 =item B<-h, --help>
 
-
 Display this list of options. 
+
+=back
+=cut
 
 =head1 EXAMPLE
 
-challenged -v --progress Packages.bz2 > result.yaml 
+  challenged -v --progress Packages.bz2 > result.yaml 
+
+=cut
 
 =head1 NOTE
+
+=cut
 
 =head1 AUTHOR
 
 Pietro Abate and Roberto Di Cosmo 
 
 =head1 SEE ALSO
-
 L<B<distcheck>(5)B<>>
 L<B<outdated>(5)B<>> 
 

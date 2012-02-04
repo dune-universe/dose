@@ -9,6 +9,7 @@ distcheck - check installability of packages according to metadata
 =item B<distcheck> [option] ... I<uri> B<debcheck> [option] ... I<file> B<rpmcheck> [option] ... I<file> B<eclipsecheck> [option] ... I<file> 
 
 =back
+=cut
 
 =head1 DESCRIPTION
 
@@ -22,21 +23,26 @@ multiple disjunctive dependencies and deep package conflicts. This problem is
 computationally infeasible in theory (that is, NP-complete), but can be solved
 very efficiently for package repositories that actually occur in practice. 
 
+=cut
+
 =head1 Input Specification
 
-Currently
-supported repository types are debian, rpm, and eclipse. The B<distcheck> tool
-expects its input specifiation in the form I<type://pathname> where I<type> is
-one of B<deb>, B<synthesis>, B<hdlist> or B<eclipse>, and I<pathname> is the pathname
-of a file containing the input. The package metadata found in that file
-must correspond to the I<type> given in the URI. 
- When invoked as I<typeB<check>>,
-the type of the repository is assumed to be I<type>, and the input is simply
-given in form of a pathname of a file containing the repository. B<debcheck>
-accepts in addition  B<--> as input specification, with the effect that input
-is taken from standard input.	    =head1 Input Formats
+Currently supported repository types are debian, rpm, and eclipse. The
+B<distcheck> tool expects its input specifiation in the form I<type://pathname>
+where I<type> is one of B<deb>, B<synthesis>, B<hdlist> or B<eclipse>, and
+I<pathname> is the pathname of a file containing the input. The package
+metadata found in that file must correspond to the I<type> given in the URI.
+When invoked as I<typeB<check>>, the type of the repository is assumed to be
+I<type>, and the input is simply given in form of a pathname of a file
+containing the repository. B<debcheck> accepts in addition  B<--> as input
+specification, with the effect that input is taken from standard input.	    
+
+=head1 Input Formats
+
+=cut
 
 =head2 Debian
+
 The input file has to contain stanzas in the format
 of L<deb-control(5)>, separated by one blank line. For instance, the Packages
 files as found on a Debian mirror server, or in the directory I</var/lib/apt/lists/>
@@ -47,30 +53,43 @@ treated like B<Depends>, and B<Breaks> are treated like B<Conflicts>. In the cas
 of Debian, it is not possible to install at the same time two packages
 with the same name but different versions. 
 
+=cut
+
 =head2 Rpm
-The input file can be either
-a I<synthesis> file or a I<hdlist> file.  By default rpmcheck expects a synthesis
-file as input. To specify a hdlist file distcheck must be invoked with a
-file argument of the form hdlist:// 
+
+The input file can be either a I<synthesis> file or a I<hdlist> file.  By
+default rpmcheck expects a synthesis file as input. To specify a hdlist file
+distcheck must be invoked with a file argument of the form hdlist:// 
+
+=cut
 
 =head2 Eclipse
+
 The input is an 822 file containing the encoding of OSGi plugins  content.xml
 files. 
 
+=cut
+
 =head1 OPTIONS
+
+=over 8
 
 =item B<-f --failures> 
 
 Only show broken packages that fail the installability check. 
+
 =item B<-v --successes> 
 
 Only show packages that do not fail the installability check. 
+
 =item B<-e --explain> 
 
 Explain the results in more detail. 
+
 =item B<--checkonly> 
 
 Select a subset of packages to check.  By default all packages are checked. 
+
 =item B<-v> 
 
 Enable info / warnings / debug messages.
@@ -79,11 +98,16 @@ This option may be repeated up to three times in order to increase verbosity.
 =item B<--progress> 
 
 Enable progress bars. 
+
 =item B<-h, --help> 
 
 Display this list of options. 
 
+=back
+=cut
+
 =head1 Exit Code
+
 The exit code is 0 when all packages that were asked to be checked
 (either explicitly with the --checkonly option, or because they exist in
 the repository) are available and found to be installable, it is 1 when
@@ -92,7 +116,10 @@ is 2 when at least one of the packages is not available but all available
 packages are found to be installable. Hence, the exit code 2 can occur only
 when the --checkonly option is used. 
 
+=cut
+
 =head1 EXAMPLE
+
 Check which packages in a particular distribution are not installable and why: 
 
    debcheck --failures --explain < Packages 
@@ -100,14 +127,22 @@ Check which packages in a particular distribution are not installable and why:
 where Packages is the file pertaining to that distribution, as for instance
 found in the directory B</var/lib/apt/lists>. 
 
+=cut
+
 =head1 NOTE
+
 Distcheck is a complete reimplementation of edos-debcheck, written for the EDOS
 project. 
 
+=cut
+
 =head1 AUTHOR
+
 The first version of debcheck was written by Jerome Vouillon for the EDOS
 project. The current version has been rewritten on the basis of the dose3
 library by Pietro Abate.
+
+=cut
 
 =head1 SEE ALSO
 L<B<deb-control>(5)> 
