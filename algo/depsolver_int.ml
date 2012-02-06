@@ -61,6 +61,9 @@ class identity = object
   method inttovar (v : int) = v
 end
 
+(* return a conversion function. If the closure is empty, 
+ * then we return the identity function, otherwise we 
+ * return a function to renumber cudf uids to solver ids *)
 let init_map closure univ =
   if List.length closure > 0 then begin
     let map = new intprojection (List.length closure) in
@@ -80,6 +83,7 @@ type pool_t =
    (Cudf_types.vpkg * S.var list) list) array
 and pool = SolverPool of pool_t | CudfPool of pool_t
 
+(* two functions to make sure we alway manipulate the correct data type *)
 let strip_solver_pool = function SolverPool p -> p | _ -> assert false
 let strip_cudf_pool = function CudfPool p -> p | _ -> assert false
 
@@ -137,7 +141,7 @@ let init_solver_pool map pool closure =
   in SolverPool solverpool
 ;;
 
-(* operates only on solver ids *)
+(* initalise the sat solver. operate only on solver ids *)
 let init_solver_cache ?(buffer=false) pool =
   let pool = strip_solver_pool pool in
   let num_conflicts = ref 0 in
@@ -211,9 +215,7 @@ let init_solver_cache ?(buffer=false) pool =
 (** low level constraint solver initialization
  
     @param buffer debug buffer to print out debug messages
-    @param closure init the solver with a subset of packages. This must be
-                   the **dependency closure** of the subset of packages.
-    @param index package index
+    @param univ cudf package universe
 *)
 let init_solver_univ ?(buffer=false) univ =
   let map = new identity in
@@ -221,6 +223,12 @@ let init_solver_univ ?(buffer=false) univ =
   { constraints = init_solver_cache ~buffer pool ; map = map }
 ;;
 
+(** low level constraint solver initialization
+ 
+    @param buffer debug buffer to print out debug messages
+    @param pool dependencies and conflicts array idexed by package id
+    @param closure subset of packages used to initialize the solver
+*)
 (* pool = cudf pool - closure = dependency clousure . cudf uid list *)
 let init_solver_closure ?(buffer=false) pool closure =
   let map = new intprojection (List.length closure) in
