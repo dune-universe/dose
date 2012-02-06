@@ -28,9 +28,9 @@ struct
   open OptParse
 
   exception Format
-  let out_option ?default ?(metavar = "<dot|cnf|dimacs|pp|table>") () =
+  let out_option ?default ?(metavar = "<dot|cnf|dimacs|cudf|table>") () =
     let corce = function
-      |("cnf"|"dimacs"|"pp"|"dot"|"table") as s -> s
+      |("cnf"|"dimacs"|"cudf"|"dot"|"table") as s -> s
       | _ -> raise Format
     in
     let error _ s = Printf.sprintf "%s format not supported" s in
@@ -113,6 +113,12 @@ let nr_conflicts univ =
   ) 0 univ
 ;;
 
+let output_cudf oc pr univ =
+  Cudf_printer.pp_preamble oc pr;
+  Printf.fprintf oc "\n";
+  Cudf_printer.pp_universe oc univ
+;;
+
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug(OptParse.Opt.get Options.verbose);
@@ -120,7 +126,7 @@ let main () =
   if OptParse.Opt.get Options.output_ty = "sqlite" then
     output_to_sqlite posargs
   else
-  let (universe,from_cudf,to_cudf) = Boilerplate.load_universe posargs in
+  let (preamble,universe,from_cudf,to_cudf) = Boilerplate.load_universe posargs in
   let get_cudfpkg (p,v) = Cudf.lookup_package universe (to_cudf (p,v)) in
 
   let pkg_src () = List.map get_cudfpkg (parse_pkg (OptParse.Opt.get Options.src)) in
@@ -193,7 +199,7 @@ ELSE
 END
       |"cnf" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~enc:Depsolver.Cnf u)
       |"dimacs" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~enc:Depsolver.Dimacs u)
-      |"pp" -> Cudf_printer.pp_universe oc u
+      |"cudf" -> output_cudf oc preamble u
       |"table" ->
 IFDEF HASOCAMLGRAPH THEN
         Printf.fprintf oc "%d\t%d\t%d\n"

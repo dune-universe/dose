@@ -85,7 +85,7 @@ let main () =
   let default_arch = OptParse.Opt.opt Options.architecture in
   let fg = posargs @ (OptParse.Opt.get Options.foreground) in
   let bg = OptParse.Opt.get Options.background in
-  let (pkgll, from_cudf,to_cudf) = Boilerplate.load_list ~default_arch [fg;bg] in
+  let (preamble,pkgll,from_cudf,to_cudf) = Boilerplate.load_list ~default_arch [fg;bg] in
   let (fg_pkglist, bg_pkglist) = match pkgll with [fg;bg] -> (fg,bg) | _ -> assert false in
   let fg_pkglist = 
     if OptParse.Opt.get Options.latest then

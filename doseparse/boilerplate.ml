@@ -148,7 +148,8 @@ let deb_load_list ?(extras=[]) ?(status=[]) dll =
       List.map (Debian.Debcudf.tocudf ~extras tables) l
     ) dll
   in
-  (cll,from_cudf,to_cudf)
+  let preamble = Debian.Debcudf.preamble in
+  (preamble,cll,from_cudf,to_cudf)
       
 let pp_versions_table fmt (from_cudf, pkglist) =
   List.iter (fun pkg ->
@@ -166,12 +167,13 @@ let eclipse_load_list ?(extras=[]) dll =
       List.map (Eclipse.Eclipsecudf.tocudf ~extras tables) l
     ) dll
   in
-  (cll,from_cudf,to_cudf)
+  let preamble = Eclipse.Eclipsecudf.preamble in
+  (preamble,cll,from_cudf,to_cudf)
  
 (** transform a list of debian control stanza into a cudf universe *)
 let deb_load_universe ?(extras=[]) l =
-  let (cll,f,t) = deb_load_list ~extras [l] in
-  (Cudf.load_universe (List.flatten cll), f, t)
+  let (pr,cll,f,t) = deb_load_list ~extras [l] in
+  (pr,Cudf.load_universe (List.flatten cll), f, t)
 
 (* XXX double minded ... this code is kinda similar to the code in rpmcudf 
  * refactor or not refactor ? *)
@@ -187,15 +189,16 @@ IFDEF HASRPM THEN
   (* Rpm.Rpmcudf.clear tables; *)
   let from_cudf (p,i) = (p,string_of_int i) in
   let to_cudf (p,v) = (p,Rpm.Rpmcudf.get_cudf_version tables (p,v)) in
-  (cll,from_cudf,to_cudf)
+  let preamble = Rpm.Rpmcudf.preamble in
+  (preamble,cll,from_cudf,to_cudf)
 ELSE
   failwith "librpm not available. re-configure with --with-rpm"
 END
 
 (** transform a list of rpm control stanza into a cudf universe *)
 let rpm_load_universe l =
-  let (cll,f,t) = rpm_load_list [l] in
-  (Cudf.load_universe (List.flatten cll), f, t)
+  let (pr,cll,f,t) = rpm_load_list [l] in
+  (pr,Cudf.load_universe (List.flatten cll), f, t)
 
 (** parse a cudf file and return a triple (preamble,package list,request
     option). If the package is not valid fails and exit *)
@@ -232,11 +235,11 @@ let cudf_load_list file =
   let _, pkglist, _ = parse_cudf file in
   let from_cudf (p,i) = (p,string_of_int i) in
   let to_cudf (p,v) = (p,int_of_string v) in
-  ([pkglist],from_cudf,to_cudf)
+  (Cudf.default_preamble,[pkglist],from_cudf,to_cudf)
 
 let cudf_load_universe file =
-  let (l,f,t) = cudf_load_list file in
-  (Cudf.load_universe (List.hd l), f, t)
+  let (pr,l,f,t) = cudf_load_list file in
+  (pr,Cudf.load_universe (List.hd l), f, t)
 
 (** return the name of the file *)
 let unpack (_,(_,_,_,_,file),_) = file
@@ -353,8 +356,8 @@ let load_universe ?default_arch ?(extras=[]) uris =
   info "Parsing and normalizing..." ;
   let timer = Util.Timer.create "Parsing and normalizing" in
   Util.Timer.start timer;
-  let (cll,f,t) = parse_input ?default_arch ~extras [uris] in
-  let u = (Cudf.load_universe (List.flatten cll), f, t) in
+  let (pr,cll,f,t) = parse_input ?default_arch ~extras [uris] in
+  let u = (pr,Cudf.load_universe (List.flatten cll), f, t) in
   Util.Timer.stop timer u
 ;;
 
