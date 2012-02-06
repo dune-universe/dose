@@ -19,7 +19,7 @@ let test_dir = "tests/algo"
 let f_legacy = Filename.concat test_dir "legacy.cudf"
 let f_legacy_sol = Filename.concat test_dir "legacy-sol.cudf"
 let f_dependency = Filename.concat test_dir "dependency.cudf"
-let f_conj_dependency = "tests/dependency.cudf"
+let f_conj_dependency = Filename.concat test_dir "dependency.cudf"
 let f_cone = Filename.concat test_dir "cone.cudf"
 let f_engine_conflicts = Filename.concat test_dir "engine-conflicts.cudf"
 let f_strongdeps_simple = Filename.concat test_dir "strongdep-simple.cudf"
@@ -122,10 +122,14 @@ let test_conjunctive_dependency_closure =
 let test_conj_dependency = 
   "conjunctive dependency closure" >:: (fun _ -> 
     let car = Cudf.lookup_package universe ("bicycle",7) in
-    let g = .conjdepgraph universe [car] in
-    let l = Strongdeps.conjdeps g in
-    List.iter (fun pkg -> print_endline (CudfAdd.string_of_package pkg)) l;
-    let set = List.fold_right S.add l S.empty in
+    let uid = Cudf.uid_by_package universe car in
+    let g = Strongdeps.conjdeps universe [car] in
+    let l = Defaultgraphs.IntPkgGraph.conjdeps g uid in
+    List.iter (fun uid ->
+      let pkg = Cudf.package_by_uid universe uid in
+      print_endline (CudfAdd.string_of_package pkg)
+      ) l;
+    let set = (* List.fold_right S.add l *) S.empty in
     assert_equal true (S.equal conj_dependency_set set)
   )
 
@@ -177,10 +181,14 @@ let solution_set =
   List.fold_right S.add pl S.empty
 
 let test_strong ?(transitive=true) file l =
-  let module G = Defaultgraphs.PackageGraph.G in
+  let module G = Defaultgraphs.IntPkgGraph.G in
   let (_,universe,_) = Cudf_parser.load_from_file file in
   let g = Strongdeps.strongdeps_univ ~transitive universe in
-  let sdedges = G.fold_edges (fun p q l -> (p,q)::l) g [] in
+  let sdedges = 
+    G.fold_edges (fun p q l ->
+      (Cudf.package_by_uid universe p,Cudf.package_by_uid universe q)::l
+    ) g [] 
+  in
   let testedges =
     List.map (fun (v,z) ->
       let p = Cudf.lookup_package universe v in
@@ -201,7 +209,11 @@ let test_strongcfl file l =
   let module SG = Strongconflicts.CG in
   let (_,universe,_) = Cudf_parser.load_from_file file in
   let g = Strongconflicts.strongconflicts universe in
-  let scedges = SG.fold_edges (fun p q l -> (p,q)::l) g [] in
+  let scedges = 
+    SG.fold_edges (fun p q l ->
+      (p, q)::l
+    ) g [] 
+  in
   let testedges =
     List.map (fun (v,z) ->
       let p = Cudf.lookup_package universe v in

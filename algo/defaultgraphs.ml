@@ -416,7 +416,6 @@ module IntPkgGraph = struct
     done;
     graph
 
-
   let out ?(dump=None) ?(dot=None) ?(detrans=false) pkggraph =
     info "Dumping Graph : nodes %d , edges %d"
     (G.nb_vertex pkggraph) (G.nb_edges pkggraph) ;
