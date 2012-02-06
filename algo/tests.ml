@@ -19,7 +19,7 @@ let test_dir = "tests/algo"
 let f_legacy = Filename.concat test_dir "legacy.cudf"
 let f_legacy_sol = Filename.concat test_dir "legacy-sol.cudf"
 let f_dependency = Filename.concat test_dir "dependency.cudf"
-(* let f_conj_dependency = "tests/conj_dependency.cudf" *)
+let f_conj_dependency = "tests/dependency.cudf"
 let f_cone = Filename.concat test_dir "cone.cudf"
 let f_engine_conflicts = Filename.concat test_dir "engine-conflicts.cudf"
 let f_strongdeps_simple = Filename.concat test_dir "strongdep-simple.cudf"
@@ -40,7 +40,7 @@ let toset f =
   List.fold_right S.add pl S.empty
 
 let dependency_set = toset f_dependency
-(* let conj_dependency_set = toset f_conj_dependency *)
+let conj_dependency_set = toset f_conj_dependency
 let cone_set = toset f_cone
 let engine_conflicts_set = toset f_engine_conflicts
 
@@ -106,7 +106,7 @@ let test_dependency_closure =
   )
 
 let test_conjunctive_dependency_closure =
-  "conjunctive dependency closure" >:: (fun _ ->
+  "dependency closure" >:: (fun _ ->
     List.iter (fun pkg ->
       let dcl = Depsolver.dependency_closure ~conjunctive:true universe [pkg] in
 (*      print_endline (CudfAdd.print_package pkg);
@@ -119,21 +119,15 @@ let test_conjunctive_dependency_closure =
     ) (Cudf.get_packages universe)
   )
 
-(* blah ... *)
-(* let test_dependency_closure_graph = 
+let test_conj_dependency = 
   "conjunctive dependency closure" >:: (fun _ -> 
-    let (_,pkglist,_) = Cudf_parser.parse_from_file f_legacy in
-    let mdf = Mdf.load_from_list pkglist in
-    let maps = mdf.Mdf.maps in
-    let idlist = List.map maps.CudfAdd.map#vartoint pkglist in
-    let graph = Strongdeps_int.conjdepgraph mdf.Mdf.index idlist in
     let car = Cudf.lookup_package universe ("bicycle",7) in
-    let l = Strongdeps_int.conjdeps graph (maps.CudfAdd.map#vartoint car) in
-    let l = List.map maps.CudfAdd.map#inttovar l in
-    (* List.iter (fun pkg -> print_endline (CudfAdd.print_package pkg)) l; *)
+    let g = .conjdepgraph universe [car] in
+    let l = Strongdeps.conjdeps g in
+    List.iter (fun pkg -> print_endline (CudfAdd.string_of_package pkg)) l;
     let set = List.fold_right S.add l S.empty in
     assert_equal true (S.equal conj_dependency_set set)
-  ) *)
+  )
 
 let test_reverse_dependencies =
   "direct reverse dependencies" >:: (fun _ ->
@@ -172,7 +166,7 @@ let test_depsolver =
     test_distribcheck ;
     test_selfprovide ;
     test_dependency_closure ;
-    (* test_dependency_closure_graph ; *)
+    test_conj_dependency ;
     test_reverse_dependencies ;
     test_reverse_dependency_closure ;
     test_conjunctive_dependency_closure ;
@@ -308,7 +302,7 @@ let test_strongdep =
     strongdep_conflict ;
     strongdep_cycle ;
     strongdep_conj ;
-		strongdep_detrans
+    strongdep_detrans
   ]
 
 let test_strongcfl = 
@@ -357,7 +351,7 @@ let all =
     test_strongdep ;
     test_strongcfl ;
     test_defaultgraphs ;
-    test_clause_dump ;
+    (* test_clause_dump ; *)
   ]
 
 let main () =

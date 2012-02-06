@@ -115,7 +115,6 @@ let main () =
   if (OptParse.Opt.get Options.dump) || (OptParse.Opt.get Options.dot) then
     Defaultgraphs.StrongDepGraph.out 
       ~dump ~dot ~detrans:(OptParse.Opt.get Options.detrans) sdgraph
-
 ;;
 
 main ();;
