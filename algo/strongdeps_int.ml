@@ -28,7 +28,7 @@ let info fmt = Util.make_info __FILE__ fmt
 let warning fmt = Util.make_warning __FILE__ fmt
 
 module G = IntPkgGraph.G
-module SO = IntPkgGraph.SO
+module O = IntPkgGraph.O
 
 (** check if p strongly depends on q.
     We check if it is possible to install p without q.  *)
@@ -107,7 +107,7 @@ let strongdeps ?(transitive=true) univ idlist =
   Util.Timer.stop conjtimer ();
   debug "conj dep graph: nodes %d , edges %d" (G.nb_vertex graph) (G.nb_edges graph);
   let g = strongdeps_int ~transitive graph univ l in
-  if not transitive then SO.transitive_reduction g;
+  if not transitive then O.transitive_reduction g;
   g
 
 (* XXX this can be refactored in a better way ... *)
@@ -129,7 +129,7 @@ let strongdeps_univ ?(transitive=true) univ =
   Util.Timer.stop conjtimer ();
   debug "conj dep graph: nodes %d , edges %d" (G.nb_vertex graph) (G.nb_edges graph);
   let g = strongdeps_int ~transitive graph univ l in
-  if not transitive then SO.transitive_reduction g;
+  if not transitive then O.transitive_reduction g;
   g
 
 (** return the impact set (list) of the node [q] in [graph] *)

@@ -314,6 +314,35 @@ module IntPkgGraph = struct
 
   module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
   module S = Set.Make(PkgV)
+  module O = GraphOper(G)
+
+  module Display =
+    struct
+      include G
+      let vertex_name uid = Printf.sprintf "\"%d\"" uid
+
+      let graph_attributes = fun _ -> []
+      let get_subgraph = fun _ -> None
+
+      let default_edge_attributes = fun _ -> []
+      let default_vertex_attributes = fun _ -> []
+
+      let vertex_attributes v = []
+
+      let edge_attributes e = []
+    end
+
+  module D = Graph.Graphviz.Dot(Display)
+
+  module DIn = Dot.Parse (Builder.I(G))(
+    struct
+      let node (id,_) _ =
+        match id with
+        |Graph.Dot_ast.String s -> int_of_string s
+        |_ -> assert false
+      let edge _ = ()
+    end
+  )
 
   let add_edge transitive graph i j =
     let rec adapt k red =
@@ -387,156 +416,32 @@ module IntPkgGraph = struct
     done;
     graph
 
-  module SO = GraphOper(G)
-end
 
-(******************************************************)
+  let out ?(dump=None) ?(dot=None) ?(detrans=false) pkggraph =
+    info "Dumping Graph : nodes %d , edges %d"
+    (G.nb_vertex pkggraph) (G.nb_edges pkggraph) ;
+    
+    if detrans then begin
+      O.transitive_reduction pkggraph;
+      debug "After transitive reduction : nodes %d , edges %d"
+      (G.nb_vertex pkggraph) (G.nb_edges pkggraph)
+    end ;
 
-(** transform an integer graph in a cudf graph *)
-let intcudf universe intgraph =
-  let module PG = PackageGraph.G in
-  let module SG = IntPkgGraph.G in
-  let trasformtimer = Util.Timer.create "Defaultgraphs.intcudf" in
-  Util.Timer.start trasformtimer;
-  let size = 25000 in
-  let cudfgraph = PG.create ~size () in
-  SG.iter_edges (fun x y ->
-    let p = CudfAdd.inttovar universe x in
-    let q = CudfAdd.inttovar universe y in
-    PG.add_edge cudfgraph p q
-  ) intgraph ;
-  SG.iter_vertex (fun v ->
-    let p = CudfAdd.inttovar universe v in
-    PG.add_vertex cudfgraph p
-  ) intgraph ;
-  debug "cudfgraph: nodes %d , edges %d"
-  (PG.nb_vertex cudfgraph) (PG.nb_edges cudfgraph);
-  Util.Timer.stop trasformtimer cudfgraph
+    if dump <> None then begin
+      let f = Option.get dump in
+      debug "Saving marshal graph in %s\n" f ;
+      let oc = open_out f in
+      Marshal.to_channel oc ((detrans,pkggraph) :> (bool * G.t)) [];
+      close_out oc
+    end ;
 
-(** transform a cudf graph into a integer graph *)
-let cudfint universe cudfgraph =
-  let module PG = PackageGraph.G in
-  let module SG = IntPkgGraph.G in
-  let trasformtimer = Util.Timer.create "DefaultGraphs.cudfint" in
-  Util.Timer.start trasformtimer;
-  let intgraph = SG.create () in
-  PG.iter_edges (fun x y ->
-    SG.add_edge intgraph
-    (CudfAdd.vartoint universe x) 
-    (CudfAdd.vartoint universe y)
-  ) cudfgraph;
-  PG.iter_vertex (fun v ->
-    SG.add_vertex intgraph (CudfAdd.vartoint universe v)
-  ) cudfgraph;
-  debug "intcudf: nodes %d , edges %d"
-  (SG.nb_vertex intgraph) (SG.nb_edges intgraph);
-  Util.Timer.stop trasformtimer intgraph
-
-(******************************************************)
-
-(** Imperative bidirectional graph. The Strong dependency graph
-    is represented as a graph with (package name, package version)
-    nodes *)
-module StrongDepGraph = struct
-
-  let debug fmt = Util.make_debug "StrongDepGraph" fmt
-
-  module PkgV = struct
-      type t = (string * string)
-      let compare = compare
-      let hash = Hashtbl.hash
-      let equal = (=)
-  end
-
-  module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
-  module O = GraphOper(G)
-
-  module Display =
-    struct
-      include G
-      let vertex_name (n,v) = Printf.sprintf "\"(%s,%s)\"" n v
-
-      let graph_attributes = fun _ -> []
-      let get_subgraph = fun _ -> None
-
-      let default_edge_attributes = fun _ -> []
-      let default_vertex_attributes = fun _ -> []
-
-      let vertex_attributes v = []
-
-      let edge_attributes e = []
-    end
-  
-  module D = Graph.Graphviz.Dot(Display)
-
-  module DIn = Dot.Parse (Builder.I(G))(
-    struct
-      let node (id,_) _ =
-        match id with
-        |Graph.Dot_ast.String s -> 
-            let rex = Str.regexp "(\\([a-zA-Z0-9_-.]+\\),\\([a-zA-Z0-9.-]+\\))" in
-            if Str.string_match rex s 0 then
-              (Str.matched_group 1 s , Str.matched_group 2 s)
-            else (s,"")
-        |_ -> assert false
-      let edge _ = ()
-    end
-  )
-
-  let pbar_edge = Util.Progress.create "StrongDepGraph.transform.edges"
-  let pbar_vertex = Util.Progress.create "StrongDepGraph.transform.vertex"
-
-  (* PackageGraph.G -> StrongDepGraph.G *)
-  let transform_out pkggraph =
-    let timer = Util.Timer.create "Defaultgraph.StrongDepGraph.transform_out" in
-    Util.Timer.start timer;
-    Util.Progress.set_total pbar_edge (PackageGraph.G.nb_edges pkggraph);
-    let graph = G.create () in
-    PackageGraph.G.iter_edges (fun p q ->
-      Util.Progress.progress pbar_edge ;
-      let vp = CudfAdd.string_of_version p in
-      let vq = CudfAdd.string_of_version q in
-      G.add_edge graph (p.Cudf.package,vp) (q.Cudf.package,vq)
-    ) pkggraph ;
-    Util.Progress.reset pbar_edge;
-    Util.Progress.set_total pbar_vertex (PackageGraph.G.nb_vertex pkggraph);
-    PackageGraph.G.iter_vertex (fun p ->
-      Util.Progress.progress pbar_vertex ;
-      let vp = CudfAdd.string_of_version p in
-      G.add_vertex graph (p.Cudf.package,vp)
-    ) pkggraph;
-    Util.Progress.reset pbar_vertex;
-    Util.Timer.stop timer graph
-
-  (* StrongDepGraph.G -> PackageGraph.G *)
-  let transform_in pkglist graph =
-    let timer = Util.Timer.create "Defaultgraph.StrongDepGraph.transform_in" in
-    let vermap = CudfAdd.realversionmap pkglist in
-    let package vermap (n,v) =
-        try Hashtbl.find vermap (n,v) 
-        with Not_found -> begin
-          Printf.eprintf "Version not found %s %s" n v ;
-          assert false
-        end
-    in
-    Util.Timer.start timer;
-    Util.Progress.set_total pbar_edge (G.nb_edges graph);
-    let pkggraph = PackageGraph.G.create () in
-    G.iter_edges (fun p q ->
-      Util.Progress.progress pbar_edge ;
-      let x = package vermap p in
-      let y = package vermap q in
-      PackageGraph.G.add_edge pkggraph x y
-    ) graph ;
-    Util.Progress.reset pbar_edge;
-    Util.Progress.set_total pbar_vertex (G.nb_vertex graph);
-    G.iter_vertex (fun p ->
-      Util.Progress.progress pbar_vertex ;
-      let v = package vermap p in
-      PackageGraph.G.add_vertex pkggraph v
-    ) graph;
-    Util.Progress.reset pbar_vertex;
-    Util.Timer.stop timer pkggraph
+    if dot <> None then begin
+      let f = Option.get dot in
+      debug "Saving dot graph in %s\n" f ;
+      let oc = open_out f in
+      D.output_graph oc pkggraph;
+      close_out oc
+    end 
 
   let load pkglist filename =
     let timer = Util.Timer.create "Defaultgraph.StrongDepGraph.load" in
@@ -545,45 +450,14 @@ module StrongDepGraph = struct
     let (detrans,graph) = ((Marshal.from_channel ic) :> (bool * G.t)) in
     close_in ic ;
     info "Loading Strong Dependencies graph";
-    let tg = transform_in pkglist graph in
     (* we assume the graph is detransitivitized *)
     let sg =
       if detrans then begin 
         info "Computing transitive closure";
-        PackageGraph.O.O.add_transitive_closure tg 
-      end else tg
+        (* O.add_transitive_closure graph *) 
+        graph
+      end else graph
     in
     Util.Timer.stop timer sg
 
-  (* StrongDepGraph.G -> PackageGraph.G *)
-  let out ?(dump=None) ?(dot=None) ?(detrans=false) pkggraph =
-    info "Dumping Graph : nodes %d , edges %d"
-    (PackageGraph.G.nb_vertex pkggraph) (PackageGraph.G.nb_edges pkggraph) ;
-    
-    let cudfgraph = transform_out pkggraph in
-
-    if detrans then begin
-      O.transitive_reduction cudfgraph;
-      debug "After transitive reduction : nodes %d , edges %d"
-      (G.nb_vertex cudfgraph) (G.nb_edges cudfgraph)
-    end ;
-
-    if dump <> None then begin
-      let f = Option.get dump in
-      debug "Saving marshal graph in %s\n" f ;
-      let oc = open_out f in
-      Marshal.to_channel oc ((detrans,cudfgraph) :> (bool * G.t)) [];
-      close_out oc
-    end ;
-
-    if dot <> None then begin
-      let f = Option.get dot in
-      debug "Saving dot graph in %s\n" f ;
-      let oc = open_out f in
-      D.output_graph oc cudfgraph;
-      close_out oc
-    end 
-  ;;
-
-  module S = Set.Make(PkgV)
 end
