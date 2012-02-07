@@ -1,54 +1,68 @@
 =head1 NAME
 
-outdated - detect broken packages due to obsolete dependencies 
+outdated - detect uninstallable packages due to obsolete dependencies 
 
 =head1 SYNOPSIS
 
-B<outdated> [option] ... I<Packages file(s)> 
+B<outdated> [option] ... I<file> ... 
 
 =cut
 
 =head1 DESCRIPTION
 
-B<outdated > identifies those broken packages that need special attention
-because of outdated meta-data, that is dependencies on a specific version of a
-package that was subsumed in the repository by a most recent version.  
-
+B<outdated> identifies in a debian package repository those packages that
+are not installable with respect to that repository by the their inter-package
+relationships (dependencies, conflicts, ...), and that furthermore cannot
+become installable (in the current version) how matter how the rest of the
+repository evolves. This means that this package has to be updated in the
+repository to ever become installable again. 
+ 
 =head1 Input Specification
 
-The input of outdated is a list of Debian Packages files 
+Input files have to contain stanzas in the format of
+L<deb-control(5)>, separated by one blank line. For instance, the
+Packages files as found on a Debian mirror server, or in the directory
+I</var/lib/apt/lists/> of a Debian system, are suitable as input. The
+repository used in the analysis consists of the union of all packages 
+from the input files.
 
 =head1 Output Specification
 
-The output of outdated is in the yaml format. 
+The output of outdated is in the YAML format. 
 
 =head1 OPTIONS
 
 =over 8
 
-=item B<-f --failure> 
-Print the list of broken packages 
+=item B<-b> 
 
-=item B<-e --explain> 
-Explain the results in more detail.
+Print the list of outdated packages.
 
 =item B<-s> 
-Print summary of broken packages 
+
+Print a summary of broken packages.
 
 =item B<--dump> 
-Dump the cudf package list and exit 
 
-=item B<--checkonly> 
-Select a subset of packages to check. By default all packages are checked. 
+Dump to standard output in CUDF format the packages that are internally  
+generated and exit (mostly useful for debugging purposes). 
 
-=item B<-v> 
+=item B<--checkonly> I<package>[,I<package>] ...
+
+Specifies a list of packages to check. By default all packages are
+checked.
+
+=item B<-v>
+ 
 Enable info / warnings / debug messages. This option may be repeated up to
 three times in order to increase verbosity.
 
 =item B<--progress> 
-Enable progress bars. 
 
-=item B<-h, --help> 
+Display progress bars. 
+
+=item B<-h>, B<--help> 
+
 Display this list of options. 
 
 =back
@@ -56,11 +70,7 @@ Display this list of options.
 
 =head1 EXAMPLE
 
- outdated -v --progress -f -e Packages.bz2 > result.yaml 
-
-=cut
-
-=head1 NOTE
+ outdated -v --progress -b Packages.bz2 > result.yaml 
 
 =cut
 
