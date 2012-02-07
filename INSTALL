@@ -45,7 +45,7 @@ not in the dose3 release tarball. By default dose3 uses the system
 wide version of libcudf. To use the version of libcudf in the source
 tree you can specify --without-libcudf as configure option. If using
 an independently installed version of libcudf you'll need version >=
-0.5.99.
+0.6.2.
 
 
 Example:
