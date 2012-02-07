@@ -364,7 +364,7 @@ let load_universe ?default_arch ?(extras=[]) uris =
 let if_application ?(alternatives=[]) filename main =
   let open Filename in
   let names = filename::alternatives in
-  let normalize f = chop_extension(basename f) in
+  let normalize f = try chop_extension(basename f) with Invalid_argument _ -> f in
   let invoked_as = normalize(Sys.argv.(0)) in
   if List.exists (fun f -> (normalize f) = invoked_as) names then
     main ()
