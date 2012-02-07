@@ -9,13 +9,19 @@
 <applications/*.ml> or <experimental/*/*.ml> or <experimental/*.ml>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_PARMAP@ @CONFIG_OCAMLGRAPH@)
 
 <*/tests.*>: package(oUnit), package(extlib), @PKG_CUDF@, package(pcre), package(zip), package(str),  package(bz2)
+<*/bench.*>: package(oUnit), package(extlib), @PKG_CUDF@, package(pcre), package(zip), package(str),  package(bz2), package(ocamlgraph)
 
 <common/tests.*>: use_common
 <deb/tests.*>: use_common, use_debian
 <rpm/tests.*>: use_common, @USE_RPM@, use_algo, package(ocamlgraph)
 <algo/tests.*>: use_common, use_algo, package(ocamlgraph)
 
-<common/*.ml{i,}>: @PKG_ZIP@, @PKG_BZ2@
+<common/bench.*>: use_common, package(benchmark)
+<deb/bench.*>: use_common, use_debian, package(benchmark)
+<rpm/bench.*>: use_common, @USE_RPM@, use_algo, package(ocamlgraph), package(benchmark)
+<algo/bench.*>: use_common, use_algo, package(ocamlgraph), package(benchmark)
+
+<common/*.ml{i,}>: @PKG_ZIP@, @PKG_BZ2@, @PKG_BENCHMARK@
 <deb/*.ml{i,}>: use_common
 <rpm/*.ml{i,}>: use_common
 <algo/*.ml{i,}>: use_common, @PKG_OCAMLGRAPH@

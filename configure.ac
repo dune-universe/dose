@@ -131,7 +131,7 @@ if test "$HAS_SQLITE" = "yes" ; then
   fi
   TAGS_SQLITE=sqlite
   PKG_SQLITE="pkg_sqlite3, pkg_json-static"
-  MLPACK_SQLITE=Sqlite
+  MLPACK_SQLITE="Sqlite"
   CONFIG_DBBACKEND="-DSQLITE"
   CONFIG_DB="-DHASDB"
 fi
@@ -151,7 +151,7 @@ if test "$HAS_PGSQL" = "yes" ; then
   fi
   TAGS_PGSQL=pgsql
   PKG_PGSQL="pkg_postgresql, pkg_json-static, pkg_threads"
-  MLPACK_PGSQL=Pgsql
+  MLPACK_PGSQL="Pgsql"
   CONFIG_DBBACKEND="$CONFIG_DBBACKEND -DPGSQL"
   CONFIG_DB="-DHASDB"
 fi
@@ -228,7 +228,8 @@ if test "$HAS_BENCHMARK" = "yes" ; then
   if test "$OCAML_PKG_benchmark" = "no"; then
    AC_MSG_ERROR([Please install OCaml findlib module 'benchmark'.])
   fi
-  PKG_BENCHMARK="pkg_benchmark"
+  PKG_BENCHMARK="package(benchmark)"
+  MLPACK_BENCHMARK="ExtBenchmark"
 fi
 
 AC_HEADER_STDC
@@ -343,12 +344,16 @@ if test "$BUILD_EXP" = "yes" ; then
   ])
 fi
 
+AC_SUBST(MLPACK_BENCHMARK)
+AC_SUBST(PKG_BENCHMARK)
+
 AC_CONFIG_FILES([
   Makefile.config
   _tags
   META
   db/db.mlpack
   algo/algo.mlpack
+  common/common.mlpack
   common/versionInfo.ml
 ])
 AC_OUTPUT

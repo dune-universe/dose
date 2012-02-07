@@ -603,6 +603,8 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+PKG_BENCHMARK
+MLPACK_BENCHMARK
 PKG_XML
 PKG_CURL
 CONFIG_OCAMLGRAPH
@@ -4447,7 +4449,7 @@ $as_echo "not found" >&6; }
   fi
   TAGS_SQLITE=sqlite
   PKG_SQLITE="pkg_sqlite3, pkg_json-static"
-  MLPACK_SQLITE=Sqlite
+  MLPACK_SQLITE="Sqlite"
   CONFIG_DBBACKEND="-DSQLITE"
   CONFIG_DB="-DHASDB"
 fi
@@ -4517,7 +4519,7 @@ $as_echo "not found" >&6; }
   fi
   TAGS_PGSQL=pgsql
   PKG_PGSQL="pkg_postgresql, pkg_json-static, pkg_threads"
-  MLPACK_PGSQL=Pgsql
+  MLPACK_PGSQL="Pgsql"
   CONFIG_DBBACKEND="$CONFIG_DBBACKEND -DPGSQL"
   CONFIG_DB="-DHASDB"
 fi
@@ -4752,7 +4754,8 @@ $as_echo "not found" >&6; }
   if test "$OCAML_PKG_benchmark" = "no"; then
    as_fn_error $? "Please install OCaml findlib module 'benchmark'." "$LINENO" 5
   fi
-  PKG_BENCHMARK="pkg_benchmark"
+  PKG_BENCHMARK="package(benchmark)"
+  MLPACK_BENCHMARK="ExtBenchmark"
 fi
 
 ac_ext=c
@@ -6106,7 +6109,10 @@ if test "$BUILD_EXP" = "yes" ; then
 
 fi
 
-ac_config_files="$ac_config_files Makefile.config _tags META db/db.mlpack algo/algo.mlpack common/versionInfo.ml"
+
+
+
+ac_config_files="$ac_config_files Makefile.config _tags META db/db.mlpack algo/algo.mlpack common/common.mlpack common/versionInfo.ml"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6831,6 +6837,7 @@ do
     "META") CONFIG_FILES="$CONFIG_FILES META" ;;
     "db/db.mlpack") CONFIG_FILES="$CONFIG_FILES db/db.mlpack" ;;
     "algo/algo.mlpack") CONFIG_FILES="$CONFIG_FILES algo/algo.mlpack" ;;
+    "common/common.mlpack") CONFIG_FILES="$CONFIG_FILES common/common.mlpack" ;;
     "common/versionInfo.ml") CONFIG_FILES="$CONFIG_FILES common/versionInfo.ml" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
