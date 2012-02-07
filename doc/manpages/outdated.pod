@@ -26,8 +26,11 @@ The output of outdated is in the yaml format.
 
 =over 8
 
-=item B<-b> 
+=item B<-f --failure> 
 Print the list of broken packages 
+
+=item B<-e --explain> 
+Explain the results in more detail.
 
 =item B<-s> 
 Print summary of broken packages 
@@ -53,7 +56,7 @@ Display this list of options.
 
 =head1 EXAMPLE
 
- outdated -v --progress -b Packages.bz2 > result.yaml 
+ outdated -v --progress -f -e Packages.bz2 > result.yaml 
 
 =cut
 

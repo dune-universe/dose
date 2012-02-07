@@ -329,5 +329,7 @@ let main () =
   ) pred
 ;;
 
-Boilerplate.if_application __FILE__ main ;;
+Boilerplate.if_application 
+~alternatives:["dose-challenged";"dose3-challenged";"edos-challenged";"deb-challenged"]
+__FILE__ main ;;
 
