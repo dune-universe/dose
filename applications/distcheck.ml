@@ -25,13 +25,9 @@ module Options = struct
   let failures = StdOpt.store_true ()
   let explain = StdOpt.store_true ()
   let summary = StdOpt.store_true ()
-  let uuid = StdOpt.store_true ()
   let latest = StdOpt.store_true ()
   let checkonly = Boilerplate.vpkglist_option ()
   let architecture = StdOpt.str_option ()
-  let distribution = StdOpt.str_option ()
-  let release = StdOpt.str_option ()
-  let suite = StdOpt.str_option ()
   let outfile = StdOpt.str_option ()
   let background = Boilerplate.incr_str_list ()
   let foreground = Boilerplate.incr_str_list ()
@@ -45,11 +41,7 @@ module Options = struct
   add options ~long_name:"summary" ~help:"Print a detailed summary" summary;
 
   add options ~long_name:"latest" ~help:"Check only the latest version of each package" latest;
-  add options ~short_name:'u' ~long_name:"uid" ~help:"Generate a unique identifier for the output document" uuid;
 
-  add options ~long_name:"distrib" ~help:"Set the distribution" distribution;
-  add options ~long_name:"release" ~help:"Set the release name" release;
-  add options ~long_name:"suite" ~help:"Set the release name" suite;
   add options ~long_name:"arch" ~help:"Set the default architecture" architecture;
 
   add options ~long_name:"fg" 
@@ -143,14 +135,6 @@ let main () =
   in
   let results = Diagnostic.default_result universe_size in
 
-  if OptParse.Opt.get Options.uuid then
-    Format.fprintf fmt "uid: %s@." (Util.uuid ());
-  if OptParse.Opt.is_set Options.distribution then
-    Format.fprintf fmt "distribution: %s@." (OptParse.Opt.get Options.distribution);
-  if OptParse.Opt.is_set Options.release then
-    Format.fprintf fmt "release: %s@." (OptParse.Opt.get Options.release);
-  if OptParse.Opt.is_set Options.suite then
-    Format.fprintf fmt "suite: %s@." (OptParse.Opt.get Options.suite);
   if OptParse.Opt.is_set Options.architecture then
     Format.fprintf fmt "architecture: %s@." (OptParse.Opt.get Options.architecture);
 
