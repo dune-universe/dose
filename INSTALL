@@ -40,12 +40,12 @@ make
 --with-curl
 --with-experimental (not working at the moment?)
 
-libcudf is included in the source tree of dose3 available by svn but
+libcudf is included in the source tree of dose3 available by git but
 not in the dose3 release tarball. By default dose3 uses the system
 wide version of libcudf. To use the version of libcudf in the source
 tree you can specify --without-libcudf as configure option. If using
 an independently installed version of libcudf you'll need version >=
-0.5.99.
+0.6.2.
 
 
 Example:
