@@ -98,9 +98,9 @@ Add packages in I<file> to the background.
 
 =item B<--checkonly> I<package> [,I<package>] ... 
 
-Takes a comma-separated list of package names as argument. Only packages
-with names in this list are kept in the foreground, all other packages are
-pushed into the background.
+Takes a comma-separated list of package names and constraints as argument. Only
+packages with names in this list are kept in the foreground, all other packages
+are pushed into the background. Ex: "libc6 , 2ping (= 1.2.3-1)"
 
 =item B<--arch=>I<name>
 
