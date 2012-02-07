@@ -19,7 +19,7 @@ let test_dir = "tests/algo"
 let f_legacy = Filename.concat test_dir "legacy.cudf"
 let f_legacy_sol = Filename.concat test_dir "legacy-sol.cudf"
 let f_dependency = Filename.concat test_dir "dependency.cudf"
-let f_conj_dependency = Filename.concat test_dir "dependency.cudf"
+let f_conj_dependency = Filename.concat test_dir "conj_dependency.cudf"
 let f_cone = Filename.concat test_dir "cone.cudf"
 let f_engine_conflicts = Filename.concat test_dir "engine-conflicts.cudf"
 let f_strongdeps_simple = Filename.concat test_dir "strongdep-simple.cudf"
@@ -76,6 +76,12 @@ let test_distribcheck =
     assert_equal 20 i
   ) 
 
+let test_solver_var_order =
+  "solver dependency ordering" >:: (fun _ ->
+    assert_equal 0 0 
+  )
+;;
+
 let test_selfprovide =
   "self provide" >:: (fun _ -> 
     let universe =
@@ -121,15 +127,16 @@ let test_conjunctive_dependency_closure =
 
 let test_conj_dependency = 
   "conjunctive dependency closure" >:: (fun _ -> 
-    let car = Cudf.lookup_package universe ("bicycle",7) in
-    let uid = Cudf.uid_by_package universe car in
-    let g = Strongdeps.conjdeps universe [car] in
-    let l = Defaultgraphs.IntPkgGraph.conjdeps g uid in
-    List.iter (fun uid ->
-      let pkg = Cudf.package_by_uid universe uid in
+    let pkg = Cudf.lookup_package universe ("bicycle",7) in
+    let uid = Cudf.uid_by_package universe pkg in
+    let g = Strongdeps.conjdeps universe [pkg] in
+    let l = List.map (Cudf.package_by_uid universe) (Defaultgraphs.IntPkgGraph.conjdeps g uid) in
+    (*
+    List.iter (fun pkg ->
       print_endline (CudfAdd.string_of_package pkg)
       ) l;
-    let set = (* List.fold_right S.add l *) S.empty in
+    *)
+    let set = List.fold_right S.add l S.empty in
     assert_equal true (S.equal conj_dependency_set set)
   )
 
@@ -168,6 +175,7 @@ let test_depsolver =
     test_coinstall ;
     test_trim ;
     test_distribcheck ;
+    test_solver_var_order ;
     test_selfprovide ;
     test_dependency_closure ;
     test_conj_dependency ;
