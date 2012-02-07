@@ -56,7 +56,7 @@ specifies the maximum depth for the transitive closure.
 Specifies
 the output format to use. Possible values are B<dot> for a graph output in
 Dot/GraphViz format, B<cnf> for an output in CNF format, B<dimacs> for an output
-in the DIMACS format for CNF formulae, and B<pp> for a pretty-print output
+in the DIMACS format for CNF formulae, and B<cudf> for a pretty-print output
 in an RFC 822-like format. This option can also be specified as --outtype=I<format>.I<>
 
 =item B<-o >I<filename> 
