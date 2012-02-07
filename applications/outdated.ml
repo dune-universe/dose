@@ -298,5 +298,7 @@ let main () =
   ignore(outdated ~summary ~verbose ~dump ~checklist packagelist)
 ;;
 
-Boilerplate.if_application __FILE__ main ;;
+Boilerplate.if_application
+~alternatives:["dose-outdated";"dose3-outdated";"edos-outdated";"deb-outdated"] 
+__FILE__ main ;;
 
