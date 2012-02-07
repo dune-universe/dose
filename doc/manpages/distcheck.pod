@@ -136,6 +136,7 @@ missing package. If used together with B<--successes> then the explanation
 consists of an installation set.
 
 =item B<--summary>
+
 Gives a more detailed summary of the findings.
 
 =item B<-o>I<file>
@@ -170,18 +171,6 @@ Display this list of options.
 Show program version and exit. 
 
 =back
-=cut
-
-=head1 Exit Code
-
-The exit code is 0 when all packages that were asked to be checked
-(either explicitly with the --checkonly option, or because they exist in
-the repository) are available and found to be installable, it is 1 when
-a least one of these packages is available but not installable, and it
-is 2 when at least one of the packages is not available but all available
-packages are found to be installable. Hence, the exit code 2 can occur only
-when the --checkonly option is used. 
-
 =cut
 
 =head1 EXAMPLE
