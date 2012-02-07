@@ -35,7 +35,7 @@ module Options = struct
   let explain = StdOpt.store_true ()
   let architecture = StdOpt.str_option ()
   let checkonly = Boilerplate.pkglist_option ()
-  let failures = StdOpt.store_true ()
+  let failure = StdOpt.store_true ()
   let explain = StdOpt.store_true ()
   let summary = StdOpt.store_true ()
   let dump = StdOpt.store_true ()
@@ -48,7 +48,7 @@ module Options = struct
   ~help:"Check only these package" checkonly;
 
   add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
-  add options ~short_name:'f' ~long_name:"failures" ~help:"Show failures" failures;
+  add options ~short_name:'f' ~long_name:"failure" ~help:"Show failure" failure;
 
   add options ~short_name:'s' 
   ~help:"Print summary of broken packages" summary;
@@ -108,7 +108,7 @@ let timer = Util.Timer.create "Solver"
 
 let outdated 
   ?(dump=false) 
-  ?(failures=false) 
+  ?(failure=false) 
   ?(explain=false) 
   ?(summary=false) 
   ?(checklist=None) repository =
@@ -290,14 +290,14 @@ let main () =
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
 
   let checklist = OptParse.Opt.opt Options.checkonly in
-  let failures = OptParse.Opt.get Options.failures in
+  let failure = OptParse.Opt.get Options.failure in
   let explain = OptParse.Opt.get Options.explain in
   let summary = OptParse.Opt.get Options.summary in
   let dump = OptParse.Opt.get Options.dump in
 
   let default_arch = OptParse.Opt.opt Options.architecture in
   let packagelist = Debian.Packages.input_raw ~default_arch args in
-  ignore(outdated ~summary ~failures ~explain ~dump ~checklist packagelist)
+  ignore(outdated ~summary ~failure ~explain ~dump ~checklist packagelist)
 ;;
 
 Boilerplate.if_application

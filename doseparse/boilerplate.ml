@@ -363,10 +363,15 @@ let load_universe ?default_arch ?(extras=[]) uris =
 
 let if_application ?(alternatives=[]) filename main =
   let open Filename in
-  let names = filename::alternatives in
-  let normalize f = try chop_extension(basename f) with Invalid_argument _ -> f in
-  let invoked_as = normalize(Sys.argv.(0)) in
-  if List.exists (fun f -> (normalize f) = invoked_as) names then
-    main ()
-;;
-
+  let normalize f = 
+    try chop_extension(basename f) 
+    with Invalid_argument _ -> (basename f) 
+  in
+  let names = List.map normalize (filename::alternatives) in
+  let invoked_as = normalize Sys.argv.(0) in
+  if List.exists ((=) invoked_as) names then main ()
+  else begin
+    Printf.eprintf "you are using %s as a module and not as an executable\n" Sys.argv.(0);
+    Printf.eprintf "%s can be run as an exactable if named : %s\n" Sys.argv.(0) 
+    (ExtString.String.join " , " names)
+  end
