@@ -26,24 +26,29 @@ from the input files.
 
 =head1 Output Specification
 
-The output of strongdeps is a CSV table containing strong dependencies,
-impact set and direct dependencies. If the option B<--checkonly> is 
-spefified, B<strongdeps> prints on standard output the dot representation
-or the strong dependencies. Since B<--checkonly> computes only the strong
-dependencies of a set of packages, the impact set with relation to the 
-entire universe is not computed.
+The output of strongdeps is a CSV table containing strong dependencies, impact
+set and direct dependencies. If the option B<--checkonly> is spefified,
+B<strongdeps> prints on standard output in the YAML format the list of the
+packages that strong depends on each of the packages specified. If
+B<--checkonly> if coupled with B<--dot> then B<strongdeps> prints on standard
+output in dot format the detransitivitazed graph of the strong dependencies of
+each package.
+
+Since B<--checkonly> computes only the strong dependencies of a set of
+packages, the impact set with relation to the entire universe is not computed.
 
 =head1 OPTIONS
 
 =over 8
 
+=item B<--checkonly> I<package>[,I<package>] ...
+
+Specifies a list of packages to check. By default all packages are
+checked. B<--checkonly> and B<--table> are mutually exclusive.
+
 =item B<--dot>
 
-Save the strong dependency graph in dot format
-
-=item B<--dump>
-
-Save the strong dependency graph in the file data.dot
+Print the strong dependency graph in dot format
 
 =item B<--table>
 
@@ -51,16 +56,12 @@ Print the table (package,strong,direct,difference) in the file data.csv
 
 =item B<--detrans>
 
-Perform the transitive reduction of the strong dependency graph
+Perform the transitive reduction of the strong dependency graph. This 
+option is implied by B<--checkonly>
 
 =item B<--transitive-closure>
 
 Perform the transitive closure of the direct dependency graph
-
-=item B<--checkonly> I<package>[,I<package>] ...
-
-Specifies a list of packages to check. By default all packages are
-checked. B<--checkonly> and B<--table> are mutually exclusive.
 
 =item B<--conj-only>
 
@@ -84,17 +85,17 @@ Display this list of options.
 
 =head1 EXAMPLE
 
- strong-deps.native --checkonly "libc6" \ 
+ strongdeps --dot --checkonly "2ping,libc6" \
  deb:///var/lib/apt/lists/ftp.fr.debian.org_debian_dists_sid_main_binary-amd64_Packages
 
- strong-deps.native --table \
+ strongdeps --table \
  deb:///var/lib/apt/lists/ftp.fr.debian.org_debian_dists_sid_main_binary-amd64_Packages
 
 =cut
 
 =head1 AUTHORS
 
-Pietro Abate
+Pietro Abate, Jaap Boender, Roberto Di Cosmo
 
 =cut
 
