@@ -103,7 +103,7 @@ html: $(HTML)
 	cp doc/manpages/*.html dose3.docdir/manpages
 
 doc/manpages/%.1: doc/manpages/%.pod
-	pod2man --section 1 --center="EDOS Tools" --release "$(NAME) $(VERSION)" doc/manpages/$*.pod > $@
+	pod2man --section 1 --center="DOSE Tools" --release "$(NAME) $(VERSION)" doc/manpages/$*.pod > $@
 
 doc/manpages/%.html: doc/manpages/%.pod
 	pod2html doc/manpages/$*.pod > $@

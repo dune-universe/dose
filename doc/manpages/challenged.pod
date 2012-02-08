@@ -23,13 +23,13 @@ archive.
 
 =head1 Input Specification
 
-The input of outdated is a list of Debian Packages files 
+The input of challenged is a list of Debian Packages files 
 
 =cut
 
 =head1 Output Specification
 
-The output of outdated is in the yaml format.
+The output of challenged is in the yaml format.
 
 =cut
 
