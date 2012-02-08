@@ -10,10 +10,10 @@ B<strongdeps> [option] ... I<file> ...
 
 =head1 DESCRIPTION
 
-B<strongdeps> computes the strond dependency and the impact set of a set
-of packages. For each package the relation "p strong depends on q" indentify
-the set of all packages q the must be installed if p is installed. The
-impact set of a package q is the set of all packages p that strong depends on q.
+B<strongdeps> computes the strong dependencies and the impact set of a
+set of packages. We say that p strongly depends on q if whenever p
+is installed then q must also be installed. The impact set of a
+package q is the set of all packages p that strongly depend on q.
 
 =head1 Input Specification
 
@@ -26,7 +26,7 @@ from the input files.
 
 =head1 Output Specification
 
-The output of strongdeps is in the CSV table comparing strong dependencies,
+The output of strongdeps is a CSV table containing strong dependencies,
 impact set and direct dependencies. 
 
 =head1 OPTIONS
@@ -43,7 +43,7 @@ Save the strong dependency graph in the file data.dot
 
 =item B<--table>
 
-Print the table (package,strong,direct,difference) in the file data.cvs
+Print the table (package,strong,direct,difference) in the file data.csv
 
 =item B<--detrans>
 
@@ -91,12 +91,12 @@ Pietro Abate
 =cut
 
 =head1 SEE ALSO
- <http://www.mancoosi.org> is the home page of the Mancoosi project. 
+<http://www.mancoosi.org> is the home page of the Mancoosi project. 
 
- For a comprehensive explanation of the notion of strong dependency
- and impact set see
+For a comprehensive explanation of the notion of strong dependency
+and impact set see
 
- Strong Dependencies between Software Components, 
- by Pietro Abate, Jaap Boender, Roberto Di Cosmo, and Stefano Zacchiroli.
- <http://mancoosi.org/reports/>
+Strong Dependencies between Software Components, 
+by Pietro Abate, Jaap Boender, Roberto Di Cosmo, and Stefano Zacchiroli.
+<http://mancoosi.org/reports/>
  
