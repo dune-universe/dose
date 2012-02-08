@@ -1,0 +1,102 @@
+=head1 NAME
+
+strongdeps - indentify the strong dependency of a set of packages
+
+=head1 SYNOPSIS
+
+B<strongdeps> [option] ... I<file> ... 
+
+=cut
+
+=head1 DESCRIPTION
+
+B<strongdeps> computes the strond dependency and the impact set of a set
+of packages. For each package the relation "p strong depends on q" indentify
+the set of all packages q the must be installed if p is installed. The
+impact set of a package q is the set of all packages p that strong depends on q.
+
+=head1 Input Specification
+
+Input files have to contain stanzas in the format of
+L<deb-control(5)>, separated by one blank line. For instance, the
+Packages files as found on a Debian mirror server, or in the directory
+I</var/lib/apt/lists/> of a Debian system, are suitable as input. The
+repository used in the analysis consists of the union of all packages 
+from the input files.
+
+=head1 Output Specification
+
+The output of strongdeps is in the CSV table comparing strong dependencies,
+impact set and direct dependencies. 
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<--dot>
+
+Save the strong dependency graph in dot format
+
+=item B<--dump>
+
+Save the strong dependency graph in the file data.dot
+
+=item B<--table>
+
+Print the table (package,strong,direct,difference) in the file data.cvs
+
+=item B<--detrans>
+
+Perform the transitive reduction of the strong dependency graph
+
+=item B<--transitive-closure>
+
+Perform the transitive closure of the direct dependency graph
+
+=item B<--checkonly> I<package>[,I<package>] ...
+
+Specifies a list of packages to check. By default all packages are
+checked.
+
+=item B<--conj-only>
+
+Use the conjunctive graph only
+
+=item B<-v>
+ 
+Enable info / warnings / debug messages. This option may be repeated up to
+three times in order to increase verbosity.
+
+=item B<--progress> 
+
+Display progress bars. 
+
+=item B<-h>, B<--help> 
+
+Display this list of options. 
+
+=back
+=cut
+
+=head1 EXAMPLE
+
+ strongdeps -v --progress --table deb://Packages.bz2
+
+=cut
+
+=head1 AUTHORS
+
+Pietro Abate
+
+=cut
+
+=head1 SEE ALSO
+ <http://www.mancoosi.org> is the home page of the Mancoosi project. 
+
+ For a comprehensive explanation of the notion of strong dependency
+ and impact set see
+
+ Strong Dependencies between Software Components, 
+ by Pietro Abate, Jaap Boender, Roberto Di Cosmo, and Stefano Zacchiroli.
+ <http://mancoosi.org/reports/>
+ 
