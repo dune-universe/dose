@@ -27,7 +27,11 @@ from the input files.
 =head1 Output Specification
 
 The output of strongdeps is a CSV table containing strong dependencies,
-impact set and direct dependencies. 
+impact set and direct dependencies. If the option B<--checkonly> is 
+spefified, B<strongdeps> prints on standard output the dot representation
+or the strong dependencies. Since B<--checkonly> computes only the strong
+dependencies of a set of packages, the impact set with relation to the 
+entire universe is not computed.
 
 =head1 OPTIONS
 
@@ -56,7 +60,7 @@ Perform the transitive closure of the direct dependency graph
 =item B<--checkonly> I<package>[,I<package>] ...
 
 Specifies a list of packages to check. By default all packages are
-checked.
+checked. B<--checkonly> and B<--table> are mutually exclusive.
 
 =item B<--conj-only>
 
@@ -80,7 +84,11 @@ Display this list of options.
 
 =head1 EXAMPLE
 
- strongdeps -v --progress --table deb://Packages.bz2
+ strong-deps.native --checkonly "libc6" \ 
+ deb:///var/lib/apt/lists/ftp.fr.debian.org_debian_dists_sid_main_binary-amd64_Packages
+
+ strong-deps.native --table \
+ deb:///var/lib/apt/lists/ftp.fr.debian.org_debian_dists_sid_main_binary-amd64_Packages
 
 =cut
 

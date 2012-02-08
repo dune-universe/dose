@@ -25,7 +25,7 @@ module Options = struct
   let table =  StdOpt.store_true ()
   let detrans = StdOpt.store_true ()
   let trans_closure = StdOpt.store_true ()
-  let restrain = StdOpt.str_option ()
+  let checkonly = Boilerplate.vpkglist_option ()
   let prefix = StdOpt.str_option ~default:"" ()
   let conj_only = StdOpt.store_true ()
 
@@ -36,12 +36,12 @@ module Options = struct
   add options ~long_name:"table" ~help:"Print the table (package,strong,direct,difference)" table;
   add options ~long_name:"detrans" ~help:"Perform the transitive reduction of the strong dependency graph" detrans;
   add options ~long_name:"transitive-closure" ~help:"Perform the transitive closure of the direct dependency graph" trans_closure;
-  add options ~long_name:"restrain" ~help:"Restrain only to the given packages (;-separated)" restrain;
+  add options ~long_name:"checkonly" ~help:"Check only these package" checkonly;
   add options ~long_name:"conj-only" ~help:"Use the conjunctive graph only" conj_only;
-end;;
+end
 
-module G = Defaultgraphs.IntPkgGraph.G;;
-module O = Defaultgraphs.GraphOper(G);;
+module G = Defaultgraphs.IntPkgGraph.G
+module O = Defaultgraphs.GraphOper(G)
 
 (* ----------------------------------- *)
 
@@ -65,27 +65,43 @@ let main () =
   let bars = ["Strongdeps_int.main";"Strongdeps_int.conj"] in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress) bars;
-  let (_,universe,_,_) = Boilerplate.load_universe posargs in
+  let (_,universe,_,to_cudf) = Boilerplate.load_universe posargs in
   let prefix = OptParse.Opt.get Options.prefix in
   let sdgraph = 
-    if OptParse.Opt.is_set Options.restrain then
-      let s = OptParse.Opt.get Options.restrain in
+    if OptParse.Opt.is_set Options.checkonly then
       let pkglist =
-        let l = Pcre.split ~rex:(Pcre.regexp ";") s in
-        List.flatten (List.map (Cudf.lookup_packages universe) l)
+        List.flatten (
+          List.map (function
+            |(p,None) -> Cudf.lookup_packages universe p
+            |(p,Some(c,v)) ->
+                let filter = Some(c,snd(to_cudf (p,v))) in
+                Cudf.lookup_packages ~filter universe p
+          ) (OptParse.Opt.get Options.checkonly)
+        )
       in
-      (if OptParse.Opt.get Options.conj_only
-      then Strongdeps.conjdeps universe pkglist
-      else Strongdeps.strongdeps universe pkglist)
+      if OptParse.Opt.get Options.conj_only then 
+        Strongdeps.conjdeps universe pkglist
+      else 
+        Strongdeps.strongdeps universe pkglist
     else
-    (if OptParse.Opt.get Options.conj_only
-    then Strongdeps.conjdeps_univ universe
-    else Strongdeps.strongdeps_univ universe)
+      if OptParse.Opt.get Options.conj_only then
+        Strongdeps.conjdeps_univ universe
+      else 
+        Strongdeps.strongdeps_univ universe
   in
   if OptParse.Opt.get Options.detrans then
     O.transitive_reduction sdgraph;
-  if OptParse.Opt.get Options.table then begin
-    let outch = open_out (mk_filename prefix ".table" "data") in
+  if OptParse.Opt.is_set Options.checkonly then begin
+    let pkggraph = Defaultgraphs.intcudf universe sdgraph in
+    Defaultgraphs.PackageGraph.D.output_graph stdout pkggraph;
+  end;
+  if not(OptParse.Opt.is_set Options.checkonly) then begin
+    let outch = 
+      if OptParse.Opt.get Options.table then
+        open_out (mk_filename prefix ".csv" "data")
+      else 
+        stdout
+    in
     let depgraph =
       let module O = Defaultgraphs.GraphOper(Defaultgraphs.PackageGraph.G) in
       if OptParse.Opt.get Options.trans_closure then
@@ -123,8 +139,9 @@ let main () =
     else None 
   in
   if (OptParse.Opt.get Options.dump) || (OptParse.Opt.get Options.dot) then
-    Defaultgraphs.IntPkgGraph.out 
-      ~dump ~dot ~detrans:(OptParse.Opt.get Options.detrans) sdgraph
+    let pkggraph = Defaultgraphs.intcudf universe sdgraph in
+    Defaultgraphs.PackageGraph.out 
+      ~dump ~dot ~detrans:(OptParse.Opt.get Options.detrans) pkggraph
 ;;
 
 main ();;

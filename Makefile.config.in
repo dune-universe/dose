@@ -41,7 +41,6 @@ TARGETS= \
    applications/apt-cudf.$(OCAMLBEST) \
    applications/outdated.$(OCAMLBEST) \
    applications/challenged.$(OCAMLBEST) \
-   applications/strong-deps.$(OCAMLBEST) \
 
 BYTELIBS=
 OPTLIBS=
@@ -101,9 +100,10 @@ endif
 
 #ocamlgraph support
 ifeq ("@HAS_OCAMLGRAPH@","yes")
-  TARGET += \
-	     applications/strong-deps.$(OCAMLBEST) \
-	     applications/strong-conflicts.$(OCAMLBEST)
+  TARGETS += \
+	     applications/strong-deps.$(OCAMLBEST)
+  
+  EXPERIMENTAL += applications/strong-conflicts.$(OCAMLBEST)
 endif
 
 #ocamlgraph support

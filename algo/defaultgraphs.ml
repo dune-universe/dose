@@ -209,6 +209,7 @@ module PackageGraph = struct
       let edge_attributes e = []
     end
   module Display = DisplayF(G)
+  module D = Graph.Graphviz.Dot(Display)
   
   (** Build the dependency graph from the given cudf universe *)
   let dependency_graph universe =
@@ -270,7 +271,32 @@ module PackageGraph = struct
       if not(Hashtbl.mem mark v) then (cc graph mark v)::acc else acc
     ) graph []
 
-  module D = Graph.Graphviz.Dot(Display)
+  let out ?(dump=None) ?(dot=None) ?(detrans=false) pkggraph =
+    info "Dumping Graph : nodes %d , edges %d"
+    (G.nb_vertex pkggraph) (G.nb_edges pkggraph) ;
+    
+    if detrans then begin
+      O.transitive_reduction pkggraph;
+      debug "After transitive reduction : nodes %d , edges %d"
+      (G.nb_vertex pkggraph) (G.nb_edges pkggraph)
+    end ;
+
+    if dump <> None then begin
+      let f = Option.get dump in
+      debug "Saving marshal graph in %s\n" f ;
+      let oc = open_out f in
+      Marshal.to_channel oc ((detrans,pkggraph) :> (bool * G.t)) [];
+      close_out oc
+    end ;
+
+    if dot <> None then begin
+      let f = Option.get dot in
+      debug "Saving dot graph in %s\n" f ;
+      let oc = open_out f in
+      D.output_graph oc pkggraph;
+      close_out oc
+    end 
+
 end
 
 (******************************************************)
@@ -416,32 +442,6 @@ module IntPkgGraph = struct
     done;
     graph
 
-  let out ?(dump=None) ?(dot=None) ?(detrans=false) pkggraph =
-    info "Dumping Graph : nodes %d , edges %d"
-    (G.nb_vertex pkggraph) (G.nb_edges pkggraph) ;
-    
-    if detrans then begin
-      O.transitive_reduction pkggraph;
-      debug "After transitive reduction : nodes %d , edges %d"
-      (G.nb_vertex pkggraph) (G.nb_edges pkggraph)
-    end ;
-
-    if dump <> None then begin
-      let f = Option.get dump in
-      debug "Saving marshal graph in %s\n" f ;
-      let oc = open_out f in
-      Marshal.to_channel oc ((detrans,pkggraph) :> (bool * G.t)) [];
-      close_out oc
-    end ;
-
-    if dot <> None then begin
-      let f = Option.get dot in
-      debug "Saving dot graph in %s\n" f ;
-      let oc = open_out f in
-      D.output_graph oc pkggraph;
-      close_out oc
-    end 
-
   let load pkglist filename =
     let timer = Util.Timer.create "Defaultgraph.StrongDepGraph.load" in
     Util.Timer.start timer;
@@ -460,3 +460,43 @@ module IntPkgGraph = struct
     Util.Timer.stop timer sg
 
 end
+
+let intcudf universe intgraph =
+  let module PG = PackageGraph.G in
+  let module SG = IntPkgGraph.G in
+  let trasformtimer = Util.Timer.create "Defaultgraphs.intcudf" in
+  Util.Timer.start trasformtimer;
+  let size = 25000 in
+  let cudfgraph = PG.create ~size () in
+  SG.iter_edges (fun x y ->
+    let p = CudfAdd.inttovar universe x in
+    let q = CudfAdd.inttovar universe y in
+    PG.add_edge cudfgraph p q
+  ) intgraph ;
+  SG.iter_vertex (fun v ->
+    let p = CudfAdd.inttovar universe v in
+    PG.add_vertex cudfgraph p
+  ) intgraph ;
+  debug "cudfgraph: nodes %d , edges %d"
+  (PG.nb_vertex cudfgraph) (PG.nb_edges cudfgraph);
+  Util.Timer.stop trasformtimer cudfgraph
+
+(** transform a cudf graph into a integer graph *)
+let cudfint universe cudfgraph =
+  let module PG = PackageGraph.G in
+  let module SG = IntPkgGraph.G in
+  let trasformtimer = Util.Timer.create "DefaultGraphs.cudfint" in
+  Util.Timer.start trasformtimer;
+  let intgraph = SG.create () in
+  PG.iter_edges (fun x y ->
+    SG.add_edge intgraph
+    (CudfAdd.vartoint universe x)
+    (CudfAdd.vartoint universe y)
+  ) cudfgraph;
+  PG.iter_vertex (fun v ->
+    SG.add_vertex intgraph (CudfAdd.vartoint universe v)
+  ) cudfgraph;
+  debug "intcudf: nodes %d , edges %d"
+  (SG.nb_vertex intgraph) (SG.nb_edges intgraph);
+  Util.Timer.stop trasformtimer intgraph
+
