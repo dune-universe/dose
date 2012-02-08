@@ -74,7 +74,7 @@ Display this list of options.
 
 =head1 EXAMPLE
 
- outdated -v --progress -f -e Packages.bz2 > result.yaml 
+ dose3-outdated -f -v /var/lib/apt/lists/ftp.fr.debian.org_debian_dists_sid_main_binary-amd64_Packages
 
 =cut
 

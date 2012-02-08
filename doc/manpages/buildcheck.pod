@@ -85,7 +85,9 @@ Compute the list of source packages in Sources for which
 it is not possible to install a build environment on i386, assuming that
 the binary packages described in file Packages are available: 
 
- dose3-builddebcheck --architecture i386 --failures --explain Packages Sources 
+ dose-builddebcheck -v -f -e --arch amd64 \
+ /var/lib/apt/lists/ftp.fr.debian.org_debian_dists_sid_main_binary-amd64_Packages\
+ /var/lib/apt/lists/ftp.fr.debian.org_debian_dists_sid_main_source_Sources
 
 =cut
 

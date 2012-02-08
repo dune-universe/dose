@@ -177,7 +177,10 @@ Show program version and exit.
 
 Check which packages in a particular distribution are not installable and why: 
 
-   debcheck --failures --explain < Packages 
+ dose-distcheck -v -f -e \
+ --bg deb:///var/lib/apt/lists/ftp.fr.debian.org_debian_dists_sid_main_binary-amd64_Packages\
+ --bg deb:///var/lib/apt/lists/ftp.fr.debian.org_debian_dists_sid_non-free_binary-amd64_Packages\
+ --fg deb:///var/lib/apt/lists/ftp.fr.debian.org_debian_dists_sid_contrib_binary-amd64_Packages
 
 where Packages is the file pertaining to that distribution, as for instance
 found in the directory B</var/lib/apt/lists>. 
