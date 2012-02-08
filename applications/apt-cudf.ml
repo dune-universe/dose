@@ -254,6 +254,16 @@ let main () =
       p
     ) pkglist 
   in
+
+  if OptParse.Opt.get Options.dump then begin
+    info "dump universe in  /tmp/cudf-solver.universe.dump";
+    let oc = open_out "/tmp/cudf-solver.universe.dump" in
+    Cudf_printer.pp_preamble oc default_preamble;
+    Printf.fprintf oc "\n";
+    Cudf_printer.pp_packages oc cudfpkglist;
+    close_out oc
+  end;
+
   let universe = 
     try Cudf.load_universe cudfpkglist
     with Cudf.Constraint_violation s ->
@@ -283,13 +293,6 @@ let main () =
   Cudf_printer.pp_cudf oc cudf;
   close_out oc ;
   Util.Timer.stop timer3 ();
-
-  if OptParse.Opt.get Options.dump then begin
-    info "dump universe in  /tmp/cudf-solver.universe.dump";
-    let oc = open_out "/tmp/cudf-solver.universe.dump" in
-    Cudf_printer.pp_cudf oc cudf;
-    close_out oc
-  end;
 
   Util.Timer.start timer4;
   let lines_cin = input_all_lines [] cin in
