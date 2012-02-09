@@ -77,21 +77,20 @@ let main () =
       ) (OptParse.Opt.get Options.checkonly)
     in
     List.iter (fun pkglist ->
-      (* if --checkonly we compute the strong dependencies of the
-       * dependency closure of the pkglist and the we print either
-       * the detrans graph or a simple yaml list of packages *)
-      let dcl = Depsolver.dependency_closure universe pkglist in
+      (* if --checkonly we compute the strong dependencies of the pkglist and
+       * the we print either the detrans graph or a simple yaml list of packages *)
       let sdgraph =
         if OptParse.Opt.get Options.conj_only then 
-          Strongdeps.conjdeps universe dcl
+          Strongdeps.conjdeps universe pkglist
         else 
-          Strongdeps.strongdeps universe dcl
+          Strongdeps.strongdeps universe pkglist
       in
-      O.transitive_reduction sdgraph;
+      (* O.transitive_reduction sdgraph; *)
       if OptParse.Opt.get Options.dot then begin
         let pkggraph = Defaultgraphs.intcudf universe sdgraph in
         Defaultgraphs.PackageGraph.D.output_graph stdout pkggraph;
       end else begin
+        let sdgraph = O.O.transitive_closure sdgraph in
         let pp_list = Diagnostic.pp_list CudfAdd.pp_package in
         let pkggraph = Defaultgraphs.intcudf universe sdgraph in
         List.iter (fun q -> 

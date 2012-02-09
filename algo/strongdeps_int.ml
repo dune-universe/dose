@@ -96,13 +96,8 @@ let strongdeps ?(transitive=true) univ idlist =
   Util.Progress.set_total conjbar size;
 
   Util.Timer.start conjtimer;
-  let l = 
-    List.fold_left (fun acc id ->
-      Util.Progress.progress conjbar;
-      IntPkgGraph.conjdepgraph_int ~transitive graph univ id; 
-      id :: acc
-    ) [] idlist
-  in
+  let graph = IntPkgGraph.dependency_graph_list ~conjunctive:true univ idlist in
+  let l = IntPkgGraph.G.fold_vertex (fun v acc -> v::acc) graph [] in
   Util.Progress.reset conjbar;
   Util.Timer.stop conjtimer ();
   debug "conj dep graph: nodes %d , edges %d" (G.nb_vertex graph) (G.nb_edges graph);

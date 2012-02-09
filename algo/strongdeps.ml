@@ -16,9 +16,9 @@ open ExtLib
 open Common
 open CudfAdd
 
-let debug fmt = Util.make_debug "StrongDeps" fmt
-let info fmt = Util.make_info "StrongDeps" fmt
-let warning fmt = Util.make_warning "StrongDeps" fmt
+let debug fmt = Util.make_debug __FILE__ fmt
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
 
 (** [strongdeps u l] build the strong dependency graph of all packages in 
     [l] wrt the universe [u] *)

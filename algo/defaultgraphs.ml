@@ -43,6 +43,7 @@ module GraphOper (G : Sig.I) = struct
 
   module O = Oper.I(G) 
 
+
 end
 
 (** syntactic dependency graph. Vertex are Cudf packages and
@@ -210,27 +211,33 @@ module PackageGraph = struct
     end
   module Display = DisplayF(G)
   module D = Graph.Graphviz.Dot(Display)
-  
+
+
   (** Build the dependency graph from the given cudf universe *)
-  let dependency_graph universe =
+  let dependency_graph ?(conjunctive=false) universe =
     let gr = G.create () in
     Cudf.iter_packages (fun pkg ->
-      List.iter (fun l ->
-        List.iter (G.add_edge gr pkg) 
-        (List.flatten (List.map (CudfAdd.who_provides universe) l))
+      G.add_vertex gr pkg;
+      List.iter (fun vpkgs ->
+        match CudfAdd.resolve_deps universe vpkgs with
+        |[p] -> G.add_edge gr pkg p
+        |l when not conjunctive -> List.iter (G.add_edge gr pkg) l
+        |_ -> ()
       ) pkg.Cudf.depends
     ) universe
     ;
     gr
 
   (** Build the dependency graph from the given list of packages *)
-  let dependency_graph_list universe pkglist =
+  let dependency_graph_list ?(conjunctive=false) universe pkglist =
     let gr = G.create () in
     List.iter (fun pkg ->
       G.add_vertex gr pkg;
-      List.iter (fun l ->
-        List.iter (G.add_edge gr pkg) 
-        (List.flatten (List.map (CudfAdd.who_provides universe) l))
+      List.iter (fun vpkgs ->
+        match CudfAdd.resolve_deps universe vpkgs with
+        |[p] -> G.add_edge gr pkg p
+        |l when not conjunctive -> List.iter (G.add_edge gr pkg) l
+        |_ -> ()
       ) pkg.Cudf.depends
     ) pkglist
     ;
@@ -297,33 +304,6 @@ module PackageGraph = struct
       close_out oc
     end 
 
-end
-
-(******************************************************)
-
-(** Integer matrix graph. *)
-module MatrixGraph(Pr : sig val pr : int -> string end) = struct
-
-  module G = Imperative.Matrix.Digraph
-
-  module Display =
-    struct
-      include G
-      let vertex_name v = Printf.sprintf "\"%s\"" (Pr.pr v)
-
-      let graph_attributes = fun _ -> []
-      let get_subgraph = fun _ -> None
-
-      let default_edge_attributes = fun _ -> []
-      let default_vertex_attributes = fun _ -> []
-
-      let vertex_attributes v = []
-
-      let edge_attributes e = []
-    end
-  
-  module D = Graph.Graphviz.Dot(Display)
-  module S = Set.Make(struct type t = int let compare = Pervasives.compare end)
 end
 
 (******************************************************)
@@ -429,18 +409,50 @@ module IntPkgGraph = struct
 
   (** Build the dependency graph from the given index. conjunctive and
       disjunctive dependencies are considered as equal *)
-  let dependency_graph universe =
+  let dependency_graph ?(conjunctive=false) universe =
     let size = Cudf.universe_size universe in
     let graph = G.create ~size () in
-    for id = 0 to size -1 do
+    Cudf.iteri_packages (fun id pkg ->
       G.add_vertex graph id;
-      let p = CudfAdd.inttovar universe id in
-      List.iter (fun l ->
-        let dl = List.flatten (List.map (CudfAdd.resolve_vpkg_int universe) l) in
-        List.iter (fun p -> if p <> id then G.add_edge graph id p) dl
-      ) p.Cudf.depends;
+      List.iter (fun vpkgs ->
+        match CudfAdd.resolve_vpkgs_int universe vpkgs with
+        |[p] -> G.add_edge graph id p
+        |l when not conjunctive -> List.iter (G.add_edge graph id) l
+        |_ -> ()
+      ) pkg.Cudf.depends
+    ) universe;
+    graph
+
+  let dependency_graph_list ?(conjunctive=false) universe idlist =
+    let queue = Queue.create () in
+    let graph = G.create () in
+    let visited = Hashtbl.create (2 * (List.length idlist)) in
+    List.iter (fun e -> Queue.add e queue) idlist;
+    while (Queue.length queue > 0) do
+      let id = Queue.take queue in
+      let pkg = Cudf.package_by_uid universe id in
+      if not(Hashtbl.mem visited id) then begin
+        G.add_vertex graph id;
+        Hashtbl.add visited id ();
+        List.iter (fun vpkgs ->
+          match CudfAdd.resolve_vpkgs_int universe vpkgs with
+          |[i] when not(Hashtbl.mem visited i) -> begin
+              Queue.add i queue;
+              G.add_edge graph id i
+          end
+          |dsj when not conjunctive ->
+            List.iter (fun i ->
+              if not(Hashtbl.mem visited i) then begin
+                Queue.add i queue;
+                G.add_edge graph id i
+              end
+            ) dsj
+          |_ -> ()
+        ) pkg.Cudf.depends
+      end
     done;
     graph
+;;
 
   let load pkglist filename =
     let timer = Util.Timer.create "Defaultgraph.StrongDepGraph.load" in

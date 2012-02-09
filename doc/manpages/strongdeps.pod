@@ -28,14 +28,13 @@ from the input files.
 
 The output of strongdeps is a CSV table containing strong dependencies, impact
 set and direct dependencies. If the option B<--checkonly> is spefified,
-B<strongdeps> prints on standard output in the YAML format the list of the
-packages that strong depends on each of the packages specified. If
-B<--checkonly> if coupled with B<--dot> then B<strongdeps> prints on standard
-output in dot format the detransitivitazed graph of the strong dependencies of
-each package.
+B<strongdeps> prints on standard output the list of the packages that strong
+depends on each of the given packages. If B<--checkonly> if paired with
+B<--dot> then B<strongdeps> prints on standard output the detransitivitazed
+graph of the strong dependencies of each package in dot format.
 
-Since B<--checkonly> computes only the strong dependencies of a set of
-packages, the impact set with relation to the entire universe is not computed.
+N.B. Since B<--checkonly> computes only the strong dependencies of a set of
+packages, the impact set is not computed.
 
 =head1 OPTIONS
 
