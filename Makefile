@@ -181,9 +181,10 @@ dist: ./$(DIST_TARBALL)
 	rm -rf ./$(DIST_DIR)
 	@echo "Distribution tarball: ./$(DIST_TARBALL)"
 
-doc:
+doc: fast
 	$(OCAMLBUILD) $(OBFLAGS) dose3.docdir/index.html dose3.docdir/index.dot
 	dot -Grotate=0 -Tsvg -o dose3.docdir/index.svg dose3.docdir/index.dot
+	$(MAKE) man
 	$(MAKE) html
 
 .PHONY: all opt clean top-level headers test tags install uninstall dist doc
