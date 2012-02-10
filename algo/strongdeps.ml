@@ -24,7 +24,8 @@ let warning fmt = Util.make_warning __FILE__ fmt
     [l] wrt the universe [u] *)
 let strongdeps ?(transitive=true) universe pkglist =
   let idlist = List.map (CudfAdd.vartoint universe) pkglist in
-  Strongdeps_int.strongdeps ~transitive universe idlist
+  let closure = Depsolver_int.dependency_closure universe idlist in
+  Strongdeps_int.strongdeps ~transitive universe closure
 
 (** [strongdeps_univ u] build the strong dependency graph of 
     all packages in the universe [u] *)

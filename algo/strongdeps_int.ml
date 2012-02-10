@@ -89,15 +89,19 @@ let strongdeps_int ?(transitive=true) graph univ l =
 
 module S = Set.Make (struct type t = int let compare = Pervasives.compare end)
 
-(* XXX this can be refactored in a better way ... *)
-let strongdeps ?(transitive=true) univ idlist =
-  let size = List.length idlist in
+let strongdeps ?(transitive=true) univ closure =
+  let size = Cudf.universe_size univ in
   let graph = G.create ~size () in
   Util.Progress.set_total conjbar size;
 
   Util.Timer.start conjtimer;
-  let graph = IntPkgGraph.dependency_graph_list ~conjunctive:true univ idlist in
-  let l = IntPkgGraph.G.fold_vertex (fun v acc -> v::acc) graph [] in
+  let l = 
+    List.fold_left (fun acc id ->
+      Util.Progress.progress conjbar;
+      IntPkgGraph.conjdepgraph_int ~transitive graph univ id;
+      id :: acc
+    ) [] closure
+  in
   Util.Progress.reset conjbar;
   Util.Timer.stop conjtimer ();
   debug "conj dep graph: nodes %d , edges %d" (G.nb_vertex graph) (G.nb_edges graph);
@@ -105,7 +109,6 @@ let strongdeps ?(transitive=true) univ idlist =
   if not transitive then O.transitive_reduction g;
   g
 
-(* XXX this can be refactored in a better way ... *)
 let strongdeps_univ ?(transitive=true) univ =
   let size = Cudf.universe_size univ in
   let graph = G.create ~size () in
