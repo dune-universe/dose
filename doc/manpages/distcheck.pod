@@ -46,10 +46,12 @@ containing the input. The package metadata found in that file must
 correspond to the I<type> given in the URI.
 
 When invoked as I<typeB<check>> then the type of input is assumed to
-be I<type>, and repositories (in positional arguments or in the values
-of options B<--fg> and B<--bg>) are simply given in form of a pathname of
-a file containing the repository. If no positional argument is given
-then input is read from standard input.
+be I<type>, and repositories (in positional arguments or in the values of
+options B<--fg> and B<--bg>) are simply given in form of a pathname of a file
+containing the repository. If no positional argument is given then input is
+read from standard input.  B<distcheck> also compressed files (.gz , .bz2) as
+positional arguments. Input read on standard input cannot be in compressed
+form.
 
 =head1 Input Formats
 
