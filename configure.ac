@@ -17,6 +17,15 @@ if test "$OCAMLFIND" = "no"; then
  AC_MSG_ERROR([You must install OCaml findlib (the ocamlfind command)])
 fi
 
+AC_ARG_WITH(bytecode,
+        [ --with-bytecode ],
+        OCAMLBEST=byte,
+        OCAMLBEST="$OCAMLBEST")
+if test "$OCAMLBEST" = "byte" ; then
+  OCAMLOPT=
+  AC_SUBST(OCAMLOPT)
+fi
+
 #defaults
 USE_RPM=use_
 LINK_RPM=link_

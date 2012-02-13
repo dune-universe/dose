@@ -731,6 +731,7 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
+with_bytecode
 with_libcudf
 with_parmap
 with_zip
@@ -1365,6 +1366,7 @@ if test -n "$ac_init_help"; then
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+ --with-bytecode
  --without-libcudf
  --with-parmap
  --with-zip
@@ -4017,6 +4019,19 @@ fi
 
 if test "$OCAMLFIND" = "no"; then
  as_fn_error $? "You must install OCaml findlib (the ocamlfind command)" "$LINENO" 5
+fi
+
+
+# Check whether --with-bytecode was given.
+if test "${with_bytecode+set}" = set; then :
+  withval=$with_bytecode; OCAMLBEST=byte
+else
+  OCAMLBEST="$OCAMLBEST"
+fi
+
+if test "$OCAMLBEST" = "byte" ; then
+  OCAMLOPT=
+
 fi
 
 #defaults
