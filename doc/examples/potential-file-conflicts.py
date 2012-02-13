@@ -1,15 +1,19 @@
-#!/usr/bin/python
+#!/usr/bin/python 
+
+# needs debian packages: python-yaml
 
 import argparse
 import re
 import os
+import sys
 import subprocess
+import yaml
 
 argparser=argparse.ArgumentParser(
   description="Find packages with potential file conflicts.")
 argparser.add_argument('-c',dest='contentsfile',action='store',required=True,
                        help='set name of the Contents file.')
-argparser.add_argument('-o',dest='outputdir',action='store',required=True,
+argparser.add_argument('-o',dest='outdir',action='store',required=True,
                        help='set name of the output directory')
 argparser.add_argument('-r',dest='repositories',action='append',required=True,
                        help='add a debian repository (Packages) file')
@@ -17,6 +21,8 @@ arguments=argparser.parse_args()
 
 # read the contentsfile into a dictionary
 cntsf=open(arguments.contentsfile,'r')
+print 'Scanning the contents file ...',
+sys.stdout.flush()
 # Skip the preamble
 while True:
     if re.match('FILE\s*LOCATION\s*',cntsf.readline()): break
@@ -43,17 +49,17 @@ for line in cntsf:
             else:
                 filetable[pair] += foundfile+'\n'
 cntsf.close()
+print 'done.'
 
-# cd into the output directory
-if os.path.exists(arguments.outputdir):
-    raise('directory'+arguments.outputdir+'already exists')
+outdir = arguments.outdir
+if os.path.exists(outdir):
+    raise('directory'+outdir+'already exists')
 else:
-    os.mkdir(arguments.outputdir)
-os.chdir(arguments.outputdir)
+    os.mkdir(arguments.outdir)
 
 # write the input file for debcheck, containing a pseudo-package for each
 # of the pairs (pa,pb) that we found, depending on pa and on pb
-edosin=open('debcheck-input','w')
+edosin=open(outdir+'/debcheck-input','w')
 for packages,files in filetable.iteritems():
     pa=packages[0]
     pb=packages[1]
@@ -66,14 +72,22 @@ edosin.close()
 debcheck='/usr/bin/dose-debcheck -s'
 for repo in arguments.repositories:
     debcheck += ' --bg=deb://' + repo
-debcheck += ' debcheck-input -o debcheck-output'
+debcheck += ' -o'+outdir+'/debcheck-output '+outdir+'/debcheck-input'
+print 'Running dose-debcheck ...',
+sys.stdout.flush()
 edos=subprocess.call(debcheck,shell=True)
+print 'done.'
+
+debreport = yaml.load (file(outdir+'/debcheck-output', 'r'))
+os.chdir(outdir)
+for stanza in debreport['report'] :
+    stanzamatch=re.match('^(.*)---(.*)',stanza['package'])
+    pa,pb=stanzamatch.group(1),stanzamatch.group(2)
+    out=open(pa+','+pb,'w')
+    out.write(filetable[(pa,pb)])
+    out.close()
 
 #result=edos.communicate()[0]
 #print result
-
-#    out=open(packages[0]+'_'+packages[1],'w')
-#    out.write(files)
-#    out.close()
 
 
