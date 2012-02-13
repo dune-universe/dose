@@ -63,7 +63,7 @@ edosin=open(outdir+'/debcheck-input','w')
 for packages,files in filetable.iteritems():
     pa=packages[0]
     pb=packages[1]
-    edosin.write('Package: '+pa+'---'+pb+'\n')
+    edosin.write('Package: '+pa+':'+pb+'\n')
     edosin.write('Version: 1\nArchitecture: all\n')
     edosin.write('Depends: '+pa+', '+pb+'\n\n')
 edosin.close()
@@ -81,9 +81,9 @@ print 'done.'
 debreport = yaml.load (file(outdir+'/debcheck-output', 'r'))
 os.chdir(outdir)
 for stanza in debreport['report'] :
-    stanzamatch=re.match('^(.*)---(.*)',stanza['package'])
+    stanzamatch=re.match('^(.*):(.*)',stanza['package'])
     pa,pb=stanzamatch.group(1),stanzamatch.group(2)
-    out=open(pa+','+pb,'w')
+    out=open(pa+':'+pb,'w')
     out.write(filetable[(pa,pb)])
     out.close()
 
