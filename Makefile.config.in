@@ -27,11 +27,12 @@ ifeq ("@OCAML_OS_TYPE@","freebsd")
   LDFLAGS += -fstack-protector
 endif
 
-OCAMLBUILD=@OCAMLBUILD@
 ifeq ("@OCAMLBEST@","opt")
   OCAMLBEST=native
+  OCAMLBUILD=@OCAMLBUILD@
 else
   OCAMLBEST=byte
+  OCAMLBUILD=@OCAMLBUILD@ -byte-plugin
 endif
 
 TARGETS= \
@@ -49,9 +50,9 @@ CMXSLIBS=
 ALIBS=
 
 ifeq ("@HAS_LIBCUDF@","no")
-  BYTELIBS += cudf/cudf.cma cudf/cudf.a
+  BYTELIBS += cudf/cudf.cma
   ifeq ("@OCAMLBEST@","opt")
-    OPTLIBS += cudf/cudf.cmxa
+    OPTLIBS += cudf/cudf.cmxa cudf/cudf.a
     CMXSLIBS += cudf/cudf.cmxs
   endif
 endif
@@ -71,16 +72,11 @@ endif
 
 BYTELIBS += common/common.cma deb/debian.cma rpm/rpm.cma eclipse/eclipse.cma algo/algo.cma doseparse/boilerplateNoRpm.cma doseparse/boilerplate.cma
 
-ifeq ("@OCAMLBEST@","opt")
-  OPTLIBS += $(BYTELIBS:%.cma=%.cmxa) 
-  CMXSLIBS += $(BYTELIBS:%.cma=%.cmxs)
-endif
-
 #rpm support
 ifeq ("@HAS_RPM@","yes")
-  BYTELIBS += rpm/rpm.cma rpm/rpm.a
+  BYTELIBS += rpm/rpm.cma
   ifeq ("@OCAMLBEST@","opt")
-    OPTLIBS += rpm/rpm.cmxa
+    OPTLIBS += rpm/rpm.cmxa rpm/rpm.a
     CMXSLIBS += rpm/rpm.cmxs
   endif
 endif
@@ -117,4 +113,10 @@ ifeq ("@HAS_OUNIT@","yes")
   TESTS= common deb algo $(TEST_DB) $(TEST_RPM)
 endif
 
-ALIBS = $(BYTELIBS:%.cma=%.a)
+ifeq ("@OCAMLBEST@","opt")
+  OPTLIBS += $(BYTELIBS:%.cma=%.cmxa) 
+  CMXSLIBS += $(BYTELIBS:%.cma=%.cmxs)
+  ALIBS = $(BYTELIBS:%.cma=%.a)
+endif
+
+

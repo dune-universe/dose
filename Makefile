@@ -80,7 +80,7 @@ doseparse/boilerplate.%:
 	@for i in _build/doseparse/boilerplate.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
-	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
+	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx $(DOSELIBS)/*.ml ; \
 	  fi ; \
 	done
 

@@ -265,7 +265,12 @@ let parse_input ?default_arch ?(extras=[]) (urilist : string list list) =
   |None,_ -> fatal "No input specified"
   |Some Url.Cudf,[[p]] when (unpack p) = "-" -> fatal "no stdin for cudf yet"
   |Some Url.Cudf,[[p]] -> cudf_load_list (unpack p)
-  |Some Url.Cudf, _ -> fatal "only one cudf"
+  |Some Url.Cudf, l when (List.flatten l) = [] -> fatal "how do you know it's a cudf ?"
+  |Some Url.Cudf, l -> 
+      if List.length (List.flatten l) > 1 then
+        warning "more then one cudf speficied on the command line";
+      let p = List.hd (List.flatten l) in 
+      cudf_load_list (unpack p)
 
   |Some Url.Deb,ll ->
       let dll = 
