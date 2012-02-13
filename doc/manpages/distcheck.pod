@@ -10,9 +10,9 @@ distcheck - check installability of packages according to metadata
 
 =item B<debcheck> [option] ... [I<file>]
 
-=item B<rpmcheck> [option] ... I<file>
+=item B<rpmcheck> [option] ... [I<file>]
 
-=item B<eclipsecheck> [option] ... I<file> 
+=item B<eclipsecheck> [option] ... [I<file>] 
 
 =back
 =cut
@@ -38,16 +38,18 @@ all packages are in the foreground.
 
 =head1 Input Specification
 
-Currently supported repository types are debian, rpm, and eclipse. The
-B<distcheck> tool expects its input specifiation in the form I<type://pathname>
-where I<type> is one of B<deb>, B<synthesis>, B<hdlist> or B<eclipse>, and
-I<pathname> is the pathname of a file containing the input. The package
-metadata found in that file must correspond to the I<type> given in the URI.
-When invoked as I<typeB<check>>, the type of the repository is assumed to be
-I<type>, and the input is simply given in form of a pathname of a file
-containing the repository. B<debcheck> reads package descriptions from
-standard input in case no file argument is provided.
+Currently supported input types are debian, rpm, and eclipse. The
+B<distcheck> tool expects its input specifiations in the form
+I<type://pathname> where I<type> is one of B<deb>, B<synthesis>,
+B<hdlist> or B<eclipse>, and I<pathname> is the pathname of a file
+containing the input. The package metadata found in that file must
+correspond to the I<type> given in the URI.
 
+When invoked as I<typeB<check>> then the type of input is assumed to
+be I<type>, and repositories (in positional arguments or in the values
+of options B<--fg> and B<--bg>) are simply given in form of a pathname of
+a file containing the repository. If no positional argument is given
+then input is read from standard input.
 
 =head1 Input Formats
 

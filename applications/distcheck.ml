@@ -61,22 +61,27 @@ let fatal fmt = Util.make_fatal __FILE__ fmt
 let timer = Util.Timer.create "Solver" 
 
 let main () =
-  let posargs =
-    let args = OptParse.OptParser.parse_argv Options.options in
-    match Filename.basename(Sys.argv.(0)),args with
-    |("debcheck"|"edos-debcheck"),[] -> ["deb://-"]
-    |("debcheck"|"edos-debcheck"),l -> List.map ((^) "deb://") l
-    |"eclipsecheck",l -> List.map ((^) "eclipse://") l
-    |("rpmcheck"|"edos-rpmcheck"),l -> List.map ((^) "synth://") l
-    |_,_ -> args
+  let resource_prefix =
+    (* implicit prefix of resources derived from name of executable *)
+    match Filename.basename(Sys.argv.(0)) with
+      |"debcheck"|"edos-debcheck" -> "deb://"
+      |"eclipsecheck" -> "eclipse://"
+      |"rpmcheck"|"edos-rpmcheck" -> "synth://"
+      |_ -> ""
   in
+  let add_resource_prefix = List.map (function s -> resource_prefix^s) in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress)
     ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
-  let default_arch = OptParse.Opt.opt Options.architecture in
-  let fg = posargs @ (OptParse.Opt.get Options.foreground) in
-  let bg = OptParse.Opt.get Options.background in
+  let default_arch = OptParse.Opt.opt Options.architecture
+  and fg = 
+    let posargs = OptParse.OptParser.parse_argv Options.options in
+    if posargs=[] && resource_prefix <> ""
+    then add_resource_prefix ("-"::(OptParse.Opt.get Options.foreground))
+    else add_resource_prefix (posargs@(OptParse.Opt.get Options.foreground))
+  and bg = add_resource_prefix (OptParse.Opt.get Options.background)
+  in
   let (preamble,pkgll,from_cudf,to_cudf) = Boilerplate.load_list ~default_arch [fg;bg] in
   let (fg_pkglist, bg_pkglist) = match pkgll with [fg;bg] -> (fg,bg) | _ -> assert false in
   let fg_pkglist = 
