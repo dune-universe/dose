@@ -1,5 +1,12 @@
 #!/usr/bin/python 
 
+# Copyright (C) 2012 Ralf Treinen <treinen@debian.org>
+#
+# This library is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
 import argparse
 import re
 import os
@@ -17,7 +24,15 @@ argparser.add_argument('-r',dest='repositories',action='append',required=True,
                        help='add a debian repository (Packages) file')
 arguments=argparser.parse_args()
 
+outdir = arguments.outdir
+if os.path.exists(outdir):
+    raise('directory'+outdir+'already exists')
+else:
+    os.mkdir(arguments.outdir)
+
+############################################################################
 # read the contentsfile into a dictionary
+############################################################################
 cntsf=open(arguments.contentsfile,'r')
 print 'Scanning the contents file ...',
 sys.stdout.flush()
@@ -26,7 +41,7 @@ while True:
     if re.match('FILE\s*LOCATION\s*',cntsf.readline()): break
 # Lines start on a file, then a comma-separated list of packages. We are only
 # interested in lines that contain at least two packages. Packages are given
-# as suite/section/packagename or section/packagename.
+# as area/section/packagename or section/packagename.
 linefilter=re.compile('^(.*\S)\s+(\S*,\S*)\s*$')
 filetable = {}
 for line in cntsf:
@@ -34,7 +49,7 @@ for line in cntsf:
     if linematch:
         foundfile=linematch.group(1)
         # get the packages as a sorted list. Drop package prefix consisting
-        # of (possibly suite and) section.
+        # of (possibly area and) section.
         foundpackages=sorted(map(
                 lambda s:s[1+s.rfind('/'):],
                 re.split(',',linematch.group(2))))
@@ -49,11 +64,9 @@ for line in cntsf:
 cntsf.close()
 print 'done.'
 
-outdir = arguments.outdir
-if os.path.exists(outdir):
-    raise('directory'+outdir+'already exists')
-else:
-    os.mkdir(arguments.outdir)
+###########################################################################
+# run debcheck
+###########################################################################
 
 invocation='/usr/bin/dose-debcheck --successes'
 for repo in arguments.repositories:
