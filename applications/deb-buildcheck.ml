@@ -33,9 +33,6 @@ module Options = struct
   (* let checkonly = Boilerplate.vpkglist_option () *)
   let summary = StdOpt.store_true ()
   let architecture = StdOpt.str_option ()
-  let distribution = StdOpt.str_option ()
-  let release = StdOpt.str_option ()
-  let suite = StdOpt.str_option ()
   let dump = StdOpt.str_option ()
 
   open OptParser
@@ -46,9 +43,6 @@ module Options = struct
   (* add options ~long_name:"checkonly" ~help:"Check only these package" checkonly; *)
   add options ~long_name:"summary" ~help:"Print a detailed summary" summary;
 
-  add options ~long_name:"distrib" ~help:"Set the distribution" distribution;
-  add options ~long_name:"release" ~help:"Set the release name" release;
-  add options ~long_name:"suite" ~help:"Set the release name" suite;
   add options ~long_name:"arch" ~help:"Set the default architecture" architecture;
 
   add options ~long_name:"dump" ~help:"dump the cudf file" dump;
@@ -114,12 +108,6 @@ let main () =
 
   let results = Diagnostic.default_result universe_size in
 
-  if OptParse.Opt.is_set Options.distribution then
-    Format.fprintf fmt "distribution: %s@." (OptParse.Opt.get Options.distribution);
-  if OptParse.Opt.is_set Options.release then
-    Format.fprintf fmt "release: %s@." (OptParse.Opt.get Options.release);
-  if OptParse.Opt.is_set Options.suite then
-    Format.fprintf fmt "suite: %s@." (OptParse.Opt.get Options.suite);
   if OptParse.Opt.is_set Options.architecture then
     Format.fprintf fmt "architecture: %s@." (OptParse.Opt.get Options.architecture);
 
