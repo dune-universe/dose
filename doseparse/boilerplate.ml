@@ -83,6 +83,14 @@ let incr_str_list ?(default=Some []) ?(metavar = "STR") =
   (fun _ s -> Printf.sprintf "Invalid String '%s'" s)
 ;;
 
+let str_list ?(default=Some []) ?(metavar = "STRLST") =
+  let sep = "," in
+  let coerce str = ExtString.String.nsplit str sep in
+  fun () ->
+    OptParse.Opt.value_option metavar default coerce
+    (fun _ s -> Printf.sprintf "Invalid String '%s'" s)
+
+
 (* *************************************** *)
 
 module MakeOptions(O : Ot) = struct

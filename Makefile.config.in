@@ -72,6 +72,12 @@ endif
 
 BYTELIBS += common/common.cma deb/debian.cma rpm/rpm.cma eclipse/eclipse.cma algo/algo.cma doseparse/boilerplateNoRpm.cma doseparse/boilerplate.cma
 
+ifeq ("@OCAMLBEST@","opt")
+  OPTLIBS += $(BYTELIBS:%.cma=%.cmxa) 
+  CMXSLIBS += $(BYTELIBS:%.cma=%.cmxs)
+  ALIBS = $(BYTELIBS:%.cma=%.a)
+endif
+
 #rpm support
 ifeq ("@HAS_RPM@","yes")
   BYTELIBS += rpm/rpm.cma
@@ -112,11 +118,3 @@ endif
 ifeq ("@HAS_OUNIT@","yes")
   TESTS= common deb algo $(TEST_DB) $(TEST_RPM)
 endif
-
-ifeq ("@OCAMLBEST@","opt")
-  OPTLIBS += $(BYTELIBS:%.cma=%.cmxa) 
-  CMXSLIBS += $(BYTELIBS:%.cma=%.cmxs)
-  ALIBS = $(BYTELIBS:%.cma=%.a)
-endif
-
-

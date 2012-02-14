@@ -68,7 +68,7 @@ print 'done.'
 # run debcheck
 ###########################################################################
 
-invocation='tee query | /usr/bin/dose-debcheck --successes'
+invocation='/usr/bin/dose-debcheck --successes'
 for repo in arguments.repositories:
     invocation += ' --bg=deb://' + repo
 
@@ -80,7 +80,7 @@ debcheckproc=subprocess.Popen(invocation,shell=True,
 
 # write the input file for debcheck, containing a pseudo-package for each
 # of the pairs (pa,pb) that we found, depending on pa and on pb. We use
-# bogus version constraint >=0 to enforce that thsi dependency can only be
+# bogus version constraint >=0 to enforce that this dependency can only be
 # satisfied by a real package, not a virtual package.
 #
 # We pipe that input directly into the debcheck process. We use 

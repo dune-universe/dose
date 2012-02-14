@@ -13,9 +13,9 @@
 open ExtLib
 open Common
 
-let debug fmt = Util.make_debug "Rpm.Packages" fmt
-let info fmt = Util.make_info "Rpm.Packages" fmt
-let warning fmt = Util.make_warning "Rpm.Packages" fmt
+let debug fmt = Util.make_debug __FILE__ fmt
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
 
 
 type name = string
