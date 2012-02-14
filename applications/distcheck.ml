@@ -75,18 +75,19 @@ let main () =
       |_ -> ""
   in
   let add_resource_prefix = List.map (function s -> resource_prefix^s) in
+  let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress)
     ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
-  let default_arch = OptParse.Opt.opt Options.architecture
-  and fg = 
-    let posargs = OptParse.OptParser.parse_argv Options.options in
-    if posargs=[] && resource_prefix <> ""
-    then add_resource_prefix ("-"::(OptParse.Opt.get Options.foreground))
-    else add_resource_prefix (posargs@(OptParse.Opt.get Options.foreground))
-  and bg = add_resource_prefix (OptParse.Opt.get Options.background)
+  let default_arch = OptParse.Opt.opt Options.architecture in 
+  let fg = 
+    if posargs=[] && resource_prefix <> "" then 
+      add_resource_prefix ("-"::(OptParse.Opt.get Options.foreground))
+    else
+      add_resource_prefix (posargs@(OptParse.Opt.get Options.foreground))
   in
+  let bg = add_resource_prefix (OptParse.Opt.get Options.background) in
   let (preamble,pkgll,from_cudf,to_cudf) = Boilerplate.load_list ~default_arch [fg;bg] in
   let (fg_pkglist, bg_pkglist) = match pkgll with [fg;bg] -> (fg,bg) | _ -> assert false in
   let fg_pkglist = 
