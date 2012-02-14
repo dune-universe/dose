@@ -1,14 +1,19 @@
-(**************************************************************************************)
-(*  Copyright (C) 2009 Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
-(*  Copyright (C) 2009 Mancoosi Project                                               *)
-(*                                                                                    *)
-(*  This library is free software: you can redistribute it and/or modify              *)
-(*  it under the terms of the GNU Lesser General Public License as                    *)
-(*  published by the Free Software Foundation, either version 3 of the                *)
-(*  License, or (at your option) any later version.  A special linking                *)
-(*  exception to the GNU Lesser General Public License applies to this                *)
-(*  library, see the COPYING file for more information.                               *)
-(**************************************************************************************)
+(******************************************************************************)
+(*  This file is part of the Dose library http://www.irill.org/software/dose  *)
+(*                                                                            *)
+(*  Copyright (C) 2009-2012 Pietro Abate <pietro.abate@pps.jussieu.fr>        *)
+(*                                                                            *)
+(*  This library is free software: you can redistribute it and/or modify      *)
+(*  it under the terms of the GNU Lesser General Public License as            *)
+(*  published by the Free Software Foundation, either version 3 of the        *)
+(*  License, or (at your option) any later version.  A special linking        *)
+(*  exception to the GNU Lesser General Public License applies to this        *)
+(*  library, see the COPYING file for more information.                       *)
+(*                                                                            *)
+(*  Work developed with the support of the Mancoosi Project                   *)
+(*  http://www.mancoosi.org                                                   *)
+(*                                                                            *)
+(******************************************************************************)
 
 open ExtLib
 open Debian
@@ -64,9 +69,9 @@ let main () =
   let resource_prefix =
     (* implicit prefix of resources derived from name of executable *)
     match Filename.basename(Sys.argv.(0)) with
-      |"debcheck"|"edos-debcheck" -> "deb://"
-      |"eclipsecheck" -> "eclipse://"
-      |"rpmcheck"|"edos-rpmcheck" -> "synth://"
+      |"debcheck"|"dose-debcheck" -> "deb://"
+      |"eclipsecheck"|"dose-eclipsecheck" -> "eclipse://"
+      |"rpmcheck"|"dose-rpmcheck" -> "synth://"
       |_ -> ""
   in
   let add_resource_prefix = List.map (function s -> resource_prefix^s) in
