@@ -28,13 +28,35 @@ represents the query.
   without installing c. We create a pseudo package like this:
 \begin{verbatim}
 Package: query
+Version: 1
+Architecture: all
 Depends: a, b(>= 42)
 Conflicts: c
 \end{verbatim}
 Then we check for installability of that package with respect to the
 repository:
 \begin{verbatim}
-echo "Package: query\nDepends: a, b(>=42)\nConflicts: c" | debcheck -b repository --
+echo "Package: query\nVersion: 1\nArchitecture: all\nDepends: a, b(>=42)\nConflicts: c" | dose-debcheck --bg=repository
+\end{verbatim}
+\end{example}
+
+\subsection{Parsing \debcheck's output in Python}
+Debcheck's output can be easily parsed from a Python program by using
+the YAML parser (needs the debian package\texttt{python-yaml}).
+
+\begin{example}
+  If you have run debcheck with the option \texttt{-f} (and possibly
+  with the \texttt{-s} option in addition) you may obtain a report
+  containing one non-installable package (name and version) per line
+  like this:
+  
+\begin{verbatim}
+import yaml
+
+doc = yaml.load(file("output-of-distcheck", ’r ’))
+for p in doc [’report’]:
+  if p [’status’] == "broken":
+    print "%s %s is broken" (p[’package’], p[’version’])
 \end{verbatim}
 \end{example}
 
