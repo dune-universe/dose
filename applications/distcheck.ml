@@ -69,9 +69,9 @@ let main () =
   let resource_prefix =
     (* implicit prefix of resources derived from name of executable *)
     match Filename.basename(Sys.argv.(0)) with
-      |"debcheck"|"edos-debcheck" -> "deb://"
-      |"eclipsecheck" -> "eclipse://"
-      |"rpmcheck"|"edos-rpmcheck" -> "synth://"
+      |"debcheck"|"dose-debcheck" -> "deb://"
+      |"eclipsecheck"|"dose-eclipsecheck" -> "eclipse://"
+      |"rpmcheck"|"dose-rpmcheck" -> "synth://"
       |_ -> ""
   in
   let add_resource_prefix = List.map (function s -> resource_prefix^s) in
