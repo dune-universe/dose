@@ -100,15 +100,38 @@ satisfied then it exits with an error:
 \begin{verbatim}
 Package: abc
 Version: 42
+Architecture: amd64
 Depends: xyz
 
 Package: abc
 Version: 42
+Architecture: amd64
 Depends: pqr
 \end{verbatim}
 The reason is that the package $(abc,42)$ is not unique. \debcheck{}
 will reject such an input. After changing the version in the second
 stanza to 43, for example, the input becomes correct.
+\end{example}
+
+\begin{example} The following input does not constitute a repository either:
+\begin{verbatim}
+Package: abc
+Version: 42
+Architecture: amd64
+
+Package: def
+Version: 43
+Architecture: all
+
+Package: ghi
+Version: 44
+Architecture: i386
+\end{verbatim}
+Here, the reason is that the architectures \texttt{amd64} and
+\texttt{i386} are considered in contradiction. Dropping either the
+first or the last package of the repository will fix the problem. Note
+that this can also be achieved by using an architecture filter on the
+input, see Section~\ref{sec:invocation}).
 \end{example}
 
 
