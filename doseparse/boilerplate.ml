@@ -51,6 +51,7 @@ let parse_vpkg s =
   in List.map parse_aux (Pcre.split ~rex:and_sep_re s)
 ;;
 
+(* this is a ,-separated list of vpkgs of the form "a (= v)" *)
 let vpkglist_option ?default ?(metavar = "VPKGLST") () =
   OptParse.Opt.value_option metavar default
   parse_vpkg (fun _ s -> Printf.sprintf "invalid vpackage list '%s'" s)
@@ -70,6 +71,7 @@ let parse_pkg s =
   in List.map parse_aux (Pcre.split ~rex:and_sep_re s)
 ;;
 
+(* this is a ;-separated list of package names *)
 let pkglist_option ?default ?(metavar = "PKGLST") () =
   OptParse.Opt.value_option metavar default
   parse_pkg (fun _ s -> Printf.sprintf "invalid package list '%s'" s)
@@ -83,13 +85,13 @@ let incr_str_list ?(default=Some []) ?(metavar = "STR") =
   (fun _ s -> Printf.sprintf "Invalid String '%s'" s)
 ;;
 
-let str_list ?(default=Some []) ?(metavar = "STRLST") =
+(* this is a ,-separated list of strings *)
+let str_list_option ?(default=Some []) ?(metavar = "STRLST") =
   let sep = "," in
-  let coerce str = ExtString.String.nsplit str sep in
+  let coerce s = ExtString.String.nsplit s sep in
   fun () ->
     OptParse.Opt.value_option metavar default coerce
     (fun _ s -> Printf.sprintf "Invalid String '%s'" s)
-
 
 (* *************************************** *)
 
@@ -256,7 +258,7 @@ let unpack (_,(_,_,_,_,file),_) = file
 (* If yes return that instance of scheme, and the list of paths  *)
 (* in uris.                                                      *)
 (** parse a list of uris of the same type and return a cudf packages list *)
-let parse_input ?default_arch ?(extras=[]) (urilist : string list list) =
+let parse_input ?(archs=[]) ?(extras=[]) (urilist : string list list) =
   let default = match List.flatten urilist with
     |uri::_ -> let (p,_,_) = Input.parse_uri uri in Some p
     |_ -> None
@@ -284,7 +286,13 @@ let parse_input ?default_arch ?(extras=[]) (urilist : string list list) =
       let dll = 
         List.map (fun l ->
           let filelist = List.map unpack l in
-          Debian.Packages.input_raw ?default_arch filelist
+          let default_arch =
+            match archs with
+            |[] -> None
+            |l -> Some (List.hd l)
+          in
+          List.iter print_endline archs;
+          Debian.Packages.input_raw ~default_arch filelist
         ) ll 
       in
       deb_load_list ~extras dll
@@ -356,20 +364,20 @@ END
 ;;
 
 (** parse and merge a list of files into a cudf package list *)
-let load_list ?default_arch ?(extras=[]) urilist =
+let load_list ?(archs=[]) ?(extras=[]) urilist =
   info "Parsing and normalizing..." ;
   let timer = Util.Timer.create "Parsing and normalizing" in
   Util.Timer.start timer;
-  let u = parse_input ?default_arch ~extras urilist in
+  let u = parse_input ~archs ~extras urilist in
   Util.Timer.stop timer u
 ;;
 
 (** parse and merge a list of files into a cudf universe *)
-let load_universe ?default_arch ?(extras=[]) uris =
+let load_universe ?(archs=[]) ?(extras=[]) uris =
   info "Parsing and normalizing..." ;
   let timer = Util.Timer.create "Parsing and normalizing" in
   Util.Timer.start timer;
-  let (pr,cll,f,t) = parse_input ?default_arch ~extras [uris] in
+  let (pr,cll,f,t) = parse_input ~archs ~extras [uris] in
   let u = (pr,Cudf.load_universe (List.flatten cll), f, t) in
   Util.Timer.stop timer u
 ;;

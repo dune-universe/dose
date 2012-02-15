@@ -32,7 +32,7 @@ module Options = struct
   let summary = StdOpt.store_true ()
   let latest = StdOpt.store_true ()
   let checkonly = Boilerplate.vpkglist_option ()
-  let architecture = StdOpt.str_option ()
+  let architectures = Boilerplate.str_list_option ()
   let outfile = StdOpt.str_option ()
   let background = Boilerplate.incr_str_list ()
   let foreground = Boilerplate.incr_str_list ()
@@ -47,7 +47,7 @@ module Options = struct
 
   add options ~long_name:"latest" ~help:"Check only the latest version of each package" latest;
 
-  add options ~long_name:"arch" ~help:"Set the default architecture" architecture;
+  add options ~long_name:"archs" ~help:"Set the default architectures" architectures;
 
   add options ~long_name:"fg" 
   ~help:"Additional Packages lists that are checked and used for resolving dependencies (can be repeated)" foreground;
@@ -80,7 +80,11 @@ let main () =
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress)
     ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
-  let default_arch = OptParse.Opt.opt Options.architecture in 
+  let archs = 
+    if OptParse.Opt.is_set Options.architectures then 
+      OptParse.Opt.get Options.architectures 
+    else []
+  in
   let fg = 
     if posargs=[] && resource_prefix <> "" then 
       add_resource_prefix ("-"::(OptParse.Opt.get Options.foreground))
@@ -88,7 +92,7 @@ let main () =
       add_resource_prefix (posargs@(OptParse.Opt.get Options.foreground))
   in
   let bg = add_resource_prefix (OptParse.Opt.get Options.background) in
-  let (preamble,pkgll,from_cudf,to_cudf) = Boilerplate.load_list ~default_arch [fg;bg] in
+  let (preamble,pkgll,from_cudf,to_cudf) = Boilerplate.load_list ~archs [fg;bg] in
   let (fg_pkglist, bg_pkglist) = match pkgll with [fg;bg] -> (fg,bg) | _ -> assert false in
   let fg_pkglist = 
     if OptParse.Opt.get Options.latest then
@@ -146,8 +150,8 @@ let main () =
   in
   let results = Diagnostic.default_result universe_size in
 
-  if OptParse.Opt.is_set Options.architecture then
-    Format.fprintf fmt "architecture: %s@." (OptParse.Opt.get Options.architecture);
+  if archs <> [] then
+    Format.fprintf fmt "architectures: %s@." (ExtString.String.join "," archs);
 
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
   let callback d =
