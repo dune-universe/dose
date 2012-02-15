@@ -107,12 +107,12 @@ let rec packages_parser ?(request=false) (req,acc) p =
       let req = parse_request_stanza stanza in
       packages_parser (req,acc) p
   |Some stanza when req.strict_pin = true -> begin
-    match (Packages.parse_package_stanza (Some(filter)) None extras stanza) with
+    match (Packages.parse_package_stanza (Some(filter)) [] extras stanza) with
     |None -> packages_parser (req,acc) p
     |Some st -> packages_parser (req,st::acc) p
   end
   |Some stanza when req.strict_pin = false -> begin
-    match (Packages.parse_package_stanza None None extras stanza) with
+    match (Packages.parse_package_stanza None [] extras stanza) with
     |None -> assert false (* this is not possible in this branch *)
     |Some st -> packages_parser (req,st::acc) p
   end
