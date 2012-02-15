@@ -200,9 +200,12 @@ let print_error pp root fmt l =
 let default_pp pkg = (pkg.Cudf.package,CudfAdd.string_of_version pkg,[])
 
 let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) fmt = function
-  |{result = Success (f); request = Package r } when success ->
+  |{result = Success (f); request = req } when success ->
        Format.fprintf fmt "@[<v 1>-@,";
-       Format.fprintf fmt "@[<v>%a@]@," (pp_package ~source:true pp) r;
+       begin match req with
+       |Package r -> Format.fprintf fmt "@[<v>%a@]@," (pp_package ~source:true pp) r
+       |PackageList rl -> ()
+       end;
        Format.fprintf fmt "status: ok@,";
        if explain then begin
          let is = f ~all:true () in
@@ -223,7 +226,10 @@ let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
          Format.fprintf fmt "@]"
        end;
        Format.fprintf fmt "@]@,"
-  |_ -> ()
+  |{result = Failure (f) ; request = PackageList rl } when failure -> 
+       Format.fprintf fmt "@[<v 1>-@,";
+       Format.fprintf fmt "status: broken@,";
+       Format.fprintf fmt "@]@,"
 ;;
 
 let printf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) d =
