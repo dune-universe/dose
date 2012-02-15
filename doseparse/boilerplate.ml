@@ -286,13 +286,7 @@ let parse_input ?(archs=[]) ?(extras=[]) (urilist : string list list) =
       let dll = 
         List.map (fun l ->
           let filelist = List.map unpack l in
-          let default_arch =
-            match archs with
-            |[] -> None
-            |l -> Some (List.hd l)
-          in
-          List.iter print_endline archs;
-          Debian.Packages.input_raw ~default_arch filelist
+          Debian.Packages.input_raw ~archs filelist
         ) ll 
       in
       deb_load_list ~extras dll
