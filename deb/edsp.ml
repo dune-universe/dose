@@ -135,6 +135,7 @@ let extras_tocudf =
 ;;
 
 let tocudf tables pkg =
+  let options = { Debcudf.default_options with Debcudf.extras = extras_tocudf } in
   let inst =
     try
       let _loc = Format822.dummy_loc in
@@ -142,5 +143,5 @@ let tocudf tables pkg =
       Packages.parse_bool (_loc,v)
     with Not_found -> false
   in
-  Debcudf.tocudf tables ~inst ~extras:extras_tocudf pkg 
+  Debcudf.tocudf tables ~options ~inst pkg 
 ;;

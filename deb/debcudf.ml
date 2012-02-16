@@ -267,11 +267,19 @@ let add_inst inst pkg =
     with Not_found -> false
 
 let add_extra extras tables pkg =
-  match extras with
-  |None -> []
-  |Some el -> add_extra_default el tables pkg
+  add_extra_default extras tables pkg
 
-let tocudf tables ?extras ?(inst=false) pkg =
+type options = {
+  extras : extramap ;
+  availableArchs : string list ;
+}
+
+let default_options = {
+  extras = [] ; 
+  availableArchs = [] 
+}
+
+let tocudf tables ?(options=default_options) ?(inst=false) pkg =
   { Cudf.default_package with
     Cudf.package = CudfAdd.encode pkg.name ;
     Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;
@@ -280,23 +288,23 @@ let tocudf tables ?extras ?(inst=false) pkg =
     Cudf.conflicts = loadlc tables pkg.name (pkg.breaks @ pkg.conflicts) ;
     Cudf.provides = loadlp tables pkg.provides ;
     Cudf.installed = add_inst inst pkg;
-    Cudf.pkg_extra = add_extra extras tables pkg ;
+    Cudf.pkg_extra = add_extra options.extras tables pkg ;
   }
 
 let lltocudf = loadll
 let ltocudf = loadl
 
-let load_list l =
+let load_list ?options l =
   let timer = Util.Timer.create "Debian.Debcudf.load_list" in
   Util.Timer.start timer;
   let tables = init_tables l in
-  let pkglist = List.map (tocudf tables) l in
+  let pkglist = List.map (tocudf tables ?options) l in
   clear tables;
   Util.Timer.stop timer pkglist
 
-let load_universe l =
+let load_universe ?options l =
   let timer = Util.Timer.create "Debian.Debcudf.load_universe" in
-  let pkglist = load_list l in
+  let pkglist = load_list ?options l in
   Util.Timer.start timer;
   let univ = Cudf.load_universe pkglist in
   Util.Timer.stop timer univ
