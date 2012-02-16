@@ -93,9 +93,8 @@ let main () =
       ) ["architecture";"source";"sourcenumber"]
     in (p,v,l)
   in
-
-  let sl = List.map (fun pkg -> Debcudf.tocudf ~extras:[] tables pkg) srclist in
-  let l = List.fold_left (fun acc pkg -> (Debcudf.tocudf ~extras:[] tables pkg)::acc) sl pkglist in
+  let sl = List.map (fun pkg -> Debcudf.tocudf tables pkg) srclist in
+  let l = List.fold_left (fun acc pkg -> (Debcudf.tocudf tables pkg)::acc) sl pkglist in
 
   let universe = Cudf.load_universe l in
   let universe_size = Cudf.universe_size universe in

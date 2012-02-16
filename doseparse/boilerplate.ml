@@ -150,12 +150,16 @@ let read_deb ?filter ?(extras=[]) fname =
 let deb_load_list ?(extras=[]) ?(status=[]) dll =
   let pkglist = List.flatten dll in
   let pkglist = if status = [] then pkglist else Debian.Packages.merge status pkglist in
+  let options = {
+    Debian.Debcudf.extras = extras;
+    availableArchs = ["amd64";"i386";"arm";"armel"] }
+  in
   let tables = Debian.Debcudf.init_tables pkglist in
   let from_cudf (p,i) = (p,Debian.Debcudf.get_real_version tables (p,i)) in
   let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
   let cll = 
     List.map (fun l ->
-      List.map (Debian.Debcudf.tocudf ~extras tables) l
+      List.map (Debian.Debcudf.tocudf tables ~options) l
     ) dll
   in
   let preamble = Debian.Debcudf.preamble in
