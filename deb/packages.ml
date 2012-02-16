@@ -24,8 +24,8 @@ let fatal fmt = Util.make_fatal "Debian.Packages" fmt
 type package = {
   name : Format822.name ;
   version : Format822.version;
-  architecture : string;
-  multiarch : string;
+  architecture : Format822.architecture ;
+  multiarch : Format822.multiarch ;
   essential : bool;
   build_essential : bool;
   priority : string;
@@ -46,7 +46,7 @@ let default_package = {
   name = "";
   version = "";
   architecture = "";
-  multiarch = "";
+  multiarch = `None;
   essential = false;
   build_essential = false;
   priority = "";
@@ -154,7 +154,7 @@ let parse_package_stanza filter archs extras par =
       name = parse_s ~err:"(MISSING NAME)" parse_name "Package" par;
       version = parse_s ~err:"(MISSING VERSION)" parse_version "Version" par;
       architecture = parse_s ~err:"(MISSING ARCH)" parse_arch "Architecture" par;
-      multiarch = parse_s ~opt:"None" parse_multiarch "Multi-Arch" par;
+      multiarch = parse_s ~opt:`None parse_multiarch "Multi-Arch" par;
       source = parse_s ~opt:("",None) parse_source "Source" par;
 
       essential = parse_s ~opt:false parse_bool "Essential" par;
