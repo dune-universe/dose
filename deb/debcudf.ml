@@ -162,7 +162,7 @@ let loadl tables l =
       |None ->
           if (Util.StringHashtbl.mem tables.virtual_table name) &&
           (Util.StringHashtbl.mem tables.versioned_table name) then
-            [(encname, None);(encname^"--virtual", None)]
+            [(encname, None);("--virtual-"^encname, None)]
           else
             [(encname, None)]
       |Some(op,v) ->
@@ -181,12 +181,12 @@ let loadlp tables l =
     |None  ->
         if (Util.StringHashtbl.mem tables.unit_table name) || 
         (Util.StringHashtbl.mem tables.versioned_table name)
-        then (encname^"--virtual",None)
+        then ("--virtual-"^encname,None)
         else (encname, None)
     |Some(`Eq,v) ->
         if (Util.StringHashtbl.mem tables.unit_table name) || 
         (Util.StringHashtbl.mem tables.versioned_table name)
-        then (encname^"--virtual",Some(`Eq,get_cudf_version tables (name,v)))
+        then ("--virtual-"^encname,Some(`Eq,get_cudf_version tables (name,v)))
         else (encname,Some(`Eq,get_cudf_version tables (name,v)))
     |_ -> fatal "This should never happen : a provide can be either = or unversioned"
   ) l
