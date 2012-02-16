@@ -271,14 +271,16 @@ let add_extra extras tables pkg =
 
 type options = {
   extras : extramap ;
-  hostArch : string;
-  availableArchs : string list ;
+  host : string;
+  build : string;
+  foreign : string list ;
 }
 
 let default_options = {
-  extras = [] ; 
-  hostArch = "";
-  availableArchs = [] 
+  extras = [] ;
+  build = "";  (* the default architecture 'dpkg -print-architecture' *)
+  host = "";   (* used to resolv cross dependencies *)
+  foreign = [] (* list of foreign architectures *)
 }
 
 let tocudf tables ?(options=default_options) ?(inst=false) pkg =
