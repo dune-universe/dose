@@ -13,10 +13,10 @@ let parse_relop = function
   | _ -> assert false   (* lexer shouldn't have returned such a RELOP! *)
 
 let parse_multiarch = function
-  |("None"|"none") -> "None"
-  |("Allowed"|"allowed") -> "Allowed"
-  |("Foreign"|"foreign") -> "Foreign"
-  |("Same"|"same") -> "Same"
+  |("None"|"none") -> `None
+  |("Allowed"|"allowed") -> `Allowed
+  |("Foreign"|"foreign") -> `Foreign
+  |("Same"|"same") -> `Same
   |s -> raise (Format822.Type_error ("Field Multi-Arch has a wrong value : "^ s))
 
 let parse_request s =
@@ -40,6 +40,7 @@ let parse_request s =
 %type <Format822.name> pkgname_top
 %type <Format822.version> version_top 
 
+%type <Format822.architecture list> archlist_top
 %type <Format822.multiarch> multiarch_top 
 %type <Format822.source> source_top 
 
@@ -51,7 +52,6 @@ let parse_request s =
 %type <Format822.builddepslist> builddepslist_top
 
 %type <Format822.vpkgreq list> request_top
-%type <Format822.architecture list> archlist_top
 
 %start pkgname_top version_top
 %start multiarch_top source_top
