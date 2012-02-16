@@ -152,6 +152,7 @@ let deb_load_list ?(extras=[]) ?(status=[]) dll =
   let pkglist = if status = [] then pkglist else Debian.Packages.merge status pkglist in
   let options = {
     Debian.Debcudf.extras = extras;
+    hostArch = "";
     availableArchs = ["amd64";"i386";"arm";"armel"] }
   in
   let tables = Debian.Debcudf.init_tables pkglist in
