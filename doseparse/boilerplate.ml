@@ -153,6 +153,7 @@ let deb_load_list ?(extras=[]) ?(status=[]) dll =
   let options = { 
     Debian.Debcudf.default_options with
     Debian.Debcudf.extras = extras;
+    host = "amd64";
     foreign = ["amd64";"i386";"arm";"armel"] 
   }
   in
