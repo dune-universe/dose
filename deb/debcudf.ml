@@ -265,11 +265,13 @@ let add_extra extras tables pkg =
 
 type options = {
   extras : extramap ;
+  hostArch : string;
   availableArchs : string list ;
 }
 
 let default_options = {
   extras = [] ; 
+  hostArch = "";
   availableArchs = [] 
 }
 
