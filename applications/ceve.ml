@@ -46,6 +46,10 @@ struct
   let output_ty = out_option ~default:"cnf" ()
   let out_ch = StdOpt.str_option ()
 
+  let deb_foreign_arch = Boilerplate.str_list_option ()
+  let deb_host_arch = StdOpt.str_option ()
+  let deb_build_arch = StdOpt.str_option ()
+
   let output_ch () =
     if Opt.is_set out_ch then 
       open_out (Opt.get out_ch)
@@ -64,6 +68,12 @@ struct
   add options                 ~long_name:"depth" ~help:"max depth - in conjunction with cone" cone_maxdepth;
   add options ~short_name:'t' ~long_name:"outtype" ~help:"Output type" output_ty;
   add options ~short_name:'o' ~long_name:"outfile" ~help:"Output file" out_ch;
+
+  let deb_group = add_group options "Debian Specific Options" in
+  add options ~group:deb_group ~long_name:"deb-host-arch" ~help:"Host architecture" deb_host_arch;
+  add options ~group:deb_group ~long_name:"deb-build-arch" ~help:"Build architecture" deb_build_arch;
+  add options ~group:deb_group ~long_name:"deb-foreign-archs" ~help:"Foreign architectures" deb_foreign_arch;
+
 end;;
 
 let and_sep_re = Pcre.regexp "\\s*;\\s*"
@@ -119,14 +129,50 @@ let output_cudf oc pr univ =
   Cudf_printer.pp_universe oc univ
 ;;
 
+let set_options = function
+  |Url.Deb ->
+    let host =
+      if OptParse.Opt.is_set Options.deb_host_arch then
+        OptParse.Opt.get Options.deb_host_arch
+      else ""
+    in
+    let build =
+      if OptParse.Opt.is_set Options.deb_build_arch then
+        OptParse.Opt.get Options.deb_build_arch
+      else ""
+    in
+    let archs = 
+      let l = OptParse.Opt.get Options.deb_foreign_arch in
+      let l = if host <> "" then host::l else l in
+      let l = if build <> "" then build::l else l in
+      l
+    in
+
+    Some (
+      Boilerplate.Deb {
+        Debian.Debcudf.default_options with 
+        Debian.Debcudf.foreign = archs;
+        host = host;
+        build = build
+      }
+    )
+  |Url.Synthesis -> None
+  |Url.Hdlist -> None
+  |Url.Eclipse -> Some (Boilerplate.Eclipse Debian.Debcudf.default_options)
+  |Url.Cudf -> None
+;;
+
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
+  let input_format = Input.guess_format [posargs] in
+  let options = set_options input_format in
+
   Boilerplate.enable_debug(OptParse.Opt.get Options.verbose);
 
   if OptParse.Opt.get Options.output_ty = "sqlite" then
     output_to_sqlite posargs
   else
-  let (preamble,universe,from_cudf,to_cudf) = Boilerplate.load_universe posargs in
+  let (preamble,universe,from_cudf,to_cudf) = Boilerplate.load_universe ~options posargs in
   let get_cudfpkg (p,v) = Cudf.lookup_package universe (to_cudf (p,v)) in
 
   let pkg_src () = List.map get_cudfpkg (parse_pkg (OptParse.Opt.get Options.src)) in

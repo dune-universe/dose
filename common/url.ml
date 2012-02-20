@@ -12,7 +12,10 @@
 
 exception Invalid_url of string;;
 
-let error m s = raise (Invalid_url (m^": "^s));;
+let debug fmt = Util.make_debug __FILE__ fmt
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
+let fatal fmt = Util.make_fatal __FILE__ fmt
 
 (***********************************************************************)
 (* Input schemes *******************************************************)
@@ -45,7 +48,7 @@ let scheme_of_string = function
   | "hdlist" -> Hdlist
   | "sqlite" -> Sqlite
   | "pgsql" -> Pgsql
-  | s -> error "unknown scheme" s
+  | s -> fatal "unknown scheme" s
 ;;
 
 (***********************************************************************)
@@ -115,19 +118,18 @@ let rec parse_query_from s from length =
 	[(String.sub s from (pos_equal-from)),
 	 (String.sub s (pos_equal+1) (length-pos_equal-1))]
     with
-	Not_found -> error
-	  ("no '=' found after position "^(string_of_int from)) s
+	Not_found -> fatal "no '=' found after position %d %s" from s
 
 let of_string s =
   let l = String.length s in
   let pos_colon =
     try String.index s ':'
-    with Not_found -> error "missing '://' separator" s
+    with Not_found -> fatal "missing '://' separator %s" s
   in
   if pos_colon+2 >= l
     || String.get s (pos_colon+1) <> '/'
     || String.get s (pos_colon+2) <> '/'
-  then error "missing '://' separator" s;
+  then fatal "missing '://' separator %s" s;
   let scheme = scheme_of_string (String.sub s 0 pos_colon)
   and start_rest = pos_colon+3 in
   if is_local_scheme scheme
@@ -149,12 +151,12 @@ let of_string s =
         (* since it separates the authentication part from the path     *)
 	try String.index_from s start_rest '/'
 	with Not_found ->
-	  error "remote scheme needs authentication/path separator" s
+	  fatal "remote scheme needs authentication/path separator" s
       in
       (* The first path segment in case of a remote scheme must not be  *)
       (* empty.                                                         *)
       if pos_slash=start_rest
-      then error "path of a remote scheme must not start on '/'" s;
+      then fatal "path of a remote scheme must not start on '/'" s;
       let pos_at_in_auth =
 	(* the position of @ before the first slash, or -1 otherwise    *)
 	try 
@@ -223,6 +225,3 @@ let of_string s =
 	query  = query
       }
 ;;
-
-of_string "pgsql://a/ksdklfjsdklfjl";;
-
