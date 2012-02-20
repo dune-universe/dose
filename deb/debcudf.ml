@@ -303,42 +303,54 @@ let default_options = {
 }
 
 let tocudf tables ?(options=default_options) ?(inst=false) pkg =
-  let _name = add_arch options.host pkg.architecture pkg.name in
-  let _provides = 
-    let l = 
-      match pkg.multiarch with
-      |`None -> [(CudfAdd.encode pkg.name,None)]
-      |`Foreign -> List.map (fun arch -> (add_arch options.host arch pkg.name,None)) options.foreign
-      |`Allowed -> [(CudfAdd.encode pkg.name,None) ; (add_arch options.host "any" pkg.name,None)]
-      |`Same -> []
+  if options.host <> "" then begin
+    let _name = add_arch options.host pkg.architecture pkg.name in
+    let _provides = 
+      let l = 
+        match pkg.multiarch with
+        |`None -> [(CudfAdd.encode pkg.name,None)]
+        |`Foreign -> List.map (fun arch -> (add_arch options.host arch pkg.name,None)) options.foreign
+        |`Allowed -> [(CudfAdd.encode pkg.name,None) ; (add_arch options.host "any" pkg.name,None)]
+        |`Same -> []
+      in
+      match pkg.architecture with
+      |_ -> l@(add_arch_l options.host pkg.architecture (loadlp tables pkg.provides))
     in
-    match pkg.architecture with
-    |_ -> l@(add_arch_l options.host pkg.architecture (loadlp tables pkg.provides))
-  in
-  let _conflicts = 
-    (* self conflict / multi-arch conflict *)
-    let sc = (add_arch options.host pkg.architecture pkg.name,None) in
-    let mac = (CudfAdd.encode pkg.name,None) in
-    let l = pkg.breaks @ pkg.conflicts in
-    match pkg.multiarch with
-    |(`None|`Foreign|`Allowed) -> 
-        sc::mac::(add_arch_l options.host pkg.architecture (loadl tables l))
-    |`Same -> sc::(add_arch_l options.host pkg.architecture (loadl tables l))
-  in
-  let _depends = 
-    List.map (add_arch_l options.host pkg.architecture) 
-    (loadll tables (pkg.pre_depends @ pkg.depends))
-  in
-  { Cudf.default_package with
-    Cudf.package = _name ;
-    Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;
-    Cudf.keep = add_essential pkg.essential;
-    Cudf.depends = _depends;
-    Cudf.conflicts = _conflicts ;
-    Cudf.provides = _provides ;
-    Cudf.installed = add_inst inst pkg;
-    Cudf.pkg_extra = add_extra options.extras tables pkg ;
-  }
+    let _conflicts = 
+      (* self conflict / multi-arch conflict *)
+      let sc = (add_arch options.host pkg.architecture pkg.name,None) in
+      let mac = (CudfAdd.encode pkg.name,None) in
+      let l = pkg.breaks @ pkg.conflicts in
+      match pkg.multiarch with
+      |(`None|`Foreign|`Allowed) -> 
+          sc::mac::(add_arch_l options.host pkg.architecture (loadl tables l))
+      |`Same -> sc::(add_arch_l options.host pkg.architecture (loadl tables l))
+    in
+    let _depends = 
+      List.map (add_arch_l options.host pkg.architecture) 
+      (loadll tables (pkg.pre_depends @ pkg.depends))
+    in
+    { Cudf.default_package with
+      Cudf.package = _name ;
+      Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;
+      Cudf.keep = add_essential pkg.essential;
+      Cudf.depends = _depends;
+      Cudf.conflicts = _conflicts ;
+      Cudf.provides = _provides ;
+      Cudf.installed = add_inst inst pkg;
+      Cudf.pkg_extra = add_extra options.extras tables pkg ;
+    }
+  end else
+    { Cudf.default_package with
+      Cudf.package = CudfAdd.encode pkg.name ;
+      Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;
+      Cudf.keep = add_essential pkg.essential;
+      Cudf.depends = loadll tables (pkg.pre_depends @ pkg.depends);
+      Cudf.conflicts = loadlc tables pkg.name (pkg.breaks @ pkg.conflicts) ;
+      Cudf.provides = loadlp tables pkg.provides ;
+      Cudf.installed = add_inst inst pkg;
+      Cudf.pkg_extra = add_extra options.extras tables pkg ;
+    }
 
 let lltocudf = loadll
 let ltocudf = loadl

@@ -147,16 +147,9 @@ let read_deb ?filter ?(extras=[]) fname =
  * dll = deb packages list list 
  * cll = cudf package list list
  *)
-let deb_load_list ?(extras=[]) ?(status=[]) dll =
+let deb_load_list options ?(status=[]) dll =
   let pkglist = List.flatten dll in
   let pkglist = if status = [] then pkglist else Debian.Packages.merge status pkglist in
-  let options = { 
-    Debian.Debcudf.default_options with
-    Debian.Debcudf.extras = extras;
-    host = "amd64";
-    foreign = ["amd64";"i386";"arm";"armel"] 
-  }
-  in
   let tables = Debian.Debcudf.init_tables pkglist in
   let from_cudf (p,i) = (p,Debian.Debcudf.get_real_version tables (p,i)) in
   let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
@@ -174,7 +167,8 @@ let pp_versions_table fmt (from_cudf, pkglist) =
     Format.fprintf fmt "%s=%d=%s@." p pkg.Cudf.version v
   ) pkglist
 
-let eclipse_load_list ?(extras=[]) dll =
+let eclipse_load_list options dll =
+  let extras = [] in
   let pkglist = List.flatten dll in
   let tables = Eclipse.Eclipsecudf.init_tables pkglist in
   let from_cudf (p,i) = (p, Eclipse.Eclipsecudf.get_real_version tables (p,i)) in
@@ -188,8 +182,8 @@ let eclipse_load_list ?(extras=[]) dll =
   (preamble,cll,from_cudf,to_cudf)
  
 (** transform a list of debian control stanza into a cudf universe *)
-let deb_load_universe ?(extras=[]) l =
-  let (pr,cll,f,t) = deb_load_list ~extras [l] in
+let deb_load_universe options l =
+  let (pr,cll,f,t) = deb_load_list options [l] in
   (pr,Cudf.load_universe (List.flatten cll), f, t)
 
 (* XXX double minded ... this code is kinda similar to the code in rpmcudf 
@@ -261,72 +255,78 @@ let cudf_load_universe file =
 (** return the name of the file *)
 let unpack (_,(_,_,_,_,file),_) = file
 
+type options =
+  |Deb of Debian.Debcudf.options
+  |Eclipse of Debian.Debcudf.options
+  |Rpm
+  |Cudf
+
+let deb_parse_input options urilist =
+  let archs = options.Debian.Debcudf.foreign in
+  let dll = 
+    List.map (fun l ->
+      let filelist = List.map unpack l in
+      Debian.Packages.input_raw ~archs filelist
+    ) urilist
+  in
+  deb_load_list options dll
+
+let eclipse_parse_input options urilist =
+  let extras = [] in
+  let dll = 
+    List.map (fun l ->
+      let filelist = List.map unpack l in
+      Eclipse.Packages.input_raw filelist
+    ) urilist
+  in
+  eclipse_load_list options dll
+
+let cudf_parse_input urilist =
+  match urilist with
+  |[[p]] when (unpack p) = "-" -> fatal "no stdin for cudf yet"
+  |[[p]] -> cudf_load_list (unpack p)
+  |l ->
+    if List.length (List.flatten l) > 1 then
+      warning "more then one cudf speficied on the command line";
+    let p = List.hd (List.flatten l) in 
+    cudf_load_list (unpack p)
+;;
+
 (* Check that all uris are of type that is an instance of scheme *)
 (* If yes return that instance of scheme, and the list of paths  *)
 (* in uris.                                                      *)
 (** parse a list of uris of the same type and return a cudf packages list *)
-let parse_input ?(archs=[]) ?(extras=[]) (urilist : string list list) =
-  let default = match List.flatten urilist with
-    |uri::_ -> let (p,_,_) = Input.parse_uri uri in Some p
-    |_ -> None
-  in
-  let filelist =
-    List.map (fun uris ->
-      List.filter_map (fun uri ->
-        let (t,_,_) as p = Input.parse_uri uri in
-        if Some t = default then Some p else None
-      ) uris
-    ) urilist
-  in
-  match default, filelist with
-  |None,_ -> fatal "No input specified"
-  |Some Url.Cudf,[[p]] when (unpack p) = "-" -> fatal "no stdin for cudf yet"
-  |Some Url.Cudf,[[p]] -> cudf_load_list (unpack p)
-  |Some Url.Cudf, l when (List.flatten l) = [] -> fatal "how do you know it's a cudf ?"
-  |Some Url.Cudf, l -> 
-      if List.length (List.flatten l) > 1 then
-        warning "more then one cudf speficied on the command line";
-      let p = List.hd (List.flatten l) in 
-      cudf_load_list (unpack p)
+let parse_input ?(options=None) urilist =
+  let filelist = List.map (List.map Input.parse_uri) urilist in
+  match Input.guess_format urilist, options with
+  |Url.Cudf, None -> cudf_parse_input filelist
 
-  |Some Url.Deb,ll ->
-      let dll = 
-        List.map (fun l ->
-          let filelist = List.map unpack l in
-          Debian.Packages.input_raw ~archs filelist
-        ) ll 
-      in
-      deb_load_list ~extras dll
+  |Url.Deb, None -> deb_parse_input Debian.Debcudf.default_options filelist
+  |Url.Eclipse, None -> eclipse_parse_input Debian.Debcudf.default_options filelist
 
-  |Some Url.Eclipse, ll ->
-      let dll = 
-        List.map (fun l ->
-          let filelist = List.map unpack l in
-          Eclipse.Packages.input_raw filelist
-        ) ll 
-      in
-      eclipse_load_list ~extras dll
+  |Url.Deb, Some (Deb opt) -> deb_parse_input opt filelist
+  |Url.Eclipse, Some (Eclipse opt) -> eclipse_parse_input opt filelist
 
-  |Some Url.Hdlist, ll -> 
+  |Url.Hdlist, None -> 
 IFDEF HASRPM THEN
       let dll = 
         List.map (fun l ->
           let filelist = List.map unpack l in
           Rpm.Packages.Hdlists.input_raw filelist
-        ) ll 
+        ) filelist 
       in
       rpm_load_list dll
 ELSE
     fatal "hdlist Not supported. re-configure with --with-rpm"
 END
 
-  |Some Url.Synthesis, ll -> 
+  |Url.Synthesis, None -> 
 IFDEF HASRPM THEN
       let dll = 
         List.map (fun l ->
           let filelist = List.map unpack l in
           Rpm.Packages.Synthesis.input_raw filelist
-        ) ll 
+        ) filelist
       in
       rpm_load_list dll
 ELSE
@@ -342,7 +342,7 @@ ELSE
     fatal "%s Not supported. re-configure with --with-??" (Url.scheme_to_string dbtype)
 END
 *)
-    |Some s,_ -> fatal "%s Not supported" (Url.scheme_to_string s)
+    |s,_ -> fatal "%s Not supported" (Url.scheme_to_string s)
 ;;
 
 let supported_formats () =
@@ -365,20 +365,20 @@ END
 ;;
 
 (** parse and merge a list of files into a cudf package list *)
-let load_list ?(archs=[]) ?(extras=[]) urilist =
+let load_list ?(options=None) urilist =
   info "Parsing and normalizing..." ;
   let timer = Util.Timer.create "Parsing and normalizing" in
   Util.Timer.start timer;
-  let u = parse_input ~archs ~extras urilist in
+  let u = parse_input ~options urilist in
   Util.Timer.stop timer u
 ;;
 
 (** parse and merge a list of files into a cudf universe *)
-let load_universe ?(archs=[]) ?(extras=[]) uris =
+let load_universe ?(options=None) uris =
   info "Parsing and normalizing..." ;
   let timer = Util.Timer.create "Parsing and normalizing" in
   Util.Timer.start timer;
-  let (pr,cll,f,t) = parse_input ~archs ~extras [uris] in
+  let (pr,cll,f,t) = parse_input ~options [uris] in
   let u = (pr,Cudf.load_universe (List.flatten cll), f, t) in
   Util.Timer.stop timer u
 ;;

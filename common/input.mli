@@ -55,3 +55,7 @@ val parse_uri : string -> (
   * string )          (* db name - or filename *)
   * string option     (* query string *)
   )
+
+(** guess the input format from a list of list of uris and check
+ *  if the list is omogenueous w.r.t the guessed format. Fails otherwise *)
+val guess_format : string list list -> Url.input_scheme
