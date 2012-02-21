@@ -53,10 +53,11 @@ the YAML parser (needs the debian package\texttt{python-yaml}).
 \begin{verbatim}
 import yaml
 
-doc = yaml.load(file("output-of-distcheck", ’r ’))
-for p in doc [’report’]:
-  if p [’status’] == "broken":
-    print "%s %s is broken" (p[’package’], p[’version’])
+doc = yaml.load(file("output-of-distcheck", 'r'))
+if doc['report'] is not None:
+  for p in doc['report']:
+    if p ['status'] == "broken":
+      print "%s %s is broken" (p['package'], p['version'])
 \end{verbatim}
 \end{example}
 

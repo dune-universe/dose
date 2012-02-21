@@ -97,10 +97,11 @@ debcheckproc.stdin.close()
 # pairs of packages.
 debreport = yaml.load(debcheckproc.stdout)
 print 'done.'
-os.chdir(outdir)
-for stanza in debreport['report'] :
-    stanzamatch=re.match('^(.*):(.*)',stanza['package'])
-    pa,pb=stanzamatch.group(1),stanzamatch.group(2)
-    out=open(pa+':'+pb,'w')
-    out.write(filetable[(pa,pb)])
-    out.close()
+if debreport['report'] is not None:
+    os.chdir(outdir)
+    for stanza in debreport['report'] :
+        stanzamatch=re.match('^(.*):(.*)',stanza['package'])
+        pa,pb=stanzamatch.group(1),stanzamatch.group(2)
+        out=open(pa+':'+pb,'w')
+        out.write(filetable[(pa,pb)])
+        out.close()
