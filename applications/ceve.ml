@@ -47,6 +47,7 @@ struct
   let out_ch = StdOpt.str_option ()
 
   let deb_foreign_arch = Boilerplate.str_list_option ()
+  let deb_native_arch = StdOpt.str_option ()
   let deb_host_arch = StdOpt.str_option ()
   let deb_build_arch = StdOpt.str_option ()
 
@@ -70,8 +71,11 @@ struct
   add options ~short_name:'o' ~long_name:"outfile" ~help:"Output file" out_ch;
 
   let deb_group = add_group options "Debian Specific Options" in
+  add options ~group:deb_group ~long_name:"deb-native-arch" ~help:"Native architecture" deb_native_arch;
+  (*
   add options ~group:deb_group ~long_name:"deb-host-arch" ~help:"Host architecture" deb_host_arch;
   add options ~group:deb_group ~long_name:"deb-build-arch" ~help:"Build architecture" deb_build_arch;
+  *)
   add options ~group:deb_group ~long_name:"deb-foreign-archs" ~help:"Foreign architectures" deb_foreign_arch;
 
 end;;
@@ -141,10 +145,16 @@ let set_options = function
         OptParse.Opt.get Options.deb_build_arch
       else ""
     in
+    let native =
+      if OptParse.Opt.is_set Options.deb_native_arch then
+        OptParse.Opt.get Options.deb_native_arch
+      else ""
+    in
     let archs = 
       let l = OptParse.Opt.get Options.deb_foreign_arch in
       let l = if host <> "" then host::l else l in
       let l = if build <> "" then build::l else l in
+      let l = if native <> "" then native::l else l in
       l
     in
 
@@ -153,7 +163,8 @@ let set_options = function
         Debian.Debcudf.default_options with 
         Debian.Debcudf.foreign = archs;
         host = host;
-        build = build
+        build = build;
+        native = native
       }
     )
   |Url.Synthesis -> None

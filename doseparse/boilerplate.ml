@@ -35,7 +35,7 @@ end
 (* *************************************** *)
 
 let and_sep_re = Pcre.regexp "\\s*,\\s*"
-let pkg_re = Pcre.regexp "([0-9a-z][a-z0-9.+-]*)(\\s*$|\\s*\\(([><=!]+)\\s+([a-zA-Z0-9.+:~-]+)\\))"
+let pkg_re = Pcre.regexp "([0-9a-z][a-z0-9.+-:]*)(\\s*$|\\s*\\(([><=!]+)\\s+([a-zA-Z0-9.+:~-]+)\\))"
 let parse_vpkg s =
   let parse_aux str =
     try
@@ -44,8 +44,8 @@ let parse_vpkg s =
       try 
         let c = Pcre.get_substring s 3 in
         let v = Pcre.get_substring s 4 in
-        (p,CudfAdd.cudfop(Some(c,v)))
-      with Not_found -> (p,None)
+        (CudfAdd.encode p,CudfAdd.cudfop(Some(c,v)))
+      with Not_found -> (CudfAdd.encode p,None)
     with
       Not_found -> fatal "Parse error %s\n" str
   in List.map parse_aux (Pcre.split ~rex:and_sep_re s)
@@ -60,7 +60,7 @@ let vpkglist_option ?default ?(metavar = "VPKGLST") () =
 (* *************************************** *)
 
 let and_sep_re = Pcre.regexp "\\s*;\\s*"
-let pkg_re = Pcre.regexp "\\(([0-9a-z][a-z0-9.+-]*)\\s*,\\s*([a-zA-Z0-9.+:~-]+)\\)"
+let pkg_re = Pcre.regexp "\\(([0-9a-z][a-z0-9.+-:]*)\\s*,\\s*([a-zA-Z0-9.+:~-]+)\\)"
 let parse_pkg s =
   let parse_aux str =
     try

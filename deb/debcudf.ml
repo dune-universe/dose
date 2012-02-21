@@ -281,8 +281,8 @@ let add_inst inst pkg =
 let add_name_arch a n = CudfAdd.encode (Printf.sprintf "%s:%s" n a)
 
 let add_arch hostArch arch = function
+  |n when String.ends_with n ":any" -> (CudfAdd.encode n)
   |n when arch = "all" -> add_name_arch n hostArch
-  |n when String.ends_with n ":any" -> add_name_arch n hostArch
   |n -> add_name_arch n arch
 
 let add_arch_l hostArch arch l = 
@@ -290,6 +290,7 @@ let add_arch_l hostArch arch l =
 
 type options = {
   extras : extramap ;
+  native : string;
   host : string;
   build : string;
   foreign : string list ;
@@ -297,37 +298,37 @@ type options = {
 
 let default_options = {
   extras = [] ;
+  native = "";
   build = "";  (* the default architecture 'dpkg -print-architecture' *)
   host = "";   (* used to resolv cross dependencies *)
   foreign = [] (* list of foreign architectures *)
 }
 
 let tocudf tables ?(options=default_options) ?(inst=false) pkg =
-  if options.host <> "" then begin
-    let _name = add_arch options.host pkg.architecture pkg.name in
+  if options.native <> "" then begin
+    let _name = add_arch options.native pkg.architecture pkg.name in
     let _provides = 
       let l = 
         match pkg.multiarch with
         |`None -> [(CudfAdd.encode pkg.name,None)]
-        |`Foreign -> List.map (fun arch -> (add_arch options.host arch pkg.name,None)) options.foreign
-        |`Allowed -> [(CudfAdd.encode pkg.name,None) ; (add_arch options.host "any" pkg.name,None)]
+        |`Foreign -> List.map (fun arch -> (add_arch options.native arch pkg.name,None)) options.foreign
+        |`Allowed -> [(CudfAdd.encode pkg.name,None) ; (CudfAdd.encode (pkg.name^":any"),None)]
         |`Same -> []
       in
-      match pkg.architecture with
-      |_ -> l@(add_arch_l options.host pkg.architecture (loadlp tables pkg.provides))
+      l@(add_arch_l options.native pkg.architecture (loadlp tables pkg.provides))
     in
     let _conflicts = 
       (* self conflict / multi-arch conflict *)
-      let sc = (add_arch options.host pkg.architecture pkg.name,None) in
+      let sc = (add_arch options.native pkg.architecture pkg.name,None) in
       let mac = (CudfAdd.encode pkg.name,None) in
       let l = pkg.breaks @ pkg.conflicts in
       match pkg.multiarch with
       |(`None|`Foreign|`Allowed) -> 
-          sc::mac::(add_arch_l options.host pkg.architecture (loadl tables l))
-      |`Same -> sc::(add_arch_l options.host pkg.architecture (loadl tables l))
+          sc::mac::(add_arch_l options.native pkg.architecture (loadl tables l))
+      |`Same -> sc::(add_arch_l options.native pkg.architecture (loadl tables l))
     in
     let _depends = 
-      List.map (add_arch_l options.host pkg.architecture) 
+      List.map (add_arch_l options.native pkg.architecture) 
       (loadll tables (pkg.pre_depends @ pkg.depends))
     in
     { Cudf.default_package with
