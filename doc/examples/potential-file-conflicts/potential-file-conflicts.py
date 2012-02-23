@@ -19,7 +19,7 @@ import yaml
 argparser=argparse.ArgumentParser(
   description="Find packages with potential file conflicts.")
 argparser.add_argument('-c',dest='contentsfiles',action='append',required=True,
-                       help='set name of the Contents file.')
+                       help='add a debian Contents file.')
 argparser.add_argument('-o',dest='outdir',action='store',required=True,
                        help='set name of the output directory')
 argparser.add_argument('-r',dest='repositories',action='append',required=True,
@@ -28,7 +28,7 @@ arguments=argparser.parse_args()
 
 outdir = arguments.outdir
 if os.path.exists(outdir):
-    raise('directory'+outdir+'already exists')
+    raise EnvironmentError(1,'directory \''+outdir+'\' already exists')
 else:
     os.mkdir(arguments.outdir)
 
