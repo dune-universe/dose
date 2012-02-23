@@ -68,14 +68,10 @@ for foundfile, pck_it in itertools.groupby(
     # of foundfile. Otherwise we iterate over all pairs that we can build
     # from elements in packagelist, and make an according entry in filetable
     if len(packagelist) > 1:
-        # strip any section/ or suite/section/ prefix from packagenames.
-        # we have to do this only when we have more than 1 package.
         number_shared_files += 1
+        # strip any section/ or suite/section/ prefix from packagenames.
         foundpackages=sorted(map(lambda s:s[1+s.rfind('/'):],packagelist))
-        numberpackages=len(foundpackages)
-        for pair in [ (foundpackages[i],foundpackages[j])
-                      for i in range(numberpackages-1)
-                      for j in range(i+1,numberpackages)]:
+        for pair in itertools.combinations(foundpackages,2):
             if pair not in filetable:
                 filetable[pair]=foundfile+'\n'
                 number_pairs_sharing += 1
