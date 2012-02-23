@@ -3,12 +3,13 @@ that are co-installable according to debcheck.
 
 Usage:
 
-potential-file-conflicts -c <file> -r <file> ... -o <directory>
+potential-file-conflicts -c <file> ... -r <file> ... -o <directory>
 
 Options may be given in any order. 
 
--c <file> : gives the name of the Contents file. The syntax of this file is
-   the one of Contents files as to be found on debian mirrors
+-c <file> : specifies a Contents file. The syntax of this file is
+   the one of Contents files as to be found on debian mirrors. May be
+   repeated in order to use several contents files.
 -r <file> : gives the name of a repository (debian Packages file). These
    files may be compressed with gzip or bzip2, provided that the distcheck
    tool has been compiled with support for these compression methods.

@@ -9,6 +9,8 @@
 
 import argparse
 import re
+import itertools
+import heapq
 import os
 import sys
 import subprocess
@@ -16,7 +18,7 @@ import yaml
 
 argparser=argparse.ArgumentParser(
   description="Find packages with potential file conflicts.")
-argparser.add_argument('-c',dest='contentsfile',action='store',required=True,
+argparser.add_argument('-c',dest='contentsfiles',action='append',required=True,
                        help='set name of the Contents file.')
 argparser.add_argument('-o',dest='outdir',action='store',required=True,
                        help='set name of the output directory')
@@ -30,38 +32,58 @@ if os.path.exists(outdir):
 else:
     os.mkdir(arguments.outdir)
 
+# variables used for statsitics
+number_shared_files = 0
+number_pairs_sharing = 0
+number_pairs_sharing_coinstallable = 0
+
 ############################################################################
 # read the contentsfile into a dictionary
 ############################################################################
-cntsf=open(arguments.contentsfile,'r')
-print 'Scanning the contents file ...',
+
+print 'Scanning the contents files ...',
 sys.stdout.flush()
-# Skip the preamble
-while True:
-    if re.match('FILE\s*LOCATION\s*',cntsf.readline()): break
-# Lines start on a file, then a comma-separated list of packages. We are only
-# interested in lines that contain at least two packages. Packages are given
-# as area/section/packagename or section/packagename.
-linefilter=re.compile('^(.*\S)\s+(\S*,\S*)\s*$')
+descriptors=map(open,arguments.contentsfiles)
+
+# Skip the preambles in all files
+for desc in descriptors:
+    while True:
+        if re.match('FILE\s*LOCATION\s*',desc.readline()): break
+
+# iterator over the pairs in a file, each pair is a line in the file split
+# at whitespace.
+def lr_split_file(f):
+    for line in f: 
+        s=line.rsplit(None,1)
+        yield (s[0],s[1])
+
+# table that will associate to a pair of packages a list of common files
 filetable = {}
-for line in cntsf:
-    linematch=re.match(linefilter,line)
-    if linematch:
-        foundfile=linematch.group(1)
-        # get the packages as a sorted list. Drop package prefix consisting
-        # of (possibly area and) section.
-        foundpackages=sorted(map(
-                lambda s:s[1+s.rfind('/'):],
-                re.split(',',linematch.group(2))))
+
+for foundfile, pck_it in itertools.groupby(
+    heapq.merge(*[lr_split_file(f) for f in descriptors]),lambda x:x[0]):
+    packagelist=[p for p in itertools.chain(
+            *map(lambda pl:re.split(',',pl[1]),pck_it))]
+    # if packagelist contains only one package then there is no sharing
+    # of foundfile. Otherwise we iterate over all pairs that we can build
+    # from elements in packagelist, and make an according entry in filetable
+    if len(packagelist) > 1:
+        # strip any section/ or suite/section/ prefix from packagenames.
+        # we have to do this only when we have more than 1 package.
+        number_shared_files += 1
+        foundpackages=sorted(map(lambda s:s[1+s.rfind('/'):],packagelist))
         numberpackages=len(foundpackages)
         for pair in [ (foundpackages[i],foundpackages[j])
                       for i in range(numberpackages-1)
                       for j in range(i+1,numberpackages)]:
             if pair not in filetable:
                 filetable[pair]=foundfile+'\n'
+                number_pairs_sharing += 1
             else:
                 filetable[pair] += foundfile+'\n'
-cntsf.close()
+
+for desc in descriptors:
+    desc.close()
 print 'done.'
 
 ###########################################################################
@@ -97,11 +119,23 @@ debcheckproc.stdin.close()
 # pairs of packages.
 debreport = yaml.load(debcheckproc.stdout)
 print 'done.'
+os.chdir(outdir)
 if debreport['report'] is not None:
-    os.chdir(outdir)
     for stanza in debreport['report'] :
+        number_pairs_sharing_coinstallable += 1
         stanzamatch=re.match('^(.*):(.*)',stanza['package'])
         pa,pb=stanzamatch.group(1),stanzamatch.group(2)
         out=open(pa+':'+pb,'w')
         out.write(filetable[(pa,pb)])
         out.close()
+
+#############################################################################
+# Report statistics
+#############################################################################
+
+print "Number of shared files:",
+print number_shared_files
+print "Number of pairs of packages sharing a file:",
+print number_pairs_sharing
+print "Number of coinstallable pairs among these:",
+print number_pairs_sharing_coinstallable
