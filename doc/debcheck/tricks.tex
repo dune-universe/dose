@@ -15,8 +15,8 @@
 \debcheck{} only tests whether any package in the foreground set is
 installable. However, sometimes one is interested in knowing whether
 several packages are co-installable, that is whether there exists an
-an installation set that contains all these packages. One might also
-be interested in an installation that does \emph{not} contain a certain
+installation set that contains all these packages. One might also be
+interested in an installation that does \emph{not} contain a certain
 package.
 
 This can be encoded by creating a pseudo-package that
@@ -38,7 +38,48 @@ repository:
 \begin{verbatim}
 echo "Package: query\nVersion: 1\nArchitecture: all\nDepends: a, b(>=42)\nConflicts: c" | dose-debcheck --bg=repository
 \end{verbatim}
+(Beware: This might not do exactly what you want, see below!)
 \end{example}
+
+The problem with this encoding is as follows: if we ask \debcheck{}
+for installability of some package depending on \texttt{a} then this
+dependency can a priori be satisfied by any of the available versions
+of package \texttt{a}, or even by some other package that provides
+\texttt{a} as a virtual package. Virtual packages can be excluded by
+exploiting the fact that, in Debian, virtual packages are not
+versioned. As a consequence, any package relation (like Depends)
+containing a version constraint can only be matched by a real package,
+and not by a virtual package. This means that the dependency on
+\texttt{b (>= 42)} in the above example already can only be matched by
+a real package. If we also want to restrict dependency on \texttt{a}
+to real packages only without knowing its possible versions, then we
+may write \texttt{Depends: a (>=0) | a(<0)}.
+
+\begin{example}
+  If we wish to know whether it is possible to install at the same
+  time some version of package \texttt{a} and some version of package
+  \texttt{b}, under the condition that these are real packages and not
+  virtual packages, then we may construct the following pseudo-package
+  and check its installability:
+\begin{verbatim}
+Package: query
+Version: 1
+Architecture: all
+Depends: a(>=0) | a(<0), b(>=0) | b(<0)
+\end{verbatim}
+\end{example}
+
+Note that it is in theory possible, though admittedly quite unlikely,
+that a package has a version number smaller than $0$ (example:
+$0\sim$).
+
+However, if we have several versions of package \texttt{a} and several
+versions of package \texttt{b} then the above pseudo-package is
+installable if it is possible to install at the same time \emph{some
+  version} of \texttt{a} and \emph{some version} of \texttt{b}. If we
+want instead to check co-installability of any combination of versions
+of package \texttt{a} with versions of package \texttt{b} then the
+\texttt{--coinst} option is better suited for the task.
 
 \subsection{Parsing \debcheck's output in Python}
 Debcheck's output can be easily parsed from a Python program by using
@@ -53,12 +94,17 @@ the YAML parser (needs the debian package\texttt{python-yaml}).
 \begin{verbatim}
 import yaml
 
-doc = yaml.load(file("output-of-distcheck", 'r'))
+doc = yaml.load(file('output-of-distcheck', 'r'))
 if doc['report'] is not None:
   for p in doc['report']:
-    if p ['status'] == "broken":
-      print "%s %s is broken" (p['package'], p['version'])
+    if p['status'] == 'broken':
+      print '%s %s is broken' (p['package'], p['version'])
 \end{verbatim}
 \end{example}
+
+A complete example of a python script that constructs a set of
+pseudo-packages, runs \debcheck{} on it, and then processes the output
+is given in the directory
+\texttt{doc/examples/potential-file-overwrites}.
 
 

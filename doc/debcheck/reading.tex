@@ -10,4 +10,22 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Further Reading}
-** Relation to CUDF 
+The \debcheck{} tool, the underlying theory and its application, was
+described in \cite{edos2006ase}.
+
+
+
+
+Checking the relationships between software components is of course
+also possible and useful for other models of software packages than
+Debian packages. In fact, the \debcheck{} tool is only one flavor of a
+more general tool called \distcheck{} which may perform these checks
+as well for RPM packages and Eclipse plugins, and in the future
+possibly for even more formats. These formats have many things in
+common, and the authors of \debcheck{} are convinced that the right
+architecture for tools dealing with logical aspects of packages is a
+modular one. Such a modular architecture should be centered around a
+common universal format for describing the relationships between
+packages. This architecture is described in \cite{mpm-cbse11}.
+
+
