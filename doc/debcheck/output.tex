@@ -12,18 +12,82 @@
 \section{Output}
 \label{sec:output}
 
+\subsection{Understanding Explanations of installability}
+
+%** We should fix the error codes (also for inconsistent input data)
+
+
 \subsection{Understanding Explanations of Non-installability}
 
-A package can be broken because of a missing package or because of a
-conflict. For a missing package we'll have a stanza like this :
+Installability of a package is much easier to explain than
+non-installabilty. The reason for this is that in the former case we
+just have to give one installation that our tool has found, while in
+the latter case we have to explain why \emph{all} possible attempts to
+install the package must fail. The first consequence of this
+observation is that the explanation in case non-installability may
+consist of several components.
 
+\begin{example}
+  Consider the following repository consisting of only two packages:
+\begin{verbatim}
+Package: a
+Version: 1
+Depends: b|c
+
+Package: c
+Version: 3
+Conflicts: a
+\end{verbatim}
+To explain why package (\texttt{a},1) is not installable we have to
+say why all possible alternative ways to satify its dependency must
+fail:
+\begin{itemize}
+\item there is no package \texttt{b} in the repository
+\item the only version of package \texttt{c} in the repository is in
+  conflict with package (\texttt{a},1)
+\end{itemize}
+\end{example}
+
+There may be several ways to satisfy dependencies due to alternatives
+in the dependencies in packages. Alternatives may occur in dependencies
+in different forms:
+\begin{itemize}
+\item explicitely, like in \texttt{Depends: b|c},
+\item through dependency on a package that exists in several versions,
+\item through dependency on a virtual package which is provided by several
+  (versions of) real packages.
+\end{itemize}
+There is one component in the explanation for every possible way to
+choose among these alternatives in the dependencies.
+
+There are only two possible reasons why an attempt to satisfy dependencies
+may fail:
+\begin{enumerate}
+\item dependency on a package that is missing from the repository,
+\item dependency on a package that is in conflict with some other package
+  we depend on (possibly through a chain of dependencies).
+\end{enumerate}
+Each component of the explanation is either a missing package, or a conflict. 
+
+\subsubsection{Explanation in Case of a Missing Package}
+A component of the explanation that corresponds to the case of a
+missing consist of two stanzas:
+\begin{itemize}
+\item a \texttt{pkg} stanza that states the package that cannot satisfy
+  one of its direct dependencies
+\item a \texttt{paths} stanza containing the dependency chain that
+  leads from the package we have found non-installable to the one that
+  cannot satisfy its direct dependency.
+\end{itemize}
+\begin{example}
+An explanation might look like this:
 \begin{verbatim}
 package: libgnuradio-dev
-  version: 3.2.2.dfsg-1
-  architecture: all
-  source: gnuradio (= 3.2.2.dfsg-1)
-  status: broken
-  reasons:
+version: 3.2.2.dfsg-1
+architecture: all
+source: gnuradio (= 3.2.2.dfsg-1)
+status: broken
+reasons:
    -
     missing:
      pkg:
@@ -37,11 +101,11 @@ package: libgnuradio-dev
         -
          package: libgnuradio-dev
          version: 3.2.2.dfsg-1
-         architecture: all
-         depends: libgnuradio (= 3.2.2.dfsg-1)
+         Architecture: all
+         Depends: libgnuradio (= 3.2.2.dfsg-1)
         -
          package: libgnuradio
-         version: 3.2.2.dfsg-1
+         ersion: 3.2.2.dfsg-1
          architecture: all
          depends: libgnuradio-core0
         -
@@ -50,44 +114,22 @@ package: libgnuradio-dev
          architecture: amd64
          depends: libgruel0 (= 3.2.2.dfsg-1+b1)
 \end{verbatim}
+This tells us that \texttt{libgnuradio-dev} in version $3.2.2.dfsg-1$
+is not installable, due to the fact that package \texttt{tlibgruel0}
+in version $3.2.2.dfsg-1+b1$ has a dependency
+\texttt{libboost-thread1.40.0 (>= 1.40.0-1)} that is not matched by
+any package in the repository. The dependency chain tells why package
+\texttt{libgnuradio-dev} in the given version might want to install
+\texttt{libgruel0}.
+\end{example}
 
-The first part gives details about the package libgnuradio-dev, specifying its
-status, source and architecture. The second part is the reason of the problem.
-In this case it is a missing package that is essential to install
-libgnuradio-dev. missindep is the dependency that cannot be satisfied is the
-package libgruel0 , in this case: {\tt libboost-thread1.40.0 (>= 1.40.0-1)}.
-
-The paths component gives all possible depchains from the root package
-libgnuradio-dev to libgruel0 . Notice that we do not include the last node in
-the dependency chain to avoid a useless repetition. Of course there might be
-more then on path to reach libgruel0. Distcheck will unroll all of them.
-Because of the structure of debian dependencies usually there are not so many
-paths.
-
-\begin{verbatim}
-package: a
-version: 1
-depends: b, d
-
-package: b
-version: 1
-depends: e
-
-package: d
-version: 1
-depends: f
-
-package: f
-version: 1
-conflicts: e
-
-package: e
-version: 1
-conflicts: f
-\end{verbatim}
-
-The other possible cause of a problem is a conflict. Consider the following :
-
+\subsubsection{Explanation in Case of a Conflict}
+The other possible cause of a problem is a conflict. In that case, the
+explanation consists of a \texttt{conflict} stanza giving the two
+packages that are in direct conflict with each other. Next, we have
+two \texttt{depchain} stanzas that lead to the first, resp. the second
+of these directly conflicting packages.
+\begin{example}
 \begin{verbatim}
 package: a
   version: 1
@@ -124,11 +166,6 @@ package: a
          version: 1
          depends: f
 \end{verbatim}
-
-This is the general case of a deep conflict. I use an artificial example here
-instead of a concrete one since this case is not very common and I was not able
-to find one.
-
 The first part of the distcheck report is as before with details about the
 broken package. Since this is a conflict, and all conflicts are binary, we give
 the two packages involved in the conflict first. Packages f and e are in
@@ -136,8 +173,38 @@ conflict, but they are not direct dependency of package a . For this reason, we
 output the two paths that from a lead to f or e. All dependency chains for each
 conflict are together. Again, since there might be more than one way from a to
 reach the conflicting packages, we can have more then one depchain. 
+\end{example}
+If a conflict occurs between two packages that are both reached
+through non-trivial dependency chains then we sometimes speak of a
+\emph{deep conflict}.
 
-\subsection{Understanding Explanations of installability}
+\subsubsection{Explanations Combining Missing Packages and Conflicts}
+The paths component gives all possible depchains from the root package
+libgnuradio-dev to libgruel0 . Notice that we do not include the last node in
+the dependency chain to avoid a useless repetition. Of course there might be
+more then on path to reach libgruel0. Distcheck will unroll all of them.
+Because of the structure of debian dependencies usually there are not so many
+paths.
 
-%** We should fix the error codes (also for inconsistent input data)
+\begin{verbatim}
+package: a
+version: 1
+depends: b, d
+
+package: b
+version: 1
+depends: e
+
+package: d
+version: 1
+depends: f
+
+package: f
+version: 1
+conflicts: e
+
+package: e
+version: 1
+conflicts: f
+\end{verbatim}
 

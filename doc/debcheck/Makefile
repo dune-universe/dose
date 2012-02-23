@@ -1,10 +1,11 @@
 MAIN=debcheck
 SHELL=/bin/bash
-DEPS = $(wildcard *.tex)
+HEVEA=hevea -exec xxdate.exe
+DEPS = $(wildcard *.tex) mancoosi.bib
 
 $(MAIN).html: $(DEPS) $(MAIN).aux
 	bibtex $(MAIN)	
-	hevea -fix $(MAIN).tex
+	$(HEVEA) -fix $(MAIN).tex
 
 $(MAIN).ps: $(MAIN).dvi
 	dvips $<
