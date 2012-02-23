@@ -2,7 +2,7 @@
 (*  This file is part of a library developed with the support of the      *)
 (*  Mancoosi Project. http://www.mancoosi.org                             *)
 (*                                                                        *)
-(*  Main author(s):  ADD authors here                                     *)
+(*  Main author(s):  Pietro Abate                                         *)
 (*                                                                        *)
 (*  Contributor(s):  ADD minor contributors here                          *)
 (*                                                                        *)
@@ -33,46 +33,30 @@ module Options = struct
   let options = OptParser.make ~description:"Detect circular build dependencies"
   include Boilerplate.MakeOptions(struct let options = options end)
 
-  let successes = StdOpt.store_true ()
-  let failures = StdOpt.store_true ()
-  let explain = StdOpt.store_true ()
+  let build_arch = StdOpt.str_option ()
+  let target_arch = StdOpt.str_option ()
+  let native_arch = StdOpt.str_option ()
+  let foreign_archs = Boilerplate.str_list_option ()
+  
+  let base_system = Boilerplate.str_list_option ()
 
-  let buildarch = StdOpt.str_option ()
-  let targetarch = StdOpt.str_option ()
+  (* let checkonly = Boilerplate.vpkglist_option ()
+  add options ~long_name:"checkonly" ~help:"Check only these package" checkonly;
+  *)
+
   let dump = StdOpt.str_option ()
 
   open OptParser
-  add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
-  add options ~short_name:'f' ~long_name:"failures" ~help:"Only show failures" failures;
-  add options ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" successes;
 
-  add options ~long_name:"builarch" ~help:"Build Architecture" buildarch;
-  add options ~long_name:"targetarch" ~help:"Target Architecture" targetarch;
+  add options ~long_name:"deb-build-arch" ~help:"Build Architecture" build_arch;
+  add options ~long_name:"deb-host-arch" ~help:"Target Architecture" target_arch;
+  (* same as host in this context ? *)
+  add options ~long_name:"deb-native-arch" ~help:"Native Architecture" native_arch;
+  add options ~long_name:"deb-foreign-archs" ~help:"Foregin Architectures" foreign_archs;
+  add options ~long_name:"base-system" ~help:"Cross compiled components" base_system;
+
   add options ~long_name:"dump" ~help:"dump the cudf file" dump;
 end
-
-let filter_map_results tables universe is =
-  try 
-    List.filter_map (fun pkg ->
-      try
-        let sn = Cudf.lookup_package_property pkg "source" in
-        let sv = Cudf.lookup_package_property pkg "sourcenumber" in
-        Some((sn,sv),pkg)
-      with Not_found -> None
-    ) is
-  with Not_found -> assert false
-;;
-
-let get_source_pkg to_cudf universe l = 
-  let aux = function
-    |(p,None) ->
-        Cudf.lookup_packages universe (CudfAdd.encode ("src"^Src.sep^p))
-    |(p,Some(c,v)) ->
-        let filter = Some(c,to_cudf (CudfAdd.encode ("src"^Src.sep^p),v)) in
-        Cudf.lookup_packages ~filter universe (CudfAdd.encode ("src"^Src.sep^p))
-  in
-  List.flatten (List.map aux l)
-;;
 
 let main () =
 
@@ -87,44 +71,78 @@ let main () =
   (* enable a selection of timers *)
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) [];
 
-  if not(OptParse.Opt.is_set Options.buildarch) then
-    fatal "--builarch must be specified";
+  if not(OptParse.Opt.is_set Options.native_arch) then
+    fatal "--deb-native-arch must be specified";
 
-  if not(OptParse.Opt.is_set Options.targetarch) then begin
-    info "--targetarch must be specified assume same of buildarch";
-    OptParse.Opt.set Options.targetarch (OptParse.Opt.get Options.buildarch);
+  if not(OptParse.Opt.is_set Options.build_arch) then begin
+    info "assume build arch the same as native arch";
+    OptParse.Opt.set Options.build_arch (OptParse.Opt.get Options.native_arch);
   end;
 
-  let binlist, srclist, checklist =
+  if not(OptParse.Opt.is_set Options.target_arch) then begin
+    info "assume target arch the same as native arch";
+    OptParse.Opt.set Options.target_arch (OptParse.Opt.get Options.native_arch);
+  end;
+
+  let foreign_archs =
+    if OptParse.Opt.is_set Options.foreign_archs then 
+      OptParse.Opt.get Options.foreign_archs
+    else []
+  in
+
+  let base_system =
+    if OptParse.Opt.is_set Options.base_system then 
+      OptParse.Opt.get Options.base_system
+    else []
+  in
+
+  let binlist, srclist =
     match posargs with
     |[] | [_] -> fatal
       "You must provide a list of Debian Packages files and \
        a Debian Sources file"
     |l ->
         begin match List.rev l with
-        |r::h::t ->
+        |h::t ->
+          let archs = ["linux-any";OptParse.Opt.get Options.build_arch] in
           let l = Src.input_raw [h] in
-          let archs = ["linux-any";OptParse.Opt.get Options.buildarch] in
           let srcl = Src.sources2packages archs l in
           let pkgl = Pkg.input_raw t in
-          let request = Boilerplate.parse_vpkg r in
-          (pkgl,srcl,request)
+          (pkgl,srcl)
         |_ -> failwith "Impossible"
         end
   in
 
   let tables = Debcudf.init_tables (srclist @ binlist) in
   let sl = List.map (fun pkg -> Debcudf.tocudf tables pkg) srclist in
-  let pkglist = 
-    List.fold_left (fun acc pkg -> 
-      (Debcudf.tocudf tables pkg)::acc
-    ) sl binlist 
-  in
+  let bl =
+    List.map (fun pkg ->
+      Debcudf.tocudf tables (
+        if List.mem pkg.Pkg.name base_system then 
+          {pkg with Pkg.depends = [] ; Pkg.conflicts = []}
+        else pkg
+      )
+    ) binlist in
+  let pkglist = sl@bl in
 
   let to_cudf = Debcudf.get_cudf_version tables in
+
+  (*
   let from_cudf = Debcudf.get_real_version tables in
+  let pp pkg =
+    let p = pkg.Cudf.package in
+    let v = from_cudf (CudfAdd.decode pkg.Cudf.package,pkg.Cudf.version) in
+    let l =
+      List.filter_map (fun k ->
+        try Some(k,Cudf.lookup_package_property pkg k)
+        with Not_found -> None
+      ) ["architecture";"source";"sourcenumber"]
+    in (p,v,l)
+  in
+  *)
 
   let universe = Cudf.load_universe pkglist in
+  let solver = Depsolver_int.init_solver_univ universe in
 
   let universe_size = Cudf.universe_size universe in
   info "Total packages (source + binaries) %d" universe_size;
@@ -135,88 +153,157 @@ let main () =
     Cudf_printer.pp_universe oc universe
   end;
 
-  let failure = OptParse.Opt.get Options.failures in
-  let success = OptParse.Opt.get Options.successes in
-  let explain = OptParse.Opt.get Options.explain in
-  let fmt = Format.std_formatter in
-
-  if OptParse.Opt.is_set Options.buildarch then
-    Format.fprintf fmt "buildarch: %s@." (OptParse.Opt.get Options.buildarch);
-  if OptParse.Opt.is_set Options.targetarch then
-    Format.fprintf fmt "targetarch: %s@." (OptParse.Opt.get Options.targetarch);
-
-  let pp pkg =
-    let p = pkg.Cudf.package in
-    let v = from_cudf (CudfAdd.decode pkg.Cudf.package,pkg.Cudf.version) in
-    let l =
-      List.filter_map (fun k ->
-        try Some(k,Cudf.lookup_package_property pkg k)
-        with Not_found -> None
-      ) ["architecture"]
-    in (p,v,l)
-  in
-
-  if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
-
-  let queue = ref checklist in
-  let visited = Hashtbl.create 1023 in
-  let broken = ref 0 in
-  let callback d = match d with
-    |{Diagnostic.result = Diagnostic.Success (f); 
-                request = Diagnostic.Package r } ->
-        info "Buildcheking %s" (CudfAdd.string_of_package r);
-        let is = filter_map_results tables universe (f ~all:true ()) in
-        List.iter (fun ((sn,sv),why) ->
-          if CudfAdd.equal r why then () else
-          if not(Hashtbl.mem visited (sn,sv)) then begin
-            info "Scheduling (src:%s, %s) (because of %s)" 
-            sn sv (CudfAdd.string_of_package why) ;
-            Hashtbl.add visited (sn,sv) [(r,why)];
-            queue := (sn,Some(`Eq,sv))::!queue
-          end else
-            let l = Hashtbl.find visited (sn,sv) in
-            Hashtbl.replace visited (sn,sv) ((r,why)::l)
-        ) is;
-        Diagnostic.fprintf ~pp ~failure ~success ~explain fmt d
-    |d -> Diagnostic.fprintf ~pp ~failure ~success ~explain fmt d
-  in
-
-  while (List.length !queue > 0) do
-    let l = get_source_pkg to_cudf universe !queue in 
-    let _ = queue := [] in
-    let i = Depsolver.listcheck ~callback universe l in 
-    broken := i + !broken;
-  done;
+  (* build a table that associate to each source :
+    - binary list
+    - build dependency list
+  *)
 
   let module G = Defaultgraphs.PackageGraph.G in
   let module D = Defaultgraphs.PackageGraph.D in
   let module C = Graph.Components.Make(G) in
   let g = G.create () in
-  Hashtbl.iter (fun (sn,sv) l -> 
-    let src = List.hd (get_source_pkg to_cudf universe [(sn,Some(`Eq,sv))]) in
-    G.add_vertex g src;
-    List.iter (fun (root,why) ->
-      G.add_edge g src root (* label why *)
-    ) l
-  ) visited; 
-  let oc = open_out "tt.dot" in
+  List.iter (fun pkg ->
+    let sn = Cudf.lookup_package_property pkg "source" in
+    let sv = Cudf.lookup_package_property pkg "sourcenumber" in
+    let src = Cudf.lookup_package universe (CudfAdd.encode ("src"^Src.sep^sn),to_cudf (sn,sv)) in
+    (* find an installation set of the build dependencies : the smallest ? *)
+    (* get the bin list, add the src package and ask for an
+     * installation set of this src in this universe *)
+    (* add to the graph all the runtime dependencies that are
+     * in this installation set *)
+    if not (G.mem_vertex g src) then begin
+      let req = Diagnostic_int.Sng (CudfAdd.vartoint universe src) in
+      let res = Depsolver_int.solve solver req in
+      let closure =
+        match res with
+        |Diagnostic_int.Success f_int ->
+            List.map (CudfAdd.inttovar universe) (f_int ~all:true ())
+        |_ -> info "broken source %s %s " sn sv ; []
+      in
+      List.iter (fun pkg ->
+        G.add_vertex g pkg;
+        List.iter (fun vpkgs ->
+          let l = CudfAdd.resolve_deps universe vpkgs in
+          List.iter (fun q ->
+            if List.mem q closure then begin
+              info "%s -> %s" (CudfAdd.string_of_package pkg) (CudfAdd.string_of_package q);
+              G.add_edge g pkg q
+            end;
+          ) l;
+        ) pkg.Cudf.depends
+      ) closure;
+    end;
+    info "%s -> %s" (CudfAdd.string_of_package pkg) (CudfAdd.string_of_package src);
+    G.add_edge g pkg src;
+  ) bl;
+  (* this is the graph of all sources and build dependencies and their
+   * runtime dependencies *)
+
+  let oc = open_out "tt-start.dot" in
   D.output_graph oc g;
-  (*
+  close_out oc;
+
+  let reduce_bin g =
+    List.iter (fun src ->
+      if G.mem_vertex g src then
+        (* iter on all build-deps of a source *)
+        G.iter_succ (fun pkg ->
+          (* if the build-dep does not have any dependencies itself
+           * then remove the edge *)
+          if List.length pkg.Cudf.depends = 0 then
+            G.remove_edge g src pkg
+        ) g src
+    ) sl
+  in
+
+  let reduce_src g =
+    List.iter (fun bin ->
+      (* if G.mem_vertex g bin then *)
+      let l = G.succ g bin in
+      List.iter (fun src ->
+        info "considering %s" (CudfAdd.string_of_package src);
+        info "%d" (G.out_degree g src);
+        if List.mem src sl && G.out_degree g src = 0 then
+          begin
+            (* if this binary depends on a source package that does not have
+             * any build dependencies then we can safely remove it from the
+             * graph and recompile it *)
+            info "source %s can be compiled" (CudfAdd.string_of_package src); 
+            G.remove_edge g bin src;
+            G.remove_vertex g src;
+            if List.length l = 1 then
+              G.remove_vertex g bin
+          end
+      ) l
+    ) bl
+  in
+
+  reduce_bin g;
+
+  let oc = open_out "tt-reduce1.dot" in
+  D.output_graph oc g;
+  close_out oc;
+  
+  reduce_src g;
+
+  let oc = open_out "tt-reduce2.dot" in
+  D.output_graph oc g;
+  close_out oc;
+ 
+  let scc = C.scc_array g in
   Array.iter (fun l ->
+    let broken = ref false in
     List.iter (fun pkg ->
-      Printf.printf "%s\n" (CudfAdd.string_of_package pkg)
+      info "%s" (CudfAdd.string_of_package pkg);
+      if not !broken && List.mem pkg bl then begin
+        let l = G.succ g pkg in
+        let q = List.hd l in
+        info "arbitrarly breaking loop between %s and %s" 
+        (CudfAdd.string_of_package pkg)
+        (CudfAdd.string_of_package q);
+        broken := true;
+      end
     ) l;
     print_newline ();
-  )  (C.scc_array g);
-  *)
+  ) scc;
 
-  if failure || success then Format.fprintf fmt "@]@.";
+  reduce_bin g;
 
-  let nb = universe_size in
-  let nf = List.length sl in
-  Format.fprintf fmt "background-packages: %d@." nb;
-  Format.fprintf fmt "foreground-packages: %d@." (if nf = 0 then nb else nf);
-  Format.fprintf fmt "broken-packages: %d@." !broken;
+  let oc = open_out "tt-reduce3.dot" in
+  D.output_graph oc g;
+  close_out oc;
+  
+  reduce_src g;
+
+  let oc = open_out "tt-reduce4.dot" in
+  D.output_graph oc g;
+  close_out oc;
+ 
+  (* parse the list of packages to include in the base system and
+   * build a list of packages that have the same version as the package
+   * in the binlist but no dependencies or conflicts. These packages must
+   * always be installable. they are the dummy packages built using a cross
+   * compiler . One goal is to find the smallest set needed to bootstrap a
+   * system *)
+
+  (* All packages in the base system must always be installable *)
+
+  (* for all sources :
+    - have no build dependencies
+    - have all build dependencies satisfied in the base system.
+      For all binaries of such sources
+      - if the binary is installable in the base system, then add it to it.
+      - otherwise add the source of its dependencies to the buildqueue
+    repeat until no other source can be marked as compiled
+   *)
+
+  (* what I'm left with is a bunch of source that cannot be compiled because of
+   * circular dependencies *)
+
+  (* break one, start from the beginning *)
+  (* which one to break ? *)
+  (* how to break it ? *)
+
 ;;
 
 main ();;
