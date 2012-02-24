@@ -32,14 +32,14 @@ consist of several components.
 \begin{verbatim}
 Package: a
 Version: 1
-Depends: b|c
+Depends: b | c
 
 Package: c
 Version: 3
 Conflicts: a
 \end{verbatim}
 To explain why package (\texttt{a},1) is not installable we have to
-say why all possible alternative ways to satify its dependency must
+say why all possible alternative ways to satisfy its dependency must
 fail:
 \begin{itemize}
 \item there is no package \texttt{b} in the repository
@@ -52,7 +52,7 @@ There may be several ways to satisfy dependencies due to alternatives
 in the dependencies in packages. Alternatives may occur in dependencies
 in different forms:
 \begin{itemize}
-\item explicitely, like in \texttt{Depends: b|c},
+\item explicitly, like in \texttt{Depends: b|c},
 \item through dependency on a package that exists in several versions,
 \item through dependency on a virtual package which is provided by several
   (versions of) real packages.
