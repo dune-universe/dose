@@ -96,6 +96,16 @@ let main () =
     else []
   in
 
+  let sourcearchs =
+    let native = OptParse.Opt.get Options.native_arch in
+    let build = OptParse.Opt.get Options.build_arch in
+    let ul = build :: native :: foreign_archs in
+    let l = List.map (fun s -> "any-"^s) ul in
+    "any" :: "all" :: "linux-any" :: (l @ ul)
+  in
+
+  info "Source Archs %s" (String.join "," sourcearchs);
+
   let binlist, srclist =
     match posargs with
     |[] | [_] -> fatal
@@ -104,7 +114,7 @@ let main () =
     |l ->
         begin match List.rev l with
         |h::t ->
-          let archs = ["linux-any";OptParse.Opt.get Options.build_arch] in
+          let archs = sourcearchs in
           let l = Src.input_raw [h] in
           let srcl = Src.sources2packages archs l in
           let pkgl = Pkg.input_raw t in
@@ -163,45 +173,46 @@ let main () =
   let module C = Graph.Components.Make(G) in
   let g = G.create () in
   List.iter (fun pkg ->
-    let sn = Cudf.lookup_package_property pkg "source" in
-    let sv = Cudf.lookup_package_property pkg "sourcenumber" in
-    let src = Cudf.lookup_package universe (CudfAdd.encode ("src"^Src.sep^sn),to_cudf (sn,sv)) in
-    (* find an installation set of the build dependencies : the smallest ? *)
-    (* get the bin list, add the src package and ask for an
-     * installation set of this src in this universe *)
-    (* add to the graph all the runtime dependencies that are
-     * in this installation set *)
-    if not (G.mem_vertex g src) then begin
-      let req = Diagnostic_int.Sng (CudfAdd.vartoint universe src) in
-      let res = Depsolver_int.solve solver req in
-      let closure =
-        match res with
-        |Diagnostic_int.Success f_int ->
-            List.map (CudfAdd.inttovar universe) (f_int ~all:true ())
-        |_ -> info "broken source %s %s " sn sv ; []
-      in
-      List.iter (fun pkg ->
-        G.add_vertex g pkg;
-        List.iter (fun vpkgs ->
-          let l = CudfAdd.resolve_deps universe vpkgs in
-          List.iter (fun q ->
-            if List.mem q closure then begin
-              info "%s -> %s" (CudfAdd.string_of_package pkg) (CudfAdd.string_of_package q);
-              G.add_edge g pkg q
-            end;
-          ) l;
-        ) pkg.Cudf.depends
-      ) closure;
-    end;
-    info "%s -> %s" (CudfAdd.string_of_package pkg) (CudfAdd.string_of_package src);
-    G.add_edge g pkg src;
+      let sn = try Cudf.lookup_package_property pkg "source" with Not_found -> fatal "WTF source" in
+      let sv = try Cudf.lookup_package_property pkg "sourcenumber" with Not_found -> fatal "WTF sourcenumber"in
+    try
+      let src = Cudf.lookup_package universe (CudfAdd.encode ("src"^Src.sep^sn),to_cudf (sn,sv)) in
+      (* find an installation set of the build dependencies : the smallest ? *)
+      (* get the bin list, add the src package and ask for an
+       * installation set of this src in this universe *)
+      (* add to the graph all the runtime dependencies that are
+       * in this installation set *)
+      if not (G.mem_vertex g src) then begin
+        let req = Diagnostic_int.Sng (CudfAdd.vartoint universe src) in
+        let res = Depsolver_int.solve solver req in
+        let closure =
+          match res with
+          |Diagnostic_int.Success f_int ->
+              List.map (CudfAdd.inttovar universe) (f_int ~all:true ())
+          |_ -> info "broken source %s %s " sn sv ; []
+        in
+        List.iter (fun pkg ->
+          G.add_vertex g pkg;
+          List.iter (fun vpkgs ->
+            let l = CudfAdd.resolve_deps universe vpkgs in
+            List.iter (fun q ->
+              if List.mem q closure then begin
+                (* info "%s -> %s" (CudfAdd.string_of_package pkg) (CudfAdd.string_of_package q); *)
+                G.add_edge g pkg q
+              end;
+            ) l;
+          ) pkg.Cudf.depends
+        ) closure;
+      end;
+      (* info "%s -> %s" (CudfAdd.string_of_package pkg) (CudfAdd.string_of_package src); *)
+      G.add_edge g pkg src;
+    with Not_found -> begin
+      warning "The source package %s %s associated to the bin package %s is missing" 
+      sn sv (CudfAdd.string_of_package pkg);
+    end
   ) bl;
   (* this is the graph of all sources and build dependencies and their
    * runtime dependencies *)
-
-  let oc = open_out "tt-start.dot" in
-  D.output_graph oc g;
-  close_out oc;
 
   let reduce_bin g =
     List.iter (fun src ->
@@ -218,66 +229,71 @@ let main () =
 
   let reduce_src g =
     List.iter (fun bin ->
-      (* if G.mem_vertex g bin then *)
-      let l = G.succ g bin in
-      List.iter (fun src ->
-        info "considering %s" (CudfAdd.string_of_package src);
-        info "%d" (G.out_degree g src);
-        if List.mem src sl && G.out_degree g src = 0 then
-          begin
-            (* if this binary depends on a source package that does not have
-             * any build dependencies then we can safely remove it from the
-             * graph and recompile it *)
-            info "source %s can be compiled" (CudfAdd.string_of_package src); 
-            G.remove_edge g bin src;
-            G.remove_vertex g src;
-            if List.length l = 1 then
-              G.remove_vertex g bin
-          end
-      ) l
+      if G.mem_vertex g bin then
+        match G.succ g bin with
+        |[] when G.out_degree g bin = 0 -> G.remove_vertex g bin;
+        |[] -> ()
+        |l -> 
+            List.iter (fun src ->
+              if List.mem src sl && G.out_degree g src = 0 then
+                begin
+                  (* if this binary depends on a source package that does not have
+                   * any build dependencies then we can safely remove it from the
+                   * graph and recompile it *)
+                  Printf.printf "source %s can be compiled\n" (CudfAdd.string_of_package src); 
+                  G.remove_edge g bin src;
+                  G.remove_vertex g src;
+                  if List.length l = 1 then
+                    G.remove_vertex g bin
+                end
+            ) l
     ) bl
   in
 
-  reduce_bin g;
+  let reduce_loops g =
+    let scc = C.scc_array g in
+    Array.iter (fun l ->
+      let broken = ref false in
+      if List.length l > 1 then info "Loop detected";
+      List.iter (fun pkg ->
+        if not !broken && List.mem pkg sl then begin
+          let l = G.succ g pkg in
+          let q = List.hd l in
+          G.remove_edge g pkg q;
+          info "arbitrarly breaking loop between %s and %s" 
+          (CudfAdd.string_of_package pkg)
+          (CudfAdd.string_of_package q);
+          broken := true;
+        end
+      ) l;
+    ) scc;
+  in
 
-  let oc = open_out "tt-reduce1.dot" in
-  D.output_graph oc g;
-  close_out oc;
-  
-  reduce_src g;
+  let print_dot s g =
+    let oc = open_out s in
+    D.output_graph oc g;
+    close_out oc
+  in
 
-  let oc = open_out "tt-reduce2.dot" in
-  D.output_graph oc g;
-  close_out oc;
+  print_dot "reduce-start.dot" g;
+
+  let iteration = ref 0 in
+  while G.nb_vertex g > 0 do
+
+    info "Nodes %d (this should descrease)" (G.nb_vertex g);
+    info "Reduce bin (#%d)" !iteration;
+    reduce_bin g;
+    print_dot (Printf.sprintf "reduce-%d-bin.dot" !iteration) g;
+    info "Reduce src (#%d)" !iteration;
+    reduce_src g;
+    print_dot (Printf.sprintf "reduce-%d-src.dot" !iteration) g;
+    info "Reduce loops (#%d)" !iteration;
+    reduce_loops g;
+    print_dot (Printf.sprintf "reduce-%d-loops.dot" !iteration) g;
+    incr iteration;
+
+  done
  
-  let scc = C.scc_array g in
-  Array.iter (fun l ->
-    let broken = ref false in
-    List.iter (fun pkg ->
-      info "%s" (CudfAdd.string_of_package pkg);
-      if not !broken && List.mem pkg bl then begin
-        let l = G.succ g pkg in
-        let q = List.hd l in
-        info "arbitrarly breaking loop between %s and %s" 
-        (CudfAdd.string_of_package pkg)
-        (CudfAdd.string_of_package q);
-        broken := true;
-      end
-    ) l;
-    print_newline ();
-  ) scc;
-
-  reduce_bin g;
-
-  let oc = open_out "tt-reduce3.dot" in
-  D.output_graph oc g;
-  close_out oc;
-  
-  reduce_src g;
-
-  let oc = open_out "tt-reduce4.dot" in
-  D.output_graph oc g;
-  close_out oc;
  
   (* parse the list of packages to include in the base system and
    * build a list of packages that have the same version as the package
