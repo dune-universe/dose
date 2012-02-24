@@ -168,7 +168,7 @@ let print_error pp root fmt l =
     |Conflict (i,j,vpkg) ->
         Format.fprintf fmt "@[<v 1>conflict:@,";
         Format.fprintf fmt "@[<v 1>pkg1:@,%a@," (pp_package ~source:true pp) i;
-        Format.fprintf fmt "unsat-conflitc: %a@]@," (pp_vpkglist pp) [vpkg];
+        Format.fprintf fmt "unsat-conflict: %a@]@," (pp_vpkglist pp) [vpkg];
         Format.fprintf fmt "@[<v 1>pkg2:@,%a@]" (pp_package ~source:true pp) j;
         if deps <> [] then begin
           let pl1 = create_pathlist root (Dependency(i,[],[])::deps) in
