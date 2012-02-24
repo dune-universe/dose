@@ -11,11 +11,108 @@
 
 \section{Output}
 \label{sec:output}
+The output of \debcheck{} is in the YAML format, see
+Section~\ref{sec:tricks-python} for how to parse the output.
+
+Without any particular options, \debcheck{} just reports some
+statistics:
+\begin{example}
+\begin{verbatim}
+% dose-debcheck rep1
+background-packages: 0
+foreground-packages: 4
+total-packages: 4
+broken-packages: 1
+\end{verbatim}
+\end{example}
+
+With the options \texttt{--failures} and \texttt{--successes}, \debcheck{}
+reports findings of the requested kind for all packages in the foreground.
+These options may be used alone or in combination. In any case, the status
+field tells whether the package is found to be installable (value \texttt{ok})
+or non-installable (value \texttt{broken}).
+
+\begin{example}
+\begin{verbatim}
+% dose-debcheck --failures --successes rep1
+report:
+ -
+  package: a
+  version: 1
+  architecture: amd64
+  source: a (= 1)
+  status: broken
+  
+ -
+  package: a
+  version: 2
+  architecture: amd64
+  source: a (= 2)
+  status: ok
+  
+ -
+  package: b
+  version: 1
+  architecture: amd64
+  source: b (= 1)
+  status: ok
+  
+ -
+  package: c
+  version: 3
+  architecture: amd64
+  source: c (= 3)
+  status: ok
+  
+ 
+background-packages: 0
+foreground-packages: 4
+total-packages: 4
+broken-packages: 1
+\end{verbatim}
+\end{example}
+
+With an additional \texttt{--explain} option, an explanation is given
+with each finding. 
 
 \subsection{Understanding Explanations of installability}
 
-%** We should fix the error codes (also for inconsistent input data)
+Explanations of installability are simply giving by listing an
+installation (in the sense of Section~\ref{sec:installability})
+containing the package in question.
 
+\begin{example}
+\begin{verbatim}
+% dose-debcheck --explain --successes rep1
+report:
+ -
+  package: a
+  version: 2
+  architecture: amd64
+  source: a (= 2)
+  status: ok
+  installationset:
+   -
+    package: c
+    version: 3
+    architecture: amd64
+   -
+    package: a
+    version: 2
+    architecture: amd64
+ -
+  package: b
+  version: 1
+  architecture: amd64
+  source: b (= 1)
+  status: ok
+  installationset:
+   -
+    package: b
+    version: 1
+    architecture: amd64
+\end{verbatim}
+\end{example}
 
 \subsection{Understanding Explanations of Non-installability}
 
@@ -94,7 +191,7 @@ reasons:
       package: libgruel0
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
-      missingdep: libboost-thread1.40.0 (>= 1.40.0-1)
+      unsat-dependency: libboost-thread1.40.0 (>= 1.40.0-1)
      paths:
       -
        depchain:
@@ -122,6 +219,14 @@ any package in the repository. The dependency chain tells why package
 \texttt{libgnuradio-dev} in the given version might want to install
 \texttt{libgruel0}.
 \end{example}
+
+The paths component gives all possible depchains from the root package
+(\texttt{libgnuradio-dev} in the above example) to the one where a
+direct dependency is not matched by any package (\texttt{libgruel0} in
+the example). We do not include the last node in the dependency chain
+to avoid a useless repetition. In general there may be more then one
+path to reach a certain package from a given root package, in that
+case \debcheck{} will unroll all of them.
 
 \subsubsection{Explanation in Case of a Conflict}
 The other possible cause of a problem is a conflict. In that case, the
@@ -178,33 +283,5 @@ If a conflict occurs between two packages that are both reached
 through non-trivial dependency chains then we sometimes speak of a
 \emph{deep conflict}.
 
-\subsubsection{Explanations Combining Missing Packages and Conflicts}
-The paths component gives all possible depchains from the root package
-libgnuradio-dev to libgruel0 . Notice that we do not include the last node in
-the dependency chain to avoid a useless repetition. Of course there might be
-more then on path to reach libgruel0. Distcheck will unroll all of them.
-Because of the structure of debian dependencies usually there are not so many
-paths.
 
-\begin{verbatim}
-package: a
-version: 1
-depends: b, d
-
-package: b
-version: 1
-depends: e
-
-package: d
-version: 1
-depends: f
-
-package: f
-version: 1
-conflicts: e
-
-package: e
-version: 1
-conflicts: f
-\end{verbatim}
 
