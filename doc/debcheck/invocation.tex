@@ -12,3 +12,54 @@
 \section{Invocation}
 \label{sec:invocation}
 
+\debcheck{} accepts several different options, and also arguments.
+
+\begin{alltt}
+  \debcheck{} [option] ... [file] ...
+\end{alltt}
+
+All arguments are interpreted as filenames of Packages input files,
+the contents of which go into the foreground. If no argument is given
+then metadata of foreground packages is read from standard input.
+In addition, one may specify listings of foreground packages with
+the option \verb|--fg=<filename>|, and listings of background packages
+with the option \verb|--bg=<filename>|. Input from files (but not from 
+standard input) may be compressed with gzip or bzip2, provided \debcheck{}
+was compiled with support for these compression libraries.
+
+\begin{example}
+We may check whether packages in \textit{non-free} are installable,
+where dependencies may be satisfied from \textit{main} or \textit{contrib}:
+\begin{verbatim}
+dose-distcheck  -f -e \
+    --bg=/var/lib/apt/lists/ftp.fr.debian.org_debian_dists_sid_main_binary-amd64_Packages\
+    --bg=/var/lib/apt/lists/ftp.fr.debian.org_debian_dists_sid_contrib_binary-amd64_Packages\
+    /var/lib/apt/lists/ftp.fr.debian.org_debian_dists_sid_non-free_binary-amd64_Packages
+\end{verbatim}
+\end{example} 
+
+The initial distinction between foreground and background packages is
+modified when using the \verb|--checkonly| option. This option takes
+as value a comma-separated list of package names, possibly qualified
+with a version constraint. The effect is that only packages that match
+one of these package names are kept in the foreground, all others are
+pushed into the background.
+
+\begin{example}
+\begin{alltt}
+\debcheck{} --checkonly "libc6, 2ping (= 1.2.3-1)" Packages
+\end{alltt}
+\end{example}
+
+There are also some filters on package metadata: \texttt{--latest}
+keeps only the latest version of any package, and \texttt{--arch}
+allows to filter out all packages that are not consistent with a
+particular architecture (for instance, with \texttt{arch=amd64} only
+packages with an Architecture value of \texttt{amd64} or \texttt{all}
+are kept.
+
+Other options controlling the output are explained in detail in
+Section~\ref{sec:output}. A complete listing of all options can be found in
+the \debcheck(1) manpage.
+
+

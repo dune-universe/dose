@@ -77,8 +77,8 @@ with each finding.
 
 \subsection{Understanding Explanations of installability}
 
-Explanations of installability are simply giving by listing an
-installation (in the sense of Section~\ref{sec:installability})
+An explanation of installability simply consists of an
+installation set in the sense of Section~\ref{sec:installability}
 containing the package in question.
 
 \begin{example}
@@ -168,7 +168,7 @@ Each component of the explanation is either a missing package, or a conflict.
 
 \subsubsection{Explanation in Case of a Missing Package}
 A component of the explanation that corresponds to the case of a
-missing consist of two stanzas:
+missing package consist of two stanzas:
 \begin{itemize}
 \item a \texttt{pkg} stanza that states the package that cannot satisfy
   one of its direct dependencies
@@ -192,7 +192,7 @@ reasons:
       version: 3.2.2.dfsg-1+b1
       architecture: amd64
       unsat-dependency: libboost-thread1.40.0 (>= 1.40.0-1)
-     paths:
+     depchains:
       -
        depchain:
         -
@@ -212,7 +212,7 @@ reasons:
          depends: libgruel0 (= 3.2.2.dfsg-1+b1)
 \end{verbatim}
 This tells us that \texttt{libgnuradio-dev} in version $3.2.2.dfsg-1$
-is not installable, due to the fact that package \texttt{tlibgruel0}
+is not installable, due to the fact that package \texttt{libgruel0}
 in version $3.2.2.dfsg-1+b1$ has a dependency
 \texttt{libboost-thread1.40.0 (>= 1.40.0-1)} that is not matched by
 any package in the repository. The dependency chain tells why package
@@ -224,9 +224,83 @@ The paths component gives all possible depchains from the root package
 (\texttt{libgnuradio-dev} in the above example) to the one where a
 direct dependency is not matched by any package (\texttt{libgruel0} in
 the example). We do not include the last node in the dependency chain
-to avoid a useless repetition. In general there may be more then one
-path to reach a certain package from a given root package, in that
-case \debcheck{} will unroll all of them.
+to avoid a useless repetition.
+
+In general there may be more then one path to reach a certain package
+from a given root package, in that case \debcheck{} will unroll all of
+them.
+\begin{example}
+In the following repository, package \texttt{a} is not installable since 
+the dependency of package \texttt{d} cannot be satisfied:
+\begin{verbatim}
+Package: a
+Architecture: amd64
+Version: 1
+Depends: b|c
+
+Package: b
+Architecture: amd64
+Version: 1
+Depends: d
+
+Package: c
+Architecture: amd64
+Version: 3
+Depends: d
+
+Package: d
+Architecture: amd64
+Version: 42
+Depends: x
+\end{verbatim}
+There are two different ways how \texttt{a} arrives at a dependency on
+\texttt{d}. \debcheck{} reports the problem once, but lists the two pathes 
+from \texttt{a} to \texttt{d}:
+\begin{verbatim}
+% dose-debcheck -e -f --checkonly a rep1
+report:
+ -
+  package: a
+  version: 1
+  architecture: amd64
+  source: a (= 1)
+  status: broken
+  reasons:
+   -
+    missing:
+     pkg:
+      package: d
+      version: 42
+      architecture: amd64
+      unsat-dependency: x
+     depchains:
+      -
+       depchain:
+        -
+         package: a
+         version: 1
+         architecture: amd64
+         depends: b | c
+        -
+         package: b
+         version: 1
+         architecture: amd64
+         depends: d
+      -
+       depchain:
+        -
+         package: a
+         version: 1
+         architecture: amd64
+         depends: b | c
+        -
+         package: c
+         version: 3
+         architecture: amd64
+         depends: d
+\end{verbatim}
+\end{example}
+
 
 \subsubsection{Explanation in Case of a Conflict}
 The other possible cause of a problem is a conflict. In that case, the
