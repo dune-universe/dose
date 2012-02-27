@@ -21,12 +21,18 @@ let _ = dispatch begin function
    | After_rules ->
        List.iter (fun lib ->
          flag ["ocaml"; "link"; "use_"^lib; "program"; "native"] & 
-         S[A"-I"; A(lib); A"-I"; A"doselibs"; A(lib^".cmxa")];
+         S[A("doselibs/"^lib^".cmxa")];
          
          flag ["ocaml"; "link"; "use_"^lib; "program"; "byte"] & 
-         S[A"-I"; A(lib); A"-I"; A"doselibs"; A(lib^".cma")];
+         S[A("doselibs/"^lib^".cma")];
        ) libraries
        ;
+
+       (* add add the directory rpm to find the dllrpm?_stubs at
+        * link time . we need this only with bytecode *)
+       flag ["ocaml"; "link"; "use_rpm"; "program"; "byte"] & S[
+         A"-I"; A"rpm"
+       ];
 
        (* add compilation flags for rpm *)
        flag ["c"; "use_rpm"; "compile"] & S[ 
