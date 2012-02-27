@@ -21,10 +21,10 @@ let _ = dispatch begin function
    | After_rules ->
        List.iter (fun lib ->
          flag ["ocaml"; "link"; "use_"^lib; "program"; "native"] & 
-         S[A(doselibs^"/"^lib^".cmxa")];
+         S[A"-I"; A(lib); A"-I"; A"doselibs"; A(lib^".cmxa")];
          
          flag ["ocaml"; "link"; "use_"^lib; "program"; "byte"] & 
-         S[A(doselibs^"/"^lib^".cma")]
+         S[A"-I"; A(lib); A"-I"; A"doselibs"; A(lib^".cma")];
        ) libraries
        ;
 
@@ -53,6 +53,8 @@ let _ = dispatch begin function
          A"-cclib"; A"-lrpmio";
          A"-ccopt"; A"-Lrpm";
        ];
+
+       flag ["ocaml"; "use_rpm"; "link"; "program"; "byte"] & S[A"-I"; A"rpm"];
 
        flag ["link"; "ocaml"; "link_rpm4"] & S[A"rpm/librpm4_stubs.a"];
        flag ["link"; "ocaml"; "link_rpm5"] & S[A"rpm/librpm5_stubs.a"];
