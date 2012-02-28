@@ -62,39 +62,26 @@ files (see Section~\ref{sec:invocation}). \debcheck{} makes two
 important assumptions on the repositories; if any of these is not
 satisfied then it exits with an error:
 
-\begin{itemize}
+\begin{enumerate}
 \item
   We assume that there are no two package stanzas in the repository
-  that have both the same value of \texttt{Package} and the same value
-  of \texttt{Version}. Having different versions for the same package
-  name is OK, as it is of course OK to have two stanzas with different
-  package names and the same version.
+  that have the same values of all three fields \texttt{Package},
+  \texttt{Version}, and \texttt{Architecture}. Having different
+  versions for the same package name is OK, as it is of course OK to
+  have two stanzas with different package names and the same version.
+  In other words, the \debcheck{} tool uses internally the triple of
+  name, architecture and version as an identifier for packages.
 
-  As a consequence, the pair of package name and package version is a
-  unique identifier of a package stanza inside a given repository. In
-  the following, when we speak of \emph{a package}, we mean a precise
-  package stanza that is identified by a name \emph{and} a version,
-  like the package of name \texttt{gcc} in version \texttt{4:4.3.2-2}.
-  The stanza with name \texttt{gcc} and version \texttt{4:4.4.4-2}
-  would constitute a different package.
+  In the following, when we speak of \emph{a package}, we mean a
+  precise package stanza that is identified by a name, a version, and
+  an architecture, like the package of name \texttt{gcc} in version
+  \texttt{4:4.3.2-2} and for architecture \texttt{amd64}. The stanza with name
+  \texttt{gcc} and version \texttt{4:4.4.4-2} for architecture
+  \textit{amd64} would constitute a different package.
 
-  It is allowed that the \emph{same} package stanza occurs several
-  time in the input, in that case all copies after the first one are
-  simply ignored. In this context, two package stanzas are considered
-  the same when they have the same value for all the fields that are
-  listed in Section~\ref{sec:packages}.
-\item
-  We assume that the values of the \texttt{Architecture} fields are
-  consistent, that is that there exists a single architecture that
-  matches all these architecture values. Currently (policy version
-  3.9.1), this means that all architecture values are either
-  \texttt{all}, or the same specific architecture.
-
-  An exception is the \texttt{-a \textit{<architecture>}} option which
-  allows to restrict the repository to those package stanzas who's
-  architecture field is consistent with a given concrete architecture
-  (see Section~\ref{sec:invocation}).
-\end{itemize}
+  If the input contains several stanzas with the same name, version
+  and architecture then all but the first such stanza are dropped, and a 
+  warning message is issued.
 
 \begin{example} The following input does not constitute a repository:
 \begin{verbatim}
@@ -108,12 +95,24 @@ Version: 42
 Architecture: amd64
 Depends: pqr
 \end{verbatim}
-The reason is that the package $(abc,42)$ is not unique. \debcheck{}
-will reject such an input. After changing the version in the second
-stanza to 43, for example, the input becomes correct.
+The reason is that the triple $(abc,42,amd64)$ is not
+unique. \debcheck{} will only take the first stanza and drop the
+second one from its input:
+\begin{verbatim}
+TODO: show the exact warning message.
+\end{verbatim}
 \end{example}
 
-% XXX This is going to change with multi-arch \ldots soon
+\item
+  We assume that the values of the \texttt{Architecture} fields are
+  consistent, that is that there exists a single architecture that
+  matches all these architecture values. Currently (policy version
+  3.9.1), this means that all architecture values are either
+  \texttt{all}, or the same specific architecture. The \debcheck{} tool
+  will drop from its input any package stanza whose architecture is
+  inconsistent with the previously accepted architecture values, and
+  issue a warning message:
+
 \begin{example} The following input does not constitute a repository either:
 \begin{verbatim}
 Package: abc
@@ -129,10 +128,21 @@ Version: 44
 Architecture: i386
 \end{verbatim}
 Here, the reason is that the architectures \texttt{amd64} and
-\texttt{i386} are considered in contradiction. Dropping either the
-first or the last package of the repository will fix the problem. Note
-that this can also be achieved by using an architecture filter on the
-input, see Section~\ref{sec:invocation}).
+\texttt{i386} are considered in contradiction. \debcheck{} will accept
+the first two stanzas and drop the last one:
+\begin{verbatim}
+*** TODO; show the warning message
+\end{verbatim}
+
 \end{example}
+
+  An exception is the \texttt{-arch=\textit{<architectures>}} option which
+  takes as value a comma-separated list of architectures. It allows to
+  restrict the repository to those package stanzas whose architecture
+  value occurs in that list (or is equal to \texttt{all}), even if that 
+  leads to package stanzas with inconsistent architectures
+  (see Section~\ref{sec:invocation}).
+\end{enumerate}
+
 
 
