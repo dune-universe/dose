@@ -15,8 +15,10 @@
 %{
 
 open ExtLib
-exception Dup_stanza
+(* exception Dup_stanza *)
 
+(* XXX instead of ^ and triggering a reallocation everytime, I could use
+ * String.concat to allocate the string of the right size once for all *)
 let join (r1, v) (r2, cont) = (Format822.extend_loc r1 r2, v ^ cont)
 
 %}
@@ -61,11 +63,12 @@ stanzas:
 ;
 
 stanza:
-  | fields      { let keys = List.map fst $1 in
+  | fields      { (* let keys = List.map fst $1 in
                   (* check for re-defined keys *)
                   if List.length (List.unique keys) < List.length keys then
                     raise Dup_stanza
                   else
+                    *)
                     $1
                 }
 ;
@@ -95,11 +98,11 @@ let error_wrapper f =
           raise (Format822.Parse_error_822
                    ("RFC 822 (stanza structure) parse error",
                     Format822.loc_of_lexbuf lexbuf))
-      | Dup_stanza ->
+(*      | Dup_stanza ->
           raise (Format822.Parse_error_822
                    ("duplicate keys in stanza",
                     Format822.loc_of_lexbuf lexbuf))
-
+*)
 let doc_822 = error_wrapper doc_822
 let stanza_822 = error_wrapper stanza_822
 

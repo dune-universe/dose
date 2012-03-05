@@ -78,8 +78,9 @@ let parse_binarylist = lexbuf_wrapper Packages_parser.vpkglist_top
 
 (**************************************)
 
+(* assume n is lowercase *)
 let rec assoc (n : string) = function
-  |(k,v)::_ when (String.lowercase k) = (String.lowercase n) -> v
+  |(k,v)::_ when (String.lowercase k) = n -> v
   |(k,_)::t -> assoc n t
   |[] -> raise Not_found
 ;;
@@ -91,6 +92,7 @@ exception IgnorePackage of string
  * opt = None && err = Some s -> ParseError s :
  * opt = Some s -> return s *)
 let parse_s ?opt ?err ?(multi=false) f field par =
+  let field = String.lowercase field in
   try 
     let (_loc,s) = (assoc field par) in
     f (_loc,s) 
@@ -177,7 +179,7 @@ let parse_package_stanza filter default_arch extras par =
 
 let status_filter par =
   try
-    let (_,s) = (assoc "Status" par) in
+    let (_,s) = (assoc "status" par) in
     match String.nsplit s " " with
     |[_;_;"installed"] -> true
     |_ -> false
@@ -185,7 +187,7 @@ let status_filter par =
 
 let arch_filter archlist par =
   try
-    let (_,s) = (assoc "Architecture" par) in
+    let (_,s) = (assoc "architecture" par) in
     List.mem s archlist
   with Not_found -> false
 

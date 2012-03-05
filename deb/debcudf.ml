@@ -255,7 +255,7 @@ let add_inst inst pkg =
   if inst then true 
   else
     try
-      match String.nsplit (Packages.assoc "Status" pkg.extras) " " with
+      match String.nsplit (Packages.assoc "status" pkg.extras) " " with
       |[_;_;"installed"] -> true
       | _ -> false
     with Not_found -> false

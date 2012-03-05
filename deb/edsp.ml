@@ -97,8 +97,8 @@ let rec packages_parser ?(request=false) (req,acc) p =
         end
       with Not_found -> false
     in
-    let inst () = match_field "Installed" par in 
-    let candidate () = match_field "APT-Candidate" par in
+    let inst () = match_field "installed" par in 
+    let candidate () = match_field "apt-candidate" par in
     ((inst ()) || (candidate ()))
   in
   match Format822_parser.stanza_822 Format822_lexer.token_822 p.Format822.lexbuf with
@@ -138,7 +138,7 @@ let tocudf tables pkg =
   let inst =
     try
       let _loc = Format822.dummy_loc in
-      let v = Packages.assoc "Installed" pkg.Packages.extras in
+      let v = Packages.assoc "installed" pkg.Packages.extras in
       Packages.parse_bool (_loc,v)
     with Not_found -> false
   in

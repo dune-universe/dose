@@ -249,12 +249,18 @@ let solve solver request =
   let result solve collect var =
     if solve solver.constraints var then begin
       let get_assignent ?(all=false) () =
-        let l = ref [] in
         let a = S.assignment solver.constraints in
-        for i = 0 to (Array.length a) - 1 do
-          if a.(i) = S.True then l := (solver.map#inttovar i) :: !l
-        done;
-        !l
+        let size = (Array.length a) - 1 in
+        let rec aux (i,acc) =
+          if i < size then
+            let acc = 
+              if (Array.unsafe_get a i) = S.True then 
+                (solver.map#inttovar i) :: acc 
+              else acc
+            in aux (i+1,acc)
+          else acc
+        in
+        aux (0,[])
       in
       Diagnostic_int.Success(get_assignent)
     end
