@@ -180,16 +180,11 @@ end
 
 (** Imperative bidirectional graph for dependecies. *)
 (** Imperative unidirectional graph for conflicts. *)
-module PackageGraph = struct
+module MakePackageGraph(V : Sig.COMPARABLE with type t = Cudf.package )(E : Sig.ORDERED_TYPE_DFT) = struct
 
-  module PkgV = struct
-      type t = Cudf.package
-      let compare = CudfAdd.compare
-      let hash = CudfAdd.hash
-      let equal = CudfAdd.equal
-  end
-
-  module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
+  module PkgV = V
+  module PkgE = E
+  module G = Imperative.Digraph.ConcreteBidirectionalLabeled(PkgV)(PkgE)
   module UG = Imperative.Graph.Concrete(PkgV)
   module O = GraphOper(G)
   module S = Set.Make(PkgV)
@@ -211,7 +206,6 @@ module PackageGraph = struct
     end
   module Display = DisplayF(G)
   module D = Graph.Graphviz.Dot(Display)
-
 
   (** Build the dependency graph from the given cudf universe *)
   let dependency_graph ?(conjunctive=false) universe =
@@ -307,6 +301,23 @@ module PackageGraph = struct
 end
 
 (******************************************************)
+
+module PkgV = struct
+    type t = Cudf.package
+    let compare = CudfAdd.compare
+    let hash = CudfAdd.hash
+    let equal = CudfAdd.equal
+end
+
+module PkgE = struct
+  type t = float
+  let compare = Pervasives.compare
+  let hash = Hashtbl.hash
+  let equal = (=)
+  let default = 0.0
+end
+
+module PackageGraph = MakePackageGraph(PkgV)(PkgE)
 
 (** Integer Imperative Bidirectional Graph *)
 module IntPkgGraph = struct
