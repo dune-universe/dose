@@ -201,7 +201,21 @@ let main () =
   let module G = PG.G in
   let module D = PG.D in
   let module C = Graph.Components.Make(G) in
+  let module Dfs = Graph.Traverse.Dfs(G) in
 
+  let module SV = Set.Make(G.V) in
+
+  let to_set l = List.fold_right SV.add l SV.empty in
+
+  let partition s w = snd(SV.partition (fun e -> e >= w) s) in
+
+  let print_set s =
+    String.join " " (List.map (fun e -> 
+      (CudfAdd.string_of_package e)
+      ) (SV.elements s))
+  in
+
+  (* returns a new graph containg a copy of all edges and vertex of g *)
   let copy_graph g =
     let g1 = G.create () in
     G.iter_edges_e (fun e -> G.add_edge_e g1 e) g;
@@ -209,28 +223,90 @@ let main () =
     g1
   in
 
-  let fas sg =
-    info "subgraph (%d)" (G.nb_vertex sg);
-    let to_list t = Hashtbl.fold (fun k _ acc -> k::acc) t [] in
-    Util.Progress.set_total progressbar (G.nb_vertex sg) ;
+  (* return subgraph that contains all vertex in s and all edges that connet
+   * two vertex in s *)
+  let extract_subgraph g s =
+    let sg = G.create () in
+    SV.iter (fun e -> G.add_vertex sg e) s;
+    G.iter_edges (fun v1 v2 ->
+      if SV.mem v1 s && SV.mem v2 s then
+        G.add_edge sg v1 v2
+    ) g;
+    sg
+  in
+
+  (* return a new graph without all the edges in l - as G.E.t list *)
+  let remove_edges_e g l =
+    let sg = copy_graph g in
+    List.iter (G.remove_edge_e sg) l;
+    sg
+  in
+
+  let hash_to_list t = Hashtbl.fold (fun k _ acc -> k::acc) t [] in
+
+  (* return one cycle in g, if one exists *)
+  let find_simple_cycle g =
+    let clean es =
+      let l = ref [] in
+      let ll = ref [] in
+      try
+        Stack.iter (fun e ->
+          ll:= (G.E.dst e)::!ll;
+          if List.mem (G.E.src e) !ll then (l:= e::!l ; raise Exit)
+          else l:= e::!l
+        ) es; []
+      with Exit -> !l
+    in
+    let h = Hashtbl.create (G.nb_vertex g) in
+    let es = Stack.create () in
+    let rec visit v =
+      Hashtbl.add h v true;
+      G.iter_succ_e (fun e ->
+        let w = G.E.dst e in
+        Stack.push e es;
+        try if Hashtbl.find h w then raise Exit else ignore(Stack.pop es)
+        with Not_found -> visit w ;
+      ) g v;
+      if not (Stack.is_empty es) then ignore(Stack.pop es);
+      Hashtbl.replace h v false;
+    in
+    try G.iter_vertex (fun v -> if not (Hashtbl.mem h v) then visit v) g; []
+    with Exit -> clean es
+  in
+
+  (* return a feedback arc set of a weight graph *)
+  let fas weight_table sg =
     let g = copy_graph sg in
+    (* f is a set of edges to remove *)
     let f = Hashtbl.create 1023 in
-    let vertex_set = Stack.create () in
-    G.iter_vertex (fun v -> Stack.push v vertex_set) g ;
-    info "before loop";
-    while G.nb_vertex g > 0 do
-      Util.Progress.progress progressbar;
-      let v = Stack.pop vertex_set in
-      if G.in_degree g v < G.out_degree g v then
-        G.iter_pred (fun v1 -> Hashtbl.add f (v1,v) ()) g v
-      else
-        G.iter_succ (fun v2 -> Hashtbl.add f (v,v2) ()) g v
-      ;
-      (* this removes all incoming and outgoing arcs to v *)
-      G.remove_vertex g v
+    let weight e = Hashtbl.find weight_table e in
+    let update_weight e w = Hashtbl.add weight_table e w in
+    let add k = Hashtbl.replace f k () in
+    let subgraph = ref g in
+    while Dfs.has_cycle !subgraph do
+      let c = find_simple_cycle !subgraph in
+
+      (* edge with min weight *)
+      let e = List.hd c in
+      let eps = weight e in
+      List.iter (fun e ->
+        update_weight e ((weight e) - eps);
+        if (weight e) <= 0 then add e
+      ) c;
+      subgraph := remove_edges_e g (hash_to_list f);
     done;
-    Util.Progress.reset progressbar;
-    to_list f
+    Hashtbl.iter (fun e _ ->
+      let (v,w) = G.E.src e, G.E.dst e in
+      let sl = hash_to_list f in
+      let sub = remove_edges_e g sl in
+      let all_edges = G.fold_edges_e (fun e acc -> e::acc) sub [] in
+
+      G.add_edge_e sub e;
+      if not(Dfs.has_cycle sub) then begin
+        Hashtbl.remove f e;
+      end
+    ) f;
+    hash_to_list f
   in
 
   let print_dot s g =
@@ -334,7 +410,7 @@ let main () =
     ) s
   in
   *)
-
+(*
   let subgraph g l =
     let sg = G.create () in
     List.iter (fun src_up ->
@@ -353,6 +429,7 @@ let main () =
     ) l;
     sg
   in
+*)
 
   (* break dependency loops. This should use a heuristic of some kind or
    * ask for user intervention *)
@@ -368,19 +445,19 @@ let main () =
             CudfAdd.string_of_package pkg
           ) l));
           *)
-        let sg = subgraph g l in
-        info "subgraph";
+        let sg = extract_subgraph g (to_set l) in
         let subname = Printf.sprintf "sub-%d-%d.dot" !iteration i in
         print_dot subname sg;
 
-        let feedback_set = fas sg in
+        let feedback_set = fas (Hashtbl.create 1023) sg in
         info "arcs to remove %d" (List.length feedback_set);
         List.iter (fun (v1,v2) ->
-          info "Remove %s -> %s" 
+          info "Remove %s -> %s"
           (CudfAdd.string_of_package v1)
           (CudfAdd.string_of_package v2);
           G.remove_edge sg v1 v2
         ) feedback_set;
+        info "cycles %b\n" (Dfs.has_cycle sg);
         let subname = Printf.sprintf "sub-%d-%d-fas.dot" !iteration i in
         print_dot subname sg;
 
