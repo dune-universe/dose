@@ -24,7 +24,8 @@ let warning fmt = Util.make_warning __FILE__ fmt
 let debug fmt = Util.make_debug __FILE__ fmt
 let fatal fmt = Util.make_fatal __FILE__ fmt
 
-let progressbar = Util.Progress.create "fas"
+let progressbar_u = Util.Progress.create ~unbounded:true "fasU"
+let progressbar_b = Util.Progress.create "fasB"
 
 module Boilerplate = BoilerplateNoRpm
 module Src = Sources
@@ -70,7 +71,7 @@ let main () =
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   
   (* enable a selection of progress bars *)
-  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) ["fas"] ;
+  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) ["fasB";"fasU"] ;
 
   (* enable a selection of timers *)
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) [];
@@ -196,24 +197,55 @@ let main () =
     - binary list
     - build dependency list
   *)
+  let module PkgE = struct
+    type t = int
+    let compare = Pervasives.compare
+    let hash = Hashtbl.hash
+    let equal = (=)
+    let default = -10000
+  end in
 
-  let module PG = Defaultgraphs.PackageGraph in
+  let module PG = Defaultgraphs.MakePackageGraph(Defaultgraphs.PkgV)(PkgE) in
+
   let module G = PG.G in
   let module D = PG.D in
   let module C = Graph.Components.Make(G) in
   let module Dfs = Graph.Traverse.Dfs(G) in
 
   let module SV = Set.Make(G.V) in
+  let module SE = Set.Make(
+    struct
+      type t = G.E.t 
+      let compare e1 e2 = 
+        if G.E.compare e1 e2 = 0 then 1 else
+          if (G.E.label e1) = (G.E.label e2) then 1
+          else (G.E.label e1) - (G.E.label e2)
+    end) 
+  in
 
   let to_set l = List.fold_right SV.add l SV.empty in
 
   let partition s w = snd(SV.partition (fun e -> e >= w) s) in
 
-  let print_set s =
+  let print_set_e s =
     String.join " " (List.map (fun e -> 
       (CudfAdd.string_of_package e)
       ) (SV.elements s))
   in
+
+  let edge_to_string (s,l,d) = 
+    Printf.sprintf "%s -(%d)-> %s" 
+    (CudfAdd.string_of_package s)
+    l
+    (CudfAdd.string_of_package d)
+  in
+
+  let print_set_e msg s =
+    info "%s %s" msg (
+      String.join " " (List.map edge_to_string (SE.elements s))
+    )
+  in
+
 
   (* returns a new graph containg a copy of all edges and vertex of g *)
   let copy_graph g =
@@ -228,9 +260,10 @@ let main () =
   let extract_subgraph g s =
     let sg = G.create () in
     SV.iter (fun e -> G.add_vertex sg e) s;
-    G.iter_edges (fun v1 v2 ->
+    G.iter_edges_e (fun e ->
+      let v1 = G.E.src e in let v2 = G.E.dst e in
       if SV.mem v1 s && SV.mem v2 s then
-        G.add_edge sg v1 v2
+        G.add_edge_e sg e
     ) g;
     sg
   in
@@ -247,14 +280,14 @@ let main () =
   (* return one cycle in g, if one exists *)
   let find_simple_cycle g =
     let clean es =
-      let l = ref [] in
+      let l = ref SE.empty in
       let ll = ref [] in
       try
         Stack.iter (fun e ->
           ll:= (G.E.dst e)::!ll;
-          if List.mem (G.E.src e) !ll then (l:= e::!l ; raise Exit)
-          else l:= e::!l
-        ) es; []
+          if List.mem (G.E.src e) !ll then (l:= SE.add e !l ; raise Exit)
+          else l:= SE.add e !l
+        ) es; SE.empty
       with Exit -> !l
     in
     let h = Hashtbl.create (G.nb_vertex g) in
@@ -270,36 +303,54 @@ let main () =
       if not (Stack.is_empty es) then ignore(Stack.pop es);
       Hashtbl.replace h v false;
     in
-    try G.iter_vertex (fun v -> if not (Hashtbl.mem h v) then visit v) g; []
+    try G.iter_vertex (fun v -> if not (Hashtbl.mem h v) then visit v) g;
+    SE.empty
     with Exit -> clean es
   in
 
   (* return a feedback arc set of a weight graph *)
-  let fas weight_table sg =
+  let fas sg =
     let g = copy_graph sg in
     (* f is a set of edges to remove *)
     let f = Hashtbl.create 1023 in
-    let weight e = Hashtbl.find weight_table e in
+    let weight_table = Hashtbl.create 1023 in
+    let weight e = 
+      try Hashtbl.find weight_table e 
+      with Not_found -> 
+        let l = G.E.label e in 
+        Hashtbl.add weight_table e l;
+        l
+    in
     let update_weight e w = Hashtbl.add weight_table e w in
     let add k = Hashtbl.replace f k () in
     let subgraph = ref g in
     while Dfs.has_cycle !subgraph do
+      Util.Progress.progress progressbar_u;
       let c = find_simple_cycle !subgraph in
+      print_set_e "simple cycle" c;
 
       (* edge with min weight *)
-      let e = List.hd c in
-      let eps = weight e in
-      List.iter (fun e ->
-        update_weight e ((weight e) - eps);
-        if (weight e) <= 0 then add e
+      let (_,eps,_) = SE.min_elt c in
+      Printf.printf "min %d\n%!" eps ;
+      SE.iter (fun e ->
+        Printf.printf "w e %d\n%!" (weight e) ;
+        if (weight e) <= 0 then () else begin
+          update_weight e ((weight e) - eps);
+          Printf.printf "update %d\n%!" (weight e) ;
+          if (weight e) <= 0 then (
+            Printf.printf "Candidate to be removed %s \n%!" (edge_to_string e);
+            add e
+          )
+        end
       ) c;
       subgraph := remove_edges_e g (hash_to_list f);
     done;
+    Util.Progress.set_total progressbar_b (Hashtbl.length f);
     Hashtbl.iter (fun e _ ->
+      Util.Progress.progress progressbar_b;
       let (v,w) = G.E.src e, G.E.dst e in
       let sl = hash_to_list f in
       let sub = remove_edges_e g sl in
-      let all_edges = G.fold_edges_e (fun e acc -> e::acc) sub [] in
 
       G.add_edge_e sub e;
       if not(Dfs.has_cycle sub) then begin
@@ -315,7 +366,37 @@ let main () =
     close_out oc
   in
 
+  let is_build_essential pkg =
+    try bool_of_string (Cudf.lookup_package_property pkg "buildessential") 
+    with Not_found -> false
+  in
+  
+  let is_essential pkg =
+    try bool_of_string (Cudf.lookup_package_property pkg "essential") 
+    with Not_found -> false
+  in
+
+  let get_source pkg =
+    let sn = try Cudf.lookup_package_property pkg "source" with Not_found -> fatal "WTF source" in
+    let sv = try Cudf.lookup_package_property pkg "sourcenumber" with Not_found -> fatal "WTF sourcenumber"in
+    try 
+      Cudf.lookup_package universe (CudfAdd.encode ("src"^Src.sep^sn),to_cudf (sn,sv))
+    with Not_found -> begin
+      warning "The source package %s %s associated to the bin package %s is missing" 
+      sn sv (CudfAdd.string_of_package pkg);
+      raise Not_found
+    end
+  in
+
   let add_source g src =
+    let is_direct_build_dep src bin =
+      try
+        ignore (
+          List.find (fun p -> CudfAdd.equal bin p) (List.flatten (CudfAdd.who_depends universe src))
+        ); true
+      with Not_found -> false
+    in
+
     if not (G.mem_vertex g src) then begin
       let req = Diagnostic_int.Sng (CudfAdd.vartoint universe src) in
       let res = Depsolver_int.solve solver req in
@@ -332,22 +413,18 @@ let main () =
       List.iter (fun bin ->
         (* if the source package depends on a package in the base system,
          * we do not add this package *)
-        if not (CudfAdd.equal bin src) then
-          G.add_edge g src bin
+        if not (CudfAdd.equal bin src) then begin
           (* source -> bin (build dep) *)
+          let label = 
+            if is_build_essential bin || is_essential bin then 1000
+            else
+              if is_direct_build_dep src bin then 1 
+              else 100 
+            in
+          let e = G.E.create src label bin in
+          G.add_edge_e g e
+        end
       ) closure
-    end
-  in
-
-  let get_source pkg =
-    let sn = try Cudf.lookup_package_property pkg "source" with Not_found -> fatal "WTF source" in
-    let sv = try Cudf.lookup_package_property pkg "sourcenumber" with Not_found -> fatal "WTF sourcenumber"in
-    try 
-      Cudf.lookup_package universe (CudfAdd.encode ("src"^Src.sep^sn),to_cudf (sn,sv))
-    with Not_found -> begin
-      warning "The source package %s %s associated to the bin package %s is missing" 
-      sn sv (CudfAdd.string_of_package pkg);
-      raise Not_found
     end
   in
 
@@ -362,8 +439,10 @@ let main () =
       let src = get_source bin in
       begin try add_source g src with Not_found -> () end;
       (* bin -> source (belongs to) *)
-      G.add_edge g bin src;
-
+      (* I never want to break such dependency *)
+      let label = 100000 in
+      let e = G.E.create bin label src in
+      G.add_edge_e g e;
     with Not_found -> () (* from get_source *)
   ) bl ;
   
@@ -449,11 +528,12 @@ let main () =
         let subname = Printf.sprintf "sub-%d-%d.dot" !iteration i in
         print_dot subname sg;
 
-        let feedback_set = fas (Hashtbl.create 1023) sg in
+        let feedback_set = fas sg in
         info "arcs to remove %d" (List.length feedback_set);
-        List.iter (fun (v1,v2) ->
-          info "Remove %s -> %s"
+        List.iter (fun (v1,l,v2) ->
+          info "Remove %s -(%d)-> %s"
           (CudfAdd.string_of_package v1)
+          l
           (CudfAdd.string_of_package v2);
           G.remove_edge sg v1 v2
         ) feedback_set;
