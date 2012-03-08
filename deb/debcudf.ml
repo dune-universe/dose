@@ -208,6 +208,8 @@ let preamble =
     ("source",(`String (Some ""))) ;
     ("sourcenumber",(`String (Some "")));
     ("sourceversion",(`Int (Some 1))) ;
+    ("essential",(`Bool (Some false))) ;
+    ("buildessential",(`Bool (Some false))) ;
     ]
   in
   CudfAdd.add_properties Cudf.default_preamble l
@@ -216,6 +218,8 @@ let add_extra_default extras tables pkg =
   let number = ("number",`String pkg.version) in
   let architecture = ("architecture",`String pkg.architecture) in
   let priority = ("priority",`String pkg.priority) in
+  let essential = ("essential", `Bool pkg.essential) in
+  let build_essential = ("buildessential", `Bool pkg.build_essential) in
   let (source,sourcenumber,sourceversion) =
     let (n,v) =
       match pkg.source with
@@ -244,7 +248,9 @@ let add_extra_default extras tables pkg =
     |e -> Some e
   )
   [priority; architecture; number;
-  source; sourcenumber; sourceversion; recommends; replaces]@ l
+  source; sourcenumber; sourceversion; 
+  recommends; replaces;
+  essential;build_essential]@ l
 ;;
 
 let add_essential = function
