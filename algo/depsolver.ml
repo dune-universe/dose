@@ -84,16 +84,25 @@ let listcheck ?callback universe pkglist =
       let callback_int (res,req) = f (diagnosis universe res req) in
       Depsolver_int.listcheck ~callback:callback_int universe idlist
 
-let edos_install univ solver pkg =
-  let req = Diagnostic_int.Sng (CudfAdd.vartoint univ pkg) in
+let edos_install univ pkg =
+  let pool = Depsolver_int.init_pool_univ univ in
+  let id = CudfAdd.vartoint univ pkg in
+  let closure = Depsolver_int.dependency_closure univ [id] in
+  let solver = Depsolver_int.init_solver_closure pool closure in
+  let req = Diagnostic_int.Sng id in
   let res = Depsolver_int.solve solver req in
   diagnosis univ res req
+;;
 
-let edos_coinstall univ solver pkglist =
+let edos_coinstall univ pkglist =
+  let pool = Depsolver_int.init_pool_univ univ in
   let idlist = List.map (CudfAdd.vartoint univ) pkglist in
+  let closure = Depsolver_int.dependency_closure univ idlist in
+  let solver = Depsolver_int.init_solver_closure pool closure in
   let req = Diagnostic_int.Lst idlist in
   let res = Depsolver_int.solve solver req in
   diagnosis univ res req
+;;
 
 let trim universe =
   let trimmed_pkgs = ref [] in
@@ -201,6 +210,8 @@ let check_request (_,pkglist,request) =
     conflicts = request.Cudf.remove}
   in
   let universe = Cudf.load_universe (dummy::pkglist) in
-  let solver = load ~check:false universe in
-  edos_install universe solver dummy
+(*  let solver = load ~check:false universe in
+  let solver = Depsolver_int.init_solver_closure pool closure in
+*)
+  edos_install universe dummy
 
