@@ -107,12 +107,12 @@ let rec packages_parser ?(request=false) (req,acc) p =
       let req = parse_request_stanza stanza in
       packages_parser (req,acc) p
   |Some stanza when req.strict_pin = true -> begin
-    match (Packages.parse_package_stanza (Some(filter)) None extras stanza) with
+    match (Packages.parse_package_stanza (Some(filter)) [] extras stanza) with
     |None -> packages_parser (req,acc) p
     |Some st -> packages_parser (req,st::acc) p
   end
   |Some stanza when req.strict_pin = false -> begin
-    match (Packages.parse_package_stanza None None extras stanza) with
+    match (Packages.parse_package_stanza None [] extras stanza) with
     |None -> assert false (* this is not possible in this branch *)
     |Some st -> packages_parser (req,st::acc) p
   end
@@ -135,6 +135,7 @@ let extras_tocudf =
 ;;
 
 let tocudf tables pkg =
+  let options = { Debcudf.default_options with Debcudf.extras = extras_tocudf } in
   let inst =
     try
       let _loc = Format822.dummy_loc in
@@ -142,5 +143,5 @@ let tocudf tables pkg =
       Packages.parse_bool (_loc,v)
     with Not_found -> false
   in
-  Debcudf.tocudf tables ~inst ~extras:extras_tocudf pkg 
+  Debcudf.tocudf tables ~options ~inst pkg 
 ;;

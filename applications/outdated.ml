@@ -33,7 +33,7 @@ module Options = struct
   include Boilerplate.MakeOptions(struct let options = options end)
 
   let explain = StdOpt.store_true ()
-  let architecture = StdOpt.str_option ()
+  let architectures = Boilerplate.str_list_option ()
   let checkonly = Boilerplate.pkglist_option ()
   let failure = StdOpt.store_true ()
   let explain = StdOpt.store_true ()
@@ -41,11 +41,9 @@ module Options = struct
   let dump = StdOpt.store_true ()
 
   open OptParser
-  add options ~short_name:'a' ~long_name:"architecture" 
-  ~help:"Set the default architecture" architecture;
+  add options ~long_name:"archs" ~help:"Allowed architectures" architectures;
  
-  add options ~long_name:"checkonly" 
-  ~help:"Check only these package" checkonly;
+  add options ~long_name:"checkonly" ~help:"Check only these package" checkonly;
 
   add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
   add options ~short_name:'f' ~long_name:"failure" ~help:"Show failure" failure;
@@ -175,7 +173,7 @@ let outdated
         let acc0 = 
           (* by assumption all packages in a cluster are syncronized *)
           List.fold_left (fun l pkg ->
-            let p = Debian.Debcudf.tocudf ~extras:[] tables pkg in
+            let p = Debian.Debcudf.tocudf tables pkg in
             (sync (sn,version,1) p)::l
           ) acc0 cluster
         in
@@ -183,7 +181,7 @@ let outdated
         List.fold_left (fun acc1 (target,equiv) ->
           incr sync_index;
           List.fold_left (fun acc2 pkg ->
-            let p = Debian.Debcudf.tocudf ~extras:[] tables pkg in
+            let p = Debian.Debcudf.tocudf tables pkg in
             let pv = p.Cudf.version in
 
             let target = Debian.Evolution.align pkg.Debian.Packages.version target in
@@ -295,8 +293,8 @@ let main () =
   let summary = OptParse.Opt.get Options.summary in
   let dump = OptParse.Opt.get Options.dump in
 
-  let default_arch = OptParse.Opt.opt Options.architecture in
-  let packagelist = Debian.Packages.input_raw ~default_arch args in
+  let archs = OptParse.Opt.get Options.architectures in
+  let packagelist = Debian.Packages.input_raw ~archs args in
   ignore(outdated ~summary ~failure ~explain ~dump ~checklist packagelist)
 ;;
 

@@ -24,8 +24,8 @@ let fatal fmt = Util.make_fatal "Debian.Packages" fmt
 type package = {
   name : Format822.name ;
   version : Format822.version;
-  architecture : string;
-  multiarch : string;
+  architecture : Format822.architecture ;
+  multiarch : Format822.multiarch ;
   essential : bool;
   build_essential : bool;
   priority : string;
@@ -46,7 +46,7 @@ let default_package = {
   name = "";
   version = "";
   architecture = "";
-  multiarch = "";
+  multiarch = `None;
   essential = false;
   build_essential = false;
   priority = "";
@@ -134,26 +134,27 @@ let parse_bool = function
   |(_,("No" |"no" |"False"|"false")) -> false (* this one usually is not there *)
   |(_,s) -> assert false (*raise (Format822.Type_error ("wrong value : "^ s))*)
 
-let parse_architecture default_arch (_,arch) =
-  match default_arch with
-  |None -> arch
-  |Some default_arch ->
-      if (default_arch = arch || arch = "all") then arch else
+(* this function make sure that the "all" arch is always considered *)
+let parse_architecture archs (_,arch) =
+  match archs with
+  |[] -> arch
+  |l -> 
+      if List.mem arch ("all"::archs) then arch else
         raise (IgnorePackage (
           Printf.sprintf
-          "architecture: %s is different from %s (default) or 'all'"
-          arch default_arch
+          "architecture: %s is not included in %s"
+          arch (ExtString.String.join "," ("all"::archs))
           )
         )
 ;;
 
-let parse_package_stanza filter default_arch extras par =
-  let parse_arch = parse_architecture default_arch in
+let parse_package_stanza filter archs extras par =
+  let parse_arch = parse_architecture archs in
   let p () = {
       name = parse_s ~err:"(MISSING NAME)" parse_name "Package" par;
       version = parse_s ~err:"(MISSING VERSION)" parse_version "Version" par;
       architecture = parse_s ~err:"(MISSING ARCH)" parse_arch "Architecture" par;
-      multiarch = parse_s ~opt:"None" parse_multiarch "Multi-Arch" par;
+      multiarch = parse_s ~opt:`None parse_multiarch "Multi-Arch" par;
       source = parse_s ~opt:("",None) parse_source "Source" par;
 
       essential = parse_s ~opt:false parse_bool "Essential" par;
@@ -204,9 +205,9 @@ let rec packages_parser stanza_parser acc p =
       |Some st -> packages_parser stanza_parser (st::acc) p
   end
 
-let parse_packages_in ?filter ?(default_arch=None) ?(extras=[]) file ic =
+let parse_packages_in ?filter ?(archs=[]) ?(extras=[]) file ic =
   info "Parsing Packages file %s..." file;
-  let stanza_parser = parse_package_stanza filter default_arch extras in
+  let stanza_parser = parse_package_stanza filter archs extras in
   Format822.parse_from_ch (packages_parser stanza_parser []) ic
 
 (**/**)
@@ -246,13 +247,13 @@ let default_extras = [
 ]
 
 (** input_raw [file] : parse a debian Packages file from [file] *)
-let input_raw ?filter ?(default_arch=None) ?(extras=[]) =
+let input_raw ?filter ?(archs=[]) ?(extras=[]) =
   let module M = Format822.RawInput(Set) in
   let extras = default_extras @ extras in
-  M.input_raw (parse_packages_in ?filter ~default_arch ~extras)
+  M.input_raw (parse_packages_in ?filter ~archs ~extras)
 
 (** input_raw_ch ch : parse a debian Packages file from channel [ch] *)
-let input_raw_ch ?filter ?(default_arch=None) ?(extras=[]) =
+let input_raw_ch ?filter ?(archs=[]) ?(extras=[]) =
   let module M = Format822.RawInput(Set) in
   let extras = default_extras @ extras in
-  M.input_raw_ch (parse_packages_in ?filter ~default_arch ~extras)
+  M.input_raw_ch (parse_packages_in ?filter ~archs ~extras)

@@ -31,3 +31,4 @@ exception Invalid_url of string;;
 
 val to_string: url -> string
 val scheme_to_string: input_scheme -> string
+val scheme_of_string: string -> input_scheme
