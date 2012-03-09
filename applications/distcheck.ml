@@ -34,6 +34,7 @@ module Options = struct
   let latest = StdOpt.store_true ()
   let checkonly = Boilerplate.vpkglist_option ()
   let coinst = Boilerplate.vpkglist_option ()
+
   let outfile = StdOpt.str_option ()
   let background = Boilerplate.incr_str_list ()
   let foreground = Boilerplate.incr_str_list ()
