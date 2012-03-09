@@ -72,6 +72,7 @@ let main () =
       |"debcheck"|"dose-debcheck" -> "deb://"
       |"eclipsecheck"|"dose-eclipsecheck" -> "eclipse://"
       |"rpmcheck"|"dose-rpmcheck" -> "synth://"
+      |"cudfcheck"|"dose-cudfcheck" -> "cudf://"
       |_ -> ""
   in
   let add_resource_prefix = List.map (function s -> resource_prefix^s) in
@@ -82,7 +83,7 @@ let main () =
     ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
   let default_arch = OptParse.Opt.opt Options.architecture in 
   let fg = 
-    if posargs=[] && resource_prefix <> "" then 
+    if posargs = [] && resource_prefix <> "" then 
       add_resource_prefix ("-"::(OptParse.Opt.get Options.foreground))
     else
       add_resource_prefix (posargs@(OptParse.Opt.get Options.foreground))
