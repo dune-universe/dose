@@ -190,6 +190,8 @@ let main () =
   if OptParse.Opt.is_set Options.dump then begin
     let oc = open_out (OptParse.Opt.get Options.dump) in
     info "Dumping Cudf file";
+    Cudf_printer.pp_preamble oc Debcudf.preamble;
+    Printf.fprintf oc "\n";
     Cudf_printer.pp_universe oc universe
   end;
 
@@ -198,11 +200,11 @@ let main () =
     - build dependency list
   *)
   let module PkgE = struct
-    type t = int
-    let compare = Pervasives.compare
-    let hash = Hashtbl.hash
-    let equal = (=)
-    let default = -10000
+    type t = int ref
+    let compare x y = Pervasives.compare !x !y
+    let hash x = Hashtbl.hash !x
+    let equal x y = !x = !y
+    let default = ref (-10000)
   end in
 
   let module PG = Defaultgraphs.MakePackageGraph(Defaultgraphs.PkgV)(PkgE) in
@@ -211,6 +213,7 @@ let main () =
   let module D = PG.D in
   let module C = Graph.Components.Make(G) in
   let module Dfs = Graph.Traverse.Dfs(G) in
+  let module O = Defaultgraphs.GraphOper(G) in
 
   let module SV = Set.Make(G.V) in
   let module SE = Set.Make(
@@ -218,8 +221,8 @@ let main () =
       type t = G.E.t 
       let compare e1 e2 = 
         if G.E.compare e1 e2 = 0 then 1 else
-          if (G.E.label e1) = (G.E.label e2) then 1
-          else (G.E.label e1) - (G.E.label e2)
+          if !(G.E.label e1) = !(G.E.label e2) then 1
+          else !(G.E.label e1) - !(G.E.label e2)
     end) 
   in
 
@@ -236,15 +239,10 @@ let main () =
   let edge_to_string (s,l,d) = 
     Printf.sprintf "%s -(%d)-> %s" 
     (CudfAdd.string_of_package s)
-    l
+    !l
     (CudfAdd.string_of_package d)
   in
 
-  let print_set_e msg s =
-    info "%s %s" msg (
-      String.join " " (List.map edge_to_string (SE.elements s))
-    )
-  in
 
 
   (* returns a new graph containg a copy of all edges and vertex of g *)
@@ -313,37 +311,35 @@ let main () =
     let g = copy_graph sg in
     (* f is a set of edges to remove *)
     let f = Hashtbl.create 1023 in
-    let weight_table = Hashtbl.create 1023 in
-    let weight e = 
-      try Hashtbl.find weight_table e 
-      with Not_found -> 
-        let l = G.E.label e in 
-        Hashtbl.add weight_table e l;
-        l
-    in
-    let update_weight e w = Hashtbl.add weight_table e w in
+    let weight e = !(G.E.label e) in
+    let update_weight e w = let l = G.E.label e in l := w in
     let add k = Hashtbl.replace f k () in
     let subgraph = ref g in
+    let is_stuck = ref (Hashtbl.length f) in
     while Dfs.has_cycle !subgraph do
       Util.Progress.progress progressbar_u;
       let c = find_simple_cycle !subgraph in
-      print_set_e "simple cycle" c;
+      (* print_set_e "simple cycle" c; *)
 
       (* edge with min weight *)
-      let (_,eps,_) = SE.min_elt c in
-      Printf.printf "min %d\n%!" eps ;
+      let eps = weight (SE.min_elt c) in
+      (* Printf.printf "min %d\n%!" eps ; *)
       SE.iter (fun e ->
-        Printf.printf "w e %d\n%!" (weight e) ;
+        (* Printf.printf "w e %d\n%!" (weight e) ; *)
         if (weight e) <= 0 then () else begin
           update_weight e ((weight e) - eps);
-          Printf.printf "update %d\n%!" (weight e) ;
+          (* Printf.printf "update %d\n%!" (weight e) ; *)
           if (weight e) <= 0 then (
             Printf.printf "Candidate to be removed %s \n%!" (edge_to_string e);
-            add e
+            (* we remove only one edge per cycle ... *)
+            add e 
           )
         end
       ) c;
-      subgraph := remove_edges_e g (hash_to_list f);
+
+      if (Hashtbl.length f) = !is_stuck then raise Exit;
+      is_stuck := Hashtbl.length f;
+      subgraph := remove_edges_e !subgraph (hash_to_list f);
     done;
     Util.Progress.set_total progressbar_b (Hashtbl.length f);
     Hashtbl.iter (fun e _ ->
@@ -389,6 +385,13 @@ let main () =
   in
 
   let add_source g src =
+    (* source -> bin (build dep) *)
+    (* build essential or essential -> 2000
+     * direct dependency and doc -> 10
+     * direct dependency and lib -> 1
+     * direct dependency -> 100
+     * not a direct dependency -> 500
+     *)
     let is_direct_build_dep src bin =
       try
         ignore (
@@ -396,8 +399,20 @@ let main () =
         ); true
       with Not_found -> false
     in
+    let is_doc bin = String.ends_with bin.Cudf.package "-doc" in
+    let is_lib bin = String.ends_with bin.Cudf.package "-dev" in
+    let assign_label src bin =
+      let l = 
+        if is_build_essential bin || is_essential bin then 2000
+        else 
+          if is_direct_build_dep src bin then 
+            if is_doc bin then 10 else
+              if is_lib bin then 1 else 100
+          else 500 
+      in ref l
+    in
 
-    if not (G.mem_vertex g src) then begin
+    (* if not (G.mem_vertex g src) then *) begin
       let req = Diagnostic_int.Sng (CudfAdd.vartoint universe src) in
       let res = Depsolver_int.solve solver req in
       (* effectively here we select ONE solution to satsfy the build 
@@ -410,19 +425,16 @@ let main () =
             List.map (CudfAdd.inttovar universe) (f_int ~all:true ())
         |_ -> info "broken source %s " (CudfAdd.string_of_package src) ; []
       in
+      let preds = G.pred g src in
+      info "Source %s" (CudfAdd.string_of_package src);
       List.iter (fun bin ->
+        info "Add %s" (CudfAdd.string_of_package bin);
         (* if the source package depends on a package in the base system,
          * we do not add this package *)
         if not (CudfAdd.equal bin src) then begin
-          (* source -> bin (build dep) *)
-          let label = 
-            if is_build_essential bin || is_essential bin then 1000
-            else
-              if is_direct_build_dep src bin then 1 
-              else 100 
-            in
+          let label = assign_label src bin in
           let e = G.E.create src label bin in
-          G.add_edge_e g e
+          if not(List.mem bin preds) then G.add_edge_e g e
         end
       ) closure
     end
@@ -433,26 +445,34 @@ let main () =
    * installation set of this src in this universe *)
   (* add to the graph all the runtime dependencies that are
    * in this installation set *)
+  (* create the src-dependency graph *)
   let g = G.create () in
   List.iter (fun bin ->
     try 
       let src = get_source bin in
-      begin try add_source g src with Not_found -> () end;
       (* bin -> source (belongs to) *)
       (* I never want to break such dependency *)
-      let label = 100000 in
+      let label = ref 100000 in
       let e = G.E.create bin label src in
       G.add_edge_e g e;
     with Not_found -> () (* from get_source *)
   ) bl ;
-  
+  List.iter (fun bin ->
+    try 
+      let src = get_source bin in
+      begin try add_source g src with Not_found -> () end;
+    with Not_found -> () (* from get_source *)
+  ) bl ;
+
   let remove_source g src =
-    G.iter_pred (fun bin ->
-      (* info "Remove binary %s" (CudfAdd.string_of_package bin); *)
-      G.remove_vertex g bin
-    ) g src;
     info "Remove source %s" (CudfAdd.string_of_package src);
-    G.remove_vertex g src
+    if G.mem_vertex g src then begin 
+      G.iter_pred (fun bin ->
+        info "Remove binary %s" (CudfAdd.string_of_package bin);
+        G.remove_vertex g bin
+      ) g src;
+      G.remove_vertex g src
+    end
   in
 
   let reduce g =
@@ -474,42 +494,6 @@ let main () =
     ) l
   in
  
-  (*
-  let f g =
-    let module VS = 
-      Set.Make (struct
-        type t = G.V.t
-        let compare p q = compare (G.in_degree g q) (G.in_degree g p)
-      end) 
-    in
-
-    let s = List.fold_right VS.add bl VS.empty in
-    VS.iter (fun p ->
-      Printf.printf "%s (%d)\n" (CudfAdd.string_of_package p) (G.in_degree g p);
-    ) s
-  in
-  *)
-(*
-  let subgraph g l =
-    let sg = G.create () in
-    List.iter (fun src_up ->
-      if String.starts_with src_up.Cudf.package "src%3a" then
-        G.iter_succ (fun pkg -> 
-          if String.starts_with pkg.Cudf.package "src%3a" then
-            fatal "%s -> %s" (CudfAdd.string_of_package src_up) (CudfAdd.string_of_package pkg);
-          let sn = try Cudf.lookup_package_property pkg "source" with Not_found -> fatal "WTF source" in
-          let sv = try Cudf.lookup_package_property pkg "sourcenumber" with Not_found -> fatal "WTF sourcenumber"in
-          try
-            let src_down = Cudf.lookup_package universe (CudfAdd.encode ("src"^Src.sep^sn),to_cudf (sn,sv)) in
-            if not (CudfAdd.equal src_up src_down) then
-              G.add_edge sg src_up src_down
-          with Not_found -> info "missing %s %s ?" sv sv
-        ) g src_up
-    ) l;
-    sg
-  in
-*)
-
   (* break dependency loops. This should use a heuristic of some kind or
    * ask for user intervention *)
   let reduce_loops g =
@@ -531,10 +515,7 @@ let main () =
         let feedback_set = fas sg in
         info "arcs to remove %d" (List.length feedback_set);
         List.iter (fun (v1,l,v2) ->
-          info "Remove %s -(%d)-> %s"
-          (CudfAdd.string_of_package v1)
-          l
-          (CudfAdd.string_of_package v2);
+          info "Remove %s" (edge_to_string (v1,l,v2));
           G.remove_edge sg v1 v2
         ) feedback_set;
         info "cycles %b\n" (Dfs.has_cycle sg);
