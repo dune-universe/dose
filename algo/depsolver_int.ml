@@ -250,7 +250,7 @@ let solve solver request =
     if solve solver.constraints var then begin
       let get_assignent ?(all=false) () =
         let a = S.assignment solver.constraints in
-        let size = (Array.length a) - 1 in
+        let size = Array.length a in
         let rec aux (i,acc) =
           if i < size then
             let acc = 
