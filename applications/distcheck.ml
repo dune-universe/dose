@@ -32,6 +32,7 @@ module Options = struct
   let summary = StdOpt.store_true ()
   let latest = StdOpt.store_true ()
   let checkonly = Boilerplate.vpkglist_option ()
+  let coinst = Boilerplate.vpkglist_option ()
   let architecture = StdOpt.str_option ()
   let outfile = StdOpt.str_option ()
   let background = Boilerplate.incr_str_list ()
@@ -47,7 +48,9 @@ module Options = struct
 
   add options ~long_name:"latest" ~help:"Check only the latest version of each package" latest;
 
-  add options ~long_name:"arch" ~help:"Set the default architecture" architecture;
+  add options ~long_name:"arch" ~help:"Allowed architecture" architecture;
+
+  add options ~long_name:"coinst" ~help:"Check if these packages are coinstallable" coinst;
 
   add options ~long_name:"fg" 
   ~help:"Additional Packages lists that are checked and used for resolving dependencies (can be repeated)" foreground;
@@ -124,6 +127,19 @@ let main () =
       )
     end else []
   in
+  let coinstlist = 
+    if OptParse.Opt.is_set Options.coinst then begin
+      info "--coinst specified, consider all packages as background packages";
+      List.flatten (
+        List.map (function 
+          |(p,None) -> Cudf.lookup_packages universe p
+          |(p,Some(c,v)) ->
+              let filter = Some(c,snd(to_cudf (p,v))) in
+              Cudf.lookup_packages ~filter universe p
+        ) (OptParse.Opt.get Options.coinst)
+      )
+    end else []
+  in
   let pp pkg =
     let (p,v) = from_cudf (pkg.Cudf.package,pkg.Cudf.version) in 
     let l = 
@@ -157,7 +173,10 @@ let main () =
   in
   Util.Timer.start timer;
   let i =
-    if OptParse.Opt.is_set Options.checkonly then 
+    if OptParse.Opt.is_set Options.coinst then begin
+      info "coinst %s" (ExtString.String.join " " (List.map CudfAdd.string_of_package coinstlist));
+      callback (Depsolver.edos_coinstall universe coinstlist); 0
+    end else if OptParse.Opt.is_set Options.checkonly then 
       Depsolver.listcheck ~callback universe checklist
     else begin
       if bg_pkglist = [] then
