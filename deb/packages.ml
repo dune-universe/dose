@@ -215,7 +215,12 @@ let (>%) p1 p2 = Pervasives.compare (id p1) (id p2)
 module Set = struct
   include Set.Make(struct
     type t = package
-    let compare = (>%)
+    let compare x y =
+      let c = x >% y in 
+      if c = 0 then 
+        warning "the input contains two packages with the same name, version and architecture (%s,%s,%s). Only the latter will be considered."
+        x.name x.version x.architecture;
+      c
   end)
 end
 (**/**)
