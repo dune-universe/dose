@@ -281,7 +281,7 @@ let pkgcheck callback solver failed tested id =
     begin
       match res with
       |Diagnostic_int.Success(f_int) ->
-          List.iter (fun i -> tested.(i) <- true) (f_int ())
+          List.iter (fun i -> Array.unsafe_set tested i true) (f_int ())
       |Diagnostic_int.Failure _  -> incr failed
     end ; res
   in

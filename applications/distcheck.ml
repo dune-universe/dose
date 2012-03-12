@@ -193,8 +193,12 @@ let main () =
   let n1 = List.length checklist in
   let n2 = List.length fg_pkglist in
   let n3 = List.length bg_pkglist in
+  let n4 = List.length coinstlist in
   let nb = if n1 != 0 then (n2 + n3) - n1 else n3 in
   let nf = if n1 != 0 then n1 else n2 in
+  let nb = if n4 != 0 then (n2 + n3) - n4 else n3 in
+  let nf = if n4 != 0 then n4 else n2 in
+
   Format.fprintf fmt "background-packages: %d@." nb;
   Format.fprintf fmt "foreground-packages: %d@." nf;
   Format.fprintf fmt "total-packages: %d@." universe_size;
