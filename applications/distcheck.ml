@@ -201,6 +201,10 @@ let main () =
  
   if summary then 
     Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
+  
+  (* if at least one broken package then we set the exit code = 1 *)
+  if i > 0 then exit(1);
+
 ;;
 
 main () ;;
