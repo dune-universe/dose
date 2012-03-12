@@ -230,6 +230,7 @@ let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
        Format.fprintf fmt "@[<v 1>-@,";
        Format.fprintf fmt "status: broken@,";
        Format.fprintf fmt "@]@,"
+  |_ -> ()
 ;;
 
 let printf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) d =

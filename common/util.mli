@@ -106,6 +106,9 @@ module Progress : sig
 
   (** [enable "barname"] : enable the progress bar with label "barname" *)
   val enable : label -> unit
+
+  (** [disable "barname"] : disable the progress bar with label "barname" *)
+  val disable : label -> unit
   
   (** [set_total bar 10] : set the max width of the progress bar to 10 units *)
   val set_total : t -> int -> unit

@@ -111,8 +111,6 @@ module MakeMessages(X : sig val label : string end) = struct
   let disable s = onoff s false
 
   let avalaible () = Hashtbl.fold (fun k _ acc -> k::acc) messages []
-  let all_enabled () = allenabled := true
-  let all_disabled () = allenabled := false
   let is_enabled s =
     try let t = Hashtbl.find messages s in t.enabled
     with Not_found -> begin
@@ -131,8 +129,9 @@ let make_info label =
   let t = Info.create label in
   fun fmt -> Info.eprintf t fmt
 
+(* warning is enabled by default *)
 let make_warning label =
-  let t = Warning.create label in
+  let t = Warning.create ~enabled:true label in
   fun fmt -> Warning.eprintf t fmt
 
 let make_debug label =
@@ -180,6 +179,10 @@ module Progress = struct
 
   let enable s =
     try let t = Hashtbl.find bars s in t.enabled <- true
+    with Not_found -> warning "Progress Bar %s not found" s
+
+  let disable s =
+    try let t = Hashtbl.find bars s in t.enabled <- false
     with Not_found -> warning "Progress Bar %s not found" s
 
   let available () = Hashtbl.fold (fun k _ acc -> k::acc) bars []
