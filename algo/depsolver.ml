@@ -35,28 +35,28 @@ let load ?(check=true) universe =
       (Cudf_checker.explain_reason (r :> Cudf_checker.bad_solution_reason)) ;
   |_,_ -> assert false
 
-let reason universe =
+let reason map universe =
   let from_sat = CudfAdd.inttovar universe in
   List.map (function
     |Diagnostic_int.Dependency(i,vl,il) ->
-        Diagnostic.Dependency(from_sat i,vl,List.map from_sat il)
+        Diagnostic.Dependency(from_sat (map#inttovar i),vl,List.map (fun i -> from_sat (map#inttovar i)) il)
     |Diagnostic_int.Missing(i,vl) ->
-        Diagnostic.Missing(from_sat i,vl)
+        Diagnostic.Missing(from_sat (map#inttovar i),vl)
     |Diagnostic_int.Conflict(i,j,vpkg) ->
-        Diagnostic.Conflict(from_sat i,from_sat j,vpkg)
+        Diagnostic.Conflict(from_sat (map#inttovar i),from_sat (map#inttovar j),vpkg)
   )
 
-let result universe result = 
+let result map universe result = 
   let from_sat = CudfAdd.inttovar universe in
   match result with
   |Diagnostic_int.Success f_int ->
       Diagnostic.Success (fun ?(all=false) () ->
         List.map (fun i ->
-          {(from_sat i) with Cudf.installed = true}
+          {(from_sat (map#inttovar i)) with Cudf.installed = true}
         ) (f_int ~all ())
       )
   |Diagnostic_int.Failure f -> Diagnostic.Failure (fun () ->
-      reason universe (f ()))
+      reason map universe (f ()))
 
 let request universe result = 
   let from_sat = CudfAdd.inttovar universe in
@@ -64,25 +64,29 @@ let request universe result =
   |Diagnostic_int.Sng i -> Diagnostic.Package (from_sat i)
   |Diagnostic_int.Lst il -> Diagnostic.PackageList (List.map from_sat il)
 
-let diagnosis universe res req =
-  let result = result universe res in
+let diagnosis map universe res req =
+  let result = result map universe res in
   let request = request universe req in
   { Diagnostic.result = result ; request = request }
 
 let univcheck ?callback universe =
+  let map = new Depsolver_int.identity in
   match callback with
   |None -> Depsolver_int.univcheck universe
   |Some f ->
-      let callback_int (res,req) = f (diagnosis universe res req) in
+      let callback_int (res,req) = f (diagnosis map universe res req) in
       Depsolver_int.univcheck ~callback:callback_int universe
+;;
 
 let listcheck ?callback universe pkglist =
   let idlist = List.map (CudfAdd.vartoint universe) pkglist in
+  let map = new Depsolver_int.identity in
   match callback with
   |None -> Depsolver_int.listcheck universe idlist
   |Some f ->
-      let callback_int (res,req) = f (diagnosis universe res req) in
+      let callback_int (res,req) = f (diagnosis map universe res req) in
       Depsolver_int.listcheck ~callback:callback_int universe idlist
+;;
 
 let edos_install univ pkg =
   let pool = Depsolver_int.init_pool_univ univ in
@@ -91,7 +95,7 @@ let edos_install univ pkg =
   let solver = Depsolver_int.init_solver_closure pool closure in
   let req = Diagnostic_int.Sng id in
   let res = Depsolver_int.solve solver req in
-  diagnosis univ res req
+  diagnosis solver.Depsolver_int.map univ res req
 ;;
 
 let edos_coinstall univ pkglist =
@@ -101,7 +105,7 @@ let edos_coinstall univ pkglist =
   let solver = Depsolver_int.init_solver_closure pool closure in
   let req = Diagnostic_int.Lst idlist in
   let res = Depsolver_int.solve solver req in
-  diagnosis univ res req
+  diagnosis solver.Depsolver_int.map univ res req
 ;;
 
 let trim universe =

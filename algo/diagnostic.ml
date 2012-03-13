@@ -228,6 +228,7 @@ let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
        Format.fprintf fmt "@]@,"
   |{result = Failure (f) ; request = PackageList rl } when failure -> 
        Format.fprintf fmt "@[<v 1>-@,";
+       Format.fprintf fmt "@[<v>%a@]@," (pp_list (pp_package pp)) rl;
        Format.fprintf fmt "status: broken@,";
        Format.fprintf fmt "@]@,";
        if explain then begin
@@ -237,7 +238,7 @@ let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
            Format.fprintf fmt "@]"
          ) rl
        end;
-  |_ -> () (* do not print anything ... *)
+  |_ -> ()
 ;;
 
 let printf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) d =

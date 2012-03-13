@@ -53,7 +53,7 @@ let parse_inst_from_file file =
 let parse_popcon s =
   match Str.split space_re s with
   |rank::name::inst::_ -> (int_of_string rank,name,int_of_string inst)
-  |_ -> (Printf.eprintf "Parse error %s\n" s ; exit (-1))
+  |_ -> fatal "Parse error %s\n" s
 
 (*****************************************************)
 

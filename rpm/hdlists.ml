@@ -48,7 +48,7 @@ let decode_flags f =
   | 8 -> `Eq
   |12 -> `Geq
   | 4 -> `Gt
-  |_ -> (Printf.eprintf "Wrong flag %d" (f land 15) ; exit 1)
+  |_ -> fatal "Wrong flag %d" (f land 15)
 
 let string_of_rel = function
   | `Lt -> "<"

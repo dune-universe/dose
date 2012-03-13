@@ -272,7 +272,7 @@ let solve solver request =
   match request with
   |Diagnostic_int.Sng i ->
       result S.solve S.collect_reasons (solver.map#vartoint i)
-  |Diagnostic_int.Lst il ->
+  |Diagnostic_int.Lst il -> 
       result S.solve_lst S.collect_reasons_lst (List.map solver.map#vartoint il)
 ;;
 

@@ -140,7 +140,7 @@ let make_debug label =
 
 let make_fatal label =
   let l = Printf.sprintf "Fatal error in module %s: " label in
-  Printf.kprintf (fun s -> Printf.eprintf "%s%s\n%!" l s; exit (1))
+  Printf.kprintf (fun s -> Printf.eprintf "%s%s\n%!" l s; exit (64))
 
 let debug fmt = make_debug __FILE__ fmt
 let info fmt = make_info __FILE__ fmt

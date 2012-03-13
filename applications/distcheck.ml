@@ -115,6 +115,11 @@ let main () =
     Cudf.load_universe (CudfAdd.Cudf_set.elements s) 
   in
   let universe_size = Cudf.universe_size universe in
+
+  if OptParse.Opt.is_set Options.checkonly && 
+    OptParse.Opt.is_set Options.coinst then
+      fatal "--checkonly and --coinst cannot be speficied together";
+
   let checklist = 
     if OptParse.Opt.is_set Options.checkonly then begin
       info "--checkonly specified, consider all packages as background packages";
@@ -128,6 +133,7 @@ let main () =
       )
     end else []
   in
+
   let coinstlist = 
     if OptParse.Opt.is_set Options.coinst then begin
       info "--coinst specified, consider all packages as background packages";
@@ -141,6 +147,7 @@ let main () =
       )
     end else []
   in
+
   let pp pkg =
     let (p,v) = from_cudf (pkg.Cudf.package,pkg.Cudf.version) in 
     let l = 
@@ -176,7 +183,9 @@ let main () =
   let i =
     if OptParse.Opt.is_set Options.coinst then begin
       info "coinst %s" (ExtString.String.join " " (List.map CudfAdd.string_of_package coinstlist));
-      callback (Depsolver.edos_coinstall universe coinstlist); 0
+      let r = Depsolver.edos_coinstall universe coinstlist in
+      callback r;
+      if Diagnostic.is_solution r then 0 else 1
     end else if OptParse.Opt.is_set Options.checkonly then 
       Depsolver.listcheck ~callback universe checklist
     else begin
@@ -189,15 +198,17 @@ let main () =
   ignore(Util.Timer.stop timer ());
 
   if failure || success then Format.fprintf fmt "@]@.";
- 
-  let n1 = List.length checklist in
-  let n2 = List.length fg_pkglist in
-  let n3 = List.length bg_pkglist in
-  let n4 = List.length coinstlist in
-  let nb = if n1 != 0 then (n2 + n3) - n1 else n3 in
-  let nf = if n1 != 0 then n1 else n2 in
-  let nb = if n4 != 0 then (n2 + n3) - n4 else n3 in
-  let nf = if n4 != 0 then n4 else n2 in
+  
+  let fn = List.length fg_pkglist in
+  let bn = List.length bg_pkglist in
+
+  let nb,nf = 
+    let cl = List.length checklist in
+    let co = List.length coinstlist in
+    if cl != 0 then ((fn + bn) - cl,cl) else 
+    if co != 0 then ((fn + bn) - co,co) else
+    (bn,fn)
+  in
 
   Format.fprintf fmt "background-packages: %d@." nb;
   Format.fprintf fmt "foreground-packages: %d@." nf;
