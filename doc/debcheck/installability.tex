@@ -12,11 +12,11 @@
 \section{Installability}
 \label{sec:installability}
 
-In order to understand what installability exactely means for us we need
-a little bit of theory.
-Let $R$ be a repository (see Section~\ref{sec:data}).  An
-\emph{$R$-installation} is a subset $I$ of $R$ that has the following four
-properties:
+In order to understand what installability exactly means for us we
+need a little bit of theory.  Let $R$ be a repository (see
+Section~\ref{sec:data}).  An \emph{$R$-installation set}, or sometimes
+simply called an \emph{$R$-installation}, is a subset $I$ of $R$ that
+has the following four properties:
 \begin{description}
     % XXX to be updated Multi-Arch
   \item[flatness:] $I$ does not contain two different packages with the same
@@ -117,6 +117,8 @@ if there exists an $R$-installation set $I$ that contains $(p,n)$.
   exclude certain solutions.
 \end{itemize}
 
+\subsection{Co-installability}
+\label{sec:coinstallability}
 One also should keep in mind that, even when two packages are
 $R$-installable, this does not necessarily mean that both packages can
 be installed \emph{together}. A set $P$ of packages is called

@@ -97,7 +97,7 @@ module MakeOptions(O : Ot) = struct
   open OptParse ;;
 
   let verbose = StdOpt.incr_option ()
-  let quite = StdOpt.store_true ()
+  let quiet = StdOpt.store_true ()
   let progress = StdOpt.store_true ()
   let timers = StdOpt.store_true ()
   let options = O.options ~version:VersionInfo.version () ;;
@@ -106,12 +106,12 @@ module MakeOptions(O : Ot) = struct
   add options ~short_name:'v' ~long_name:"verbose" ~help:"print additional information" verbose;
   add options ~long_name:"progress" ~help:"print progress bars" progress;
   add options ~long_name:"timers" ~help:"print timing information" timers;
-  add options ~long_name:"quite" ~help:"do no print any messages" quite;
+  add options ~long_name:"quiet" ~help:"do no print any messages" quiet;
 
 end
 
 let enable_debug = function
-  |0 -> () (* quite : default *)
+  |0 -> () (* quiet : default *)
   |1 -> Util.Info.all_enabled ()
   |_ ->
       begin
@@ -120,7 +120,7 @@ let enable_debug = function
       end
 ;;
 
-let all_quite = function
+let all_quiet = function
   |true ->
       begin
         Util.Info.all_disabled ();

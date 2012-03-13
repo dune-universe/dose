@@ -117,11 +117,11 @@ report:
 \subsection{Understanding Explanations of Non-installability}
 
 Installability of a package is much easier to explain than
-non-installabilty. The reason for this is that in the former case we
+non-installability. The reason for this is that in the former case we
 just have to give one installation that our tool has found, while in
 the latter case we have to explain why \emph{all} possible attempts to
 install the package must fail. The first consequence of this
-observation is that the explanation in case non-installability may
+observation is that the explanation in case of non-installability may
 consist of several components.
 
 \begin{example}
@@ -152,7 +152,7 @@ in different forms:
 \item explicitly, like in \texttt{Depends: b|c},
 \item through dependency on a package that exists in several versions,
 \item through dependency on a virtual package which is provided by several
-  (versions of) real packages.
+  (possibly versions of) real packages.
 \end{itemize}
 There is one component in the explanation for every possible way to
 choose among these alternatives in the dependencies.
@@ -220,7 +220,7 @@ any package in the repository. The dependency chain tells why package
 \texttt{libgruel0}.
 \end{example}
 
-The paths component gives all possible depchains from the root package
+The paths component gives all possible dependency chains (\textit{depchains}, for short) from the root package
 (\texttt{libgnuradio-dev} in the above example) to the one where a
 direct dependency is not matched by any package (\texttt{libgruel0} in
 the example). We do not include the last node in the dependency chain
@@ -254,7 +254,7 @@ Version: 42
 Depends: x
 \end{verbatim}
 There are two different ways how \texttt{a} arrives at a dependency on
-\texttt{d}. \debcheck{} reports the problem once, but lists the two pathes 
+\texttt{d}. \debcheck{} reports the problem once, but lists the two paths 
 from \texttt{a} to \texttt{d}:
 \begin{verbatim}
 % dose-debcheck -e -f --checkonly a rep1
@@ -345,13 +345,15 @@ package: a
          version: 1
          depends: f
 \end{verbatim}
-The first part of the distcheck report is as before with details about the
-broken package. Since this is a conflict, and all conflicts are binary, we give
-the two packages involved in the conflict first. Packages f and e are in
-conflict, but they are not direct dependency of package a . For this reason, we
-output the two paths that from a lead to f or e. All dependency chains for each
-conflict are together. Again, since there might be more than one way from a to
-reach the conflicting packages, we can have more then one depchain. 
+The first part of the \debcheck{} report is as before with details
+about the broken package. Since this is a conflict, and all conflicts
+are binary, we give the two packages involved in the conflict
+first. Packages \texttt{f} and \texttt{e} are in conflict, but they
+are not direct dependencies of package \texttt{a} . For this reason,
+we output the two paths that from a lead to \texttt{f} or
+\texttt{e}. All dependency chains for each conflict are
+together. Again, since there might be more than one way from a to
+reach the conflicting packages, we can have more then one depchain.
 \end{example}
 If a conflict occurs between two packages that are both reached
 through non-trivial dependency chains then we sometimes speak of a

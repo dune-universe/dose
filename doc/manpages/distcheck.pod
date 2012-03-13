@@ -65,7 +65,13 @@ files as found on a Debian mirror server, or in the directory I</var/lib/apt/lis
 of a Debian system, are suitable as input to B<debcheck>. Installability of
 packages is analyzed according to their B<Depends>, B<Conflicts>, and B<Provides>
 fields with their meaning as of Debian policy version 3.9.0. B<Pre-depends> are
-treated like B<Depends>, and B<Breaks> are treated like B<Conflicts>. In the case
+treated like B<Depends>, and B<Breaks> are treated like B<Conflicts>.
+
+If the input contains several packages with the same values of name, version,
+and architecture than only the last of these is taken into account, and a
+warning is issued.
+
+In the case
 of Debian, it is not possible to install at the same time two packages
 with the same name but different versions. 
 
@@ -158,6 +164,10 @@ Send output to I<file>.
 Enable info / warnings / debug messages.
 This option may be repeated up to three times in order to increase verbosity.
 
+=item B<--quiet>
+
+Do not print warning messages
+
 =item B<--progress> 
 
 Show progress bars.
@@ -176,6 +186,17 @@ Show program version and exit.
 
 =back
 =cut
+
+=head1 EXIT CODES
+
+Exit codes 0-63 indicate a normal termination of the program, codes 64-127 indicate abnormal termination of the program (such as parse errors, I/O errors).
+
+In case of normal program termination:
+
+- exit code 0 indicates that all foreground packages are found installable;
+
+- exit code 1 indicates that at least one foreground package is found
+uninstallable.
 
 =head1 EXAMPLE
 
