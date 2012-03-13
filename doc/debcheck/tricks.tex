@@ -107,3 +107,19 @@ A complete example of a python script that constructs a set of
 pseudo-packages, runs \debcheck{} on it, and then processes the output
 is given in the directory
 \texttt{doc/examples/potential-file-overwrites}.
+
+\subsection{Usage as a test in a shell script}
+Exit codes allow for a convenient integration of installation checks
+as tests in shell scripts.
+
+\begin{example}
+Suppose that you want to check installability of all \verb|.deb| files
+in the current directory with respect to the repository
+\verb|unstable.packages| before uploading your package described in
+\verb|mypackage.changes|:
+
+\begin{verbatim}
+find . -name "*.deb" -exec dpkg-deb --info '{}' control \; -exec echo ""\; | \
+  dose-debcheck --bg unstable.packages && dput mypackage.changes
+\end{verbatim}
+\end{example}
