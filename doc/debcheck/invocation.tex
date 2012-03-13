@@ -12,20 +12,32 @@
 \section{Invocation}
 \label{sec:invocation}
 
+\subsection{Basic usage}
+
 \debcheck{} accepts several different options, and also arguments.
 
 \begin{alltt}
   \debcheck{} [option] ... [file] ...
 \end{alltt}
 
+The package repository is partionend into a \emph{background} and a
+\emph{foreground}. The foreground contains the packages we are actually
+interested in, the background contains packages that are just available
+for satisfying dependencies, but for which we do not care about installability.
+
 All arguments are interpreted as filenames of Packages input files,
 the contents of which go into the foreground. If no argument is given
-then metadata of foreground packages is read from standard input.
-In addition, one may specify listings of foreground packages with
-the option \verb|--fg=<filename>|, and listings of background packages
-with the option \verb|--bg=<filename>|. Input from files (but not from 
-standard input) may be compressed with gzip or bzip2, provided \debcheck{}
-was compiled with support for these compression libraries.
+then metadata of foreground packages is read from standard input.  In
+addition, one may specify listings of foreground packages with the
+option \verb|--fg=<filename>|, and listings of background packages
+with the option \verb|--bg=<filename>|. Input from files (but not from
+standard input) may be compressed with gzip or bzip2, provided
+\debcheck{} was compiled with support for these compression libraries.
+
+The option \texttt{-f} and \texttt{-s} ask for a listing of uninstallable,
+resp.\ installable packages. The option \texttt{-e} asks for an explanation
+of each reported case. The exact effect of these options will be explained
+in Section~\ref{sec:output}.
 
 \begin{example}
 We may check whether packages in \textit{non-free} are installable,
@@ -38,6 +50,7 @@ dose-distcheck  -f -e \
 \end{verbatim}
 \end{example} 
 
+\subsection{Checking only selected packages}
 The initial distinction between foreground and background packages is
 modified when using the \verb|--checkonly| option. This option takes
 as value a comma-separated list of package names, possibly qualified
@@ -51,12 +64,65 @@ pushed into the background.
 \end{alltt}
 \end{example}
 
+\subsection{Checking for co-installability}
+\label{sec:invocation-coinst}
+Co-installability of packages can be easily checked with the
+\verb|--coinst| option. This option takes as argument a
+comma-separated list of packages, each of them possibly with a version
+constraint. In that case, \debcheck{} will check whether the packages
+specified are co-installable, that is whether it is possible to
+install these packages at the same time (see
+Section~\ref{sec:coinstallability}).
+
+Note that it is possible that the name of a package, even when
+qualified with a version constraint, might be matched by several
+packages with different versions. In that case, co-installability will
+be checked for \emph{each} combination of real packages that match the
+packages specified in the argument of the \verb|--coinst| option.
+\begin{example}
+  Consider the following repository (architectures are omitted for
+  clarity):
+\begin{verbatim}
+Package: a
+Version: 1
+
+Package: a 
+Version: 2
+
+Package: a
+Version: 3
+
+Package: b
+Version: 10
+
+Package: b
+Version: 11
+
+...
+\end{verbatim}
+Executing the command \verb|debcheck --coinst a (>1), b| on this
+repository will check co-installability of 4 pairs of packages: there
+are two packages that match \verb|a (>1)|, namely package \texttt{a} in
+versions 2 and 3, and there are two packages that match \texttt{b}. Hence,
+the following four pairs of packages will be checked for co-installability:
+\begin{enumerate}
+\item (a,2), (b,10)
+\item (a,2), (b,11)
+\item (a,3), (b,10)
+\item (a,3), (b,11)
+\end{enumerate}
+\end{example}
+
+Mathematically speaking, the set of checked tuples is the Cartesian product
+of the denotations of the single package specifications.
+
+\subsection{Other options}
 There are also some filters on package metadata: \texttt{--latest}
 keeps only the latest version of any package, and \texttt{--arch}
 allows to filter out all packages that are not consistent with a
 particular architecture (for instance, with \texttt{arch=amd64} only
 packages with an Architecture value of \texttt{amd64} or \texttt{all}
-are kept.
+are kept. 
 
 Other options controlling the output are explained in detail in
 Section~\ref{sec:output}. A complete listing of all options can be found in

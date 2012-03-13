@@ -58,9 +58,8 @@ policy conformance of package stanzas.
 A \emph{repository} is a set of package stanzas. This set may be given
 to \debcheck{} in form of a single file or as several files, in the
 latter case the repository is constituted by all stanzas in all input
-files (see Section~\ref{sec:invocation}). \debcheck{} makes two
-important assumptions on the repositories; if any of these is not
-satisfied then it exits with an error:
+files (see Section~\ref{sec:invocation}). \debcheck{} assures that the
+repositories has two important properties:
 
 \begin{enumerate}
 \item
@@ -80,7 +79,7 @@ satisfied then it exits with an error:
   \textit{amd64} would constitute a different package.
 
   If the input contains several stanzas with the same name, version
-  and architecture then all but the first such stanza are dropped, and a 
+  and architecture then all but the last such stanza are dropped, and a 
   warning message is issued.
 
 \begin{example} The following input does not constitute a repository:
