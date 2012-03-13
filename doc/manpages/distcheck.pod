@@ -164,6 +164,10 @@ Send output to I<file>.
 Enable info / warnings / debug messages.
 This option may be repeated up to three times in order to increase verbosity.
 
+=item B<--quiet>
+
+Do not print warning messages
+
 =item B<--progress> 
 
 Show progress bars.
