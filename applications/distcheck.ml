@@ -84,7 +84,7 @@ let main () =
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress)
     ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
-  Boilerplate.all_quite (OptParse.Opt.get Options.quite);
+  Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
   let default_arch = OptParse.Opt.opt Options.architecture in 
   let fg = 
     if posargs = [] && resource_prefix <> "" then 
