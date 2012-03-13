@@ -65,7 +65,13 @@ files as found on a Debian mirror server, or in the directory I</var/lib/apt/lis
 of a Debian system, are suitable as input to B<debcheck>. Installability of
 packages is analyzed according to their B<Depends>, B<Conflicts>, and B<Provides>
 fields with their meaning as of Debian policy version 3.9.0. B<Pre-depends> are
-treated like B<Depends>, and B<Breaks> are treated like B<Conflicts>. In the case
+treated like B<Depends>, and B<Breaks> are treated like B<Conflicts>.
+
+If the input contains several packages with the same values of name, version,
+and architecture than only the last of these is taken into account, and a
+warning is issued.
+
+In the case
 of Debian, it is not possible to install at the same time two packages
 with the same name but different versions. 
 

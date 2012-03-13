@@ -96,10 +96,10 @@ Architecture: amd64
 Depends: pqr
 \end{verbatim}
 The reason is that the triple $(abc,42,amd64)$ is not
-unique. \debcheck{} will only take the first stanza and drop the
-second one from its input:
+unique. \debcheck{} will warn us that it only accepts the second
+stanza and drops the first one from its input:
 \begin{verbatim}
-TODO: show the exact warning message.
+(W)Debian: the input contains two packages with the same name, version and architecture (abc,42,amd64). Only the latter will be considered.
 \end{verbatim}
 \end{example}
 
