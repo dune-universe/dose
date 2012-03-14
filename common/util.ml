@@ -90,7 +90,7 @@ module MakeMessages(X : sig val label : string end) = struct
       { label = label ; enabled = enabled }
     else begin
       Format.eprintf "The label (%s) %s already exists@." X.label label;
-      exit 1
+      exit(64)
     end
 
   let eprintf t fmt =

@@ -25,6 +25,10 @@ val edos_install : Cudf.universe -> Cudf.package -> Diagnostic.diagnosis
 (** check if the give package list can be installed in the universe *)
 val edos_coinstall : Cudf.universe -> Cudf.package list -> Diagnostic.diagnosis
 
+(** accept a list of list of packages and return the coinstallability test of
+ * the cartesian product. *)
+val edos_coinstall_prod : Cudf.universe -> Cudf.package list list -> Diagnostic.diagnosis list
+
 (** remove uninstallable packages from the universe *)
 val trim : Cudf.universe -> Cudf.universe
 

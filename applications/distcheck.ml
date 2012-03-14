@@ -137,14 +137,12 @@ let main () =
   let coinstlist = 
     if OptParse.Opt.is_set Options.coinst then begin
       info "--coinst specified, consider all packages as background packages";
-      List.flatten (
-        List.map (function 
-          |(p,None) -> Cudf.lookup_packages universe p
-          |(p,Some(c,v)) ->
-              let filter = Some(c,snd(to_cudf (p,v))) in
-              Cudf.lookup_packages ~filter universe p
-        ) (OptParse.Opt.get Options.coinst)
-      )
+      List.map (function 
+        |(p,None) -> Cudf.lookup_packages universe p
+        |(p,Some(c,v)) ->
+            let filter = Some(c,snd(to_cudf (p,v))) in
+            Cudf.lookup_packages ~filter universe p
+      ) (OptParse.Opt.get Options.coinst)
     end else []
   in
 
@@ -182,10 +180,14 @@ let main () =
   Util.Timer.start timer;
   let i =
     if OptParse.Opt.is_set Options.coinst then begin
-      info "coinst %s" (ExtString.String.join " " (List.map CudfAdd.string_of_package coinstlist));
-      let r = Depsolver.edos_coinstall universe coinstlist in
-      callback r;
-      if Diagnostic.is_solution r then 0 else 1
+      (* info "coinst %s" (ExtString.String.join " " (List.map CudfAdd.string_of_package coinstlist));
+       * *)
+      let rl = Depsolver.edos_coinstall_prod universe coinstlist in
+      let broken = ref 0 in
+      List.iter (fun r ->
+        if not (Diagnostic.is_solution r) then incr broken ; callback r
+      ) rl;
+      !broken
     end else if OptParse.Opt.is_set Options.checkonly then 
       Depsolver.listcheck ~callback universe checklist
     else begin

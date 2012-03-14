@@ -206,8 +206,10 @@ let rec packages_parser stanza_parser acc p =
 
 let parse_packages_in ?filter ?(default_arch=None) ?(extras=[]) file ic =
   info "Parsing Packages file %s..." file;
-  let stanza_parser = parse_package_stanza filter default_arch extras in
-  Format822.parse_from_ch (packages_parser stanza_parser []) ic
+  try
+    let stanza_parser = parse_package_stanza filter default_arch extras in
+    Format822.parse_from_ch (packages_parser stanza_parser []) ic
+  with ParseError (field,errmsg) -> fatal "%s \n %s : %s" file field errmsg
 
 (**/**)
 let id p = (p.name,p.version,p.architecture)

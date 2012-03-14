@@ -203,8 +203,11 @@ let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
   |{result = Success (f); request = req } when success ->
        Format.fprintf fmt "@[<v 1>-@,";
        begin match req with
-       |Package r -> Format.fprintf fmt "@[<v>%a@]@," (pp_package ~source:true pp) r
-       |PackageList rl -> ()
+       |Package r -> 
+           Format.fprintf fmt "@[<v>%a@]@," (pp_package ~source:true pp) r
+       |PackageList rl -> 
+           Format.fprintf fmt "coinst: %s@," 
+           (String.concat " , " (List.map CudfAdd.string_of_package rl));
        end;
        Format.fprintf fmt "status: ok@,";
        if explain then begin
@@ -228,15 +231,15 @@ let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
        Format.fprintf fmt "@]@,"
   |{result = Failure (f) ; request = PackageList rl } when failure -> 
        Format.fprintf fmt "@[<v 1>-@,";
-       Format.fprintf fmt "@[<v>%a@]@," (pp_list (pp_package pp)) rl;
+       Format.fprintf fmt "coinst: %s@," (String.concat " , " (List.map CudfAdd.string_of_package rl));
        Format.fprintf fmt "status: broken@,";
        Format.fprintf fmt "@]@,";
        if explain then begin
+         Format.fprintf fmt "@[<v 1>reasons:@,";
          List.iter (fun r -> 
-           Format.fprintf fmt "@[<v 1>reasons:@,";
-           Format.fprintf fmt "@[<v>%a@]" (print_error pp r) (f ());
-           Format.fprintf fmt "@]"
-         ) rl
+           Format.fprintf fmt "@[<v>%a@]@," (print_error pp r) (f ());
+         ) rl;
+        Format.fprintf fmt "@]@,"
        end;
   |_ -> ()
 ;;

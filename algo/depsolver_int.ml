@@ -25,6 +25,7 @@ let progressbar_univcheck = Util.Progress.create "Depsolver_int.univcheck"
 let debug fmt = Util.make_debug __FILE__ fmt
 let info fmt = Util.make_info __FILE__ fmt
 let warning fmt = Util.make_warning __FILE__ fmt
+let fatal fmt = Util.make_fatal __FILE__ fmt
 
 module R = struct type reason = Diagnostic_int.reason end
 module S = EdosSolver.M(R)
@@ -40,7 +41,7 @@ class intprojection size = object
   method add v =
     if (size = 0) then assert false ;
     if (counter > size - 1) then assert false;
-    (* debug "intprojection : var %d -> int %d" v counter; *)
+    debug "intprojection : var %d -> int %d" v counter;
     Util.IntHashtbl.add vartoint v counter;
     inttovar.(counter) <- v;
     counter <- counter + 1
@@ -51,7 +52,7 @@ class intprojection size = object
 
   (* given a sat solver variable return a package id *)
   method inttovar i =
-    if (i > size - 1) then assert false;
+    if (i >= size) then fatal "out of boundary i = %d size = %d" i size;
     inttovar.(i)
 end
 
@@ -130,7 +131,10 @@ let init_solver_pool map pool closure =
           let l =
             List.filter_map (fun uid -> 
               try Some(map#vartoint uid)
-              with Not_found -> None
+              with Not_found -> begin
+                debug "Dropping Conflict %s" (Cudf_types_pp.string_of_vpkg vpkg) ;
+                None
+              end
             ) uidl
           in
           (vpkg, l)
@@ -254,8 +258,7 @@ let solve solver request =
         let rec aux (i,acc) =
           if i < size then
             let acc = 
-              if (Array.unsafe_get a i) = S.True then 
-                (solver.map#inttovar i) :: acc 
+              if (Array.unsafe_get a i) = S.True then i :: acc 
               else acc
             in aux (i+1,acc)
           else acc

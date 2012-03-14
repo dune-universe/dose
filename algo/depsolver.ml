@@ -64,6 +64,14 @@ let request universe result =
   |Diagnostic_int.Sng i -> Diagnostic.Package (from_sat i)
   |Diagnostic_int.Lst il -> Diagnostic.PackageList (List.map from_sat il)
 
+(* XXX here the threatment of result and request is not uniform.
+ * On one hand indexes in result must be processed with map#inttovar 
+ * as they represent indexes associated with the solver.
+ * On the other hand the indexes in result represent cudf uid and
+ * therefore do not need to be processed.
+ * Ideally the compile should make sure that we use the correct indexes
+ * but we should annotate everything making packing/unpackaing handling
+ * a bit too heavy *)
 let diagnosis map universe res req =
   let result = result map universe res in
   let request = request universe req in
@@ -106,6 +114,27 @@ let edos_coinstall univ pkglist =
   let req = Diagnostic_int.Lst idlist in
   let res = Depsolver_int.solve solver req in
   diagnosis solver.Depsolver_int.map univ res req
+;;
+
+let edos_coinstall_prod univ ll =
+  let pool = Depsolver_int.init_pool_univ univ in
+  let return a = [a] in
+  let bind m f = List.flatten (List.map f m) in
+  let rec permutation = function
+    |[] -> return []
+    |h::t ->
+        bind (permutation t) (fun t1 ->
+          List.map (fun h1 -> h1 :: t1) h
+        )
+  in
+  List.map (fun pkglist -> 
+    let idlist = List.map (CudfAdd.vartoint univ) pkglist in
+    let closure = Depsolver_int.dependency_closure univ idlist in
+    let solver = Depsolver_int.init_solver_closure pool closure in
+    let req = Diagnostic_int.Lst idlist in
+    let res = Depsolver_int.solve solver req in
+    diagnosis solver.Depsolver_int.map univ res req
+  ) (permutation ll)
 ;;
 
 let trim universe =

@@ -216,4 +216,4 @@ let cudfop = function
   |Some("=",v) -> Some(`Eq,v)
   |Some("ALL",v) -> None
   |None -> None
-  |Some(c,v) -> (Printf.eprintf "%s %s" c v ; assert false)
+  |Some(c,v) -> fatal "%s %s" c v
