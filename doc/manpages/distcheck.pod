@@ -108,9 +108,35 @@ Add packages in I<file> to the background.
 
 =item B<--checkonly> I<package> [,I<package>] ... 
 
-Takes a comma-separated list of package names and constraints as argument. Only
-packages with names in this list are kept in the foreground, all other packages
-are pushed into the background. Ex: "libc6 , 2ping (= 1.2.3-1)"
+Takes a comma-separated list of package names, each of them possibly with a version
+constraint, as argument. The foreground is constituted of all packages
+that match any of the expressions, all other packages are pushed into
+the background. The initial distinction between foreground and background is
+ignored. This option must not be combined with B<--coinst>.
+
+Example: --checkonly "libc6 , 2ping (= 1.2.3-1)"
+
+=item B<--coinst>  I<package> [,I<package>] ... 
+
+Takes a comma-separated list of package names, each of them possibly with a version
+constraint, as argument. If this list consists of n expressions, then
+co-installability will be checked independently for each set of n
+packages where the i-th element of the set matches the i-th
+expression. The initial distinction between foreground and background
+is ignored. This option must not be combined with B<--checkonly>.
+
+Example: --coinst "a (>1), b"
+
+If we have package a in versions 1, 2 and 3, and package b in versions
+11 and 12, then this will check 4 pairs of packages for
+co-installability, namely (a=2,b=11), (a=2,b=12), (a=3,b=11) and
+(a=3,b=12).
+
+=back
+
+=head2 OPTIONS FOR FILTERING THE INPUT
+
+=over 8
 
 =item B<--arch=>I<name>
 
