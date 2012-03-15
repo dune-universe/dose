@@ -243,8 +243,6 @@ let main () =
     (CudfAdd.string_of_package d)
   in
 
-
-
   (* returns a new graph containg a copy of all edges and vertex of g *)
   let copy_graph g =
     let g1 = G.create () in
@@ -276,6 +274,7 @@ let main () =
   let hash_to_list t = Hashtbl.fold (fun k _ acc -> k::acc) t [] in
 
   (* return one cycle in g, if one exists *)
+  (* the problem here is that this simple cycle is does not have a minimal weigth *)
   let find_simple_cycle g =
     let clean es =
       let l = ref SE.empty in
@@ -323,12 +322,12 @@ let main () =
 
       (* edge with min weight *)
       let eps = weight (SE.min_elt c) in
-      (* Printf.printf "min %d\n%!" eps ; *)
+      Printf.printf "min %d\n%!" eps ;
       SE.iter (fun e ->
-        (* Printf.printf "w e %d\n%!" (weight e) ; *)
+        Printf.printf "w e %d\n%!" (weight e) ;
         if (weight e) <= 0 then () else begin
           update_weight e ((weight e) - eps);
-          (* Printf.printf "update %d\n%!" (weight e) ; *)
+          Printf.printf "update %d\n%!" (weight e) ;
           if (weight e) <= 0 then (
             Printf.printf "Candidate to be removed %s \n%!" (edge_to_string e);
             (* we remove only one edge per cycle ... *)
@@ -426,14 +425,13 @@ let main () =
         |_ -> info "broken source %s " (CudfAdd.string_of_package src) ; []
       in
       let preds = G.pred g src in
-      info "Source %s" (CudfAdd.string_of_package src);
       List.iter (fun bin ->
-        info "Add %s" (CudfAdd.string_of_package bin);
         (* if the source package depends on a package in the base system,
          * we do not add this package *)
         if not (CudfAdd.equal bin src) then begin
           let label = assign_label src bin in
           let e = G.E.create src label bin in
+          info "Add Edge %s" (edge_to_string e);
           if not(List.mem bin preds) then G.add_edge_e g e
         end
       ) closure
