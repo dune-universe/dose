@@ -178,50 +178,56 @@ let main () =
     Diagnostic.fprintf ~pp ~failure ~success ~explain fmt d
   in
   Util.Timer.start timer;
-  let i =
-    if OptParse.Opt.is_set Options.coinst then begin
-      (* info "coinst %s" (ExtString.String.join " " (List.map CudfAdd.string_of_package coinstlist));
-       * *)
-      let rl = Depsolver.edos_coinstall_prod universe coinstlist in
-      let broken = ref 0 in
-      List.iter (fun r ->
-        if not (Diagnostic.is_solution r) then incr broken ; callback r
-      ) rl;
-      !broken
-    end else if OptParse.Opt.is_set Options.checkonly then 
-      Depsolver.listcheck ~callback universe checklist
-    else begin
-      if bg_pkglist = [] then
-        Depsolver.univcheck ~callback universe 
-      else
-        Depsolver.listcheck ~callback universe fg_pkglist
+
+  if OptParse.Opt.is_set Options.coinst then 
+    let rl = Depsolver.edos_coinstall_prod universe coinstlist in
+    let bl = List.filter Diagnostic.is_solution rl in
+    let number_broken = List.length bl
+    and number_checks = List.length rl
+    in begin
+      ignore(Util.Timer.stop timer ());
+      List.iter callback bl;
+      if failure || success then Format.fprintf fmt "@]@.";
+      Format.fprintf fmt "total-packages: %d@." universe_size;
+      Format.fprintf fmt "total-tuples: %d@." number_checks;
+      Format.fprintf fmt "broken-tuples: %d@." number_broken;
+      (* if at least one broken package then we set the exit code = 1 *)
+      if number_broken > 0 then exit(1);
     end
-  in
-  ignore(Util.Timer.stop timer ());
-
-  if failure || success then Format.fprintf fmt "@]@.";
+  else begin 
+    let number_broken =
+      if OptParse.Opt.is_set Options.checkonly then 
+	Depsolver.listcheck ~callback universe checklist
+      else begin
+	if bg_pkglist = [] then
+          Depsolver.univcheck ~callback universe 
+	else
+          Depsolver.listcheck ~callback universe fg_pkglist
+      end
+    in
+    ignore(Util.Timer.stop timer ());
+    
+    if failure || success then Format.fprintf fmt "@]@.";
   
-  let fn = List.length fg_pkglist in
-  let bn = List.length bg_pkglist in
-
-  let nb,nf = 
-    let cl = List.length checklist in
-    let co = List.length coinstlist in
-    if cl != 0 then ((fn + bn) - cl,cl) else 
-    if co != 0 then ((fn + bn) - co,co) else
-    (bn,fn)
-  in
-
-  Format.fprintf fmt "background-packages: %d@." nb;
-  Format.fprintf fmt "foreground-packages: %d@." nf;
-  Format.fprintf fmt "total-packages: %d@." universe_size;
-  Format.fprintf fmt "broken-packages: %d@." i;
- 
-  if summary then 
-    Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
-  
-  (* if at least one broken package then we set the exit code = 1 *)
-  if i > 0 then exit(1);
+    let fn = List.length fg_pkglist in
+    let bn = List.length bg_pkglist in
+    
+    let nb,nf = 
+      let cl = List.length checklist in
+      if cl != 0 then ((fn + bn) - cl,cl) else (bn,fn)
+    in
+    
+    Format.fprintf fmt "background-packages: %d@." nb;
+    Format.fprintf fmt "foreground-packages: %d@." nf;
+    Format.fprintf fmt "total-packages: %d@." universe_size;
+    Format.fprintf fmt "broken-packages: %d@." number_broken;
+    
+    if summary then 
+      Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
+    
+    (* if at least one broken package then we set the exit code = 1 *)
+    if number_broken > 0 then exit(1);
+  end;
 
 ;;
 
