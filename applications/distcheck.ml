@@ -186,7 +186,7 @@ let main () =
     and number_checks = List.length rl
     in begin
       ignore(Util.Timer.stop timer ());
-      List.iter callback bl;
+      List.iter callback rl;
       if failure || success then Format.fprintf fmt "@]@.";
       Format.fprintf fmt "total-packages: %d@." universe_size;
       Format.fprintf fmt "total-tuples: %d@." number_checks;
