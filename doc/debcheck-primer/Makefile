@@ -1,4 +1,4 @@
-MAIN=debcheck
+MAIN=debcheck-primer
 SHELL=/bin/bash
 HEVEA=hevea -exec xxdate.exe
 DEPS = $(wildcard *.tex) mancoosi.bib
