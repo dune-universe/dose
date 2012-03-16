@@ -13,8 +13,12 @@
 \usepackage[utf8]{inputenc}
 \usepackage{hevea}
 \usepackage{alltt}
+
 \newcommand{\debcheck}{dose-debcheck}
 \newcommand{\distcheck}{dose-distcheck}
+
+\input{version}
+
 \newenvironment{example}%
   {\par\begin{divstyle}{example}\par\textbf{Example:}}%
   {\end{divstyle}\par}
@@ -35,7 +39,7 @@ a \texttt{Packages} file of a Debian suite. The installability check
 is by default performed for all package stanzas in the repository, but
 may be also be restricted to a subset of these.
 
-This primer applies to version 2.9.13 of \debcheck. 
+This primer applies to version \version{} of \debcheck. 
 
 \tableofcontents
 
