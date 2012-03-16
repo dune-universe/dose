@@ -1,6 +1,8 @@
 
 open Ocamlbuild_plugin;;
 
+Options.use_ocamlfind := true ;;
+
 let modules_dirs = [
   "common";"deb";"eclipse";"rpm";"db";"algo";
   "doseparse"; "applications";"experimental"; "libcudf";
