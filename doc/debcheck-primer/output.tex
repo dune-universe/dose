@@ -172,7 +172,7 @@ missing package consist of two stanzas:
 \begin{itemize}
 \item a \texttt{pkg} stanza that states the package that cannot satisfy
   one of its direct dependencies
-\item a \texttt{paths} stanza containing the dependency chain that
+\item a \texttt{depchains} stanza containing the dependency chain that
   leads from the package we have found non-installable to the one that
   cannot satisfy its direct dependency.
 \end{itemize}
@@ -220,7 +220,7 @@ any package in the repository. The dependency chain tells why package
 \texttt{libgruel0}.
 \end{example}
 
-The paths component gives all possible dependency chains (\textit{depchains}, for short) from the root package
+The depchains component gives all possible dependency chains (\textit{depchains}, for short) from the root package
 (\texttt{libgnuradio-dev} in the above example) to the one where a
 direct dependency is not matched by any package (\texttt{libgruel0} in
 the example). We do not include the last node in the dependency chain
@@ -359,5 +359,100 @@ If a conflict occurs between two packages that are both reached
 through non-trivial dependency chains then we sometimes speak of a
 \emph{deep conflict}.
 
+\subsection{The output in case of co-installability queries}
+In case of a co-installability query (with the option
+\texttt{--coinst}), the distinction between background and foreground
+does no longer make sense since the checks now apply to tuples of packages,
+and not to individual packages. As a consequence, the summary looks a bit
+different in this case:
 
+\begin{example}
+  In the following example, there are 3 different versions of package
+  \texttt{aa}, two different versions of package \texttt{bb} and two
+  packages with other names, giving rise to 6 pairs of packages to
+  check for co-installability. Two pairs out of these 6 are found
+  not co-installable:
+\begin{verbatim}
+% ./debcheck --coinst "aa,bb" coinst.packages 
+total-packages: 7
+total-tuples: 6
+broken-tuples: 2
+\end{verbatim}
+\end{example}
 
+Listings of co-installable, or non co-installable packages when
+requested with the options \texttt{-s}/\texttt{--successes},
+resp.\ \texttt{-f}/\texttt{--failures}, are similar as before but now
+start on the word \texttt{coinst} instead of \texttt{package}. Explanations
+are as before:
+
+\begin{example}
+\begin{verbatim}
+% ./debcheck --coinst "aa,bb" -s -f -e coinst.simple
+report:
+ -
+  coinst: aa (= 2) , bb (= 11)
+  status: ok
+  installationset:
+   -
+    package: aa
+    version: 2
+    architecture: all
+   -
+    package: bb
+    version: 11
+    architecture: all
+   -
+    package: cc
+    version: 31
+    architecture: all
+ -
+  coinst: aa (= 1) , bb (= 11)
+  status: broken
+  
+ reasons:
+  -
+   conflict:
+    pkg1:
+     package: aa
+     version: 1
+     architecture: all
+     source: aa (= 1)
+     unsat-conflict: cc
+    pkg2:
+     package: cc
+     version: 31
+     architecture: all
+     source: cc (= 31)
+    depchain2:
+     
+  -
+   conflict:
+    pkg1:
+     package: aa
+     version: 1
+     architecture: all
+     source: aa (= 1)
+     unsat-conflict: cc
+    pkg2:
+     package: cc
+     version: 31
+     architecture: all
+     source: cc (= 31)
+    depchain1:
+     
+    depchain2:
+     -
+      depchain:
+       -
+        package: bb
+        version: 11
+        architecture: all
+        depends: cc
+  
+ 
+total-packages: 5
+total-tuples: 2
+broken-tuples: 1
+\end{verbatim}
+\end{example}
