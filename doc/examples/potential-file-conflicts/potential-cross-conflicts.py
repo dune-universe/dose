@@ -183,7 +183,11 @@ if debreport['report'] is not None:
         number_pairs_coinst += 1
         stanzamatch=re.match('^(.*)'+sepchar+'(.*)',stanza['package'])
         pa,pb=stanzamatch.group(1),stanzamatch.group(2)
-        out=open(pa+sepchar+pb,'w')
+        outfile='{pa}={va}{sep}{pb}={vb}'.format(pa=pa,pb=pb,
+                                                 va=versiontable1[pa],
+                                                 vb=versiontable2[pb],
+                                                 sep=sepchar)
+        out=open(outfile,'w')
         out.write(filetable[(pa,pb)])
         out.close()
 
