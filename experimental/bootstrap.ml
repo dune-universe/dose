@@ -62,6 +62,128 @@ module Options = struct
   add options ~long_name:"dump" ~help:"dump the cudf file" dump;
 end
 
+  (* build a table that associate to each source :
+    - binary list
+    - build dependency list
+  *)
+module PkgE = struct
+  type t = int ref
+  let compare x y = Pervasives.compare !x !y
+  let hash x = Hashtbl.hash !x
+  let equal x y = !x = !y
+  let default = ref (-10000)
+end 
+
+module PG = Defaultgraphs.MakePackageGraph(Defaultgraphs.PkgV)(PkgE)
+
+module G = PG.G
+module D = PG.D
+module C = Graph.Components.Make(G)
+module Dfs = Graph.Traverse.Dfs(G)
+module O = Defaultgraphs.GraphOper(G)
+
+module SV = Set.Make(G.V) 
+module SE = Set.Make(
+  struct
+    type t = G.E.t 
+    let compare e1 e2 = 
+      if G.E.compare e1 e2 = 0 then 1 else
+        if !(G.E.label e1) = !(G.E.label e2) then 1
+        else !(G.E.label e1) - !(G.E.label e2)
+  end) 
+
+let to_set l = List.fold_right SV.add l SV.empty ;;
+
+let partition s w = snd(SV.partition (fun e -> e >= w) s) ;;
+
+let print_set_e s =
+  String.join " " (List.map (fun e -> 
+    (CudfAdd.string_of_package e)
+    ) (SV.elements s))
+;;
+
+let edge_to_string (s,l,d) = 
+  Printf.sprintf "%s -(%d)-> %s" 
+  (CudfAdd.string_of_package s)
+  !l
+  (CudfAdd.string_of_package d)
+;;
+
+(* returns a new graph containg a copy of all edges and vertex of g *)
+let copy_graph g =
+  let g1 = G.create () in
+  G.iter_edges_e (fun e -> G.add_edge_e g1 e) g;
+  G.iter_vertex (fun v -> G.add_vertex g1 v) g;
+  g1
+;;
+
+(* return subgraph that contains all vertex in s and all edges that connet
+ * two vertex in s *)
+let extract_subgraph g s =
+  let sg = G.create () in
+  SV.iter (fun e -> G.add_vertex sg e) s;
+  G.iter_edges_e (fun e ->
+    let v1 = G.E.src e in let v2 = G.E.dst e in
+    if SV.mem v1 s && SV.mem v2 s then
+      G.add_edge_e sg e
+  ) g;
+  sg
+;;
+
+(* return a new graph without all the edges in l - as G.E.t list *)
+let remove_edges_e g l =
+  let sg = copy_graph g in
+  List.iter (G.remove_edge_e sg) l;
+  sg
+;;
+
+let hash_to_list t = Hashtbl.fold (fun k _ acc -> k::acc) t [] ;;
+
+
+type block = {
+  blocked : (G.V.t,bool) Hashtbl.t;
+  notelem : (G.V.t,G.V.t list) Hashtbl.t
+}
+
+let init_block g =
+  let t = {
+    blocked = Hashtbl.create 1023;
+    notelem = Hashtbl.create 1023;
+  } in
+  G.iter_vertex (fun node ->
+    Hashtbl.add t.blocked node false;
+    Hashtbl.add t.notelem node [];
+  ) g;
+  t
+;;
+
+let get_notelem t n =
+  try Hashtbl.find t.notelem n with Not_found -> []
+;;
+
+let is_bloked t n =
+  try Hashtbl.find t.blocked n with Not_found -> false
+;;
+
+let rec unblock t n =
+  if is_bloked t n then begin
+    Hashtbl.replace t.blocked n false;
+    let l = get_notelem t n in
+    List.iter (unblock t) l;
+    Hashtbl.replace t.notelem n []
+  end
+;;
+
+let block t n =
+  Hashtbl.replace t.blocked n true
+;;
+
+let print_edge_list_e s l =
+    Printf.printf "%s: %s\n" s (String.join " " (
+      List.map edge_to_string l)
+    )
+;;
+
 let main () =
   let iteration = ref 0 in
 
@@ -195,115 +317,79 @@ let main () =
     Cudf_printer.pp_universe oc universe
   end;
 
-  (* build a table that associate to each source :
-    - binary list
-    - build dependency list
-  *)
-  let module PkgE = struct
-    type t = int ref
-    let compare x y = Pervasives.compare !x !y
-    let hash x = Hashtbl.hash !x
-    let equal x y = !x = !y
-    let default = ref (-10000)
-  end in
-
-  let module PG = Defaultgraphs.MakePackageGraph(Defaultgraphs.PkgV)(PkgE) in
-
-  let module G = PG.G in
-  let module D = PG.D in
-  let module C = Graph.Components.Make(G) in
-  let module Dfs = Graph.Traverse.Dfs(G) in
-  let module O = Defaultgraphs.GraphOper(G) in
-
-  let module SV = Set.Make(G.V) in
-  let module SE = Set.Make(
-    struct
-      type t = G.E.t 
-      let compare e1 e2 = 
-        if G.E.compare e1 e2 = 0 then 1 else
-          if !(G.E.label e1) = !(G.E.label e2) then 1
-          else !(G.E.label e1) - !(G.E.label e2)
-    end) 
-  in
-
-  let to_set l = List.fold_right SV.add l SV.empty in
-
-  let partition s w = snd(SV.partition (fun e -> e >= w) s) in
-
-  let print_set_e s =
-    String.join " " (List.map (fun e -> 
-      (CudfAdd.string_of_package e)
-      ) (SV.elements s))
-  in
-
-  let edge_to_string (s,l,d) = 
-    Printf.sprintf "%s -(%d)-> %s" 
-    (CudfAdd.string_of_package s)
-    !l
-    (CudfAdd.string_of_package d)
-  in
-
-  (* returns a new graph containg a copy of all edges and vertex of g *)
-  let copy_graph g =
-    let g1 = G.create () in
-    G.iter_edges_e (fun e -> G.add_edge_e g1 e) g;
-    G.iter_vertex (fun v -> G.add_vertex g1 v) g;
-    g1
-  in
-
-  (* return subgraph that contains all vertex in s and all edges that connet
-   * two vertex in s *)
-  let extract_subgraph g s =
-    let sg = G.create () in
-    SV.iter (fun e -> G.add_vertex sg e) s;
-    G.iter_edges_e (fun e ->
-      let v1 = G.E.src e in let v2 = G.E.dst e in
-      if SV.mem v1 s && SV.mem v2 s then
-        G.add_edge_e sg e
-    ) g;
-    sg
-  in
-
-  (* return a new graph without all the edges in l - as G.E.t list *)
-  let remove_edges_e g l =
-    let sg = copy_graph g in
-    List.iter (G.remove_edge_e sg) l;
-    sg
-  in
-
-  let hash_to_list t = Hashtbl.fold (fun k _ acc -> k::acc) t [] in
-
   (* return one cycle in g, if one exists *)
-  (* the problem here is that this simple cycle is does not have a minimal weigth *)
-  let find_simple_cycle g =
-    let clean es =
-      let l = ref SE.empty in
-      let ll = ref [] in
-      try
-        Stack.iter (fun e ->
-          ll:= (G.E.dst e)::!ll;
-          if List.mem (G.E.src e) !ll then (l:= SE.add e !l ; raise Exit)
-          else l:= SE.add e !l
-        ) es; SE.empty
-      with Exit -> !l
+  let find_min_cycle g =
+    let min_weigth l =
+      List.fold_left (fun acc e ->
+        if !(G.E.label e) = 1 then acc + 1 else acc
+        ) 0 l 
     in
-    let h = Hashtbl.create (G.nb_vertex g) in
-    let es = Stack.create () in
-    let rec visit v =
-      Hashtbl.add h v true;
-      G.iter_succ_e (fun e ->
-        let w = G.E.dst e in
-        Stack.push e es;
-        try if Hashtbl.find h w then raise Exit else ignore(Stack.pop es)
-        with Not_found -> visit w ;
-      ) g v;
-      if not (Stack.is_empty es) then ignore(Stack.pop es);
-      Hashtbl.replace h v false;
+
+    let rec circuit path t thisnode startnode component =
+       let rec aux acc = function
+         |[] -> acc
+         |edge :: rest ->
+             let nextnode = G.E.dst edge in
+             print_edge_list_e "candidate " (edge::path);
+             Printf.printf "min weight path %d\n" (min_weigth (edge::path));
+             if G.V.equal nextnode startnode then begin
+               unblock t thisnode;
+               match acc with
+               |None -> aux (Some(List.rev (edge::path))) rest
+               |Some p when min_weigth (edge::path) >= min_weigth p ->
+                   print_edge_list_e "min so far " p;
+                   Printf.printf "min weight so far %d\n" (min_weigth p);
+                   aux (Some(List.rev (edge::path))) rest
+               |_ -> aux acc rest
+             end else
+               if not(is_bloked t nextnode) then begin
+                 let e = circuit (edge::path) t nextnode startnode component in
+                 match acc,e with
+                 |None,_ -> aux e rest
+                 |Some p,Some path when min_weigth path >= min_weigth p -> begin
+                   print_edge_list_e "min so far " p;
+                   Printf.printf "min weight so far %d\n" (min_weigth p);
+                   aux e rest
+                 end
+                 |_,_ -> aux acc rest
+               end else begin
+                 aux acc rest
+               end
+       in
+       block t thisnode;
+       let e = aux None (G.succ_e component thisnode) in
+       G.iter_succ (fun nextnode ->
+         let l = get_notelem t nextnode in
+         if List.mem thisnode l then
+           Hashtbl.replace t.notelem nextnode (thisnode::l)
+       ) component thisnode;
+       e
     in
-    try G.iter_vertex (fun v -> if not (Hashtbl.mem h v) then visit v) g;
-    SE.empty
-    with Exit -> clean es
+    let vertex_set = G.fold_vertex SV.add g SV.empty in
+    let rec aux acc = function
+      |[] -> acc
+      |s :: rest ->
+        let subset = SV.add s (partition vertex_set s) in
+        let subgraph = extract_subgraph g subset in
+        (* I need only one... not all scc *)
+        (* actually I need only the scc that contains the min *)
+        let scc = C.scc_list subgraph in
+        let minnode = SV.min_elt subset in
+        let mincomp = List.find (fun l -> List.mem minnode l) scc in
+        let startnode = minnode in
+        let component = extract_subgraph subgraph (to_set mincomp) in
+        let t = init_block component in
+        match acc,circuit [] t startnode startnode component with
+        |None,e -> aux e rest
+        |Some p,Some path when min_weigth path >= min_weigth p -> aux (Some path) rest
+        |_,_ -> aux acc rest
+    in
+    match aux None (SV.elements vertex_set) with
+    |None -> SE.empty
+    |Some c ->
+    List.fold_right SE.add c SE.empty
   in
+
 
   (* return a feedback arc set of a weight graph *)
   let fas sg =
@@ -317,8 +403,8 @@ let main () =
     let is_stuck = ref (Hashtbl.length f) in
     while Dfs.has_cycle !subgraph do
       Util.Progress.progress progressbar_u;
-      let c = find_simple_cycle !subgraph in
-      (* print_set_e "simple cycle" c; *)
+      let c = find_min_cycle !subgraph in
+      print_edge_list_e "simple cycle" (SE.elements c);
 
       (* edge with min weight *)
       let eps = weight (SE.min_elt c) in
