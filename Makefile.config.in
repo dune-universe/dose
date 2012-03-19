@@ -30,9 +30,11 @@ endif
 ifeq ("@OCAMLBEST@","opt")
   OCAMLBEST=native
   OCAMLBUILD=@OCAMLBUILD@
+  INSTALLOPTS=-s
 else
   OCAMLBEST=byte
   OCAMLBUILD=@OCAMLBUILD@ -byte-plugin
+  INSTALLOPTS=
 endif
 
 TARGETS= \

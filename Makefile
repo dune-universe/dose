@@ -153,7 +153,7 @@ install: META installcudf
 	cd _build/applications ; \
 	install -d $(BINDIR) ; \
 	for f in $$(ls *.$(OCAMLBEST)) ; do \
-	  install -s $$f $(BINDIR)/$${f%.$(OCAMLBEST)} ; \
+	  install $(INSTALLOPTS) $$f $(BINDIR)/$${f%.$(OCAMLBEST)} ; \
 	done
 	ln -s $(BINDIR)/distcheck $(BINDIR)/debcheck
 	ln -s $(BINDIR)/distcheck $(BINDIR)/rpmcheck
