@@ -3,4 +3,4 @@
 	url = https://gforge.inria.fr/git/mancoosi-tools/cudf.git
 [submodule "tests"]
 	path = tests
-	url = git://gforge.inria.fr/git/mancoosi-tools/dose-testdata.git
+	url = https://gforge.inria.fr/git/mancoosi-tools/dose-testdata.git
