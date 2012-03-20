@@ -1,6 +1,6 @@
 [submodule "cudf"]
 	path = cudf
-	url = git://scm.gforge.inria.fr/mancoosi-tools/cudf.git
+	url = https://gforge.inria.fr/git/mancoosi-tools/cudf.git
 [submodule "tests"]
 	path = tests
-	url = git://scm.gforge.inria.fr/mancoosi-tools/dose-testdata.git
+	url = git://gforge.inria.fr/git/mancoosi-tools/dose-testdata.git
