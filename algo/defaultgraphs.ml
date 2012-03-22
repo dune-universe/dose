@@ -28,16 +28,18 @@ module GraphOper (G : Sig.I) = struct
       Transitive Reduction of a Directed Graph, Aho, Garey and Ullman, 1972 - 
       with the proviso that we know that our graph already is a transitive 
       closure *)
+  (* this is a VERY expensive operation ... and it should be avoided on large
+   * graphs if you care about performances *)
   let transitive_reduction graph =
     Util.Timer.start tr_timer;
     G.iter_vertex (fun v ->
-      List.iter (fun v' ->
+      G.iter_succ (fun v' ->
         if v <> v' then
-        List.iter (fun v'' ->
+        G.iter_succ (fun v'' ->
           if v' <> v'' then
             G.remove_edge graph v v''
-        ) (G.succ graph v')
-      ) (G.succ graph v);
+        ) graph v'
+      ) graph v;
     ) graph;
     Util.Timer.stop tr_timer ()
 

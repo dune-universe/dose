@@ -1,3 +1,6 @@
+- error codes  gt 63 reserved
+- coinst
+
 - use ocaml-magic to identify compressed file types
 
 - remove all references to Str and move to Pcre

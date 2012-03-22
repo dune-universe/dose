@@ -2,7 +2,7 @@
 (*  This file is part of a library developed with the support of the      *)
 (*  Mancoosi Project. http://www.mancoosi.org                             *)
 (*                                                                        *)
-(*  Main author(s):  ADD authors here                                     *)
+(*  Main author(s):  Pietro Abate                                         *)
 (*                                                                        *)
 (*  Contributor(s):  ADD minor contributors here                          *)
 (*                                                                        *)
@@ -24,6 +24,9 @@ let warning fmt = Util.make_warning __FILE__ fmt
 let debug fmt = Util.make_debug __FILE__ fmt
 let fatal fmt = Util.make_fatal __FILE__ fmt
 
+let progressbar_u = Util.Progress.create ~unbounded:true "fasU"
+let progressbar_b = Util.Progress.create "fasB"
+
 module Boilerplate = BoilerplateNoRpm
 module Src = Sources
 module Pkg = Packages
@@ -33,48 +36,156 @@ module Options = struct
   let options = OptParser.make ~description:"Detect circular build dependencies"
   include Boilerplate.MakeOptions(struct let options = options end)
 
-  let successes = StdOpt.store_true ()
-  let failures = StdOpt.store_true ()
-  let explain = StdOpt.store_true ()
+  let build_arch = StdOpt.str_option ()
+  let target_arch = StdOpt.str_option ()
+  let native_arch = StdOpt.str_option ()
+  let foreign_archs = Boilerplate.str_list_option ()
+  
+  let base_system = Boilerplate.vpkglist_option ()
 
-  let buildarch = StdOpt.str_option ()
-  let targetarch = StdOpt.str_option ()
+  (*
+  let checkonly = Boilerplate.vpkglist_option ()
+  add options ~long_name:"checkonly" ~help:"Check only these package" checkonly;
+  *)
+
   let dump = StdOpt.str_option ()
 
   open OptParser
-  add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
-  add options ~short_name:'f' ~long_name:"failures" ~help:"Only show failures" failures;
-  add options ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" successes;
 
-  add options ~long_name:"builarch" ~help:"Build Architecture" buildarch;
-  add options ~long_name:"targetarch" ~help:"Target Architecture" targetarch;
+  add options ~long_name:"deb-build-arch" ~help:"Build Architecture" build_arch;
+  add options ~long_name:"deb-host-arch" ~help:"Target Architecture" target_arch;
+  (* same as host in this context ? *)
+  add options ~long_name:"deb-native-arch" ~help:"Native Architecture" native_arch;
+  add options ~long_name:"deb-foreign-archs" ~help:"Foregin Architectures" foreign_archs;
+  add options ~long_name:"base-system" ~help:"Cross compiled components" base_system;
+
   add options ~long_name:"dump" ~help:"dump the cudf file" dump;
 end
 
-let filter_map_results tables universe is =
-  try 
-    List.filter_map (fun pkg ->
-      try
-        let sn = Cudf.lookup_package_property pkg "source" in
-        let sv = Cudf.lookup_package_property pkg "sourcenumber" in
-        Some((sn,sv),pkg)
-      with Not_found -> None
-    ) is
-  with Not_found -> assert false
+  (* build a table that associate to each source :
+    - binary list
+    - build dependency list
+  *)
+module PkgE = struct
+  type t = int ref
+  let compare x y = Pervasives.compare !x !y
+  let hash x = Hashtbl.hash !x
+  let equal x y = !x = !y
+  let default = ref (-10000)
+end 
+
+module PG = Defaultgraphs.MakePackageGraph(Defaultgraphs.PkgV)(PkgE)
+
+module G = PG.G
+module D = PG.D
+module C = Graph.Components.Make(G)
+module Dfs = Graph.Traverse.Dfs(G)
+module O = Defaultgraphs.GraphOper(G)
+
+module SV = Set.Make(G.V) 
+module SE = Set.Make(
+  struct
+    type t = G.E.t 
+    let compare e1 e2 = 
+      if G.E.compare e1 e2 = 0 then 1 else
+        if !(G.E.label e1) = !(G.E.label e2) then 1
+        else !(G.E.label e1) - !(G.E.label e2)
+  end) 
+
+let to_set l = List.fold_right SV.add l SV.empty ;;
+
+let partition s w = snd(SV.partition (fun e -> e >= w) s) ;;
+
+let print_set_e s =
+  String.join " " (List.map (fun e -> 
+    (CudfAdd.string_of_package e)
+    ) (SV.elements s))
 ;;
 
-let get_source_pkg to_cudf universe l = 
-  let aux = function
-    |(p,None) ->
-        Cudf.lookup_packages universe (CudfAdd.encode ("src"^Src.sep^p))
-    |(p,Some(c,v)) ->
-        let filter = Some(c,to_cudf (CudfAdd.encode ("src"^Src.sep^p),v)) in
-        Cudf.lookup_packages ~filter universe (CudfAdd.encode ("src"^Src.sep^p))
-  in
-  List.flatten (List.map aux l)
+let edge_to_string (s,l,d) = 
+  Printf.sprintf "%s -(%d)-> %s" 
+  (CudfAdd.string_of_package s)
+  !l
+  (CudfAdd.string_of_package d)
+;;
+
+(* returns a new graph containg a copy of all edges and vertex of g *)
+let copy_graph g =
+  let g1 = G.create () in
+  G.iter_edges_e (fun e -> G.add_edge_e g1 e) g;
+  G.iter_vertex (fun v -> G.add_vertex g1 v) g;
+  g1
+;;
+
+(* return subgraph that contains all vertex in s and all edges that connet
+ * two vertex in s *)
+let extract_subgraph g s =
+  let sg = G.create () in
+  SV.iter (fun e -> G.add_vertex sg e) s;
+  G.iter_edges_e (fun e ->
+    let v1 = G.E.src e in let v2 = G.E.dst e in
+    if SV.mem v1 s && SV.mem v2 s then
+      G.add_edge_e sg e
+  ) g;
+  sg
+;;
+
+(* return a new graph without all the edges in l - as G.E.t list *)
+let remove_edges_e g l =
+  let sg = copy_graph g in
+  List.iter (G.remove_edge_e sg) l;
+  sg
+;;
+
+let hash_to_list t = Hashtbl.fold (fun k _ acc -> k::acc) t [] ;;
+
+
+type block = {
+  blocked : (G.V.t,bool) Hashtbl.t;
+  notelem : (G.V.t,G.V.t list) Hashtbl.t
+}
+
+let init_block g =
+  let t = {
+    blocked = Hashtbl.create 1023;
+    notelem = Hashtbl.create 1023;
+  } in
+  G.iter_vertex (fun node ->
+    Hashtbl.add t.blocked node false;
+    Hashtbl.add t.notelem node [];
+  ) g;
+  t
+;;
+
+let get_notelem t n =
+  try Hashtbl.find t.notelem n with Not_found -> []
+;;
+
+let is_bloked t n =
+  try Hashtbl.find t.blocked n with Not_found -> false
+;;
+
+let rec unblock t n =
+  if is_bloked t n then begin
+    Hashtbl.replace t.blocked n false;
+    let l = get_notelem t n in
+    List.iter (unblock t) l;
+    Hashtbl.replace t.notelem n []
+  end
+;;
+
+let block t n =
+  Hashtbl.replace t.blocked n true
+;;
+
+let print_edge_list_e s l =
+    Printf.printf "%s: %s\n" s (String.join " " (
+      List.map edge_to_string l)
+    )
 ;;
 
 let main () =
+  let iteration = ref 0 in
 
   let posargs = OptParse.OptParser.parse_argv Options.options in
   
@@ -82,69 +193,73 @@ let main () =
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   
   (* enable a selection of progress bars *)
-  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) [] ;
+  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) ["fasB";"fasU"] ;
 
   (* enable a selection of timers *)
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) [];
 
-  if not(OptParse.Opt.is_set Options.buildarch) then
-    fatal "--builarch must be specified";
+  if not(OptParse.Opt.is_set Options.native_arch) then
+    fatal "--deb-native-arch must be specified";
 
-  if not(OptParse.Opt.is_set Options.targetarch) then begin
-    info "--targetarch must be specified assume same of buildarch";
-    OptParse.Opt.set Options.targetarch (OptParse.Opt.get Options.buildarch);
+  if not(OptParse.Opt.is_set Options.build_arch) then begin
+    info "assume build arch the same as native arch";
+    OptParse.Opt.set Options.build_arch (OptParse.Opt.get Options.native_arch);
   end;
 
-  let binlist, srclist, checklist =
+  if not(OptParse.Opt.is_set Options.target_arch) then begin
+    info "assume target arch the same as native arch";
+    OptParse.Opt.set Options.target_arch (OptParse.Opt.get Options.native_arch);
+  end;
+
+  let foreign_archs =
+    if OptParse.Opt.is_set Options.foreign_archs then 
+      OptParse.Opt.get Options.foreign_archs
+    else []
+  in
+
+  let sourcearchs =
+    let native = OptParse.Opt.get Options.native_arch in
+    let build = OptParse.Opt.get Options.build_arch in
+    let ul = build :: native :: foreign_archs in
+    let l = List.map (fun s -> "any-"^s) ul in
+    "any" :: "all" :: "linux-any" :: (l @ ul)
+  in
+
+  info "Source Archs %s" (String.join "," sourcearchs);
+
+  let binlist, srclist =
     match posargs with
     |[] | [_] -> fatal
       "You must provide a list of Debian Packages files and \
        a Debian Sources file"
     |l ->
         begin match List.rev l with
-        |r::h::t ->
+        |h::t ->
+          let archs = sourcearchs in
           let l = Src.input_raw [h] in
-          let archs = ["linux-any";OptParse.Opt.get Options.buildarch] in
           let srcl = Src.sources2packages archs l in
           let pkgl = Pkg.input_raw t in
-          let request = Boilerplate.parse_vpkg r in
-          (pkgl,srcl,request)
+          (pkgl,srcl)
         |_ -> failwith "Impossible"
         end
   in
 
   let tables = Debcudf.init_tables (srclist @ binlist) in
   let sl = List.map (fun pkg -> Debcudf.tocudf tables pkg) srclist in
-  let pkglist = 
-    List.fold_left (fun acc pkg -> 
-      (Debcudf.tocudf tables pkg)::acc
-    ) sl binlist 
-  in
+  let bl =
+    List.map (fun pkg ->
+      Debcudf.tocudf tables (
+        (* if List.mem pkg.Pkg.name base_system then 
+          {pkg with Pkg.depends = [] ; Pkg.conflicts = []}
+        else *) pkg
+      )
+    ) binlist in
+  let pkglist = sl@bl in
 
   let to_cudf = Debcudf.get_cudf_version tables in
+
+  (*
   let from_cudf = Debcudf.get_real_version tables in
-
-  let universe = Cudf.load_universe pkglist in
-
-  let universe_size = Cudf.universe_size universe in
-  info "Total packages (source + binaries) %d" universe_size;
-
-  if OptParse.Opt.is_set Options.dump then begin
-    let oc = open_out (OptParse.Opt.get Options.dump) in
-    info "Dumping Cudf file";
-    Cudf_printer.pp_universe oc universe
-  end;
-
-  let failure = OptParse.Opt.get Options.failures in
-  let success = OptParse.Opt.get Options.successes in
-  let explain = OptParse.Opt.get Options.explain in
-  let fmt = Format.std_formatter in
-
-  if OptParse.Opt.is_set Options.buildarch then
-    Format.fprintf fmt "buildarch: %s@." (OptParse.Opt.get Options.buildarch);
-  if OptParse.Opt.is_set Options.targetarch then
-    Format.fprintf fmt "targetarch: %s@." (OptParse.Opt.get Options.targetarch);
-
   let pp pkg =
     let p = pkg.Cudf.package in
     let v = from_cudf (CudfAdd.decode pkg.Cudf.package,pkg.Cudf.version) in
@@ -152,71 +267,402 @@ let main () =
       List.filter_map (fun k ->
         try Some(k,Cudf.lookup_package_property pkg k)
         with Not_found -> None
-      ) ["architecture"]
+      ) ["architecture";"source";"sourcenumber"]
     in (p,v,l)
   in
-
-  if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
-
-  let queue = ref checklist in
-  let visited = Hashtbl.create 1023 in
-  let broken = ref 0 in
-  let callback d = match d with
-    |{Diagnostic.result = Diagnostic.Success (f); 
-                request = Diagnostic.Package r } ->
-        info "Buildcheking %s" (CudfAdd.string_of_package r);
-        let is = filter_map_results tables universe (f ~all:true ()) in
-        List.iter (fun ((sn,sv),why) ->
-          if CudfAdd.equal r why then () else
-          if not(Hashtbl.mem visited (sn,sv)) then begin
-            info "Scheduling (src:%s, %s) (because of %s)" 
-            sn sv (CudfAdd.string_of_package why) ;
-            Hashtbl.add visited (sn,sv) [(r,why)];
-            queue := (sn,Some(`Eq,sv))::!queue
-          end else
-            let l = Hashtbl.find visited (sn,sv) in
-            Hashtbl.replace visited (sn,sv) ((r,why)::l)
-        ) is;
-        Diagnostic.fprintf ~pp ~failure ~success ~explain fmt d
-    |d -> Diagnostic.fprintf ~pp ~failure ~success ~explain fmt d
-  in
-
-  while (List.length !queue > 0) do
-    let l = get_source_pkg to_cudf universe !queue in 
-    let _ = queue := [] in
-    let i = Depsolver.listcheck ~callback universe l in 
-    broken := i + !broken;
-  done;
-
-  let module G = Defaultgraphs.PackageGraph.G in
-  let module D = Defaultgraphs.PackageGraph.D in
-  let module C = Graph.Components.Make(G) in
-  let g = G.create () in
-  Hashtbl.iter (fun (sn,sv) l -> 
-    let src = List.hd (get_source_pkg to_cudf universe [(sn,Some(`Eq,sv))]) in
-    G.add_vertex g src;
-    List.iter (fun (root,why) ->
-      G.add_edge g src root (* label why *)
-    ) l
-  ) visited; 
-  let oc = open_out "tt.dot" in
-  D.output_graph oc g;
-  (*
-  Array.iter (fun l ->
-    List.iter (fun pkg ->
-      Printf.printf "%s\n" (CudfAdd.string_of_package pkg)
-    ) l;
-    print_newline ();
-  )  (C.scc_array g);
   *)
 
-  if failure || success then Format.fprintf fmt "@]@.";
+  let universe = Cudf.load_universe pkglist in
+  let solver = Depsolver_int.init_solver_univ universe in
 
-  let nb = universe_size in
-  let nf = List.length sl in
-  Format.fprintf fmt "background-packages: %d@." nb;
-  Format.fprintf fmt "foreground-packages: %d@." (if nf = 0 then nb else nf);
-  Format.fprintf fmt "broken-packages: %d@." !broken;
+  let universe_size = Cudf.universe_size universe in
+  info "Total packages (source + binaries) %d" universe_size;
+
+  let base_system =
+    if OptParse.Opt.is_set Options.base_system then begin
+      List.flatten (
+        List.map (function
+          |(p,None) -> Cudf.lookup_packages universe p
+          |(p,Some(c,v)) ->
+              let filter = Some(c,to_cudf (p,v)) in
+              Cudf.lookup_packages ~filter universe p
+        ) (OptParse.Opt.get Options.base_system)
+      )
+    end else []
+  in
+
+
+  (*
+  let checklist =
+    if OptParse.Opt.is_set Options.checkonly then begin
+      info "--checkonly specified, consider all packages as background packages";
+      List.flatten (
+        List.map (function
+          |(p,None) -> Cudf.lookup_packages universe p
+          |(p,Some(c,v)) ->
+              let filter = Some(c,snd(to_cudf (p,v))) in
+              Cudf.lookup_packages ~filter universe p
+        ) (OptParse.Opt.get Options.checkonly)
+      )
+    end else []
+  in
+  *)
+
+
+  if OptParse.Opt.is_set Options.dump then begin
+    let oc = open_out (OptParse.Opt.get Options.dump) in
+    info "Dumping Cudf file";
+    Cudf_printer.pp_preamble oc Debcudf.preamble;
+    Printf.fprintf oc "\n";
+    Cudf_printer.pp_universe oc universe
+  end;
+
+  (* return one cycle in g, if one exists *)
+  let find_min_cycle g =
+    let min_weigth l =
+      List.fold_left (fun acc e ->
+        if !(G.E.label e) = 1 then acc + 1 else acc
+        ) 0 l 
+    in
+
+    let rec circuit path t thisnode startnode component =
+       let rec aux acc = function
+         |[] -> acc
+         |edge :: rest ->
+             let nextnode = G.E.dst edge in
+             print_edge_list_e "candidate " (edge::path);
+             Printf.printf "min weight path %d\n" (min_weigth (edge::path));
+             if G.V.equal nextnode startnode then begin
+               unblock t thisnode;
+               match acc with
+               |None -> aux (Some(List.rev (edge::path))) rest
+               |Some p when min_weigth (edge::path) >= min_weigth p ->
+                   print_edge_list_e "min so far " p;
+                   Printf.printf "min weight so far %d\n" (min_weigth p);
+                   aux (Some(List.rev (edge::path))) rest
+               |_ -> aux acc rest
+             end else
+               if not(is_bloked t nextnode) then begin
+                 let e = circuit (edge::path) t nextnode startnode component in
+                 match acc,e with
+                 |None,_ -> aux e rest
+                 |Some p,Some path when min_weigth path >= min_weigth p -> begin
+                   print_edge_list_e "min so far " p;
+                   Printf.printf "min weight so far %d\n" (min_weigth p);
+                   aux e rest
+                 end
+                 |_,_ -> aux acc rest
+               end else begin
+                 aux acc rest
+               end
+       in
+       block t thisnode;
+       let e = aux None (G.succ_e component thisnode) in
+       G.iter_succ (fun nextnode ->
+         let l = get_notelem t nextnode in
+         if List.mem thisnode l then
+           Hashtbl.replace t.notelem nextnode (thisnode::l)
+       ) component thisnode;
+       e
+    in
+    let vertex_set = G.fold_vertex SV.add g SV.empty in
+    let rec aux acc = function
+      |[] -> acc
+      |s :: rest ->
+        let subset = SV.add s (partition vertex_set s) in
+        let subgraph = extract_subgraph g subset in
+        (* I need only one... not all scc *)
+        (* actually I need only the scc that contains the min *)
+        let scc = C.scc_list subgraph in
+        let minnode = SV.min_elt subset in
+        let mincomp = List.find (fun l -> List.mem minnode l) scc in
+        let startnode = minnode in
+        let component = extract_subgraph subgraph (to_set mincomp) in
+        let t = init_block component in
+        match acc,circuit [] t startnode startnode component with
+        |None,e -> aux e rest
+        |Some p,Some path when min_weigth path >= min_weigth p -> aux (Some path) rest
+        |_,_ -> aux acc rest
+    in
+    match aux None (SV.elements vertex_set) with
+    |None -> SE.empty
+    |Some c ->
+    List.fold_right SE.add c SE.empty
+  in
+
+
+  (* return a feedback arc set of a weight graph *)
+  let fas sg =
+    let g = copy_graph sg in
+    (* f is a set of edges to remove *)
+    let f = Hashtbl.create 1023 in
+    let weight e = !(G.E.label e) in
+    let update_weight e w = let l = G.E.label e in l := w in
+    let add k = Hashtbl.replace f k () in
+    let subgraph = ref g in
+    let is_stuck = ref (Hashtbl.length f) in
+    while Dfs.has_cycle !subgraph do
+      Util.Progress.progress progressbar_u;
+      let c = find_min_cycle !subgraph in
+      print_edge_list_e "simple cycle" (SE.elements c);
+
+      (* edge with min weight *)
+      let eps = weight (SE.min_elt c) in
+      Printf.printf "min %d\n%!" eps ;
+      SE.iter (fun e ->
+        Printf.printf "w e %d\n%!" (weight e) ;
+        if (weight e) <= 0 then () else begin
+          update_weight e ((weight e) - eps);
+          Printf.printf "update %d\n%!" (weight e) ;
+          if (weight e) <= 0 then (
+            Printf.printf "Candidate to be removed %s \n%!" (edge_to_string e);
+            (* we remove only one edge per cycle ... *)
+            add e 
+          )
+        end
+      ) c;
+
+      if (Hashtbl.length f) = !is_stuck then raise Exit;
+      is_stuck := Hashtbl.length f;
+      subgraph := remove_edges_e !subgraph (hash_to_list f);
+    done;
+    Util.Progress.set_total progressbar_b (Hashtbl.length f);
+    Hashtbl.iter (fun e _ ->
+      Util.Progress.progress progressbar_b;
+      let (v,w) = G.E.src e, G.E.dst e in
+      let sl = hash_to_list f in
+      let sub = remove_edges_e g sl in
+
+      G.add_edge_e sub e;
+      if not(Dfs.has_cycle sub) then begin
+        Hashtbl.remove f e;
+      end
+    ) f;
+    hash_to_list f
+  in
+
+  let print_dot s g =
+    let oc = open_out s in
+    D.output_graph oc g;
+    close_out oc
+  in
+
+  let is_build_essential pkg =
+    try bool_of_string (Cudf.lookup_package_property pkg "buildessential") 
+    with Not_found -> false
+  in
+  
+  let is_essential pkg =
+    try bool_of_string (Cudf.lookup_package_property pkg "essential") 
+    with Not_found -> false
+  in
+
+  let get_source pkg =
+    let sn = try Cudf.lookup_package_property pkg "source" with Not_found -> fatal "WTF source" in
+    let sv = try Cudf.lookup_package_property pkg "sourcenumber" with Not_found -> fatal "WTF sourcenumber"in
+    try 
+      Cudf.lookup_package universe (CudfAdd.encode ("src"^Src.sep^sn),to_cudf (sn,sv))
+    with Not_found -> begin
+      warning "The source package %s %s associated to the bin package %s is missing" 
+      sn sv (CudfAdd.string_of_package pkg);
+      raise Not_found
+    end
+  in
+
+  let add_source g src =
+    (* source -> bin (build dep) *)
+    (* build essential or essential -> 2000
+     * direct dependency and doc -> 10
+     * direct dependency and lib -> 1
+     * direct dependency -> 100
+     * not a direct dependency -> 500
+     *)
+    let is_direct_build_dep src bin =
+      try
+        ignore (
+          List.find (fun p -> CudfAdd.equal bin p) (List.flatten (CudfAdd.who_depends universe src))
+        ); true
+      with Not_found -> false
+    in
+    let is_doc bin = String.ends_with bin.Cudf.package "-doc" in
+    let is_lib bin = String.ends_with bin.Cudf.package "-dev" in
+    let assign_label src bin =
+      let l = 
+        if is_build_essential bin || is_essential bin then 2000
+        else 
+          if is_direct_build_dep src bin then 
+            if is_doc bin then 10 else
+              if is_lib bin then 1 else 100
+          else 500 
+      in ref l
+    in
+
+    (* if not (G.mem_vertex g src) then *) begin
+      let req = Diagnostic_int.Sng (CudfAdd.vartoint universe src) in
+      let res = Depsolver_int.solve solver req in
+      (* effectively here we select ONE solution to satsfy the build 
+       * dependencies of this package. There can be many of these solutions
+       * and a backtrack step might be required. This simplification
+       * make this algorithm not exaustive... *)
+      let closure =
+        match res with
+        |Diagnostic_int.Success f_int ->
+            List.map (CudfAdd.inttovar universe) (f_int ~all:true ())
+        |_ -> info "broken source %s " (CudfAdd.string_of_package src) ; []
+      in
+      let preds = G.pred g src in
+      List.iter (fun bin ->
+        (* if the source package depends on a package in the base system,
+         * we do not add this package *)
+        if not (CudfAdd.equal bin src) then begin
+          let label = assign_label src bin in
+          let e = G.E.create src label bin in
+          info "Add Edge %s" (edge_to_string e);
+          if not(List.mem bin preds) then G.add_edge_e g e
+        end
+      ) closure
+    end
+  in
+
+  (* find an installation set of the build dependencies : the smallest ? *)
+  (* get the bin list, add the src package and ask for an
+   * installation set of this src in this universe *)
+  (* add to the graph all the runtime dependencies that are
+   * in this installation set *)
+  (* create the src-dependency graph *)
+  let g = G.create () in
+  List.iter (fun bin ->
+    try 
+      let src = get_source bin in
+      (* bin -> source (belongs to) *)
+      (* I never want to break such dependency *)
+      let label = ref 100000 in
+      let e = G.E.create bin label src in
+      G.add_edge_e g e;
+    with Not_found -> () (* from get_source *)
+  ) bl ;
+  List.iter (fun bin ->
+    try 
+      let src = get_source bin in
+      begin try add_source g src with Not_found -> () end;
+    with Not_found -> () (* from get_source *)
+  ) bl ;
+
+  let remove_source g src =
+    info "Remove source %s" (CudfAdd.string_of_package src);
+    if G.mem_vertex g src then begin 
+      G.iter_pred (fun bin ->
+        info "Remove binary %s" (CudfAdd.string_of_package bin);
+        G.remove_vertex g bin
+      ) g src;
+      G.remove_vertex g src
+    end
+  in
+
+  let reduce g =
+    List.iter (fun src ->
+      if G.mem_vertex g src then
+        if G.out_degree g src = 0 then
+          remove_source g src
+    ) sl
+  in
+
+  let remove_base_packages g l =
+    List.iter (fun pkg ->
+      let src = 
+        if List.mem pkg bl then
+          get_source pkg
+        else pkg
+      in
+      remove_source g src
+    ) l
+  in
+ 
+  (* break dependency loops. This should use a heuristic of some kind or
+   * ask for user intervention *)
+  let reduce_loops g =
+    let scc = C.scc_array g in
+    info "SCC # %d" (Array.length scc);
+    Array.iteri (fun i l ->
+      if List.length l > 1 then begin 
+        info "Loop detected (%d)" (List.length l);
+        (*
+        info "Loop : %s" (
+          String.join " -> " (List.map (fun pkg -> 
+            CudfAdd.string_of_package pkg
+          ) l));
+          *)
+        let sg = extract_subgraph g (to_set l) in
+        let subname = Printf.sprintf "sub-%d-%d.dot" !iteration i in
+        print_dot subname sg;
+
+        let feedback_set = fas sg in
+        info "arcs to remove %d" (List.length feedback_set);
+        List.iter (fun (v1,l,v2) ->
+          info "Remove %s" (edge_to_string (v1,l,v2));
+          G.remove_edge sg v1 v2
+        ) feedback_set;
+        info "cycles %b\n" (Dfs.has_cycle sg);
+        let subname = Printf.sprintf "sub-%d-%d-fas.dot" !iteration i in
+        print_dot subname sg;
+
+      end
+    ) scc;
+  in
+
+  print_dot "reduce-start.dot" g;
+  remove_base_packages g base_system;
+  print_dot "reduce-base.dot" g;
+  reduce g;
+  print_dot "reduce-1.dot" g;
+  reduce g;
+  print_dot "reduce-2.dot" g;
+  reduce_loops g;
+
+  (*
+  while G.nb_vertex g > 0 do
+
+    info "Nodes %d %d (this should descrease)" (G.nb_vertex g) (G.nb_edges g);
+    info "Reduce bin (#%d)" !iteration;
+    reduce_bin g;
+    print_dot (Printf.sprintf "reduce-%d-bin.dot" !iteration) g;
+    info "Reduce src (#%d)" !iteration;
+    reduce_src g;
+    print_dot (Printf.sprintf "reduce-%d-src.dot" !iteration) g;
+    info "Reduce loops (#%d)" !iteration;
+    reduce_loops g;
+    print_dot (Printf.sprintf "reduce-%d-loops.dot" !iteration) g;
+    incr iteration;
+
+  done
+*)
+ 
+ 
+  (* parse the list of packages to include in the base system and
+   * build a list of packages that have the same version as the package
+   * in the binlist but no dependencies or conflicts. These packages must
+   * always be installable. they are the dummy packages built using a cross
+   * compiler . One goal is to find the smallest set needed to bootstrap a
+   * system *)
+
+  (* All packages in the base system must always be installable *)
+
+  (* for all sources :
+    - have no build dependencies
+    - have all build dependencies satisfied in the base system.
+      For all binaries of such sources
+      - if the binary is installable in the base system, then add it to it.
+      - otherwise add the source of its dependencies to the buildqueue
+    repeat until no other source can be marked as compiled
+   *)
+
+  (* what I'm left with is a bunch of source that cannot be compiled because of
+   * circular dependencies *)
+
+  (* break one, start from the beginning *)
+  (* which one to break ? *)
+  (* how to break it ? *)
+
 ;;
 
 main ();;
