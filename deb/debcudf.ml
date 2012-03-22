@@ -157,12 +157,12 @@ let get_real_version tables (package,cudfversion) =
 let loadl tables l =
   List.flatten (
     List.map (fun (name,sel) ->
-      let encname = CudfAdd.encode name in
+      let encname = (* CudfAdd.encode *) name in
       match CudfAdd.cudfop sel with
       |None ->
           if (Util.StringHashtbl.mem tables.virtual_table name) &&
           (Util.StringHashtbl.mem tables.versioned_table name) then
-            [(encname, None);(encname^"--virtual", None)]
+            [(encname, None);("--virtual-"^encname, None)]
           else
             [(encname, None)]
       |Some(op,v) ->
@@ -176,17 +176,17 @@ let loadlc tables name l = (CudfAdd.encode name, None)::(loadl tables l)
 
 let loadlp tables l =
   List.map (fun (name,sel) ->
-    let encname = CudfAdd.encode name in
+    let encname = (* CudfAdd.encode *) name in
     match CudfAdd.cudfop sel with
     |None  ->
         if (Util.StringHashtbl.mem tables.unit_table name) || 
         (Util.StringHashtbl.mem tables.versioned_table name)
-        then (encname^"--virtual",None)
+        then ("--virtual-"^encname,None)
         else (encname, None)
     |Some(`Eq,v) ->
         if (Util.StringHashtbl.mem tables.unit_table name) || 
         (Util.StringHashtbl.mem tables.versioned_table name)
-        then (encname^"--virtual",Some(`Eq,get_cudf_version tables (name,v)))
+        then ("--virtual-"^encname,Some(`Eq,get_cudf_version tables (name,v)))
         else (encname,Some(`Eq,get_cudf_version tables (name,v)))
     |_ -> fatal "This should never happen : a provide can be either = or unversioned"
   ) l
@@ -267,36 +267,106 @@ let add_inst inst pkg =
     with Not_found -> false
 
 let add_extra extras tables pkg =
-  match extras with
-  |None -> []
-  |Some el -> add_extra_default el tables pkg
+  add_extra_default extras tables pkg
 
-let tocudf tables ?extras ?(inst=false) pkg =
-  { Cudf.default_package with
-    Cudf.package = CudfAdd.encode pkg.name ;
-    Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;
-    Cudf.keep = add_essential pkg.essential;
-    Cudf.depends = loadll tables (pkg.pre_depends @ pkg.depends);
-    Cudf.conflicts = loadlc tables pkg.name (pkg.breaks @ pkg.conflicts) ;
-    Cudf.provides = loadlp tables pkg.provides ;
-    Cudf.installed = add_inst inst pkg;
-    Cudf.pkg_extra = add_extra extras tables pkg ;
-  }
+let add_inst inst pkg =
+  if inst then true 
+  else
+    try
+      match String.nsplit (Packages.assoc "Status" pkg.extras) " " with
+      |[_;_;"installed"] -> true
+      | _ -> false
+    with Not_found -> false
+
+let add_name_arch a n = CudfAdd.encode (Printf.sprintf "%s:%s" n a)
+
+let add_arch hostArch arch = function
+  |n when String.ends_with n ":any" -> (CudfAdd.encode n)
+  |n when arch = "all" -> add_name_arch n hostArch
+  |n -> add_name_arch n arch
+
+let add_arch_l hostArch arch l = 
+  List.map (fun (n,c) -> (add_arch hostArch arch n,c)) l
+
+type options = {
+  extras : extramap ;
+  native : string;
+  host : string;
+  build : string;
+  foreign : string list ;
+}
+
+let default_options = {
+  extras = [] ;
+  native = "";
+  build = "";  (* the default architecture 'dpkg -print-architecture' *)
+  host = "";   (* used to resolv cross dependencies *)
+  foreign = [] (* list of foreign architectures *)
+}
+
+let tocudf tables ?(options=default_options) ?(inst=false) pkg =
+  if options.native <> "" then begin
+    let _name = add_arch options.native pkg.architecture pkg.name in
+    let _provides = 
+      let l = 
+        match pkg.multiarch with
+        |`None -> [(CudfAdd.encode pkg.name,None)]
+        |`Foreign -> List.map (fun arch -> (add_arch options.native arch pkg.name,None)) options.foreign
+        |`Allowed -> [(CudfAdd.encode pkg.name,None) ; (CudfAdd.encode (pkg.name^":any"),None)]
+        |`Same -> []
+      in
+      l@(add_arch_l options.native pkg.architecture (loadlp tables pkg.provides))
+    in
+    let _conflicts = 
+      (* self conflict / multi-arch conflict *)
+      let sc = (add_arch options.native pkg.architecture pkg.name,None) in
+      let mac = (CudfAdd.encode pkg.name,None) in
+      let l = pkg.breaks @ pkg.conflicts in
+      match pkg.multiarch with
+      |(`None|`Foreign|`Allowed) -> 
+          sc::mac::(add_arch_l options.native pkg.architecture (loadl tables l))
+      |`Same -> sc::(add_arch_l options.native pkg.architecture (loadl tables l))
+    in
+    let _depends = 
+      List.map (add_arch_l options.native pkg.architecture) 
+      (loadll tables (pkg.pre_depends @ pkg.depends))
+    in
+    { Cudf.default_package with
+      Cudf.package = _name ;
+      Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;
+      Cudf.keep = add_essential pkg.essential;
+      Cudf.depends = _depends;
+      Cudf.conflicts = _conflicts ;
+      Cudf.provides = _provides ;
+      Cudf.installed = add_inst inst pkg;
+      Cudf.pkg_extra = add_extra options.extras tables pkg ;
+    }
+  end else
+    { Cudf.default_package with
+      Cudf.package = CudfAdd.encode pkg.name ;
+      Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;
+      Cudf.keep = add_essential pkg.essential;
+      Cudf.depends = loadll tables (pkg.pre_depends @ pkg.depends);
+      Cudf.conflicts = loadlc tables pkg.name (pkg.breaks @ pkg.conflicts) ;
+      Cudf.provides = loadlp tables pkg.provides ;
+      Cudf.installed = add_inst inst pkg;
+      Cudf.pkg_extra = add_extra options.extras tables pkg ;
+    }
 
 let lltocudf = loadll
 let ltocudf = loadl
 
-let load_list l =
+let load_list ?options l =
   let timer = Util.Timer.create "Debian.Debcudf.load_list" in
   Util.Timer.start timer;
   let tables = init_tables l in
-  let pkglist = List.map (tocudf tables) l in
+  let pkglist = List.map (tocudf tables ?options) l in
   clear tables;
   Util.Timer.stop timer pkglist
 
-let load_universe l =
+let load_universe ?options l =
   let timer = Util.Timer.create "Debian.Debcudf.load_universe" in
-  let pkglist = load_list l in
+  let pkglist = load_list ?options l in
   Util.Timer.start timer;
   let univ = Cudf.load_universe pkglist in
   Util.Timer.stop timer univ

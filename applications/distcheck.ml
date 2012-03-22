@@ -26,6 +26,7 @@ module Options = struct
   let options = OptParser.make ~description
   include Boilerplate.MakeOptions(struct let options = options end)
 
+  let inputtype = StdOpt.str_option ()
   let successes = StdOpt.store_true ()
   let failures = StdOpt.store_true ()
   let explain = StdOpt.store_true ()
@@ -33,12 +34,20 @@ module Options = struct
   let latest = StdOpt.store_true ()
   let checkonly = Boilerplate.vpkglist_option ()
   let coinst = Boilerplate.vpkglist_option ()
-  let architecture = StdOpt.str_option ()
+
   let outfile = StdOpt.str_option ()
   let background = Boilerplate.incr_str_list ()
   let foreground = Boilerplate.incr_str_list ()
 
+  let deb_foreign_arch = Boilerplate.str_list_option ()
+  let deb_native_arch = StdOpt.str_option ()
+  let deb_host_arch = StdOpt.str_option ()
+  let deb_build_arch = StdOpt.str_option ()
+
   open OptParser
+
+  add options ~short_name:'t' ~help:"input type format" inputtype;
+
   add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
   add options ~short_name:'f' ~long_name:"failures" ~help:"Only show failures" failures;
   add options ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" successes;
@@ -47,8 +56,6 @@ module Options = struct
   add options ~long_name:"summary" ~help:"Print a detailed summary" summary;
 
   add options ~long_name:"latest" ~help:"Check only the latest version of each package" latest;
-
-  add options ~long_name:"arch" ~help:"Allowed architecture" architecture;
 
   add options ~long_name:"coinst" ~help:"Check if these packages are coinstallable" coinst;
 
@@ -59,6 +66,18 @@ module Options = struct
   ~help:"Additional Packages lists that are NOT checked but used for resolving dependencies (can be repeated)" background;
 
   add options ~short_name:'o' ~long_name:"outfile" ~help:"output file" outfile;
+
+  let deb_group = add_group options "Debian Specific Options" in
+  add options ~group:deb_group ~long_name:"deb-native-arch" ~help:"Native architecture" deb_native_arch;
+  (*
+  add options ~group:deb_group ~long_name:"deb-host-arch" ~help:"Host architecture" deb_host_arch;
+  add options ~group:deb_group ~long_name:"deb-build-arch" ~help:"Build architecture" deb_build_arch;
+  *)
+  add options ~group:deb_group ~long_name:"deb-foreign-archs" ~help:"Foreign architectures" deb_foreign_arch;
+
+(*  let rpm_group = add_group options "Rpm Specific Options" in
+    let eclipse_group = add_group options "Eclipse Specific Options" in
+*)
 end
 
 let debug fmt = Util.make_debug __FILE__ fmt
@@ -68,32 +87,88 @@ let fatal fmt = Util.make_fatal __FILE__ fmt
 
 let timer = Util.Timer.create "Solver" 
 
+(* implicit prefix of resources derived from name of executable *)
+(* (input_format * add_format ?) *)
+let guess_format t l =
+  match Filename.basename(Sys.argv.(0)) with
+  |"debcheck"|"dose-debcheck" -> (Url.Deb, true)
+  |"eclipsecheck"|"dose-eclipsecheck" -> (Url.Eclipse, true)
+  |"rpmcheck"|"dose-rpmcheck" -> (Url.Synthesis,true)
+  |_ when OptParse.Opt.is_set t -> 
+      (Url.scheme_of_string (OptParse.Opt.get t),true)
+  |_ -> (Input.guess_format [l], false)
+;;
+
+let set_options = function
+  |Url.Deb ->
+    let host = 
+      if OptParse.Opt.is_set Options.deb_host_arch then
+        OptParse.Opt.get Options.deb_host_arch
+      else ""
+    in
+    let build =  
+      if OptParse.Opt.is_set Options.deb_build_arch then
+        OptParse.Opt.get Options.deb_build_arch
+      else ""
+    in
+    let native =  
+      if OptParse.Opt.is_set Options.deb_native_arch then
+        OptParse.Opt.get Options.deb_native_arch
+      else ""
+    in
+
+    let archs = 
+      let l = OptParse.Opt.get Options.deb_foreign_arch in
+      let l = if host <> "" then host::l else l in
+      let l = if build <> "" then build::l else l in
+      let l = if native <> "" then native::l else l in
+      l
+    in
+
+    Some (
+      Boilerplate.Deb {
+        Debian.Debcudf.default_options with 
+        Debian.Debcudf.foreign = archs;
+        host = host;
+        build = build;
+        native = native
+      }
+    )
+  |Url.Synthesis -> None
+  |Url.Hdlist -> None
+  |Url.Eclipse -> Some (Boilerplate.Eclipse Debian.Debcudf.default_options)
+  |Url.Cudf -> None
+;;
+
+let add_format t = List.map (fun s -> (Url.scheme_to_string t)^"://"^s)
+
 let main () =
-  let resource_prefix =
-    (* implicit prefix of resources derived from name of executable *)
-    match Filename.basename(Sys.argv.(0)) with
-      |"debcheck"|"dose-debcheck" -> "deb://"
-      |"eclipsecheck"|"dose-eclipsecheck" -> "eclipse://"
-      |"rpmcheck"|"dose-rpmcheck" -> "synth://"
-      |"cudfcheck"|"dose-cudfcheck" -> "cudf://"
-      |_ -> ""
-  in
-  let add_resource_prefix = List.map (function s -> resource_prefix^s) in
   let posargs = OptParse.OptParser.parse_argv Options.options in
+  let inputlist = posargs@(OptParse.Opt.get Options.foreground) in
+  let (input_format,implicit_format) = guess_format Options.inputtype inputlist in
+
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress)
     ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
   Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
-  let default_arch = OptParse.Opt.opt Options.architecture in 
-  let fg = 
-    if posargs = [] && resource_prefix <> "" then 
-      add_resource_prefix ("-"::(OptParse.Opt.get Options.foreground))
-    else
-      add_resource_prefix (posargs@(OptParse.Opt.get Options.foreground))
+
+  let options = set_options input_format in
+
+  let fg = OptParse.Opt.get Options.foreground in
+  let bg = OptParse.Opt.get Options.background in
+  let fg =
+    let pos =
+      if List.length (posargs@fg@bg) = 0 && implicit_format then 
+        ["-"] 
+      else 
+        posargs
+    in
+    if implicit_format then add_format input_format (pos@fg) else (pos@fg)
   in
-  let bg = add_resource_prefix (OptParse.Opt.get Options.background) in
-  let (preamble,pkgll,from_cudf,to_cudf) = Boilerplate.load_list ~default_arch [fg;bg] in
+  let bg = if implicit_format then add_format input_format bg else bg in
+
+  let (preamble,pkgll,from_cudf,to_cudf) = Boilerplate.load_list ~options [fg;bg] in
   let (fg_pkglist, bg_pkglist) = match pkgll with [fg;bg] -> (fg,bg) | _ -> assert false in
   let fg_pkglist = 
     if OptParse.Opt.get Options.latest then
@@ -169,8 +244,10 @@ let main () =
   in
   let results = Diagnostic.default_result universe_size in
 
-  if OptParse.Opt.is_set Options.architecture then
-    Format.fprintf fmt "architecture: %s@." (OptParse.Opt.get Options.architecture);
+  (*
+  if archs <> [] then
+    Format.fprintf fmt "architectures: %s@." (ExtString.String.join "," archs);
+    *)
 
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
   let callback d =

@@ -17,8 +17,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-
-
 open OUnit
 open Common
 
@@ -42,10 +40,13 @@ let extras_properties = [
   ("Size", ("size", `Nat None));
   ("Installed-Size", ("installedsize", `Nat None))
 ];;
+
 let extras = List.map fst extras_properties ;;
+let options = { Debcudf.default_options with Debcudf.extras = extras_properties } ;;
+
 let packagelist = Packages.input_raw [f_packages] ;;
 let tables = Debcudf.init_tables packagelist ;;
-let cudf_list = List.map (Debcudf.tocudf ~extras:extras_properties tables) packagelist ;; 
+let cudf_list = List.map (Debcudf.tocudf tables ~options) packagelist ;; 
 let universe = Cudf.load_universe cudf_list ;;
 
 (* version comparison ****************************************************************************)
@@ -436,7 +437,7 @@ let test_virtual =
     "provides" >:: (fun _ -> 
       try
         let ssmtp = Cudf.lookup_package universe ("ssmtp",8366) in
-        let vpkg = ("mail-transport-agent--virtual",None) in
+        let vpkg = ("--virtual-mail-transport-agent",None) in
         let provides = CudfAdd.who_provides universe vpkg in
         assert_equal true (List.exists (Cudf.(=%) ssmtp) provides)
       with Not_found -> assert_failure "ssmtp version mismatch"

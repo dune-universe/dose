@@ -215,7 +215,7 @@ let challenged
   let tables = Debian.Debcudf.init_tables ~step:2 ~versionlist repository in
   let getv v = Debian.Debcudf.get_cudf_version tables ("",v) in
   let pp = pp tables in
-  let pkglist = List.map (Debian.Debcudf.tocudf ~extras:[] tables) repository in
+  let pkglist = List.map (Debian.Debcudf.tocudf tables) repository in
   let universe = Cudf.load_universe pkglist in
   let brokenlist = Depsolver.find_broken universe in
   let pkgset = pkgset universe in
