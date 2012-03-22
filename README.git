@@ -19,7 +19,7 @@ See the git submodules documentation for more usage information [1,2].
 
 
 Note that the submodules are configured using the public git clone URL of
-external repositories (i.e. git://scm.gforge.inria.fr/... instead of
+external repositories (i.e. https://gforge.inria.fr/... instead of
 git+ssh://scm.gforge.inria.fr//...). This is to allow people checking out the
 dose code to easily retrieve the submodules. The drawback is that by default
 you cannot push your changes via those URLs. Just add a separate git+ssh remote
