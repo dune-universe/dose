@@ -52,7 +52,7 @@ let check_strong transitive graph solver p l =
 (* true if at least one dependency is disjunctive *)
 let somedisj pool id = 
   let cudfpool = Depsolver_int.strip_cudf_pool pool in
-  let depends = fst(cudfpool.(id)) in
+  let (depends,_,_) = cudfpool.(id) in
   if List.length depends > 0 then
     try
       List.iter (function (_,[_]) -> () | _ -> raise Not_found) depends;

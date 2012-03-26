@@ -87,15 +87,16 @@ let pp_package ?(source=false) pp fmt pkg =
     |(("source"|"sourcenumber"),_) -> ()
     |(k,v) -> Format.fprintf fmt "@,%s: %s" k (CudfAdd.decode v)
   ) fields;
-  if source then
-    begin try
+  if source then begin 
+    try
       let source = List.assoc "source" fields in
       let sourceversion = 
         try "(= "^(List.assoc "sourcenumber" fields)^")" 
         with Not_found -> ""
       in
       Format.fprintf fmt "@,source: %s %s" source sourceversion
-    with Not_found -> () end
+    with Not_found -> ()
+  end
 ;;
 
 let pp_vpkglist pp fmt = 

@@ -136,6 +136,7 @@ let set_options = function
     )
   |Url.Synthesis -> None
   |Url.Hdlist -> None
+  |(Url.Pgsql|Url.Sqlite) -> None
   |Url.Eclipse -> Some (Boilerplate.Eclipse Debian.Debcudf.default_options)
   |Url.Cudf -> None
   |Url.Cws -> Some (Boilerplate.Cws Debian.Debcudf.default_options)
@@ -230,7 +231,7 @@ let main () =
       List.filter_map (fun k ->
         try Some(k,Cudf.lookup_package_property pkg k)
         with Not_found -> None
-      ) ["architecture";"source";"sourcenumber"]
+      ) ["architecture";"source";"sourcenumber";"essential"]
     in (p,v,l)
   in
   info "Solving..." ;

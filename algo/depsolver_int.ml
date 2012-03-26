@@ -77,7 +77,7 @@ type solver = {
 
 type pool_t =
   ((Cudf_types.vpkg list * S.var list) list * 
-   (Cudf_types.vpkg * S.var list) list) array
+   (Cudf_types.vpkg * S.var list) list * bool) array
 and pool = SolverPool of pool_t | CudfPool of pool_t
 
 (* two functions to make sure we alway manipulate the correct data type *)
@@ -100,7 +100,7 @@ let init_pool_univ univ =
           (vpkg, CudfAdd.resolve_vpkg_int univ vpkg)
         ) pkg.Cudf.conflicts
       in
-      (dll,cl)
+      (dll,cl,pkg.Cudf.keep = `Keep_package)
     )
   in CudfPool pool
 ;;
@@ -112,7 +112,7 @@ let init_solver_pool map pool closure =
   let solverpool = 
     Array.init (List.length closure) (fun sid ->
       let uid = map#inttovar sid in
-      let (dll,cl) = cudfpool.(uid) in
+      let (dll,cl,e) = cudfpool.(uid) in
       let sdll = 
         List.map (fun (vpkgs,uidl) ->
           (vpkgs,List.map map#vartoint uidl)
@@ -136,7 +136,7 @@ let init_solver_pool map pool closure =
           (vpkg, l)
         ) cl 
       in
-      (sdll,scl)
+      (sdll,scl,e)
     )
   in SolverPool solverpool
 ;;
@@ -196,10 +196,11 @@ let init_solver_cache ?(buffer=false) pool =
   Util.Progress.set_total progressbar_init size ;
   let constraints = S.initialize_problem ~buffer size in
 
-  Array.iteri (fun id (dll,cl) ->
+  Array.iteri (fun id (dll,cl,essential) ->
     Util.Progress.progress progressbar_init;
     exec_depends constraints id dll;
     exec_conflicts constraints id cl;
+    if essential then S.add_rule constraints [|S.lit_of_var id true|] [];
   ) pool;
     
   Hashtbl.clear conflicts;
@@ -382,6 +383,7 @@ let dependency_closure_cache ?(maxdepth=max_int) ?(conjunctive=false) pool idlis
     let (id,level) = Queue.take queue in
     if not(Hashtbl.mem visited id) && level < maxdepth then begin
       Hashtbl.add visited id ();
+      let (l,_,_) = cudfpool.(id) in
       List.iter (function
         |(_,[i]) when conjunctive = true ->
           if not(Hashtbl.mem visited i) then
@@ -393,7 +395,7 @@ let dependency_closure_cache ?(maxdepth=max_int) ?(conjunctive=false) pool idlis
                 Queue.add (i,level+1) queue
           ) dsj
         |_ -> ()
-      ) (fst(cudfpool.(id)))
+      ) l
     end
   done;
   Hashtbl.fold (fun k _ l -> k::l) visited []
