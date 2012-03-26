@@ -293,6 +293,7 @@ type options = {
   host : string;
   build : string;
   foreign : string list ;
+  ignore_essential : bool;
 }
 
 let default_options = {
@@ -300,7 +301,8 @@ let default_options = {
   native = "";
   build = "";  (* the default architecture 'dpkg -print-architecture' *)
   host = "";   (* used to resolv cross dependencies *)
-  foreign = [] (* list of foreign architectures *)
+  foreign = []; (* list of foreign architectures *)
+  ignore_essential = false
 }
 
 let tocudf tables ?(options=default_options) ?(inst=false) pkg =
@@ -333,7 +335,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
     { Cudf.default_package with
       Cudf.package = _name ;
       Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;
-      Cudf.keep = add_essential pkg.essential;
+      Cudf.keep = if options.ignore_essential then `Keep_none else add_essential pkg.essential;
       Cudf.depends = _depends;
       Cudf.conflicts = _conflicts ;
       Cudf.provides = _provides ;
@@ -344,7 +346,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
     { Cudf.default_package with
       Cudf.package = CudfAdd.encode pkg.name ;
       Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;
-      Cudf.keep = add_essential pkg.essential;
+      Cudf.keep = if options.ignore_essential then `Keep_none else add_essential pkg.essential;
       Cudf.depends = loadll tables (pkg.pre_depends @ pkg.depends);
       Cudf.conflicts = loadlc tables pkg.name (pkg.breaks @ pkg.conflicts) ;
       Cudf.provides = loadlp tables pkg.provides ;

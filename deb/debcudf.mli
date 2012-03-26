@@ -22,6 +22,7 @@ type options = {
   host : string ;
   build : string ;
   foreign : string list ;
+  ignore_essential : bool ;
 }
 
 val default_options : options

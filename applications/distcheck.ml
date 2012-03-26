@@ -43,6 +43,7 @@ module Options = struct
   let deb_native_arch = StdOpt.str_option ()
   let deb_host_arch = StdOpt.str_option ()
   let deb_build_arch = StdOpt.str_option ()
+  let deb_ignore_essential = StdOpt.store_true ()
 
   open OptParser
 
@@ -74,6 +75,7 @@ module Options = struct
   add options ~group:deb_group ~long_name:"deb-build-arch" ~help:"Build architecture" deb_build_arch;
   *)
   add options ~group:deb_group ~long_name:"deb-foreign-archs" ~help:"Foreign architectures" deb_foreign_arch;
+  add options ~group:deb_group ~long_name:"deb-ignore-essential" ~help:"Ignore Essential Packages" deb_ignore_essential;
 
 (*  let rpm_group = add_group options "Rpm Specific Options" in
     let eclipse_group = add_group options "Eclipse Specific Options" in
@@ -128,7 +130,8 @@ let set_options = function
         Debian.Debcudf.foreign = archs;
         host = host;
         build = build;
-        native = native
+        native = native;
+        ignore_essential = OptParse.Opt.get Options.deb_ignore_essential
       }
     )
   |Url.Synthesis -> None
