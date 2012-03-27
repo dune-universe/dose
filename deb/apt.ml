@@ -15,10 +15,10 @@
 open ExtLib
 open Common
 
-let debug fmt = Util.make_debug "Debian.Apt" fmt
-let info fmt = Util.make_info "Debian.Apt" fmt
-let warning fmt = Util.make_warning "Debian.Apt" fmt
-let fatal fmt = Util.make_fatal "Debian.Apt" fmt
+let debug fmt = Util.make_debug __FILE__ fmt
+let info fmt = Util.make_info __FILE__ fmt
+let warning fmt = Util.make_warning __FILE__ fmt
+let fatal fmt = Util.make_fatal __FILE__ fmt
 
 let space_re = Str.regexp "[ \t]+" 
 
