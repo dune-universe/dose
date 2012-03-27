@@ -195,9 +195,36 @@ let print_error pp root fmt l =
   pp_list pp_reason fmt res;
 ;;
 
+(* XXX unplug your imperative brain and rewrite this as a tail recoursive
+ * function ! *)
+let minimize roots l =
+  let module H = Hashtbl in
+  let h = H.create (List.length l) in
+  List.iter (fun p -> H.add h p.Cudf.package p) l;
+  let acc = H.create 1023 in
+  let rec visit pkg =
+    if not (H.mem acc pkg) then begin
+      H.add acc pkg ();
+      List.iter (fun vpkgformula ->
+        List.iter (fun (name,constr) ->
+          try
+            let p = H.find h name in
+            if Cudf.version_matches p.Cudf.version constr then
+              visit p
+          with Not_found -> ()
+        ) vpkgformula
+      ) pkg.Cudf.depends
+    end
+  in
+  begin match roots with 
+  |Package r -> visit r
+  |PackageList rl -> List.iter visit l end;
+  H.fold (fun k _ l -> k::l) acc []
+;;
+
 let default_pp pkg = (pkg.Cudf.package,CudfAdd.string_of_version pkg,[])
 
-let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) fmt = function
+let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) ?(minimal=false) fmt = function
   |{result = Success (f); request = req } when success ->
        Format.fprintf fmt "@[<v 1>-@,";
        begin match req with
@@ -209,7 +236,10 @@ let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
        end;
        Format.fprintf fmt "status: ok@,";
        if explain then begin
-         let is = f ~all:true () in
+         let is =
+           let s = f ~all:true () in
+           if minimal then minimize req s else s
+         in
          if is <> [] then begin
            Format.fprintf fmt "@[<v 1>installationset:@," ;
            Format.fprintf fmt "@[<v>%a@]" (pp_list (pp_package pp)) is;

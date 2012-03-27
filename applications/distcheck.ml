@@ -30,6 +30,7 @@ module Options = struct
   let successes = StdOpt.store_true ()
   let failures = StdOpt.store_true ()
   let explain = StdOpt.store_true ()
+  let minimal = StdOpt.store_true ()
   let summary = StdOpt.store_true ()
   let latest = StdOpt.store_true ()
   let checkonly = Boilerplate.vpkglist_option ()
@@ -50,6 +51,7 @@ module Options = struct
   add options ~short_name:'t' ~help:"input type format" inputtype;
 
   add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
+  add options ~short_name:'m' ~long_name:"explain-minimal" ~help:"" minimal;
   add options ~short_name:'f' ~long_name:"failures" ~help:"Only show failures" failures;
   add options ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" successes;
 
@@ -238,6 +240,7 @@ let main () =
   let failure = OptParse.Opt.get Options.failures in
   let success = OptParse.Opt.get Options.successes in
   let explain = OptParse.Opt.get Options.explain in
+  let minimal = OptParse.Opt.get Options.minimal in
   let summary = OptParse.Opt.get Options.summary in
   let fmt =
     if OptParse.Opt.is_set Options.outfile then
@@ -251,7 +254,7 @@ let main () =
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
   let callback d =
     if summary then Diagnostic.collect results d ;
-    Diagnostic.fprintf ~pp ~failure ~success ~explain fmt d
+    Diagnostic.fprintf ~pp ~failure ~success ~explain ~minimal fmt d
   in
   Util.Timer.start timer;
 
