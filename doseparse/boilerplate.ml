@@ -111,7 +111,7 @@ module MakeOptions(O : Ot) = struct
 end
 
 let enable_debug = function
-  |0 -> () (* quiet : default *)
+  |0 -> () (* only warning messages : default *)
   |1 -> Util.Info.all_enabled ()
   |_ ->
       begin
@@ -125,7 +125,7 @@ let all_quiet = function
       begin
         Util.Info.all_disabled ();
         Util.Warning.all_disabled ();
-        Util.Warning.all_disabled ();
+        Util.Debug.all_disabled ();
         List.iter Util.Progress.disable (Util.Progress.available ())
       end
   |false -> ()
