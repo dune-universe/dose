@@ -42,7 +42,9 @@ module Options = struct
   let native_arch = StdOpt.str_option ()
   let foreign_archs = Boilerplate.str_list_option ()
 
-  let base_system = Boilerplate.vpkglist_option ()
+  let base_system = StdOpt.str_option ()
+  let hints = StdOpt.str_option ()
+
   let checkonly = Boilerplate.vpkglist_option ()
   let depth = StdOpt.int_option ~default:0 ()
 
@@ -55,12 +57,45 @@ module Options = struct
   (* same as host in this context ? *)
   add options ~long_name:"deb-native-arch" ~help:"Native Architecture" native_arch;
   add options ~long_name:"deb-foreign-archs" ~help:"Foregin Architectures" foreign_archs;
+
   add options ~long_name:"base-system" ~help:"Cross compiled components" base_system;
+  add options ~long_name:"hints" ~help:"Soft Components" hints;
+
   add options ~long_name:"depth" ~help:"Graph Depth" depth;
   add options ~long_name:"checkonly" ~help:"Root packages" checkonly;
 
   add options ~long_name:"dump" ~help:"dump the cudf file" dump;
 end
+
+let space_re = Str.regexp "[ \t]+"
+ 
+let parse_aux f ch =
+  let l = ref [] in 
+  try while true do l := (f (input_line ch)) :: !l done ; !l
+  with End_of_file -> !l
+;;
+ 
+let parse_pkg_list f file =
+  let ch = open_in file in
+  let l = parse_aux f ch in
+  let _ = close_in ch in
+  l
+;;
+
+let lookup_packages tables universe ?(s="") l = 
+  let to_cudf = Debcudf.get_cudf_version tables in
+  List.flatten (
+    List.map (function
+      |(p,None) -> 
+          let p = CudfAdd.encode (s^p) in
+          Cudf.lookup_packages universe p
+      |(p,Some(c,v)) ->
+          let p = CudfAdd.encode (s^p) in
+          let filter = Some(c,to_cudf (p,v)) in
+          Cudf.lookup_packages ~filter universe p
+    ) l
+  )
+;;
 
 type vertex = Src of Cudf.package | BuildDep of Cudf.package list
 type edge = Belong | Hard of Cudf.package | Soft of (int * Cudf.package)
@@ -87,7 +122,7 @@ let edge_to_string (s,l,d) =
 ;;
 
 let print_edge_list_e s l =
-    Printf.printf "%s: %s\n" s (String.join " " (
+    Printf.printf "%s: %s\n%!" s (String.join " " (
       List.map edge_to_string l)
     )
 ;;
@@ -353,6 +388,7 @@ let fas sg =
       Util.Progress.progress progressbar_u;
       let c = find_min_cycle !subgraph in
       print_edge_list_e "simple cycle" (SE.elements c);
+      if SE.is_empty c then assert false;
 
       (* edge with min weight *)
       let eps = weight (SE.min_elt c) in
@@ -402,7 +438,7 @@ let dependency_graph universe l =
   gr
 ;;
 
-let create_source_graph ?(depth=0) tables base_system (bl,sl,pkglist) universe =
+let create_source_graph ?(depth=0) tables (bl,sl,pkglist) universe =
   let packagegraph = dependency_graph universe pkglist in
 
   let source_table =
@@ -432,6 +468,7 @@ let create_source_graph ?(depth=0) tables base_system (bl,sl,pkglist) universe =
   let solver = Depsolver_int.init_solver_univ universe in
 
   let base_system_h =
+    let base_system = [] in
     let h = Hashtbl.create (List.length base_system) in
     List.iter (fun bin ->
       let src = get_source bin in
@@ -450,10 +487,18 @@ let create_source_graph ?(depth=0) tables base_system (bl,sl,pkglist) universe =
      *)
     let is_doc bin = String.ends_with bin.Cudf.package "-doc" in
     let is_lib bin = String.ends_with bin.Cudf.package "-dev" in
+    let is_hint src bin =
+      try
+        let (name,constr) = Hashtbl.find hint_h src in
+        (name = bin.Cudf.package) && (Cudf.match_version bin.Cudf.version constr)
+      with Not_found -> false
+    in
+
     let assign_label src bin =
       let constr =
+        if is_hint src bin then Soft (1,bin) else
         if is_doc bin then Soft(2,bin) else
-          if is_lib bin then Soft (1,bin) else Hard bin
+        if is_lib bin then Soft (1,bin) else Hard bin
       in ref constr
     in
 
@@ -593,32 +638,9 @@ let main () =
   let universe_size = Cudf.universe_size universe in
   info "Total packages (source + binaries) %d" universe_size;
 
-  let base_system =
-    if OptParse.Opt.is_set Options.base_system then begin
-      List.flatten (
-        List.map (function
-          |(p,None) -> Cudf.lookup_packages universe p
-          |(p,Some(c,v)) ->
-              let filter = Some(c,to_cudf (p,v)) in
-              Cudf.lookup_packages ~filter universe p
-        ) (OptParse.Opt.get Options.base_system)
-      )
-    end else []
-  in
-
   let checkonly =
     if OptParse.Opt.is_set Options.checkonly then begin
-      List.flatten (
-        List.map (function
-          |(p,None) -> 
-              let p = CudfAdd.encode ("src:"^p) in
-              Cudf.lookup_packages universe p
-          |(p,Some(c,v)) ->
-              let p = CudfAdd.encode ("src:"^p) in
-              let filter = Some(c,to_cudf (p,v)) in
-              Cudf.lookup_packages ~filter universe p
-        ) (OptParse.Opt.get Options.checkonly)
-      )
+      lookup_packages ~s:"src:" tables universe (OptParse.Opt.get Options.checkonly)
     end else sl
   in
 
@@ -629,7 +651,7 @@ let main () =
     Printf.fprintf oc "\n";
     Cudf_printer.pp_universe oc universe
   end;
-  let g = create_source_graph tables base_system (bl,checkonly,pkglist) universe in
+  let g = create_source_graph tables (bl,checkonly,pkglist) universe in
   print_dot "source.dot" g;
   let e = find_min_cycle g in
   print_edge_list_e "min cycle" (SE.elements e);
