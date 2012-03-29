@@ -141,6 +141,7 @@ let get_cudf_version tables (package,version) =
   end
 
 let get_real_version tables (package,cudfversion) =
+  let package = CudfAdd.decode package in
   try
     match !(Util.IntHashtbl.find tables.reverse_table cudfversion) with
     |[] -> fatal "at lease one version for (%s,%d) must exist" package cudfversion
