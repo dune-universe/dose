@@ -15,10 +15,7 @@
 open ExtLib
 open Common
 
-let debug fmt = Util.make_debug __FILE__ fmt
-let info fmt = Util.make_info __FILE__ fmt
-let warning fmt = Util.make_warning __FILE__ fmt
-let fatal fmt = Util.make_fatal __FILE__ fmt
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 (*************************************************************)
 (* Options *)
@@ -113,7 +110,7 @@ module MakeOptions(O : Ot) = struct
 end
 
 let enable_debug = function
-  |0 -> () (* quiet : default *)
+  |0 -> () (* only warning messages : default *)
   |1 -> Util.Info.all_enabled ()
   |_ ->
       begin
@@ -122,15 +119,13 @@ let enable_debug = function
       end
 ;;
 
-let all_quiet = function
-  |true ->
-      begin
-        Util.Info.all_disabled ();
-        Util.Warning.all_disabled ();
-        Util.Warning.all_disabled ();
-        List.iter Util.Progress.disable (Util.Progress.available ())
-      end
-  |false -> ()
+let all_quiet t =
+  if t then begin
+    Util.Info.all_disabled ();
+    Util.Warning.all_disabled ();
+    Util.Debug.all_disabled ();
+    List.iter Util.Progress.disable (Util.Progress.available ())
+  end
 ;;
 
 let enable_bars verbose l =

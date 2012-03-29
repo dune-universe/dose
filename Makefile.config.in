@@ -5,6 +5,7 @@ CFLAGS=@CFLAGS@ -fPIC -Wall -pedantic -Werror -Wno-long-long
 CPPFLAGS=@CPPFLAGS@
 LDFLAGS=@LDFLAGS@
 
+OCAMLFIND_COMMANDS="ocamlc=@OCAMLC@ ocamlopt=@OCAMLOPT@ ocamldep=@OCAMLDEP@"
 OCAMLFIND=@OCAMLFIND@
 
 DESTDIR =
@@ -29,7 +30,7 @@ endif
 
 ifeq ("@OCAMLBEST@","opt")
   OCAMLBEST=native
-  OCAMLBUILD=@OCAMLBUILD@
+  OCAMLBUILD=@OCAMLBUILD@ -ocamlc @OCAMLC@ -ocamlopt @OCAMLOPT@ -ocamldep @OCAMLDEP@
   INSTALLOPTS=-s
 else
   OCAMLBEST=byte

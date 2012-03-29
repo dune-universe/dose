@@ -13,10 +13,7 @@
 open ExtLib
 open Common
 
-let debug fmt = Util.make_debug __FILE__ fmt
-let info fmt = Util.make_info __FILE__ fmt
-let warning fmt = Util.make_warning __FILE__ fmt
-
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 type name = string
 type version = string

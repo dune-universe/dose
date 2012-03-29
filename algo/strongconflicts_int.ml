@@ -15,9 +15,7 @@
 open ExtLib
 open Common
 
-let debug fmt = Util.make_debug "Strongconflicts_int" fmt
-let info fmt = Util.make_info "Strongconflicts_int" fmt
-let warning fmt = Util.make_warning "Strongconflicts_int" fmt
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 module SG = Defaultgraphs.IntPkgGraph.G
 module PkgV = Defaultgraphs.IntPkgGraph.PkgV

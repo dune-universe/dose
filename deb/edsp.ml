@@ -15,10 +15,7 @@
 open ExtLib
 open Common
 
-let debug fmt = Util.make_debug "Debian.Edsp" fmt
-let info fmt = Util.make_info "Debian.Edsp" fmt
-let warning fmt = Util.make_warning "Debian.Edsp" fmt
-let fatal fmt = Util.make_fatal "Debian.Edsp" fmt
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 type request = {
   request : string;

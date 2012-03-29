@@ -15,10 +15,7 @@
 open ExtLib
 open Common
 
-let debug fmt = Util.make_debug "Rpm.Hdlist" fmt
-let info fmt = Util.make_info "Rpm.Hdlist" fmt
-let warning fmt = Util.make_warning "Rpm.Hdlist" fmt
-let fatal fmt = Util.make_fatal "Rpm.Hdlist" fmt
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 let progressbar = Util.Progress.create "Rpm.Parse.Hdlists.parse_822_iter" ;;
 Util.Progress.set_total progressbar 8000 (* estimate *) ;
