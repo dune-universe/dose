@@ -22,9 +22,7 @@ open Graph
 open ExtLib
 open Common
 
-let debug fmt = Util.make_debug "Statistics" fmt
-let info fmt = Util.make_info "Statistics" fmt
-let warning fmt = Util.make_warning "Statistics" fmt
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 module Make (G: Sig.G) = struct
 	module VS = Set.Make (G.V)

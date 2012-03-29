@@ -11,7 +11,8 @@
 (**************************************************************************************)
 
 open ExtLib
-let fatal fmt = Util.make_fatal "Input" fmt
+
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 IFDEF HASZIP THEN
 let gzip_open_file file =

@@ -77,25 +77,26 @@ module MakeMessages(X : sig val label : string end) = struct
     mutable enabled : bool
   } 
   let messages = Hashtbl.create 10
-  let allenabled = ref false
 
   let create ?(enabled=false) label =
-    let label = 
+    let clean label = 
       try 
         let s = Filename.chop_extension (Filename.basename label) in
         String.capitalize s
       with Invalid_argument _ -> label
     in
     if not (Hashtbl.mem messages label) then
-      { label = label ; enabled = enabled }
+      let t = { label = clean label ; enabled = enabled } in
+      Hashtbl.add messages label t ;
+      t
     else begin
       Format.eprintf "The label (%s) %s already exists@." X.label label;
-      exit(64)
+      exit (64);
     end
 
   let eprintf t fmt =
     Printf.kprintf (
-      if (t.enabled || !allenabled) then begin
+      if t.enabled then begin
         (fun s -> Format.eprintf "(%s)%s: %s@." X.label t.label s)
       end else ignore
     ) fmt
@@ -105,8 +106,8 @@ module MakeMessages(X : sig val label : string end) = struct
     with Not_found ->
       Printf.eprintf "Warning: debug label %s not found\n" s
 
-  let all_enabled () = allenabled := true
-  let all_disabled () = allenabled := false
+  let all_enabled () = Hashtbl.iter (fun _ t -> t.enabled <- true) messages
+  let all_disabled () = Hashtbl.iter (fun k t -> t.enabled <- false) messages
   let enable s = onoff s true
   let disable s = onoff s false
 
@@ -125,26 +126,24 @@ module Info = MakeMessages(struct let label = "I" end)
 module Warning = MakeMessages(struct let label = "W" end)
 module Debug = MakeMessages(struct let label = "D" end)
 
-let make_info label =
-  let t = Info.create label in
-  fun fmt -> Info.eprintf t fmt
+module Logging(X : sig val label : string end) = struct
+
+  let it = Info.create X.label
+  let info fmt = Info.eprintf it fmt
 
 (* warning is enabled by default *)
-let make_warning label =
-  let t = Warning.create ~enabled:true label in
-  fun fmt -> Warning.eprintf t fmt
+  let wt = Warning.create ~enabled:true X.label
+  let warning fmt = Warning.eprintf wt fmt
 
-let make_debug label =
-  let t = Debug.create label in
-  fun fmt -> Debug.eprintf t fmt
+  let dt = Debug.create X.label
+  let debug fmt = Debug.eprintf dt fmt
 
-let make_fatal label =
-  let l = Printf.sprintf "Fatal error in module %s: " label in
-  Printf.kprintf (fun s -> Printf.eprintf "%s%s\n%!" l s; exit (64))
+  let fatal fmt = 
+    let l = Printf.sprintf "Fatal error in module %s: " X.label in
+    Printf.kprintf (fun s -> Printf.eprintf "%s%s\n%!" l s; exit (64)) fmt
+end
 
-let debug fmt = make_debug __FILE__ fmt
-let info fmt = make_info __FILE__ fmt
-let warning fmt = make_warning __FILE__ fmt
+include Logging(struct let label = __FILE__ end) ;;
 
 (** Printf bars are printed immediately on stderr.
  * they can be enabled or disabled (default) *)

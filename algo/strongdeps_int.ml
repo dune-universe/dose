@@ -23,9 +23,7 @@ let conjbar = Util.Progress.create "Strongdeps_int.conj"
 let strongtimer = Util.Timer.create "Strongdeps_int.strong"
 let conjtimer = Util.Timer.create "Strongdeps_int.conjdep"
 
-let debug fmt = Util.make_debug __FILE__ fmt
-let info fmt = Util.make_info __FILE__ fmt
-let warning fmt = Util.make_warning __FILE__ fmt
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 module G = IntPkgGraph.G
 module O = IntPkgGraph.O

@@ -17,10 +17,7 @@ open Common
 open Debian
 module Boilerplate = BoilerplateNoRpm
 
-let info fmt = Util.make_info "apt-cudf backend" fmt
-let warning fmt = Util.make_warning "apt-cudf backend" fmt
-let debug fmt = Util.make_debug "apt-cudf backend" fmt
-let fatal fmt = Util.make_fatal "apt-cudf backend" fmt
+include Util.Logging(struct let label = "apt-cudf backend" end) ;;
 
 module Options = struct
   open OptParse

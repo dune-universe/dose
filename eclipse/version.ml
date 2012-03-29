@@ -21,7 +21,7 @@ open Common
  alpha ::= [a..zA..Z]
 *)
 
-let warning fmt = Util.make_warning "Eclipse.Version" fmt
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 let rex = Pcre.regexp "^\\d+(\\.\\d+(\\.\\d+(\\.[\\w_-]+)?)?)?$" ;;
 let parse_version s =

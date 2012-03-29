@@ -48,10 +48,7 @@ module Options = struct
   add options ~long_name:"transitive-closure" ~help:"" closure;
 end
 
-let debug fmt = Util.make_debug "SmallWorld" fmt
-let info fmt = Util.make_info "SmallWorld" fmt
-let warning fmt = Util.make_warning "SmallWorld" fmt
-
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 (**********************************)
 

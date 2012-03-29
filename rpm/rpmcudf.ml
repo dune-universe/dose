@@ -14,9 +14,7 @@ open ExtLib
 open ExtString
 open Common
 
-let debug fmt = Util.make_debug "Rpm.Rpmcudf" fmt
-let info fmt = Util.make_info "Rpm.Rpmcudf" fmt
-let warning fmt = Util.make_warning "Rpm.Rpmcudf" fmt
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 type tables = {
   units : (Packages.name, (int * (Packages.rel * string)) list) Hashtbl.t;

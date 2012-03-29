@@ -21,11 +21,7 @@ open Common
 let progressbar_init = Util.Progress.create "Depsolver_int.init_solver"
 let progressbar_univcheck = Util.Progress.create "Depsolver_int.univcheck"
 
-(** Message printers *)
-let debug fmt = Util.make_debug __FILE__ fmt
-let info fmt = Util.make_info __FILE__ fmt
-let warning fmt = Util.make_warning __FILE__ fmt
-let fatal fmt = Util.make_fatal __FILE__ fmt
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 module R = struct type reason = Diagnostic_int.reason end
 module S = EdosSolver.M(R)
