@@ -17,13 +17,14 @@ open Common
 open Packages
 
 include Util.Logging(struct let label = __FILE__ end) ;;
+module SMap = Map.Make (String)
 
 type tables = {
   virtual_table : unit Util.StringHashtbl.t;
   unit_table : unit Util.StringHashtbl.t ;
   versions_table : int Util.StringHashtbl.t;
   versioned_table : unit Util.StringHashtbl.t;
-  reverse_table : (string * string) list ref Util.IntHashtbl.t
+  reverse_table : (string SMap.t) ref Util.IntHashtbl.t
 }
 
 let create n = {
@@ -110,9 +111,13 @@ let init_tables ?(step=1) ?(versionlist=[]) pkglist =
   List.iter (fun v -> add_v temp_versions_table (v,"") ()) versionlist; 
   List.iter (fun pkg -> ivt pkg ; ivrt pkg ; ivdt pkg ; iut pkg) pkglist ;
   let l = Hashtbl.fold (fun v _ acc -> v::acc) temp_versions_table [] in
-  let add_reverse i v =
-     try let l = Util.IntHashtbl.find tables.reverse_table i in l := v::!l
-     with Not_found -> Util.IntHashtbl.add tables.reverse_table i (ref [v])
+  let add_reverse i (n,v) =
+     try 
+       let s = Util.IntHashtbl.find tables.reverse_table i in 
+       s := (SMap.add n v !s)
+     with Not_found ->
+       let s = SMap.add n v SMap.empty in
+       Util.IntHashtbl.add tables.reverse_table i (ref s)
   in
   let sl = List.sort ~cmp:(fun x y -> Version.compare (fst x) (fst y)) l in
   let rec numbers (prec,i) = function
@@ -120,11 +125,11 @@ let init_tables ?(step=1) ?(versionlist=[]) pkglist =
     |(v,n)::t ->
       if Version.equal v prec then begin
         add tables.versions_table v i;
-        add_reverse i (v,n);
+        add_reverse i (n,v);
         numbers (prec,i) t
       end else begin
         add tables.versions_table v (i+step);
-        add_reverse (i+step) (v,n);
+        add_reverse (i+step) (n,v);
         numbers (v,(i+step)) t
       end
   in
@@ -143,12 +148,8 @@ let get_cudf_version tables (package,version) =
 let get_real_version tables (package,cudfversion) =
   let package = CudfAdd.decode package in
   try
-    match !(Util.IntHashtbl.find tables.reverse_table cudfversion) with
-    |[] -> fatal "at lease one version for (%s,%d) must exist" package cudfversion
-    |[(v,_)] -> v
-    |l ->
-        try fst (List.find (fun (v,n) -> n = package) l)
-        with Not_found -> fatal "%s" package
+    let m = !(Util.IntHashtbl.find tables.reverse_table cudfversion) in
+    try SMap.find package m with Not_found -> fatal "%s" package
   with Not_found ->
     fatal "package (%s,%d) is not known" package cudfversion
 
