@@ -139,14 +139,57 @@ let test_lookup_packages =
     test_who_provides;
   ]
 
-let test_encode =
-  "name mangling" >::: [
-    "name encoding" >:: (fun _ ->
-      assert_equal (CudfAdd.encode "/bin/bash__") "/bin/bash%5f%5f"
-    )
+let (test_encode, test_decode) =
+  (* List of triplets: (test_name, decoded_string, encoded_string) *)
+  let encode_decode_triplets = [
+    ("empty", "", "");
+    ("single \"allowed\" character", "a", "a");
+    ("single \"not allowed\" character", "|", "%7c");
+    ("single percent character", "%", "%25");
+    ("several \"allowed\" characters", "abcdef", "abcdef");
+    ("several \"not allowed\" characters", "[_|?]", "%5b%5f%7c%3f%5d");
+    ("several percent characters", "%%%%%%", "%25%25%25%25%25%25");
+    ("several mixed characters", "a[b_c|d?e]f", "a%5bb%5fc%7cd%3fe%5df");
+    ("all ASCII characters in range 32-126 (i.e. normal)",
+     " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
+     "%20%21%22%23%24%25%26%27()%2a+%2c-./0123456789%3a%3b%3c%3d%3e%3f@ABCDEFGHIJKLMNOPQRSTUVWXYZ%5b%5c%5d%5e%5f%60abcdefghijklmnopqrstuvwxyz%7b%7c%7d%7e");
+    ("several characters out of range 32-126 (i.e. not usual)", "\031\127\213", "%1f%7f%d5");
+    ("path", "/bin/bash__", "/bin/bash%5f%5f")
   ]
-;;
-
+  in
+  (* From each triplet we generate two test cases, one for
+     the function encode and one for the function decode. *)
+  let (encode_tests_cases, decode_tests_cases)=
+    List.split (
+    List.map
+      (fun (test_name, decoded_string, encoded_string) -> 
+	(
+	("encoding " ^ test_name) >::
+	(fun _ -> 
+	  assert_equal 
+	    (CudfAdd.encode decoded_string) 
+	    encoded_string
+	    ~msg:("\ndecoded_string is        = " ^ decoded_string ^ 
+		  "\nencoded_string is        = " ^ (CudfAdd.encode decoded_string) ^
+		  "\nencoded_string should be = " ^ encoded_string)
+	    ),
+	
+	("decoding " ^ test_name) >::
+	(fun _ ->
+	  assert_equal
+	    (CudfAdd.decode encoded_string)
+	    decoded_string
+	    ~msg:("\nencoded_string is        = " ^ encoded_string ^ 
+		  "\ndecoded_string is        = " ^ (CudfAdd.decode encoded_string) ^
+		  "\ndecoded_string should be = " ^ decoded_string)
+	    )
+	  ))
+      encode_decode_triplets
+      )
+  in
+  (* We have two test suites: one for testing encoding and one for testing decoding. *)
+  ("name mangling encoding" >::: encode_tests_cases,
+   "name mangling decoding" >::: decode_tests_cases)
 
 (*
 let test_projection
@@ -163,6 +206,7 @@ let all =
   "all tests" >::: [
     parse_uri ;
     test_encode;
+    test_decode;
     test_lookup_packages;
   ]
 

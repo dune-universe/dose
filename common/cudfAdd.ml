@@ -10,29 +10,46 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
+(** Library of additional functions for the CUDF format. *)
+
+(** {3 Remembering two Ocaml standard library modules, whose names will be overriden by opening Extlib}*)
+
+(** Original hashtable module from Ocaml standard library. *)
 module OCAMLHashtbl = Hashtbl
+
+(** Original set module from Ocaml standard library. *)
+(* WTF? I don't see any Set module in ExtLib... *)
 module OCAMLSet = Set
 
 open ExtLib
+
+(** {3 Internal debugging functions for this module.} *)
 
 let debug fmt = Util.make_debug __FILE__ fmt
 let info fmt = Util.make_info __FILE__ fmt
 let warning fmt = Util.make_warning __FILE__ fmt
 let fatal fmt = Util.make_fatal __FILE__ fmt
 
-(* the id of a package *)
+(** the id of a package 
+    TODO: check if used anywhere. *)
 let id pkg = (pkg.Cudf.package,pkg.Cudf.version)
 
-(** compare two cudf packages only using name and version *)
-let compare = Cudf.(<%)
+(** {2 Basic comparison operations for packages} *)
 
-(** has a cudf package only using name and version *)
-let hash p = Hashtbl.hash (p.Cudf.package,p.Cudf.version)
-
-(** two cudf packages are equal if name and version are the same *)
+(** Equality test: two CUDF packages are equal if their names and versions are equal. *)
 let equal = Cudf.(=%)
 
-(** specialized Hash table for cudf packages *)
+(** Compare function: compares two CUDF packages using standard CUDF comparison operator (i.e. comparing by their name and version). *)
+let compare = Cudf.(<%)
+
+(** {2 Specialized data structures for CUDF packages} *)
+
+(** A hash function for CUDF packages, using only their name and version. *)
+let hash p = Hashtbl.hash (p.Cudf.package,p.Cudf.version)
+
+(** Data structures: *)
+
+(** Specialized hashtable for CUDF packages. *)
 module Cudf_hashtbl =
   OCAMLHashtbl.Make(struct
     type t = Cudf.package
@@ -40,53 +57,99 @@ module Cudf_hashtbl =
     let hash = hash
   end)
 
-(** specialized Set for cudf packages *)
+(** Specialized set data structure for CUDF packages. *)
 module Cudf_set =
   OCAMLSet.Make(struct
     type t = Cudf.package
     let compare = compare
   end)
 
+(* *)
 let to_set l = List.fold_right Cudf_set.add l Cudf_set.empty
 
-(** additional functions on Cudf data type.  *)
+(** {2 Encode and decode a string functions. } *)
+(** TODO: What are these functions doing in this module? *)
 
+(** Encode a string.
+
+    Replaces all the "not allowed" characters
+    with their ASCII code (in hexadecimal format),
+    prefixed with a '%' sign.
+    
+    Only "allowed" characters are letters, numbers and these: [@/+().-],
+    all the others are replaced.
+    
+    Examples:
+    {ul
+    {li [encode "ab"  = "ab"]}
+    {li [encode "|"   = "%7c"]}
+    {li [encode "a|b" = "a%7cb"]}
+    }
+*)
 let encode s =
-  let not_allowed = Str.regexp  "[^a-zA-Z0-9@/+().-]" in
+  let not_allowed_regex = Str.regexp  "[^a-zA-Z0-9@/+().-]"
+  in
   let search s =
-    try (Str.search_forward not_allowed s 0) >= 0
+    try (Str.search_forward not_allowed_regex s 0) >= 0
     with Not_found -> false
   in
-  let make_hex chr = Printf.sprintf "%%%x" (Char.code chr) in
+  (*  "encode_char char" returns the ASCII code of the given character
+      in the hexadecimal form, prefixed with the '%' sign.
+      e.g. encode_char '+' = "%2b" *)
+  let encode_char char = Printf.sprintf "%%%x" (Char.code char) 
+  in
   if search s then begin
+    (* If there are some "not allowed" charactes in the string: *)
     let n = String.length s in
     let b = Buffer.create n in
+    (* for each character *)
     for i = 0 to n-1 do
       let s' = String.of_char s.[i] in
-      if Str.string_match not_allowed s' 0 then
-        Buffer.add_string b (make_hex s.[i])
+      if Str.string_match not_allowed_regex s' 0 then
+	(* if it is "not allowed" it gets converted, *)
+        Buffer.add_string b (encode_char s.[i])
       else
+	(* if it is "allowed" it stays the same. *)
         Buffer.add_string b s'
     done;
     Buffer.contents b
   end else s
 
-let decode s =
-  let hex_re = Str.regexp "%[0-9a-f][0-9a-f]" in
-  let un s =
-    let s = Str.matched_string s in
-    let hex = String.sub s 1 2 in
-    let n = int_of_string ("0x" ^ hex) in
-    String.make 1 (Char.chr n)
-  in
-  Str.global_substitute hex_re un s
+(** Decode a string. Opposite of the [encode] function.
 
-let add_properties preamble l =
-  List.fold_left (fun pre prop ->
-    {pre with Cudf.property = prop :: pre.Cudf.property }
-  ) preamble l
+    Replaces all the encoded "not allowed" characters
+    in the string by their original (i.e. not encoded) versions.
+
+    Examples:
+    {ul
+    {li [decode "ab" = "ab"]}
+    {li [decode "%7c" = "|"]}
+    {li [decode "a%7cb" = "a|b"]}
+    }
+*)
+let decode s =
+  let encoded_char_regex = Str.regexp "%[0-9a-f][0-9a-f]" 
+  in
+  (* "decode_char encoded" returns the decoded form 
+      of a character, which was encoded using 
+      the encode_char function.
+      e.g. decode_char "%2b" = '+' *)
+  let decode_char encoded_char =
+    let ascii_code_hex = String.sub encoded_char 1 2 in
+    let ascii_code_dec = int_of_string ("0x" ^ ascii_code_hex) in
+    String.make 1 (Char.chr ascii_code_dec)
+  in
+  let decode_next_char s =
+    let encoded_char = Str.matched_string s in
+    decode_char encoded_char
+  in
+  (* Decode all the encoded chars in the string one by one. *)
+  Str.global_substitute encoded_char_regex decode_next_char s
+
+(** {2 Formatting, printing, converting to string. } *)
 
 let buf = Buffer.create 1024
+
 let buf_formatter =
   let fmt = Format.formatter_of_buffer buf in
     Format.pp_set_margin fmt max_int;
@@ -108,16 +171,24 @@ let pp_package fmt pkg =
 let string_of_version = string_of pp_version
 let string_of_package = string_of pp_package
 
-let is_essential pkg =
-  try (Cudf.lookup_package_property pkg "essential") = "yes"
-  with Not_found -> false
-
 module StringSet = OCAMLSet.Make(String)
 
 let pkgnames universe =
   Cudf.fold_packages (fun names pkg ->
     StringSet.add pkg.Cudf.package names
   ) StringSet.empty universe
+
+(** {2 Additional functions on the CUDF data type. } *)
+
+let add_properties preamble l =
+  List.fold_left (fun pre prop ->
+    {pre with Cudf.property = prop :: pre.Cudf.property }
+  ) preamble l
+
+let is_essential pkg =
+  try (Cudf.lookup_package_property pkg "essential") = "yes"
+  with Not_found -> false
+
 
 (** build an hash table that associates (package name, String version) to
  * cudf packages *)
