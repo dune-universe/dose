@@ -219,7 +219,8 @@ let main () =
   in
 
   let pp pkg =
-    let (p,v) = from_cudf (pkg.Cudf.package,pkg.Cudf.version) in 
+    let (p,v) = (*CudfAdd.decode pkg.Cudf.package,CudfAdd.string_of_version pkg*) ( from_cudf
+    (pkg.Cudf.package,pkg.Cudf.version) ) in 
     let l = 
       List.filter_map (fun k ->
         try Some(k,Cudf.lookup_package_property pkg k)
@@ -240,11 +241,6 @@ let main () =
       Format.std_formatter
   in
   let results = Diagnostic.default_result universe_size in
-
-  (*
-  if archs <> [] then
-    Format.fprintf fmt "architectures: %s@." (ExtString.String.join "," archs);
-    *)
 
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
   let callback d =
@@ -303,7 +299,6 @@ let main () =
   in
   (* if at least one broken package then we set the exit code = 1 *)
   if number_broken > 0 then exit(1);
-  
 ;;
 
 main () ;;

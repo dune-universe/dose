@@ -113,11 +113,11 @@ let init_tables ?(step=1) ?(versionlist=[]) pkglist =
   let l = Hashtbl.fold (fun v _ acc -> v::acc) temp_versions_table [] in
   let add_reverse i (n,v) =
      try 
-       let s = Util.IntHashtbl.find tables.reverse_table i in 
-       s := (SMap.add n v !s)
+       let m = Util.IntHashtbl.find tables.reverse_table i in 
+       m := (SMap.add n v !m)
      with Not_found ->
-       let s = SMap.add n v SMap.empty in
-       Util.IntHashtbl.add tables.reverse_table i (ref s)
+       let m = SMap.add n v SMap.empty in
+       Util.IntHashtbl.add tables.reverse_table i (ref m)
   in
   let sl = List.sort ~cmp:(fun x y -> Version.compare (fst x) (fst y)) l in
   let rec numbers (prec,i) = function
@@ -145,13 +145,13 @@ let get_cudf_version tables (package,version) =
     raise Not_found
   end
 
-let get_real_version tables (package,cudfversion) =
-  let package = CudfAdd.decode package in
+let get_real_version tables (name,cudfversion) =
+  let package = CudfAdd.decode name in
   try
     let m = !(Util.IntHashtbl.find tables.reverse_table cudfversion) in
-    try SMap.find package m with Not_found -> fatal "%s" package
+    try SMap.find package m with Not_found -> fatal "%s" name
   with Not_found ->
-    fatal "package (%s,%d) is not known" package cudfversion
+    fatal "package (%s,%d) is not known" name cudfversion
 
 let loadl tables l =
   List.flatten (
