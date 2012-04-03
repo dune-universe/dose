@@ -169,6 +169,7 @@ let set_options = function
   |Url.Hdlist -> None
   |Url.Eclipse -> Some (Boilerplate.Eclipse Debian.Debcudf.default_options)
   |Url.Cudf -> None
+  |_ -> fatal "Unkown input format"
 ;;
 
 let main () =

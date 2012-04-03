@@ -53,9 +53,6 @@
 <experimental/deb-cudf.*>: use_boilerplateNoRpm
 <experimental/aptsolutions.*>: use_boilerplateNoRpm
 <experimental/edsp-cudf.*>: use_boilerplateNoRpm
-<experimental/bootstrap.*>: use_boilerplateNoRpm, use_algo
-<experimental/bootstrap2.*>: use_boilerplateNoRpm, use_algo
-<experimental/rpm-cudf.*>: @USE_RPM@, use_boilerplate
 <experimental/dominators-graph.*>: @USE_RPM@, use_boilerplate, use_algo
 
 <experimental/strongpreds.*>: @USE_RPM@, use_algo, use_boilerplate

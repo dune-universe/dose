@@ -135,6 +135,7 @@ let set_options = function
   |Url.Hdlist -> None
   |Url.Eclipse -> Some (Boilerplate.Eclipse Debian.Debcudf.default_options)
   |Url.Cudf -> None
+  |_ -> fatal "Unknown Url format"
 ;;
 
 let add_format t = List.map (fun s -> (Url.scheme_to_string t)^"://"^s)
