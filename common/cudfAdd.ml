@@ -83,33 +83,16 @@ let to_set l = List.fold_right Cudf_set.add l Cudf_set.empty
     }
 *)
 let encode s =
-  let not_allowed_regex = Str.regexp  "[^a-zA-Z0-9@/+().-]"
+  let not_allowed_regex = Pcre.regexp "[^a-zA-Z0-9@/+().-]"
   in
-  let search s =
-    try (Str.search_forward not_allowed_regex s 0) >= 0
-    with Not_found -> false
-  in
-  (*  "encode_char char" returns the ASCII code of the given character
+  (*  "hex_char char" returns the ASCII code of the given character
       in the hexadecimal form, prefixed with the '%' sign.
-      e.g. encode_char '+' = "%2b" *)
-  let encode_char char = Printf.sprintf "%%%x" (Char.code char) 
+      e.g. hex_char '+' = "%2b" *)
+  let hex_char char = Printf.sprintf "%%%x" (Char.code char)
   in
-  if search s then begin
-    (* If there are some "not allowed" charactes in the string: *)
-    let n = String.length s in
-    let b = Buffer.create n in
-    (* for each character *)
-    for i = 0 to n-1 do
-      let s' = String.of_char s.[i] in
-      if Str.string_match not_allowed_regex s' 0 then
-	(* if it is "not allowed" it gets converted, *)
-        Buffer.add_string b (encode_char s.[i])
-      else
-	(* if it is "allowed" it stays the same. *)
-        Buffer.add_string b s'
-    done;
-    Buffer.contents b
-  end else s
+  let hex_string s = String.replace_chars hex_char s
+  in
+  Pcre.substitute ~rex:not_allowed_regex ~subst:hex_string s
 
 (** Decode a string. Opposite of the [encode] function.
 
@@ -124,23 +107,19 @@ let encode s =
     }
 *)
 let decode s =
-  let encoded_char_regex = Str.regexp "%[0-9a-f][0-9a-f]" 
+  let encoded_char_regex = Pcre.regexp "%[0-9a-f][0-9a-f]" 
   in
-  (* "decode_char encoded" returns the decoded form 
+  (* "unhex_char encoded" returns the decoded form 
       of a character, which was encoded using 
-      the encode_char function.
-      e.g. decode_char "%2b" = '+' *)
-  let decode_char encoded_char =
+      the hex_char function.
+      e.g. unhex_char "%2b" = '+' *)
+  let unhex_char encoded_char =
     let ascii_code_hex = String.sub encoded_char 1 2 in
     let ascii_code_dec = int_of_string ("0x" ^ ascii_code_hex) in
     String.make 1 (Char.chr ascii_code_dec)
   in
-  let decode_next_char s =
-    let encoded_char = Str.matched_string s in
-    decode_char encoded_char
-  in
   (* Decode all the encoded chars in the string one by one. *)
-  Str.global_substitute encoded_char_regex decode_next_char s
+  Pcre.substitute ~rex:encoded_char_regex ~subst:unhex_char s
 
 (** {2 Formatting, printing, converting to string. } *)
 
