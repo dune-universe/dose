@@ -274,7 +274,6 @@ let deb_parse_input options urilist =
   deb_load_list options dll
 
 let eclipse_parse_input options urilist =
-  let extras = [] in
   let dll = 
     List.map (fun l ->
       let filelist = List.map unpack l in
