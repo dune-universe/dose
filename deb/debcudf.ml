@@ -16,17 +16,15 @@ open ExtLib
 open Common
 open Packages
 
-let debug fmt = Util.make_debug __FILE__ fmt
-let info fmt = Util.make_info __FILE__ fmt
-let warning fmt = Util.make_warning __FILE__ fmt
-let fatal fmt = Util.make_fatal __FILE__ fmt
+include Util.Logging(struct let label = __FILE__ end) ;;
+module SMap = Map.Make (String)
 
 type tables = {
   virtual_table : unit Util.StringHashtbl.t;
   unit_table : unit Util.StringHashtbl.t ;
   versions_table : int Util.StringHashtbl.t;
   versioned_table : unit Util.StringHashtbl.t;
-  reverse_table : string list ref Util.IntHashtbl.t
+  reverse_table : (string SMap.t) ref Util.IntHashtbl.t
 }
 
 let create n = {
@@ -54,6 +52,10 @@ let add table k v =
   if not(Util.StringHashtbl.mem table k) then
     Util.StringHashtbl.add table k v
 
+let add_v table k v =
+  if not(Hashtbl.mem table k) then
+    Hashtbl.add table k v
+
 (* collect names of virtual packages *)
 let init_virtual_table table pkg =
   List.iter (fun (name,_) -> add table name ()) pkg.provides
@@ -78,15 +80,15 @@ let init_versions_table table pkg =
     List.iter (fun (name,sel) ->
       match CudfAdd.cudfop sel with
       |None -> ()
-      |Some(_,version) -> add table version ()
+      |Some(_,version) -> add_v table (version,name) ()
     ) l
   in
   let cnf_iter ll = List.iter conj_iter ll in
   let add_source pv = function
-    |(_,None) -> add table pv ()
-    |(p,Some(v)) -> add table v ()
+    |(p,None) -> add_v table (pv,p) ()
+    |(p,Some(v)) -> add_v table (v,p) ()
   in 
-  add table pkg.version ();
+  add_v table (pkg.version,pkg.name) ();
   conj_iter pkg.breaks;
   conj_iter pkg.provides;
   conj_iter pkg.conflicts ;
@@ -100,30 +102,34 @@ let init_versions_table table pkg =
 let init_tables ?(step=1) ?(versionlist=[]) pkglist =
   let n = List.length pkglist in
   let tables = create n in 
-  let temp_versions_table = Util.StringHashtbl.create (10 * n) in
+  let temp_versions_table = Hashtbl.create (10 * n) in
   let ivt = init_versions_table temp_versions_table in
   let ivrt = init_virtual_table tables.virtual_table in
   let ivdt = init_versioned_table tables.versioned_table in
   let iut = init_unit_table tables.unit_table in
 
-  List.iter (fun v -> add temp_versions_table v ()) versionlist; 
+  List.iter (fun v -> add_v temp_versions_table (v,"") ()) versionlist; 
   List.iter (fun pkg -> ivt pkg ; ivrt pkg ; ivdt pkg ; iut pkg) pkglist ;
-  let l = Util.StringHashtbl.fold (fun v _ acc -> v::acc) temp_versions_table [] in
-  let add_reverse i v =
-     try let l = Util.IntHashtbl.find tables.reverse_table i in l := v::!l
-     with Not_found -> Util.IntHashtbl.add tables.reverse_table i (ref [v])
+  let l = Hashtbl.fold (fun v _ acc -> v::acc) temp_versions_table [] in
+  let add_reverse i (n,v) =
+     try 
+       let m = Util.IntHashtbl.find tables.reverse_table i in 
+       m := (SMap.add n v !m)
+     with Not_found ->
+       let m = SMap.add n v SMap.empty in
+       Util.IntHashtbl.add tables.reverse_table i (ref m)
   in
-  let sl = List.sort ~cmp:Version.compare l in
+  let sl = List.sort ~cmp:(fun x y -> Version.compare (fst x) (fst y)) l in
   let rec numbers (prec,i) = function
     |[] -> ()
-    |v::t ->
+    |(v,n)::t ->
       if Version.equal v prec then begin
         add tables.versions_table v i;
-        add_reverse i v;
+        add_reverse i (n,v);
         numbers (prec,i) t
       end else begin
         add tables.versions_table v (i+step);
-        add_reverse (i+step) v;
+        add_reverse (i+step) (n,v);
         numbers (v,(i+step)) t
       end
   in
@@ -135,24 +141,17 @@ let init_tables ?(step=1) ?(versionlist=[]) pkglist =
 let get_cudf_version tables (package,version) =
   try Util.StringHashtbl.find tables.versions_table version
   with Not_found -> begin
-    warning "This should never happen : (%s,%s) is not known" package version;
+    warning "(%s,%s) is not known" package version;
     raise Not_found
   end
 
-let get_real_version tables (package,cudfversion) =
-  let min a b = match Version.compare a b with -1 -> a | _ -> b in
+let get_real_version tables (name,cudfversion) =
+  let package = CudfAdd.decode name in
   try
-    match !(Util.IntHashtbl.find tables.reverse_table cudfversion) with
-    |[] -> fatal "This should never happen : at lease one version for (%s,%d) must exist" package cudfversion
-    |[h] -> h
-    |l ->
-        begin
-          let v = List.fold_left min "999999:999999" l in
-          debug "version %s is equivalent to (%s)" v (String.concat "," l);
-          v
-        end
+    let m = !(Util.IntHashtbl.find tables.reverse_table cudfversion) in
+    try SMap.find package m with Not_found -> fatal "%s" name
   with Not_found ->
-    fatal "This should never happen : (%s,%d) is not known" package cudfversion
+    fatal "package (%s,%d) is not known" name cudfversion
 
 let loadl tables l =
   List.flatten (

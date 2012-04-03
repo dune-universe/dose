@@ -79,6 +79,15 @@ AC_DEFUN([AC_PROG_OCAML],
   # checking for ocamldep
   AC_CHECK_TOOL([OCAMLDEP],[ocamldep],[no])
 
+  # checking for ocamldep.opt
+  if test "$OCAMLDEP" != "no" ; then
+     AC_CHECK_TOOL([OCAMLDEPDOTOPT],[ocamldep.opt],[no])
+     if test "$OCAMLDEPDOTOPT" != "no"; then
+         OCAMLDEP=$OCAMLDEPDOTOPT
+     fi
+  fi
+  AC_SUBST([OCAMLDEP])
+
   # checking for ocamlmktop
   AC_CHECK_TOOL([OCAMLMKTOP],[ocamlmktop],[no])
 

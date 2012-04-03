@@ -23,12 +23,8 @@ module OCAMLSet = Set
 
 open ExtLib
 
-(** {3 Internal debugging functions for this module.} *)
-
-let debug fmt = Util.make_debug __FILE__ fmt
-let info fmt = Util.make_info __FILE__ fmt
-let warning fmt = Util.make_warning __FILE__ fmt
-let fatal fmt = Util.make_fatal __FILE__ fmt
+(** {3 Include internal debugging functions for this module (debug, info, warning, fatal).} *)
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 (** the id of a package 
     TODO: check if used anywhere. *)

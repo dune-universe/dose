@@ -20,10 +20,7 @@ let domtimer = Util.Timer.create "Algo.Dominators.dominators"
 let tjntimer = Util.Timer.create "Algo.Dominators.tarjan"
 let crtimer = Util.Timer.create "Algo.Dominators.cycle_reduction"
 
-let debug fmt = Util.make_debug "Dominators" fmt
-let info fmt = Util.make_info "Dominators" fmt
-let warning fmt = Util.make_warning "Dominators" fmt
-let fatal fmt = Util.make_fatal "Dominators" fmt
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 module G = Defaultgraphs.PackageGraph.G
 module C = Components.Make(G)

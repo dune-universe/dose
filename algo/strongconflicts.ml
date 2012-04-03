@@ -14,6 +14,8 @@ open Common
 open CudfAdd
 open Defaultgraphs
 
+include Util.Logging(struct let label = __FILE__ end) ;;
+
 module ICG = Strongconflicts_int.CG
 
 type cfl_type = Explicit | Conjunctive | Other of Diagnostic.reason list

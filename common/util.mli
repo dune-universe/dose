@@ -80,18 +80,20 @@ module Info : Messages
   Debug.enable "MyModuleLabel"
 *)
 
-(** [make_debug l] create a new printing functions with label [l] *)
-val make_debug : label -> ('a, unit, string, unit) format4 -> 'a
-
-(** [make_info l] create a new printing functions with label [l] *)
-val make_info : label -> ('a, unit, string, unit) format4 -> 'a
-
-(** [make_warning l] create a new printing functions with label [l] *)
-val make_warning : label -> ('a, unit, string, unit) format4 -> 'a
-
-(** [make_fatal l] created a function that will throw a fatal exception 
-    with failwith *)
-val make_fatal : string -> ('a, unit, string, 'b) format4 -> 'a
+(* 
+  include Util.Logging(struct let label = __FILE__ end) ;;
+*)
+module Logging :
+  functor (X : sig val label : string end) ->
+    sig
+      val it : Info.t
+      val info : ('a, unit, string, unit) format4 -> 'a
+      val wt : Warning.t
+      val warning : ('a, unit, string, unit) format4 -> 'a
+      val dt : Debug.t
+      val debug : ('a, unit, string, unit) format4 -> 'a
+      val fatal : ('a, unit, string, 'b) format4 -> 'a
+    end
 
 (** ProgressBars are printed immediately on stderr. 
  * To be used, the **must** be created outside the functions where
