@@ -66,6 +66,67 @@ let to_set l = List.fold_right Cudf_set.add l Cudf_set.empty
 (** {2 Encode and decode a string functions. } *)
 (** TODO: What are these functions doing in this module? *)
 
+module EncodingHashtable =
+  OCAMLHashtbl.Make(struct
+    type t = string
+    let equal = (=)
+    let hash = fun s -> Char.code (s.[0])
+  end)
+
+module DecodingHashtable =
+  OCAMLHashtbl.Make(struct
+    type t = string
+    let equal = (=)
+    let hash = (fun s -> (Char.code s.[1]) * 1000 + (Char.code s.[2]) )
+
+(*      ( int_of_string ("0x" ^ s.[1]) ) * 16 + ( int_of_string ("0x" ^ s.[2]) )
+	) *)
+  end)
+
+
+let add_all_ascii_chars_to_hashtables encoding_hashtable decoding_hashtable =
+
+  let all_ascii_chars = 
+    (*  "all_numbers_from_to first last" generates a list of
+	all integers between the first one and the last one
+	(including both ends). *)
+    let rec all_numbers_from_to first last =
+      if first <= last
+      then first :: (all_numbers_from_to (first + 1) last)
+      else []
+    in
+    (* We convert each number from 0 to 255 to a character with the given ASCII code. *)
+    List.map Char.chr (all_numbers_from_to 0 255)
+    
+  in
+
+  (*  "hex_char char" returns the ASCII code of the given character
+      in the hexadecimal form, prefixed with the '%' sign.
+      e.g. hex_char '+' = "%2b" *)
+  let hex_char char = Printf.sprintf "%%%02x" (Char.code char)
+  in
+    
+  List.iter 
+    (fun char -> 
+    let char_as_string = String.make 1 char
+    and hexed_char = hex_char char
+    in
+    EncodingHashtable.add encoding_hashtable char_as_string hexed_char;
+    DecodingHashtable.add decoding_hashtable hexed_char char_as_string
+    )
+    all_ascii_chars
+
+let encoding_hashtable = EncodingHashtable.create 265
+and decoding_hashtable = DecodingHashtable.create 265;;
+
+add_all_ascii_chars_to_hashtables encoding_hashtable decoding_hashtable
+
+let hex_string s   = EncodingHashtable.find encoding_hashtable s
+let unhex_string s = DecodingHashtable.find decoding_hashtable s
+
+let not_allowed_regex = Pcre.regexp "[^a-zA-Z0-9@/+().-]"
+let encoded_char_regex = Pcre.regexp "%[0-9a-f][0-9a-f]" 
+
 (** Encode a string.
 
     Replaces all the "not allowed" characters
@@ -83,16 +144,8 @@ let to_set l = List.fold_right Cudf_set.add l Cudf_set.empty
     }
 *)
 let encode s =
-  let not_allowed_regex = Pcre.regexp "[^a-zA-Z0-9@/+().-]"
-  in
-  (*  "hex_char char" returns the ASCII code of the given character
-      in the hexadecimal form, prefixed with the '%' sign.
-      e.g. hex_char '+' = "%2b" *)
-  let hex_char char = Printf.sprintf "%%%x" (Char.code char)
-  in
-  let hex_string s = String.replace_chars hex_char s
-  in
   Pcre.substitute ~rex:not_allowed_regex ~subst:hex_string s
+
 
 (** Decode a string. Opposite of the [encode] function.
 
@@ -106,20 +159,14 @@ let encode s =
     {li [decode "a%7cb" = "a|b"]}
     }
 *)
-let decode s =
-  let encoded_char_regex = Pcre.regexp "%[0-9a-f][0-9a-f]" 
-  in
+and decode s =
+  Pcre.substitute ~rex:encoded_char_regex ~subst:unhex_string s
+
+
   (* "unhex_char encoded" returns the decoded form 
       of a character, which was encoded using 
       the hex_char function.
       e.g. unhex_char "%2b" = '+' *)
-  let unhex_char encoded_char =
-    let ascii_code_hex = String.sub encoded_char 1 2 in
-    let ascii_code_dec = int_of_string ("0x" ^ ascii_code_hex) in
-    String.make 1 (Char.chr ascii_code_dec)
-  in
-  (* Decode all the encoded chars in the string one by one. *)
-  Pcre.substitute ~rex:encoded_char_regex ~subst:unhex_char s
 
 (** {2 Formatting, printing, converting to string. } *)
 
