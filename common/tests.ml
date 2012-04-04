@@ -140,6 +140,15 @@ let test_lookup_packages =
   ]
 
 let (test_encode, test_decode) =
+  (* Some useful very long strings for testing encoding and decoding. *)
+  let a_lot_of =  (* a huge number *)
+    (Pcre.config_match_limit + 111)
+  in
+  let a_lot_of_a           = String.make a_lot_of 'a'
+  (* This test takes too much time... 
+  and a_lot_of_pipes       = String.make a_lot_of '|' in
+  let a_lot_of_hexed_pipes = ExtLib.String.replace_chars (fun _ -> "%7c") a_lot_of_pipes *)
+  in
   (* List of triplets: (test_name, decoded_string, encoded_string) *)
   let encode_decode_triplets = [
     ("empty", "", "");
@@ -154,11 +163,10 @@ let (test_encode, test_decode) =
      " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
      "%20%21%22%23%24%25%26%27()%2a+%2c-./0123456789%3a%3b%3c%3d%3e%3f@ABCDEFGHIJKLMNOPQRSTUVWXYZ%5b%5c%5d%5e%5f%60abcdefghijklmnopqrstuvwxyz%7b%7c%7d%7e");
     ("several characters out of range 32-126 (i.e. not usual)", "\031\127\213", "%1f%7f%d5");
-    ("path", "/bin/bash__", "/bin/bash%5f%5f");
-    ("huge string of \"allowed\" characters",
-     String.make (Pcre.config_match_limit + 111) 'a',
-     String.make (Pcre.config_match_limit + 111) 'a')
-    (* TODO: huge string of not allowed characters. *)
+    ("huge string of \"allowed\" characters", a_lot_of_a, a_lot_of_a);
+    (* This test takes too much time... 
+    ("huge string of \"not allowed\" characters", a_lot_of_pipes, a_lot_of_hexed_pipes); *)
+    ("path", "/bin/bash__", "/bin/bash%5f%5f")
   ]
   in
   (* From each triplet we generate two test cases, one for
