@@ -17,7 +17,7 @@ open Common
 
 include Util.Logging(struct let label = __FILE__ end) ;;
 
-let space_re = Str.regexp "[ \t]+" 
+let space_re = Str.regexp "[ \t]+" ;;
 
 (* parse the output of "dpkg -l" *)
 let parse_inst ch =
@@ -80,8 +80,8 @@ type apt_req =
 
 let parse_pkg_only s = `Pkg(Packages.parse_name (Format822.dummy_loc,s))
 
-let distro_re = Str.regexp "^\\([^=/]*\\)*/[ \t]*\\(.*\\)$"
-let version_re = Str.regexp "^\\([^=]*\\)*=[ \t]*\\(.*\\)$"
+let distro_re = Str.regexp "^\\([^=/]*\\)*/[ \t]*\\(.*\\)$" ;;
+let version_re = Str.regexp "^\\([^=]*\\)*=[ \t]*\\(.*\\)$" ;;
 let parse_pkg_req suite s =
   try 
     if Str.string_match distro_re s 0 then
@@ -191,23 +191,26 @@ module Pref = struct
 
 end
 
+let comma_re = Str.regexp "[ \t]*,[ \t]*" ;;
+let eq_re = Str.regexp "[ \t]*=[ \t]*" ;;
+let di_re = Str.regexp "[0-9\\.]+" ;;
+let al_re = Str.regexp "[a-zA-Z]+" ;;
+
 let parse_pref_labels s =
-  let comma_re = Str.regexp "[ \t]*,[ \t]*" in
-  let eq_re = Str.regexp "[ \t]*=[ \t]*" in
   List.map (fun s' ->
     match Str.split eq_re s with
-    |[v] when (Str.string_match (Str.regexp "[0-9\\.]+") v 0) -> ("v",v)
-    |[v] when (Str.string_match (Str.regexp "[a-zA-Z]+") v 0) -> ("a",v)
+    |[v] when (Str.string_match di_re v 0) -> ("v",v)
+    |[v] when (Str.string_match al_re v 0) -> ("a",v)
     |[l;v] -> (l,v)
     |_ -> fatal "To many commas in label %s" s
   ) (Str.split comma_re s)
 
-let general_re = Str.regexp "^[ \t]*\\*[ \t]*$"
+let general_re = Str.regexp "^[ \t]*\\*[ \t]*$" ;;
 let parse_pref_package (_,s) =
   if Str.string_match general_re s 0 then Pref.Star
   else Pref.Package (Packages.parse_name (Format822.dummy_loc,s))
 
-let pin_re = Str.regexp "^\\([A-Za-z]+\\)[ \t]+\\(.*\\)$"
+let pin_re = Str.regexp "^\\([A-Za-z]+\\)[ \t]+\\(.*\\)$" ;;
 let parse_pin (_,s) =
   if Str.string_match pin_re s 0 then
     match Str.matched_group 1 s with

@@ -180,9 +180,8 @@ type version_analysis =
     (* epoch,upstream,revision,binnmu *)
 ;;
 
+let binnmu_regexp = Pcre.regexp "^(.*)\\+(b[\\d]+)$" ;;
 let extract_binnmu v =
-  let binnmu_regexp = Pcre.regexp "^(.*)\\+(b[\\d]+)$"
-  in
   try
     let subs = Pcre.extract ~rex:binnmu_regexp v
     in (subs.(1),subs.(2))
