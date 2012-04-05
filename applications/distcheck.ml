@@ -40,12 +40,6 @@ module Options = struct
   let background = Boilerplate.incr_str_list ()
   let foreground = Boilerplate.incr_str_list ()
 
-  let deb_foreign_arch = Boilerplate.str_list_option ()
-  let deb_native_arch = StdOpt.str_option ()
-  let deb_host_arch = StdOpt.str_option ()
-  let deb_build_arch = StdOpt.str_option ()
-  let deb_ignore_essential = StdOpt.store_true ()
-
   open OptParser
 
   add options ~short_name:'t' ~help:"input type format" inputtype;
@@ -70,18 +64,8 @@ module Options = struct
 
   add options ~short_name:'o' ~long_name:"outfile" ~help:"output file" outfile;
 
-  let deb_group = add_group options "Debian Specific Options" in
-  add options ~group:deb_group ~long_name:"deb-native-arch" ~help:"Native architecture" deb_native_arch;
-  (*
-  add options ~group:deb_group ~long_name:"deb-host-arch" ~help:"Host architecture" deb_host_arch;
-  add options ~group:deb_group ~long_name:"deb-build-arch" ~help:"Build architecture" deb_build_arch;
-  *)
-  add options ~group:deb_group ~long_name:"deb-foreign-archs" ~help:"Foreign architectures" deb_foreign_arch;
-  add options ~group:deb_group ~long_name:"deb-ignore-essential" ~help:"Ignore Essential Packages" deb_ignore_essential;
+  include Boilerplate.MakeDistribOptions(struct let options = options end);;
 
-(*  let rpm_group = add_group options "Rpm Specific Options" in
-    let eclipse_group = add_group options "Eclipse Specific Options" in
-*)
 end
 
 include Util.Logging(struct let label = __FILE__ end) ;;
@@ -100,51 +84,6 @@ let guess_format t l =
   |_ -> (Input.guess_format [l], false)
 ;;
 
-let set_options = function
-  |Url.Deb ->
-    let host = 
-      if OptParse.Opt.is_set Options.deb_host_arch then
-        OptParse.Opt.get Options.deb_host_arch
-      else ""
-    in
-    let build =  
-      if OptParse.Opt.is_set Options.deb_build_arch then
-        OptParse.Opt.get Options.deb_build_arch
-      else ""
-    in
-    let native =  
-      if OptParse.Opt.is_set Options.deb_native_arch then
-        OptParse.Opt.get Options.deb_native_arch
-      else ""
-    in
-
-    let archs = 
-      let l = OptParse.Opt.get Options.deb_foreign_arch in
-      let l = if host <> "" then host::l else l in
-      let l = if build <> "" then build::l else l in
-      let l = if native <> "" then native::l else l in
-      l
-    in
-
-    Some (
-      Boilerplate.Deb {
-        Debian.Debcudf.default_options with 
-        Debian.Debcudf.foreign = archs;
-        host = host;
-        build = build;
-        native = native;
-        ignore_essential = OptParse.Opt.get Options.deb_ignore_essential
-      }
-    )
-  |Url.Synthesis -> None
-  |Url.Hdlist -> None
-  |(Url.Pgsql|Url.Sqlite) -> None
-  |Url.Eclipse -> Some (Boilerplate.Eclipse Debian.Debcudf.default_options)
-  |Url.Cudf -> None
-  |Url.Cws -> Some (Boilerplate.Cws Debian.Debcudf.default_options)
-  |_ -> fatal "Unknown Url format"
-;;
-
 let add_format t = List.map (fun s -> (Url.scheme_to_string t)^"://"^s)
 
 let main () =
@@ -158,7 +97,7 @@ let main () =
     ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
   Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
 
-  let options = set_options input_format in
+  let options = Options.set_options input_format in
 
   let fg = OptParse.Opt.get Options.foreground in
   let bg = OptParse.Opt.get Options.background in

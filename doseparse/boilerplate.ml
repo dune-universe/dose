@@ -109,6 +109,83 @@ module MakeOptions(O : Ot) = struct
 
 end
 
+type options =
+  |Deb of Debian.Debcudf.options
+  |Eclipse of Debian.Debcudf.options
+  |Cws of Debian.Debcudf.options
+  |Rpm
+  |Cudf
+
+module MakeDistribOptions(O : sig val options : OptParse.OptParser.t end) = struct
+  open OptParse ;;
+
+  let deb_foreign_arch = str_list_option ()
+  let deb_native_arch = StdOpt.str_option ()
+  let deb_host_arch = StdOpt.str_option ()
+  let deb_build_arch = StdOpt.str_option ()
+  let deb_ignore_essential = StdOpt.store_true ()
+
+  let set_options = function
+    |Url.Deb ->
+      let host =
+        if Opt.is_set deb_host_arch then
+          Opt.get deb_host_arch
+        else ""
+      in
+      let build =
+        if Opt.is_set deb_build_arch then
+          Opt.get deb_build_arch
+        else ""
+      in
+      let native =
+        if Opt.is_set deb_native_arch then
+          Opt.get deb_native_arch
+        else ""
+      in
+
+      let archs =
+        let l = Opt.get deb_foreign_arch in
+        let l = if host <> "" then host::l else l in
+        let l = if build <> "" then build::l else l in
+        let l = if native <> "" then native::l else l in
+        l
+      in
+
+      Some (
+        Deb {
+          Debian.Debcudf.default_options with
+          Debian.Debcudf.foreign = archs;
+          host = host;
+          build = build;
+          native = native;
+          ignore_essential = Opt.get deb_ignore_essential
+        }
+      )
+    |Url.Synthesis -> None
+    |Url.Hdlist -> None
+    |(Url.Pgsql|Url.Sqlite) -> None
+    |Url.Eclipse -> Some (Eclipse Debian.Debcudf.default_options)
+    |Url.Cudf -> None
+    |Url.Cws -> Some (Cws Debian.Debcudf.default_options)
+    |_ -> fatal "Unknown Url format"
+  ;;
+
+  open OptParser ;;
+  let deb_group = add_group O.options "Debian Specific Options" in
+  add O.options ~group:deb_group ~long_name:"deb-native-arch" ~help:"Native architecture" deb_native_arch;
+  (*
+  add options ~group:deb_group ~long_name:"deb-host-arch" ~help:"Host architecture" deb_host_arch;
+  add options ~group:deb_group ~long_name:"deb-build-arch" ~help:"Build architecture" deb_build_arch;
+  *)
+  add O.options ~group:deb_group ~long_name:"deb-foreign-archs" ~help:"Foreign architectures" deb_foreign_arch;
+  add O.options ~group:deb_group ~long_name:"deb-ignore-essential" ~help:"Ignore Essential Packages" deb_ignore_essential;
+
+(*  let rpm_group = add_group options "Rpm Specific Options" in
+    let eclipse_group = add_group options "Eclipse Specific Options" in
+*)
+end
+
+
 let enable_debug = function
   |0 -> () (* only warning messages : default *)
   |1 -> Util.Info.all_enabled ()
@@ -270,13 +347,6 @@ let cudf_load_universe file =
 
 (** return the name of the file *)
 let unpack (_,(_,_,_,_,file),_) = file
-
-type options =
-  |Deb of Debian.Debcudf.options
-  |Eclipse of Debian.Debcudf.options
-  |Cws of Debian.Debcudf.options
-  |Rpm
-  |Cudf
 
 let deb_parse_input options urilist =
   let archs = options.Debian.Debcudf.foreign in

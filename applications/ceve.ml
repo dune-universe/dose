@@ -45,11 +45,6 @@ module Options = struct
   let out_type = out_option ~default:"cnf" ()
   let out_file = StdOpt.str_option ()
 
-  let deb_foreign_arch = Boilerplate.str_list_option ()
-  let deb_native_arch = StdOpt.str_option ()
-  let deb_host_arch = StdOpt.str_option ()
-  let deb_build_arch = StdOpt.str_option ()
-
   open OptParser
   add options ~short_name:'e' ~long_name:"extract" ~help:"dependency/conflict cone" extract;
   add options ~short_name:'c' ~long_name:"cone" ~help:"dependency cone" cone;
@@ -58,13 +53,7 @@ module Options = struct
   add options ~short_name:'t' ~long_name:"outtype" ~help:"Output type" out_type;
   add options ~short_name:'o' ~long_name:"outfile" ~help:"Output file" out_file;
 
-  let deb_group = add_group options "Debian Specific Options" in
-  add options ~group:deb_group ~long_name:"deb-native-arch" ~help:"Native architecture" deb_native_arch;
-  (*
-  add options ~group:deb_group ~long_name:"deb-host-arch" ~help:"Host architecture" deb_host_arch;
-  add options ~group:deb_group ~long_name:"deb-build-arch" ~help:"Build architecture" deb_build_arch;
-  *)
-  add options ~group:deb_group ~long_name:"deb-foreign-archs" ~help:"Foreign architectures" deb_foreign_arch;
+  include Boilerplate.MakeDistribOptions(struct let options = options end);;
 
 end;;
 
@@ -121,52 +110,10 @@ let output_cudf oc pr univ =
   Cudf_printer.pp_universe oc univ
 ;;
 
-let set_options = function
-  |Url.Deb ->
-    let host =
-      if OptParse.Opt.is_set Options.deb_host_arch then
-        OptParse.Opt.get Options.deb_host_arch
-      else ""
-    in
-    let build =
-      if OptParse.Opt.is_set Options.deb_build_arch then
-        OptParse.Opt.get Options.deb_build_arch
-      else ""
-    in
-    let native =
-      if OptParse.Opt.is_set Options.deb_native_arch then
-        OptParse.Opt.get Options.deb_native_arch
-      else ""
-    in
-    let archs = 
-      let l = OptParse.Opt.get Options.deb_foreign_arch in
-      let l = if host <> "" then host::l else l in
-      let l = if build <> "" then build::l else l in
-      let l = if native <> "" then native::l else l in
-      l
-    in
-
-    Some (
-      Boilerplate.Deb {
-        Debian.Debcudf.default_options with 
-        Debian.Debcudf.foreign = archs;
-        host = host;
-        build = build;
-        native = native
-      }
-    )
-  |Url.Synthesis -> None
-  |Url.Hdlist -> None
-  |Url.Eclipse -> Some (Boilerplate.Eclipse Debian.Debcudf.default_options)
-  |Url.Cudf -> None
-  |Url.Cws -> Some (Boilerplate.Cws Debian.Debcudf.default_options)
-  |_ -> fatal "Unkown input format"
-;;
-
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
   let input_format = Input.guess_format [posargs] in
-  let options = set_options input_format in
+  let options = Options.set_options input_format in
 
   Boilerplate.enable_debug(OptParse.Opt.get Options.verbose);
 
