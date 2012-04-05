@@ -25,8 +25,8 @@ let conjtimer = Util.Timer.create "Strongdeps_int.conjdep"
 
 include Util.Logging(struct let label = __FILE__ end) ;;
 
-module G = IntPkgGraph.G
-module O = IntPkgGraph.O
+module G = PackageGraph.G
+module O = PackageGraph.O
 
 (** check if p strongly depends on q.
     We check if it is possible to install p without q.  *)
@@ -41,12 +41,14 @@ let strong_depends solver p q =
   |Depsolver_int.Success _ -> false
 
 (** check if [p] strong depends on any packages in [l] *)
-let check_strong transitive graph solver p l =
+let check_strong univ transitive graph solver p l =
+  let pkg_p = CudfAdd.inttovar univ p in
   List.iter (fun q ->
+    let pkg_q = CudfAdd.inttovar univ q in
     if p <> q then
-      if not(G.mem_edge graph p q) then
+      if not(G.mem_edge graph pkg_p pkg_q) then
         if strong_depends solver p q then 
-          IntPkgGraph.add_edge transitive graph p q
+          PackageGraph.add_edge transitive graph pkg_p pkg_q
   ) l
 
 (* true if at least one dependency is disjunctive *)
@@ -67,9 +69,10 @@ let strongdeps_int ?(transitive=true) graph univ l =
   let cudfpool = Depsolver_int.init_pool_univ univ in
   Util.Progress.set_total mainbar (List.length l);
   Util.Timer.start strongtimer;
-  List.iter (fun id ->
+  List.iter (fun pkg ->
     Util.Progress.progress mainbar;
-    G.add_vertex graph id;
+    G.add_vertex graph pkg;
+    let id = CudfAdd.vartoint univ pkg in
     if somedisj cudfpool id then begin 
       let closure = Depsolver_int.dependency_closure_cache cudfpool [id] in
       let solver = Depsolver_int.init_solver_closure cudfpool closure in
@@ -86,7 +89,9 @@ let strongdeps_int ?(transitive=true) graph univ l =
   graph
 ;;
 
+(*
 module S = Set.Make (struct type t = int let compare = Pervasives.compare end)
+*)
 
 let strongdeps ?(transitive=true) univ closure =
   let size = Cudf.universe_size univ in
@@ -97,7 +102,7 @@ let strongdeps ?(transitive=true) univ closure =
   let l = 
     List.fold_left (fun acc id ->
       Util.Progress.progress conjbar;
-      IntPkgGraph.conjdepgraph_int ~transitive graph univ id;
+      PackageGraph.conjdepgraph_int ~transitive graph univ id;
       id :: acc
     ) [] closure
   in
@@ -116,10 +121,9 @@ let strongdeps_univ ?(transitive=true) univ =
   Util.Timer.start conjtimer;
   let l = 
     Cudf.fold_packages (fun acc pkg ->
-      let id = Cudf.uid_by_package univ pkg in
       Util.Progress.progress conjbar;
-      IntPkgGraph.conjdepgraph_int ~transitive graph univ id;
-      id :: acc
+      PackageGraph.conjdepgraph_int ~transitive graph univ pkg;
+      pkg :: acc
     ) [] univ
   in
   Util.Progress.reset conjbar;
@@ -141,11 +145,11 @@ let stronglist graph q =
 
 let impactset graph q =
   if G.mem_vertex graph q then
-    G.fold_pred (fun p acc -> S.add p acc) graph q S.empty
-  else S.empty
+    G.fold_pred (fun p acc -> PackageGraph.S.add p acc) graph q PackageGraph.S.empty
+  else PackageGraph.S.empty
 
 let strongset graph q =
   if G.mem_vertex graph q then
-    G.fold_succ (fun p acc -> S.add p acc) graph q S.empty
-  else S.empty
+    G.fold_succ (fun p acc -> PackageGraph.S.add p acc) graph q PackageGraph.S.empty
+  else PackageGraph.S.empty
 

@@ -115,7 +115,7 @@ endif
 #ocamlgraph support
 ifeq ("@HAS_OCAMLGRAPH@","yes")
   TARGETS += \
-	     applications/ceve.$(OCAMLBEST)
+	     applications/smallworld.$(OCAMLBEST)
 endif
 
 #ounit support

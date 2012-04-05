@@ -95,13 +95,14 @@ let main () =
   (* at_exit (fun () -> Util.dump Format.err_formatter); *)
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
-  let (universe,_,_) = Boilerplate.load_universe posargs in
+  let (_,universe,_,_) = Boilerplate.load_universe posargs in
   let gr = 
   begin
     let gr' = if OptParse.Opt.get Options.strong_deps then
       Strongdeps.strongdeps_univ universe
     else 
-      Defaultgraphs.PackageGraph.dependency_graph universe in
+      Defaultgraphs.PackageGraph.dependency_graph universe 
+    in
     if OptParse.Opt.get Options.detrans then O.transitive_reduction gr';
     if OptParse.Opt.get Options.closure then O.O.transitive_closure gr'
     else gr'

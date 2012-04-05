@@ -25,7 +25,7 @@ open Common
 include Util.Logging(struct let label = __FILE__ end) ;;
 
 module Make (G: Sig.G) = struct
-	module VS = Set.Make (G.V)
+  module VS = Set.Make (G.V)
   module UndG = Imperative.Graph.Concrete(G.V) 
 
   let undirect g =

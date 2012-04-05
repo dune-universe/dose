@@ -207,6 +207,59 @@ module MakePackageGraph(V : Sig.COMPARABLE with type t = Cudf.package )(E : Sig.
   module Display = DisplayF(G)
   module D = Graph.Graphviz.Dot(Display)
 
+  let add_edge transitive graph i j =
+    let rec adapt k red =
+      let new_red = 
+        S.fold (fun l acc ->
+          if k <> l then G.add_edge graph k l;
+          G.fold_succ (fun m acc' ->
+            if not (G.mem_edge graph k m) then S.add m acc'
+            else acc'
+          ) graph l acc
+        ) red S.empty 
+      in
+      if S.is_empty new_red then ()
+      else adapt k new_red
+    in
+    (* debug "Adding edge from %d to %d" i j; *)
+    G.add_edge graph i j;
+    if transitive then begin
+      adapt i (S.singleton j);
+      G.iter_pred (fun k ->
+        if not (G.mem_edge graph k j) then
+          adapt k (S.singleton j)
+      ) graph i
+    end
+
+  (** add to the graph all conjunctive dependencies of package id *)
+  let conjdepgraph_int ?(transitive=false) graph univ p =
+    G.add_vertex graph p;
+    List.iter (fun vpkgs ->
+      match CudfAdd.resolve_deps univ vpkgs with
+      |[q] when not(CudfAdd.equal q p) -> add_edge transitive graph p q
+      |_ -> ()
+    ) p.Cudf.depends
+
+  (** for all id \in idlist add to the graph all conjunctive dependencies *)
+  let conjdepgraph univ idlist =
+    let graph = G.create ~size:(List.length idlist) () in
+    List.iter (conjdepgraph_int graph univ) idlist;
+    graph
+
+  (** given a graph return the conjunctive dependency closure of the package id *)
+  let conjdeps graph =
+    let h = Hashtbl.create (G.nb_vertex graph) in
+    fun id ->
+      try Hashtbl.find h id
+      with Not_found -> begin
+        let module Dfs = Traverse.Dfs(G) in
+        let l = ref [] in
+        let collect id = l := id :: !l in
+        Dfs.prefix_component collect graph id;
+        Hashtbl.add h id !l;
+        !l
+      end
+
   (** Build the dependency graph from the given cudf universe *)
   let dependency_graph ?(conjunctive=false) universe =
     let gr = G.create () in
@@ -297,6 +350,24 @@ module MakePackageGraph(V : Sig.COMPARABLE with type t = Cudf.package )(E : Sig.
       D.output_graph oc pkggraph;
       close_out oc
     end 
+
+  let load pkglist filename =
+    let timer = Util.Timer.create "Defaultgraph.PackageGrah.load" in
+    Util.Timer.start timer;
+    let ic = open_in filename in
+    let (detrans,graph) = ((Marshal.from_channel ic) :> (bool * G.t)) in
+    close_in ic ;
+    info "Loading Strong Dependencies graph";
+    (* we assume the graph is detransitivitized *)
+    let sg =
+      if detrans then begin 
+        info "Computing transitive closure";
+        (* O.add_transitive_closure graph *) 
+        graph
+      end else graph
+    in
+    Util.Timer.stop timer sg
+
 
 end
 

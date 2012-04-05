@@ -23,7 +23,7 @@ include Util.Logging(struct let label = __FILE__ end) ;;
 let strongdeps ?(transitive=true) universe pkglist =
   let idlist = List.map (CudfAdd.vartoint universe) pkglist in
   let closure = Depsolver_int.dependency_closure universe idlist in
-  Strongdeps_int.strongdeps ~transitive universe closure
+  Strongdeps_int.strongdeps ~transitive universe pkglist
 
 (** [strongdeps_univ u] build the strong dependency graph of 
     all packages in the universe [u] *)
