@@ -45,6 +45,7 @@ TARGETS= \
    applications/apt-cudf.$(OCAMLBEST) \
    applications/outdated.$(OCAMLBEST) \
    applications/challenged.$(OCAMLBEST) \
+   applications/strong-deps.$(OCAMLBEST) \
 
 BYTELIBS=
 OPTLIBS=
@@ -73,7 +74,7 @@ installcudf:
 uninstallcudf:
 endif
 
-BYTELIBS += common/common.cma deb/debian.cma rpm/rpm.cma eclipse/eclipse.cma algo/algo.cma doseparse/boilerplateNoRpm.cma doseparse/boilerplate.cma
+BYTELIBS += common/common.cma deb/debian.cma rpm/rpm.cma opencws/cws.cma eclipse/eclipse.cma algo/algo.cma doseparse/boilerplateNoRpm.cma doseparse/boilerplate.cma
 
 ifeq ("@OCAMLBEST@","opt")
   OPTLIBS += $(BYTELIBS:%.cma=%.cmxa) 

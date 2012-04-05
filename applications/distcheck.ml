@@ -135,6 +135,7 @@ let set_options = function
   |Url.Hdlist -> None
   |Url.Eclipse -> Some (Boilerplate.Eclipse Debian.Debcudf.default_options)
   |Url.Cudf -> None
+  |Url.Cws -> Some (Boilerplate.Cws Debian.Debcudf.default_options)
   |_ -> fatal "Unknown Url format"
 ;;
 

@@ -75,6 +75,15 @@ eclipse/eclipse.%:
 	  fi ; \
 	done
 
+opencws/cws.%:
+	$(OCAMLBUILD) $(OBFLAGS) opencws/cws.$*
+	@for i in _build/opencws/cws.*; do \
+	  if [ -e $$i ]; then \
+	  cp $$i $(DOSELIBS) ; \
+	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
+	  fi ; \
+	done
+
 doseparse/boilerplate.%:
 	$(OCAMLBUILD) $(OBFLAGS) doseparse/boilerplate.$*
 	@for i in _build/doseparse/boilerplate.*; do \

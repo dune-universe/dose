@@ -20,8 +20,9 @@
 <rpm/*.ml{i,}>: use_common
 <algo/*.ml{i,}>: use_common, @PKG_OCAMLGRAPH@
 <eclipse/*.ml{i,}>: use_common, use_debian
-<doseparse/boilerplate.ml>: use_common, use_debian, use_eclipse, @USE_RPM@
-<doseparse/boilerplateNoRpm.ml>: use_common, use_debian, use_eclipse
+<opencws/*.ml{i,}>: use_common, use_debian
+<doseparse/boilerplate.ml>: use_common, use_debian, use_eclipse, use_cws, @USE_RPM@
+<doseparse/boilerplateNoRpm.ml>: use_common, use_debian, use_eclipse, use_cws
 <rpm/librpm4_stubs.*>: use_rpm, use_rpm4
 <rpm/librpm5_stubs.*>: use_rpm, use_rpm5
 <rpm/rpm.cm{x,}a>: @USE_RPM@
@@ -31,9 +32,10 @@
 <algo/*.cmx>: for-pack(Algo)
 <deb/*.cmx>: for-pack(Debian)
 <eclipse/*.cmx>: for-pack(Eclipse)
+<opencws/*.cmx>: for-pack(Cws)
 <rpm/*.cmx>: for-pack(Rpm)
 
-<{applications,experimental}/*>: use_common, use_debian, use_eclipse
+<{applications,experimental}/*>: use_common, use_debian, use_eclipse, use_cws
 <{applications,experimental}/*>: package(extlib), package(pcre), package(str), package(unix)
 <{applications,experimental}/*>: @PKG_CUDF@, @PKG_OCAMLGRAPH@, @PKG_ZIP@, @PKG_BZ2@
 
@@ -63,4 +65,4 @@
 <experimental/partition.*>: use_algo, package(buddy), use_boilerplateNoRpm
 <experimental/cnftocudf.*>: use_boilerplateNoRpm
 
-<experimental/dudftocudf/*>: use_common, use_debian, use_eclipse, package(extlib), package(pcre), package(str), package(unix), @PKG_CUDF@, @PKG_ZIP@, @PKG_BZ2@, @PKG_CURL@, @PKG_XML@, use_boilerplateNoRpm
+<experimental/dudftocudf/*>: use_common, use_debian, use_eclipse, use_cws, package(extlib), package(pcre), package(str), package(unix), @PKG_CUDF@, @PKG_ZIP@, @PKG_BZ2@, @PKG_CURL@, @PKG_XML@, use_boilerplateNoRpm

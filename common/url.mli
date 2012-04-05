@@ -11,7 +11,7 @@
 (****************************************************************************)
 
 type input_scheme =
-    Deb | Cudf | Eclipse | Synthesis | Hdlist  (* file types *)
+  | Cws | Deb | Cudf | Eclipse | Synthesis | Hdlist  (* file types *)
   | Sqlite | Pgsql                             (* data bases *)
 ;;
 

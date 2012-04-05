@@ -183,6 +183,20 @@ let eclipse_load_list options dll =
   let preamble = Eclipse.Eclipsecudf.preamble in
   (preamble,cll,from_cudf,to_cudf)
  
+let cws_load_list options dll =
+  let extras = [] in
+  let pkglist = List.flatten dll in
+  let tables = Cws.Cwscudf.init_tables pkglist in
+  let from_cudf (p,i) = (p, Cws.Cwscudf.get_real_version tables (p,i)) in
+  let to_cudf (p,v) = (p, Cws.Cwscudf.get_cudf_version tables (p,v)) in
+  let cll = 
+    List.map (fun l ->
+      List.map (Cws.Cwscudf.tocudf ~extras tables) l
+    ) dll
+  in
+  let preamble = Cws.Cwscudf.preamble in
+  (preamble,cll,from_cudf,to_cudf)
+ 
 (** transform a list of debian control stanza into a cudf universe *)
 let deb_load_universe options l =
   let (pr,cll,f,t) = deb_load_list options [l] in
@@ -260,6 +274,7 @@ let unpack (_,(_,_,_,_,file),_) = file
 type options =
   |Deb of Debian.Debcudf.options
   |Eclipse of Debian.Debcudf.options
+  |Cws of Debian.Debcudf.options
   |Rpm
   |Cudf
 
@@ -281,6 +296,15 @@ let eclipse_parse_input options urilist =
     ) urilist
   in
   eclipse_load_list options dll
+
+let cws_parse_input options urilist =
+  let dll = 
+    List.map (fun l ->
+      let filelist = List.map unpack l in
+      Cws.Packages.input_raw filelist
+    ) urilist
+  in
+  cws_load_list options dll
 
 let cudf_parse_input urilist =
   match urilist with
@@ -307,6 +331,8 @@ let parse_input ?(options=None) urilist =
 
   |Url.Deb, Some (Deb opt) -> deb_parse_input opt filelist
   |Url.Eclipse, Some (Eclipse opt) -> eclipse_parse_input opt filelist
+
+  |Url.Cws, Some (Cws opt) -> cws_parse_input opt filelist
 
   |Url.Hdlist, None -> 
 IFDEF HASRPM THEN
