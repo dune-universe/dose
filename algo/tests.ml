@@ -239,14 +239,10 @@ let solution_set =
   List.fold_right S.add pl S.empty
 
 let test_strong ?(transitive=true) file l =
-  let universe = load_univ file in
-  let module G = Defaultgraphs.IntPkgGraph.G in
+  let module G = Defaultgraphs.PackageGraph.G in
+  let (_,universe,_) = Cudf_parser.load_from_file file in
   let g = Strongdeps.strongdeps_univ ~transitive universe in
-  let sdedges = 
-    G.fold_edges (fun p q l ->
-      (Cudf.package_by_uid universe p,Cudf.package_by_uid universe q)::l
-    ) g [] 
-  in
+  let sdedges = G.fold_edges (fun p q l -> (p,q)::l) g [] in
   let testedges =
     List.map (fun (v,z) ->
       let p = Cudf.lookup_package universe v in
