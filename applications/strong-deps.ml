@@ -40,7 +40,7 @@ end
 
 include Util.Logging(struct let label = __FILE__ end) ;;
 
-module G = Defaultgraphs.IntPkgGraph.G
+module G = Defaultgraphs.PackageGraph.G
 module O = Defaultgraphs.GraphOper(G)
 
 module PG = Defaultgraphs.PackageGraph.G
@@ -105,12 +105,11 @@ let main () =
       in
       (* O.transitive_reduction sdgraph; *)
       if OptParse.Opt.get Options.dot then begin
-        let pkggraph = Defaultgraphs.intcudf universe sdgraph in
-        Defaultgraphs.PackageGraph.D.output_graph stdout pkggraph;
+        Defaultgraphs.PackageGraph.D.output_graph stdout sdgraph;
       end else begin
         let sdgraph = O.O.transitive_closure sdgraph in
         let pp_list = Diagnostic.pp_list CudfAdd.pp_package in
-        let pkggraph = Defaultgraphs.intcudf universe sdgraph in
+        let pkggraph = sdgraph in
         List.iter (fun q -> 
           let l = rev_impactlist_p pkggraph q in
           Format.printf "@[<v 1>root: %s@," (CudfAdd.string_of_package q);
@@ -145,7 +144,7 @@ let main () =
     in
     let l = 
       PG.fold_vertex (fun p l ->
-        let uid = Cudf.uid_by_package universe p in
+        let uid = p in
         let strongimpact = List.length (impactlist sdgraph uid) in 
         let rev_strongimpact = List.length (rev_impactlist sdgraph uid) in
         let directimpact = List.length (impactlist_p depgraph p) in
@@ -168,7 +167,7 @@ let main () =
       else None 
     in
     if (OptParse.Opt.get Options.dot) then
-      let pkggraph = Defaultgraphs.intcudf universe sdgraph in
+      let pkggraph = sdgraph in
       Defaultgraphs.PackageGraph.out ~dot pkggraph
   end
 ;;

@@ -176,9 +176,8 @@ let test_conjunctive_dependency_closure =
 let test_conj_dependency = 
   "conjunctive dependency closure" >:: (fun _ -> 
     let pkg = Cudf.lookup_package universe ("bicycle",7) in
-    let uid = Cudf.uid_by_package universe pkg in
     let g = Strongdeps.conjdeps universe [pkg] in
-    let l = List.map (Cudf.package_by_uid universe) (Defaultgraphs.IntPkgGraph.conjdeps g uid) in
+    let l = Defaultgraphs.PackageGraph.conjdeps g pkg in
     (*
     List.iter (fun pkg ->
       print_endline (CudfAdd.string_of_package pkg)

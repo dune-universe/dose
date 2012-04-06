@@ -38,18 +38,17 @@ let impactset graph q =
 
 (** compute the conjunctive dependency graph *)
 let conjdeps_univ universe =
-  let g = Defaultgraphs.IntPkgGraph.G.create () in
-  for id = 0 to (Cudf.universe_size universe) - 1 do
-    Defaultgraphs.IntPkgGraph.conjdepgraph_int g universe id
-  done;
+  let g = Defaultgraphs.PackageGraph.G.create () in
+  Cudf.iter_packages (fun pkg ->
+    Defaultgraphs.PackageGraph.conjdepgraph_int g universe pkg
+  ) universe;
   g
 
 (** compute the conjunctive dependency graph considering only packages 
     in [pkglist] *)
 let conjdeps universe pkglist =
-  let idlist = List.map (CudfAdd.vartoint universe) pkglist in
-  let g = Defaultgraphs.IntPkgGraph.G.create () in
-  List.iter (fun id ->
-    Defaultgraphs.IntPkgGraph.conjdepgraph_int g universe id
-  ) idlist ;
+  let g = Defaultgraphs.PackageGraph.G.create () in
+  List.iter (fun pkg ->
+    Defaultgraphs.PackageGraph.conjdepgraph_int g universe pkg
+  ) pkglist ;
   g
