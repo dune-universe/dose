@@ -325,6 +325,22 @@ module MakePackageGraph(V : Sig.COMPARABLE with type t = Cudf.package )(E : Sig.
       if not(Hashtbl.mem mark v) then (cc graph mark v)::acc else acc
     ) graph []
 
+  let pred_list graph q =
+    G.fold_pred (fun p acc -> p :: acc ) graph q []
+
+  let succ_list graph q =
+    G.fold_succ (fun p acc -> p :: acc ) graph q []
+
+  let pred_set graph q =
+    if G.mem_vertex graph q then
+      G.fold_pred (fun p acc -> S.add p acc) graph q S.empty
+    else S.empty
+
+  let succ_set graph q =
+    if G.mem_vertex graph q then
+      G.fold_succ (fun p acc -> S.add p acc) graph q S.empty
+    else S.empty
+
   let out ?(dump=None) ?(dot=None) ?(detrans=false) pkggraph =
     info "Dumping Graph : nodes %d , edges %d"
     (G.nb_vertex pkggraph) (G.nb_edges pkggraph) ;

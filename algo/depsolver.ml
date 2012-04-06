@@ -93,6 +93,10 @@ let listcheck ?callback universe pkglist =
       Depsolver_int.listcheck ~callback:callback_int universe idlist
 ;;
 
+(** this function converts Depsolver_int results to
+ * Diagnostic_int results. The difference is that the integer
+ * list returned by the function f_int represents solver indexs
+ * while Diagnostic_int.Success must return cudf indexs *)
 let conv solver = function
   |Depsolver_int.Success(f_int) -> 
       Diagnostic_int.Success(fun ?all () -> 
@@ -104,7 +108,7 @@ let conv solver = function
 let edos_install univ pkg =
   let pool = Depsolver_int.init_pool_univ univ in
   let id = CudfAdd.vartoint univ pkg in
-  let closure = Depsolver_int.dependency_closure univ [id] in
+  let closure = Depsolver_int.dependency_closure_cache pool [id] in
   let solver = Depsolver_int.init_solver_closure pool closure in
   let req = Diagnostic_int.Sng id in
   let res = Depsolver_int.solve solver req in
@@ -114,7 +118,7 @@ let edos_install univ pkg =
 let edos_coinstall univ pkglist =
   let pool = Depsolver_int.init_pool_univ univ in
   let idlist = List.map (CudfAdd.vartoint univ) pkglist in
-  let closure = Depsolver_int.dependency_closure univ idlist in
+  let closure = Depsolver_int.dependency_closure_cache pool idlist in
   let solver = Depsolver_int.init_solver_closure pool closure in
   let req = Diagnostic_int.Lst idlist in
   let res = Depsolver_int.solve solver req in
@@ -134,7 +138,7 @@ let edos_coinstall_prod univ ll =
   in
   List.map (fun pkglist -> 
     let idlist = List.map (CudfAdd.vartoint univ) pkglist in
-    let closure = Depsolver_int.dependency_closure univ idlist in
+    let closure = Depsolver_int.dependency_closure_cache pool idlist in
     let solver = Depsolver_int.init_solver_closure pool closure in
     let req = Diagnostic_int.Lst idlist in
     let res = Depsolver_int.solve solver req in
@@ -165,8 +169,7 @@ let find_broken universe =
   !broken_pkgs
 
 let dependency_closure ?maxdepth ?conjunctive univ pkglist =
-  let idlist = List.map (CudfAdd.vartoint univ) pkglist in
-  let closure = Depsolver_int.dependency_closure ?maxdepth ?conjunctive univ idlist in
+  let closure = Depsolver_int.dependency_closure ?maxdepth ?conjunctive univ pkglist in
   List.map (CudfAdd.inttovar univ) closure
 
 let reverse_dependencies univ =

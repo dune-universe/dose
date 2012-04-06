@@ -14,15 +14,12 @@
 
 open ExtLib
 open Common
-open CudfAdd
 
 include Util.Logging(struct let label = __FILE__ end) ;;
 
 (** [strongdeps u l] build the strong dependency graph of all packages in 
     [l] wrt the universe [u] *)
 let strongdeps ?(transitive=true) universe pkglist =
-  let idlist = List.map (CudfAdd.vartoint universe) pkglist in
-  let closure = Depsolver_int.dependency_closure universe idlist in
   Strongdeps_int.strongdeps ~transitive universe pkglist
 
 (** [strongdeps_univ u] build the strong dependency graph of 
@@ -32,9 +29,7 @@ let strongdeps_univ ?(transitive=true) universe =
 
 (** compute the impact set of the node [q], that is the list of all 
     packages [p] that strong depends on [q] *)
-let impactset graph q =
-  let module G = Defaultgraphs.PackageGraph.G in
-  G.fold_pred (fun p acc -> p :: acc ) graph q []
+let impactset = Defaultgraphs.PackageGraph.pred_list
 
 (** compute the conjunctive dependency graph *)
 let conjdeps_univ universe =

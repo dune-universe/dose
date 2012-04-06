@@ -412,11 +412,12 @@ let dependency_closure_cache ?(maxdepth=max_int) ?(conjunctive=false) pool idlis
 
     @param maxdepth the maximum cone depth (infinite by default)
     @param conjunctive consider only conjunctive dependencies (false by default)
-    @param index the package universe
-    @param l a subset of [index]
+    @param universe the package universe
+    @param pkglist a subset of [universe]
 *)
-let dependency_closure ?(maxdepth=max_int) ?(conjunctive=false) univ idlist =
-  let pool = init_pool_univ univ in
+let dependency_closure ?(maxdepth=max_int) ?(conjunctive=false) universe pkglist =
+  let pool = init_pool_univ universe in
+  let idlist = List.map (CudfAdd.vartoint universe) pkglist in
   dependency_closure_cache ~maxdepth ~conjunctive pool idlist
 ;;
 
