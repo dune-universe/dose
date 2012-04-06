@@ -17,7 +17,7 @@ open Common
 
 include Util.Logging(struct let label = __FILE__ end) ;;
 
-let space_re = Str.regexp "[ \t]+" ;;
+let blank_regexp = Pcre.regexp "[ \t]+" ;;
 
 (* parse the output of "dpkg -l" *)
 let parse_inst ch =
@@ -25,7 +25,7 @@ let parse_inst ch =
   try
     while true do
       let s = (input_line ch) in
-      match Str.split space_re s with
+      match Pcre.split ~rex:blank_regexp s with
       |status::name::version::_ when status = "ii"-> Hashtbl.add h (name,version) ()
       |_ -> ()
     done ;
@@ -48,7 +48,7 @@ let parse_inst_from_file file =
 
 (* parse the a popcon file *)
 let parse_popcon s =
-  match Str.split space_re s with
+  match Pcre.split ~rex:blank_regexp s with
   |rank::name::inst::_ -> (int_of_string rank,name,int_of_string inst)
   |_ -> fatal "Parse error %s\n" s
 
@@ -80,25 +80,39 @@ type apt_req =
 
 let parse_pkg_only s = `Pkg(Packages.parse_name (Format822.dummy_loc,s))
 
-let distro_re = Str.regexp "^\\([^=/]*\\)*/[ \t]*\\(.*\\)$" ;;
-let version_re = Str.regexp "^\\([^=]*\\)*=[ \t]*\\(.*\\)$" ;;
+let distro_regexp = Pcre.regexp "^([^=/]*)/[ \t]*(.*)$";;
+let version_regexp = Pcre.regexp "^([^=]*)=[ \t]*(.*)$" ;;
+
 let parse_pkg_req suite s =
-  try 
-    if Str.string_match distro_re s 0 then
+  let fatal_bad_apt_package () =
+    fatal "Bad apt package in request '%s'" s
+  in
+  try
+    (* First try matching with distro_regexp. *)
+    let substrings = Pcre.exec ~rex:distro_regexp s in
+    try
       `PkgDst(
-        Packages.parse_name(Format822.dummy_loc,Str.matched_group 1 s),
-        Str.matched_group 2 s
+        Packages.parse_name (Format822.dummy_loc, Pcre.get_substring substrings 1),
+        Pcre.get_substring substrings 2
       )
-    else if Str.string_match version_re s 0 then
+    with Not_found -> fatal_bad_apt_package ()
+  with Not_found -> try
+    (* Then try matching with version_regexp. *)
+    let substrings = Pcre.exec ~rex:version_regexp s in
+    try
       `PkgVer(
-        Packages.parse_name (Format822.dummy_loc,Str.matched_group 1 s),
-        Packages.parse_version (Format822.dummy_loc,Str.matched_group 2 s)
+        Packages.parse_name    (Format822.dummy_loc, Pcre.get_substring substrings 1),
+        Packages.parse_version (Format822.dummy_loc, Pcre.get_substring substrings 2)
       )
-    else begin match suite with
-    |None -> parse_pkg_only s
-    |Some suite -> `PkgDst(s,suite)
-    end
-  with Not_found -> fatal "Bad apt package in request '%s'" s
+    with Not_found -> fatal_bad_apt_package ()
+  with Not_found ->
+    try
+      (* If it doesn't match any of them. *)
+      begin match suite with
+      |None -> parse_pkg_only s
+      |Some suite -> `PkgDst(s,suite)
+      end
+    with Not_found -> fatal_bad_apt_package ()
 ;;
 
 (** parse a string containing an apt-get command line 
@@ -124,7 +138,7 @@ let parse_request_apt s =
   let reqlist = ref [] in
   let anon s = reqlist := s :: !reqlist in
   begin
-    begin try Arg.parse_argv ~current:(ref 0) (Array.of_list (Str.split space_re s)) options anon ""
+    begin try Arg.parse_argv ~current:(ref 0) (Array.of_list (Pcre.split ~rex:blank_regexp s)) options anon ""
     with Arg.Bad s -> fatal "%s" s end ;
     match List.rev !reqlist with
     |"install" :: tl -> Install(List.map (parse_pkg_req !suite) tl)
@@ -157,7 +171,7 @@ let parse_request_aptitude s =
   let reqlist = ref [] in
   let anon s = reqlist := s :: !reqlist in
   begin
-    begin try Arg.parse_argv ~current:(ref 0) (Array.of_list (Str.split space_re s)) options anon ""
+    begin try Arg.parse_argv ~current:(ref 0) (Array.of_list (Pcre.split ~rex:blank_regexp s)) options anon ""
     with Arg.Bad s -> fatal "%s" s end ;
     match List.rev !reqlist with
     |"install" :: tl -> Install(List.map (parse_pkg_req !suite) tl)
@@ -191,34 +205,38 @@ module Pref = struct
 
 end
 
-let comma_re = Str.regexp "[ \t]*,[ \t]*" ;;
-let eq_re = Str.regexp "[ \t]*=[ \t]*" ;;
-let di_re = Str.regexp "[0-9\\.]+" ;;
-let al_re = Str.regexp "[a-zA-Z]+" ;;
+let comma_regexp = Pcre.regexp "[ \t]*,[ \t]*" ;;
+let eq_regexp = Pcre.regexp "[ \t]*=[ \t]*" ;;
+let di_regexp = Pcre.regexp "[0-9.]+" ;;
+let al_regexp = Pcre.regexp "[a-zA-Z]+" ;; 
 
 let parse_pref_labels s =
   List.map (fun s' ->
-    match Str.split eq_re s with
-    |[v] when (Str.string_match di_re v 0) -> ("v",v)
-    |[v] when (Str.string_match al_re v 0) -> ("a",v)
+    match Pcre.split ~rex:eq_regexp s' with
+    |[v] when (Pcre.pmatch ~rex:di_regexp v) -> ("v",v)
+    |[v] when (Pcre.pmatch ~rex:al_regexp v) -> ("a",v)
     |[l;v] -> (l,v)
-    |_ -> fatal "To many commas in label %s" s
-  ) (Str.split comma_re s)
+    |_ -> fatal "To many '=' in label %s" s
+  ) (Pcre.split ~rex:comma_regexp s)
 
-let general_re = Str.regexp "^[ \t]*\\*[ \t]*$" ;;
+let general_regexp = Pcre.regexp "^[ \t]*[*][ \t]*$" ;;
+
 let parse_pref_package (_,s) =
-  if Str.string_match general_re s 0 then Pref.Star
+  if Pcre.pmatch ~rex:general_regexp s then Pref.Star
   else Pref.Package (Packages.parse_name (Format822.dummy_loc,s))
 
-let pin_re = Str.regexp "^\\([A-Za-z]+\\)[ \t]+\\(.*\\)$" ;;
+let pin_regexp = Pcre.regexp "^([A-Za-z]+)[ \t]+(.*)$" ;;
+
 let parse_pin (_,s) =
-  if Str.string_match pin_re s 0 then
-    match Str.matched_group 1 s with
-    |"release" -> Pref.Release (parse_pref_labels (Str.matched_group 2 s))
-    |"version" -> Pref.Version (Str.matched_group 2 s) 
-    |"origin"  -> Pref.Origin (Str.matched_group 2 s)
-    |s -> fatal "Unkwnon pin type %s" s
-  else fatal "Unkwnon pin format %s" s
+  try
+    let substrings = Pcre.exec ~rex:pin_regexp s
+    in
+    match Pcre.get_substring substrings 1 with
+    |"release" -> Pref.Release (parse_pref_labels (Pcre.get_substring substrings 2))
+    |"version" -> Pref.Version (Pcre.get_substring substrings 2) 
+    |"origin"  -> Pref.Origin  (Pcre.get_substring substrings 2)
+    |s -> fatal "Unknown pin type %s" s
+  with Not_found -> fatal "Unknown pin format %s" s
 
 let parse_preferences_stanza par =
   {

@@ -105,12 +105,14 @@ let parse_sample s =
   else
     failwith (Printf.sprintf "invalid sample %s" s)
 
+(* "parse_date s" extracts the date from a date-string of a specific format.
+    e.g. parse_date "date 12345" = 12345 *)
 let parse_date s =
-  let re = Str.regexp "^date \\([0-9]+\\)$" in
-  if Str.string_match re s 0 then
-    float_of_string(Str.matched_group 1 s)
-  else
-    failwith (Printf.sprintf "invalid date %s" s)
+  let date_regexp = Pcre.regexp "^date ([0-9]+)$" in
+  try
+    let substrings = Pcre.exec ~rex:date_regexp s in
+    float_of_string(Pcre.get_substring substrings 1)
+  with Not_found -> failwith (Printf.sprintf "invalid date %s" s)
 
 let parse_benchmark filename =
   let ic = open_in filename in
