@@ -10,40 +10,24 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-(** Library of additional functions for the CUDF format. *)
 
-(** {3 Remembering one Ocaml standard library module, whose name will be overriden by opening Extlib}*)
-
-(** Original hashtable module from Ocaml standard library. *)
+(* Remember the original hashtable module from Ocaml standard library,
+    whose name will be overriden by opening Extlib. *)
 module OCAMLHashtbl = Hashtbl
 
 open ExtLib
 
-(** {3 Include internal debugging functions for this module (debug, info, warning, fatal).} *)
+(* Include internal debugging functions for this module (debug, info, warning, fatal). *)
 include Util.Logging(struct let label = __FILE__ end) ;;
 
-(** {2 Basic comparison operations for packages} *)
-
-(** The id of a package.
-    TODO: Check which version is used. Remove the other one.
-    TODO: Maybe include it in functions like hash etc. *)
 let id pkg = (pkg.Cudf.package,pkg.Cudf.version)
 let pkgid p = (p.Cudf.package, p.Cudf.version)
 
-(** Equality test: two CUDF packages are equal if their names and versions are equal. *)
 let equal = Cudf.(=%)
-
-(** Compare function: compares two CUDF packages using standard CUDF comparison operator (i.e. comparing by their name and version). *)
 let compare = Cudf.(<%)
 
-(** {2 Specialized data structures for CUDF packages} *)
-
-(** A hash function for CUDF packages, using only their name and version. *)
 let hash p = Hashtbl.hash (p.Cudf.package,p.Cudf.version)
 
-(** Data structures: *)
-
-(** Specialized hashtable for CUDF packages. *)
 module Cudf_hashtbl =
   OCAMLHashtbl.Make(struct
     type t = Cudf.package
@@ -51,18 +35,16 @@ module Cudf_hashtbl =
     let hash = hash
   end)
 
-(** Specialized set data structure for CUDF packages. *)
 module Cudf_set =
   Set.Make(struct
     type t = Cudf.package
     let compare = compare
   end)
 
-(** Convert a list of CUDF packages to a set of CUDF packages. *)
 let to_set l = List.fold_right Cudf_set.add l Cudf_set.empty
 
-(** {2 Functions to encode and decode strings. } *)
-(* TODO: What are these functions doing in this module? *)
+
+(* encode - decode *)
 
 (* Specialized hashtable for encoding strings efficiently. *)
 module EncodingHashtable =
@@ -128,51 +110,24 @@ let enc_ht = EncodingHashtable.create 256;;
 let dec_ht = DecodingHashtable.create 256;;
 init_hashtables enc_ht dec_ht;;
 
-
+(* encode *)
 let encode_single s   = EncodingHashtable.find enc_ht s;;
 let not_allowed_regexp = Pcre.regexp "[^a-zA-Z0-9@/+().-]";;
 
-(** Encode a string.
-
-    Replaces all the "not allowed" characters
-    with their ASCII code (in hexadecimal format),
-    prefixed with a '%' sign.
-    
-    Only "allowed" characters are letters, numbers and these: [@/+().-],
-    all the others are replaced.
-    
-    Examples:
-    {ul
-    {li [encode "ab"  = "ab"]}
-    {li [encode "|"   = "%7c"]}
-    {li [encode "a|b" = "a%7cb"]}
-    }
-*)
 let encode s =
   Pcre.substitute ~rex:not_allowed_regexp ~subst:encode_single s
 ;;
 
-
+(* decode *)
 let decode_single s = DecodingHashtable.find dec_ht s;;
 let encoded_char_regexp = Pcre.regexp "%[0-9a-f][0-9a-f]";;
 
-(** Decode a string. Opposite of the [encode] function.
-
-    Replaces all the encoded "not allowed" characters
-    in the string by their original (i.e. not encoded) versions.
-
-    Examples:
-    {ul
-    {li [decode "ab" = "ab"]}
-    {li [decode "%7c" = "|"]}
-    {li [decode "a%7cb" = "a|b"]}
-    }
-*)
 let decode s =
   Pcre.substitute ~rex:encoded_char_regexp ~subst:decode_single s
 ;;
 
-(** {2 Formatting, printing, converting to string. } *)
+
+(* formatting *)
 
 let buf = Buffer.create 1024
 
@@ -204,7 +159,7 @@ let pkgnames universe =
     StringSet.add pkg.Cudf.package names
   ) StringSet.empty universe
 
-(** {2 Additional functions on the CUDF data type. } *)
+
 
 let add_properties preamble l =
   List.fold_left (fun pre prop ->
@@ -216,8 +171,6 @@ let is_essential pkg =
   with Not_found -> false
 
 
-(** build an hash table that associates (package name, String version) to
- * cudf packages *)
 let realversionmap pkglist =
   let h = Hashtbl.create (5 * (List.length pkglist)) in
   List.iter (fun pkg ->
