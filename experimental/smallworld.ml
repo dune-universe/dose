@@ -48,10 +48,7 @@ module Options = struct
   add options ~long_name:"transitive-closure" ~help:"" closure;
 end
 
-let debug fmt = Util.make_debug "SmallWorld" fmt
-let info fmt = Util.make_info "SmallWorld" fmt
-let warning fmt = Util.make_warning "SmallWorld" fmt
-
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 (**********************************)
 
@@ -97,13 +94,15 @@ let saveplot2 h outfile =
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
-  let (universe,_,_) = Boilerplate.load_universe posargs in
+  let (_,universe,_,_) = Boilerplate.load_universe posargs in
   let gr = 
   begin
-    let gr' = if OptParse.Opt.get Options.strong_deps then
-      Strongdeps.strongdeps_univ universe
-    else 
-      Defaultgraphs.PackageGraph.dependency_graph universe in
+    let gr' =
+      if OptParse.Opt.get Options.strong_deps then
+        Strongdeps.strongdeps_univ universe
+      else 
+        Defaultgraphs.PackageGraph.dependency_graph universe 
+    in
     if OptParse.Opt.get Options.detrans then O.transitive_reduction gr';
     if OptParse.Opt.get Options.closure then O.O.transitive_closure gr'
     else gr'
