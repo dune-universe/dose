@@ -112,8 +112,8 @@ let strongconflicts univ =
       IG.add_edge cache p q;
       let req = Diagnostic_int.Lst [p;q] in
       match Depsolver_int.solve solver req with
-      |Diagnostic_int.Success _ -> ()
-      |Diagnostic_int.Failure f ->
+      |Depsolver_int.Success _ -> ()
+      |Depsolver_int.Failure f ->
         CG.add_edge_e stronglist (p, (x, y, Other (f ())), q)
     end 
   in

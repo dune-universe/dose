@@ -80,6 +80,10 @@ type pool_t =
    (Cudf_types.vpkg * S.var list) list * bool) array
 and pool = SolverPool of pool_t | CudfPool of pool_t
 
+type result =
+  |Success of (unit -> int list)
+  |Failure of (unit -> Diagnostic_int.reason list)
+
 (* two functions to make sure we alway manipulate the correct data type *)
 let strip_solver_pool = function SolverPool p -> p | _ -> assert false
 let strip_cudf_pool = function CudfPool p -> p | _ -> assert false
@@ -248,8 +252,8 @@ let solve solver request =
   S.reset solver.constraints;
 
   let result solve collect var =
-    if solve solver.constraints var then begin
-      let get_assignent ?(all=false) () =
+    if solve solver.constraints var then
+      let get_assignent () =
         let a = S.assignment solver.constraints in
         let size = Array.length a in
         let rec aux (i,acc) =
@@ -262,11 +266,10 @@ let solve solver request =
         in
         aux (0,[])
       in
-      Diagnostic_int.Success(get_assignent)
-    end
+      Success(get_assignent)
     else
       let get_reasons () = collect solver.constraints var in
-      Diagnostic_int.Failure(get_reasons)
+      Failure(get_reasons)
   in
 
   match request with
@@ -280,10 +283,14 @@ let pkgcheck callback solver failed tested id =
   let memo (tested,failed) res = 
     begin
       match res with
-      |Diagnostic_int.Success(f_int) ->
-          List.iter (fun i -> Array.unsafe_set tested i true) (f_int ())
-      |Diagnostic_int.Failure _  -> incr failed
-    end ; res
+      |Success(f_int) ->
+          List.iter (fun i -> Array.unsafe_set tested i true) (f_int ());
+          Diagnostic_int.Success(fun ?all () -> f_int ())
+      |Failure r ->
+          incr failed;
+          Diagnostic_int.Failure(r)
+
+    end 
   in
   let req = Diagnostic_int.Sng id in
   let res =
@@ -301,8 +308,8 @@ let pkgcheck callback solver failed tested id =
       let f ?(all=false) () =
         if all then begin
           match solve solver req with
-          |Diagnostic_int.Success(f_int) -> f_int ()
-          |Diagnostic_int.Failure _ -> assert false (* impossible *)
+          |Success(f_int) -> List.map solver.map#inttovar (f_int ())
+          |Failure _ -> assert false (* impossible *)
         end else []
       in Diagnostic_int.Success(f) 
     end

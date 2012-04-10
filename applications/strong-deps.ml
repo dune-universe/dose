@@ -38,6 +38,8 @@ module Options = struct
   add options ~long_name:"conj-only" ~help:"Use the conjunctive graph only" conj_only;
 end
 
+include Util.Logging(struct let label = __FILE__ end) ;;
+
 module G = Defaultgraphs.IntPkgGraph.G
 module O = Defaultgraphs.GraphOper(G)
 
@@ -60,12 +62,28 @@ let rev_impactlist_p graph q =
 
 let mk_filename prefix suffix s = if prefix = "" then s^suffix else prefix^suffix
 
+let default_options = function
+  |Url.Deb -> Some ( 
+    Boilerplate.Deb { 
+      Debian.Debcudf.default_options with
+      Debian.Debcudf.ignore_essential = true
+    })
+  |Url.Synthesis -> None
+  |Url.Hdlist -> None
+  |(Url.Pgsql|Url.Sqlite) -> None
+  |Url.Eclipse -> Some (Boilerplate.Eclipse Debian.Debcudf.default_options)
+  |Url.Cudf -> None
+  |Url.Cws -> Some (Boilerplate.Cws Debian.Debcudf.default_options)
+  |_ -> fatal "Unknown Url format"
+;;
+
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
   let bars = ["Strongdeps_int.main";"Strongdeps_int.conj"] in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress) bars;
-  let (_,universe,_,to_cudf) = Boilerplate.load_universe posargs in
+  let options = default_options (Input.guess_format [posargs]) in
+  let (_,universe,_,to_cudf) = Boilerplate.load_universe ~options posargs in
   let prefix = OptParse.Opt.get Options.prefix in
   if OptParse.Opt.is_set Options.checkonly then begin
     let pkglistlist =
