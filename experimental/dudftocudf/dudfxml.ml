@@ -13,10 +13,7 @@
 open ExtLib
 open Common
 
-let debug fmt = Util.make_debug "Dudfxml" fmt
-let info fmt = Util.make_info "Dudfxml" fmt
-let warning fmt = Util.make_warning "Dudfxml" fmt
-let fatal fmt = Util.make_fatal "Dudfxml" fmt
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 module L = Xml.LazyList 
 

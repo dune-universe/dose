@@ -13,10 +13,7 @@
 open ExtLib
 open Common
 
-let debug fmt = Util.make_debug "Deb-dudfcudf" fmt
-let info fmt = Util.make_info "Deb-dudfcudf" fmt
-let warning fmt = Util.make_warning "Deb-dudfcudf" fmt
-let fatal fmt = Util.make_fatal "Deb-dudfcudf" fmt
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 module Deb = Debian.Packages
 
@@ -330,6 +327,7 @@ let main () =
   in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose) ;
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress) ["debdudf"];
+  Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
 
   info "parse xml";
 
@@ -368,19 +366,19 @@ let main () =
 
   info "parse all packages";
   Util.Progress.set_total progressbar (List.length packagelist);
-  let default_arch = 
+  let archs = 
     if OptParse.Opt.is_set Options.archdefault then
-      OptParse.Opt.opt Options.archdefault
+      [OptParse.Opt.get Options.archdefault]
     else
       match guess_default_arch _package_list with
-      |None -> (warning "No default Arch. Unable to guess"; None)
-      |Some s -> info "Guessed Default Arch %s" s ; Some s
+      |None -> (warning "No default Arch. Unable to guess"; [])
+      |Some s -> info "Guessed Default Arch %s" s ; [s]
   in
   let all_packages =
     List.fold_left (fun acc (release,contents) ->
       Util.Progress.progress progressbar ;
       let ch = IO.input_string contents in
-      let l = Deb.input_raw_ch ~default_arch ~extras ch in
+      let l = Deb.input_raw_ch ~archs ~extras ch in
       let _ = IO.close_in ch in
       List.fold_left (fun s pkg -> 
         Hashtbl.add infoH (pkg.Deb.name,pkg.Deb.version) release ;
@@ -426,6 +424,10 @@ let main () =
 
   info "convert";
   Util.Progress.set_total progressbar (List.length l); 
+  let options = 
+    { Debian.Debcudf.default_options with 
+      Debian.Debcudf.extras = extras_property }
+  in
   let pl =
     List.map (fun pkg ->
       Util.Progress.progress progressbar ;
@@ -434,7 +436,7 @@ let main () =
           Some(Hashtbl.find infoH (pkg.Deb.name,pkg.Deb.version)) 
         with Not_found -> None
       in
-      let cudfpkg = Debian.Debcudf.tocudf tables ~extras:extras_property pkg in
+      let cudfpkg = Debian.Debcudf.tocudf ~options tables pkg in
       let priority = AptPref.assign_priority preferences info cudfpkg in
       let cudfpkg = add_pin_priority priority cudfpkg in
       let cudfpkg = add_suite info cudfpkg in

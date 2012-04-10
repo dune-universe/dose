@@ -14,10 +14,7 @@ open ExtLib
 open Common
 module Boilerplate = BoilerplateNoRpm
 
-let debug fmt = Util.make_debug "dudf-extract" fmt
-let info fmt = Util.make_info "dudf-extract" fmt
-let warning fmt = Util.make_warning "dudf-extract" fmt
-let fatal fmt = Util.make_fatal "dudf-extract" fmt
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 module Deb = Debian.Packages
 
