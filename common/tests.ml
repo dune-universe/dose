@@ -14,10 +14,8 @@ open OUnit
 open Common
 
 let test_dir = "tests/common"
-
-(* XXX this file should not be in the algo test directory, but in a more
- * central location *)
-let f_legacy = "tests/algo/legacy.cudf"
+let cudf_dir = "tests/cudf"
+let f_legacy = Filename.concat cudf_dir "legacy.cudf"
 
 let test_deb_local =
   "deb local" >:: (fun _ ->
@@ -176,46 +174,37 @@ let (test_encode, test_decode) =
   in
   (* From each triplet we generate two test cases, one for
      the function encode and one for the function decode. *)
-  let (encode_tests_cases, decode_tests_cases)=
+  let (encode_tests_cases, decode_tests_cases) =
     List.split (
-    List.map
-      (fun (test_name, decoded_string, encoded_string) -> 
-	(
-	("encoding " ^ test_name) >::
-	(fun _ -> 
-	  assert_equal 
-	    (CudfAdd.encode decoded_string) 
-	    encoded_string
-	    ~msg:("\ndecoded_string is        = " ^ decoded_string ^ 
-		  "\nencoded_string is        = " ^ (CudfAdd.encode decoded_string) ^
-		  "\nencoded_string should be = " ^ encoded_string)
-	    ),
-	
-	("decoding " ^ test_name) >::
-	(fun _ ->
-	  assert_equal
-	    (CudfAdd.decode encoded_string)
-	    decoded_string
-	    ~msg:("\nencoded_string is        = " ^ encoded_string ^ 
-		  "\ndecoded_string is        = " ^ (CudfAdd.decode encoded_string) ^
-		  "\ndecoded_string should be = " ^ decoded_string)
-	    )
-	  ))
-      encode_decode_triplets
-      )
+      List.map (fun (test_name, decoded_string, encoded_string) -> 
+          ("encoding " ^ test_name) >:: (fun _ -> 
+            assert_equal 
+              (CudfAdd.encode decoded_string) 
+              encoded_string
+              ~msg:("\ndecoded_string is        = " ^ decoded_string ^ 
+                    "\nencoded_string is        = " ^ (CudfAdd.encode decoded_string) ^
+                    "\nencoded_string should be = " ^ encoded_string)
+              ),
+          
+          ("decoding " ^ test_name) >:: (fun _ ->
+            assert_equal
+              (CudfAdd.decode encoded_string)
+              decoded_string
+              ~msg:("\nencoded_string is        = " ^ encoded_string ^ 
+                    "\ndecoded_string is        = " ^ (CudfAdd.decode encoded_string) ^
+                    "\ndecoded_string should be = " ^ decoded_string)
+              )
+      ) encode_decode_triplets
+    )
   in
   (* We have two test suites: one for testing encoding and one for testing decoding. *)
   ("name mangling encoding" >::: encode_tests_cases,
    "name mangling decoding" >::: decode_tests_cases)
+;;
 
 (*
-let test_projection
 
-let test_compare
-
-let test_realversionmap
-
-let test_mdf
+  let test_realversionmap
 
 *)
 

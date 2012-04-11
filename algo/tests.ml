@@ -15,9 +15,8 @@ open OUnit
 open Common
 module S = CudfAdd.Cudf_set
 let test_dir = "tests/algo"
+let cudf_dir = "tests/cudf"
 
-let f_legacy = Filename.concat test_dir "legacy.cudf"
-let f_legacy_sol = Filename.concat test_dir "legacy-sol.cudf"
 let f_dependency = Filename.concat test_dir "dependency.cudf"
 let f_conj_dependency = Filename.concat test_dir "conj_dependency.cudf"
 let f_cone = Filename.concat test_dir "cone.cudf"
@@ -29,11 +28,21 @@ let f_strongdeps_conj = Filename.concat test_dir "strongdep-conj.cudf"
 let f_strongcfl_simple = Filename.concat test_dir "strongcfl-simple.cudf"
 let f_strongcfl_triangle = Filename.concat test_dir "strongcfl-triangle.cudf"
 let f_selfprovide = Filename.concat test_dir "selfprovide.cudf"
-let f_debian = Filename.concat test_dir "debian.cudf" 
+let f_coinst = Filename.concat test_dir "coinst.cudf"
+
+let f_legacy = Filename.concat cudf_dir "legacy.cudf"
+let f_legacy_sol = Filename.concat cudf_dir "legacy-sol.cudf"
+let f_debian = Filename.concat cudf_dir "debian.cudf" 
+
+let load_univ f =
+  let (_,univ,_) = Cudf_parser.load_from_file f in
+  univ
 
 let (universe,request) =
-  let (_,univ,request) = Cudf_parser.parse_from_file f_legacy in
-  (Cudf.load_universe univ,Option.get request)
+  let (_,univ,request) = Cudf_parser.load_from_file f_legacy in
+  (univ,Option.get request)
+
+let universe_debian = load_univ f_debian
 
 let toset f = 
   let (_,pl,_) = Cudf_parser.parse_from_file f in
@@ -55,8 +64,8 @@ let test_install =
     |Diagnostic.Failure _ -> assert_failure "fail"
   )
 
-let test_coinstall = 
-  "coinstall" >:: (fun _ -> 
+let test_coinst_legacy = 
+  "coinstall legacy" >:: (fun _ -> 
     let electric_engine1 = Cudf.lookup_package universe ("electric-engine",1) in
     let electric_engine2 = Cudf.lookup_package universe ("electric-engine",2) in
     let d = Depsolver.edos_coinstall universe [electric_engine1;electric_engine2] in
@@ -65,43 +74,79 @@ let test_coinstall =
     |Diagnostic.Failure f -> assert_bool "pass" true
   )
 
+let test_coinst_real = 
+  "coinst debian" >:: (fun _ -> 
+    let exim4 = Cudf.lookup_package universe_debian ("exim4",1) in
+    let sendmail = Cudf.lookup_package universe_debian ("sendmail",3) in
+    let d = Depsolver.edos_coinstall universe_debian [exim4;sendmail] in
+    match d.Diagnostic.result with
+    |Diagnostic.Success f -> assert_failure "fail"
+    |Diagnostic.Failure f -> assert_bool "pass" true 
+  )
+
+let test_coinst_prod = 
+  "coinst product" >:: (fun _ -> 
+    let universe = load_univ f_coinst in
+    let al = Cudf.lookup_packages universe "a" in
+    let bl = Cudf.lookup_packages universe "b" in
+    let a1 = Cudf.lookup_package universe ("a",1) in
+    let a2 = Cudf.lookup_package universe ("a",2) in
+    let b1 = Cudf.lookup_package universe ("b",1) in
+    let b2 = Cudf.lookup_package universe ("b",2) in
+    let res_expected = [
+      List.sort [a1;b1],false;
+      List.sort [a1;b2],true;
+      List.sort [a2;b1],true;
+      List.sort [a2;b2],false
+      ]
+    in
+    let dl = Depsolver.edos_coinstall_prod universe [al;bl] in
+    let resl =
+      List.map (fun res ->
+        let l =
+          match res.Diagnostic.request with
+          |Diagnostic.PackageList l -> List.sort l
+          |_ -> []
+        in
+        let r =
+          match res.Diagnostic.result with
+          |Diagnostic.Success _ -> true
+          |Diagnostic.Failure _ -> false
+        in
+        (l,r)
+      ) dl
+    in
+    assert_equal (List.sort resl) (List.sort res_expected)
+  )
+
 (* debian testing 18/11/2009 *)
 let test_distribcheck =
   "distribcheck" >:: (fun _ -> 
-    let universe =
-      let (_,pl,_) = Cudf_parser.parse_from_file f_debian in
-      Cudf.load_universe pl
-    in
-    let i = Depsolver.univcheck universe in
+    let i = Depsolver.univcheck universe_debian in
     assert_equal 20 i
   ) 
 
+let test_trim =
+  "trim" >:: (fun _ ->
+    let l = Depsolver.trim universe_debian in
+    assert_equal (25606 - 20) (Cudf.universe_size l)
+  )
+ 
+(* XXX this test doesn't do anything *)
 let test_solver_var_order =
   "solver dependency ordering" >:: (fun _ ->
     assert_equal 0 0 
   )
 ;;
 
+(* XXX this test doesn't do anything *)
 let test_selfprovide =
   "self provide" >:: (fun _ -> 
-    let universe =
-      let (_,pl,_) = Cudf_parser.parse_from_file f_selfprovide in
-      Cudf.load_universe pl
-    in
+    let universe = load_univ f_selfprovide in
     let i = Depsolver.univcheck universe in
     assert_equal 0 i
   ) 
 
-let test_trim =
-  "trim" >:: (fun _ ->
-    let universe =
-      let (_,pl,_) = Cudf_parser.parse_from_file f_debian in
-      Cudf.load_universe pl
-    in
-    let l = Depsolver.trim universe in
-    assert_equal (25606 - 20) (Cudf.universe_size l)
-  )
- 
 let test_dependency_closure = 
   "dependency closure" >:: (fun _ -> 
     let car = Cudf.lookup_package universe ("car",1) in
@@ -122,7 +167,7 @@ let test_conjunctive_dependency_closure =
       match d.Diagnostic.result with
       |Diagnostic.Success _ -> assert_bool "pass" true
       |Diagnostic.Failure _ -> (
-        Diagnostic.printf ~explain:true d;
+        (* Diagnostic.printf ~explain:true d; *)
         assert_failure "fail"
       )
     ) (Cudf.get_packages universe)
@@ -175,7 +220,9 @@ let test_reverse_dependency_closure =
 let test_depsolver =
   "depsolver" >::: [
     test_install ;
-    test_coinstall ;
+    test_coinst_real ;
+    test_coinst_legacy ;
+    test_coinst_prod ;
     test_trim ;
     test_distribcheck ;
     test_solver_var_order ;
@@ -192,8 +239,8 @@ let solution_set =
   List.fold_right S.add pl S.empty
 
 let test_strong ?(transitive=true) file l =
+  let universe = load_univ file in
   let module G = Defaultgraphs.IntPkgGraph.G in
-  let (_,universe,_) = Cudf_parser.load_from_file file in
   let g = Strongdeps.strongdeps_univ ~transitive universe in
   let sdedges = 
     G.fold_edges (fun p q l ->
@@ -207,6 +254,7 @@ let test_strong ?(transitive=true) file l =
       (p,q)
     ) l
   in
+  (*
   if not((List.sort sdedges) = (List.sort testedges)) then
     List.iter (fun (p,q) -> 
       Printf.eprintf "%s -> %s\n" 
@@ -214,11 +262,12 @@ let test_strong ?(transitive=true) file l =
       (CudfAdd.string_of_package q)
     ) sdedges
   ;
+  *)
   assert_equal (List.sort sdedges) (List.sort testedges)
 
 let test_strongcfl file l =
+  let universe = load_univ file in
   let module SG = Strongconflicts.CG in
-  let (_,universe,_) = Cudf_parser.load_from_file file in
   let g = Strongconflicts.strongconflicts universe in
   let scedges = 
     SG.fold_edges (fun p q l ->
@@ -232,6 +281,7 @@ let test_strongcfl file l =
       (p,q)
     ) l
   in
+  (*
   if not((List.sort scedges) = (List.sort testedges)) then
     List.iter (fun (p,q) -> 
       Printf.eprintf "%s <-> %s\n" 
@@ -239,6 +289,7 @@ let test_strongcfl file l =
       (CudfAdd.string_of_package q)
     ) scedges
   ;
+  *)
   assert_equal (List.sort scedges) (List.sort testedges)
 
 let strongdep_simple =
@@ -339,9 +390,12 @@ let test_dependency_graph =
     let module SDG = Defaultgraphs.SyntacticDependencyGraph in
     let module G = SDG.G in
     let g = SDG.dependency_graph universe in
+    (*
     G.iter_edges_e (fun edge ->
       print_endline (SDG.string_of_edge edge)
     ) g
+    *)
+    ()
   )
 
 let test_defaultgraphs =
