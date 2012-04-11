@@ -94,7 +94,7 @@ let pp_package ?(source=false) pp fmt pkg =
         try "(= "^(List.assoc "sourcenumber" fields)^")" 
         with Not_found -> ""
       in
-      Format.fprintf fmt "@,source: %s %s" source sourceversion
+      Format.fprintf fmt "@,source: %s %s" (CudfAdd.decode source) sourceversion
     with Not_found -> ()
   end
 ;;

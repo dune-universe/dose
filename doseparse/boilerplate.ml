@@ -336,10 +336,14 @@ let load_cudf doc =
 
 (* XXX when parsing a cudf, I should also remember the preamble !! *)
 let cudf_load_list file =
-  let _, pkglist, _ = parse_cudf file in
+  let preamble, pkglist =
+    match parse_cudf file with
+    |None, pkglist, _ -> Cudf.default_preamble, pkglist
+    |Some p , pkglist, _ -> p, pkglist
+  in
   let from_cudf (p,i) = (p,string_of_int i) in
   let to_cudf (p,v) = (p,int_of_string v) in
-  (Cudf.default_preamble,[pkglist;[]],from_cudf,to_cudf)
+  (preamble,[pkglist;[]],from_cudf,to_cudf)
 
 let cudf_load_universe file =
   let (pr,l,f,t) = cudf_load_list file in
