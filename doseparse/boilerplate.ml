@@ -32,7 +32,7 @@ end
 (* *************************************** *)
 
 let and_sep_re = Pcre.regexp "\\s*,\\s*"
-let pkg_re = Pcre.regexp "([0-9a-z][a-z0-9.+-:]*)(\\s*$|\\s*\\(([><=!]+)\\s+([a-zA-Z0-9.+:~-]+)\\))"
+let pkg_re = Pcre.regexp "([0-9a-z][a-z0-9.+-:]*)(\\s*$|\\s*\\(\\s*([><=!]+)\\s*([a-zA-Z0-9.+:~-]+)\\s*\\))"
 let parse_vpkg s =
   let parse_aux str =
     try

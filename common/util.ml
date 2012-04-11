@@ -191,7 +191,7 @@ module Progress = struct
     else warning "%s is an unbounded progress bar. Cannot set total" c.name
 
   let reset c =
-    Printf.eprintf "\n%!";
+    if c.enabled then Printf.eprintf "\n%!";
     Buffer.clear c.buffer;
     c.perc <- 0;
     c.rotation <- 0
