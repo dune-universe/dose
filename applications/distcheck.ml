@@ -164,15 +164,14 @@ let main () =
     end else []
   in
 
-  let pp pkg =
-    let (p,v) = (*CudfAdd.decode pkg.Cudf.package,CudfAdd.string_of_version pkg*) ( from_cudf
-    (pkg.Cudf.package,pkg.Cudf.version) ) in 
+  let pp ?(decode=CudfAdd.decode) pkg =
+    let (p,v) = from_cudf (pkg.Cudf.package,pkg.Cudf.version) in 
     let l = 
       List.filter_map (fun k ->
-        try Some(k,Cudf.lookup_package_property pkg k)
+        try Some(k,decode(Cudf.lookup_package_property pkg k))
         with Not_found -> None
       ) ["architecture";"source";"sourcenumber";"essential"]
-    in (p,v,l)
+    in (decode p,decode v,l)
   in
   info "Solving..." ;
   let failure = OptParse.Opt.get Options.failures in
@@ -192,6 +191,11 @@ let main () =
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
   let callback d =
     if summary then Diagnostic.collect results d ;
+    let pp =
+      if input_format = Url.Cudf then 
+        fun pkg -> pp ~decode:(fun x -> x) pkg 
+      else fun pkg -> pp pkg
+    in
     Diagnostic.fprintf ~pp ~failure ~success ~explain ~minimal fmt d
   in
   Util.Timer.start timer;

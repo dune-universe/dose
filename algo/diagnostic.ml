@@ -81,11 +81,11 @@ let build_paths deps root =
 
 let pp_package ?(source=false) pp fmt pkg =
   let (p,v,fields) = pp pkg in
-  Format.fprintf fmt "package: %s@," (CudfAdd.decode p);
+  Format.fprintf fmt "package: %s@," p;
   Format.fprintf fmt "version: %s" v;
   List.iter (function
     |(("source"|"sourcenumber"),_) -> ()
-    |(k,v) -> Format.fprintf fmt "@,%s: %s" k (CudfAdd.decode v)
+    |(k,v) -> Format.fprintf fmt "@,%s: %s" k v
   ) fields;
   if source then begin 
     try
@@ -94,7 +94,7 @@ let pp_package ?(source=false) pp fmt pkg =
         try "(= "^(List.assoc "sourcenumber" fields)^")" 
         with Not_found -> ""
       in
-      Format.fprintf fmt "@,source: %s %s" (CudfAdd.decode source) sourceversion
+      Format.fprintf fmt "@,source: %s %s" source sourceversion
     with Not_found -> ()
   end
 ;;
@@ -124,10 +124,10 @@ let pp_vpkglist pp fmt =
     | `Lt -> "<"
   in
   let pp_item fmt = function
-    |(p,None) -> Format.fprintf fmt "%s" (CudfAdd.decode p)
+    |(p,None) -> Format.fprintf fmt "%s" p
     |(p,Some(c,v)) ->
         let (p,v,_) = pp {Cudf.default_package with Cudf.package = p ; version = v} in
-        Format.fprintf fmt "%s (%s %s)" (CudfAdd.decode p) (string_of_relop c) v
+        Format.fprintf fmt "%s (%s %s)" p (string_of_relop c) v
   in
   pp_list fmt ~pp_item ~sep:" | "
 
