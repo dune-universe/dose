@@ -43,22 +43,10 @@ include Util.Logging(struct let label = __FILE__ end) ;;
 module G = Defaultgraphs.PackageGraph.G
 module O = Defaultgraphs.GraphOper(G)
 
-module PG = Defaultgraphs.PackageGraph.G
-module PO = Defaultgraphs.GraphOper(PG)
-
 (* ----------------------------------- *)
 
-let impactlist graph q =
-  G.fold_pred (fun p acc -> p :: acc ) graph q []
-
-let rev_impactlist graph q =
-  G.fold_succ (fun p acc -> p :: acc ) graph q []
-
-let impactlist_p graph q =
-  PG.fold_pred (fun p acc -> p :: acc ) graph q []
-
-let rev_impactlist_p graph q =
-  PG.fold_succ (fun p acc -> p :: acc ) graph q []
+let impactlist = Defaultgraphs.PackageGraph.pred_list
+let rev_impactlist = Defaultgraphs.PackageGraph.succ_list
 
 let mk_filename prefix suffix s = if prefix = "" then s^suffix else prefix^suffix
 
@@ -103,15 +91,12 @@ let main () =
         else 
           Strongdeps.strongdeps universe pkglist
       in
-      (* O.transitive_reduction sdgraph; *)
       if OptParse.Opt.get Options.dot then begin
         Defaultgraphs.PackageGraph.D.output_graph stdout sdgraph;
       end else begin
-        let sdgraph = O.O.transitive_closure sdgraph in
         let pp_list = Diagnostic.pp_list CudfAdd.pp_package in
-        let pkggraph = sdgraph in
         List.iter (fun q -> 
-          let l = rev_impactlist_p pkggraph q in
+          let l = rev_impactlist sdgraph q in
           Format.printf "@[<v 1>root: %s@," (CudfAdd.string_of_package q);
           if List.length l > 0 then
             Format.printf "@[<v 1>strongdeps:@,%a@]" pp_list l
@@ -128,8 +113,10 @@ let main () =
       else 
         Strongdeps.strongdeps_univ universe
     in
+
     if OptParse.Opt.get Options.detrans then
       O.transitive_reduction sdgraph;
+
     let outch = 
       if OptParse.Opt.get Options.table then
         open_out (mk_filename prefix ".csv" "data")
@@ -138,17 +125,17 @@ let main () =
     in
     let depgraph =
       if OptParse.Opt.get Options.trans_closure then
-        PO.O.transitive_closure (Defaultgraphs.PackageGraph.dependency_graph universe)
+        O.O.transitive_closure (Defaultgraphs.PackageGraph.dependency_graph universe)
       else
         Defaultgraphs.PackageGraph.dependency_graph universe 
     in
     let l = 
-      PG.fold_vertex (fun p l ->
+      G.fold_vertex (fun p l ->
         let uid = p in
         let strongimpact = List.length (impactlist sdgraph uid) in 
         let rev_strongimpact = List.length (rev_impactlist sdgraph uid) in
-        let directimpact = List.length (impactlist_p depgraph p) in
-        let rev_directimpact = List.length (rev_impactlist_p depgraph p) in
+        let directimpact = List.length (impactlist depgraph p) in
+        let rev_directimpact = List.length (rev_impactlist depgraph p) in
         (p,strongimpact - directimpact, 
           rev_strongimpact, strongimpact, 
           rev_directimpact, directimpact) :: l

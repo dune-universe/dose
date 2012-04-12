@@ -169,8 +169,7 @@ let find_broken universe =
   !broken_pkgs
 
 let dependency_closure ?maxdepth ?conjunctive univ pkglist =
-  let closure = Depsolver_int.dependency_closure ?maxdepth ?conjunctive univ pkglist in
-  List.map (CudfAdd.inttovar univ) closure
+  Depsolver_int.dependency_closure ?maxdepth ?conjunctive univ pkglist
 
 let reverse_dependencies univ =
   let rev = Depsolver_int.reverse_dependencies univ in

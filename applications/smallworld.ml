@@ -92,12 +92,10 @@ let saveplot2 h outfile =
 ;;
 
 let main () =
-  (* at_exit (fun () -> Util.dump Format.err_formatter); *)
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   let (_,universe,_,_) = Boilerplate.load_universe posargs in
   let gr = 
-  begin
     let gr' = if OptParse.Opt.get Options.strong_deps then
       Strongdeps.strongdeps_univ universe
     else 
@@ -106,7 +104,7 @@ let main () =
     if OptParse.Opt.get Options.detrans then O.transitive_reduction gr';
     if OptParse.Opt.get Options.closure then O.O.transitive_closure gr'
     else gr'
-  end in
+  in
   let prefix = OptParse.Opt.get Options.prefix in
   let outch = if prefix = "" then stdout else open_out ( prefix ^ "stats" ) in
   let generic = "Generic" >::: [

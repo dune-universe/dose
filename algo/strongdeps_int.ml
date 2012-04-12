@@ -87,15 +87,15 @@ let strongdeps_int ?(transitive=true) graph univ pkglist =
 ;;
 
 let strongdeps ?(transitive=true) univ pkglist =
-  let closure = Depsolver_int.dependency_closure univ pkglist in
+  let closure = Depsolver.dependency_closure univ pkglist in
   let size = Cudf.universe_size univ in
   let graph = G.create ~size () in
   Util.Progress.set_total conjbar size;
 
   Util.Timer.start conjtimer;
-  List.iter (fun id ->
+  List.iter (fun pkg ->
     Util.Progress.progress conjbar;
-    let pkg = CudfAdd.inttovar univ id in
+    (* let pkg = CudfAdd.inttovar univ id in *)
     Defaultgraphs.PackageGraph.conjdepgraph_int ~transitive graph univ pkg
   ) closure;
   Util.Progress.reset conjbar;

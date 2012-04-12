@@ -418,7 +418,8 @@ let dependency_closure_cache ?(maxdepth=max_int) ?(conjunctive=false) pool idlis
 let dependency_closure ?(maxdepth=max_int) ?(conjunctive=false) universe pkglist =
   let pool = init_pool_univ universe in
   let idlist = List.map (CudfAdd.vartoint universe) pkglist in
-  dependency_closure_cache ~maxdepth ~conjunctive pool idlist
+  let l = dependency_closure_cache ~maxdepth ~conjunctive pool idlist in
+  List.map (CudfAdd.inttovar universe) l
 ;;
 
 (*    XXX : elements in idlist should be included only if because
@@ -430,7 +431,7 @@ let dependency_closure ?(maxdepth=max_int) ?(conjunctive=false) universe pkglist
     @param index the package universe
     @param idlist a subset of [index]
 
-    This function has in a memoization strategy.
+    This function use a memoization strategy.
 *)
 let reverse_dependency_closure ?(maxdepth=max_int) reverse =
   let h = Hashtbl.create (Array.length reverse) in
