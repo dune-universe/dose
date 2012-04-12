@@ -1,0 +1,17 @@
+dose3 (2.9.16) UNRELEASED; urgency=low
+
+  * Add CHANGES and CREDITS files
+  * add distributions specific options (ex : --deb-<option>)
+  * Change the behaviour of the edos solver to honor "Keep package" annotations
+  * Change the default behaviour of distcheck to always consider debian essential
+    packages. The old behaviour can be restored using --deb-ignore-essential
+  * Add --minimal to distcheck to restrict the installation set of a package $p$ 
+    only to packages in the dependency cone of $p$. By default all packages marked
+    as "Keep" are part of installation set.
+  * Add Debian multi-arch translation to cudf.
+  * Add debian specific options to filter dependencies and packages based on the 
+    allowed architectures (--deb-native-arch , --deb-foreign-archs)
+  * add opencws format support.
+  * Numerous bug fixes and performance improvements.
+
+ -- Pietro Abate <pietro.abate@pps.jussieu.fr>  Thu, 12 Apr 2012 10:05:18 +0200
