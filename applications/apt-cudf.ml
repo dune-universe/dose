@@ -55,16 +55,15 @@ let print_progress ?i msg =
 ;;
 
 let make_request tables universe request = 
-  (*** XXX a here is the option architecture *)
-  (* always specify the version of the packages on the request *)
   let select_packages l = 
     List.map (fun (n,a,c) -> 
       let candidate = 
+        let n = if Option.is_none a then n else ((Option.get a)^":"^n) in
         try
           List.find (fun pkg -> 
             try (Cudf.lookup_package_property pkg "apt-candidate") = "true"
             with Not_found -> false
-          ) (Cudf.lookup_packages universe n)
+          ) (Cudf.lookup_packages universe (CudfAdd.encode n))
         with Not_found -> 
           print_error "Package %s does not have a suitable candidate" n
       in
@@ -100,26 +99,30 @@ let solver_dir =
   try Sys.getenv("CUDFSOLVERS") with Not_found -> "/usr/share/cudf/solvers"
 
 let pp_pkg fmt (s,univ) = 
-  let p = CudfAdd.Cudf_set.choose s in
-  let pkg = Hashtbl.find univ (p.Cudf.package,p.Cudf.version) in
-  let apt_id = Debian.Packages.assoc "APT-ID" pkg.Packages.extras in
-  Format.fprintf fmt "%s\n" apt_id;
-  Format.fprintf fmt "Package: %s\n" pkg.Packages.name;
-  Format.fprintf fmt "Version: %s\n" pkg.Packages.version;
-  Format.fprintf fmt "Architecture: %s\n" pkg.Packages.architecture;
+  try
+    let p = CudfAdd.Cudf_set.choose s in
+    let pkg = Hashtbl.find univ (p.Cudf.package,p.Cudf.version) in
+    let apt_id = Debian.Packages.assoc "apt-id" pkg.Packages.extras in
+    Format.fprintf fmt "%s\n" apt_id;
+    Format.fprintf fmt "Package: %s\n" pkg.Packages.name;
+    Format.fprintf fmt "Version: %s\n" pkg.Packages.version;
+    Format.fprintf fmt "Architecture: %s\n" pkg.Packages.architecture;
+  with Not_found -> print_error "apt-cudf internal error"
 ;;
 
 let pp_pkg_list fmt (l,univ) =
-  Format.fprintf fmt "%s" (
-    String.concat ", "
-    (List.map (fun p ->
-      let pkg = Hashtbl.find univ (p.Cudf.package,p.Cudf.version) in
-      Printf.sprintf "%s=%s/%s" 
-      pkg.Packages.name 
-      pkg.Packages.version
-      pkg.Packages.architecture
-    ) l)
-  )
+  try 
+    Format.fprintf fmt "%s" (
+      String.concat ", "
+      (List.map (fun p ->
+        let pkg = Hashtbl.find univ (p.Cudf.package,p.Cudf.version) in
+        Printf.sprintf "%s=%s/%s" 
+        pkg.Packages.name 
+        pkg.Packages.version
+        pkg.Packages.architecture
+      ) l)
+    )
+  with Not_found -> print_error "apt-cudf internal error"
 ;;
 
 let pp_pkg_list_tran fmt (l,univ) =
@@ -194,6 +197,40 @@ let rmtmpdir path =
   if String.exists path "apt-cudf" then (* safe guard, sort of *)
     ignore (Unix.system (Printf.sprintf "rm -rf %s" path))
 
+let check_exit_status = function
+  | Unix.WEXITED 0 -> ()
+  | Unix.WEXITED r -> warning "warning: the process terminated with exit code (%d)\n%!" r
+  | Unix.WSIGNALED n -> warning "warning: the process was killed by a signal (number: %d)\n%!" n
+  | Unix.WSTOPPED n -> warning "warning: the process was stopped by a signal (number: %d)\n%!" n
+;;
+
+let syscall ?(env=[| |]) cmd =
+  let ic, oc, ec = Unix.open_process_full cmd env in
+  let buf1 = Buffer.create 96
+  and buf2 = Buffer.create 48 in
+  (try
+     while true do Buffer.add_channel buf1 ic 1 done
+   with End_of_file -> ());
+  (try
+     while true do Buffer.add_channel buf2 ec 1 done
+   with End_of_file -> ());
+  let exit_status = Unix.close_process_full (ic, oc, ec) in
+  check_exit_status exit_status;
+  (Buffer.contents buf1,
+   Buffer.contents buf2)
+;;
+
+let native_arch =
+  let cmd = "dpkg --print-architecture" in
+  let (out,err) = syscall cmd in
+  ExtString.String.strip out
+
+(* XXX this is a bit brittle ... *)
+let foreign_archs =
+  let cmd = "dpkg --print-foreign-architectures" in
+  let (out,err) = syscall cmd in
+  ExtString.String.nsplit (ExtString.String.strip out) "\n"
+
 let main () =
   let timer1 = Util.Timer.create "parsing" in
   let timer2 = Util.Timer.create "conversion" in
@@ -205,6 +242,7 @@ let main () =
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress) [] ;
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers)
   ["parsing";"cudfio";"conversion";"solver";"solution"];
+  Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
 
   (* Solver "exec:" line. Contains three named wildcards to be interpolated:
      "$in", "$out", and "$pref"; corresponding to, respectively, input CUDF
@@ -231,7 +269,7 @@ let main () =
   in
   
   Util.Timer.start timer1;
-  let (request,pkglist) = Edsp.input_raw_ch ch in
+  let (request,pkglist) = Edsp.input_raw_ch ~archs:(native_arch::foreign_archs) ch in
   Util.Timer.stop timer1 ();
   
   if args <> [] then Input.close_ch ch;
@@ -242,11 +280,16 @@ let main () =
     let l = List.map snd Edsp.extras_tocudf in
     CudfAdd.add_properties Debcudf.preamble l
   in
-  
+
   let univ = Hashtbl.create (2*(List.length pkglist)-1) in
+  let options = {
+    Debcudf.default_options with 
+    Debcudf.native = native_arch;
+    Debcudf.foreign = foreign_archs }
+  in 
   let cudfpkglist = 
     List.map (fun pkg ->
-      let p = Edsp.tocudf tables pkg in
+      let p = Edsp.tocudf tables ~options pkg in
       Hashtbl.add univ (p.Cudf.package,p.Cudf.version) pkg;
       p
     ) pkglist 
@@ -297,15 +340,12 @@ let main () =
   let stat = Unix.close_process_full (cin,cout,cerr) in
   begin match stat with
     |Unix.WEXITED 0 -> ()
-    |Unix.WEXITED i ->
-        print_error "command '%s' failed with code %d" cmd i
-    |Unix.WSIGNALED i ->
-        print_error "command '%s' killed by signal %d" cmd i
-    |Unix.WSTOPPED i ->
-        print_error "command '%s' stopped by signal %d" cmd i
+    |Unix.WEXITED i -> print_error "command '%s' failed with code %d" cmd i
+    |Unix.WSIGNALED i -> print_error "command '%s' killed by signal %d" cmd i
+    |Unix.WSTOPPED i -> print_error "command '%s' stopped by signal %d" cmd i
   end;
-  let debug = String.concat "\n" lines in
-  info "%s\n%s\n%!" cmd debug; 
+  info "%s" cmd; 
+  debug "\n%s" (String.concat "\n" lines);
   Util.Timer.stop timer4 ();
 
   Util.Timer.start timer5;
@@ -339,8 +379,6 @@ let main () =
         end
         |false,false -> begin
             empty := false;
-(* Do not remove a package that just needs upgrading! *)
-(*            Format.printf "Remove: %a@." pp_pkg (rem,univ); *)
             Format.printf "Install: %a@." pp_pkg (inst,univ)
         end
         |true,true -> ()

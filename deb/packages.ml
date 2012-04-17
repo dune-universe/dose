@@ -170,12 +170,11 @@ let parse_package_stanza filter archs extras par =
       extras = parse_e extras par;
   }
   in
-  if Option.is_none filter then 
-    begin try Some (p ())
-    with IgnorePackage s ->
-      (warning "%s" s; None)
-    end
-  else if (Option.get filter) par then Some(p ()) else None
+  try
+    if Option.is_none filter then Some (p ())
+    else if (Option.get filter) par then Some(p ()) 
+    else None
+  with IgnorePackage s -> (warning "%s" s; None)
 ;;
 
 let status_filter par =

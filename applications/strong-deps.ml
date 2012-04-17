@@ -62,7 +62,6 @@ let default_options = function
   |Url.Eclipse -> Some (Boilerplate.Eclipse Debian.Debcudf.default_options)
   |Url.Cudf -> None
   |Url.Cws -> Some (Boilerplate.Cws Debian.Debcudf.default_options)
-  |_ -> fatal "Unknown Url format"
 ;;
 
 let main () =

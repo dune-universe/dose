@@ -232,7 +232,7 @@ let add_extra_default extras tables pkg =
   let l =
     List.filter_map (fun (debprop, (cudfprop,v)) ->
       try 
-        let s = Packages.assoc debprop pkg.extras in
+        let s = Packages.assoc (String.lowercase debprop) pkg.extras in
         let typ = Cudf_types.type_of_typedecl v in
         Some (cudfprop, Cudf_types_pp.parse_value typ s)
       with Not_found -> None
