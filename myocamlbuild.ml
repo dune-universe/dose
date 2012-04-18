@@ -4,13 +4,13 @@ open Ocamlbuild_plugin;;
 Options.use_ocamlfind := true ;;
 
 let modules_dirs = [
-  "common";"deb";"eclipse"; "opencws"; "rpm";"db";"algo";
+  "common";"deb";"eclipse"; "opencsw"; "rpm";"db";"algo";
   "doseparse"; "applications";"experimental"; "libcudf";
   "experimental/dudftocudf";
 ];;
 
 let libraries = [
-  "cudf"; "common";"debian";"eclipse"; "cws"; "rpm";"db";"algo";
+  "cudf"; "common";"debian";"eclipse"; "csw"; "rpm";"db";"algo";
   "boilerplate"; "boilerplateNoRpm";
 ];;
 

@@ -75,9 +75,9 @@ eclipse/eclipse.%:
 	  fi ; \
 	done
 
-opencws/cws.%:
-	$(OCAMLBUILD) $(OBFLAGS) opencws/cws.$*
-	@for i in _build/opencws/cws.*; do \
+opencsw/csw.%:
+	$(OCAMLBUILD) $(OBFLAGS) opencsw/csw.$*
+	@for i in _build/opencsw/csw.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
 	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \

@@ -18,17 +18,17 @@ include Util.Logging(struct let label = __FILE__ end) ;;
 (* Input schemes *******************************************************)
 
 type input_scheme =
-  | Cws | Deb | Cudf | Eclipse | Synthesis | Hdlist  (* file types *)
+  | Csw | Deb | Cudf | Eclipse | Synthesis | Hdlist  (* file types *)
   | Sqlite | Pgsql                             (* data bases *)
 ;;
 
 let is_local_scheme = function
-  | Cws | Deb | Cudf | Eclipse | Synthesis | Hdlist | Sqlite -> true
+  | Csw | Deb | Cudf | Eclipse | Synthesis | Hdlist | Sqlite -> true
   | Pgsql -> false
 ;;
 
 let scheme_to_string = function
-  | Cws -> "cws"
+  | Csw -> "csw"
   | Deb -> "deb"
   | Eclipse -> "eclipse"
   | Cudf -> "cudf"
@@ -39,7 +39,7 @@ let scheme_to_string = function
 ;;
 
 let scheme_of_string = function
-  | "cws" -> Cws
+  | "csw" -> Csw
   | "deb" -> Deb
   | "cudf" -> Cudf
   | "eclipse" -> Eclipse
