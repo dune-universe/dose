@@ -269,7 +269,8 @@ let main () =
   in
   
   Util.Timer.start timer1;
-  let (request,pkglist) = Edsp.input_raw_ch ~archs:(native_arch::foreign_archs) ch in
+  let archs = native_arch::foreign_archs in
+  let (request,pkglist) = Edsp.input_raw_ch ~archs ch in
   Util.Timer.stop timer1 ();
   
   if args <> [] then Input.close_ch ch;
