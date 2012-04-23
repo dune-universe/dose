@@ -78,16 +78,16 @@ module MakeMessages(X : sig val label : string end) = struct
   } 
   let messages = Hashtbl.create 10
 
+  let clean label = 
+    try 
+      let s = Filename.chop_extension (Filename.basename label) in
+      String.capitalize s
+    with Invalid_argument _ -> label
+
   let create ?(enabled=false) label =
-    let clean label = 
-      try 
-        let s = Filename.chop_extension (Filename.basename label) in
-        String.capitalize s
-      with Invalid_argument _ -> label
-    in
     if not (Hashtbl.mem messages label) then
       let t = { label = clean label ; enabled = enabled } in
-      Hashtbl.add messages label t ;
+      Hashtbl.add messages (clean label) t ;
       t
     else begin
       Format.eprintf "The label (%s) %s already exists@." X.label label;
@@ -191,7 +191,7 @@ module Progress = struct
     else warning "%s is an unbounded progress bar. Cannot set total" c.name
 
   let reset c =
-    if c.enabled then Printf.eprintf "\n%!";
+    (* if c.enabled then Printf.eprintf "\n%!"; *)
     Buffer.clear c.buffer;
     c.perc <- 0;
     c.rotation <- 0
@@ -231,8 +231,10 @@ module Timer = struct
   let () = gettimeofday := Unix.gettimeofday
 
   let pp_timer fmt c =
-    Format.fprintf fmt "Timer %s. Total time: %f.@."
-      c.name c.total
+    if c.total = 0. then
+      Format.fprintf fmt "Timer %s. Total time: n/a@." c.name
+    else
+      Format.fprintf fmt "Timer %s. Total time: %f.@." c.name c.total
 
   let dump fmt () =
     Hashtbl.iter (fun _ c -> if c.enabled then pp_timer fmt c) timers
