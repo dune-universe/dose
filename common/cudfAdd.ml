@@ -123,7 +123,6 @@ let decode s =
   Pcre.substitute ~rex:encoded_char_regexp ~subst:decode_single s
 ;;
 
-
 (* formatting *)
 
 let buf = Buffer.create 1024
@@ -140,7 +139,7 @@ let string_of pp arg =
   Buffer.contents buf
 
 let pp_version fmt pkg =
-  try Format.fprintf fmt "%s" (Cudf.lookup_package_property pkg "number")
+  try Format.fprintf fmt "%s" (decode (Cudf.lookup_package_property pkg "number"))
   with Not_found -> Format.fprintf fmt "%d" pkg.Cudf.version
 
 let pp_package fmt pkg =
@@ -155,7 +154,6 @@ let pkgnames universe =
   Cudf.fold_packages (fun names pkg ->
     StringSet.add pkg.Cudf.package names
   ) StringSet.empty universe
-
 
 
 let add_properties preamble l =
@@ -178,8 +176,6 @@ let realversionmap pkglist =
 let vartoint = Cudf.uid_by_package 
 let inttovar = Cudf.package_by_uid
 
-
-
 let add_to_package_list h n p =
   try let l = Hashtbl.find h n in l := p :: !l
   with Not_found -> Hashtbl.add h n (ref [p])
@@ -192,6 +188,7 @@ let unique l =
     else x::results) [] l
   )
 ;;
+
 let normalize_set (l : int list) = unique l
 
 (* (pkgname,constr) -> pkg *)

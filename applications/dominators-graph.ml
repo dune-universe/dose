@@ -75,7 +75,7 @@ let main () =
     "Strongdeps_int.strong";"Strongdeps_int.conjdep";
     "Algo.Dominators.dom_transitive_reduction";
     "Algo.Dominators.sd_transitive_reduction";
-    "Algo.Dominators.dominators"; "Algo.Dominators.tarjan" ] 
+    "Algo.Dominators.dominators_direct"; "Algo.Dominators.dominators_tarjan" ] 
   in
   let bars = [
     "Strongdeps_int.main"; "Strongdeps_int.conj";

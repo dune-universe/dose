@@ -30,6 +30,7 @@ module GraphOper (G : Sig.I) = struct
   (* this is a VERY expensive operation on Labelled graphs ... *)
 
   let transitive_reduction graph =
+    Util.Progress.set_total trbar (G.nb_vertex graph);
     Util.Timer.start tr_timer;
     G.iter_vertex (fun v ->
       Util.Progress.progress trbar;
@@ -41,10 +42,11 @@ module GraphOper (G : Sig.I) = struct
         ) graph w
       ) graph v;
     ) graph;
-    Util.Timer.stop tr_timer ()
+    Util.Timer.stop tr_timer ();
+    Util.Progress.reset trbar
+  ;;
 
   module O = Oper.I(G) 
-
 
 end
 
@@ -339,6 +341,54 @@ module MakePackageGraph(V : Sig.COMPARABLE with type t = Cudf.package )= struct
     if G.mem_vertex graph q then
       G.fold_succ (fun p acc -> S.add p acc) graph q S.empty
     else S.empty
+
+  let cycle_reduction g =
+    let module Hashtbl = CudfAdd.Cudf_hashtbl in
+    let module Set = CudfAdd.Cudf_set in
+    let visited = Hashtbl.create (G.nb_vertex g) in
+    let rec get_cycle res path v =
+      match path with
+      |[] -> fatal "No cycle in path!"
+      |h::t when G.V.equal h v -> (t, res)
+      |h::t -> get_cycle (h::res) t v
+    in
+    let reduce_cycle path v =
+      (* Somewhere, v should be in path. This is the cycle. *)
+      let (other, c) = get_cycle [] path v in
+      let nv = 
+        let name = String.concat "/" (List.sort compare (List.map (fun p -> p.Cudf.package) (v::c))) in
+        { Cudf.default_package with
+          Cudf.package = CudfAdd.encode name;
+          Cudf.version = 1;
+        }
+      in
+      G.add_vertex g nv;
+      let s = CudfAdd.to_set c in
+      List.iter (fun p ->
+        if G.mem_vertex g p then begin
+          G.iter_pred (fun q -> if not (Set.mem q s) then G.add_edge g q nv) g p;
+          G.iter_succ (fun q -> if not (Set.mem q s) then G.add_edge g nv q) g p;
+          G.remove_vertex g p;
+        end;
+        Hashtbl.remove visited p
+      ) (v::c);
+      (other, nv)
+    in
+    let rec visit path v =
+      if G.mem_vertex g v then begin
+        Hashtbl.add visited v true;
+        G.iter_succ (fun w ->
+          try
+            if Hashtbl.find visited w then
+              let (other, nv) = reduce_cycle (v::path) w in
+              visit other nv
+          with Not_found -> visit (v::path) w
+        ) g v;
+        Hashtbl.replace visited v false
+      end
+    in
+    G.iter_vertex (fun v -> if not (Hashtbl.mem visited v) then visit [] v) g
+  ;;
 
   let out ?(dump=None) ?(dot=None) ?(detrans=false) pkggraph =
     info "Dumping Graph : nodes %d , edges %d"
