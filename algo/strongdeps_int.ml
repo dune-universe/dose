@@ -45,7 +45,7 @@ let check_strong univ transitive graph solver p l =
     if p <> q then
       if not(G.mem_edge graph pkg_p pkg_q) then
         if strong_depends solver p q then 
-          Defaultgraphs.PackageGraph.add_edge transitive graph pkg_p pkg_q
+          Defaultgraphs.PackageGraph.add_edge ~transitive graph pkg_p pkg_q
   ) l
 
 (* true if at least one dependency is disjunctive *)
@@ -81,9 +81,8 @@ let strongdeps_int ?(transitive=true) graph univ pkglist =
     end
   ) pkglist ;
   Util.Progress.reset mainbar;
-  ignore (Util.Timer.stop strongtimer ());
-  debug "strong dep graph: %d nodes, %d edges\n" (G.nb_vertex graph) (G.nb_edges graph);
-  graph
+  debug "strong dep graph: %d nodes, %d edges" (G.nb_vertex graph) (G.nb_edges graph);
+  Util.Timer.stop strongtimer graph
 ;;
 
 let strongdeps ?(transitive=true) univ pkglist =
@@ -95,7 +94,6 @@ let strongdeps ?(transitive=true) univ pkglist =
   Util.Timer.start conjtimer;
   List.iter (fun pkg ->
     Util.Progress.progress conjbar;
-    (* let pkg = CudfAdd.inttovar univ id in *)
     Defaultgraphs.PackageGraph.conjdepgraph_int ~transitive graph univ pkg
   ) closure;
   Util.Progress.reset conjbar;
@@ -103,8 +101,10 @@ let strongdeps ?(transitive=true) univ pkglist =
 
   debug "conj dep graph: nodes %d , edges %d" (G.nb_vertex graph) (G.nb_edges graph);
   let g = strongdeps_int ~transitive graph univ pkglist in
-  if not transitive then O.transitive_reduction g;
+  (* because the graph might still be transitive *)
+  (* if not transitive then O.transitive_reduction g; *)
   g
+;;
 
 let strongdeps_univ ?(transitive=true) univ =
   let size = Cudf.universe_size univ in
@@ -123,8 +123,10 @@ let strongdeps_univ ?(transitive=true) univ =
   Util.Timer.stop conjtimer ();
   debug "conj dep graph: nodes %d , edges %d" (G.nb_vertex graph) (G.nb_edges graph);
   let g = strongdeps_int ~transitive graph univ l in
-  if not transitive then O.transitive_reduction g;
+  (* because the graph might still be transitive *)
+  (* if not transitive then O.transitive_reduction g; *)
   g
+;;
 
 (** return the impact set (list) of the node [q] in [graph] *)
 (** invariant : we assume the graph is NOT detransitivitized *)
