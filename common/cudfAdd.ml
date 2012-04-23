@@ -20,9 +20,6 @@ open ExtLib
 (* Include internal debugging functions for this module (debug, info, warning, fatal). *)
 include Util.Logging(struct let label = __FILE__ end) ;;
 
-let id pkg = (pkg.Cudf.package,pkg.Cudf.version)
-let pkgid p = (p.Cudf.package, p.Cudf.version)
-
 let equal = Cudf.(=%)
 let compare = Cudf.(<%)
 

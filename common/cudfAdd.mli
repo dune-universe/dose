@@ -2,12 +2,6 @@
 
 (** {2 Basic comparison operations for packages} *)
 
-(** Extract the unique identifier of a package: a pair (name, version).
-    TODO: Check which version is used. Remove the other one.
-    TODO: Maybe include it in functions like hash etc. *)
-val id : Cudf.package -> Cudf_types.pkgname * Cudf_types.version
-val pkgid : Cudf.package -> Cudf_types.pkgname * Cudf_types.version
-
 (** Equality test: two CUDF packages are equal if their names and versions are equal. *)
 val equal : Cudf.package -> Cudf.package -> bool
 
