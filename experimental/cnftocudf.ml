@@ -2,9 +2,7 @@
 (*  This file is part of a library developed with the support of the      *)
 (*  Mancoosi Project. http://www.mancoosi.org                             *)
 (*                                                                        *)
-(*  Main author(s):  ADD authors here                                     *)
-(*                                                                        *)
-(*  Contributor(s):  ADD minor contributors here                          *)
+(*  Main author(s):  Pietro Abate                                         *)
 (*                                                                        *)
 (*  This library is free software: you can redistribute it and/or modify  *)
 (*  it under the terms of the GNU Lesser General Public License as        *)
@@ -17,22 +15,66 @@
 open ExtLib
 open Common
 
-let info fmt = Util.make_info __FILE__ fmt
-let warning fmt = Util.make_warning __FILE__ fmt
-let debug fmt = Util.make_debug __FILE__ fmt
-let fatal fmt = Util.make_fatal __FILE__ fmt
-
 module Boilerplate = BoilerplateNoRpm
+
+let help = "
+Input specification : 
+
+Conjunctive dependencies :
+
+!a b
+!a c
+
+package: a
+version: 1
+depends: b , c
+
+package: b
+version: 1
+
+-----
+Disjunctive dependencies :
+
+!a b c
+
+package: a
+version: 1
+depends: b | c
+
+-----
+Conflicts:
+
+!a !b
+
+package: a
+version: 1
+conflicts: b
+
+package: b
+version: 1
+
+Negations can be either specified with the 
+the character '!' or '-' before the package name
+
+versions can be associated to a package as follows :
+!a-2 b
+
+package: a
+version: 2
+depends b
+
+package: b
+version: 1
+"
 
 module Options = struct
   open OptParse
-  let options = OptParser.make ~description:"add a decription here"
+  let options = OptParser.make ~description:("create a cudf document from a cnf formula" ^ help)
   include Boilerplate.MakeOptions(struct let options = options end)
-
-  let fail = StdOpt.store_true ()
   open OptParser
-  add options ~short_name:'f' ~long_name:"fail" ~help:"exit with a failoure" fail;
 end
+
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 type var = (string * int)
 type lit = Neg of var | Pos of var
@@ -74,15 +116,15 @@ let parse_line s =
   match lits with
   |[Neg c1 ; Neg c2] -> Confl (Neg c1,Neg c2)
   |Neg p::tl -> Deps lits
-  |_ -> assert false
+  |_ -> fatal "input error on line %s" s
 ;;
 
-let parse_cnf filename =
+let parse_cnf ic =
   let l = ref [] in
-  let ic = open_in filename in
   try while true do 
-    let line = input_line ic in
-    l := (parse_line line)::!l
+    let line = ExtString.String.strip (input_line ic) in
+    if line <> "" then
+      l := (parse_line line)::!l
   done; assert false
   with End_of_file -> !l
 ;;
@@ -170,8 +212,17 @@ let main () =
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress) [] ;
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) [];
+
+  let ic =
+    if List.length args > 0 then 
+      open_in (List.hd args) 
+    else fatal "you must specify an input file"
+  in
   
-  let pkglist = convert (parse_cnf (List.hd args)) in
+  let pkglist = convert (parse_cnf ic) in
+  
+  if not(ic = stdin) then close_in ic;
+
   Cudf_printer.pp_packages stdout pkglist;
 
 ;;
