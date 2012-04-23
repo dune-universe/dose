@@ -47,6 +47,7 @@
 <applications/smallworld.*>: @USE_RPM@, use_algo, use_boilerplate
 <applications/tests.*>: @USE_RPM@, use_algo, use_boilerplate, use_boilerplateNoRpm, @PKG_PARMAP@
 <applications/strong-deps.*>: @USE_RPM@, use_algo, use_boilerplate
+<applications/dominators-graph.*>: @USE_RPM@, use_boilerplate, use_algo
 <applications/challenged.*>: use_algo, use_boilerplateNoRpm, @PKG_PARMAP@
 <applications/outdated.*>: use_algo, use_boilerplateNoRpm
 
@@ -55,7 +56,6 @@
 <experimental/deb-cudf.*>: use_boilerplateNoRpm
 <experimental/aptsolutions.*>: use_boilerplateNoRpm
 <experimental/edsp-cudf.*>: use_boilerplateNoRpm
-<experimental/dominators-graph.*>: @USE_RPM@, use_boilerplate, use_algo
 
 <experimental/strongpreds.*>: @USE_RPM@, use_algo, use_boilerplate
 <experimental/cudftodeb.*>: use_boilerplateNoRpm
