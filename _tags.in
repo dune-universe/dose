@@ -64,5 +64,6 @@
 <experimental/treinen-test.*>: use_algo, use_boilerplateNoRpm
 <experimental/partition.*>: use_algo, package(buddy), use_boilerplateNoRpm
 <experimental/cnftocudf.*>: use_boilerplateNoRpm
+<experimental/example.*>: use_boilerplate
 
 <experimental/dudftocudf/*>: use_common, use_debian, use_eclipse, use_csw, package(extlib), package(pcre), package(str), package(unix), @PKG_CUDF@, @PKG_ZIP@, @PKG_BZ2@, @PKG_CURL@, @PKG_XML@, use_boilerplateNoRpm

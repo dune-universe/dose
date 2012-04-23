@@ -17,10 +17,7 @@
 open ExtLib
 open Common
 
-let info fmt = Util.make_info __FILE__ fmt
-let warning fmt = Util.make_warning __FILE__ fmt
-let debug fmt = Util.make_debug __FILE__ fmt
-let fatal fmt = Util.make_fatal __FILE__ fmt
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 module Options = struct
   open OptParse
@@ -30,6 +27,9 @@ module Options = struct
   let fail = StdOpt.store_true ()
   open OptParser
   add options ~short_name:'f' ~long_name:"fail" ~help:"exit with a failoure" fail;
+
+  include Boilerplate.MakeDistribOptions(struct let options = options end);;
+
 end
 
 let main () =
@@ -44,6 +44,7 @@ let main () =
 
   (* enable a selection of timers *)
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) [];
+  Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
 
   info "print some verbose info";
   warning "print some warnings";
