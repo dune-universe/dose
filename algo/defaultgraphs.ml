@@ -18,6 +18,7 @@ open Common
 include Util.Logging(struct let label = __FILE__ end) ;;
 
 let tr_timer = Util.Timer.create "Defaultgraph.GraphOper.transitive_reduction"
+let trbar = Util.Progress.create "Defaultgraph.GraphOper.transitive_reduction"
 
 (** generic operation over imperative graphs *)
 module GraphOper (G : Sig.I) = struct
@@ -26,17 +27,18 @@ module GraphOper (G : Sig.I) = struct
       Transitive Reduction of a Directed Graph, Aho, Garey and Ullman, 1972 - 
       with the proviso that we know that our graph already is a transitive 
       closure *)
-  (* this is a VERY expensive operation ... and it should be avoided on large
-   * graphs if you care about performances *)
+  (* this is a VERY expensive operation on Labelled graphs ... *)
+
   let transitive_reduction graph =
     Util.Timer.start tr_timer;
     G.iter_vertex (fun v ->
-      G.iter_succ (fun v' ->
-        if v <> v' then
-        G.iter_succ (fun v'' ->
-          if v' <> v'' then
-            G.remove_edge graph v v''
-        ) graph v'
+      Util.Progress.progress trbar;
+      G.iter_succ (fun w ->
+        if not(G.V.equal v w) then
+        G.iter_succ (fun z ->
+          if not(G.V.equal w z) then
+            G.remove_edge graph v z
+        ) graph w
       ) graph v;
     ) graph;
     Util.Timer.stop tr_timer ()
@@ -180,11 +182,12 @@ end
 
 (** Imperative bidirectional graph for dependecies. *)
 (** Imperative unidirectional graph for conflicts. *)
-module MakePackageGraph(V : Sig.COMPARABLE with type t = Cudf.package )(E : Sig.ORDERED_TYPE_DFT) = struct
+(* Note: ConcreteBidirectionalLabelled graphs are slower and we do not use them
+ * here *)
+module MakePackageGraph(V : Sig.COMPARABLE with type t = Cudf.package )= struct
 
   module PkgV = V
-  module PkgE = E
-  module G = Imperative.Digraph.ConcreteBidirectionalLabeled(PkgV)(PkgE)
+  module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
   module UG = Imperative.Graph.Concrete(PkgV)
   module O = GraphOper(G)
   module S = Set.Make(PkgV)
@@ -207,36 +210,44 @@ module MakePackageGraph(V : Sig.COMPARABLE with type t = Cudf.package )(E : Sig.
   module Display = DisplayF(G)
   module D = Graph.Graphviz.Dot(Display)
 
-  let add_edge transitive graph i j =
-    let rec adapt k red =
+  (* Maintenance Of Transitive Closures And Transitive Reductions Of Graphs *)
+  (* J.A. La Poutre and J. van Leeuwen *)
+  let add_edge ?transitive graph i j =
+    let rec adapt g k red =
       let new_red = 
         S.fold (fun l acc ->
-          if k <> l then G.add_edge graph k l;
+          if not(G.V.equal k l) then G.add_edge g k l;
           G.fold_succ (fun m acc' ->
-            if not (G.mem_edge graph k m) then S.add m acc'
+            if not (G.mem_edge g k m) then S.add m acc'
             else acc'
-          ) graph l acc
+          ) g l acc
         ) red S.empty 
       in
       if S.is_empty new_red then ()
-      else adapt k new_red
+      else adapt g k new_red
     in
-    (* debug "Adding edge from %d to %d" i j; *)
-    G.add_edge graph i j;
-    if transitive then begin
-      adapt i (S.singleton j);
+    let insert g i j =
+      adapt g i (S.singleton j);
       G.iter_pred (fun k ->
-        if not (G.mem_edge graph k j) then
-          adapt k (S.singleton j)
-      ) graph i
-    end
+        if not (G.mem_edge g k j) then
+          adapt g k (S.singleton j)
+      ) g i
+    in
+    match transitive with
+    |None -> G.add_edge graph i j
+    |Some true -> 
+      (* add an edge and maintain the transitive clousure of the graph *)
+      insert graph i j 
+    |Some false ->
+      (* TODO : add an edge and maintain the transitive reduction of the graph *)
+      G.add_edge graph i j
 
   (** add to the graph all conjunctive dependencies of package id *)
   let conjdepgraph_int ?(transitive=false) graph univ p =
     G.add_vertex graph p;
     List.iter (fun vpkgs ->
       match CudfAdd.resolve_deps univ vpkgs with
-      |[q] when not(CudfAdd.equal q p) -> add_edge transitive graph p q
+      |[q] when not(CudfAdd.equal q p) -> add_edge ~transitive graph p q
       |_ -> ()
     ) p.Cudf.depends
 
@@ -308,22 +319,10 @@ module MakePackageGraph(V : Sig.COMPARABLE with type t = Cudf.package )(E : Sig.
     G.iter_vertex (UG.add_vertex gr) graph;
     gr
 
-  (** Return the list of connected component graphs *)
+  (** Return the list of connected component of an undirected graph *)
   let connected_components graph =
-    let module Dfs = Graph.Traverse.Dfs(UG) in
-    let cc graph mark id =
-      let g = UG.create () in
-      let collect v1 = 
-        Hashtbl.add mark v1 () ; 
-        UG.iter_succ (fun v2 -> UG.add_edge g v1 v2) graph v1
-      in
-      Dfs.prefix_component collect graph id;
-      g
-    in
-    let mark = Hashtbl.create (UG.nb_vertex graph) in
-    UG.fold_vertex (fun v acc ->
-      if not(Hashtbl.mem mark v) then (cc graph mark v)::acc else acc
-    ) graph []
+    let module C = Graph.Components.Make(UG) in
+    C.scc_list graph
 
   let pred_list graph q =
     G.fold_pred (fun p acc -> p :: acc ) graph q []
@@ -404,7 +403,7 @@ module PkgE = struct
   let default = 0.0
 end
 
-module PackageGraph = MakePackageGraph(PkgV)(PkgE)
+module PackageGraph = MakePackageGraph(PkgV)
 
 (** Integer Imperative Bidirectional Graph *)
 module IntPkgGraph = struct
@@ -570,43 +569,3 @@ module IntPkgGraph = struct
     Util.Timer.stop timer sg
 
 end
-
-let intcudf universe intgraph =
-  let module PG = PackageGraph.G in
-  let module SG = IntPkgGraph.G in
-  let trasformtimer = Util.Timer.create "Defaultgraphs.intcudf" in
-  Util.Timer.start trasformtimer;
-  let size = 25000 in
-  let cudfgraph = PG.create ~size () in
-  SG.iter_edges (fun x y ->
-    let p = CudfAdd.inttovar universe x in
-    let q = CudfAdd.inttovar universe y in
-    PG.add_edge cudfgraph p q
-  ) intgraph ;
-  SG.iter_vertex (fun v ->
-    let p = CudfAdd.inttovar universe v in
-    PG.add_vertex cudfgraph p
-  ) intgraph ;
-  debug "cudfgraph: nodes %d , edges %d"
-  (PG.nb_vertex cudfgraph) (PG.nb_edges cudfgraph);
-  Util.Timer.stop trasformtimer cudfgraph
-
-(** transform a cudf graph into a integer graph *)
-let cudfint universe cudfgraph =
-  let module PG = PackageGraph.G in
-  let module SG = IntPkgGraph.G in
-  let trasformtimer = Util.Timer.create "DefaultGraphs.cudfint" in
-  Util.Timer.start trasformtimer;
-  let intgraph = SG.create () in
-  PG.iter_edges (fun x y ->
-    SG.add_edge intgraph
-    (CudfAdd.vartoint universe x)
-    (CudfAdd.vartoint universe y)
-  ) cudfgraph;
-  PG.iter_vertex (fun v ->
-    SG.add_vertex intgraph (CudfAdd.vartoint universe v)
-  ) cudfgraph;
-  debug "intcudf: nodes %d , edges %d"
-  (SG.nb_vertex intgraph) (SG.nb_edges intgraph);
-  Util.Timer.stop trasformtimer intgraph
-
