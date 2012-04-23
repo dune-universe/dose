@@ -1,5 +1,6 @@
 (**************************************************************************************)
-(*  Copyright (C) 2010 Jaap Boender <boender@pps.jussieu.fr>                     *)
+(*  Copyright (C) 2011 Pietro Abate <abate@pps.jussieu.fr>                            *)
+(*  Copyright (C) 2010 Jaap Boender <boender@pps.jussieu.fr>                          *)
 (*  Copyright (C) 2009 Mancoosi Project                                               *)
 (*                                                                                    *)
 (*  This library is free software: you can redistribute it and/or modify              *)
@@ -20,96 +21,90 @@ module Options = struct
   let options = OptParser.make ~description
 
   include Boilerplate.MakeOptions(struct let options = options end)
-  let tarjan = StdOpt.store_true ()
-  let out_file = StdOpt.str_option ()
-  let do_clean = StdOpt.store_true ()
-  let do_cr = StdOpt.store_true ()
-  let c_only = StdOpt.str_option ()
-  let c_but = StdOpt.str_option ()
-  let relative = StdOpt.float_option ()
-  let trans_red = StdOpt.store_true ()
-
+  let naive = StdOpt.store_true ()
+  let outfile = StdOpt.str_option ()
+  let clean_threshold = StdOpt.int_option ()
+  let approximate = StdOpt.float_option ()
 
   open OptParser
-  add options ~short_name:'t' ~long_name:"tarjan" ~help:"Use Tarjan algorithm" tarjan;
-  add options ~short_name:'o' ~long_name:"output" ~help:"Send output to file" out_file;
-  add options ~long_name:"clean" ~help:"Clean up the dominator graph" do_clean;
-  add options ~long_name:"clique-reduction" ~help:"(If not-Tarjan) Do clique reduction" do_cr;
-  add options ~long_name:"detransitivise" ~help:"Do transitive reduction" trans_red;
-  add options ~short_name:'r' ~long_name:"relative" ~help:"Use relative strong dominance (with percentage)" relative;
-  add options ~long_name:"only" ~help:"Output only the cluster(s) containing these packages (comma-separated)" c_only;
-  add options ~long_name:"all-but" ~help:"Do not output the cluster(s) containing these packages (comma-separated)" c_but;
+  add options ~short_name:'n' ~long_name:"naive" ~help:"Use a slower algorithm" naive;
+  add options ~short_name:'o' ~long_name:"output" ~help:"Send output to file" outfile;
+  add options ~long_name:"clean" ~help:"Remove all clusters with less then #n nodes" clean_threshold;
+  add options ~long_name:"approx" ~help:"Use approximate strong dominance (with percentage)" approximate;
 end
 
 (* ----------------------------------- *)
 
-module SG = Defaultgraphs.PackageGraph.G
-module SO = Defaultgraphs.PackageGraph.O;;
+include Util.Logging(struct let label = __FILE__ end) ;;
+
+module G = Defaultgraphs.PackageGraph.G
+module O = Defaultgraphs.PackageGraph.O
+module D = Defaultgraphs.PackageGraph.D
+module S = Defaultgraphs.PackageGraph.S
 module Dom = Dominators
-module D = Defaultgraphs.PackageGraph.D;;
-module PS = CudfAdd.Cudf_set
 
-let is graph pkg = SG.fold_pred (fun p s -> PS.add p s) graph pkg (PS.singleton pkg) ;;
+let is graph pkg = G.fold_pred (fun p s -> S.add p s) graph pkg (S.singleton pkg) ;;
+let scons graph pkg = G.fold_succ (fun p s -> S.add p s) graph pkg (S.singleton pkg) ;;
 
-let scons graph pkg = SG.fold_succ (fun p s -> PS.add p s) graph pkg (PS.singleton pkg) ;;
+let clean_graph n g = 
+  let nvertex = n in
+  let open Defaultgraphs.PackageGraph in
+  List.iter (fun l ->
+    if List.length l <= nvertex then
+      List.iter (G.remove_vertex g) l
+  ) (connected_components (undirect g))
+;;
 
-let clean_graph g = 
-begin
-  SG.iter_vertex (fun v ->
-    if SG.in_degree g v = 0 && SG.out_degree g v = 0 then
-      SG.remove_vertex g v
-    else if SG.in_degree g v = 0 && SG.out_degree g v = 1 then
-      SG.iter_succ (fun v' ->
-        if SG.out_degree g v' = 0 then
-        begin
-          SG.remove_vertex g v;
-          SG.remove_vertex g v';
-        end
-      ) g v
-    else if SG.in_degree g v = 1 && SG.out_degree g v = 1 then
-      SG.iter_succ (fun v' ->
-        if SG.in_degree g v' = 1 && SG.in_degree g v' = 1 then
-        SG.iter_succ (fun v'' ->
-          if v'' = v then
-          begin
-            SG.remove_vertex g v;
-            SG.remove_vertex g v'
-          end
-        ) g v'
-      ) g v
-  ) g
-end;;
-
-let strongdeps_univ universe =
-  let mdf = Mdf.load_from_universe universe in
-  let g = Strongdeps_int.strongdeps_univ (* ~transitive:false *) mdf in (* FIXME: API change in strondeps_int? *)
-  Defaultgraphs.intcudf mdf.Mdf.index g
+let default_options = function
+  |Url.Deb -> Some (
+    Boilerplate.Deb {
+      Debian.Debcudf.default_options with
+      Debian.Debcudf.ignore_essential = true
+    })
+  |Url.Synthesis -> None
+  |Url.Hdlist -> None
+  |(Url.Pgsql|Url.Sqlite) -> None
+  |Url.Eclipse -> Some (Boilerplate.Eclipse Debian.Debcudf.default_options)
+  |Url.Cudf -> None
+  |Url.Csw -> Some (Boilerplate.Csw Debian.Debcudf.default_options)
 ;;
 
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
+  let timers = [
+    "Strongdeps_int.strong";"Strongdeps_int.conjdep";
+    "Algo.Dominators.dom_transitive_reduction";
+    "Algo.Dominators.sd_transitive_reduction";
+    "Algo.Dominators.dominators"; "Algo.Dominators.tarjan" ] 
+  in
+  let bars = [
+    "Strongdeps_int.main"; "Strongdeps_int.conj";
+    "Algo.dominators"; "Defaultgraph.GraphOper.transitive_reduction"
+  ]
+  in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose); 
-  Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Algo.Dominators.dominators"; "Algo.Dominators.tarjan"; "Strongdeps_int.strong"; "Strongdeps_int.conjdep"]; 
-  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) ["Algo.dominators"]; 
-  let (universe,_,_) = Boilerplate.load_universe posargs in
+  Util.Debug.disable "Depsolver_int";
+  Util.Debug.disable "Strongdeps_int";
+  Boilerplate.enable_timers (OptParse.Opt.get Options.timers) timers;
+  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) bars; 
+  Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
+  let options = default_options (Input.guess_format [posargs]) in
+  let (_,universe,_,_) = Boilerplate.load_universe ~options posargs in
 
   let dom_graph =
-    if OptParse.Opt.get Options.tarjan then
-      Dom.dominators_tarjan (strongdeps_univ universe)
-    else begin
-      let g = Strongdeps.strongdeps_univ universe in
-      if OptParse.Opt.get Options.do_cr then Dom.clique_reduction g;
-      match OptParse.Opt.opt Options.relative with
-      | None -> Dom.dominators g
-      | Some f -> Dom.dominators ~relative:f g
-    end
+    if OptParse.Opt.get Options.naive then
+      let g = Strongdeps.strongdeps_univ ~transitive:true universe in
+      let relative = OptParse.Opt.opt Options.approximate in
+      Dom.dominators_direct ~relative g
+    else
+      let g = Strongdeps.strongdeps_univ ~transitive:true universe in
+      Dom.dominators_tarjan g
   in
-  if OptParse.Opt.get Options.trans_red then SO.transitive_reduction dom_graph;
-  if OptParse.Opt.is_set Options.c_only then () ;
-  if OptParse.Opt.get Options.do_clean then clean_graph dom_graph;
+  if OptParse.Opt.is_set Options.clean_threshold then 
+    clean_graph (OptParse.Opt.get Options.clean_threshold) dom_graph;
   let oc =
-    if OptParse.Opt.is_set Options.out_file then
-      open_out (OptParse.Opt.get Options.out_file)
+    if OptParse.Opt.is_set Options.outfile then
+      open_out (OptParse.Opt.get Options.outfile)
     else
       stdout
   in

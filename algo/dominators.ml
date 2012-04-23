@@ -1,7 +1,7 @@
 (**************************************************************************************)
-(*  Copyright (C) 2009-2010 Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
-(*                      and Jaap Boender <boender@pps.jussieu.fr>                          *)
-(*  Copyright (C) 2009-2010 Mancoosi Project                                               *)
+(*  Copyright (C) 2009-2010 Pietro Abate <pietro.abate@pps.jussieu.fr>                *)
+(*                      and Jaap Boender <boender@pps.jussieu.fr>                     *)
+(*  Copyright (C) 2009-2010 Mancoosi Project                                          *)
 (*                                                                                    *)
 (*  This library is free software: you can redistribute it and/or modify              *)
 (*  it under the terms of the GNU Lesser General Public License as                    *)
@@ -19,276 +19,139 @@ let dombar = Util.Progress.create "Algo.dominators"
 let domtimer = Util.Timer.create "Algo.Dominators.dominators"
 let tjntimer = Util.Timer.create "Algo.Dominators.tarjan"
 let crtimer = Util.Timer.create "Algo.Dominators.cycle_reduction"
+let sdtrtimer = Util.Timer.create "Algo.Dominators.sd_transitive_reduction"
+let domtrtimer = Util.Timer.create "Algo.Dominators.dom_transitive_reduction"
 
 include Util.Logging(struct let label = __FILE__ end) ;;
 
 module G = Defaultgraphs.PackageGraph.G
-module C = Components.Make(G)
 module O = Defaultgraphs.GraphOper(G)
-module S = CudfAdd.Cudf_set
+module S = Defaultgraphs.PackageGraph.S
 
-(* to be computed on the strong dependency graph *)
-let _impactset (graph,pkg) =
-  G.fold_pred (fun p s ->
-    S.add p s
-  ) graph pkg (S.singleton pkg)
+let cycle_reduction g =
+  let module Hashtbl = CudfAdd.Cudf_hashtbl in
+  let module Set = CudfAdd.Cudf_set in
+  let visited = Hashtbl.create (G.nb_vertex g) in
+  let rec get_cycle res path v =
+    match path with
+    |[] -> fatal "No cycle in path!"
+    |h::t when G.V.equal h v -> (t, res)
+    |h::t -> get_cycle (h::res) t v
+  in
+  let reduce_cycle path v =
+    (* Somewhere, v should be in path. This is the cycle. *)
+    let (other, c) = get_cycle [] path v in
+    let nv = {
+      Cudf.default_package with
+      Cudf.version = 1;
+      Cudf.package = String.concat "/" (List.sort (List.map (fun p -> p.Cudf.package) (v::c))) }
+    in
+    G.add_vertex g nv;
+    let s = CudfAdd.to_set c in
+    List.iter (fun p ->
+      if G.mem_vertex g p then begin
+        G.iter_pred (fun q -> if not (Set.mem q s) then G.add_edge g q nv) g p;
+        G.iter_succ (fun q -> if not (Set.mem q s) then G.add_edge g nv q) g p;
+        G.remove_vertex g p;
+      end;
+      Hashtbl.remove visited p
+    ) (v::c);
+    (other, nv)
+  in
+  let rec visit path v =
+    if G.mem_vertex g v then begin
+      Hashtbl.add visited v true;
+      G.iter_succ (fun w ->
+        try
+          if Hashtbl.find visited w then
+            let (other, nv) = reduce_cycle (v::path) w in
+            visit other nv
+        with Not_found -> visit (v::path) w
+      ) g v;
+      Hashtbl.replace visited v false
+    end
+  in
+  G.iter_vertex (fun v -> if not (Hashtbl.mem visited v) then visit [] v) g;
+;;
 
-(* to be computed on the strong dependency graph *)
-let _scons (graph,pkg) = 
-  G.fold_succ (fun p s ->
-    S.add p s
-  ) graph pkg (S.singleton pkg)
-
-let impactset graph pkg = Util.memo _impactset (graph,pkg)
-let scons graph pkg = Util.memo _scons (graph,pkg)
+let impactset (graph,pkg) = G.fold_pred S.add graph pkg (S.singleton pkg)
+let scons (graph,pkg) = G.fold_succ S.add graph pkg (S.singleton pkg)
 
 (* the dominators are computed on the strong dependency graph
  * with transitive archs *)
-let dominators ?relative graph = 
-  info "N. of vertex graph %d\n" (G.nb_vertex graph);
-  info "N. of edges graph %d\n" (G.nb_edges graph);
-  
+let dominators_direct ?(relative=None) graph = 
+  info "vertex %d - edges %d" (G.nb_vertex graph) (G.nb_edges graph);
 
   Util.Progress.set_total dombar (G.nb_vertex graph);
   Util.Timer.start domtimer;
   let domgraph = G.create () in
   G.iter_vertex (fun p ->
-    G.add_vertex domgraph p;
     Util.Progress.progress dombar;
-    let isp = impactset graph p in
-    let sconsp = scons graph p in
+    let isp = impactset (graph,p) in
+    let sconsp = scons (graph,p) in
     G.iter_succ (fun q ->
-      if p <> q then
-      begin
-        G.add_vertex domgraph q;
-        let isq = impactset graph q in
+      if not(CudfAdd.equal p q) then begin
+        let isq = impactset (graph,q) in
         let dfs = S.diff isq sconsp in
         match relative with
-        | None -> 
-          if S.subset dfs isp then begin
-            G.add_edge domgraph p q;
-            debug "Dominator %s -D-> %s !" (CudfAdd.string_of_package p) (CudfAdd.string_of_package q);
-          end
-        | Some f -> 
-          let fv = ( float ( S.cardinal (S.diff dfs isp)) *. 100.) /. ( float (S.cardinal isp)) in
-          if fv <= f then begin
-            G.add_edge domgraph p q;
-            debug "Dominator %s -D-> %s !" (CudfAdd.string_of_package p) (CudfAdd.string_of_package q);
-          end
+        |None -> if S.subset dfs isp then G.add_edge domgraph p q
+        |Some threshold ->
+          let t = ( float ( S.cardinal (S.diff dfs isp)) *. 100.) /. ( float (S.cardinal isp)) in
+          if t <= threshold then G.add_edge domgraph p q
       end
     ) graph p
   ) graph;
+  debug "cycle reduction"; 
+  cycle_reduction domgraph;
+  debug "transitive reduction";
+  O.transitive_reduction domgraph;
   Util.Timer.stop domtimer domgraph
 ;;
 
-(** clique reduction: replace any clique by a fresh node.
-    If we do this before transitive reduction, any cycle will be a clique
-    and thus this will also perform cycle reduction. *)
-let clique_reduction graph =
-  info "Starting clique reduction...";
-  List.iter (function
-  | [] -> ()
-  | [_] -> ()
-  | n ->
-    begin 
-      let nv = {
-        Cudf.default_package with 
-        Cudf.package = String.concat "/" (List.sort (List.map (fun p -> p.Cudf.package) n)) } 
-      in
-      G.add_vertex graph nv;
-      List.iter (fun p ->
-        G.iter_pred (fun p' ->
-          if not (List.mem p' n) then
-            G.add_edge graph p' nv
-        ) graph p;
-        G.iter_succ (fun p' ->
-          if not (List.mem p' n) then
-            G.add_edge graph nv p'
-        ) graph p;
-        G.remove_vertex graph p
-      ) n;
-    end
-  ) (C.scc_list graph)
-;;
-
-(* inspired by has_cycle from ocamlgraph; not in hashtbl: not visited,
- * false in hashtbl: visited in another component, true in hashtbl:
- * visited here *)
-let cycle_reduction g =
-  info "Starting cycle reduction...";
-  let visited = Hashtbl.create (G.nb_vertex g) in
-  let rec get_cycle res path v' =
-    match path with
-    | [] -> fatal "No cycle in path!"
-    | h::t -> if h = v' then (t, res) else get_cycle (h::res) t v' 
-  in
-  let reduce_cycle path v' =
-    (* Somewhere, v' should be in path. This is the cycle. *)
-    let (other, c) = get_cycle [] path v' in
-    let nv = { 
-      Cudf.default_package with 
-      Cudf.package = String.concat "/" (List.sort (List.map (fun p -> p.Cudf.package) (v'::c))) } 
-    in
-    G.add_vertex g nv;
-    List.iter (fun p ->
-      if G.mem_vertex g p then
-      begin
-        G.iter_pred (fun p' -> if not (List.mem p' c) then G.add_edge g p' nv) g p;
-        G.iter_succ (fun p' -> if not (List.mem p' c) then G.add_edge g nv p') g p;
-        G.remove_vertex g p;
-      end;
-      Hashtbl.remove visited p
-    ) (v'::c);
-    (other, nv)
-  in
-  let rec visit path v =
-    if G.mem_vertex g v then
-    begin
-      Hashtbl.add visited v true;
-      G.iter_succ (fun v' ->
-        try
-          if Hashtbl.find visited v' then
-          begin
-            let (other, nv) = reduce_cycle (v::path) v' in
-            visit other nv
-          end
-        with Not_found ->
-          visit (v::path) v'
-      ) g v;
-      Hashtbl.replace visited v false
-    end
-  in
-  begin
-    Util.Timer.start crtimer;
-    G.iter_vertex (fun v -> if not (Hashtbl.mem visited v) then visit [] v) g;
-    Util.Timer.stop crtimer ()
-  end
-;;
-
-
-module T = Traverse.Dfs(G)
-
-let dominators_tarjan g =
-  let graph = G.copy g in
-  info "sd_graph before reduction: %d vertices, %d edges\n" (G.nb_vertex graph) (G.nb_edges graph);
-  cycle_reduction graph;
-  O.transitive_reduction graph;
-  info "sd_graph after reduction: %d vertices, %d edges\n" (G.nb_vertex graph) (G.nb_edges graph);
+(* This function expects a strong dependency graph that might or not contain
+ * transitive edges *)
+let dominators_tarjan graph =
+  debug "dominators tarjan";
+  debug "vertex %d - edges %d" (G.nb_vertex graph) (G.nb_edges graph);
   let start_pkg = { Cudf.default_package with Cudf.package = "START" } in
-  let vertex_order = ref [] in
-  let n = ref 1 in
-  let vertex_number_ht = Hashtbl.create (G.nb_vertex graph) in
-  let semi_ht = Hashtbl.create (G.nb_vertex graph) in
-  let stg = G.create () in
-  let forest = G.create () in
-  let domgr = G.create () in
 
-  let smaller_number x y =
-    Hashtbl.find vertex_number_ht x < Hashtbl.find vertex_number_ht y 
-  in
+  let graph = G.copy graph in
 
-  let rec dfs v =
-    vertex_order := v::!vertex_order;
-    Hashtbl.replace semi_ht v v; (* v is its own semi-dominator for now *)
-    Hashtbl.replace vertex_number_ht v !n;
-    incr n;
-    G.iter_succ (fun w ->
-      if not (Hashtbl.mem semi_ht w) then
-      begin
-        (* v does not yet have a semi-dominator *)
-        G.add_edge stg v w;
-        dfs w
-      end
-    ) graph v
-  in
+  (* all cycles are cliques in the strong dependency graph *)
+  debug "cycle reduction";
+  Util.Timer.start crtimer;
+  cycle_reduction graph;
+  Util.Timer.stop crtimer ();
+  debug "vertex %d - edges %d" (G.nb_vertex graph) (G.nb_edges graph);
 
-  let link v w = G.add_edge forest v w in
+  debug "transitive reduction";
+  Util.Timer.start sdtrtimer;
+  O.transitive_reduction graph;
+  Util.Timer.stop sdtrtimer ();
+  info "vertex %d - edges %d" (G.nb_vertex graph) (G.nb_edges graph);
 
-  let rec compress_path res v =
-    match G.pred forest v with
-    | [] -> res
-    | [p] ->
-      if smaller_number (Hashtbl.find semi_ht res) (Hashtbl.find semi_ht p)
-      then
-      begin
-        match G.pred forest p with
-        | [] -> res
-        | [_] -> compress_path res p
-        | _ -> fatal "Vertex %s has multiple predecessors in forest" (CudfAdd.string_of_package p)
-      end
-      else
-        compress_path p p
-    | _ -> fatal "Vertex %s has multiple predecessors in forest" (CudfAdd.string_of_package v)
-  in
-  
-  let eval v =
-    G.add_vertex forest v;
-    if G.in_degree forest v = 0 then v 
-    else compress_path v v
-  in
-  
-  Util.Timer.start tjntimer;
-
-  (* add a start vertex, and connect it to all packages without
-   * incoming edges *)
-  G.add_vertex graph start_pkg;
+  (* connect it to all packages without incoming edges to a start vertex *)
   G.iter_vertex (fun v ->
-    if compare v start_pkg <> 0 then
-    begin
-      if (try G.in_degree graph v with Invalid_argument _ -> 0) = 0 then
-        G.add_edge graph start_pkg v;
-    end
+    if (G.in_degree graph v) = 0 then
+      G.add_edge graph start_pkg v;
   ) graph;
-  dfs start_pkg;
-  let bucket_ht = Hashtbl.create (G.nb_vertex graph) in
-  (* step 2 and 3 *)
-  List.iter (fun w ->
-    debug "step 2 for vertex %s...%!" (CudfAdd.string_of_package w);
-    G.iter_pred (fun v ->
-      let u = eval v in
-      let semi_u = Hashtbl.find semi_ht u in
-      if smaller_number semi_u (Hashtbl.find semi_ht w) then
-        Hashtbl.replace semi_ht w semi_u;      
-    ) graph w;
-    Hashtbl.add bucket_ht (Hashtbl.find semi_ht w) w;
-    match (try G.pred stg w with Invalid_argument _ -> []) with
-    | [] -> ()
-    | [parent_w] ->
-      begin
-        link parent_w w;
-        List.iter (fun v ->
-          debug "step 3 for vertex %s...%!" (CudfAdd.string_of_package w);
-          let u = eval v in
-          (match (try G.pred domgr v with Invalid_argument _ -> []) with
-          | [] -> ()
-          | [p] -> G.remove_edge domgr p v
-          | _ -> fatal "Vertex %s has multiple dominators" (CudfAdd.string_of_package v));
-          if smaller_number (Hashtbl.find semi_ht u) (Hashtbl.find semi_ht v) then
-            G.add_edge domgr u v
-          else
-            G.add_edge domgr parent_w v
-        ) (Hashtbl.find_all bucket_ht parent_w);
-        while Hashtbl.mem bucket_ht parent_w
-        do
-          Hashtbl.remove bucket_ht parent_w
-        done;
-      end
-    | _ -> fatal "Vertex %s has multiple predecessors in spanning tree" (CudfAdd.string_of_package w)
-  ) !vertex_order;
-  (* step 4 *)
-  List.iter (fun w ->
-    debug "step 4 for %s...%!" (CudfAdd.string_of_package w);
-    match (try G.pred domgr w with Invalid_argument _ -> []) with
-    | [] -> ()
-    | [p] -> if (compare p (Hashtbl.find semi_ht w) <> 0) then
-        begin
-          match (try G.pred domgr p with Invalid_argument _ -> []) with
-          | [] -> ()
-          | [p_p] -> (G.remove_edge domgr p w; G.add_edge domgr p_p w)
-          | _ -> fatal "Vertex %s has multiple dominators" (CudfAdd.string_of_package p)
-        end
-    | _ -> fatal "Vertex %s has multiple dominators" (CudfAdd.string_of_package w)
-  ) (List.rev !vertex_order);
-  Util.Timer.stop tjntimer domgr
+
+  debug "tarjan algorithm";
+  Util.Timer.start tjntimer;
+  let module Dom = Dominator.Make(G) in
+  let idom = Dom.compute_all graph start_pkg in
+  let domgr = idom.Dom.dom_graph () in
+  Util.Timer.stop tjntimer ();
+
+  G.remove_vertex graph start_pkg;
+  G.remove_vertex domgr start_pkg;
+  
+  debug "transitive reduction";
+  Util.Timer.start domtrtimer;
+  O.transitive_reduction domgr;
+  Util.Timer.stop domtrtimer ();
+  debug "vertex %d - edges %d" (G.nb_vertex domgr) (G.nb_edges domgr);
+
+  domgr
 ;;
 

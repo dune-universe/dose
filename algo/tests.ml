@@ -21,18 +21,24 @@ let f_dependency = Filename.concat test_dir "dependency.cudf"
 let f_conj_dependency = Filename.concat test_dir "conj_dependency.cudf"
 let f_cone = Filename.concat test_dir "cone.cudf"
 let f_engine_conflicts = Filename.concat test_dir "engine-conflicts.cudf"
+
 let f_strongdeps_simple = Filename.concat test_dir "strongdep-simple.cudf"
 let f_strongdeps_conflict = Filename.concat test_dir "strongdep-conflict.cudf"
 let f_strongdeps_cycle = Filename.concat test_dir "strongdep-cycle.cudf"
 let f_strongdeps_conj = Filename.concat test_dir "strongdep-conj.cudf"
+
 let f_strongcfl_simple = Filename.concat test_dir "strongcfl-simple.cudf"
 let f_strongcfl_triangle = Filename.concat test_dir "strongcfl-triangle.cudf"
+
 let f_selfprovide = Filename.concat test_dir "selfprovide.cudf"
 let f_coinst = Filename.concat test_dir "coinst.cudf"
 
 let f_legacy = Filename.concat cudf_dir "legacy.cudf"
 let f_legacy_sol = Filename.concat cudf_dir "legacy-sol.cudf"
 let f_debian = Filename.concat cudf_dir "debian.cudf" 
+
+let f_dominators_order = Filename.concat test_dir "dominators_order.cudf"
+let f_dominators_cycle = Filename.concat test_dir "dominators_cycle.cudf"
 
 let load_univ f =
   let (_,univ,_) = Cudf_parser.load_from_file f in
@@ -334,6 +340,10 @@ let strongdep_conj =
     test_strong f_strongdeps_conj edge_list
   )
 
+(* This test is no longer true.
+ * transitive = false does not mean that the result is
+ * the transitive reduction of the strong dependency
+ * graph *)
 let strongdep_detrans =
   "strongdep detrans" >:: (fun _ ->
     let edge_list = [
@@ -371,7 +381,6 @@ let test_strongdep =
     strongdep_conflict ;
     strongdep_cycle ;
     strongdep_conj ;
-    strongdep_detrans
   ]
 
 let test_strongcfl = 
@@ -392,6 +401,125 @@ let test_dependency_graph =
     *)
     ()
   )
+
+let test_dominators_tarjan_order =
+  "dominators tarjan order" >:: (fun _ ->
+    let universe = load_univ f_dominators_order in
+    let g = Strongdeps.strongdeps_univ ~transitive:false universe in
+    let dg = Dominators.dominators_tarjan g in
+    let edges = ["quebec","romeo"] in
+    let edges_packages = 
+      List.map (fun (p,q) -> 
+        Cudf.lookup_package universe (p,1),
+        Cudf.lookup_package universe (q,1)
+      ) edges
+    in
+    let size = Defaultgraphs.PackageGraph.G.nb_edges dg in
+    let all = 
+      List.map (fun (p,q) ->
+        Defaultgraphs.PackageGraph.G.find_all_edges dg p q
+      ) edges_packages 
+    in
+    List.iter (fun l ->
+      assert_equal ~msg:"too many edges" (List.length l) 1
+    ) all ;
+    assert_equal ~msg:"too many edges in the graph" size 1
+  )
+
+let test_dominators_tarjan_cycle =
+  "dominators tarjan cycle" >:: (fun _ ->
+    let universe = load_univ f_dominators_cycle in
+    let g = Strongdeps.strongdeps_univ ~transitive:false universe in
+    let dg = Dominators.dominators_tarjan g in
+    let dom_pkglist = Defaultgraphs.PackageGraph.G.fold_vertex (fun v acc -> v::acc) dg [] in
+    let dom_univ = Cudf.load_universe dom_pkglist in
+    let edges = [
+      ("a1",1),("a2",1);
+      ("a1",1),("a3",1);
+      ("a1",1),("a7",1);
+      ("a3",1),("a4/a6",1);
+      ("a4/a6",1),("a5",1) 
+      ]
+    in
+    let edges_packages = 
+      List.map (fun (p,q) -> 
+        try
+          Cudf.lookup_package dom_univ p,
+          Cudf.lookup_package dom_univ q
+        with Not_found -> failwith (Printf.sprintf "(%s,%s) not found" (fst p) (fst q))
+      ) edges
+    in
+    let size = Defaultgraphs.PackageGraph.G.nb_edges dg in
+    let all = 
+      List.map (fun (p,q) ->
+        Defaultgraphs.PackageGraph.G.find_all_edges dg p q
+      ) edges_packages 
+    in
+    List.iter (fun l ->
+      assert_equal ~msg:"too many edges" (List.length l) 1
+    ) all ;
+    assert_equal ~msg:"too many edges in the graph" size (List.length edges)
+  )
+
+let test_dominators_tarjan_legacy =
+  "dominators tarjan legacy" >:: (fun _ ->
+    let universe = load_univ f_legacy in
+    let g = Strongdeps.strongdeps_univ ~transitive:false universe in
+    let dg = Dominators.dominators_tarjan g in
+    let dom_pkglist = Defaultgraphs.PackageGraph.G.fold_vertex (fun v acc -> v::acc) dg [] in
+    let dom_univ = Cudf.load_universe dom_pkglist in
+    let edges = [
+      ("bicycle/user",1),("bike-tire",1);
+      ("bicycle/user",1),("pedal",1);
+      ("bicycle/user",1),("seat",1);
+      ("car",1),("battery",3);
+      ("gasoline-engine",1),("turbo",1);
+      ("window",3),("glass",2);
+      ("window",2),("glass",1);
+      ("bike-tire",1),("rim",1);
+      ] 
+    in
+    let edges_packages = 
+      List.map (fun (p,q) -> 
+        try
+          Cudf.lookup_package dom_univ p,
+          Cudf.lookup_package dom_univ q
+        with Not_found -> failwith (Printf.sprintf "(%s,%s) not found" (fst p) (fst q))
+      ) edges
+    in
+    let size = Defaultgraphs.PackageGraph.G.nb_edges dg in
+    let all = 
+      List.map (fun (p,q) ->
+        Defaultgraphs.PackageGraph.G.find_all_edges dg p q
+      ) edges_packages 
+    in
+    List.iter (fun l ->
+      assert_equal ~msg:"too many edges" (List.length l) 1
+    ) all ;
+    assert_equal ~msg:"too many edges in the graph" size (List.length edges)
+  )
+
+
+let test_dominators_direct_order =
+  "dominators direct" >:: (fun _ ->
+    let universe = load_univ f_dominators_order in
+    let g = Strongdeps.strongdeps_univ ~transitive:false universe in
+    let dg = Dominators.dominators_direct g in
+    let romeo = Cudf.lookup_package universe ("romeo",1) in
+    let quebec = Cudf.lookup_package universe ("quebec",1) in
+    let size = Defaultgraphs.PackageGraph.G.nb_edges dg in
+    let all = Defaultgraphs.PackageGraph.G.find_all_edges dg quebec romeo in
+    assert_equal ~msg:"too many edges between quebec and romeo" (List.length all) 1;
+    assert_equal ~msg:"too many edges in the graph" size 1
+  )
+
+let test_dominators =
+  "dominators algorithms" >::: [
+    test_dominators_tarjan_order;
+    test_dominators_tarjan_cycle;
+    test_dominators_tarjan_legacy;
+    test_dominators_direct_order;
+  ]
 
 let test_defaultgraphs =
   "default graphs algorithms" >::: [
@@ -423,6 +551,7 @@ let all =
     test_strongdep ;
     test_strongcfl ;
     test_defaultgraphs ;
+    test_dominators
     (* test_clause_dump ; *)
   ]
 
