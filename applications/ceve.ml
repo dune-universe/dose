@@ -116,6 +116,7 @@ let main () =
   let options = Options.set_options input_format in
 
   Boilerplate.enable_debug(OptParse.Opt.get Options.verbose);
+  Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
 
   if OptParse.Opt.get Options.out_type = "sqlite" then
     output_to_sqlite posargs
