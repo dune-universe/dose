@@ -179,12 +179,17 @@ let init_tables ?(options=default_options) ?(step=1) ?(versionlist=[]) pkglist =
 let get_cudf_version tables (package,version) =
   try Util.StringHashtbl.find tables.versions_table version
   with Not_found -> begin
-    warning "(%s,%s) is not known" package version;
+    warning "Package (%s,%s) does not have an associated cudf version" package version;
     raise Not_found
   end
 
 let get_real_version tables (name,cudfversion) =
-  let package = CudfAdd.decode name in
+  let package = 
+    (* XXX this is a hack. I should record the name with the architecture *)
+    let n = CudfAdd.decode name in
+    try snd(ExtString.String.split n ":") 
+    with Invalid_string _ -> n
+  in
   try
     let m = !(Util.IntHashtbl.find tables.reverse_table cudfversion) in
     try SMap.find package m 
@@ -196,9 +201,9 @@ let get_real_version tables (name,cudfversion) =
           ) (SMap.bindings m)
         )
       in
-      fatal "unable to get real version for %s\nKnown versions %s" package known
+      fatal "Unable to get real version for %s\n All Known versions for this package are %s" package known
   with Not_found ->
-    fatal "package (%s,%d) is not known" name cudfversion
+    fatal "Package (%s,%d) does not have an associated debian version" name cudfversion
 
 let loadl tables l =
   List.flatten (

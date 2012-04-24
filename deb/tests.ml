@@ -34,7 +34,6 @@ let f_discriminants = Filename.concat test_dir "deb/discriminants" ;;
   * add test for status and merge
   * *)
 
-let ch = Input.open_file f_packages ;;
 let extras_properties = [
   ("Maintainer", ("maintainer", `String None));
   ("Size", ("size", `Nat None));
@@ -420,6 +419,12 @@ let test_evolution =
   ]
 ;;
 
+let test_multiarch = 
+  "test multiarch" >::: [
+    "" >:: (fun _ -> ());
+  ] 
+;;
+
 let test_numbering = 
   "test numbering" >::: [
     "sequence" >:: (fun _ -> 
@@ -429,6 +434,7 @@ let test_numbering =
         assert_equal debconf.Cudf.version 32
       with Not_found -> assert_failure "debconf version mismatch"
     );
+    "get real version" >:: (fun _ -> ());
   ] 
 ;;
 
@@ -458,7 +464,8 @@ let test_conflicts =
 let test_mapping =
   "test deb -> cudf mapping" >::: [
 (*    test_numbering ; *)
-    test_virtual
+    test_virtual;
+    test_multiarch
   ]
 
 (* Parsing tests *)
@@ -473,6 +480,7 @@ and raises_failure function_to_test failure_text =
 (* Extension of "bracket_tmpfile" function, filling
     the temporary file with lines from the given list. *)
 let bracket_tmpfile_filled lines (test_fun : string -> unit)  =
+  let ch = Input.open_file f_packages in
   bracket_tmpfile
     (fun (file, ch) ->
       List.iter ( fun line -> output_string ch (line ^ "\n") ) lines;
