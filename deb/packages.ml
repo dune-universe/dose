@@ -174,12 +174,20 @@ let parse_package_stanza filter archs extras par =
     if Option.is_none filter then Some (p ())
     else if (Option.get filter) par then Some(p ()) 
     else None
-  with IgnorePackage s -> begin
-    let n = parse_s ~opt:"?" parse_name "Package" par in
-    let v = parse_s ~opt:"?" parse_version "Version" par in
-    let a = parse_s ~opt:"?" parse_version "Architecture" par in
-    warning "Ignoring Package (%s,%s,%s) : %s" n v a s; 
-    None
+  with 
+  |IgnorePackage s -> begin
+      let n = parse_s ~opt:"?" parse_name "Package" par in
+      let v = parse_s ~opt:"?" parse_version "Version" par in
+      let a = parse_s ~opt:"?" parse_version "Architecture" par in
+      warning "Ignoring Package (%s,%s,%s) : %s" n v a s; 
+      None
+    end
+  |ParseError (f,s) -> begin
+      let n = parse_s ~opt:"?" parse_name "Package" par in
+      let v = parse_s ~opt:"?" parse_version "Version" par in
+      let a = parse_s ~opt:"?" parse_version "Architecture" par in
+      let err = Printf.sprintf "Parser Error in Package (%s,%s,%s) : %s" n v a s in
+      raise ( ParseError (f,err) )
   end
 ;;
 
@@ -212,7 +220,7 @@ let parse_packages_in ?filter ?(archs=[]) ?(extras=[]) file ic =
   try
     let stanza_parser = parse_package_stanza filter archs extras in
     Format822.parse_from_ch (packages_parser stanza_parser []) ic
-  with ParseError (field,errmsg) -> fatal "Filename %s\n Error %s : %s" file field errmsg
+  with ParseError (field,errmsg) -> fatal "Filename %s\n %s : %s" file field errmsg
 
 (**/**)
 let id p = (p.name,p.version,p.architecture)
