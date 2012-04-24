@@ -21,19 +21,13 @@ module Options = struct
   include Boilerplate.MakeOptions(struct let options = options end)
 
   let dot = StdOpt.store_true ()
-  let table =  StdOpt.store_true ()
   let detrans = StdOpt.store_true ()
-  let trans_closure = StdOpt.store_true ()
   let checkonly = Boilerplate.vpkglist_option ()
-  let prefix = StdOpt.str_option ~default:"" ()
   let conj_only = StdOpt.store_true ()
 
   open OptParser
-  add options ~long_name:"prefix" ~help:"Prefix output fils with <prefix>" prefix;
   add options ~long_name:"dot" ~help:"Print the strong dependency graph in dot format" dot;
-  add options ~long_name:"table" ~help:"Print the table (package,strong,direct,difference)" table;
-  add options ~long_name:"detrans" ~help:"Perform the transitive reduction of the strong dependency graph" detrans;
-  add options ~long_name:"transitive-closure" ~help:"Perform the transitive closure of the direct dependency graph" trans_closure;
+  add options ~long_name:"detrans" ~help:"Print the transitive reduction of the strong dependency graph" detrans;
   add options ~long_name:"checkonly" ~help:"Check only these package" checkonly;
   add options ~long_name:"conj-only" ~help:"Use the conjunctive graph only" conj_only;
 end
@@ -47,8 +41,6 @@ module O = Defaultgraphs.GraphOper(G)
 
 let impactlist = Defaultgraphs.PackageGraph.pred_list
 let rev_impactlist = Defaultgraphs.PackageGraph.succ_list
-
-let mk_filename prefix suffix s = if prefix = "" then s^suffix else prefix^suffix
 
 let default_options = function
   |Url.Deb -> Some ( 
@@ -71,7 +63,6 @@ let main () =
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress) bars;
   let options = default_options (Input.guess_format [posargs]) in
   let (_,universe,_,to_cudf) = Boilerplate.load_universe ~options posargs in
-  let prefix = OptParse.Opt.get Options.prefix in
   if OptParse.Opt.is_set Options.checkonly then begin
     let pkglistlist =
       List.map (function
@@ -91,6 +82,8 @@ let main () =
           Strongdeps.strongdeps universe pkglist
       in
       if OptParse.Opt.get Options.dot then begin
+        if OptParse.Opt.get Options.detrans then
+          O.transitive_reduction sdgraph;
         Defaultgraphs.PackageGraph.D.output_graph stdout sdgraph;
       end else begin
         let pp_list = Diagnostic.pp_list CudfAdd.pp_package in
@@ -113,48 +106,30 @@ let main () =
         Strongdeps.strongdeps_univ universe
     in
 
-    if OptParse.Opt.get Options.detrans then
-      O.transitive_reduction sdgraph;
-
-    let outch = 
-      if OptParse.Opt.get Options.table then
-        open_out (mk_filename prefix ".csv" "data")
-      else 
-        stdout
-    in
-    let depgraph =
-      if OptParse.Opt.get Options.trans_closure then
-        O.O.transitive_closure (Defaultgraphs.PackageGraph.dependency_graph universe)
-      else
-        Defaultgraphs.PackageGraph.dependency_graph universe 
-    in
-    let l = 
-      G.fold_vertex (fun p l ->
-        let uid = p in
-        let strongimpact = List.length (impactlist sdgraph uid) in 
-        let rev_strongimpact = List.length (rev_impactlist sdgraph uid) in
-        let directimpact = List.length (impactlist depgraph p) in
-        let rev_directimpact = List.length (rev_impactlist depgraph p) in
-        (p,strongimpact - directimpact, 
-          rev_strongimpact, strongimpact, 
-          rev_directimpact, directimpact) :: l
-      ) depgraph []
-    in
-    Printf.fprintf outch "name, #str-out, #str-in, #dir-out, #dir-in, diff\n";
-    List.iter (fun (p,diff,rs,s,rd,d) ->
-      let pkg = CudfAdd.string_of_package p in
-      Printf.fprintf outch "%s , %d, %d, %d, %d, %d\n" pkg rs s rd d diff
-    ) (List.sort ~cmp:(fun (_,x,_,_,_,_) (_,y,_,_,_,_) -> y - x) l);
-    close_out outch
-    ;
-    let dot = 
-      if OptParse.Opt.get Options.dot then 
-        Some (mk_filename prefix ".dot" "graph") 
-      else None 
-    in
-    if (OptParse.Opt.get Options.dot) then
-      let pkggraph = sdgraph in
-      Defaultgraphs.PackageGraph.out ~dot pkggraph
+    if OptParse.Opt.get Options.dot then begin
+      if OptParse.Opt.get Options.detrans then
+        O.transitive_reduction sdgraph;
+      Defaultgraphs.PackageGraph.D.output_graph stdout sdgraph;
+    end else begin
+      let depgraph = Defaultgraphs.PackageGraph.dependency_graph universe in
+      let l = 
+        G.fold_vertex (fun p l ->
+          let uid = p in
+          let strongimpact = List.length (impactlist sdgraph uid) in 
+          let rev_strongimpact = List.length (rev_impactlist sdgraph uid) in
+          let directimpact = List.length (impactlist depgraph p) in
+          let rev_directimpact = List.length (rev_impactlist depgraph p) in
+          (p,strongimpact - directimpact, 
+            rev_strongimpact, strongimpact, 
+            rev_directimpact, directimpact) :: l
+        ) depgraph []
+      in
+      Printf.fprintf stdout "name, #str-out, #str-in, #dir-out, #dir-in, diff\n";
+      List.iter (fun (p,diff,rs,s,rd,d) ->
+        let pkg = CudfAdd.string_of_package p in
+        Printf.fprintf stdout "%s , %d, %d, %d, %d, %d\n" pkg rs s rd d diff
+      ) (List.sort ~cmp:(fun (_,x,_,_,_,_) (_,y,_,_,_,_) -> y - x) l);
+    end
   end
 ;;
 
