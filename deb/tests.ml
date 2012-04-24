@@ -430,7 +430,6 @@ let test_numbering =
     "sequence" >:: (fun _ -> 
       try
         let debconf = Cudf.lookup_package universe ("debconf",32) in
-        Printf.eprintf "debconf : %s\n" (CudfAdd.string_of_package debconf);
         assert_equal debconf.Cudf.version 32
       with Not_found -> assert_failure "debconf version mismatch"
     );
@@ -442,7 +441,8 @@ let test_virtual =
   "test virtual" >::: [
     "provides" >:: (fun _ -> 
       try
-        let ssmtp = Cudf.lookup_package universe ("ssmtp",8366) in
+        let v = Debcudf.get_cudf_version tables ("ssmtp","2.62-3") in
+        let ssmtp = Cudf.lookup_package universe ("ssmtp",v) in
         let vpkg = ("--virtual-mail-transport-agent",None) in
         let provides = CudfAdd.who_provides universe vpkg in
         assert_equal true (List.exists (Cudf.(=%) ssmtp) provides)
@@ -454,8 +454,9 @@ let test_virtual =
 let test_conflicts =
   "test conflict" >::: [
     "self conflict" >:: (fun _ -> 
-      try 
-        let ssmtp = Cudf.lookup_package universe ("ssmtp",8366) in
+      try
+        let v = Debcudf.get_cudf_version tables ("ssmtp","2.62-3") in
+        let ssmtp = Cudf.lookup_package universe ("ssmtp",v) in
         assert_equal true (List.mem (ssmtp.Cudf.package,None) ssmtp.Cudf.conflicts)
       with Not_found -> assert_failure "ssmtp version mismatch"
     );
@@ -477,16 +478,19 @@ let returns_result function_to_test expected_result =
 and raises_failure function_to_test failure_text =
   (fun args () -> assert_raises (Failure failure_text) (fun () -> function_to_test args) )
 
+(* let ch = Input.open_file f_packages ;; *)
 (* Extension of "bracket_tmpfile" function, filling
     the temporary file with lines from the given list. *)
 let bracket_tmpfile_filled lines (test_fun : string -> unit)  =
-  let ch = Input.open_file f_packages in
   bracket_tmpfile
     (fun (file, ch) ->
-      List.iter ( fun line -> output_string ch (line ^ "\n") ) lines;
+      List.iter (fun line ->
+        output_string ch (line ^ "\n")
+      ) lines;
       close_out ch;
-      test_fun file)
-
+      test_fun file
+    )
+;;
 
 (* parse_inst *)
 
