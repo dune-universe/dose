@@ -267,9 +267,10 @@ let outdated
   in
   ignore(Util.Timer.stop timer ());
 
-  Format.fprintf fmt "total-packages: %d@," universe_size;
-  Format.fprintf fmt "total-broken: %d@," i;
-  Format.fprintf fmt "@]@.";
+  if failure then Format.fprintf fmt "@]@.";
+
+  Format.fprintf fmt "total-packages: %d@." universe_size;
+  Format.fprintf fmt "total-broken: %d@." i;
 
   if summary then
         Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
