@@ -107,7 +107,6 @@ let dominators_tarjan graph =
   G.remove_vertex graph start_pkg;
   G.remove_vertex domgr start_pkg;
   
-  debug "transitive reduction";
   Util.Timer.start domtrtimer;
   O.transitive_reduction domgr;
   Util.Timer.stop domtrtimer ();
