@@ -50,6 +50,7 @@ let open_ch ch = IO.input_channel ch
 let close_ch ch = IO.close_in ch
 
 let open_file file =
+  if (Unix.stat file).Unix.st_size = 0 then fatal "Input file %s is empty" file;
   if Filename.check_suffix file ".gz" || Filename.check_suffix file ".cz" then
 IFDEF HASZIP THEN
     gzip_open_file file
