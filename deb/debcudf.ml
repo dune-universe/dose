@@ -40,6 +40,36 @@ type lookup = {
   to_cudf : (string * string) -> Cudf.package
 }
 
+type extramap = (string * (string * Cudf_types.typedecl1)) list
+
+type options = {
+  extras_opt : extramap ;
+  native : string;
+  host : string;
+  build : string;
+  foreign : string list ;
+  ignore_essential : bool;
+}
+
+let default_options = {
+  extras_opt = [] ;
+  native = "";
+  build = "";  (* the default architecture 'dpkg -print-architecture' *)
+  host = "";   (* used to resolv cross dependencies *)
+  foreign = []; (* list of foreign architectures *)
+  ignore_essential = false
+}
+
+let add_name_arch a n = CudfAdd.encode (Printf.sprintf "%s:%s" n a)
+
+let add_arch hostArch arch = function
+  |n when String.ends_with n ":any" -> (CudfAdd.encode n)
+  |n when arch = "all" -> add_name_arch n hostArch
+  |n -> add_name_arch n arch
+
+let add_arch_l hostArch arch l = 
+  List.map (fun (n,c) -> (add_arch hostArch arch n,c)) l
+
 let clear tables =
   Util.StringHashtbl.clear tables.virtual_table;
   Util.StringHashtbl.clear tables.unit_table;
@@ -61,7 +91,8 @@ let init_virtual_table table pkg =
   List.iter (fun (name,_) -> add table name ()) pkg.provides
 
 (* collect names of real packages *)
-let init_unit_table table pkg = add table pkg.name ()
+let init_unit_table table pkg = 
+  add table pkg.name ()
 
 (* collect all versions mentioned of depends, pre_depends, conflict and breaks *)
 let init_versioned_table table pkg =
@@ -99,7 +130,14 @@ let init_versions_table table pkg =
   add_source pkg.version pkg.source
 ;;
 
-let init_tables ?(step=1) ?(versionlist=[]) pkglist =
+let init_tables ?(options=default_options) ?(step=1) ?(versionlist=[]) pkglist =
+  (*
+  let conv pkg =
+    if options.native <> "" then begin
+      add_arch options.native pkg.architecture pkg.name
+    else pkg.name
+  in
+  *)
   let n = List.length pkglist in
   let tables = create n in 
   let temp_versions_table = Hashtbl.create (10 * n) in
@@ -149,7 +187,16 @@ let get_real_version tables (name,cudfversion) =
   let package = CudfAdd.decode name in
   try
     let m = !(Util.IntHashtbl.find tables.reverse_table cudfversion) in
-    try SMap.find package m with Not_found -> fatal "%s" name
+    try SMap.find package m 
+    with Not_found ->
+      let known =
+        String.concat "," (
+          List.map (fun (n,v) ->
+            Printf.sprintf "(%s,%s)" n v
+          ) (SMap.bindings m)
+        )
+      in
+      fatal "unable to get real version for %s\nKnown versions %s" package known
   with Not_found ->
     fatal "package (%s,%d) is not known" name cudfversion
 
@@ -193,8 +240,6 @@ let loadlp tables l =
 let loadll tables ll = List.map (loadl tables) ll
 
 (* ========================================= *)
-
-type extramap = (string * (string * Cudf_types.typedecl1)) list
 
 let preamble = 
   (* number is a mandatory property -- no default *)
@@ -277,34 +322,6 @@ let add_inst inst pkg =
       | _ -> false
     with Not_found -> false
 
-let add_name_arch a n = CudfAdd.encode (Printf.sprintf "%s:%s" n a)
-
-let add_arch hostArch arch = function
-  |n when String.ends_with n ":any" -> (CudfAdd.encode n)
-  |n when arch = "all" -> add_name_arch n hostArch
-  |n -> add_name_arch n arch
-
-let add_arch_l hostArch arch l = 
-  List.map (fun (n,c) -> (add_arch hostArch arch n,c)) l
-
-type options = {
-  extras : extramap ;
-  native : string;
-  host : string;
-  build : string;
-  foreign : string list ;
-  ignore_essential : bool;
-}
-
-let default_options = {
-  extras = [] ;
-  native = "";
-  build = "";  (* the default architecture 'dpkg -print-architecture' *)
-  host = "";   (* used to resolv cross dependencies *)
-  foreign = []; (* list of foreign architectures *)
-  ignore_essential = false
-}
-
 let tocudf tables ?(options=default_options) ?(inst=false) pkg =
   if options.native <> "" then begin
     let _name = add_arch options.native pkg.architecture pkg.name in
@@ -340,7 +357,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
       Cudf.conflicts = _conflicts ;
       Cudf.provides = _provides ;
       Cudf.installed = add_inst inst pkg;
-      Cudf.pkg_extra = add_extra options.extras tables pkg ;
+      Cudf.pkg_extra = add_extra options.extras_opt tables pkg ;
     }
   end else
     { Cudf.default_package with
@@ -351,7 +368,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
       Cudf.conflicts = loadlc tables pkg.name (pkg.breaks @ pkg.conflicts) ;
       Cudf.provides = loadlp tables pkg.provides ;
       Cudf.installed = add_inst inst pkg;
-      Cudf.pkg_extra = add_extra options.extras tables pkg ;
+      Cudf.pkg_extra = add_extra options.extras_opt tables pkg ;
     }
 
 let lltocudf = loadll
@@ -360,7 +377,7 @@ let ltocudf = loadl
 let load_list ?options l =
   let timer = Util.Timer.create "Debian.Debcudf.load_list" in
   Util.Timer.start timer;
-  let tables = init_tables l in
+  let tables = init_tables ?options l in
   let pkglist = List.map (tocudf tables ?options) l in
   clear tables;
   Util.Timer.stop timer pkglist

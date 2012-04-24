@@ -17,7 +17,7 @@ type tables
 
 type extramap = (string * (string * Cudf_types.typedecl1)) list
 type options = {
-  extras : extramap ;
+  extras_opt : extramap ;
   native : string ;
   host : string ;
   build : string ;
@@ -28,7 +28,7 @@ type options = {
 val default_options : options
 
 (** initialize the version conversion tables *)
-val init_tables : ?step:int -> ?versionlist:Format822.version list -> Packages.package list -> tables
+val init_tables : ?options:options -> ?step:int -> ?versionlist:Format822.version list -> Packages.package list -> tables
 
 val clear : tables -> unit
 (** return the cudf version associated to a tuple (name,version). 

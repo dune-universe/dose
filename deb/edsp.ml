@@ -141,6 +141,6 @@ let is_installed pkg =
   with Not_found -> false
 
 let tocudf tables ?(options=Debcudf.default_options) ?(inst=false) pkg =
-  let options = { options with Debcudf.extras = extras_tocudf } in
+  let options = { options with Debcudf.extras_opt = extras_tocudf } in
   Debcudf.tocudf tables ~options ~inst:(is_installed pkg) pkg 
 ;;

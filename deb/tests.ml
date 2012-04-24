@@ -42,7 +42,7 @@ let extras_properties = [
 ];;
 
 let extras = List.map fst extras_properties ;;
-let options = { Debcudf.default_options with Debcudf.extras = extras_properties } ;;
+let options = { Debcudf.default_options with Debcudf.extras_opt = extras_properties } ;;
 
 let packagelist = Packages.input_raw [f_packages] ;;
 let tables = Debcudf.init_tables packagelist ;;
@@ -274,7 +274,7 @@ let test_cluster =
 let test_evolution =
   let packagelist = Packages.input_raw [f_discriminants] in
   let constraints_table = Evolution.constraints packagelist in
-  let clusters = Debutil.cluster packagelist in
+  (* let clusters = Debutil.cluster packagelist in *)
   "evolution" >::: [
     "constraints" >:: (fun _ ->
       let constr = Evolution.all_constraints constraints_table "cc" in
