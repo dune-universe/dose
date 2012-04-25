@@ -132,7 +132,7 @@ let pp_pkg_list_tran fmt (l,univ) =
 (* TODO: add a configuration file to define trendy and paranoid ? *)
 let choose_criteria ?(criteria=None) request = 
   let paranoid = "-removed,-changed" in
-  let upgrade = "-notuptodate,-removed,-changed,-new" in
+  let upgrade = "-notuptodate,-new,-removed,-changed" in
   let trendy = "-removed,-notuptodate,-unsat_recommends,-new" in
   match criteria,request.Edsp.preferences with
   |None,"paranoid" when (request.Edsp.upgrade || request.Edsp.distupgrade) -> upgrade

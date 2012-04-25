@@ -133,7 +133,8 @@ $(DOSELIBS)/%:
 	$(OCAMLBUILD) $(OBFLAGS) $*
 	@touch $@
 
-test:
+test: 
+	@applications/dose-tests.py -pwd `pwd` -v
 	@for i in $(TESTS); do\
 		echo "#######TESTING $$i" ;\
 		$(OCAMLBUILD) $(OBFLAGS) $$i/tests.$(OCAMLBEST) ;\
