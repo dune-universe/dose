@@ -352,7 +352,11 @@ let cudf_load_universe file =
 let unpack (_,(_,_,_,_,file),_) = file
 
 let deb_parse_input options urilist =
-  let archs = options.Debian.Debcudf.foreign in
+  let archs = 
+    if options.Debian.Debcudf.native <> "" then
+      options.Debian.Debcudf.native :: options.Debian.Debcudf.foreign 
+    else []
+  in
   let dll = 
     List.map (fun l ->
       let filelist = List.map unpack l in

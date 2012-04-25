@@ -13,7 +13,9 @@
 open ExtLib
 open OUnit
 open Common
+
 module S = CudfAdd.Cudf_set
+
 let test_dir = "tests/algo"
 let cudf_dir = "tests/cudf"
 
@@ -54,8 +56,6 @@ let toset f =
   let (_,pl,_) = Cudf_parser.parse_from_file f in
   List.fold_right S.add pl S.empty
 
-let dependency_set = toset f_dependency
-let conj_dependency_set = toset f_conj_dependency
 let cone_set = toset f_cone
 let engine_conflicts_set = toset f_engine_conflicts
 
@@ -138,14 +138,7 @@ let test_trim =
     assert_equal (25606 - 20) (Cudf.universe_size l)
   )
  
-(* XXX this test doesn't do anything *)
-let test_solver_var_order =
-  "solver dependency ordering" >:: (fun _ ->
-    assert_equal 0 0 
-  )
-;;
-
-(* XXX this test doesn't do anything *)
+(* check if a package the depends and provides a feature is always installable *)
 let test_selfprovide =
   "self provide" >:: (fun _ -> 
     let universe = load_univ f_selfprovide in
@@ -155,6 +148,7 @@ let test_selfprovide =
 
 let test_dependency_closure = 
   "dependency closure" >:: (fun _ -> 
+    let dependency_set = toset f_dependency in
     let car = Cudf.lookup_package universe ("car",1) in
     let l = Depsolver.dependency_closure universe [car] in
     (* List.iter (fun pkg -> print_endline (CudfAdd.print_package pkg)) l; *)
@@ -163,7 +157,7 @@ let test_dependency_closure =
   )
 
 let test_conjunctive_dependency_closure =
-  "dependency closure" >:: (fun _ ->
+  "dependency closure conjunctive" >:: (fun _ ->
     List.iter (fun pkg ->
       let dcl = Depsolver.dependency_closure ~conjunctive:true universe [pkg] in
 (*      print_endline (CudfAdd.print_package pkg);
@@ -172,15 +166,15 @@ let test_conjunctive_dependency_closure =
       let d = Depsolver.edos_coinstall universe dcl in
       match d.Diagnostic.result with
       |Diagnostic.Success _ -> assert_bool "pass" true
-      |Diagnostic.Failure _ -> (
-        (* Diagnostic.printf ~explain:true d; *)
-        assert_failure "fail"
-      )
+      |Diagnostic.Failure _ ->
+          let msg = Diagnostic.fprintf ~explain:true Format.str_formatter d in
+          assert_equal false true
     ) (Cudf.get_packages universe)
   )
 
 let test_conj_dependency = 
   "conjunctive dependency closure" >:: (fun _ -> 
+    let conj_dependency_set = toset f_conj_dependency in
     let pkg = Cudf.lookup_package universe ("bicycle",7) in
     let g = Strongdeps.conjdeps universe [pkg] in
     let l = Defaultgraphs.PackageGraph.conjdeps g pkg in
@@ -222,6 +216,32 @@ let test_reverse_dependency_closure =
     assert_equal true (S.equal rev_dependency_set set)
   )
 
+(* XXX this is the same function in Depsolver.conv that is
+ * not exposed in the mli *) 
+let conv solver = function
+  |Depsolver_int.Success(f_int) ->
+      Diagnostic_int.Success(fun ?all () ->
+        List.map solver.Depsolver_int.map#inttovar (f_int ())
+      )
+  |Depsolver_int.Failure(r) -> Diagnostic_int.Failure(r)
+;;
+
+(*
+let test_ =
+  "" >:: (fun _ ->
+    let univ = universe_debian in
+    let pool = Depsolver_int.init_pool_univ univ in
+    let id = in
+    let idlist = List.map (CudfAdd.vartoint univ) pkglist in
+    let closure = Depsolver_int.dependency_closure_cache pool idlist in
+    let solver = Depsolver_int.init_solver_closure pool closure in
+    let req = Diagnostic_int.Sng id in
+    match conv solver (Depsolver_int.solve solver req) with
+    |Diagnostic.Success _ -> assert_bool "pass" true
+    |Diagnostic.Failure _ -> assert_failure "fail"
+  )
+*)
+
 let test_depsolver =
   "depsolver" >::: [
     test_install ;
@@ -230,7 +250,6 @@ let test_depsolver =
     test_coinst_prod ;
     test_trim ;
     test_distribcheck ;
-    test_solver_var_order ;
     test_selfprovide ;
     test_dependency_closure ;
     test_conj_dependency ;

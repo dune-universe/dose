@@ -12,7 +12,8 @@
 
 (** Dependency solver. Low Level API *)
 
-(** Implementation of the EDOS algorithms (and more). This module respect the cudf semantic. *)
+(** Implementation of the EDOS algorithms (and more).
+ *  This module respects the cudf semantic. *)
 
 open ExtLib
 open Common
