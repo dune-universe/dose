@@ -63,16 +63,26 @@ let rec parse_paragraph pkg ch =
     try IO.read_line ch
     with IO.No_more_input -> raise Eof | End_of_file -> assert false
   in
-  if ExtString.String.starts_with line "#" then None
-  else begin
+  if ExtString.String.strip line = "" then None else
+  if ExtString.String.starts_with line "#" then None else
+
+  (* XXX a very crude way of skipping the signature of the file *)
+  (* here we assume a specific structure *)
+  if ExtString.String.starts_with line "-----BEGIN PGP SIGNED MESSAGE-----" then None else
+  if ExtString.String.starts_with line "Hash: SHA1" then None else
+  if ExtString.String.starts_with line "-----BEGIN PGP SIGNATURE-----" then raise Eof else
+
+  begin
     let split s = ExtString.String.nsplit s "|" in
     let catcherr a i = 
       try begin match split a.(i) with ["none"] -> [] | l -> l end
       with Invalid_argument _ -> []
     in
-    info "%s" line;
-    let a = Array.of_list (ExtString.String.nsplit line " ") (*Pcre.split ~rex:(Pcre.regexp " ") line*) in
-    Array.iteri (fun i s -> info "%d : %s" i s) a ;
+    let a = Array.of_list (ExtString.String.nsplit line " ") in
+    (*
+    debug line;
+    Array.iteri (fun i s -> debug "%d : %s" i s) a ;
+    *)
     Some 
       { pkg with
         name = a.(2);
