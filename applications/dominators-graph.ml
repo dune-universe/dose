@@ -66,7 +66,7 @@ let default_options = function
   |(Url.Pgsql|Url.Sqlite) -> None
   |Url.Eclipse -> Some (Boilerplate.Eclipse Debian.Debcudf.default_options)
   |Url.Cudf -> None
-  |Url.Csw -> Some (Boilerplate.Csw Debian.Debcudf.default_options)
+  |Url.Csw -> None
 ;;
 
 let main () =

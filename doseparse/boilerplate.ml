@@ -112,7 +112,7 @@ end
 type options =
   |Deb of Debian.Debcudf.options
   |Eclipse of Debian.Debcudf.options
-  |Csw of Debian.Debcudf.options
+  |Csw
   |Rpm
   |Cudf
 
@@ -166,7 +166,7 @@ module MakeDistribOptions(O : sig val options : OptParse.OptParser.t end) = stru
     |(Url.Pgsql|Url.Sqlite) -> None
     |Url.Eclipse -> Some (Eclipse Debian.Debcudf.default_options)
     |Url.Cudf -> None
-    |Url.Csw -> Some (Csw Debian.Debcudf.default_options)
+    |Url.Csw -> None
   ;;
 
   open OptParser ;;
@@ -259,15 +259,14 @@ let eclipse_load_list options dll =
   let preamble = Eclipse.Eclipsecudf.preamble in
   (preamble,cll,from_cudf,to_cudf)
  
-let csw_load_list options dll =
-  let extras = [] in
+let csw_load_list dll =
   let pkglist = List.flatten dll in
   let tables = Csw.Cswcudf.init_tables pkglist in
   let from_cudf (p,i) = (p, Csw.Cswcudf.get_real_version tables (p,i)) in
   let to_cudf (p,v) = (p, Csw.Cswcudf.get_cudf_version tables (p,v)) in
   let cll = 
     List.map (fun l ->
-      List.map (Csw.Cswcudf.tocudf ~extras tables) l
+      List.map (Csw.Cswcudf.tocudf tables) l
     ) dll
   in
   let preamble = Csw.Cswcudf.preamble in
@@ -374,14 +373,14 @@ let eclipse_parse_input options urilist =
   in
   eclipse_load_list options dll
 
-let csw_parse_input options urilist =
+let csw_parse_input urilist =
   let dll = 
     List.map (fun l ->
       let filelist = List.map unpack l in
       Csw.Packages.input_raw filelist
     ) urilist
   in
-  csw_load_list options dll
+  csw_load_list dll
 
 let cudf_parse_input urilist =
   match urilist with
@@ -409,7 +408,7 @@ let parse_input ?(options=None) urilist =
   |Url.Deb, Some (Deb opt) -> deb_parse_input opt filelist
   |Url.Eclipse, Some (Eclipse opt) -> eclipse_parse_input opt filelist
 
-  |Url.Csw, Some (Csw opt) -> csw_parse_input opt filelist
+  |Url.Csw, None -> csw_parse_input filelist
 
   |Url.Hdlist, None -> 
 IFDEF HASRPM THEN
