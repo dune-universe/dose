@@ -29,8 +29,10 @@ module Options = struct
   let solver = StdOpt.str_option ()
   let criteria = StdOpt.str_option ()
   let explain = StdOpt.store_true ()
+  let conffile = StdOpt.str_option ~default:"/etc/apt-cudf.conf" ()
 
   open OptParser
+  add options ~long_name:"conf" ~help:"configuration file (default:/etc/apt-cudf.conf)" conffile;
   add options ~short_name:'d' ~long_name:"dump" ~help:"dump the cudf universe and solution" dump;
   add options ~short_name:'s' ~long_name:"solver" ~help:"external solver" solver;
   add options ~short_name:'c' ~long_name:"criteria" ~help:"optimization criteria" criteria;
@@ -125,26 +127,80 @@ let pp_pkg_list fmt (l,univ) =
   with Not_found -> print_error "apt-cudf internal error"
 ;;
 
-let pp_pkg_list_tran fmt (l,univ) =
-  pp_pkg_list fmt (List.map snd l,univ)
+let pp_pkg_list_tran fmt (l,univ) = pp_pkg_list fmt (List.map snd l,univ) ;;
+
+(* apt-cudf.conf example :
+
+solver: mccs-cbc , mccs-lpsolve
+upgrade: -lex[-new,-removed,-notuptodate]
+dist-upgrade: -lex[-notuptodate,-new,-removed]
+install: -lex[-removed,-changed]
+remove: -lex[-removed,-changed]
+trendy: -lex[-removed,-notuptodate,-unsat_recommends,-new]
+paranoid: -lex[-removed,-changed]
+
+solver: *
+upgrade: -new,-removed,-notuptodate
+dist-upgrade: -notuptodate,-new,-removed
+install: -removed,-changed
+remove: -removed,-changed
+trendy: -removed,-notuptodate,-unsat_recommends,-new
+paranoid: -removed,-changed
+*)
+let parse_conf_file fname =
+  let pp_lpos { Lexing.pos_fname = _fname;
+                pos_lnum = lnum; pos_bol = bol; pos_cnum = cnum } =
+    Printf.sprintf "%d:%d" lnum (cnum - bol)
+  in
+  let ic = open_in fname in
+  let lexbuf = Lexing.from_channel ic in
+  try
+    let stanzas = Cudf_822_parser.doc_822 Cudf_822_lexer.token_822 lexbuf in
+    let r = 
+      List.flatten (
+        List.map (fun stanza -> 
+          let (_,sl) = List.assoc "solver" stanza in
+          let l = List.map (fun (k, (_loc, v)) -> (k,v)) stanza in
+          List.filter_map (fun s -> 
+            match ExtString.String.strip s with
+            |"" -> None
+            |x -> Some(x,l)
+          ) (ExtString.String.nsplit sl ",")
+        ) stanzas 
+      )
+    in
+    close_in ic; r
+  with Cudf_types.Parse_error_822 (msg, (startpos, endpos)) ->
+    fatal "Parse error on file %s:%s--%s" fname (pp_lpos startpos) (pp_lpos endpos)
 ;;
 
-(* TODO: add a configuration file to define trendy and paranoid ? *)
-let choose_criteria ?(criteria=None) request = 
-  let paranoid = "-removed,-changed" in
-  let upgrade = "-notuptodate,-new,-removed,-changed" in
-  let trendy = "-removed,-notuptodate,-unsat_recommends,-new" in
+let choose_criteria ?(criteria=None) ~conffile solver request =
+  let conf = 
+    if Sys.file_exists conffile then
+      parse_conf_file conffile 
+    else []
+  in
+  let default_criteria =
+    try List.assoc solver conf
+    with Not_found ->
+      try List.assoc "*" conf 
+      with Not_found -> [
+        ("install", "-removed,-changed");
+        ("remove", "-removed,-changed");
+        ("upgrade","-new,-removed,-notuptodate");
+        ("dist-upgrade","-notuptodate,-new,-removed");
+        ("trendy","-removed,-notuptodate,-unsat_recommends,-new");
+        ("paranoid","-removed,-changed")
+      ]
+  in
   match criteria,request.Edsp.preferences with
-  |None,"paranoid" when (request.Edsp.upgrade || request.Edsp.distupgrade) -> upgrade
-  |None,"paranoid" -> paranoid
-  |None,"trendy" -> trendy
-  |None,s when s <> "" -> s
-  |None,_ when (request.Edsp.upgrade || request.Edsp.distupgrade) -> upgrade
-  |None,_ -> paranoid
-  |Some "trendy",_ -> trendy
-  |Some "paranoid",_ -> paranoid
-  |Some "upgrade",_ -> upgrade
-  |Some c,_ -> c
+  |None, c when c <> "" -> (try List.assoc c default_criteria with Not_found -> c)
+  |Some c,_ when c <> "" -> (try List.assoc c default_criteria with Not_found -> c)
+  |_,_ when request.Edsp.upgrade -> List.assoc "upgrade" default_criteria
+  |_,_ when request.Edsp.distupgrade -> List.assoc "dist-upgrade" default_criteria
+  |_,_ when request.Edsp.install <> [] -> List.assoc "install" default_criteria
+  |_,_ when request.Edsp.remove <> [] -> List.assoc "remove" default_criteria
+  |_,_ -> List.assoc "paranoid" default_criteria
 ;;
 
 let parse_solver_spec filename =
@@ -247,14 +303,13 @@ let main () =
   (* Solver "exec:" line. Contains three named wildcards to be interpolated:
      "$in", "$out", and "$pref"; corresponding to, respectively, input CUDF
      document, output CUDF universe, user preferences. *)
-  let exec_pat =
+  let solver = 
     if OptParse.Opt.is_set Options.solver then
-      let f = OptParse.Opt.get Options.solver in
-      fst (parse_solver_spec (Filename.concat solver_dir f))
-    else
-      let f = Filename.basename(Sys.argv.(0)) in
-      fst (parse_solver_spec (Filename.concat solver_dir f))
+      OptParse.Opt.get Options.solver
+    else 
+      Filename.basename(Sys.argv.(0))
   in
+  let exec_pat = fst (parse_solver_spec (Filename.concat solver_dir solver)) in
   let interpolate_solver_pat exec cudf_in cudf_out pref =
     let _, exec = String.replace ~str:exec ~sub:"$in"   ~by:cudf_in  in
     let _, exec = String.replace ~str:exec ~sub:"$out"  ~by:cudf_out in
@@ -269,6 +324,7 @@ let main () =
   in
   
   Util.Timer.start timer1;
+  (* archs are inferred by calling dpkg *)
   let archs = native_arch::foreign_archs in
   let (request,pkglist) = Edsp.input_raw_ch ~archs ch in
   Util.Timer.stop timer1 ();
@@ -321,7 +377,8 @@ let main () =
   let solver_out = Filename.concat tmpdir "out-cudf" in
 
   let cmdline_criteria = OptParse.Opt.opt (Options.criteria) in
-  let criteria = choose_criteria ~criteria:cmdline_criteria request in
+  let conffile = OptParse.Opt.get Options.conffile in
+  let criteria = choose_criteria ~criteria:cmdline_criteria ~conffile solver request in
   let cmd = interpolate_solver_pat exec_pat solver_in solver_out criteria in
   Printf.eprintf "CMD %s\n%!" cmd;
 

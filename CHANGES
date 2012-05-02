@@ -15,5 +15,6 @@ dose3 (2.9.16) UNRELEASED; urgency=low
   * Numerous bug fixes and performance improvements.
   * fix apt-cudf to deal with multi-arch enabled machines
   * Graduate strong-deps and dominators
+  * add conf file for apt-cudf
 
  -- Pietro Abate <pietro.abate@pps.jussieu.fr>  Thu, 12 Apr 2012 10:05:18 +0200
