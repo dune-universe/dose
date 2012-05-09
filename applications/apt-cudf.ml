@@ -69,7 +69,7 @@ let make_request tables universe request =
         with Not_found -> 
           print_error "Package %s does not have a suitable candidate" n
       in
-      (n,Some(`Eq,candidate.Cudf.version))
+      (candidate.Cudf.package,Some(`Eq,candidate.Cudf.version))
     ) l 
   in
   if request.Edsp.upgrade || request.Edsp.distupgrade then
@@ -345,10 +345,16 @@ let main () =
     Debcudf.foreign = foreign_archs }
   in 
   let cudfpkglist = 
-    List.map (fun pkg ->
+    List.filter_map (fun pkg ->
       let p = Edsp.tocudf tables ~options pkg in
-      Hashtbl.add univ (p.Cudf.package,p.Cudf.version) pkg;
-      p
+      if not(Hashtbl.mem univ (p.Cudf.package,p.Cudf.version)) then begin
+        Hashtbl.add univ (p.Cudf.package,p.Cudf.version) pkg;
+        Some p
+      end else begin
+        warning "Duplicated package (same version, name and architecture) : (%s,%s,%s)" 
+          pkg.Packages.name pkg.Packages.version pkg.Packages.architecture;
+        None
+      end
     ) pkglist 
   in
 
@@ -369,6 +375,17 @@ let main () =
   let cudf_request = make_request tables universe request in
   let cudf = (default_preamble,universe,cudf_request) in
   Util.Timer.stop timer2 ();
+
+  if OptParse.Opt.get Options.dump then begin
+    info "append request to /tmp/cudf-solver.universe.dump";
+    let oc = open_out_gen 
+      [Open_wronly; Open_append; Open_creat; Open_text]
+      0o666 "/tmp/cudf-solver.universe.dump" 
+    in
+    Printf.fprintf oc "\n";
+    Cudf_printer.pp_request oc cudf_request;
+    close_out oc
+  end;
 
   let tmpdir = mktmpdir "tmp.apt-cudf.XXXXXXXXXX" in
   at_exit (fun () -> rmtmpdir tmpdir);
@@ -420,6 +437,16 @@ let main () =
           sol
         else []
       in
+
+      if OptParse.Opt.get Options.dump then begin
+        info "dump cudf solution in /tmp/cudf-solver.solution.dump";
+        let oc = open_out "/tmp/cudf-solver.solution.dump" in
+        Cudf_printer.pp_preamble oc default_preamble;
+        Printf.fprintf oc "\n";
+        Cudf_printer.pp_packages oc sol;
+        close_out oc
+      end;
+
       let soluniv = Cudf.load_universe sol in
       let diff = CudfDiff.diff universe soluniv in
       let empty = ref true in
