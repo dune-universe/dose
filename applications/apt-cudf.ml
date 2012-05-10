@@ -56,11 +56,18 @@ let print_progress ?i msg =
     Format.printf "Message: %s@." msg
 ;;
 
-let make_request tables universe request = 
+let make_request tables universe native_arch request = 
   let select_packages l = 
     List.map (fun (n,a,c) -> 
       let candidate = 
-        let n = if Option.is_none a then n else ((Option.get a)^":"^n) in
+        let n = 
+          if Option.is_none a then 
+            if native_arch <> "" then
+              (native_arch^":"^n) 
+            else n
+          else 
+            ((Option.get a)^":"^n) 
+        in
         try
           List.find (fun pkg -> 
             try (Cudf.lookup_package_property pkg "apt-candidate") = "true"
@@ -276,16 +283,22 @@ let syscall ?(env=[| |]) cmd =
    Buffer.contents buf2)
 ;;
 
-let native_arch =
-  let cmd = "dpkg --print-architecture" in
-  let (out,err) = syscall cmd in
-  ExtString.String.strip out
-
-(* XXX this is a bit brittle ... *)
-let foreign_archs =
-  let cmd = "dpkg --print-foreign-architectures" in
-  let (out,err) = syscall cmd in
-  ExtString.String.nsplit (ExtString.String.strip out) "\n"
+let (native_arch,foreign_archs) =
+  let cmd = "apt-config dump" in
+  let arch = ref "" in
+  let archs = ref [] in
+  let out = Std.input_list (Unix.open_process_in cmd) in
+  List.iter (fun s ->
+    let key, value =  ExtString.String.split s " " in
+    if key = "APT::Architecture" then
+      arch := ExtString.String.slice ~first: 1 ~last:(-2) value
+    else if key = "APT::Architectures::" || key = "APT::Architectures" then
+      let s = ExtString.String.slice ~first:1 ~last:(-2) value in
+      if s <> "" then
+        archs := (ExtString.String.slice ~first:1 ~last:(-2) value)::!archs
+  ) out;
+  (!arch,List.filter ((<>) !arch) !archs)
+;;
 
 let main () =
   let timer1 = Util.Timer.create "parsing" in
@@ -372,7 +385,7 @@ let main () =
     with Cudf.Constraint_violation s ->
       print_error "(CUDF) Malformed universe %s" s;
   in
-  let cudf_request = make_request tables universe request in
+  let cudf_request = make_request tables universe native_arch request in
   let cudf = (default_preamble,universe,cudf_request) in
   Util.Timer.stop timer2 ();
 

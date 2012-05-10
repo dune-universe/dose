@@ -10,7 +10,7 @@ dose3 (2.9.16) UNRELEASED; urgency=low
     as "Keep" are part of installation set.
   * Add Debian multi-arch translation to cudf.
   * Add debian specific options to filter dependencies and packages based on the 
-    allowed architectures (--deb-native-arch , --deb-foreign-archs)
+    allowed architectures (APT::Architecture , APT::Architectures::)
   * add opencsw format support.
   * Numerous bug fixes and performance improvements.
   * fix apt-cudf to deal with multi-arch enabled machines
