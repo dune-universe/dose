@@ -8,7 +8,7 @@
 
 <applications/*.ml> or <experimental/*/*.ml> or <experimental/*.ml>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_PARMAP@ @CONFIG_OCAMLGRAPH@)
 
-<*/tests.*>: package(oUnit), package(extlib), @PKG_CUDF@, package(pcre), package(zip), package(str),  package(bz2)
+<*/tests.*>: package(oUnit), package(extlib), @PKG_CUDF@, package(pcre), package(zip), package(bz2)
 
 <common/tests.*>: use_common
 <deb/tests.*>: use_common, use_debian
@@ -36,7 +36,7 @@
 <rpm/*.cmx>: for-pack(Rpm)
 
 <{applications,experimental}/*>: use_common, use_debian, use_eclipse, use_csw
-<{applications,experimental}/*>: package(extlib), package(pcre), package(str), package(unix)
+<{applications,experimental}/*>: package(extlib), package(pcre), package(unix)
 <{applications,experimental}/*>: @PKG_CUDF@, @PKG_OCAMLGRAPH@, @PKG_ZIP@, @PKG_BZ2@
 
 <applications/apt-cudf.*>: use_boilerplateNoRpm
@@ -66,4 +66,4 @@
 <experimental/cnftocudf.*>: use_boilerplateNoRpm
 <experimental/example.*>: use_boilerplate
 
-<experimental/dudftocudf/*>: use_common, use_debian, use_eclipse, use_csw, package(extlib), package(pcre), package(str), package(unix), @PKG_CUDF@, @PKG_ZIP@, @PKG_BZ2@, @PKG_CURL@, @PKG_XML@, use_boilerplateNoRpm
+<experimental/dudftocudf/*>: use_common, use_debian, use_eclipse, use_csw, package(extlib), package(pcre), package(unix), @PKG_CUDF@, @PKG_ZIP@, @PKG_BZ2@, @PKG_CURL@, @PKG_XML@, use_boilerplateNoRpm
