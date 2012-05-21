@@ -65,59 +65,26 @@ let parse_popcon s =
 "-t RELEASE" option 
 *)
 
-type apt_req_only = [ `Pkg of string ]
-type apt_req_pkg = [
-  | apt_req_only
-  |`PkgVer of (string * string)
-  |`PkgDst of (string * string)
-]
-
 type apt_req =
-  |Install of apt_req_pkg list
-  |Remove of apt_req_only list
-  |Upgrade of string option
-  |DistUpgrade of string option
+  |Install of Format822.vpkgreq list
+  |Remove of Format822.vpkgreq list
+  |Upgrade of Format822.suite option
+  |DistUpgrade of Format822.suite option
 
-let parse_pkg_only s = `Pkg(Packages.parse_name (Format822.dummy_loc,s))
-
-let distro_regexp = Pcre.regexp "^([^=/]*)/[ \t]*(.*)$";;
-let version_regexp = Pcre.regexp "^([^=]*)=[ \t]*(.*)$" ;;
+let parse_req s = 
+  let _loc = Format822.dummy_loc in
+  Packages.lexbuf_wrapper Packages_parser.request_top (_loc,s)
 
 let parse_pkg_req suite s =
-  let fatal_bad_apt_package () =
-    fatal "Bad apt package in request '%s'" s
-  in
-  try
-    (* First try matching with distro_regexp. *)
-    let substrings = Pcre.exec ~rex:distro_regexp s in
-    try
-      `PkgDst(
-        Packages.parse_name (Format822.dummy_loc, Pcre.get_substring substrings 1),
-        Pcre.get_substring substrings 2
-      )
-    with Not_found -> fatal_bad_apt_package ()
-  with Not_found -> try
-    (* Then try matching with version_regexp. *)
-    let substrings = Pcre.exec ~rex:version_regexp s in
-    try
-      `PkgVer(
-        Packages.parse_name    (Format822.dummy_loc, Pcre.get_substring substrings 1),
-        Packages.parse_version (Format822.dummy_loc, Pcre.get_substring substrings 2)
-      )
-    with Not_found -> fatal_bad_apt_package ()
-  with Not_found ->
-    try
-      (* If it doesn't match any of them. *)
-      begin match suite with
-      |None -> parse_pkg_only s
-      |Some suite -> `PkgDst(s,suite)
-      end
-    with Not_found -> fatal_bad_apt_package ()
+  let (r,((n,a),c),s) = parse_req s in
+  begin match suite with
+  |None -> (r,((n,a),c),s)
+  |Some suite -> (r,((n,a),c),Some suite)
+  end
 ;;
 
 (** parse a string containing an apt-get command line 
     @return a data structure containing the request *)
-(* XXX upgrade with suite <> None == Install PkgDst ... *)
 let parse_request_apt s =
   if not (String.exists s "apt-get") then fatal "Not a valid apt-get command" ;
   let s = String.slice ~first:((String.find s "apt-get")) s in
@@ -129,6 +96,8 @@ let parse_request_apt s =
     ("-y", Arg.Unit (fun _ -> ()), "");
     ("-v", Arg.Unit (fun _ -> ()), "");
     ("-f", Arg.Unit (fun _ -> ()), "");
+    ("-o", Arg.String (fun _ -> ()), "");
+    ("--solver", Arg.String (fun _ -> ()), "");
     ("--no-install-recommends", Arg.Unit (fun _ -> ()), "");
     ("--install-recommends", Arg.Unit (fun _ -> ()), "");
     ("--no-upgrade", Arg.Unit (fun _ -> ()), "");
@@ -142,7 +111,7 @@ let parse_request_apt s =
     with Arg.Bad s -> fatal "%s" s end ;
     match List.rev !reqlist with
     |"install" :: tl -> Install(List.map (parse_pkg_req !suite) tl)
-    |"remove" :: tl -> Remove(List.map parse_pkg_only tl)
+    |"remove" :: tl -> Remove(List.map parse_req tl)
     |["upgrade"] -> Upgrade(!suite)
     |["dist-upgrade"] -> DistUpgrade(!suite)
     |_ -> fatal "Bad apt request '%s'" s
@@ -175,7 +144,7 @@ let parse_request_aptitude s =
     with Arg.Bad s -> fatal "%s" s end ;
     match List.rev !reqlist with
     |"install" :: tl -> Install(List.map (parse_pkg_req !suite) tl)
-    |"remove" :: tl -> Remove(List.map parse_pkg_only tl)
+    |"remove" :: tl -> Remove(List.map parse_req tl)
     |["upgrade"] | ["safe-upgrade"] | ["dist-upgrade"] -> Upgrade(!suite)
     |["full-upgrade"] -> DistUpgrade(!suite)
     |_ -> fatal "Bad aptitude request '%s'" s

@@ -88,7 +88,7 @@ let add_v table k v =
 
 (* collect names of virtual packages *)
 let init_virtual_table table pkg =
-  List.iter (fun (name,_) -> add table name ()) pkg.provides
+  List.iter (fun ((name,_),_) -> add table name ()) pkg.provides
 
 (* collect names of real packages *)
 let init_unit_table table pkg = 
@@ -96,7 +96,7 @@ let init_unit_table table pkg =
 
 (* collect all versions mentioned of depends, pre_depends, conflict and breaks *)
 let init_versioned_table table pkg =
-  let conj_iter l = List.iter (fun (name,_)-> add table name ()) l in
+  let conj_iter l = List.iter (fun ((name,_),_)-> add table name ()) l in
   let cnf_iter ll = List.iter conj_iter ll in
   conj_iter pkg.conflicts ;
   conj_iter pkg.breaks ;
@@ -108,7 +108,7 @@ let init_versioned_table table pkg =
    fields *)
 let init_versions_table table pkg =
   let conj_iter l =
-    List.iter (fun (name,sel) ->
+    List.iter (fun ((name,_),sel) ->
       match CudfAdd.cudfop sel with
       |None -> ()
       |Some(_,version) -> add_v table (version,name) ()
@@ -131,13 +131,6 @@ let init_versions_table table pkg =
 ;;
 
 let init_tables ?(options=default_options) ?(step=1) ?(versionlist=[]) pkglist =
-  (*
-  let conv pkg =
-    if options.native <> "" then begin
-      add_arch options.native pkg.architecture pkg.name
-    else pkg.name
-  in
-  *)
   let n = List.length pkglist in
   let tables = create n in 
   let temp_versions_table = Hashtbl.create (10 * n) in
@@ -207,7 +200,7 @@ let get_real_version tables (name,cudfversion) =
 
 let loadl tables l =
   List.flatten (
-    List.map (fun (name,sel) ->
+    List.map (fun ((name,_),sel) ->
       let encname = (* CudfAdd.encode *) name in
       match CudfAdd.cudfop sel with
       |None ->
@@ -226,7 +219,7 @@ let loadl tables l =
 let loadlc tables name l = (CudfAdd.encode name, None)::(loadl tables l)
 
 let loadlp tables l =
-  List.map (fun (name,sel) ->
+  List.map (fun ((name,_),sel) ->
     let encname = (* CudfAdd.encode *) name in
     match CudfAdd.cudfop sel with
     |None  ->
@@ -317,15 +310,6 @@ let add_inst inst pkg =
 
 let add_extra extras tables pkg =
   add_extra_default extras tables pkg
-
-let add_inst inst pkg =
-  if inst then true 
-  else
-    try
-      match String.nsplit (Packages.assoc "Status" pkg.extras) " " with
-      |[_;_;"installed"] -> true
-      | _ -> false
-    with Not_found -> false
 
 let tocudf tables ?(options=default_options) ?(inst=false) pkg =
   if options.native <> "" then begin

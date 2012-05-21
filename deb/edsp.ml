@@ -19,8 +19,8 @@ include Util.Logging(struct let label = __FILE__ end) ;;
 
 type request = {
   request : string;
-  install : Format822.vpkgreq list;
-  remove : Format822.vpkgreq list;
+  install : Format822.vpkg list;
+  remove : Format822.vpkg list;
   autoremove : bool;
   upgrade : bool;
   distupgrade : bool;
@@ -39,10 +39,31 @@ let default_request = {
   preferences = ""
 }
 
+(* convert a apt command line request to edsp request *)
+let from_apt_request request = function
+  |Apt.Install vpkgreqlist ->
+      List.fold_left (fun acc -> function
+        |(Some Format822.I, vpkg, _) -> {acc with install = vpkg :: acc.install}
+        |(Some Format822.R, vpkg, _) -> {acc with remove = vpkg :: acc.remove}
+        |(None, vpkg, _) -> {acc with install = vpkg :: acc.install}
+      ) request vpkgreqlist
+  |Apt.Remove vpkgreqlist ->
+      List.fold_left (fun acc -> function
+        |(Some Format822.I, vpkg, _) -> {acc with install = vpkg :: acc.install}
+        |(Some Format822.R, vpkg, _) -> {acc with remove = vpkg :: acc.remove}
+        |(None, vpkg, _) -> {acc with remove = vpkg :: acc.remove}
+      ) request vpkgreqlist
+  |Apt.Upgrade _ -> {request with upgrade = true }
+  |Apt.DistUpgrade _ -> {request with distupgrade = true}
+;;
+
 let parse_s = Packages.parse_s
 let parse_string (_,s) = s
 let parse_int_s (_,s) = string_of_int(int_of_string s)
-let parse_req s = Packages.lexbuf_wrapper Packages_parser.request_top s
+let parse_req (loc,s) = 
+  let aux = Packages.lexbuf_wrapper Packages_parser.vpkg_top in
+  let l = Pcre.split ~rex:Apt.blank_regexp s in 
+  List.map (fun s -> aux (loc,s)) l
 
 let parse_request_stanza par =
   {

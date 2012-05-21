@@ -48,12 +48,13 @@ let parse_from_ch _parser ic =
 type name = string
 type version = string
 type architecture = string
+type vpkgname = (string * architecture option)
 type multiarch = [ `Foreign | `Allowed | `None | `Same ]
 type source = (name * version option)
 type relop = string
 type constr = (relop * version)
 
-type vpkg = (string * constr option)
+type vpkg = (vpkgname * constr option)
 type vpkglist = vpkg list
 type vpkgformula = vpkg list list
 
@@ -61,7 +62,9 @@ type builddep = (vpkg * (bool * architecture) list)
 type builddepslist = builddep list
 type builddepsformula = builddep list list
 
-type vpkgreq = (name * architecture option * constr option)
+type action = I | R
+type suite = string
+type vpkgreq = (action option * vpkg * suite option)
 
 module RawInput ( Set : Set.S ) = struct
   let input_raw parse files =

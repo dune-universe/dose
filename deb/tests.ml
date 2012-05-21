@@ -581,28 +581,43 @@ let parse_pkg_req_triplets =
   let returns = returns_result function_to_test
 (*  and raises  = raises_failure function_to_test *)
   in
-  [ ("simple `PkgDst 1", 
-     ( (Some "suite"), "name/version"), 
-     returns ( `PkgDst( Packages.parse_name(Format822.dummy_loc, "name"), "version") ) );
-    ("simple `PkgDst 2", 
-     ( None, "name/version"), 
-     returns ( `PkgDst( Packages.parse_name(Format822.dummy_loc, "name"), "version") ) );
-    ("simple `PkgVer 1", 
-     ( (Some "suite"), "name=version"), 
-     returns ( `PkgVer( 
-	      Packages.parse_name(Format822.dummy_loc, "name"),
-	      Packages.parse_version (Format822.dummy_loc, "version") ) ) );
-    ("simple `PkgVer 2", 
-     ( None, "name=version"), 
-     returns ( `PkgVer( 
-	      Packages.parse_name(Format822.dummy_loc, "name"),
-	      Packages.parse_version (Format822.dummy_loc, "version") ) ) );
-    ("simple pkg only 1", 
+  [ ("suite name=1.2", 
+     ( (Some "suite"), "name=1.2"), 
+     returns (None, (("name", None), Some ("=", "1.2")), Some "suite"));
+
+    ("suite +name=1.2", 
+     ( (Some "suite"), "+name=1.2"), 
+     returns (Some Format822.I, (("name", None), Some ("=", "1.2")), Some "suite"));
+
+    ("suite -name=1.2", 
+     ( (Some "suite"), "-name=1.2"), 
+     returns (Some Format822.R, (("name", None), Some ("=", "1.2")), Some "suite"));
+
+    ("suite name/suite1", 
+     ( (Some "suite"), "name/suite1"), 
+     returns (None, (("name", None), None), Some "suite"));
+
+    ("none name/suite1", 
+     ( None, "name/suite1"), 
+     returns (None, (("name", None), None), Some "suite1"));
+
+    ("none name", 
      ( None, "name"), 
-     returns ( Apt.parse_pkg_only "name") );
-    ("simple pkg only 2", 
-     ( (Some "suite"), "name"), 
-     returns ( `PkgDst("name", "suite") ) ); ]
+     returns (None, (("name", None), None), None));
+
+    ("none +name", 
+     ( None, "+name"), 
+     returns (Some Format822.I, (("name", None), None), None));
+
+    ("none -name", 
+     ( None, "-name"), 
+     returns (Some Format822.R, (("name", None), None), None));
+
+    ("suite name", 
+     ( Some "suite", "name"), 
+     returns (None, (("name", None), None), Some "suite"));
+
+  ]
 
 (* parse_pref_labels *)
 let parse_pref_labels_triplets =

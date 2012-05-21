@@ -56,7 +56,7 @@ let parse_package_stanza filter par =
       name = parse_s ~err:"(MISSING NAME)" parse_name "Package" par;
       version = parse_s ~err:"(MISSING VERSION)" parse_version "Version" par;
       architecture = parse_s ~err:"(MISSING ARCH)" parse_arch "Architecture" par;
-      binary = parse_s ~opt:[] ~multi:true parse_binary "Binary" par; 
+      binary = []; (* parse_s ~opt:[] ~multi:true parse_binary "Binary" par; *)
       build_depends = 
         parse_s ~opt:[] ~multi:true parse_builddepsformula "Build-Depends" par; 
       build_depends_indep =

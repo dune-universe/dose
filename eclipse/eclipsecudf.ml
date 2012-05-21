@@ -44,7 +44,7 @@ let init_versions_table table =
     with Not_found -> Hashtbl.add table name [version]
   in
   let conj_iter =
-    List.iter (fun (name,sel) ->
+    List.iter (fun ((name,_),sel) ->
       match CudfAdd.cudfop sel with
       |None -> ()
       |Some(_,version) -> add name version
@@ -52,7 +52,7 @@ let init_versions_table table =
   in
   let cnf_iter = 
     List.iter (fun disjunction ->
-      List.iter (fun (name,sel) ->
+      List.iter (fun ((name,_),sel) ->
         match CudfAdd.cudfop sel with
         |None -> ()
         |Some(_,version) -> add name version
@@ -125,7 +125,7 @@ let get_real_version tables (p,i) =
 
 let loadl tables l =
   List.flatten (
-    List.map (fun (name,sel) ->
+    List.map (fun ((name,_),sel) ->
       match CudfAdd.cudfop sel with
       |None -> [(CudfAdd.encode name, None)]
       |Some(op,v) -> [(CudfAdd.encode name,Some(op,get_cudf_version tables (name,v)))]
@@ -135,7 +135,7 @@ let loadl tables l =
 let loadlc tables name l = (loadl tables l)
 
 let loadlp tables l =
-  List.map (fun (name,sel) ->
+  List.map (fun ((name,_),sel) ->
     match CudfAdd.cudfop sel with
     |None  -> (CudfAdd.encode name, None)
     |Some(`Eq,v) -> (CudfAdd.encode name,Some(`Eq,get_cudf_version tables (name,v)))

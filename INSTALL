@@ -49,7 +49,7 @@ an independently installed version of libcudf you'll need version >=
 
 
 Example:
-./configure --without-libcudf --with-xml --with-curl --with-ocamlgraph --with-zip --with-oUnit --with-bz2 --with-rpm4 --with-parmap
+./configure --with-ocamlgraph --with-zip --with-bz2 
 
 Compiling applications
 ----------------------

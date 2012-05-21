@@ -30,6 +30,8 @@ module Options = struct
   let criteria = StdOpt.str_option ()
   let explain = StdOpt.store_true ()
   let conffile = StdOpt.str_option ~default:"/etc/apt-cudf.conf" ()
+  let native_arch = StdOpt.str_option ()
+  let foreign_arch = Boilerplate.str_list_option ()
 
   open OptParser
   add options ~long_name:"conf" ~help:"configuration file (default:/etc/apt-cudf.conf)" conffile;
@@ -37,6 +39,9 @@ module Options = struct
   add options ~short_name:'s' ~long_name:"solver" ~help:"external solver" solver;
   add options ~short_name:'c' ~long_name:"criteria" ~help:"optimization criteria" criteria;
   add options ~short_name:'e' ~long_name:"explain" ~help:"summary" explain;
+
+  add options ~long_name:"native-arch" ~help:"Native architecture" native_arch;
+  add options ~long_name:"foreign-archs" ~help:"Foreign architectures" foreign_arch;
 
 end
 
@@ -58,7 +63,7 @@ let print_progress ?i msg =
 
 let make_request tables universe native_arch request = 
   let select_packages l = 
-    List.map (fun (n,a,c) -> 
+    List.map (fun ((n,a),c) -> 
       let candidate = 
         let n = 
           if Option.is_none a then 
@@ -68,11 +73,20 @@ let make_request tables universe native_arch request =
           else 
             ((Option.get a)^":"^n) 
         in
+        let constr =
+          match CudfAdd.cudfop c with
+          |None -> None
+          |Some(op,v) -> 
+              Some(op,Debcudf.get_cudf_version tables ((CudfAdd.encode n),v))
+        in
         try
-          List.find (fun pkg -> 
-            try (Cudf.lookup_package_property pkg "apt-candidate") = "true"
-            with Not_found -> false
-          ) (Cudf.lookup_packages universe (CudfAdd.encode n))
+          List.find (fun pkg ->
+            if request.Edsp.strict_pin then
+              try (Cudf.lookup_package_property pkg "apt-candidate") = "true"
+              with Not_found -> false
+            else
+              true
+          ) (CudfAdd.who_provides universe ((CudfAdd.encode n),constr))
         with Not_found -> 
           print_error "Package %s does not have a suitable candidate" n
       in
@@ -106,6 +120,9 @@ let rec input_all_lines acc chan =
 
 let solver_dir = 
   try Sys.getenv("CUDFSOLVERS") with Not_found -> "/usr/share/cudf/solvers"
+
+let apt_get_cmdline = 
+  try Sys.getenv("APT_GET_CUDF_CMDLINE") with Not_found -> ""
 
 let pp_pkg fmt (s,univ) = 
   try
@@ -283,7 +300,7 @@ let syscall ?(env=[| |]) cmd =
    Buffer.contents buf2)
 ;;
 
-let (native_arch,foreign_archs) =
+let get_architectures native_opt foreign =
   let cmd = "apt-config dump" in
   let arch = ref "" in
   let archs = ref [] in
@@ -297,7 +314,11 @@ let (native_arch,foreign_archs) =
       if s <> "" then
         archs := (ExtString.String.slice ~first:1 ~last:(-2) value)::!archs
   ) out;
-  (!arch,List.filter ((<>) !arch) !archs)
+  match native_opt, foreign with 
+  |None,[] -> (!arch,List.filter ((<>) !arch) !archs)
+  |None, l -> (!arch, l)
+  |Some a, [] -> (a,List.filter ((<>) !arch) !archs)
+  |Some a, l -> (a,l)
 ;;
 
 let main () =
@@ -316,6 +337,12 @@ let main () =
   (* Solver "exec:" line. Contains three named wildcards to be interpolated:
      "$in", "$out", and "$pref"; corresponding to, respectively, input CUDF
      document, output CUDF universe, user preferences. *)
+  let (native_arch,foreign_archs) = 
+    get_architectures 
+      (OptParse.Opt.opt Options.native_arch) 
+      (OptParse.Opt.get Options.foreign_arch)
+  in
+
   let solver = 
     if OptParse.Opt.is_set Options.solver then
       OptParse.Opt.get Options.solver
@@ -337,9 +364,17 @@ let main () =
   in
   
   Util.Timer.start timer1;
-  (* archs are inferred by calling dpkg *)
+  (* archs are inferred by calling apt-config dump *)
   let archs = native_arch::foreign_archs in
   let (request,pkglist) = Edsp.input_raw_ch ~archs ch in
+  let request =
+    match apt_get_cmdline with
+    |"" -> request
+    |_ -> 
+      let apt_req = Apt.parse_request_apt apt_get_cmdline in
+      Edsp.from_apt_request {request with Edsp.install = []; remove = []} apt_req
+  in
+
   Util.Timer.stop timer1 ();
   
   if args <> [] then Input.close_ch ch;
@@ -410,7 +445,7 @@ let main () =
   let conffile = OptParse.Opt.get Options.conffile in
   let criteria = choose_criteria ~criteria:cmdline_criteria ~conffile solver request in
   let cmd = interpolate_solver_pat exec_pat solver_in solver_out criteria in
-  Printf.eprintf "CMD %s\n%!" cmd;
+  debug "%s" cmd;
 
   let env = Unix.environment () in
   let (cin,cout,cerr) = Unix.open_process_full cmd env in

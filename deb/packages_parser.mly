@@ -19,22 +19,12 @@ let parse_multiarch = function
   |("Same"|"same") -> `Same
   |s -> raise (Format822.Type_error ("Field Multi-Arch has a wrong value : "^ s))
 
-let parse_request s =
-  try 
-    let i = String.index s ':' in
-    let slen = String.length s in
-    let name = String.sub s 0 i in
-    let nlen = String.length name in
-    let arch = String.sub s (nlen + 1) (slen - nlen -1 ) in
-    (name,Some arch)
-  with Not_found -> (s,None)
-;;
-
 %}
 
-%token <string> IDENT RELOP
+%token <string> IDENT VIDENT STRING RELOP
 %token LBRACKET RBRACKET LPAREN RPAREN
-%token COMMA PIPE EQ BANG
+%token COMMA PIPE EQ BANG 
+%token PLUS MINUS COLON SLASH
 %token EOL
 
 %type <Format822.name> pkgname_top
@@ -44,6 +34,7 @@ let parse_request s =
 %type <Format822.multiarch> multiarch_top 
 %type <Format822.source> source_top 
 
+%type <Format822.vpkgname> vpkgname_top
 %type <Format822.vpkg> vpkg_top
 %type <Format822.vpkglist> vpkglist_top
 %type <Format822.vpkgformula> vpkgformula_top
@@ -51,13 +42,15 @@ let parse_request s =
 %type <Format822.builddepsformula> builddepsformula_top
 %type <Format822.builddepslist> builddepslist_top
 
-%type <Format822.vpkgreq list> request_top
+%type <Format822.vpkgreq> request_top
+%type <Format822.vpkgreq list> requestlist_top
 
 %start pkgname_top version_top
 %start multiarch_top source_top
-%start vpkg_top vpkglist_top vpkgformula_top
+%start vpkgname_top vpkg_top vpkglist_top vpkgformula_top
 %start builddepsformula_top builddepslist_top
-%start request_top archlist_top
+%start request_top requestlist_top archlist_top
+
 
 %%
 
@@ -66,6 +59,7 @@ version_top: version EOL { $1 } ;
 multiarch_top: multiarch EOL { $1 } ;
 source_top: source EOL { $1 } ;
 
+vpkgname_top: vpkgname EOL { $1 } ;
 vpkg_top: vpkg EOL { $1 } ;
 
 vpkglist_top: vpkglist EOL { $1 } ;
@@ -74,7 +68,8 @@ vpkgformula_top: vpkgformula EOL { $1 } ;
 builddepsformula_top: builddepsformula EOL { $1 } ;
 builddepslist_top: builddepslist EOL { $1 } ;
 
-request_top: reqlist EOL { $1 } ;
+requestlist_top: reqlist EOL { $1 } ;
+request_top: request EOL { $1 } ;
 archlist_top: archlist EOL { $1 } ;
 
 /**************************************/ 
@@ -94,12 +89,17 @@ relop:
 
 /**************************************/ 
 
+vpkgname:
+  |IDENT              { try let (n,a) = String.split $1 ":" in (n,Some a) 
+                        with Invalid_string -> ($1,None) } 
+;
+
 constr:
   |                            { None }
   |LPAREN relop version RPAREN { Some ($2, $3) }
 ;
 
-vpkg: pkgname constr { ($1, $2) } ;
+vpkg: vpkgname constr { ($1, $2) } ;
 
 vpkglist:
   |             { [] }
@@ -179,9 +179,17 @@ archlist_ne:
 
 /**************************************/ 
 
-req:
-  |pkgname             { let (n,a) = parse_request $1 in (n,a,None) }
-  |pkgname EQ version  { let (n,a) = parse_request $1 in (n,a,Some("=",$3)) }
+request:
+  | PLUS req_aux        { let (vpkg,suite) = $2 in (Some Format822.I,vpkg,suite) }
+  | MINUS req_aux       { let (vpkg,suite) = $2 in (Some Format822.R,vpkg,suite) }
+  | req_aux             { let (vpkg,suite) = $1 in (None,vpkg,suite) }
+;
+
+req_aux:
+  |vpkgname              { (($1,None),None) }
+  |vpkgname EQ version   { (($1,Some("=",$3)),None) }
+  |vpkgname SLASH IDENT  { (($1,None),Some $3) }
+;
 
 reqlist:
   |            { [] }
@@ -189,11 +197,9 @@ reqlist:
 ;
 
 reqlist_ne:
-  | req                 { [ $1 ] }
-  | req reqlist_ne      { $1 :: $2 }
+  | request                 { [ $1 ] }
+  | request reqlist_ne      { $1 :: $2 }
 ;
-
-
 
 %%
 
@@ -214,3 +220,4 @@ let vpkglist_top = error_wrapper vpkglist_top
 let vpkgformula_top = error_wrapper vpkgformula_top
 let source_top = error_wrapper source_top
 let request_top = error_wrapper request_top
+let requestlist_top = error_wrapper requestlist_top

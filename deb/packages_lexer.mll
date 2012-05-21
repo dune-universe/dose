@@ -22,13 +22,18 @@ let letter = lower_letter | upper_letter
 let digit = [ '0' - '9' ]
 let blank = [ ' ' '\t' ]
 let blanks = blank+
-let ident = (letter | digit | ['-' '+' '.' ':' '_' '~'])+
+let symbols = ['-' ':' '+' '.' '_' '~']
+let ident = (letter | digit) (letter | digit | symbols)*
 
 rule token_deb = parse
   | (">=" | "<=") as op { RELOP op }
   | (">>" | "<<") as op { RELOP op }
   | ('>' | '<') as op   { RELOP (String.make 1 op) }
   | '='                 { EQ }
+  | ':'                 { COLON }
+  | '/'                 { SLASH }
+  | '+'                 { PLUS }
+  | '-'                 { MINUS }
   | '['                 { LBRACKET }
   | ']'                 { RBRACKET }
   | '('                 { LPAREN }

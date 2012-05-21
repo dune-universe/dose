@@ -82,7 +82,7 @@ let add_unique h k v =
 
 (* collect dependency information *)
 let conj_iter t l =
-  List.iter (fun (name,sel) ->
+  List.iter (fun ((name,_),sel) ->
     match CudfAdd.cudfop sel with
     |None -> add_unique t name None
     |Some(c,v) -> add_unique t name (Some(c,v))
