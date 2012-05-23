@@ -124,3 +124,13 @@ Findlib has been successfully loaded. Additional directives:
 /usr/local/lib/ocaml/3.12.1/dose3/rpm.cma: loaded
 /usr/local/lib/ocaml/3.12.1/dose3/boilerplate.cma: loaded
 #
+
+
+How to create a tarball for distribution
+----------------------------------------
+edit configure.ac: put new version number in macro AC_INIT
+aclocal -I m4
+autoconf
+make
+make dist
+
