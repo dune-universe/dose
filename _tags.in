@@ -42,12 +42,12 @@
 <applications/apt-cudf.*>: use_boilerplateNoRpm
 <applications/deb-buildcheck.*>: use_algo, use_boilerplateNoRpm
 
-<applications/distcheck.*>: @USE_RPM@, use_algo, use_boilerplate
-<applications/ceve.*>: @USE_RPM@, use_algo, use_boilerplate
-<applications/smallworld.*>: @USE_RPM@, use_algo, use_boilerplate
+<applications/distcheck.*>: @USE_RPM@, use_algo, use_boilerplate, package(str)
+<applications/ceve.*>: @USE_RPM@, use_algo, use_boilerplate, package(str)
+<applications/smallworld.*>: @USE_RPM@, use_algo, use_boilerplate, package(str)
 <applications/tests.*>: @USE_RPM@, use_algo, use_boilerplate, use_boilerplateNoRpm, @PKG_PARMAP@
-<applications/strong-deps.*>: @USE_RPM@, use_algo, use_boilerplate
-<applications/dominators-graph.*>: @USE_RPM@, use_boilerplate, use_algo
+<applications/strong-deps.*>: @USE_RPM@, use_algo, use_boilerplate, package(str)
+<applications/dominators-graph.*>: @USE_RPM@, use_boilerplate, use_algo, package(str)
 <applications/challenged.*>: use_algo, use_boilerplateNoRpm, @PKG_PARMAP@
 <applications/outdated.*>: use_algo, use_boilerplateNoRpm
 
@@ -59,7 +59,6 @@
 
 <experimental/strongpreds.*>: @USE_RPM@, use_algo, use_boilerplate
 <experimental/cudftodeb.*>: use_boilerplateNoRpm
-<experimental/smallworld.*>: @USE_RPM@, use_boilerplate, use_algo
 <experimental/cudf-solver.*>: use_algo, use_boilerplateNoRpm
 <experimental/treinen-test.*>: use_algo, use_boilerplateNoRpm
 <experimental/partition.*>: use_algo, package(buddy), use_boilerplateNoRpm
