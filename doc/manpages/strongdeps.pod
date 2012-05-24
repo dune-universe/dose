@@ -99,6 +99,7 @@ Pietro Abate, Jaap Boender, Roberto Di Cosmo
 =cut
 
 =head1 SEE ALSO
+
 <http://www.mancoosi.org> is the home page of the Mancoosi project. 
 
 For a comprehensive explanation of the notion of strong dependency

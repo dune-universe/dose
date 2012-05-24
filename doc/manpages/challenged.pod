@@ -84,6 +84,7 @@ Display this list of options.
 Pietro Abate and Roberto Di Cosmo 
 
 =head1 SEE ALSO
+
 L<B<distcheck>(5)B<>>
 L<B<outdated>(5)B<>> 
 
