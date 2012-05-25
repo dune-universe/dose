@@ -43,11 +43,17 @@ Show usage information and exit.
 
 Show program's version and exit.
 
-=item -d
-
 =item --dump
 
 Dump the cudf universe and solution
+
+=item --noop
+
+Dump the cudf universe and solution and exit. This is useful to generate a cudf universe from a edsp file
+
+=item --conf
+
+Use a configuration file. Default in /etc/apt-cudf.conf
 
 =item -s <solver>
 
@@ -61,6 +67,16 @@ Specify the external solver to use.
 
 Print a human-readable summary of the solution.
 
+=item --native-arch
+
+Speficy the native architecture to be used in the edsp -> cudf translation. By default apt-cudf
+uses apt-config to deduce the native architecture. This option is useful if the edsp was generated
+on a machine with a different architecture.
+
+=item --foreign-archs
+
+A comma-separated list of foreign architectures to be used in the edsp -> cudf translation
+
 =back
 
 =head1 SEE ALSO
@@ -71,9 +87,8 @@ L<README.Debian|file:///usr/share/doc/apt-cudf/README.Debian>
 
 =head1 AUTHOR
 
-Copyright: (C) 2011 Stefano Zacchiroli <zack@debian.org>
-
 Copyright: (C) 2011 Pietro Abate <pietro.abate@pps.jussieu.fr>
+Copyright: (C) 2011 Stefano Zacchiroli <zack@debian.org>
 
 License: GNU Lesser General Public License (GPL), version 3 or above
 
