@@ -54,7 +54,7 @@
 <experimental/strong-conflicts.*>: @USE_RPM@, use_algo, use_boilerplate
 <experimental/randcudf.*>: use_algo, use_boilerplateNoRpm
 <experimental/deb-cudf.*>: use_boilerplateNoRpm
-<experimental/aptsolutions.*>: use_boilerplateNoRpm
+<experimental/aptsolutions.*>: use_boilerplateNoRpm, package(str)
 <experimental/edsp-cudf.*>: use_boilerplateNoRpm
 
 <experimental/strongpreds.*>: @USE_RPM@, use_algo, use_boilerplate

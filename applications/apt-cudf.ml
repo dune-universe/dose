@@ -26,6 +26,7 @@ module Options = struct
   include Boilerplate.MakeOptions(struct let options = options end)
 
   let dump = StdOpt.store_true ()
+  let noop = StdOpt.store_true ()
   let solver = StdOpt.str_option ()
   let criteria = StdOpt.str_option ()
   let explain = StdOpt.store_true ()
@@ -35,7 +36,8 @@ module Options = struct
 
   open OptParser
   add options ~long_name:"conf" ~help:"configuration file (default:/etc/apt-cudf.conf)" conffile;
-  add options ~short_name:'d' ~long_name:"dump" ~help:"dump the cudf universe and solution" dump;
+  add options ~long_name:"dump" ~help:"dump the cudf universe and solution" dump;
+  add options ~long_name:"noop" ~help:"Do nothing, implies --dump" noop;
   add options ~short_name:'s' ~long_name:"solver" ~help:"external solver" solver;
   add options ~short_name:'c' ~long_name:"criteria" ~help:"optimization criteria" criteria;
   add options ~short_name:'e' ~long_name:"explain" ~help:"summary" explain;
@@ -406,9 +408,10 @@ let main () =
     ) pkglist 
   in
 
-  if OptParse.Opt.get Options.dump then begin
-    info "dump universe in  /tmp/cudf-solver.universe.dump";
-    let oc = open_out "/tmp/cudf-solver.universe.dump" in
+  let cudfdump = Filename.temp_file "apt-cudf-universe" ".cudf" in
+  if OptParse.Opt.get Options.dump || OptParse.Opt.get Options.noop then begin
+    Printf.printf "Apt-cudf: dump cudf universe in %s\n" cudfdump;
+    let oc = open_out cudfdump in
     Cudf_printer.pp_preamble oc default_preamble;
     Printf.fprintf oc "\n";
     Cudf_printer.pp_packages oc cudfpkglist;
@@ -424,16 +427,19 @@ let main () =
   let cudf = (default_preamble,universe,cudf_request) in
   Util.Timer.stop timer2 ();
 
-  if OptParse.Opt.get Options.dump then begin
-    info "append request to /tmp/cudf-solver.universe.dump";
+  if OptParse.Opt.get Options.dump || OptParse.Opt.get Options.noop then begin
+    Printf.printf "Apt-cudf: append cudf request to %s\n" cudfdump;
     let oc = open_out_gen 
       [Open_wronly; Open_append; Open_creat; Open_text]
-      0o666 "/tmp/cudf-solver.universe.dump" 
+      0o666 cudfdump 
     in
     Printf.fprintf oc "\n";
     Cudf_printer.pp_request oc cudf_request;
     close_out oc
   end;
+
+  (* do nothing, we exit here after dumping the universe *)
+  if OptParse.Opt.get Options.noop then exit(0);
 
   let tmpdir = mktmpdir "tmp.apt-cudf.XXXXXXXXXX" in
   at_exit (fun () -> rmtmpdir tmpdir);
@@ -487,8 +493,9 @@ let main () =
       in
 
       if OptParse.Opt.get Options.dump then begin
-        info "dump cudf solution in /tmp/cudf-solver.solution.dump";
-        let oc = open_out "/tmp/cudf-solver.solution.dump" in
+        let cudfsol = Filename.temp_file "apt-cudf-solution" ".cudf" in
+        Printf.printf "Apt-cudf: dump cudf solution in %s\n" cudfsol;
+        let oc = open_out cudfsol in
         Cudf_printer.pp_preamble oc default_preamble;
         Printf.fprintf oc "\n";
         Cudf_printer.pp_packages oc sol;
@@ -547,7 +554,7 @@ let main () =
   end;
   Util.Timer.stop timer5 ();
   Sys.remove solver_in;
-  Sys.remove solver_out;
+  Sys.remove solver_out
 ;;
 
 main ();;

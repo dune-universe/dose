@@ -17,6 +17,8 @@ open ExtString
 open Common
 module Boilerplate = BoilerplateNoRpm
 
+include Util.Logging(struct let label = __FILE__ end) ;;
+
 module Options = struct
   open OptParse
   let description = "parse an apt-get solution and generate a cudf solution"
@@ -33,11 +35,6 @@ module Options = struct
 end
 
 (* ========================================= *)
-
-let debug fmt = Util.make_debug "Aptsoltuions" fmt
-let info fmt = Util.make_info "Aptsolutions" fmt
-let warning fmt = Util.make_warning "Aptsolutions" fmt
-let fatal fmt = Util.make_fatal "Aptsolutions" fmt
 
 let main () =
   let (doc,apt) =
@@ -71,12 +68,14 @@ let main () =
           let n = Str.matched_group 1 line in
           let v = Str.matched_group 2 line in
           info "remove %s %s" n v;
+          let n = CudfAdd.encode ("i386:"^n) in
           remove := (n,v) :: !remove
       end
       else if Str.string_match re_inst line 0 then begin
           let n = Str.matched_group 1 line in
           let v = Str.matched_group 2 line in
           info "install %s %s" n v;
+          let n = CudfAdd.encode ("i386:"^n) in
           install := (n,v) :: !install
       end
       else if Str.string_match re_up line 0 then begin
@@ -84,6 +83,7 @@ let main () =
           let vold = Str.matched_group 2 line in
           let vnew = Str.matched_group 3 line in
           info "upgrade %s %s -> %s" n vold vnew;
+          let n = CudfAdd.encode ("i386:"^n) in
           install := (n,vnew) :: !install ;
           remove := (n,vold) :: !remove
       end
