@@ -16,18 +16,36 @@ open Common
 
 include Util.Logging(struct let label = __FILE__ end) ;;
 
+(** One un-installability reason for a package **)
 type reason =
   |Dependency of (Cudf.package * Cudf_types.vpkg list * Cudf.package list)
+  (** Not strictly a un-installability, Dependency (a,vpkglist,pkglist) is used
+      to recontruct the the dependency path from the root package to the
+      offending un-installable package **)
   |Missing of (Cudf.package * Cudf_types.vpkg list)
+  (** Missing (a,vpkglist) means that the dependency
+      [vpkglist] of package [a] cannot be satisfied **)
   |Conflict of (Cudf.package * Cudf.package * Cudf_types.vpkg)
+  (** Conflict (a,b,vpkg) means that the package [a] is in conflict
+      with package [b] because of vpkg **)
 
+(** The request provided to the solver **)
 type request =
-  |Package of Cudf.package
-  |PackageList of Cudf.package list
+  |Package of Cudf.package (** Check the installability of one package **)
+  |PackageList of Cudf.package list (** Check the installability of a list of packages **)
 
+(** The result of an installability query **)
 type result =
   |Success of (?all:bool -> unit -> Cudf.package list)
+  (** If successfull returns a function that will
+      return the installation set for the given query. Since
+      not all packages are tested for installability directly, the
+      installation set might be empty. In this case, the solver can
+      be called again to provide the real installation set 
+      using the parameter [~all:true] **)
   |Failure of (unit -> reason list)
+  (** If unsuccessful returns a function containing the list of
+      reason *)
 
 type diagnosis = { result : result ; request : request }
 
