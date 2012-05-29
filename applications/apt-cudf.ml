@@ -64,23 +64,11 @@ let print_progress ?i msg =
 ;;
 
 let make_request tables universe native_arch request = 
+  let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
   let select_packages l = 
     List.map (fun ((n,a),c) -> 
+      let (name,constr) = Boilerplate.debvpkg ~native_arch to_cudf ((n,a),c) in
       let candidate = 
-        let n = 
-          if Option.is_none a then 
-            if native_arch <> "" then
-              (native_arch^":"^n) 
-            else n
-          else 
-            ((Option.get a)^":"^n) 
-        in
-        let constr =
-          match CudfAdd.cudfop c with
-          |None -> None
-          |Some(op,v) -> 
-              Some(op,Debcudf.get_cudf_version tables ((CudfAdd.encode n),v))
-        in
         try
           List.find (fun pkg ->
             if request.Edsp.strict_pin then
@@ -88,7 +76,7 @@ let make_request tables universe native_arch request =
               with Not_found -> false
             else
               true
-          ) (CudfAdd.who_provides universe ((CudfAdd.encode n),constr))
+          ) (CudfAdd.who_provides universe (name,constr))
         with Not_found -> 
           print_error "Package %s does not have a suitable candidate" n
       in

@@ -48,10 +48,33 @@ let parse_vpkg s =
   in List.map parse_aux (Pcre.split ~rex:and_sep_re s)
 ;;
 
+let parse_vpkg s = 
+  let _loc = Debian.Format822.dummy_loc in
+  Debian.Packages.parse_vpkglist (_loc,s)
+
 (* this is a ,-separated list of vpkgs of the form "a (= v)" *)
 let vpkglist_option ?default ?(metavar = "VPKGLST") () =
   OptParse.Opt.value_option metavar default
   parse_vpkg (fun _ s -> Printf.sprintf "invalid vpackage list '%s'" s)
+;;
+
+let debvpkg ?(native_arch="") to_cudf ((n,a),c) =
+  let name =
+    CudfAdd.encode (
+      if Option.is_none a then
+        if native_arch <> "" then
+          (native_arch^":"^n)
+        else n
+      else
+        ((Option.get a)^":"^n)
+    )
+  in
+  let constr =
+    match CudfAdd.cudfop c with
+    |None -> None
+    |Some(op,v) -> Some(op,snd(to_cudf (name,v)))
+  in
+  (name,constr)
 ;;
 
 (* *************************************** *)

@@ -65,12 +65,10 @@ let main () =
   let (_,universe,_,to_cudf) = Boilerplate.load_universe ~options posargs in
   if OptParse.Opt.is_set Options.checkonly then begin
     let pkglistlist =
-      List.map (function
-        |(p,None) -> Cudf.lookup_packages universe p
-        |(p,Some(c,v)) ->
-            let filter = Some(c,snd(to_cudf (p,v))) in
-            Cudf.lookup_packages ~filter universe p
-      ) (OptParse.Opt.get Options.checkonly)
+        List.map (fun ((n,a),c) ->
+          let (name,filter) = Boilerplate.debvpkg to_cudf ((n,a),c) in
+          Cudf.lookup_packages ~filter universe name
+        ) (OptParse.Opt.get Options.checkonly)
     in
     List.iter (fun pkglist ->
       (* if --checkonly we compute the strong dependencies of the pkglist and

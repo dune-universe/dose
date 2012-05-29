@@ -142,11 +142,9 @@ let main () =
     if OptParse.Opt.is_set Options.checkonly then begin
       info "--checkonly specified, consider all packages as background packages";
       List.flatten (
-        List.map (function 
-          |(p,None) -> Cudf.lookup_packages universe p
-          |(p,Some(c,v)) ->
-              let filter = Some(c,snd(to_cudf (p,v))) in
-              Cudf.lookup_packages ~filter universe p
+        List.map (fun ((n,a),c) ->
+          let (name,filter) = Boilerplate.debvpkg to_cudf ((n,a),c) in
+          Cudf.lookup_packages ~filter universe name
         ) (OptParse.Opt.get Options.checkonly)
       )
     end else []
@@ -155,11 +153,9 @@ let main () =
   let coinstlist = 
     if OptParse.Opt.is_set Options.coinst then begin
       info "--coinst specified, consider all packages as background packages";
-      List.map (function 
-        |(p,None) -> Cudf.lookup_packages universe p
-        |(p,Some(c,v)) ->
-            let filter = Some(c,snd(to_cudf (p,v))) in
-            Cudf.lookup_packages ~filter universe p
+      List.map (fun ((n,a),c) ->
+        let (name,filter) = Boilerplate.debvpkg to_cudf ((n,a),c) in
+        Cudf.lookup_packages ~filter universe name
       ) (OptParse.Opt.get Options.coinst)
     end else []
   in

@@ -282,16 +282,15 @@ let solve solver request =
 
 let pkgcheck callback solver failed tested id =
   let memo (tested,failed) res = 
-    begin
-      match res with
-      |Success(f_int) ->
-          List.iter (fun i -> Array.unsafe_set tested i true) (f_int ());
-          Diagnostic_int.Success(fun ?all () -> f_int ())
-      |Failure r ->
-          incr failed;
-          Diagnostic_int.Failure(r)
-
-    end 
+    match res with
+    |Success(f_int) -> begin
+        List.iter (fun i -> Array.unsafe_set tested i true) (f_int ());
+        Diagnostic_int.Success(fun ?all () -> f_int ())
+    end
+    |Failure r -> begin
+        incr failed;
+        Diagnostic_int.Failure(r)
+    end
   in
   let req = Diagnostic_int.Sng id in
   let res =
