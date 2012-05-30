@@ -120,6 +120,7 @@ module SyntacticDependencyGraph = struct
       let vertex_attributes v =
         match G.V.label v with
         |PkgV.Or _ -> [`Label "Or" ; `Shape `Diamond]
+        |PkgV.Pkg p when p.Cudf.installed -> [ `Color 0x00FF00 ]
         |_ -> []
 
       let edge_attributes e =
