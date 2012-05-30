@@ -314,11 +314,12 @@ let add_extra extras tables pkg =
 let tocudf tables ?(options=default_options) ?(inst=false) pkg =
   if options.native <> "" then begin
     let _name = add_arch options.native pkg.architecture pkg.name in
+    let version = get_cudf_version tables (pkg.name,pkg.version)  in
     let _provides = 
       let l = 
         match pkg.multiarch with
         |`None -> [(CudfAdd.encode pkg.name,None)]
-        |`Foreign -> List.map (fun arch -> (add_arch options.native arch pkg.name,None)) options.foreign
+        |`Foreign -> List.map (fun arch -> (add_arch options.native arch pkg.name,Some(`Eq,version))) options.foreign
         |`Allowed -> [(CudfAdd.encode pkg.name,None) ; (CudfAdd.encode (pkg.name^":any"),None)]
         |`Same -> []
       in

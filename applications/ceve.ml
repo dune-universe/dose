@@ -36,17 +36,17 @@ module Options = struct
     let error _ s = Printf.sprintf "%s format not supported" s in
     Opt.value_option metavar default corce error
 
-  let src = StdOpt.str_option ()
-  let dst = StdOpt.str_option ()
-  let cone = StdOpt.str_option ()
-  let extract = StdOpt.str_option ()
-  let reverse_cone = StdOpt.str_option ()
+  let src = Boilerplate.vpkglist_option ()
+  let dst = Boilerplate.vpkg_option ()
+  let cone = Boilerplate.vpkglist_option ()
+(*  let extract = StdOpt.str_option () *)
+  let reverse_cone = Boilerplate.vpkglist_option ()
   let cone_maxdepth = StdOpt.int_option ()
   let out_type = out_option ~default:"cnf" ()
   let out_file = StdOpt.str_option ()
 
   open OptParser
-  add options ~short_name:'e' ~long_name:"extract" ~help:"dependency/conflict cone" extract;
+(*  add options ~short_name:'e' ~long_name:"extract" ~help:"dependency/conflict cone" extract; *)
   add options ~short_name:'c' ~long_name:"cone" ~help:"dependency cone" cone;
   add options ~short_name:'r' ~long_name:"rcone" ~help:"reverse dependency cone" reverse_cone;
   add options                 ~long_name:"depth" ~help:"max depth - in conjunction with cone" cone_maxdepth;
@@ -56,17 +56,6 @@ module Options = struct
   include Boilerplate.MakeDistribOptions(struct let options = options end);;
 
 end;;
-
-let and_sep_re = Pcre.regexp "\\s*;\\s*"
-let pkg_re = Pcre.regexp "\\(([a-z][a-z0-9.+-]*)\\s*,\\s*([a-zA-Z0-9.+:~-]+)\\)"
-let parse_pkg s =
-  let parse_aux str =
-    try 
-      let s = Pcre.exec ~rex:pkg_re str  in
-      (Pcre.get_substring s 1, Pcre.get_substring s 2)
-    with
-      Not_found -> (Printf.eprintf "Parse error %s\n" str ; exit 1)
-  in List.map parse_aux (Pcre.split ~rex:and_sep_re s);;
 
 (* -------------------------------- *)
 
@@ -122,12 +111,16 @@ let main () =
     output_to_sqlite posargs
   else
   let (preamble,universe,from_cudf,to_cudf) = Boilerplate.load_universe ~options posargs in
-  let get_cudfpkg (p,v) = Cudf.lookup_package universe (to_cudf (p,v)) in
+  let get_cudfpkg ((n,a),c) = 
+    let (name,filter) = Boilerplate.debvpkg to_cudf ((n,a),c) in
+    try List.hd(Cudf.lookup_packages ~filter universe name)
+    with ExtList.List.Empty_list -> fatal "package %s not found" n
+  in
 
-  let pkg_src () = List.map get_cudfpkg (parse_pkg (OptParse.Opt.get Options.src)) in
+  let pkg_src () = List.map get_cudfpkg (OptParse.Opt.get Options.src) in
   let pkg_dst () =
     (* all packages q in R s.t. q is in the dependency closure of p *)
-    let (p,v) = List.hd(parse_pkg (OptParse.Opt.get Options.dst)) in
+    let (p,v) = OptParse.Opt.get Options.dst in
     let pid = get_cudfpkg (p,v) in
     List.filter_map (fun pkg ->
       if List.mem pid (Depsolver.dependency_closure universe [pkg]) then
@@ -143,7 +136,7 @@ let main () =
         (Depsolver.dependency_closure ~maxdepth:md universe [pid]) @ acc
       else
         (Depsolver.dependency_closure universe [pid]) @ acc
-    ) [] (parse_pkg (OptParse.Opt.get Options.cone)))
+    ) [] (OptParse.Opt.get Options.cone))
   in
   let pkg_reverse_cone () =
     List.unique (List.fold_left (fun acc (p,v) ->
@@ -153,14 +146,14 @@ let main () =
         (Depsolver.reverse_dependency_closure ~maxdepth:md universe [pid]) @ acc
       else
         (Depsolver.reverse_dependency_closure universe [pid]) @ acc
-    ) [] (parse_pkg (OptParse.Opt.get Options.reverse_cone)))
+    ) [] (OptParse.Opt.get Options.reverse_cone))
   in
 
   let pkg_src_list = ref [] in
   let pkg_dst_list = ref [] in
   let plist =
     if OptParse.Opt.is_set Options.src && OptParse.Opt.is_set Options.dst then begin
-      let (p,v) = List.hd(parse_pkg (OptParse.Opt.get Options.dst)) in
+      let (p,v) = OptParse.Opt.get Options.dst in
       let pid = get_cudfpkg (p,v) in
       pkg_src_list := pkg_src ();
       pkg_dst_list := [pid];

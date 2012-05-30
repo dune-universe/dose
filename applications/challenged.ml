@@ -199,7 +199,7 @@ let challenged
   if Option.is_none clusterlist then
     Hashtbl.iter cluster_iter clusters
   else
-    List.iter (fun (sn,sv) ->
+    List.iter (fun (sn,_,sv) ->
       begin try
         let l = Hashtbl.find clusters (sn,sv) in
         cluster_iter (sn,sv) l

@@ -216,7 +216,7 @@ let outdated
   let checklist =
     if Option.is_none checklist then []
     else
-      List.map (fun (p,v) ->
+      List.map (fun (p,_,v) ->
         Cudf.lookup_package universe (p,getv v)
       ) (Option.get checklist)
   in

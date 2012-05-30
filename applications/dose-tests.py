@@ -51,6 +51,17 @@ class DoseTests(unittest.TestCase):
         cmd = ["./distcheck.native","-s","deb://tests/DebianPackages/lenny.packages.bz2"]
         test_application(self,expected_file,cmd)
 
+    def test_checkonly_distcheck(self):
+        expected_file = "tests/applications/dose-tests/distcheck_test_checkonly"
+        cmd = ["./distcheck.native", "--checkonly", "3dchess", "deb://tests/DebianPackages/sid.packages.bz2", "-s", "-e"]
+        test_application(self,expected_file,cmd)
+
+    def test_checkonly_multiarch_distcheck(self):
+        expected_file = "tests/applications/dose-tests/distcheck_test_checkonly_multiarch"
+        cmd = ["./distcheck.native", "--checkonly", "3dchess:amd64", "deb://tests/DebianPackages/sid.packages.bz2", "-s", "-e", "--deb-native-arch", "amd64"]
+        test_application(self,expected_file,cmd)
+
+
     def test_ignore_essential_distcheck(self):
         expected_file = "tests/applications/dose-tests/distcheck_test_ignore_essential"
         cmd = ["./distcheck.native","--deb-ignore-essential","-f","-e","deb://tests/DebianPackages/sid.packages.bz2"]
@@ -59,6 +70,21 @@ class DoseTests(unittest.TestCase):
     def test_failure_outdated(self):
         expected_file = "tests/applications/dose-tests/outdated_failure"
         cmd = ["./outdated.native","-f","-e","tests/DebianPackages/sid.packages.bz2"]
+        test_application(self,expected_file,cmd)
+
+    def test_ceve_cnf(self):
+        expected_file = "tests/applications/dose-tests/ceve_cnf"
+        cmd = ["./ceve.native","-t","cnf","deb://tests/DebianPackages/sid.packages.bz2"]
+        test_application(self,expected_file,cmd)
+
+    def test_ceve_cone_dot(self):
+        expected_file = "tests/applications/dose-tests/ceve_cone_dot"
+        cmd = ["./ceve.native","-t","dot","-c", "3dchess", "deb://tests/DebianPackages/sid.packages.bz2"]
+        test_application(self,expected_file,cmd)
+
+    def test_ceve_cone_multiarch_dot(self):
+        expected_file = "tests/applications/dose-tests/ceve_cone_multiarch_dot"
+        cmd = ["./ceve.native","-t","dot","-c", "3dchess:amd64", "--deb-native-arch", "amd64", "deb://tests/DebianPackages/sid.packages.bz2"]
         test_application(self,expected_file,cmd)
 
 def main():

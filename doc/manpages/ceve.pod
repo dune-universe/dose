@@ -30,7 +30,7 @@ Be verbose. This option can be repeated for more verbosity.
 
 =item B<-e >I<pkgspec> 
 
-Extract the transitive closure of packages connected (by conflict or
+(Option Not Implemented Yet) Extract the transitive closure of packages connected (by conflict or
 dependency) to any of the packages that satisfy I<pkgspec>. Such a package
 specification is a list of packages (separated by a semicolon), where each
 package is specified as follows: (I<name>,I<version>).I<> This option can also

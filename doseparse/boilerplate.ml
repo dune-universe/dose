@@ -31,31 +31,36 @@ end
 
 (* *************************************** *)
 
-let and_sep_re = Pcre.regexp "\\s*,\\s*"
-let pkg_re = Pcre.regexp "([0-9a-z][a-z0-9.+-:]*)(\\s*$|\\s*\\(\\s*([><=!]+)\\s*([a-zA-Z0-9.+:~-]+)\\s*\\))"
-let parse_vpkg s =
-  let parse_aux str =
-    try
-      let s = Pcre.exec ~rex:pkg_re str  in
-      let p = Pcre.get_substring s 1 in
-      try 
-        let c = Pcre.get_substring s 3 in
-        let v = Pcre.get_substring s 4 in
-        (CudfAdd.encode p,CudfAdd.cudfop(Some(c,v)))
-      with Not_found -> (CudfAdd.encode p,None)
-    with
-      Not_found -> fatal "Parse error %s\n" str
-  in List.map parse_aux (Pcre.split ~rex:and_sep_re s)
+let vpkg_option ?default ?(metavar = "VPKG") () =
+  let parse_vpkg s = 
+    let _loc = Debian.Format822.dummy_loc in
+    Debian.Packages.parse_vpkg (_loc,s)
+  in
+  OptParse.Opt.value_option metavar default
+  parse_vpkg (fun _ s -> Printf.sprintf "invalid vpackage '%s'" s)
 ;;
-
-let parse_vpkg s = 
-  let _loc = Debian.Format822.dummy_loc in
-  Debian.Packages.parse_vpkglist (_loc,s)
 
 (* this is a ,-separated list of vpkgs of the form "a (= v)" *)
 let vpkglist_option ?default ?(metavar = "VPKGLST") () =
+  let parse_vpkglist s = 
+    let _loc = Debian.Format822.dummy_loc in
+    Debian.Packages.parse_vpkglist (_loc,s)
+  in
   OptParse.Opt.value_option metavar default
-  parse_vpkg (fun _ s -> Printf.sprintf "invalid vpackage list '%s'" s)
+  parse_vpkglist (fun _ s -> Printf.sprintf "invalid vpackage list '%s'" s)
+;;
+
+(* this is a ,-separated list of vpkgs of the form "a (= v)" *)
+let pkglist_option ?default ?(metavar = "VPKGLST") () =
+  let parse_vpkglist s = 
+    let _loc = Debian.Format822.dummy_loc in
+    List.map (function
+      |((n,a),Some("=",v)) -> (n,a,v)
+      |_ -> raise (Debian.Packages.ParseError (s,""))
+    ) (Debian.Packages.parse_vpkglist (_loc,s))
+  in
+  OptParse.Opt.value_option metavar default
+  parse_vpkglist (fun _ s -> Printf.sprintf "invalid package list '%s'" s)
 ;;
 
 let debvpkg ?(native_arch="") to_cudf ((n,a),c) =
@@ -78,24 +83,6 @@ let debvpkg ?(native_arch="") to_cudf ((n,a),c) =
 ;;
 
 (* *************************************** *)
-
-let and_sep_re = Pcre.regexp "\\s*;\\s*"
-let pkg_re = Pcre.regexp "\\(([0-9a-z][a-z0-9.+-:]*)\\s*,\\s*([a-zA-Z0-9.+:~-]+)\\)"
-let parse_pkg s =
-  let parse_aux str =
-    try
-      let s = Pcre.exec ~rex:pkg_re str  in
-      (Pcre.get_substring s 1, Pcre.get_substring s 2)
-    with
-      Not_found -> fatal "Parse error %s" str
-  in List.map parse_aux (Pcre.split ~rex:and_sep_re s)
-;;
-
-(* this is a ;-separated list of package names *)
-let pkglist_option ?default ?(metavar = "PKGLST") () =
-  OptParse.Opt.value_option metavar default
-  parse_pkg (fun _ s -> Printf.sprintf "invalid package list '%s'" s)
-;;
 
 let incr_str_list ?(default=Some []) ?(metavar = "STR") =
   let acc = ref [] in 
