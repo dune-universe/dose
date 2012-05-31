@@ -103,7 +103,9 @@ doseparse/boilerplateNoRpm.%:
 	done
 
 POD = $(wildcard doc/manpages/*.pod)
-MAN = $(patsubst %.pod,%.1,$(POD))
+POD5 = doc/manpages/apt-cudf.conf.pod
+POD1 = $(filter-out $(POD5),$(POD))
+MAN = $(patsubst %.pod,%.1,$(POD1)) $(patsubst %.pod,%.5,$(POD5))
 HTML = $(patsubst %.pod,%.html,$(POD))
 
 man: $(MAN)
@@ -113,6 +115,9 @@ html: $(HTML)
 
 doc/manpages/%.1: doc/manpages/%.pod
 	pod2man --section 1 --center="DOSE Tools" --release "$(NAME) $(VERSION)" doc/manpages/$*.pod > $@
+
+doc/manpages/%.5: doc/manpages/%.pod
+	pod2man --section 5 --center="DOSE Tools" --release "$(NAME) $(VERSION)" doc/manpages/$*.pod > $@
 
 doc/manpages/%.html: doc/manpages/%.pod
 	pod2html doc/manpages/$*.pod > $@
