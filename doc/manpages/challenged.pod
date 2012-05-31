@@ -85,8 +85,8 @@ Pietro Abate and Roberto Di Cosmo
 
 =head1 SEE ALSO
 
-L<B<distcheck>(5)B<>>
-L<B<outdated>(5)B<>> 
+L<B<distcheck>(1)B<>>
+L<B<outdated>(1)B<>> 
 
 <http://www.mancoosi.org> is the home page of the Mancoosi project.
 
