@@ -62,7 +62,6 @@ val decode : string -> string
 
 (** {2 Formatting, printing, converting to string. } *)
 
-val buf_formatter : Format.formatter
 val string_of : (Format.formatter -> 'a -> 'b) -> 'a -> string
 
 val pp_version : Format.formatter -> Cudf.package -> unit

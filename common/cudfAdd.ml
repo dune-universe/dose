@@ -125,18 +125,9 @@ let decode s =
 
 (* formatting *)
 
-let buf = Buffer.create 1024
-
-let buf_formatter =
-  let fmt = Format.formatter_of_buffer buf in
-    Format.pp_set_margin fmt max_int;
-    fmt
-
 let string_of pp arg =
-  Buffer.clear buf;
-  ignore(pp buf_formatter arg);
-  Format.pp_print_flush buf_formatter ();
-  Buffer.contents buf
+  ignore(pp Format.str_formatter arg);
+  Format.flush_str_formatter ()
 
 let pp_version fmt pkg =
   try Format.fprintf fmt "%s" (decode (Cudf.lookup_package_property pkg "number"))
