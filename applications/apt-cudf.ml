@@ -65,7 +65,7 @@ let print_progress ?i msg =
 
 let make_request tables universe native_arch request = 
   let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
-  let select_packages l = 
+  let select_packages ?(remove=false) l = 
     List.map (fun ((n,a),c) -> 
       let (name,constr) = Boilerplate.debvpkg ~native_arch to_cudf ((n,a),c) in
       let candidate = 
@@ -80,7 +80,10 @@ let make_request tables universe native_arch request =
         with Not_found -> 
           print_error "Package %s does not have a suitable candidate" n
       in
-      (candidate.Cudf.package,Some(`Eq,candidate.Cudf.version))
+      if remove then
+        (candidate.Cudf.package,None)
+      else
+        (candidate.Cudf.package,Some(`Eq,candidate.Cudf.version))
     ) l 
   in
   if request.Edsp.upgrade || request.Edsp.distupgrade then
@@ -94,13 +97,13 @@ let make_request tables universe native_arch request =
     {Cudf.default_request with 
     Cudf.request_id = request.Edsp.request;
     Cudf.upgrade = to_upgrade request.Edsp.install;
-    Cudf.remove = select_packages request.Edsp.remove;
+    Cudf.remove = select_packages ~remove:true request.Edsp.remove;
     }
   else
     {Cudf.default_request with
     Cudf.request_id = request.Edsp.request;
     Cudf.install = select_packages request.Edsp.install;
-    Cudf.remove = select_packages request.Edsp.remove;
+    Cudf.remove = select_packages ~remove:true request.Edsp.remove;
     }
 ;;
 
