@@ -1,7 +1,7 @@
 description = "Dose3 libraries"
 version = "@PACKAGE_VERSION@"
-archive(byte) = "common.cma algo.cma debian.cma eclipse.cma"
-archive(native) = "common.cmxa algo.cmxa debian.cmxa eclipse.cmxa"
+archive(byte) = "common.cma algo.cma debian.cma eclipse.cma csw.cma"
+archive(native) = "common.cmxa algo.cmxa debian.cmxa eclipse.cmxa csw.cmxa"
 requires = "extlib, str, pcre, cudf, ocamlgraph, @ZIP@, @BZ2@"
 
 package "common" (
@@ -29,6 +29,13 @@ package "eclipse" (
 version = "@PACKAGE_VERSION@"
 archive(byte) = "eclipse.cma"
 archive(native) = "eclipse.cmxa"
+requires = "dose3.common, dose3.debian" 
+)
+
+package "csw" (
+version = "@PACKAGE_VERSION@"
+archive(byte) = "csw.cma"
+archive(native) = "csw.cmxa"
 requires = "dose3.common, dose3.debian" 
 )
 
