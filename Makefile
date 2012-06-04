@@ -125,6 +125,7 @@ doc/manpages/%.html: doc/manpages/%.pod
 clean:
 	$(OCAMLBUILD) -clean
 	@echo ""
+	rm -f doc/manpages/*.[158]
 
 distclean: clean
 	rm -Rf Makefile.config aclocal.m4 config.log config.status autom4te.cache/
