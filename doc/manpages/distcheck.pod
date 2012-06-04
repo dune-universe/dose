@@ -134,14 +134,40 @@ co-installability, namely (a=2,b=11), (a=2,b=12), (a=3,b=11) and
 
 =back
 
-=head2 OPTIONS FOR FILTERING THE INPUT
+=head2 DEBIAN SPECIFIC OPTIONS
 
 =over 8
 
-=item B<--arch=>I<name>
+Multi-arch annotations are correctly considered by distcheck. Since the from a
+set of control stanzas it is impossible to determine the native and foreign
+architectures, the user can specify them using the following options. By
+default the native architecture is deduced by looking at the architecture of
+the first stanza that is not architecture all. All other packages with
+different architecture are ignored.
 
-Only keep packages with architecture field I<name> or B<all>, ignore
-all other packages.
+=item B<--deb-native-arch=>I<name>
+
+Specify the native architecture.
+
+=item B<--deb-foreign-archs=>I<name>
+
+Specify a comma-separated list of foreign architectures.
+
+=item B<--deb-ignore-essential>
+
+Do not consider essential packages as part of the installation problem.
+By default all essential package are considered as part of the
+installation problem for all packages, that is a package is installable 
+if and only if it is co-installable with all essential packages. This 
+option allows the user to test the installability with no essential 
+packages installed..
+
+=back
+
+
+=head2 OPTIONS FOR FILTERING THE INPUT
+
+=over 8
 
 =item B<--latest>
 
@@ -170,6 +196,13 @@ Give explanations. If used together with B<--failures> then the explanation
 consists of dependency chains leading to a conflict or a dependency on a 
 missing package. If used together with B<--successes> then the explanation
 consists of an installation set.
+
+=item B<-m>, B<--explain-minimal> 
+
+For all packages B<P> that are found installable, and when used in conjunction
+with B<--success>, prints a reduced instllation set containing only those
+packages in the dependency cone of B<P>.  It has no effect together with
+together with B<--failures>.
 
 =item B<--summary>
 
