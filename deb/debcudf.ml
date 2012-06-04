@@ -220,7 +220,7 @@ let loadlc tables name l = (CudfAdd.encode name, None)::(loadl tables l)
 
 let loadlp tables l =
   List.map (fun ((name,_),sel) ->
-    let encname = (* CudfAdd.encode *) name in
+    let encname = CudfAdd.encode name in
     match CudfAdd.cudfop sel with
     |None  ->
         if (Util.StringHashtbl.mem tables.unit_table name) || 
