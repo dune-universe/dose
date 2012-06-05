@@ -18,13 +18,28 @@ Section~\ref{sec:data}).  An \emph{$R$-installation set}, or sometimes
 simply called an \emph{$R$-installation}, is a subset $I$ of $R$ that
 has the following four properties:
 \begin{description}
-    % XXX to be updated Multi-Arch
-  \item[flatness:] $I$ does not contain two different packages with the same
-    name (which then would have different versions).
-  \item[abundance:] For each package in $I$, every of its dependencies
-    is satisfied by some package in $I$, either directly or through a
-    virtual package in case the dependency does not carry a version
-    constraint.
+  \item[flatness:] $I$ does not contain two different packages with
+    the same name (which then would have different versions or
+    architecture), unless the package is marked as
+    \texttt{Multiarch=Same}. If package $(p,a,n)$ has
+    \texttt{Multiarch=Same} then $I$ just must not conatin any package
+    with name $p$ and a version different from $n$.
+  \item[abundance:] For each package $p$ in $I$, every of its
+    dependencies is satisfied by some package $q$ in $I$, either
+    directly or through a virtual package in case the dependency does
+    not carry a version constraint. 
+    \begin{itemize}
+    \item If $q$ has a Multiarch value of \texttt{No} or \texttt{Same}
+      then the architecture of $q$ must be the same as the
+      architecture of $p$.
+    \item If $q$ has a Multiarch value of \texttt{Foreign} then the
+      architecture of $q$ may be different then the architecture of $p$.
+    \item If $q$ has a Multiarch value of \texttt{Allowed} then the
+      architecture of $q$ must be the same as the architecture of $p$,
+      or the dependency relation must carry the annotation \texttt{:any}.
+    \end{itemize}
+    In this context, the architecture value \texttt{all} is identified with
+    the native architecture. See \cite{ubuntu:multiarch}.
   \item[peace:] For each package in $I$ and for each item in its list
     of conflicts, no package in $I$ satisfies the description of that
     item.  As an exception, it is allowed that a package in $I$ both
@@ -38,7 +53,8 @@ semantics of binary package relations according to the Debian Policy.
 The foundation requirement expresses that essential packages must be
 installed; it is formulated in a way that also caters to the
 (extremely rare) case that a package changes its \texttt{Essential}
-value between different versions.
+value between different versions. The foundation property may be
+switched off by giving the option \texttt{--deb-ignore-essential}.
 
 \begin{example}
   Let $R$ be the following repository:
