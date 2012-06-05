@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  Copyright (C) 2010-2011  Pietro Abate <pietro.abate@pps.jussieu.fr>   %
+%  Copyright (C) 2010-2012  Pietro Abate <pietro.abate@pps.jussieu.fr>   %
 %                           Ralf Treinen <ralf.treinen@pps.jussieu.fr>   %
 %                           Unversité Paris-Diderot                      %
 %                                                                        %
@@ -26,14 +26,14 @@ ignored:
 \item[Architecture] specifying the architectures on which the package
   may be installed. Required.
 \item[Multiarch] specifies whether the package may be installed
-  simultanously for different architectures, and whether it may
+  simultaneously for different architectures, and whether it may
   satisfy dependencies across architecture boundaries. Values may be
   \texttt{No}, \texttt{Same}, \texttt{Foreign}, or \texttt{Allowed}
   (\cite{ubuntu:multiarch}). Optional, defaults to \texttt{No}.
 \item[Depends] is a list of items required for the installation of
   this package. Each item is a package name optionally with a version
-  constraint, or a disjunction of these. Optional, defaults to the
-  empty list. Items may also be annotated with \texttt{:any}.
+  constraint, or a disjunction of these.  Items may also be annotated
+  with \texttt{:any}. Optional, defaults to the empty list.
 \item[Pre-Depends] are by \debcheck{} treated like Depends.
 \item[Conflicts] is a list of package names, possibly with a version
   constraint, that cannot be installed together with the package. Optional,
@@ -81,7 +81,7 @@ repositories has two important properties:
   an architecture, like the package of name \texttt{gcc} in version
   \texttt{4:4.3.2-2} and for architecture \texttt{amd64}. The stanza with name
   \texttt{gcc} and version \texttt{4:4.4.4-2} for architecture
-  \textit{amd64} would constitute a different package.
+  \texttt{amd64} would constitute a different package.
 
   If the input contains several stanzas with the same name, version
   and architecture then all but the last such stanza are dropped, and a 

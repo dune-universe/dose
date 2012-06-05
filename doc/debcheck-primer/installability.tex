@@ -12,6 +12,8 @@
 \section{Installability}
 \label{sec:installability}
 
+\subsection{A Precise Definition}
+
 In order to understand what installability exactly means for us we
 need a little bit of theory.  Let $R$ be a repository (see
 Section~\ref{sec:data}).  An \emph{$R$-installation set}, or sometimes
@@ -22,7 +24,7 @@ has the following four properties:
     the same name (which then would have different versions or
     architecture), unless the package is marked as
     \texttt{Multiarch=Same}. If package $(p,a,n)$ has
-    \texttt{Multiarch=Same} then $I$ just must not conatin any package
+    \texttt{Multiarch=Same} then $I$ just must not contain any package
     with name $p$ and a version different from $n$.
   \item[abundance:] For each package $p$ in $I$, every of its
     dependencies is satisfied by some package $q$ in $I$, either
@@ -39,7 +41,7 @@ has the following four properties:
       or the dependency relation must carry the annotation \texttt{:any}.
     \end{itemize}
     In this context, the architecture value \texttt{all} is identified with
-    the native architecture. See \cite{ubuntu:multiarch}.
+    the native architecture \cite{ubuntu:multiarch}.
   \item[peace:] For each package in $I$ and for each item in its list
     of conflicts, no package in $I$ satisfies the description of that
     item.  As an exception, it is allowed that a package in $I$ both

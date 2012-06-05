@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  Copyright (C) 2010-2011  Pietro Abate <pietro.abate@pps.jussieu.fr>   %
+%  Copyright (C) 2010-2012  Pietro Abate <pietro.abate@pps.jussieu.fr>   %
 %                           Ralf Treinen <ralf.treinen@pps.jussieu.fr>   %
 %                           Unversité Paris-Diderot                      %
 %                                                                        %
@@ -129,14 +129,21 @@ Some options affect the notion of installability:
 
 Other options concern Multiarch:
 \begin{itemize}
-\item \texttt{--deb-native-arch=}\textit{a} sets the native architecture to the
-  value $a$
-\item \texttt{--deb-foreign-archs=}$a_1,\ldots,a_n$ sets the foreign 
-  architectures to the list $a_1,\ldots,a_n$.
+\item \texttt{--deb-native-arch=}\textit{a} sets the native
+  architecture to the value $a$. Note that the native architecture is
+  not necessarily the architecture on which the tool is executed, it
+  is just the primary architecture for which we are checking
+  installability of packages. In particular, packages with the
+  architecture field set to \texttt{all} are interpreted as packages of the
+  native architecture \cite{ubuntu:multiarch}.
+\item \texttt{--deb-foreign-archs=}$a_1,\ldots,a_n$ sets the foreign
+  architectures to the list $a_1,\ldots,a_n$. Packages may only be installed
+  when their architecture is the native architecture (including \texttt{all}),
+  or one of the foreign architectures.
 \end{itemize}
 
 
-\subsection{Filtering the Packages}
+\subsection{Filtering Packages and Multiarch}
 Filtering out packages is a different operation than pushing packages
 into the background (Section~\ref{sec:invocation-background}): Background
 packages are still available to satisfy dependencies, while filtering out a 
