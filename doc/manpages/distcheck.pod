@@ -160,7 +160,7 @@ By default all essential package are considered as part of the
 installation problem for all packages, that is a package is installable 
 if and only if it is co-installable with all essential packages. This 
 option allows the user to test the installability with no essential 
-packages installed..
+packages installed.
 
 =back
 
