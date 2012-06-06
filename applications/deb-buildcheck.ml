@@ -32,7 +32,6 @@ module Options = struct
   let explain = StdOpt.store_true ()
   (* let checkonly = Boilerplate.vpkglist_option () *)
   let summary = StdOpt.store_true ()
-  let architecture = StdOpt.str_option ()
   let dump = StdOpt.str_option ()
 
   open OptParser
@@ -42,8 +41,6 @@ module Options = struct
 
   (* add options ~long_name:"checkonly" ~help:"Check only these package" checkonly; *)
   add options ~long_name:"summary" ~help:"Print a detailed summary" summary;
-
-  add options ~long_name:"arch" ~help:"Set the default architecture" architecture;
 
   add options ~long_name:"dump" ~help:"dump the cudf file" dump;
 
@@ -60,10 +57,17 @@ let main () =
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
 
-  if not(OptParse.Opt.is_set Options.architecture) then 
-    fatal "--arch must be specified";
+  if not(OptParse.Opt.is_set Options.deb_native_arch) then 
+      fatal "your must specify at least the native architecture";
 
-  let options = Options.set_options (Input.guess_format [posargs]) in
+  (*
+   let options = Options.set_options (Input.guess_format [posargs]) in
+*)
+
+  let archs = 
+    (OptParse.Opt.get Options.deb_native_arch)::
+      (OptParse.Opt.get Options.deb_foreign_arch)
+  in
 
   let pkglist, srclist =
     match posargs with
@@ -74,13 +78,12 @@ let main () =
         begin match List.rev l with
         |h::t ->
           let srclist =
-            let archs = [OptParse.Opt.get Options.architecture] in
             let l = Src.input_raw [h] in
             Src.sources2packages archs l
           in
           let pkglist = Deb.input_raw t in
           (pkglist,srclist)
-        |_ -> failwith "Impossible"
+        |_ -> fatal "An impossible situation occurred ?!#"
         end
   in
   let tables = Debcudf.init_tables (srclist @ pkglist) in
@@ -109,8 +112,10 @@ let main () =
 
   let results = Diagnostic.default_result universe_size in
 
-  if OptParse.Opt.is_set Options.architecture then
-    Format.fprintf fmt "architecture: %s@." (OptParse.Opt.get Options.architecture);
+  Format.fprintf fmt "native-architecture: %s@." (OptParse.Opt.get Options.deb_native_arch);
+
+  if (OptParse.Opt.get Options.deb_foreign_arch) != [] then
+    Format.fprintf fmt "foreign-architecture: %s@." (String.concat "," (OptParse.Opt.get Options.deb_foreign_arch));
 
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
   let callback d = 
