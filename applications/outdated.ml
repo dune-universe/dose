@@ -159,7 +159,7 @@ let outdated
   info "Total Names: %d" (Hashtbl.length worktable);
   info "Total versions: %d" (List.length versionlist);
 
-  let tables = Debian.Debcudf.init_tables ?options ~step:2 ~versionlist repository in
+  let tables = Debian.Debcudf.init_tables ~step:2 ~versionlist repository in
   let getv v = Debian.Debcudf.get_cudf_version tables ("",v) in
   let pkgset = 
     CudfAdd.to_set (

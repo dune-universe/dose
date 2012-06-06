@@ -320,7 +320,7 @@ let parse_cudf doc =
     Cudf_parser.parse p
   with
   |Cudf_parser.Parse_error _
-  | Cudf.Constraint_violation _ as exn -> begin
+  |Cudf.Constraint_violation _ as exn -> begin
     fatal "Error while loading CUDF from %s: %s" doc (Printexc.to_string exn)
   end
 

@@ -54,21 +54,28 @@ type options = {
 let default_options = {
   extras_opt = [] ;
   native = "";
-  build = "";  (* the default architecture 'dpkg -print-architecture' *)
-  host = "";   (* used to resolv cross dependencies *)
+  build = "";   (* the default architecture 'dpkg -print-architecture' *)
+  host = "";    (* used to resolv cross dependencies *)
   foreign = []; (* list of foreign architectures *)
   ignore_essential = false
 }
 
 let add_name_arch a n = CudfAdd.encode (Printf.sprintf "%s:%s" n a)
 
-let add_arch hostArch arch = function
-  |n when String.ends_with n ":any" -> (CudfAdd.encode n)
-  |n when arch = "all" -> add_name_arch n hostArch
-  |n -> add_name_arch n arch
+(* add arch info to a vpkg 
+ - if it's a :any dependency then just encode the name without arch information :
+   means that this dependency/conflict can be satified by any packages
+ - if the package is architecture all, then all dependencies are interpreted as
+   dependencies on native architecture packages.
+ - otherwise all dependencies are satisfied by packages of the same architecture
+   of the package we are considering *)
+let add_arch native_arch package_arch = function
+  |name when String.ends_with name ":any" -> (CudfAdd.encode name)
+  |name when package_arch = "all" -> add_name_arch name native_arch
+  |name -> add_name_arch name package_arch
 
-let add_arch_l hostArch arch l = 
-  List.map (fun (n,c) -> (add_arch hostArch arch n,c)) l
+let add_arch_l native_arch package_arch l = 
+  List.map (fun (n,c) -> ((add_arch native_arch package_arch n),c)) l
 
 let clear tables =
   Util.StringHashtbl.clear tables.virtual_table;
@@ -130,7 +137,7 @@ let init_versions_table table pkg =
   add_source pkg.version pkg.source
 ;;
 
-let init_tables ?(options=default_options) ?(step=1) ?(versionlist=[]) pkglist =
+let init_tables ?(step=1) ?(versionlist=[]) pkglist =
   let n = List.length pkglist in
   let tables = create n in 
   let temp_versions_table = Hashtbl.create (10 * n) in
@@ -367,7 +374,7 @@ let ltocudf = loadl
 let load_list ?options l =
   let timer = Util.Timer.create "Debian.Debcudf.load_list" in
   Util.Timer.start timer;
-  let tables = init_tables ?options l in
+  let tables = init_tables l in
   let pkglist = List.map (tocudf tables ?options) l in
   clear tables;
   Util.Timer.stop timer pkglist
