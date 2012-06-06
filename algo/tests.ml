@@ -125,6 +125,20 @@ let test_coinst_prod =
     assert_equal (List.sort resl) (List.sort res_expected)
   )
 
+let test_essential_broken =
+  "essential broken" >:: (fun _ -> 
+    let pkg = { Cudf.default_package with 
+      Cudf.package = "a";
+      Cudf.depends = [[("b",None)]];
+      Cudf.keep = `Keep_package;
+    } in
+    let universe = Cudf.load_universe [pkg] in
+    let d = Depsolver.edos_install universe pkg in
+    match d.Diagnostic.result with
+    |Diagnostic.Success _ -> assert_bool "pass" true
+    |Diagnostic.Failure _ -> assert_failure "fail"
+  ) 
+
 (* debian testing 18/11/2009 *)
 let test_distribcheck =
   "distribcheck" >:: (fun _ -> 
@@ -249,6 +263,7 @@ let test_depsolver =
     test_coinst_legacy ;
     test_coinst_prod ;
     test_trim ;
+    test_essential_broken ;
     test_distribcheck ;
     test_selfprovide ;
     test_dependency_closure ;
