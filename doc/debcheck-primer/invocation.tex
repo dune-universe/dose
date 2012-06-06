@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  Copyright (C) 2010-2011  Pietro Abate <pietro.abate@pps.jussieu.fr>   %
+%  Copyright (C) 2010-2012   Pietro Abate <pietro.abate@pps.jussieu.fr>   %
 %                           Ralf Treinen <ralf.treinen@pps.jussieu.fr>   %
 %                           Unversité Paris-Diderot                      %
 %                                                                        %
@@ -51,6 +51,7 @@ dose-distcheck  -f -e \
 \end{example} 
 
 \subsection{Checking only selected packages}
+\label{sec:invocation-background}
 The initial distinction between foreground and background packages is
 modified when using the \verb|--checkonly| option. This option takes
 as value a comma-separated list of package names, possibly qualified
@@ -116,14 +117,45 @@ the following four pairs of packages will be checked for co-installability:
 Mathematically speaking, the set of checked tuples is the Cartesian product
 of the denotations of the single package specifications.
 
-\subsection{Other options}
-There are also some filters on package metadata: \texttt{--latest}
-keeps only the latest version of any package, and \texttt{--arch}
-allows to filter out all packages that are not consistent with a
-particular architecture (for instance, with \texttt{arch=amd64} only
-packages with an Architecture value of \texttt{amd64} or \texttt{all}
-are kept. 
+\subsection{Changing the Notion of Installability}
 
+Some options affect the notion of installability:
+\begin{itemize}
+\item \texttt{--deb-ignore-essential} drops the Foundation requirement
+  of installation sets (Section~\ref{sec:installability}). In other
+  words, it is no longer required that any installation set contains all
+  essential packages.
+\end{itemize}
+
+Other options concern Multiarch:
+\begin{itemize}
+\item \texttt{--deb-native-arch=}\textit{a} sets the native
+  architecture to the value $a$. Note that the native architecture is
+  not necessarily the architecture on which the tool is executed, it
+  is just the primary architecture for which we are checking
+  installability of packages. In particular, packages with the
+  architecture field set to \texttt{all} are interpreted as packages of the
+  native architecture \cite{ubuntu:multiarch}.
+\item \texttt{--deb-foreign-archs=}$a_1,\ldots,a_n$ sets the foreign
+  architectures to the list $a_1,\ldots,a_n$. Packages may only be installed
+  when their architecture is the native architecture (including \texttt{all}),
+  or one of the foreign architectures.
+\end{itemize}
+
+
+\subsection{Filtering Packages and Multiarch}
+Filtering out packages is a different operation than pushing packages
+into the background (Section~\ref{sec:invocation-background}): Background
+packages are still available to satisfy dependencies, while filtering out a 
+package makes it completely invisible.
+
+\begin{itemize}
+\item The effect of \texttt{--latest} is to keep only the latest version of any
+package.
+\end{itemize}
+
+
+\subsection{Other Options}
 Other options controlling the output are explained in detail in
 Section~\ref{sec:output}. A complete listing of all options can be found in
 the \debcheck(1) manpage.

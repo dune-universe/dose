@@ -75,7 +75,7 @@ broken-packages: 1
 With an additional \texttt{--explain} option, an explanation is given
 with each finding. 
 
-\subsection{Understanding Explanations of installability}
+\subsection{Understanding Explanations of Installability}
 
 An explanation of installability simply consists of an
 installation set in the sense of Section~\ref{sec:installability}
@@ -113,6 +113,13 @@ report:
     architecture: amd64
 \end{verbatim}
 \end{example}
+
+An installation set contains all essential packages (see
+Section~\ref{sec:installability}), which may blow up the output of
+installability. Giving the option \texttt{--deb-ignore-essential} will
+avoid this, but will also alter the notion of installability in some
+corner cases (for instance, when a package needs a version of an
+essential package that is not available in the repository).
 
 \subsection{Understanding Explanations of Non-installability}
 

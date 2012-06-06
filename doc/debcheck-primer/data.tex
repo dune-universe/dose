@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  Copyright (C) 2010-2011  Pietro Abate <pietro.abate@pps.jussieu.fr>   %
+%  Copyright (C) 2010-2012  Pietro Abate <pietro.abate@pps.jussieu.fr>   %
 %                           Ralf Treinen <ralf.treinen@pps.jussieu.fr>   %
 %                           Unversité Paris-Diderot                      %
 %                                                                        %
@@ -25,10 +25,15 @@ ignored:
   in conformance with the Debian policy. Required.
 \item[Architecture] specifying the architectures on which the package
   may be installed. Required.
+\item[Multiarch] specifies whether the package may be installed
+  simultaneously for different architectures, and whether it may
+  satisfy dependencies across architecture boundaries. Values may be
+  \texttt{No}, \texttt{Same}, \texttt{Foreign}, or \texttt{Allowed}
+  (\cite{ubuntu:multiarch}). Optional, defaults to \texttt{No}.
 \item[Depends] is a list of items required for the installation of
   this package. Each item is a package name optionally with a version
-  constraint, or a disjunction of these. Optional, defaults to the
-  empty list.
+  constraint, or a disjunction of these.  Items may also be annotated
+  with \texttt{:any}. Optional, defaults to the empty list.
 \item[Pre-Depends] are by \debcheck{} treated like Depends.
 \item[Conflicts] is a list of package names, possibly with a version
   constraint, that cannot be installed together with the package. Optional,
@@ -76,7 +81,7 @@ repositories has two important properties:
   an architecture, like the package of name \texttt{gcc} in version
   \texttt{4:4.3.2-2} and for architecture \texttt{amd64}. The stanza with name
   \texttt{gcc} and version \texttt{4:4.4.4-2} for architecture
-  \textit{amd64} would constitute a different package.
+  \texttt{amd64} would constitute a different package.
 
   If the input contains several stanzas with the same name, version
   and architecture then all but the last such stanza are dropped, and a 
@@ -103,45 +108,11 @@ stanza and drops the first one from its input:
 \end{example}
 
 \item
-  We assume that the values of the \texttt{Architecture} fields are
-  consistent, that is that there exists a single architecture that
-  matches all these architecture values. Currently (policy version
-  3.9.1), this means that all architecture values are either
-  \texttt{all}, or the same specific architecture. The \debcheck{} tool
-  will drop from its input any package stanza whose architecture is
-  inconsistent with the previously accepted architecture values, and
-  issue a warning message:
+  We assume that Multiarch information is consistent: If the
+  repository contains packages with the same name and version and
+  different architecture then both packages have to agree on the value
+  of their \texttt{Multiarch} field.
 
-\begin{example} The following input does not constitute a repository either:
-\begin{verbatim}
-Package: abc
-Version: 42
-Architecture: amd64
-
-Package: def
-Version: 43
-Architecture: all
-
-Package: ghi
-Version: 44
-Architecture: i386
-\end{verbatim}
-Here, the reason is that the architectures \texttt{amd64} and
-\texttt{i386} are considered in contradiction. \debcheck{} will accept
-the first two stanzas and drop the last one:
-\begin{verbatim}
-*** TODO; show the warning message
-\end{verbatim}
-
-\end{example}
-
-  An exception is the \texttt{-arch=\textit{<architectures>}} option which
-  takes as value a comma-separated list of architectures. It allows to
-  restrict the repository to those package stanzas whose architecture
-  value occurs in that list (or is equal to \texttt{all}), even if that 
-  leads to package stanzas with inconsistent architectures
-  (see Section~\ref{sec:invocation}).
 \end{enumerate}
-
 
 
