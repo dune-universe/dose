@@ -111,7 +111,7 @@ let test_coinst_prod =
       List.map (fun res ->
         let l =
           match res.Diagnostic.request with
-          |Diagnostic.PackageList l -> List.sort l
+          |Diagnostic.PackageList (_,l) -> List.sort l
           |_ -> []
         in
         let r =

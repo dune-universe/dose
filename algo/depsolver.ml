@@ -58,15 +58,15 @@ let result map universe result =
 let request universe result = 
   let from_sat = CudfAdd.inttovar universe in
   match result with
-  |Diagnostic_int.Sng i -> Diagnostic.Package (from_sat i)
-  |Diagnostic_int.Lst il -> Diagnostic.PackageList (List.map from_sat il)
+  |Diagnostic_int.Sng (_,i) -> Diagnostic.Package (from_sat i)
+  |Diagnostic_int.Lst (_,il) -> Diagnostic.PackageList (List.map from_sat il)
 
 (* XXX here the threatment of result and request is not uniform.
  * On one hand indexes in result must be processed with map#inttovar 
  * as they represent indexes associated with the solver.
  * On the other hand the indexes in result represent cudf uid and
  * therefore do not need to be processed.
- * Ideally the compile should make sure that we use the correct indexes
+ * Ideally the compiler should make sure that we use the correct indexes
  * but we should annotate everything making packing/unpackaing handling
  * a bit too heavy *)
 let diagnosis map universe res req =
@@ -74,23 +74,59 @@ let diagnosis map universe res req =
   let request = request universe req in
   { Diagnostic.result = result ; request = request }
 
+(** [univcheck ?callback universe] check all packages in the
+    universe for installability 
+
+    @return the number of packages that cannot be installed
+*)
 let univcheck ?callback universe =
+  let aux ?callback univ =
+    let timer = Util.Timer.create "Algo.Depsolver.univcheck" in
+    Util.Timer.start timer;
+    let solver = Depsolver_int.init_solver_univ univ in
+    let failed = ref 0 in
+    let size = Cudf.universe_size univ in
+    let tested = Array.make size false in
+    Util.Progress.set_total Depsolver_int.progressbar_univcheck size ;
+    let check = Depsolver_int.pkgcheck callback solver failed tested in
+    for i = 0 to size - 1 do check i done;
+    Util.Timer.stop timer !failed
+  in
+
   let map = new Depsolver_int.identity in
   match callback with
-  |None -> Depsolver_int.univcheck universe
+  |None -> aux universe
   |Some f ->
       let callback_int (res,req) = f (diagnosis map universe res req) in
-      Depsolver_int.univcheck ~callback:callback_int universe
+      aux ~callback:callback_int universe
 ;;
 
+(** [listcheck ?callback universe pkglist] check if a subset of packages 
+    un the universe are installable.
+
+    @param pkglist list of packages to be checked
+    @return the number of packages that cannot be installed
+*)
 let listcheck ?callback universe pkglist =
+  let aux ?callback univ idlist =
+    let solver = Depsolver_int.init_solver_univ univ in
+    let timer = Util.Timer.create "Algo.Depsolver.listcheck" in
+    Util.Timer.start timer;
+    let failed = ref 0 in
+    let size = Cudf.universe_size univ in
+    Util.Progress.set_total Depsolver_int.progressbar_univcheck size ;
+    let tested = Array.make size false in
+    let check = Depsolver_int.pkgcheck callback solver failed tested in
+    List.iter check idlist ;
+    Util.Timer.stop timer !failed
+  in
   let idlist = List.map (CudfAdd.vartoint universe) pkglist in
   let map = new Depsolver_int.identity in
   match callback with
-  |None -> Depsolver_int.listcheck universe idlist
+  |None -> aux universe idlist
   |Some f ->
       let callback_int (res,req) = f (diagnosis map universe res req) in
-      Depsolver_int.listcheck ~callback:callback_int universe idlist
+      aux ~callback:callback_int universe idlist
 ;;
 
 (** this function converts Depsolver_int results to
@@ -110,7 +146,7 @@ let edos_install univ pkg =
   let id = CudfAdd.vartoint univ pkg in
   let closure = Depsolver_int.dependency_closure_cache pool [id] in
   let solver = Depsolver_int.init_solver_closure pool closure in
-  let req = Diagnostic_int.Sng id in
+  let req = Diagnostic_int.Sng (None,id) in
   let res = Depsolver_int.solve solver req in
   diagnosis solver.Depsolver_int.map univ (conv solver res) req
 ;;
@@ -120,7 +156,7 @@ let edos_coinstall univ pkglist =
   let idlist = List.map (CudfAdd.vartoint univ) pkglist in
   let closure = Depsolver_int.dependency_closure_cache pool idlist in
   let solver = Depsolver_int.init_solver_closure pool closure in
-  let req = Diagnostic_int.Lst idlist in
+  let req = Diagnostic_int.Lst (None,idlist) in
   let res = Depsolver_int.solve solver req in
   diagnosis solver.Depsolver_int.map univ (conv solver res) req
 ;;
@@ -140,7 +176,7 @@ let edos_coinstall_prod univ ll =
     let idlist = List.map (CudfAdd.vartoint univ) pkglist in
     let closure = Depsolver_int.dependency_closure_cache pool idlist in
     let solver = Depsolver_int.init_solver_closure pool closure in
-    let req = Diagnostic_int.Lst idlist in
+    let req = Diagnostic_int.Lst (None,idlist) in
     let res = Depsolver_int.solve solver req in
     diagnosis solver.Depsolver_int.map univ (conv solver res) req
   ) (permutation ll)

@@ -31,8 +31,10 @@ type reason =
 
 (** The request provided to the solver *)
 type request =
-  |Package of Cudf.package (** Check the installability of one package *)
-  |PackageList of Cudf.package list (** Check the installability of a list of packages *)
+  |Package of Cudf.package
+  (** Check the installability of one package *)
+  |PackageList of Cudf.package list
+  (** Check the installability of a list of packages *)
 
 (** The result of an installability query *)
 type result =

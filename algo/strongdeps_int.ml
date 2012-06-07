@@ -33,7 +33,7 @@ let strong_depends solver p q =
   let solver = Depsolver_int.copy_solver solver in
   let lit = Depsolver_int.S.lit_of_var (solver.Depsolver_int.map#vartoint q) false in
   Depsolver_int.S.add_rule solver.Depsolver_int.constraints [|lit|] [];
-  match Depsolver_int.solve solver (Diagnostic_int.Sng p) with
+  match Depsolver_int.solve solver (Diagnostic_int.Sng (None,p)) with
   |Depsolver_int.Failure _ -> true
   |Depsolver_int.Success _ -> false
 
@@ -51,7 +51,7 @@ let check_strong univ transitive graph solver p l =
 (* true if at least one dependency is disjunctive *)
 let somedisj pool id = 
   let cudfpool = Depsolver_int.strip_cudf_pool pool in
-  let (depends,_,_) = cudfpool.(id) in
+  let (depends,_) = cudfpool.(id) in
   if List.length depends > 0 then
     try
       List.iter (function (_,[_]) -> () | _ -> raise Not_found) depends;
@@ -73,7 +73,7 @@ let strongdeps_int ?(transitive=true) graph univ pkglist =
     if somedisj cudfpool id then begin 
       let closure = Depsolver_int.dependency_closure_cache cudfpool [id] in
       let solver = Depsolver_int.init_solver_closure cudfpool closure in
-      match Depsolver_int.solve solver (Diagnostic_int.Sng id) with
+      match Depsolver_int.solve solver (Diagnostic_int.Sng (None,id)) with
       |Depsolver_int.Failure(_) -> ()
       |Depsolver_int.Success(f_int) ->
           let l = List.map solver.Depsolver_int.map#inttovar (f_int ()) in

@@ -25,5 +25,5 @@ type result =
   |Failure of (unit -> reason list)
 
 type request =
-  |Sng of int
-  |Lst of int list
+  |Sng of (int option * int)
+  |Lst of (int option * int list)

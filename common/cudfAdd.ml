@@ -156,7 +156,6 @@ let is_essential pkg =
   try (Cudf.lookup_package_property pkg "essential") = "yes"
   with Not_found -> false
 
-
 let realversionmap pkglist =
   let h = Hashtbl.create (5 * (List.length pkglist)) in
   List.iter (fun pkg ->

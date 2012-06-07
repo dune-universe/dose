@@ -76,9 +76,10 @@ type solver = {
   map : intprojection
 }
 
-type pool_t =
+type dep_t = 
   ((Cudf_types.vpkg list * S.var list) list * 
-   (Cudf_types.vpkg * S.var list) list * bool) array
+   (Cudf_types.vpkg * S.var list) list ) 
+and pool_t = dep_t array
 and pool = SolverPool of pool_t | CudfPool of pool_t
 
 type result =
@@ -92,8 +93,9 @@ let strip_cudf_pool = function CudfPool p -> p | _ -> assert false
 (* cudf uid -> cudf uid array . Here we assume cudf uid are sequential
  * and we can use them as an array index *)
 let init_pool_univ univ =
+  let size = (Cudf.universe_size univ) in
   let pool = 
-    Array.init (Cudf.universe_size univ) (fun uid ->
+    Array.init size (fun uid ->
       let pkg = Cudf.package_by_uid univ uid in
       let dll = 
         List.map (fun vpkgs ->
@@ -105,7 +107,7 @@ let init_pool_univ univ =
           (vpkg, CudfAdd.resolve_vpkg_int univ vpkg)
         ) pkg.Cudf.conflicts
       in
-      (dll,cl,pkg.Cudf.keep = `Keep_package)
+      (dll,cl)
     )
   in CudfPool pool
 ;;
@@ -114,10 +116,11 @@ let init_pool_univ univ =
  * ids that can be used to init the edos solver *)
 let init_solver_pool map pool closure =
   let cudfpool = strip_cudf_pool pool in
+  let size = (List.length closure) in
   let solverpool = 
-    Array.init (List.length closure) (fun sid ->
+    Array.init size (fun sid ->
       let uid = map#inttovar sid in
-      let (dll,cl,e) = cudfpool.(uid) in
+      let (dll,cl) = cudfpool.(uid) in
       let sdll = 
         List.map (fun (vpkgs,uidl) ->
           (vpkgs,List.map map#vartoint uidl)
@@ -141,7 +144,7 @@ let init_solver_pool map pool closure =
           (vpkg, l)
         ) cl 
       in
-      (sdll,scl,e)
+      (sdll,scl)
     )
   in SolverPool solverpool
 ;;
@@ -201,11 +204,10 @@ let init_solver_cache ?(buffer=false) pool =
   Util.Progress.set_total progressbar_init size ;
   let constraints = S.initialize_problem ~buffer size in
 
-  Array.iteri (fun id (dll,cl,essential) ->
+  Array.iteri (fun id (dll,cl) ->
     Util.Progress.progress progressbar_init;
     exec_depends constraints id dll;
     exec_conflicts constraints id cl;
-    if essential then S.add_rule constraints [|S.lit_of_var id true|] [];
   ) pool;
     
   Hashtbl.clear conflicts;
@@ -274,9 +276,9 @@ let solve solver request =
   in
 
   match request with
-  |Diagnostic_int.Sng i ->
+  |Diagnostic_int.Sng (_,i) ->
       result S.solve S.collect_reasons (solver.map#vartoint i)
-  |Diagnostic_int.Lst il -> 
+  |Diagnostic_int.Lst (_,il) -> 
       result S.solve_lst S.collect_reasons_lst (List.map solver.map#vartoint il)
 ;;
 
@@ -292,7 +294,7 @@ let pkgcheck callback solver failed tested id =
         Diagnostic_int.Failure(r)
     end
   in
-  let req = Diagnostic_int.Sng id in
+  let req = Diagnostic_int.Sng (None,id) in
   let res =
     Util.Progress.progress progressbar_univcheck;
     if not(tested.(id)) then begin
@@ -317,46 +319,6 @@ let pkgcheck callback solver failed tested id =
   match callback with
   |None -> ()
   |Some f -> f (res,req)
-;;
-
-(** [univcheck ?callback (mdf,solver)] check if all packages known by 
-    the solver are installable. XXX
-
-    @param mdf package index 
-    @param solver dependency solver
-    @return the number of packages that cannot be installed
-*)
-let univcheck ?callback univ =
-  let timer = Util.Timer.create "Algo.Depsolver.univcheck" in
-  Util.Timer.start timer;
-  let solver = init_solver_univ univ in
-  let failed = ref 0 in
-  let size = Cudf.universe_size univ in
-  let tested = Array.make size false in
-  Util.Progress.set_total progressbar_univcheck size ;
-  let check = pkgcheck callback solver failed tested in
-  for i = 0 to size - 1 do check i done;
-  Util.Timer.stop timer !failed
-;;
-
-(** [listcheck ?callback idlist mdf] check if a subset of packages 
-    known by the solver [idlist] are installable
-
-    @param idlist list of packages id to be checked
-    @param maps package index
-    @return the number of packages that cannot be installed
-*)
-let listcheck ?callback univ idlist =
-  let solver = init_solver_univ univ in
-  let timer = Util.Timer.create "Algo.Depsolver.listcheck" in
-  Util.Timer.start timer;
-  let failed = ref 0 in
-  let size = Cudf.universe_size univ in
-  Util.Progress.set_total progressbar_univcheck size ;
-  let tested = Array.make size false in
-  let check = pkgcheck callback solver failed tested in
-  List.iter check idlist ;
-  Util.Timer.stop timer !failed
 ;;
 
 (***********************************************************)
@@ -390,7 +352,7 @@ let dependency_closure_cache ?(maxdepth=max_int) ?(conjunctive=false) pool idlis
     let (id,level) = Queue.take queue in
     if not(Hashtbl.mem visited id) && level < maxdepth then begin
       Hashtbl.add visited id ();
-      let (l,_,_) = cudfpool.(id) in
+      let (l,_) = cudfpool.(id) in
       List.iter (function
         |(_,[i]) when conjunctive = true ->
           if not(Hashtbl.mem visited i) then
