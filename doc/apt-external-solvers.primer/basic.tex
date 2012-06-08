@@ -1,1 +1,59 @@
 \section{Basic Usage}
+
+From release 0.9.x \aptget is able to use external solvers (via the
+EDSP protocol).
+
+%There are many benefits of using external CUDF solver. First, The
+%solver technology can evolve in parallel with the front end tool :
+%This extend the dependency solving community we clear overall
+%benefits.  Moreover because of the diversity of the CUDF community,
+%giving to them access to a large user base and practical use case, can
+%lead to faster advancement and diversification in dependency solving
+%technology.
+
+The integration of CUDF solvers in \aptget is transparent from the
+user prospective. To invoke an external solver the user just need to
+pass the option \texttt{--solver} to \aptget plus the name of the
+selected CUDF solver. Available solvers in debian are aspcud, mccs,
+packup. These solvers use different technologies and can provide
+slightly different solutions.
+
+Using an external CUDF solver does not require any other particular
+action from the user :
+
+\begin{verbatim}
+ 
+  $apt-get -s --solver aspcud install gnome
+  NOTE: This is only a simulation!
+        apt-get needs root privileges for real execution.
+        Keep also in mind that locking is deactivated,
+        so don't depend on the relevance to the real current situation!
+  Reading package lists... Done
+  Building dependency tree       
+  Reading state information... Done
+  Execute external solver... Done
+  The following extra packages will be installed:
+  [...]
+ 
+\end{verbatim}
+
+Depending on the solver, the invocation of external solver can take
+longer then the \aptget internal solver. This difference is to be
+explained in the additional conversion step from EDSP to CUDF and back
+and the effective solving time.
+
+\aptget itself ships two EDSP-compatible tools. The first, the
+internal \aptget dependency solver, called \texttt{internal}, uses the
+apt dependency solver from release 0.8.x. The second, that is not
+strictly a solver is not a solver, can be used to dump the EDSP
+document in a text file for debugging purposes and it is called
+\texttt{dump}.
+
+For example, the following invocation is equivalent to invoking
+\aptget without the \texttt{--solver} argument :
+
+\begin{verbatim}
+
+  apt-get -s install --solver internal gnome
+
+\end{verbatim}

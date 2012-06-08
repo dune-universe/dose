@@ -11,23 +11,30 @@
 
 \documentclass{article}
 \usepackage[utf8]{inputenc}
-\usepackage{hevea}
+%\usepackage{hevea}
 \usepackage{alltt}
 
 \input{version}
 
-\newenvironment{example}%
-  {\par\begin{divstyle}{example}\par\textbf{Example:}}%
-  {\end{divstyle}\par}
-\newstyle{.example}{border:solid black;background:\#eeddbb;padding:lex}
+%\newenvironment{example}%
+%  {\par\begin{divstyle}{example}\par\textbf{Example:}}%
+%  {\end{divstyle}\par}
+%\newstyle{.example}{border:solid black;background:\#eeddbb;padding:lex}
 
 \newcommand{\aptget}{\texttt{apt-get}}
+\newcommand{\aptcudf}{\texttt{apt-cudf}}
 
 \title{Using \aptget{} With External Solvers}
 \author{Pietro Abate, Roberto Di Cosmo, Ralf Treinen, Stefano Zacchiroli}
 \date{\today}
 
 \begin{document}
+
+\aptcudf bridges \aptget with external CUDF solvers. It implements a translator
+from the protocol EDSP\ref{} and CUDF\ref{}, invokes an external solver and
+translate back to \aptget the outcome in the EDSP laguage.
+
+This primer applies to version \version{} of \aptcudf.
 
 \maketitle
 
