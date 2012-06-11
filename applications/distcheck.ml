@@ -212,14 +212,15 @@ let main () =
 	number_broken_tuples
       end
     else begin 
+      let global_constraints = not(OptParse.Opt.get Options.deb_ignore_essential) in
       let number_broken_packages =
 	if OptParse.Opt.is_set Options.checkonly then 
-	  Depsolver.listcheck ~callback universe checklist
+	  Depsolver.listcheck ~global_constraints ~callback universe checklist
 	else begin
 	  if bg_pkglist = [] then
-            Depsolver.univcheck ~callback universe 
+            Depsolver.univcheck ~global_constraints ~callback universe 
 	  else
-            Depsolver.listcheck ~callback universe fg_pkglist
+            Depsolver.listcheck ~global_constraints ~callback universe fg_pkglist
 	end
       in
       ignore(Util.Timer.stop timer ());

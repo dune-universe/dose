@@ -12,6 +12,8 @@ import argparse
 # dominators-graph.native  
 # smallworld.native  strong-deps.native
 
+verbose = 0
+
 def diff_files(fromfile,tofile):
     n = 3 #context lines
     fromdate = time.ctime(os.stat(fromfile).st_mtime)
@@ -31,7 +33,8 @@ def test_application(self,expected_file,cmd):
     uid = uuid.uuid1()
     output_file = "tmp/%s.cudf" % uid
     output = open(output_file,'w')
-    #print cmd
+    if verbose == 2:
+        print " ".join(cmd)
     #print expected_file
     p = Popen(cmd, stdout=output)
     p.communicate()
@@ -51,16 +54,31 @@ class DoseTests(unittest.TestCase):
         cmd = ["./distcheck.native","-s","deb://tests/DebianPackages/lenny.packages.bz2"]
         test_application(self,expected_file,cmd)
 
+    # we consider essential packages and we print everything
     def test_checkonly_distcheck(self):
         expected_file = "tests/applications/dose-tests/distcheck_test_checkonly"
         cmd = ["./distcheck.native", "--checkonly", "3dchess", "deb://tests/DebianPackages/sid.packages.bz2", "-s", "-e"]
         test_application(self,expected_file,cmd)
 
+    # we consider essential packages but we print only the code of 3dchess
+    def test_checkonly_minimal_distcheck(self):
+        expected_file = "tests/applications/dose-tests/distcheck_test_minimal_checkonly"
+        cmd = ["./distcheck.native", "-m", "--checkonly", "3dchess", "deb://tests/DebianPackages/sid.packages.bz2", "-s", "-e"]
+        test_application(self,expected_file,cmd)
+
+    # we **do not** consider essential packages. The result in this case is semantically equal to
+    # test_checkonly_minimal_distcheck, but syntactically different ...
+    def test_checkonly_ignore_essential_distcheck(self):
+        expected_file = "tests/applications/dose-tests/distcheck_test_ignore_essential_checkonly"
+        cmd = ["./distcheck.native", "--deb-ignore-essential", "--checkonly", "3dchess", "deb://tests/DebianPackages/sid.packages.bz2", "-s", "-e"]
+        test_application(self,expected_file,cmd)
+
+    # XXX add test for checkonly + failure
+
     def test_checkonly_multiarch_distcheck(self):
         expected_file = "tests/applications/dose-tests/distcheck_test_checkonly_multiarch"
         cmd = ["./distcheck.native", "--checkonly", "3dchess:amd64", "deb://tests/DebianPackages/sid.packages.bz2", "-s", "-e", "--deb-native-arch", "amd64"]
         test_application(self,expected_file,cmd)
-
 
     def test_ignore_essential_distcheck(self):
         expected_file = "tests/applications/dose-tests/distcheck_test_ignore_essential"
@@ -88,11 +106,14 @@ class DoseTests(unittest.TestCase):
         test_application(self,expected_file,cmd)
 
 def main():
+    global verbose
     parser = argparse.ArgumentParser(description='description of you program')
     parser.add_argument('-v', '--verbose', action='store_const', const=2)
     parser.add_argument('-d', '--debug', action='store_true')
     parser.add_argument('-pwd', type=str, nargs=1, help="dose root directory")
     args = parser.parse_args()
+
+    verbose = args.verbose
 
     suite = unittest.TestLoader().loadTestsFromTestCase(DoseTests)
     unittest.TextTestRunner(verbosity=args.verbose).run(suite)

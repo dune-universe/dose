@@ -20,20 +20,20 @@ type solver
 val load : ?check : bool -> Cudf.universe -> solver
 
 (** check if the given package can be installed in the universe *)
-val edos_install : Cudf.universe -> Cudf.package -> Diagnostic.diagnosis
+val edos_install : ?global_constraints:bool -> Cudf.universe -> Cudf.package -> Diagnostic.diagnosis
 
 (** check if the give package list can be installed in the universe *)
-val edos_coinstall : Cudf.universe -> Cudf.package list -> Diagnostic.diagnosis
+val edos_coinstall : ?global_constraints:bool -> Cudf.universe -> Cudf.package list -> Diagnostic.diagnosis
 
 (** accept a list of list of packages and return the coinstallability test of
  * the cartesian product. *)
-val edos_coinstall_prod : Cudf.universe -> Cudf.package list list -> Diagnostic.diagnosis list
+val edos_coinstall_prod : ?global_constraints:bool -> Cudf.universe -> Cudf.package list list -> Diagnostic.diagnosis list
 
 (** remove uninstallable packages from the universe *)
-val trim : Cudf.universe -> Cudf.universe
+val trim : ?global_constraints:bool -> Cudf.universe -> Cudf.universe
 
 (** return the list of the broken packages *)
-val find_broken : Cudf.universe -> Cudf.package list
+val find_broken : ?global_constraints:bool -> Cudf.universe -> Cudf.package list
 
 (** [univcheck ] check if all packages in the 
     universe can be installed.
@@ -46,7 +46,7 @@ val find_broken : Cudf.universe -> Cudf.package list
     @param callback : execute a function for each package
     @return the number of broken packages
  *)
-val univcheck : ?callback:(Diagnostic.diagnosis -> unit) -> Cudf.universe -> int
+val univcheck : ?global_constraints:bool -> ?callback:(Diagnostic.diagnosis -> unit) -> Cudf.universe -> int
 
 (* [listcheck ~callback:c solver l] check if all packages in [l]
   Invariant : l is a subset of universe
@@ -55,7 +55,7 @@ val univcheck : ?callback:(Diagnostic.diagnosis -> unit) -> Cudf.universe -> int
   @return the number of broken packages
  *)
 
-val listcheck : ?callback:(Diagnostic.diagnosis -> unit) -> 
+val listcheck : ?global_constraints:bool -> ?callback:(Diagnostic.diagnosis -> unit) -> 
   Cudf.universe -> Cudf.package list -> int 
 
 (** [dependency_closure universe l] compute the dependencies closure 

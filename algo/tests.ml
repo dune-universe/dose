@@ -65,6 +65,7 @@ let test_install =
   "install" >:: (fun _ ->
     let bicycle = Cudf.lookup_package universe ("bicycle", 7) in
     let d = Depsolver.edos_install universe bicycle in
+    Diagnostic.printf d;
     match d.Diagnostic.result with
     |Diagnostic.Success _ -> assert_bool "pass" true
     |Diagnostic.Failure _ -> assert_failure "fail"
@@ -111,7 +112,7 @@ let test_coinst_prod =
       List.map (fun res ->
         let l =
           match res.Diagnostic.request with
-          |Diagnostic.PackageList (_,l) -> List.sort l
+          |Diagnostic.PackageList l -> List.sort l
           |_ -> []
         in
         let r =
@@ -127,16 +128,20 @@ let test_coinst_prod =
 
 let test_essential_broken =
   "essential broken" >:: (fun _ -> 
-    let pkg = { Cudf.default_package with 
+    let pkg1 = { Cudf.default_package with 
       Cudf.package = "a";
       Cudf.depends = [[("b",None)]];
       Cudf.keep = `Keep_package;
     } in
-    let universe = Cudf.load_universe [pkg] in
-    let d = Depsolver.edos_install universe pkg in
+    let pkg2 = { Cudf.default_package with 
+      Cudf.package = "c";
+    } in
+    let global_constraints = true in
+    let universe = Cudf.load_universe [pkg1;pkg2] in
+    let d = Depsolver.edos_install ~global_constraints universe pkg2 in
     match d.Diagnostic.result with
-    |Diagnostic.Success _ -> assert_bool "pass" true
-    |Diagnostic.Failure _ -> assert_failure "fail"
+    |Diagnostic.Success _ -> assert_failure "fail"
+    |Diagnostic.Failure _ -> assert_bool "pass" true
   ) 
 
 (* debian testing 18/11/2009 *)
@@ -181,7 +186,8 @@ let test_conjunctive_dependency_closure =
       match d.Diagnostic.result with
       |Diagnostic.Success _ -> assert_bool "pass" true
       |Diagnostic.Failure _ ->
-          let msg = Diagnostic.fprintf ~explain:true Format.str_formatter d in
+          (* let msg = Diagnostic.fprintf ~explain:true Format.str_formatter d
+           * in *)
           assert_equal false true
     ) (Cudf.get_packages universe)
   )
@@ -425,10 +431,10 @@ let test_strongcfl =
 
 let test_dependency_graph =
   "syntactic dependency graph" >:: (fun _ ->
+    (*
     let module SDG = Defaultgraphs.SyntacticDependencyGraph in
     let module G = SDG.G in
     let g = SDG.dependency_graph universe in
-    (*
     G.iter_edges_e (fun edge ->
       print_endline (SDG.string_of_edge edge)
     ) g
