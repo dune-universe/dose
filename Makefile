@@ -143,14 +143,18 @@ $(DOSELIBS)/%:
 	$(OCAMLBUILD) $(OBFLAGS) $*
 	@touch $@
 
-test: 
+testapps: apps 
 	@applications/dose-tests.py -pwd `pwd` -v
+
+testlib: 
 	@for i in $(TESTS); do\
 		echo "#######TESTING $$i" ;\
 		$(OCAMLBUILD) $(OBFLAGS) $$i/tests.$(OCAMLBEST) ;\
 		./tests.$(OCAMLBEST) ;\
 	done
 	@make apps
+
+test: testapps testlib
 
 # stuff not not put in a distribution tarball
 DIST_EXCLUDE = cudf tests $(wildcard */tests) experimental
