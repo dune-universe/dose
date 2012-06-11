@@ -260,9 +260,9 @@ let outdated
   Util.Timer.start timer;
   let i =
     if checklist <> [] then
-      Depsolver.listcheck ~callback universe checklist
+      Depsolver.listcheck ~callback ~global_constraints:false universe checklist
     else
-      Depsolver.univcheck ~callback universe
+      Depsolver.univcheck ~callback ~global_constraints:false universe
   in
   ignore(Util.Timer.stop timer ());
 
@@ -290,7 +290,6 @@ let main () =
     ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
   Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
-
 
   let checklist = OptParse.Opt.opt Options.checkonly in
   let failure = OptParse.Opt.get Options.failure in

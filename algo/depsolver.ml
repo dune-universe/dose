@@ -110,7 +110,6 @@ let univcheck ?(global_constraints=true) ?callback universe =
     for i = 0 to size - 2 do check i done;
     Util.Timer.stop timer !failed
   in
-
   let map = new Depsolver_int.identity in
   match callback with
   |None -> aux universe
