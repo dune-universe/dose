@@ -1,3 +1,11 @@
+dose3 (3.0) UNRELEASED; urgency=low
+
+  * Fix the encoding of debian essential packages
+  * Fix META file
+  * Add more tests for all shipped applications
+
+ -- Pietro Abate <pietro.abate@pps.jussieu.fr>  Wed, 13 Jun 2012 16:55:51 +0200
+
 dose3 (2.9.16) UNRELEASED; urgency=low
 
   * Add CHANGES and CREDITS files
