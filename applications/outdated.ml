@@ -64,6 +64,7 @@ let dummy (sn,sv) pkg number equivs version =
    version = version;
    conflicts = [(pkg.Cudf.package, None)];
    provides = pkg.Cudf.provides;
+   keep = pkg.Cudf.keep;
    pkg_extra = [
      ("number",`String number);
      ("architecture",`String "dummy");
