@@ -136,22 +136,22 @@ co-installability, namely (a=2,b=11), (a=2,b=12), (a=3,b=11) and
 
 =head2 DEBIAN SPECIFIC OPTIONS
 
-=over 8
+Multi-arch annotations are correctly considered by distcheck. Packages
+whose's architecture is neither the native architecture nor in the list
+of foreign architectures (see below) are ignored.
 
-Multi-arch annotations are correctly considered by distcheck. Since the from a
-set of control stanzas it is impossible to determine the native and foreign
-architectures, the user can specify them using the following options. By
-default the native architecture is deduced by looking at the architecture of
-the first stanza that is not architecture all. All other packages with
-different architecture are ignored.
+=over 8
 
 =item B<--deb-native-arch=>I<name>
 
-Specify the native architecture.
+Specify the native architecture. The default behavior is to deduce
+the native architecture from the first package stanza in the input
+that has an architecture different from all.
 
-=item B<--deb-foreign-archs=>I<name>
+=item B<--deb-foreign-archs=>I<name> [,I<name>] ...
 
-Specify a comma-separated list of foreign architectures.
+Specify a comma-separated list of foreign architectures. The default
+is an empty list of foreign architectures.
 
 =item B<--deb-ignore-essential>
 
