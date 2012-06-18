@@ -19,14 +19,25 @@ type solver
     for universe consistency (cf. Cudf_checker.is_consistent) *)
 val load : ?check : bool -> Cudf.universe -> solver
 
-(** check if the given package can be installed in the universe *)
+(** check if the given package can be installed in the universe 
+ 
+    @param global_constraints : enforce global constraints on the given
+    universe. In particular packages marked as `Keep_package must be always
+    installed. Default false.
+
+*)
 val edos_install : ?global_constraints:bool -> Cudf.universe -> Cudf.package -> Diagnostic.diagnosis
 
-(** check if the give package list can be installed in the universe *)
+(** check if the give package list can be installed in the universe 
+  
+    @param global_constraints : enforce global constraints on the given
+    universe. In particular packages marked as `Keep_package must be always
+    installed. Default false.
+*)
 val edos_coinstall : ?global_constraints:bool -> Cudf.universe -> Cudf.package list -> Diagnostic.diagnosis
 
 (** accept a list of list of packages and return the coinstallability test of
- * the cartesian product. *)
+    the cartesian product. *)
 val edos_coinstall_prod : ?global_constraints:bool -> Cudf.universe -> Cudf.package list list -> Diagnostic.diagnosis list
 
 (** remove uninstallable packages from the universe *)
@@ -35,24 +46,32 @@ val trim : ?global_constraints:bool -> Cudf.universe -> Cudf.universe
 (** return the list of the broken packages *)
 val find_broken : ?global_constraints:bool -> Cudf.universe -> Cudf.package list
 
-(** [univcheck ] check if all packages in the 
-    universe can be installed.
-    Since not all packages
-    are directly tested for installation, if a packages is installable, the 
-    installation might be empty. To obtain an installation set for
-    each installable packages, the correct procedure is to iter on the list of
-    packages and use the function [edos_install].
+(** [univcheck ] check if all packages in the universe can be installed.
+    Since not all packages are directly tested for installation, if a packages
+    is installable, the installation might be empty. To obtain an installation
+    set for each installable packages, the correct procedure is to iter on the
+    list of packages.
  
-    @param callback : execute a function for each package
+    @param callback : execute a function for each package. This function can
+    have side effects and can be used to collect the installation set or the
+    failure reason.
+
+    @param global_constraints : enforce global constraints on the given
+    universe. In particular packages marked as `Keep_package must be always
+    installed. Default true.
+
     @return the number of broken packages
  *)
 val univcheck : ?global_constraints:bool -> ?callback:(Diagnostic.diagnosis -> unit) -> Cudf.universe -> int
 
-(* [listcheck ~callback:c solver l] check if all packages in [l]
-  Invariant : l is a subset of universe
-  can be installed in the solver universe.
-  @param callback : execute a function for each package
-  @return the number of broken packages
+(** [listcheck ~callback:c solver l] check if all packages in [l] can be
+   installed.
+  
+   Invariant : l is a subset of universe can be installed in the solver universe.
+
+   @param callback : execute a function for each package.
+   @param global_constraints : enforce global constraints on the given universe.
+   @return the number of broken packages
  *)
 
 val listcheck : ?global_constraints:bool -> ?callback:(Diagnostic.diagnosis -> unit) -> 
@@ -64,11 +83,13 @@ val listcheck : ?global_constraints:bool -> ?callback:(Diagnostic.diagnosis -> u
 val dependency_closure : ?maxdepth:int -> ?conjunctive:bool ->
   Cudf.universe -> Cudf.package list -> Cudf.package list
 
-(** [reverse_dependencies univ l] compute the reverse dependency list of all
-    packages in [l] in the universe [univ] *)
+(** [reverse_dependencies univ ] compute the reverse dependency list of all
+    packages in the universe [univ] *)
 val reverse_dependencies : 
   Cudf.universe -> (Cudf.package list) Common.CudfAdd.Cudf_hashtbl.t
 
+(** [reverse_dependencies_closure univ ] compute the reverse dependency list of all
+    packages in [l] in the universe [univ] *)
 val reverse_dependency_closure : ?maxdepth:int ->
   Cudf.universe -> Cudf.package list -> Cudf.package list
 

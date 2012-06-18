@@ -13,7 +13,17 @@
 (** Dependency solver. Low Level API *)
 
 (** Implementation of the EDOS algorithms (and more).
- *  This module respects the cudf semantic. *)
+    This module respects the cudf semantic. 
+
+    This module contains two type of functions.
+    Normal functions work on a cudf universe. These are just a wrapper to
+    _cache functions.
+
+    _cache functions work on a pool of ids that is a more compact
+    representation of a cudf universe based on arrays of integers.
+    _cache function can be used to avoid recreating the pool for each
+    operation and therefore speed up operations.
+*)
 
 open ExtLib
 open Common
@@ -60,8 +70,8 @@ class identity = object
 end
 
 (* return a conversion function. If the closure is empty, 
- * then we return the identity function, otherwise we 
- * return a function to renumber cudf uids to solver ids *)
+   then we return the identity function, otherwise we 
+   return a function to renumber cudf uids to solver ids *)
 let init_map closure univ =
   if List.length closure > 0 then begin
     let map = new intprojection (List.length closure) in
@@ -73,7 +83,7 @@ let init_map closure univ =
 (** low level solver data type *)
 type solver = {
   constraints : S.state; (** the sat problem *)
-  map : intprojection
+  map : intprojection (** a map from cudf package ids to solver ids *)
 }
 
 type dep_t = 
@@ -91,7 +101,7 @@ let strip_solver_pool = function SolverPool p -> p | _ -> assert false
 let strip_cudf_pool = function CudfPool p -> p | _ -> assert false
 
 (* cudf uid -> cudf uid array . Here we assume cudf uid are sequential
- * and we can use them as an array index *)
+   and we can use them as an array index *)
 let init_pool_univ univ =
   let size = (Cudf.universe_size univ) + 1 in
   (* the last element of the array *)
@@ -131,8 +141,8 @@ let init_pool_univ univ =
   CudfPool pool
 ;;
 
-(* this function creates an array indexed by solver
-   ids that can be used to init the edos solver *)
+(** this function creates an array indexed by solver ids that can be 
+    used to init the edos solver *)
 let init_solver_pool map pool closure =
   let cudfpool = strip_cudf_pool pool in
   (* while in init_pool_univ we create a pool that is bigger
@@ -181,7 +191,7 @@ let init_solver_pool map pool closure =
   SolverPool solverpool
 ;;
 
-(* initalise the sat solver. operate only on solver ids *)
+(** initalise the sat solver. operate only on solver ids *)
 let init_solver_cache ?(buffer=false) pool =
   let pool = strip_solver_pool pool in
   let num_conflicts = ref 0 in
@@ -369,11 +379,11 @@ let pkgcheck global_constraints callback solver failed tested id =
     end
     else begin
       (* this branch is true only if the package was previously
-       * added to the tested packages and therefore it is installable *)
-      (* if all = true then the solver is called again to provide the list
-       * of installed packages despite the fact the the package was already
-       * tested. This is done to provide one installation set for each package
-       * in the universe *)
+         added to the tested packages and therefore it is installable
+         if all = true then the solver is called again to provide the list
+         of installed packages despite the fact the the package was already
+         tested. This is done to provide one installation set for each package
+         in the universe *)
       let f ?(all=false) () =
         if all then begin
           match solve solver req with
