@@ -304,7 +304,7 @@ let conv solver = function
 ;;
 
 (** low level call to the sat solver *)
-let solve solver request =
+let solve ?tested solver request =
   S.reset solver.constraints;
 
   let result solve collect var =
@@ -315,7 +315,11 @@ let solve solver request =
         let rec aux (i,acc) =
           if i < size then
             let acc = 
-              if (Array.unsafe_get a i) = S.True then i :: acc 
+              if (Array.unsafe_get a i) = S.True then begin
+                if not(Option.is_none tested) then 
+                  Array.unsafe_set (Option.get tested) i true;
+                i :: acc
+              end
               else acc
             in aux (i+1,acc)
           else acc
@@ -367,10 +371,10 @@ let set_hard_constraints solver pool =
 ;;
 
 let pkgcheck global_constraints callback solver failed tested id =
-  let memo (tested,failed) res = 
+  let memo failed res = 
     match res with
     |Success(f_int) -> begin
-        List.iter (fun i -> Array.unsafe_set tested i true) (f_int ());
+        (* List.iter (fun i -> Array.unsafe_set tested i true) (f_int ()); *)
         Diagnostic_int.Success(fun ?all () -> f_int ())
     end
     |Failure r -> begin incr failed; Diagnostic_int.Failure(r) end
@@ -387,7 +391,7 @@ let pkgcheck global_constraints callback solver failed tested id =
   let res =
     Util.Progress.progress progressbar_univcheck;
     if not(tested.(id)) then begin
-      memo (tested,failed) (solve solver req)
+      memo failed (solve ~tested solver req)
     end
     else begin
       (* this branch is true only if the package was previously
