@@ -146,18 +146,6 @@ let listcheck ?(global_constraints=true) ?callback universe pkglist =
       aux ~callback:callback_int universe idlist
 ;;
 
-(** this function converts Depsolver_int results to
- * Diagnostic_int results. The difference is that the integer
- * list returned by the function f_int represents solver indexs
- * while Diagnostic_int.Success must return cudf indexes *)
-let conv solver = function
-  |Depsolver_int.Success(f_int) -> 
-      Diagnostic_int.Success(fun ?all () -> 
-        List.map solver.Depsolver_int.map#inttovar (f_int ())
-      )
-  |Depsolver_int.Failure(r) -> Diagnostic_int.Failure(r)
-;;
-
 let edos_install ?(global_constraints=false) univ pkg =
   let pool = Depsolver_int.init_pool_univ univ in
   let id = CudfAdd.vartoint univ pkg in
@@ -172,8 +160,8 @@ let edos_install ?(global_constraints=false) univ pkg =
     else
       Diagnostic_int.Sng (None,id)
   in
-  let res = Depsolver_int.solve solver req in
-  diagnosis solver.Depsolver_int.map univ (conv solver res) req
+  let res = Depsolver_int.conv solver (Depsolver_int.solve solver req) in
+  diagnosis solver.Depsolver_int.map univ res req
 ;;
 
 let edos_coinstall_cache global_constraints univ pool pkglist =
@@ -187,8 +175,8 @@ let edos_coinstall_cache global_constraints univ pool pkglist =
     else
       Diagnostic_int.Lst (None,idlist)
   in
-  let res = Depsolver_int.solve solver req in
-  diagnosis solver.Depsolver_int.map univ (conv solver res) req
+  let res = Depsolver_int.conv solver (Depsolver_int.solve solver req) in
+  diagnosis solver.Depsolver_int.map univ res req
 ;;
 
 let edos_coinstall ?(global_constraints=false) univ pkglist =

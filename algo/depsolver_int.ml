@@ -291,6 +291,18 @@ let init_solver_closure ?(buffer=false) pool closure =
 let copy_solver solver =
   { solver with constraints = S.copy solver.constraints }
 
+(** this function converts Depsolver_int results to
+ * Diagnostic_int results. The difference is that the integer
+ * list returned by the function f_int represents solver indexs
+ * while Diagnostic_int.Success must return cudf indexes *)
+let conv solver = function
+  |Success(f_int) ->
+      Diagnostic_int.Success(fun ?all () ->
+        List.map solver.map#inttovar (f_int ())
+      )
+  |Failure(r) -> Diagnostic_int.Failure(r)
+;;
+
 (** low level call to the sat solver *)
 let solve solver request =
   S.reset solver.constraints;
