@@ -64,8 +64,11 @@ module type T = sig
       by re initializing the solver with an identical constraints set *)
   val reset : state -> unit
 
-  (* [assignment st] return the array of values associated to every variable.*)
+  (** [assignment st] return the array of values associated to every variable.*)
   val assignment : state -> value array
+
+  (** [assignment_true st] return the list of variables that are true *)
+  val assignment_true : state -> var list
 
   (** [add_rule st l] add a disjuction to the solver of type {% \Bigvee l %} *)
   val add_rule : state -> lit array -> X.reason list -> unit

@@ -31,6 +31,7 @@ module type T = sig
   val reset : state -> unit
   type value = True | False | Unknown
   val assignment : state -> value array
+  val assignment_true : state -> var list
   val add_rule : state -> lit array -> X.reason list -> unit
   val associate_vars : state -> lit -> var list -> unit
   val solve : state -> var -> bool
@@ -41,6 +42,15 @@ module type T = sig
   val debug : bool -> unit
   val stats : state -> unit
 end
+
+include Util.Logging(struct let label = __FILE__ end) ;;
+
+module IntHash = 
+  Hashtbl.Make (struct
+    type t = int
+    let equal = (=)
+    let hash i = i
+  end)
 
 module M (X : S) = struct
 
@@ -69,6 +79,7 @@ module M (X : S) = struct
   type state =
     { (* Indexed by var *)
       st_assign : value array;
+      st_assign_true : unit IntHash.t;
       st_reason : clause option array;
       st_level : int array;
       st_seen_var : int array;
@@ -131,6 +142,7 @@ module M (X : S) = struct
 
   let copy st =
     { st_assign = Array.copy st.st_assign;
+      st_assign_true = IntHash.copy st.st_assign_true;
       st_reason = copy_clause st.st_reason;
       st_level = Array.copy st.st_level;
       st_seen_var = Array.copy st.st_seen_var;
@@ -275,6 +287,7 @@ module M (X : S) = struct
         end;
         let x = var_of_lit p in
         st.st_assign.(x) <- val_of_bool (pol_of_lit p);
+        if st.st_assign.(x) = True then IntHash.add st.st_assign_true x ();
         st.st_reason.(x) <- reason;
         st.st_level.(x) <- st.st_cur_level;
         st.st_trail <- p :: st.st_trail;
@@ -360,6 +373,7 @@ module M (X : S) = struct
   let undo_one st p =
     let x = var_of_lit p in
     if !debug then Format.eprintf "Cancelling %a@." st.st_print_var x;
+    if st.st_assign.(x) = True then IntHash.remove st.st_assign_true x;
     st.st_assign.(x) <- Unknown;
     st.st_reason.(x) <- None;
     st.st_level.(x) <- -1;
@@ -553,6 +567,7 @@ module M (X : S) = struct
         Gc.max_overhead = 150;
       } ; (* let's fly ! *)
       { st_assign = Array.make n Unknown;
+        st_assign_true = IntHash.create n;
         st_reason = Array.make n None;
         st_level = Array.make n (-1);
         st_seen_var = Array.make n (-1);
@@ -644,7 +659,8 @@ module M (X : S) = struct
     collect_rec st x []
 
   let assignment st = st.st_assign
-
+  let assignment_true st =
+    IntHash.fold (fun k _ acc -> k::acc ) st.st_assign_true []
 
   let stats st =
     let (t,f,u) =
