@@ -303,33 +303,26 @@ let conv solver = function
   |Failure(r) -> Diagnostic_int.Failure(r)
 ;;
 
-(** low level call to the sat solver *)
+(** low level call to the sat solver
+    
+    @param tested: optional int array used to cache older results
+*)
 let solve ?tested solver request =
   S.reset solver.constraints;
 
   let result solve collect var =
     if solve solver.constraints var then
-      let get_assignent () =
-        let a = S.assignment solver.constraints in
-        let size = Array.length a in
-        let rec aux (i,acc) =
-          if i < size then
-            let acc = 
-              if (Array.unsafe_get a i) = S.True then begin
-                if not(Option.is_none tested) then 
-                  Array.unsafe_set (Option.get tested) i true;
-                i :: acc
-              end
-              else acc
-            in aux (i+1,acc)
-          else acc
-        in
-        aux (0,[])
+      let get_assignent ?(all=false) () =
+        List.map (fun i -> 
+          if not(Option.is_none tested) then
+            Array.unsafe_set (Option.get tested) i true;
+          solver.map#inttovar i
+        )(S.assignment_true solver.constraints)
       in
-      Success(get_assignent)
+      Diagnostic_int.Success(get_assignent)
     else
       let get_reasons () = collect solver.constraints var in
-      Failure(get_reasons)
+      Diagnostic_int.Failure(get_reasons)
   in
 
   match request with
@@ -352,6 +345,7 @@ let solve ?tested solver request =
     or if there are multiple solutions, then this is not possible anymore and
     we are forced to check if a request can be satisfied given a set of
     globla constraints. *)
+(*
 let set_hard_constraints solver pool =
   let globalid = (Array.length pool) - 1 in
   match pool.(globalid) with
@@ -369,16 +363,8 @@ let set_hard_constraints solver pool =
   end
   |_ -> false
 ;;
-
+*)
 let pkgcheck global_constraints callback solver failed tested id =
-  let memo failed res = 
-    match res with
-    |Success(f_int) -> begin
-        (* List.iter (fun i -> Array.unsafe_set tested i true) (f_int ()); *)
-        Diagnostic_int.Success(fun ?all () -> f_int ())
-    end
-    |Failure r -> begin incr failed; Diagnostic_int.Failure(r) end
-  in
   (* global id is a fake package id encoding the global constraints of the
    * universe. it is the last element of the id array *)
   let req = 
@@ -391,7 +377,9 @@ let pkgcheck global_constraints callback solver failed tested id =
   let res =
     Util.Progress.progress progressbar_univcheck;
     if not(tested.(id)) then begin
-      memo failed (solve ~tested solver req)
+      match solve ~tested solver req with
+      |Diagnostic_int.Success _ as res -> res
+      |Diagnostic_int.Failure _ as res -> (incr failed;  res)
     end
     else begin
       (* this branch is true only if the package was previously
@@ -403,8 +391,8 @@ let pkgcheck global_constraints callback solver failed tested id =
       let f ?(all=false) () =
         if all then begin
           match solve solver req with
-          |Success(f_int) -> List.map solver.map#inttovar (f_int ())
-          |Failure _ -> assert false (* impossible *)
+          |Diagnostic_int.Success(f_int) -> f_int ()
+          |Diagnostic_int.Failure _ -> assert false (* impossible *)
         end else []
       in Diagnostic_int.Success(f) 
     end

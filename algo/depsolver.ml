@@ -160,7 +160,7 @@ let edos_install ?(global_constraints=false) univ pkg =
     else
       Diagnostic_int.Sng (None,id)
   in
-  let res = Depsolver_int.conv solver (Depsolver_int.solve solver req) in
+  let res = Depsolver_int.solve solver req in
   diagnosis solver.Depsolver_int.map univ res req
 ;;
 
@@ -175,7 +175,7 @@ let edos_coinstall_cache global_constraints univ pool pkglist =
     else
       Diagnostic_int.Lst (None,idlist)
   in
-  let res = Depsolver_int.conv solver (Depsolver_int.solve solver req) in
+  let res = Depsolver_int.solve solver req in
   diagnosis solver.Depsolver_int.map univ res req
 ;;
 
