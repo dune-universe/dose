@@ -102,7 +102,7 @@ let strip_cudf_pool = function CudfPool p -> p | _ -> assert false
 
 (* cudf uid -> cudf uid array . Here we assume cudf uid are sequential
    and we can use them as an array index *)
-let init_pool_univ univ =
+let init_pool_univ ~global_constraints univ =
   let size = (Cudf.universe_size univ) + 1 in
   (* the last element of the array *)
   let globalid = size - 1 in
@@ -130,14 +130,16 @@ let init_pool_univ univ =
         (dll,cl)
     )
   in
-  let keep_dll =
-    Hashtbl.fold (fun name {contents = l} acc ->
-      ([(name,None)],l) :: acc
-    ) keep []
-  in
-  (* here in theory we could encode more complex contraints .
-   * for the moment we consider only `Keep_package *)
-  pool.(globalid) <- (keep_dll,[]);
+  if global_constraints then begin
+    let keep_dll =
+      Hashtbl.fold (fun name {contents = l} acc ->
+        ([(name,None)],l) :: acc
+      ) keep []
+    in
+    (* here in theory we could encode more complex contraints .
+     * for the moment we consider only `Keep_package *)
+    pool.(globalid) <- (keep_dll,[])
+  end;
   CudfPool pool
 ;;
 
@@ -145,12 +147,6 @@ let init_pool_univ univ =
     used to init the edos solver *)
 let init_solver_pool map pool closure =
   let cudfpool = strip_cudf_pool pool in
-  (* while in init_pool_univ we create a pool that is bigger
-   * then the universe to keep into consideration the space
-   * needed to encode the global contraint, here we assume that
-   * the pool is already of the correct size and the closure
-   * contains also the globalid *) 
-  let globalid = Array.length cudfpool in
   let convert (dll,cl) =
     let sdll = 
       List.map (fun (vpkgs,uidl) ->
@@ -177,6 +173,12 @@ let init_solver_pool map pool closure =
     in (sdll,scl)
   in
 
+  (* while in init_pool_univ we create a pool that is bigger
+   * then the universe to keep into consideration the space
+   * needed to encode the global contraint, here we assume that
+   * the pool is already of the correct size and the closure
+   * contains also the globalid *) 
+  let globalid = Array.length cudfpool - 1 in
   let solverpool = 
     let size = List.length closure in
     Array.init size (fun sid ->
@@ -262,47 +264,6 @@ let init_solver_cache ?(buffer=false) pool =
   constraints
 ;;
 
-(** low level constraint solver initialization
- 
-    @param buffer debug buffer to print out debug messages
-    @param univ cudf package universe
-*)
-let init_solver_univ ?(buffer=false) univ =
-  let map = new identity in
-  let pool = SolverPool (strip_cudf_pool (init_pool_univ univ)) in
-  { constraints = init_solver_cache ~buffer pool ; map = map }
-;;
-
-(** low level constraint solver initialization
- 
-    @param buffer debug buffer to print out debug messages
-    @param pool dependencies and conflicts array idexed by package id
-    @param closure subset of packages used to initialize the solver
-*)
-(* pool = cudf pool - closure = dependency clousure . cudf uid list *)
-let init_solver_closure ?(buffer=false) pool closure =
-  let map = new intprojection (List.length closure) in
-  List.iter map#add closure;
-  let pool = init_solver_pool map pool closure in
-  { constraints = init_solver_cache ~buffer pool ; map = map }
-;;
-
-(** return a copy of the state of the solver *)
-let copy_solver solver =
-  { solver with constraints = S.copy solver.constraints }
-
-(** this function converts Depsolver_int results to
- * Diagnostic_int results. The difference is that the integer
- * list returned by the function f_int represents solver indexs
- * while Diagnostic_int.Success must return cudf indexes *)
-let conv solver = function
-  |Success(f_int) ->
-      Diagnostic_int.Success(fun ?all () ->
-        List.map solver.map#inttovar (f_int ())
-      )
-  |Failure(r) -> Diagnostic_int.Failure(r)
-;;
-
 (** low level call to the sat solver
     
     @param tested: optional int array used to cache older results
@@ -312,10 +273,10 @@ let solve ?tested solver request =
 
   let result solve collect var =
     if solve solver.constraints var then
-      let get_assignent ?(all=false) () =
+      let get_assignent ?(all=true) () =
         List.map (fun i -> 
           if not(Option.is_none tested) then
-            Array.unsafe_set (Option.get tested) i true;
+            (Option.get tested).(i) <- true;
           solver.map#inttovar i
         )(S.assignment_true solver.constraints)
       in
@@ -337,33 +298,6 @@ let solve ?tested solver request =
       result S.solve_lst S.collect_reasons_lst (List.map solver.map#vartoint (k::il))
 ;;
 
-(** [set_hard_constraints] adds additional constraints to the solver. The
-    rationale is that if the global constraints are satisfied and there is
-    only **one** solution, then we can just fix this solution once for all
-    and save precious time that would be otherwise spent to recompute this
-    solution over and over again. Of cource if, either there is no solution,
-    or if there are multiple solutions, then this is not possible anymore and
-    we are forced to check if a request can be satisfied given a set of
-    globla constraints. *)
-(*
-let set_hard_constraints solver pool =
-  let globalid = (Array.length pool) - 1 in
-  match pool.(globalid) with
-  |(ll,[]) when not(List.exists (fun l -> (List.length l) < 2) ll) -> begin
-      let req = Diagnostic_int.Sng (None,globalid) in
-      let res = solve solver req in
-      begin match res with
-      |Failure _ -> ()
-      |Success(f_int) -> 
-          List.iter (fun i -> 
-            S.add_rule solver.constraints [|S.lit_of_var i true|] [];
-          )(f_int ())
-      end;
-      true
-  end
-  |_ -> false
-;;
-*)
 let pkgcheck global_constraints callback solver failed tested id =
   (* global id is a fake package id encoding the global constraints of the
    * universe. it is the last element of the id array *)
@@ -401,6 +335,40 @@ let pkgcheck global_constraints callback solver failed tested id =
   |None -> ()
   |Some f -> f (res,req)
 ;;
+
+(** low level constraint solver initialization
+ 
+    @param buffer debug buffer to print out debug messages
+    @param univ cudf package universe
+*)
+let init_solver_univ ?(global_constraints=true) ?(buffer=false) univ =
+  let map = new identity in
+  let cudfpool = init_pool_univ global_constraints univ in
+  let globalid = (Array.length (strip_cudf_pool cudfpool)) - 1 in
+  let solverpool = SolverPool (strip_cudf_pool cudfpool) in
+  let solver = { constraints = init_solver_cache ~buffer solverpool ; map = map } in
+  solver
+;;
+
+(** low level constraint solver initialization
+ 
+    @param buffer debug buffer to print out debug messages
+    @param pool dependencies and conflicts array idexed by package id
+    @param closure subset of packages used to initialize the solver
+*)
+(* pool = cudf pool - closure = dependency clousure . cudf uid list *)
+let init_solver_closure ?(buffer=false) cudfpool closure =
+  let map = new intprojection (List.length closure) in
+  List.iter map#add closure;
+  let globalid = (Array.length (strip_cudf_pool cudfpool)) - 1 in
+  let solverpool = init_solver_pool map cudfpool closure in
+  let solver = { constraints = init_solver_cache ~buffer solverpool ; map = map } in
+  solver
+;;
+
+(** return a copy of the state of the solver *)
+let copy_solver solver =
+  { solver with constraints = S.copy solver.constraints }
 
 (***********************************************************)
 
@@ -459,7 +427,7 @@ let dependency_closure_cache ?(maxdepth=max_int) ?(conjunctive=false) pool idlis
     @param pkglist a subset of [universe]
 *)
 let dependency_closure ?(maxdepth=max_int) ?(conjunctive=false) universe pkglist =
-  let pool = init_pool_univ universe in
+  let pool = init_pool_univ ~global_constraints:false universe in
   let idlist = List.map (CudfAdd.vartoint universe) pkglist in
   let l = dependency_closure_cache ~maxdepth ~conjunctive pool idlist in
   List.map (CudfAdd.inttovar universe) l

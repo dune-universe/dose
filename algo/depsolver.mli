@@ -95,8 +95,13 @@ val reverse_dependency_closure : ?maxdepth:int ->
 
 type enc = Cnf | Dimacs
 
-(** [output_clauses enc univ] return a string encoded accordingly to [enc] *)
-val output_clauses : ?enc:enc -> Cudf.universe -> string
+(** [output_clauses enc univ] return a string encoded accordingly to [enc]
+    (default cnf). 
+
+    @param global_constraints : enforce global constraints on the given universe.
+
+  *)
+val output_clauses : ?global_constraints:bool -> ?enc:enc -> Cudf.universe -> string
 
 (* check if there exists a solution for the give cudf document *)
 val check_request : Cudf.cudf_doc -> Diagnostic.diagnosis

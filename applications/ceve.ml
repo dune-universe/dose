@@ -107,6 +107,8 @@ let main () =
   Boilerplate.enable_debug(OptParse.Opt.get Options.verbose);
   Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
 
+  let global_constraints = not(OptParse.Opt.get Options.deb_ignore_essential) in
+
   if OptParse.Opt.get Options.out_type = "sqlite" then
     output_to_sqlite posargs
   else
@@ -189,8 +191,8 @@ IFDEF HASOCAMLGRAPH THEN
 ELSE
         failwith ("dot not supported: needs ocamlgraph")
 END
-      |"cnf" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~enc:Depsolver.Cnf u)
-      |"dimacs" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~enc:Depsolver.Dimacs u)
+      |"cnf" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Cnf u)
+      |"dimacs" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Dimacs u)
       |"cudf" -> output_cudf oc preamble u
       |"table" ->
 IFDEF HASOCAMLGRAPH THEN

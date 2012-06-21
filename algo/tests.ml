@@ -136,9 +136,8 @@ let test_essential_broken =
     let pkg2 = { Cudf.default_package with 
       Cudf.package = "c";
     } in
-    let global_constraints = true in
     let universe = Cudf.load_universe [pkg1;pkg2] in
-    let d = Depsolver.edos_install ~global_constraints universe pkg2 in
+    let d = Depsolver.edos_install ~global_constraints:true universe pkg2 in
     match d.Diagnostic.result with
     |Diagnostic.Success _ -> assert_failure "fail"
     |Diagnostic.Failure _ -> assert_bool "pass" true

@@ -63,7 +63,7 @@ let somedisj pool id =
 (* each package has a node in the graph, even if it does not have  
  * any strong dependencies *)
 let strongdeps_int ?(transitive=true) graph univ pkglist =
-  let cudfpool = Depsolver_int.init_pool_univ univ in
+  let cudfpool = Depsolver_int.init_pool_univ ~global_constraints:false univ in
   Util.Progress.set_total mainbar (List.length pkglist);
   Util.Timer.start strongtimer;
   List.iter (fun pkg ->
@@ -76,7 +76,6 @@ let strongdeps_int ?(transitive=true) graph univ pkglist =
       match Depsolver_int.solve solver (Diagnostic_int.Sng (None,id)) with
       |Diagnostic_int.Failure(_) -> ()
       |Diagnostic_int.Success(f_int) ->
-          (* let l = List.map solver.Depsolver_int.map#inttovar (f_int ()) in *)
           check_strong univ transitive graph solver id (f_int ())
     end
   ) pkglist ;
