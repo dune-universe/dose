@@ -1,0 +1,66 @@
+\section{Cudf 2.0 Encoding}
+
+Debian packages can be represented by a tuple composed of name,
+version, architecture, multiarch, depends, conflicts, provides.
+
+In a multi architecture environment there might be more then one
+package with the same name and version, but different architectures.
+Since cudf semantics does not allow duplicated packages with the same
+pair $(name,version)$ the encoding to cudf 2.0 must regain this
+property by encoding each debian package $(name,version,architecture)$
+to a cudf package identified only by the pair $(name,version)$.
+Different strategies are possible : to maintain readability of the
+cudf document we encode each debian package as $(name:architecture,
+version)$, therefore identifying the corresponding cudf package by
+concatenating name with the architecture using the character ``:'' as
+separator. Note that since the character ``:'' is not part of the
+character sets used to denote cudf packages, it will be encoded in a
+cudf document as its hexadecimal encoding ``\%\ldots''.
+
+The multi architecture field in the debian stanza determines the
+encoding of dependencies, conflicts and provides of the cudf package.
+The encoding for each value of the field \texttt{MutliArch} is given
+in Table \ref{tab:encoding} with the proviso that if a dependency is
+tagged with \texttt{:any}, this dependency will not be affected by the
+encoding above and stay unchanged as ${\tt d_i:any},dc_i,dv_i$ for some $i$.
+
+\begin{table}
+  \centering
+  \begin{tabular*}{1.18\textwidth}{ | c | c | c | c | c | }
+    \hline
+    \backslashbox{Type}{Value} & None & Some & Foreign & Allowed \\
+    \hline 
+    Depends   & $({\tt d_i:a},dc_i,dv_i)$     & 
+                $({\tt d_i:a},dc_i,dv_i)$ & 
+                $({\tt d_i:a},dc_i,dv_i)$ & 
+                $({\tt d_i:a},dc_i,dv_i)$   \\
+    Conflicts & $({\tt c_i:a},cc_i,cv_i), p$  &
+                $({\tt c_i:a},cc_i,cv_i)$ & 
+                $({\tt c_i:a},cc_i,cv_i),p$ & 
+                $({\tt c_i:a},cc_i,cv_i),p$ \\
+    Provides  & $p$ & & 
+                $({\tt p:a_i},v)$ & 
+                $({\tt p:any},v)$ \\
+    \hline
+  \end{tabular*}
+  \caption{Multi Arch dependency encoding}
+  \label{tab:encoding}
+\end{table}
+
+The encoding takes care of enforcing co-installability w.r.t. the value of the 
+\texttt{MutliArch} field and to allow packages to correctly satisfy dependencies of
+multi architecture enable packages.
+
+
+\par{Co-installation}: For multiarch equal to \texttt{None}, \texttt{Foreign}
+and \texttt{Allowed}, we prevent coinstallability with all other packages with
+the same debian name by providing the the debian name (without the architecture
+qualifier) and adding a self conflict on the debian name. For multiarch
+\texttt{Same} we explicitly allow coinstallability and we do not add any
+additional constraints.
+
+\par{Satisfying other dependencies}. Form multiarch \texttt{None} and
+\texttt{Same} the package can satisfy dependencies only of packages with the
+same architecture. For multiarch \texttt{Foreign} we add one versioned provide
+for each known foreign architecture. For \texttt{Allowed} we add a provide to
+architecture \texttt{any}.
