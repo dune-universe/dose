@@ -178,7 +178,7 @@ let init_solver_pool map pool closure =
    * needed to encode the global contraint, here we assume that
    * the pool is already of the correct size and the closure
    * contains also the globalid *) 
-  let globalid = Array.length cudfpool - 1 in
+  let globalid = Array.length cudfpool in
   let solverpool = 
     let size = List.length closure in
     Array.init size (fun sid ->
