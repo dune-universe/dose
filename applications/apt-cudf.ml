@@ -475,12 +475,14 @@ let main () =
     print_error "(UNSAT) No Solutions according to the give preferences"
   else begin
     try begin
-      let sol = 
+      let solpre,soluniv = 
         if (Unix.stat solver_out).Unix.st_size <> 0 then
           let cudf_parser = Cudf_parser.from_file solver_out in
-          let (_,sol,_) = Cudf_parser.parse cudf_parser in
-          sol
-        else []
+          try Cudf_parser.load_solution cudf_parser universe with
+          |Cudf_parser.Parse_error _
+          |Cudf.Constraint_violation _ as exn ->
+            print_error "(CRASH) Solution file contains an invalid solution"
+        else print_error "(CRASH) Solution file is empty"
       in
 
       if OptParse.Opt.get Options.dump then begin
@@ -489,11 +491,10 @@ let main () =
         let oc = open_out cudfsol in
         Cudf_printer.pp_preamble oc default_preamble;
         Printf.fprintf oc "\n";
-        Cudf_printer.pp_packages oc sol;
+        Cudf_printer.pp_universe oc soluniv;
         close_out oc
       end;
 
-      let soluniv = Cudf.load_universe sol in
       let diff = CudfDiff.diff universe soluniv in
       let empty = ref true in
       Hashtbl.iter (fun pkgname s ->
