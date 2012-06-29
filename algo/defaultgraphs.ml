@@ -187,9 +187,8 @@ end
 (** Imperative unidirectional graph for conflicts. *)
 (* Note: ConcreteBidirectionalLabelled graphs are slower and we do not use them
  * here *)
-module MakePackageGraph(V : Sig.COMPARABLE with type t = Cudf.package )= struct
+module MakePackageGraph(PkgV : Sig.COMPARABLE with type t = Cudf.package )= struct
 
-  module PkgV = V
   module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
   module UG = Imperative.Graph.Concrete(PkgV)
   module O = GraphOper(G)
@@ -206,7 +205,8 @@ module MakePackageGraph(V : Sig.COMPARABLE with type t = Cudf.package )= struct
       let default_edge_attributes = fun _ -> []
       let default_vertex_attributes = fun _ -> []
 
-      let vertex_attributes v = []
+      let vertex_attributes p =
+        if p.Cudf.installed then [ `Color 0x00FF00 ] else []
 
       let edge_attributes e = []
     end

@@ -344,7 +344,6 @@ let pkgcheck global_constraints callback solver failed tested id =
 let init_solver_univ ?(global_constraints=true) ?(buffer=false) univ =
   let map = new identity in
   let cudfpool = init_pool_univ global_constraints univ in
-  let globalid = (Array.length (strip_cudf_pool cudfpool)) - 1 in
   let solverpool = SolverPool (strip_cudf_pool cudfpool) in
   let solver = { constraints = init_solver_cache ~buffer solverpool ; map = map } in
   solver
@@ -360,7 +359,6 @@ let init_solver_univ ?(global_constraints=true) ?(buffer=false) univ =
 let init_solver_closure ?(buffer=false) cudfpool closure =
   let map = new intprojection (List.length closure) in
   List.iter map#add closure;
-  let globalid = (Array.length (strip_cudf_pool cudfpool)) - 1 in
   let solverpool = init_solver_pool map cudfpool closure in
   let solver = { constraints = init_solver_cache ~buffer solverpool ; map = map } in
   solver
