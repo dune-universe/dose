@@ -41,17 +41,30 @@ control stanzas, separated by one blank line. For instance, the Sources files
 as found on a Debian mirror server, or in the directory I</var/lib/apt/lists/>
 of a Debian system, are suitable. 
 
+Multi-arch annotations are correctly considered by distcheck. Packages
+whose's architecture is neither the native architecture nor in the
+list of foreign architectures (see below) are ignored. Here, native
+and foreign refers at the same time to the architecture on which the
+compilation will be run, and to the target architecture of the
+compilation. Cross-compilation is not supported in the current
+version.
+
 =cut
 
 =head1 OPTIONS
 
 =over 8
 
-=item B<-a --architecture > 
+=item B<--deb-native-arch=>I<name>
 
-Specify the architecture for which installability of build
-environments should be checked. This argument is (in the current version
-of this program) mandatory. 
+Specify the native architecture. The default behavior is to deduce
+the native architecture from the first package stanza in the input
+that has an architecture different from all.
+
+=item B<--deb-foreign-archs=>I<name> [,I<name>] ...
+
+Specify a comma-separated list of foreign architectures. The default
+is an empty list of foreign architectures.
 
 =item B<-f --failures> 
 
