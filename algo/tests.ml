@@ -143,6 +143,31 @@ let test_essential_broken =
     |Diagnostic.Failure _ -> assert_bool "pass" true
   ) 
 
+let test_essential_multi =
+  "essential multi" >:: (fun _ -> 
+    let pkg1a = { Cudf.default_package with 
+      Cudf.package = "a";
+      version = 1;
+      installed = true;
+      keep = `Keep_package;
+    } in
+    let pkg1b = { Cudf.default_package with 
+      Cudf.package = "a";
+      version = 2;
+      conflicts = [("c",None)];
+      keep = `Keep_package;
+    } in
+    let pkg2 = { Cudf.default_package with 
+      Cudf.package = "c";
+    } in
+    let universe = Cudf.load_universe [pkg1a;pkg1b;pkg2] in
+    let d = Depsolver.edos_install ~global_constraints:true universe pkg2 in
+    match d.Diagnostic.result with
+    |Diagnostic.Failure _ -> assert_failure "fail"
+    |Diagnostic.Success _ -> assert_bool "pass" true
+  ) 
+
+
 (* debian testing 18/11/2009 *)
 let test_distribcheck =
   "distribcheck" >:: (fun _ -> 
@@ -269,6 +294,7 @@ let test_depsolver =
     test_coinst_prod ;
     test_trim ;
     test_essential_broken ;
+    test_essential_multi ;
     test_distribcheck ;
     test_selfprovide ;
     test_dependency_closure ;
