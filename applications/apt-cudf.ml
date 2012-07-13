@@ -83,7 +83,10 @@ let make_request tables universe native_arch request =
       if remove then
         (candidate.Cudf.package,None)
       else
-        (candidate.Cudf.package,Some(`Eq,candidate.Cudf.version))
+        if constr = None then 
+          (candidate.Cudf.package,None)
+        else
+          (candidate.Cudf.package,Some(`Eq,candidate.Cudf.version))
     ) l 
   in
   if request.Edsp.upgrade || request.Edsp.distupgrade then
