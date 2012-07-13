@@ -44,6 +44,11 @@ def test_application(self,expected_file,cmd):
 
 class DoseTests(unittest.TestCase):
 
+    def test_apt_cudf(self):
+        expected_file = "tests/applications/dose-tests/apt-cudf-test1"
+        cmd = ["./apt-cudf.native", "-e", "--solver=aspcud", "--native-arch=i386", "tests/deb/edsp/install-sarge-etch.edsp"]
+        test_application(self,expected_file,cmd)
+
     def test_failure_distcheck(self):
         expected_file = "tests/applications/dose-tests/distcheck_test_failure"
         cmd = ["./distcheck.native","-f","-e","deb://tests/DebianPackages/sid.packages.bz2"]
