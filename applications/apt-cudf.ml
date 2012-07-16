@@ -68,26 +68,20 @@ let make_request tables universe native_arch request =
   let select_packages ?(remove=false) l = 
     List.map (fun ((n,a),c) -> 
       let (name,constr) = Boilerplate.debvpkg ~native_arch to_cudf ((n,a),c) in
-      let candidate = 
-        try
-          List.find (fun pkg ->
-            if request.Edsp.strict_pin then
+      if remove then (name,None)
+      else if constr = None && not request.Edsp.strict_pin then (name,None)
+      else
+        let candidate = 
+          try
+            List.find (fun pkg ->
               try (Cudf.lookup_package_property pkg "apt-candidate") = "true"
               with Not_found -> false
-            else
-              true
-          ) (CudfAdd.who_provides universe (name,constr))
-        with Not_found -> 
-          print_error "Package %s does not have a suitable candidate" n
-      in
-      if remove then
-        (candidate.Cudf.package,None)
-      else
-        if constr = None then 
-          (candidate.Cudf.package,None)
-        else
-          (candidate.Cudf.package,Some(`Eq,candidate.Cudf.version))
-    ) l 
+            ) (CudfAdd.who_provides universe (name,constr))
+          with Not_found -> 
+            print_error "Package %s does not have a suitable candidate" n
+        in 
+        (name,Some(`Eq,candidate.Cudf.version))
+    ) l
   in
   if request.Edsp.upgrade || request.Edsp.distupgrade then
     let to_upgrade = function
