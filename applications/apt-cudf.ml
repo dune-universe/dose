@@ -63,25 +63,38 @@ let print_progress ?i msg =
     Format.printf "Message: %s@." msg
 ;;
 
+
+(* Debian specific assumption: only one version of a package 
+   can be installed at a given time.
+   Hence, when a remove request is issued without version constraint,
+   we return (candidate.Cudf.package,None) that designates the only
+   package installed.
+ *)
+
 let make_request tables universe native_arch request = 
   let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
+  let get_candidate (name,constr) = 
+    try
+      List.find 
+	(fun pkg -> 
+	  try (Cudf.lookup_package_property pkg "apt-candidate") = "true"
+	  with Not_found -> false) 
+	(CudfAdd.who_provides universe (name,constr))
+    with Not_found -> 
+      print_error "Package %s does not have a suitable candidate" name
+  in
   let select_packages ?(remove=false) l = 
     List.map (fun ((n,a),c) -> 
       let (name,constr) = Boilerplate.debvpkg ~native_arch to_cudf ((n,a),c) in
-      if remove then (name,None)
-      else if constr = None && not request.Edsp.strict_pin then (name,None)
+      if remove then
+        (name,None)
       else
-        let candidate = 
-          try
-            List.find (fun pkg ->
-              try (Cudf.lookup_package_property pkg "apt-candidate") = "true"
-              with Not_found -> false
-            ) (CudfAdd.who_provides universe (name,constr))
-          with Not_found -> 
-            print_error "Package %s does not have a suitable candidate" n
-        in 
-        (name,Some(`Eq,candidate.Cudf.version))
-    ) l
+	match constr, request.Edsp.strict_pin with
+          None, false -> (name, None)
+	| _, _ -> (name,Some(`Eq,(get_candidate (name,constr)).Cudf.version))
+        (* FIXME: when apt will accept version constraints different from `Eq,
+           we will need to pass them through. *)
+    ) l 
   in
   if request.Edsp.upgrade || request.Edsp.distupgrade then
     let to_upgrade = function
