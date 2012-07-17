@@ -27,10 +27,12 @@ module Options = struct
 
   let source = StdOpt.store_true ()
   let outdir = StdOpt.str_option ()
+  let native_arch = StdOpt.str_option ()
 
   open OptParser
   add options ~long_name:"outdir" ~help:"Send output to a file" outdir;
   add options ~long_name:"from-cudf" ~help:"do no consider \"number\" property" source;
+  add options ~long_name:"native-arch" ~help:"native architecture" native_arch;
 
 end
 
@@ -49,7 +51,7 @@ let main () =
   let (preamble,universe) =
     match Input.parse_uri doc with
     |(Url.Cudf,(_,_,_,_,file),_) -> begin
-      let p, u, _ = Boilerplate.parse_cudf file in (p,u)
+      let p, u, _ = Boilerplate.load_cudf file in (p,u)
     end
     |(_,_,_) -> fatal "Only Cudf is supported"
   in
@@ -96,8 +98,8 @@ let main () =
     exit 0
   end;
 
-  let t = Hashtbl.create (List.length universe) in
-  List.iter (fun pkg ->
+  let t = Hashtbl.create (Cudf.universe_size universe) in
+  Cudf.iter_packages (fun pkg ->
     let n = pkg.Cudf.package in
     let v = 
       if OptParse.Opt.get Options.source then
@@ -105,17 +107,24 @@ let main () =
       else
         Cudf.lookup_package_property pkg "number" 
     in
-    Hashtbl.add t (n,v) pkg
+    Hashtbl.add t (n,v) pkg;
   ) universe;
 
   List.iter (fun (n,v) ->
-    try
-      let pkg = Hashtbl.find t (n,v) in
-      Hashtbl.replace t (n,v) {pkg with Cudf.installed = false }
-    with Not_found ->
-      fatal 
-      "Something wrong in the remove request.
-      Package in the solution is not present in the universe (%s,%s)" n v;
+    if v = "" then
+      List.iter (fun pkg ->
+        Printf.eprintf "Remove package %s with version %s\n" n
+        (Cudf.lookup_package_property pkg "number");
+        Hashtbl.replace t (n,Cudf.lookup_package_property pkg "number") {pkg with Cudf.installed = false }
+      ) (Cudf.get_installed universe n)
+    else
+      try
+        let pkg = Hashtbl.find t (n,v) in
+        Hashtbl.replace t (n,v) {pkg with Cudf.installed = false }
+      with Not_found ->
+        fatal 
+        "Something wrong in the remove request.
+        Package in the solution is not present in the universe (%s,%s)" n v;
   ) remove ;
 
   List.iter (fun (n,v) ->
@@ -131,7 +140,7 @@ let main () =
     end
   ) install ;
 
-  let l = Hashtbl.fold (fun k v acc -> if v.Cudf.installed then v::acc else acc) t [] in
+  let l = Hashtbl.fold (fun (n,v) pkg acc -> if pkg.Cudf.installed && v <> "" then pkg::acc else acc) t [] in
   if not (Option.is_none preamble) then begin
       Cudf_printer.pp_preamble stdout (Option.get preamble);
       Printf.fprintf stdout "\n"
