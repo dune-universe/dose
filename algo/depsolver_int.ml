@@ -298,7 +298,7 @@ let solve ?tested solver request =
       result S.solve_lst S.collect_reasons_lst (List.map solver.map#vartoint (k::il))
 ;;
 
-let pkgcheck global_constraints callback solver failed tested id =
+let pkgcheck global_constraints callback solver tested id =
   (* global id is a fake package id encoding the global constraints of the
    * universe. it is the last element of the id array *)
   let req = 
@@ -310,11 +310,8 @@ let pkgcheck global_constraints callback solver failed tested id =
   in
   let res =
     Util.Progress.progress progressbar_univcheck;
-    if not(tested.(id)) then begin
-      match solve ~tested solver req with
-      |Diagnostic_int.Success _ as res -> res
-      |Diagnostic_int.Failure _ as res -> (incr failed;  res)
-    end
+    if not(tested.(id)) then 
+      solve ~tested solver req 
     else begin
       (* this branch is true only if the package was previously
          added to the tested packages and therefore it is installable
@@ -331,9 +328,11 @@ let pkgcheck global_constraints callback solver failed tested id =
       in Diagnostic_int.Success(f) 
     end
   in
-  match callback with
-  |None -> ()
-  |Some f -> f (res,req)
+  match callback, res with
+  |None, Diagnostic_int.Success _ -> true
+  |None, Diagnostic_int.Failure _ -> false
+  |Some f, Diagnostic_int.Success _ -> ( f (res,req) ; true )
+  |Some f, Diagnostic_int.Failure _ -> ( f (res,req) ; false )
 ;;
 
 (** low level constraint solver initialization

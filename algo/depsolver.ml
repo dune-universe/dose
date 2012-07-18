@@ -104,10 +104,10 @@ let univcheck ?(global_constraints=true) ?callback universe =
     let size = (Cudf.universe_size univ) + 1 in
     let tested = Array.make size false in
     Util.Progress.set_total Depsolver_int.progressbar_univcheck size ;
-    let check = Depsolver_int.pkgcheck global_constraints callback solver failed tested in
+    let check = Depsolver_int.pkgcheck global_constraints callback solver tested in
     (* we do not test the last package that encodes the global constraints
      * on the universe as it is tested all the time with all other packages. *)
-    for i = 0 to size - 2 do check i done;
+    for i = 0 to size - 2 do if not(check i) then incr failed done;
     Util.Timer.stop timer !failed
   in
   let map = new Depsolver_int.identity in
@@ -133,8 +133,8 @@ let listcheck ?(global_constraints=true) ?callback universe pkglist =
     let size = (Cudf.universe_size univ) + 1 in
     let tested = Array.make size false in
     Util.Progress.set_total Depsolver_int.progressbar_univcheck size ;
-    let check = Depsolver_int.pkgcheck global_constraints callback solver failed tested in
-    List.iter (function id when id = size -> () |id -> check id) idlist ;
+    let check = Depsolver_int.pkgcheck global_constraints callback solver tested in
+    List.iter (function id when id = size -> () |id -> if not(check id) then incr failed) idlist ;
     Util.Timer.stop timer !failed
   in
   let idlist = List.map (CudfAdd.vartoint universe) pkglist in
@@ -280,7 +280,7 @@ let output_clauses ?(global_constraints=true) ?(enc=Cnf) univ =
 ;;
 
 (** check if a cudf request is satisfiable. we do not care about
- * universe consistency . We try to installa dummy package *)
+ * universe consistency . We try to install a dummy package *)
 let check_request (_,pkglist,request) =
   let deps = 
     let k = 
@@ -303,7 +303,7 @@ let check_request (_,pkglist,request) =
   in
   let dummy = {
     Cudf.default_package with
-    Cudf.package = "dummy";
+    Cudf.package = "dose-dummy-request";
     version = 1;
     depends = deps;
     conflicts = request.Cudf.remove}
