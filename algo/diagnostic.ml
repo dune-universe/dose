@@ -265,6 +265,58 @@ let default_pp pkg =
     else "nan"
   in
   (pkg.Cudf.package,v,[])
+;;
+
+let print_error_human ?(prefix="") pp root fmt l =
+  let (deps,res) = List.partition (function Dependency _ -> true |_ -> false) l in
+  let pp_package pkg =
+    let (p,v,fields) = pp pkg in
+    Format.sprintf "(%s %s)" p v
+  in
+  let pp_dependencies fmt pathlist =
+    List.iter (fun path ->
+      List.iter (fun (i,vpkgs) ->
+        if i.Cudf.package <> "dose-dummy-request" then
+          Format.fprintf fmt "%s%s@." prefix (pp_package i)
+      ) path
+    ) pathlist
+  in
+  let pp_reason fmt = function
+    |Conflict (i,j,vpkg) -> begin
+      Format.printf "%sThere is a conflict " prefix;
+      Format.printf "between package %s and package %s@." (pp_package i) (pp_package j);
+      if deps <> [] then begin
+          let pl1 = create_pathlist root (Dependency(i,[],[])::deps) in
+          let pl2 = create_pathlist root (Dependency(j,[],[])::deps) in
+          if pl1 <> [[]] then pp_dependencies fmt pl1;
+          if pl2 <> [[]] then pp_dependencies fmt pl2;
+        end
+    end
+    |Missing (i,vpkgs) -> begin
+      Format.printf "%sThe dependency %a of package %s cannot be satisfied@." prefix (pp_vpkglist pp) vpkgs (pp_package i);
+      let pl = create_pathlist root (Dependency(i,vpkgs,[])::deps) in
+      if pl <> [[]] then pp_dependencies fmt pl
+    end
+    |_ -> assert false 
+  in
+  if root.Cudf.package = "dose-dummy-request" then
+    Format.printf "%sThe request cannot be satisfied@," prefix
+  else
+    Format.printf "%sThe request for package %s cannot be satisfied@," prefix (pp_package root);
+  List.iter (pp_reason fmt) res
+;;
+
+let fprintf_human ?(pp=default_pp) ?(prefix="") fmt = function
+  |{result = Failure f ; request = Package r } -> 
+         print_error_human ~prefix pp r fmt (f ());
+  |{result = Failure f ; request = PackageList rl } -> 
+      let n = List.length rl in
+      List.iteri (fun i r ->
+        print_error_human ~prefix pp r fmt (f ());
+        if i <> (n-1) then Format.fprintf fmt "@."
+      ) rl;
+  |_ -> ()
+;;
 
 let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) ?(minimal=false) fmt d = 
   match d with

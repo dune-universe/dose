@@ -27,6 +27,7 @@ module Options = struct
 
   let dump = StdOpt.store_true ()
   let noop = StdOpt.store_true ()
+  let human = StdOpt.store_true ()
   let solver = StdOpt.str_option ()
   let criteria = StdOpt.str_option ()
   let explain = StdOpt.store_true ()
@@ -38,7 +39,8 @@ module Options = struct
   add options ~long_name:"noop" ~help:"Do nothing, implies --dump" noop;
   add options ~short_name:'s' ~long_name:"solver" ~help:"external solver" solver;
   add options ~short_name:'c' ~long_name:"criteria" ~help:"optimization criteria" criteria;
-  add options ~short_name:'e' ~long_name:"explain" ~help:"summary" explain;
+  add options ~long_name:"explain" ~help:"print installation summary" explain;
+  add options ~long_name:"human" ~help:"print human readable installation errors" human;
 
 end
 
@@ -321,10 +323,18 @@ let main () =
   OptParse.Opt.set Options.criteria criteria ;
 
   let solpre,soluniv = 
-    let explain = OptParse.Opt.get Options.explain in
+    let from_cudf (p,v) = (p,Debian.Debcudf.get_real_version tables (p,v)) in
+    let pp = CudfAdd.pp from_cudf in
+    let explain = OptParse.Opt.get Options.human in
     match Algo.Depsolver.check_request ~cmd:exec_pat ~criteria ~explain cudf with
     |Algo.Depsolver.Error s -> fatal "%s" s
-    |Algo.Depsolver.Unsat _ -> fatal "(UNSAT) No Solutions according to the given preferences"
+    |Algo.Depsolver.Unsat None ->
+      fatal "(UNSAT) No Solutions according to the give preferences"
+    |Algo.Depsolver.Unsat Some d -> begin
+      Format.printf "Error: (UNSAT) No Solutions according to the give preferences@.";
+      Format.printf "%a@." (Algo.Diagnostic.fprintf_human ~prefix:"Message: " ~pp) d;
+      exit 1
+    end
     |Algo.Depsolver.Sat s -> s
   in
 
