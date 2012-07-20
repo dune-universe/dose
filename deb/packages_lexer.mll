@@ -28,7 +28,8 @@ let ident = (letter | digit) (letter | digit | symbols)*
 rule token_deb = parse
   | (">=" | "<=") as op { RELOP op }
   | (">>" | "<<") as op { RELOP op }
-  | ('>' | '<') as op   { RELOP (String.make 1 op) }
+  | '<'                 { LT }
+  | '>'                 { GT }
   | '='                 { EQ }
   | ':'                 { COLON }
   | '/'                 { SLASH }

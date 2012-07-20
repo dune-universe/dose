@@ -59,6 +59,7 @@ let parse_from_ch _parser ic =
 type name = string
 type version = string
 type architecture = string
+type buildprofile = string
 type vpkgname = (string * architecture option)
 type multiarch = [ `Foreign | `Allowed | `None | `Same ]
 type source = (name * version option)
@@ -69,7 +70,7 @@ type vpkg = (vpkgname * constr option)
 type vpkglist = vpkg list
 type vpkgformula = vpkg list list
 
-type builddep = (vpkg * (bool * architecture) list)
+type builddep = (vpkg * (bool * architecture) list * (bool * buildprofile) list)
 type builddepslist = builddep list
 type builddepsformula = builddep list list
 

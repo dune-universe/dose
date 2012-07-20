@@ -22,7 +22,7 @@ let parse_multiarch = function
 %}
 
 %token <string> IDENT VIDENT STRING RELOP
-%token LBRACKET RBRACKET LPAREN RPAREN
+%token LBRACKET RBRACKET LPAREN RPAREN LT GT
 %token COMMA PIPE EQ BANG 
 %token PLUS MINUS COLON SLASH
 %token EOL
@@ -84,6 +84,8 @@ source:
 
 relop:
   | RELOP       { $1 }
+  | LT          { "<" }
+  | GT          { ">" }
   | EQ          { "=" }
 ;
 
@@ -124,8 +126,10 @@ or_formula:
 /**************************************/ 
 
 buidldep:
-  |vpkg                            { ($1,[]) }
-  |vpkg LBRACKET buildarchlist RBRACKET { ($1,$3) }
+  |vpkg                            { ($1,[],[]) }
+  |vpkg LBRACKET buildarchlist RBRACKET { ($1,$3,[]) }
+  |vpkg LT buildprofilelist GT { ($1,[],$3) }
+  |vpkg LBRACKET buildarchlist RBRACKET LT buildprofilelist GT { ($1,$3,$6) }
 ;
 
 builddepslist:
@@ -163,6 +167,23 @@ buildarchlist:
 buildarchlist_ne:
   | buildarch                       { [ $1 ] }
   | buildarch buildarchlist_ne      { $1 :: $2 }
+;
+
+/**************************************/ 
+
+buildprofile:
+  | BANG IDENT             { (false,$2) }
+  | IDENT                  { (true,$1)  }
+;
+
+buildprofilelist:
+  |             { [] }
+  | buildprofilelist_ne { $1 }
+;
+
+buildprofilelist_ne:
+  | buildprofile                      { [ $1 ] }
+  | buildprofile buildprofilelist_ne  { $1 :: $2 }
 ;
 
 /**************************************/ 

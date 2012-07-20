@@ -86,24 +86,47 @@ let input_raw =
 
 let sep = ":" ;;
 
+(* as per policy, if the first arch restriction contains a !
+ * then we assume that all archs on the lists are bang-ed.
+ * cf: http://www.debian.org/doc/debian-policy/ch-relationships.html 7.1
+ * use the same rule for buildprofile lists *)
+let select archs profile dep = match dep,profile with
+  |(v,(((true,_)::_) as al),(((false,_)::_))),None when
+    List.exists (fun (_,a) -> List.mem a archs) al -> Some v
+  |(v,(((false,_)::_) as al),(((false,_)::_))),None when
+    List.for_all (fun (_,a) -> not(List.mem a archs)) al -> Some v
+  |(v,(((true,_)::_) as al),(((true,_)::_) as pl)),(Some p) when
+    (List.exists (fun (_,a) -> List.mem a archs) al) &&
+    (List.exists (fun (_,a) -> a = p) pl) -> Some v
+  |(v,(((true,_)::_) as al),(((false,_)::_) as pl)),(Some p) when
+    (List.exists (fun (_,a) -> List.mem a archs) al) &&
+    (List.for_all (fun (_,a) -> a <> p) pl) -> Some v
+  |(v,(((false,_)::_) as al),(((true,_)::_) as pl)),(Some p) when
+    (List.for_all (fun (_,a) -> not(List.mem a archs)) al) &&
+    (List.exists (fun (_,a) -> a = p) pl) -> Some v
+  |(v,(((false,_)::_) as al),(((false,_)::_) as pl)),(Some p) when
+    (List.for_all (fun (_,a) -> not(List.mem a archs)) al) &&
+    (List.for_all (fun (_,a) -> a <> p) pl) -> Some v
+  |(v,(((false,_)::_) as al),[]),_ when
+    List.for_all (fun (_,a) -> not(List.mem a archs)) al -> Some v
+  |(v,(((true,_)::_) as al),[]),_ when
+    List.exists (fun (_,a) -> List.mem a archs) al -> Some v
+  |(v,[],(((false,_)::_) as pl)),(Some p) when
+    List.for_all (fun (_,a) -> a <> p) pl -> Some v
+  |(v,[],(((true,_)::_) as pl)),(Some p) when
+    List.exists (fun (_,a) -> a = p) pl -> Some v
+  |(v,[],(((false,_)::_))),None -> Some v
+  |(v,[],[]),_ -> Some v
+  |_ -> None
+;;
+
 (** transform a list of sources into dummy packages to be then converted to cudf *)
-let sources2packages ?(src="src") archs l =
+let sources2packages ?(profiles=false) ?(src="src") archs l =
   let archs = "all"::"any"::archs in
-  (* as per policy, if the first arch restriction contains a !
-   * then we assume that all archs on the lists are bang-ed.
-   * cf: http://www.debian.org/doc/debian-policy/ch-relationships.html 7.1 *)
-  let select = function
-    |(v,(((false,_)::_) as al)) when 
-      List.for_all (fun (_,a) -> not(List.mem a archs)) al -> Some v
-    |(v,(((true,_)::_) as al)) when 
-      List.exists (fun (_,a) -> List.mem a archs) al -> Some v
-    |(v,[]) -> Some v
-    |_ -> None
-  in
-  let conflicts l = List.filter_map select l in
-  let depends ll = 
+  let conflicts profile l = List.filter_map (select archs profile) l in
+  let depends profile ll =
     List.filter_map (fun l ->
-      match List.filter_map select l with 
+      match List.filter_map (select archs profile) l with
       |[] -> None 
       | l -> Some l
     ) ll
@@ -112,27 +135,44 @@ let sources2packages ?(src="src") archs l =
    * by native packages. Despite that, both fields are each concatenated. B-D-I
    * and B-C-I can not contain :any or :native modifiers. Adding :native to
    * B-D-I and B-C-I makes sure they are satisfied by native packages *)
-  let add_native_l = List.map (fun (((name, ao), constr), al) -> match ao with
-      | None -> (((name, Some "native"), constr), al)
+  let add_native_l = List.map (fun (((name, ao), constr), al, pl) -> match ao with
+      | None -> (((name, Some "native"), constr), al, pl)
       | Some a ->
          warning "modifier %s for indep dependency %s used" a name;
-         (((name, ao), constr), al)
+         (((name, ao), constr), al, pl)
   ) in
   let add_native_ll = List.map (fun deps -> add_native_l deps) in
   let bins pkg = String.concat "," pkg.binary in
-  List.filter_map (fun pkg ->
-    let pkgarchs = pkg.architecture in
-    if List.exists (fun a -> List.mem a archs) pkgarchs then
-      Some (
-      { Packages.default_package with
-        Packages.name = src ^ sep ^ pkg.name ;
-        source = (pkg.name, Some pkg.version);
-        version = pkg.version;
-        depends = ([(("build-essential", Some "native"), None)])::(depends ((add_native_ll pkg.build_depends_indep) @ pkg.build_depends));
-        conflicts = conflicts ((add_native_l pkg.build_conflicts_indep) @ pkg.build_conflicts);
-        architecture = String.concat "," pkg.architecture;
-        extras = [("type",src);("binaries",bins pkg)]
-      }
-      )
-    else None
-  ) l
+
+  let src2pkg ?(profile=None) srcpkg =
+    let prefix = match profile with None -> src | Some s -> src^"-"^s in
+    let extras_profile = match profile with None -> [] | Some s -> [("profile", s)] in
+    { Packages.default_package with
+      Packages.name = prefix ^ sep ^ srcpkg.name ;
+      source = (srcpkg.name, Some srcpkg.version);
+      version = srcpkg.version;
+      depends = ([(("build-essential", Some "native"), None)])::(depends profile ((add_native_ll srcpkg.build_depends_indep) @ srcpkg.build_depends));
+      conflicts = conflicts profile ((add_native_l srcpkg.build_conflicts_indep) @ srcpkg.build_conflicts);
+      architecture = String.concat "," srcpkg.architecture;
+      extras = extras_profile @ [("type",src);("binaries",bins srcpkg)]
+    }
+  in
+
+  (* search in Build-Depends and Build-Conflicts for buildprofiles
+     searching in Build-Depends-Indep and Build-Conflicts-Indep doesnt make sense *)
+  let getprofiles pkg =
+    let deps = pkg.build_conflicts @ (List.concat pkg.build_depends) in
+    List.unique (List.map (fun (_,p) -> p) (List.fold_left (fun l (_,_,pl) -> pl @ l) [] deps))
+  in
+
+  (* right fold to not inverse the order *)
+  List.fold_right (fun srcpkg al ->
+    let pkgarchs = srcpkg.architecture in
+    if List.exists (fun a -> List.mem a archs) pkgarchs then begin
+      let pkg = src2pkg srcpkg in
+      if profiles then begin
+        pkg :: (List.map (fun p -> src2pkg ~profile:(Some p) srcpkg) (getprofiles srcpkg)) @ al
+      end else
+        pkg::al
+    end else al
+  ) l []
