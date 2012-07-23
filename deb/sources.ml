@@ -121,7 +121,7 @@ let select archs profile dep = match dep,profile with
 ;;
 
 (** transform a list of sources into dummy packages to be then converted to cudf *)
-let sources2packages ?(profiles=false) ?(src="src") archs l =
+let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") archs l =
   let archs = "all"::"any"::archs in
   let conflicts profile l = List.filter_map (select archs profile) l in
   let depends profile ll =
@@ -147,12 +147,14 @@ let sources2packages ?(profiles=false) ?(src="src") archs l =
   let src2pkg ?(profile=None) srcpkg =
     let prefix = match profile with None -> src | Some s -> src^"-"^s in
     let extras_profile = match profile with None -> [] | Some s -> [("profile", s)] in
+    let depends_indep = if noindep then [] else add_native_ll srcpkg.build_depends_indep in
+    let conflicts_indep = if noindep then [] else add_native_l srcpkg.build_conflicts_indep in
     { Packages.default_package with
       Packages.name = prefix ^ sep ^ srcpkg.name ;
       source = (srcpkg.name, Some srcpkg.version);
       version = srcpkg.version;
-      depends = ([(("build-essential", Some "native"), None)])::(depends profile ((add_native_ll srcpkg.build_depends_indep) @ srcpkg.build_depends));
-      conflicts = conflicts profile ((add_native_l srcpkg.build_conflicts_indep) @ srcpkg.build_conflicts);
+      depends = [(("build-essential", Some "native"), None)]::(depends profile (depends_indep @ srcpkg.build_depends));
+      conflicts = conflicts profile (conflicts_indep @ srcpkg.build_conflicts);
       architecture = String.concat "," srcpkg.architecture;
       extras = extras_profile @ [("type",src);("binaries",bins srcpkg)]
     }
