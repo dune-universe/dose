@@ -207,8 +207,8 @@ let get_real_version tables (name,cudfversion) =
 
 let loadl tables l =
   List.flatten (
-    List.map (fun ((name,_),sel) ->
-      let encname = (* CudfAdd.encode *) name in
+    List.map (fun ((name,aop),sel) ->
+      let encname = match aop with Some a -> name^":"^a | None -> name in
       match CudfAdd.cudfop sel with
       |None ->
           if (Util.StringHashtbl.mem tables.virtual_table name) &&
