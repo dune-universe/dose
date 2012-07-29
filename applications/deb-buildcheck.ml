@@ -33,6 +33,7 @@ module Options = struct
   (* let checkonly = Boilerplate.vpkglist_option () *)
   let summary = StdOpt.store_true ()
   let dump = StdOpt.str_option ()
+  let host = StdOpt.str_option ()
 
   open OptParser
   add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
@@ -43,6 +44,8 @@ module Options = struct
   add options ~long_name:"summary" ~help:"Print a detailed summary" summary;
 
   add options ~long_name:"dump" ~help:"dump the cudf file" dump;
+
+  add options ~long_name:"host" ~help:"cross build for foreign architecture" host;
 
   include Boilerplate.MakeDistribOptions(struct let options = options end);;
 
@@ -64,9 +67,22 @@ let main () =
    let options = Options.set_options (Input.guess_format [posargs]) in
 *)
 
-  let archs = 
+  let archs = if OptParse.Opt.is_set Options.host then
+    (OptParse.Opt.get Options.host)::
+      (OptParse.Opt.get Options.deb_foreign_arch)
+  else
     (OptParse.Opt.get Options.deb_native_arch)::
       (OptParse.Opt.get Options.deb_foreign_arch)
+  in
+
+  let options = if OptParse.Opt.is_set Options.host then
+    { Debcudf.default_options with
+      Debcudf.native = OptParse.Opt.get Options.deb_native_arch;
+      Debcudf.foreign = OptParse.Opt.get Options.deb_foreign_arch;
+      Debcudf.host = OptParse.Opt.get Options.host;
+    }
+  else
+    Debcudf.default_options
   in
 
   let pkglist, srclist =
@@ -98,8 +114,8 @@ let main () =
       ) ["architecture";"source";"sourcenumber"]
     in (p,v,l)
   in
-  let sl = List.map (fun pkg -> Debcudf.tocudf tables pkg) srclist in
-  let l = List.fold_left (fun acc pkg -> (Debcudf.tocudf tables pkg)::acc) sl pkglist in
+  let sl = List.map (fun pkg -> Debcudf.tocudf ~options tables pkg) srclist in
+  let l = List.fold_left (fun acc pkg -> (Debcudf.tocudf ~options tables pkg)::acc) sl pkglist in
 
   let universe = Cudf.load_universe l in
   let universe_size = Cudf.universe_size universe in
@@ -116,6 +132,9 @@ let main () =
 
   if (OptParse.Opt.get Options.deb_foreign_arch) != [] then
     Format.fprintf fmt "foreign-architecture: %s@." (String.concat "," (OptParse.Opt.get Options.deb_foreign_arch));
+
+  if OptParse.Opt.is_set Options.host then
+    Format.fprintf fmt "cross build for host-architecture: %s@." (OptParse.Opt.get Options.host);
 
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
   let callback d = 
