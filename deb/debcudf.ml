@@ -71,6 +71,7 @@ let add_name_arch a n = CudfAdd.encode (Printf.sprintf "%s:%s" n a)
    of the package we are considering *)
 let add_arch native_arch package_arch = function
   |name when String.ends_with name ":any" -> (CudfAdd.encode name)
+  |name when String.ends_with name ":native" -> add_name_arch (String.slice ~last:(-7) name) native_arch
   |name when package_arch = "all" -> add_name_arch name native_arch
   |name -> add_name_arch name package_arch
 
