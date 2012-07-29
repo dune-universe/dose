@@ -318,7 +318,8 @@ let add_extra extras tables pkg =
 
 let tocudf tables ?(options=default_options) ?(inst=false) pkg =
   if options.native <> "" then begin
-    let _name = add_arch options.native pkg.architecture pkg.name in
+    let pkgarch = if options.host <> "" && String.starts_with pkg.name "src:" then options.host else pkg.architecture in
+    let _name = add_arch options.native pkgarch pkg.name in
     let version = get_cudf_version tables (pkg.name,pkg.version)  in
     let _provides = 
       let l = 
@@ -328,20 +329,20 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
         |`Allowed -> [(CudfAdd.encode pkg.name,None) ; (CudfAdd.encode (pkg.name^":any"),None)]
         |`Same -> []
       in
-      l@(add_arch_l options.native pkg.architecture (loadlp tables pkg.provides))
+      l@(add_arch_l options.native pkgarch (loadlp tables pkg.provides))
     in
     let _conflicts = 
       (* self conflict / multi-arch conflict *)
-      let sc = (add_arch options.native pkg.architecture pkg.name,None) in
+      let sc = (add_arch options.native pkgarch pkg.name,None) in
       let mac = (CudfAdd.encode pkg.name,None) in
       let l = pkg.breaks @ pkg.conflicts in
       match pkg.multiarch with
       |(`None|`Foreign|`Allowed) -> 
-          sc::mac::(add_arch_l options.native pkg.architecture (loadl tables l))
-      |`Same -> sc::(add_arch_l options.native pkg.architecture (loadl tables l))
+          sc::mac::(add_arch_l options.native pkgarch (loadl tables l))
+      |`Same -> sc::(add_arch_l options.native pkgarch (loadl tables l))
     in
     let _depends = 
-      List.map (add_arch_l options.native pkg.architecture) 
+      List.map (add_arch_l options.native pkgarch) 
       (loadll tables (pkg.pre_depends @ pkg.depends))
     in
     { Cudf.default_package with
