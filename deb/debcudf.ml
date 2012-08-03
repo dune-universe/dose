@@ -352,7 +352,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
     { Cudf.default_package with
       Cudf.package = _name ;
       Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;
-      Cudf.keep = if options.ignore_essential then `Keep_none else add_essential pkg.essential;
+      Cudf.keep = if options.ignore_essential || (pkgarch <> options.native && pkgarch <> "all") then `Keep_none else add_essential pkg.essential;
       Cudf.depends = _depends;
       Cudf.conflicts = _conflicts ;
       Cudf.provides = _provides ;
