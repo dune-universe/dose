@@ -335,11 +335,15 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
       (* self conflict / multi-arch conflict *)
       let sc = (add_arch options.native pkgarch pkg.name,None) in
       let mac = (CudfAdd.encode pkg.name,None) in
+      let masc = (* multi-arch: same conflict to packages of same name but different arch and version*)
+        List.map (fun arch -> (add_arch options.native arch pkg.name,Some(`Neq,version)))
+        (List.filter (fun arch -> arch != pkgarch) (options.native::options.foreign))
+      in
       let l = pkg.breaks @ pkg.conflicts in
       match pkg.multiarch with
       |(`None|`Foreign|`Allowed) -> 
           sc::mac::(add_arch_l options.native pkgarch (loadl tables l))
-      |`Same -> sc::(add_arch_l options.native pkgarch (loadl tables l))
+      |`Same -> sc::masc@(add_arch_l options.native pkgarch (loadl tables l))
     in
     let _depends = 
       List.map (add_arch_l options.native pkgarch) 
