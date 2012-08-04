@@ -325,7 +325,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
       let l = 
         match pkg.multiarch with
         |`None -> [(CudfAdd.encode pkg.name,None)]
-        |`Foreign -> List.map (fun arch -> (add_arch options.native arch pkg.name,Some(`Eq,version))) options.foreign
+        |`Foreign -> List.map (fun arch -> (add_arch options.native arch pkg.name,Some(`Eq,version))) (List.filter (fun arch -> arch != pkgarch) (options.native::options.foreign))
         |`Allowed -> [(CudfAdd.encode pkg.name,None) ; (CudfAdd.encode (pkg.name^":any"),None)]
         |`Same -> []
       in
