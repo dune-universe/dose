@@ -128,7 +128,7 @@ let sources2packages ?(src="src") archs l =
         Packages.name = src ^ sep ^ pkg.name ;
         source = (pkg.name, Some pkg.version);
         version = pkg.version;
-        depends = depends ((add_native_ll pkg.build_depends_indep) @ pkg.build_depends);
+        depends = ([(("build-essential", Some "native"), None)])::(depends ((add_native_ll pkg.build_depends_indep) @ pkg.build_depends));
         conflicts = conflicts ((add_native_l pkg.build_conflicts_indep) @ pkg.build_conflicts);
         architecture = String.concat "," pkg.architecture;
         extras = [("type",src);("binaries",bins pkg)]
