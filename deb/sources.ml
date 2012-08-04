@@ -108,6 +108,17 @@ let sources2packages ?(src="src") archs l =
       | l -> Some l
     ) ll
   in
+  (* In contrast to B-D and B-C, B-D-I and B-C-I requirements must be satisfied
+   * by native packages. Despite that, both fields are each concatenated. B-D-I
+   * and B-C-I can not contain :any or :native modifiers. Adding :native to
+   * B-D-I and B-C-I makes sure they are satisfied by native packages *)
+  let add_native_l = List.map (fun (((name, ao), constr), al) -> match ao with
+      | None -> (((name, Some "native"), constr), al)
+      | Some a ->
+         warning "modifier %s for indep dependency %s used" a name;
+         (((name, ao), constr), al)
+  ) in
+  let add_native_ll = List.map (fun deps -> add_native_l deps) in
   let bins pkg = String.concat "," pkg.binary in
   List.filter_map (fun pkg ->
     let pkgarchs = pkg.architecture in
@@ -117,8 +128,8 @@ let sources2packages ?(src="src") archs l =
         Packages.name = src ^ sep ^ pkg.name ;
         source = (pkg.name, Some pkg.version);
         version = pkg.version;
-        depends = depends (pkg.build_depends_indep @ pkg.build_depends);
-        conflicts = conflicts (pkg.build_conflicts_indep @ pkg.build_conflicts);
+        depends = depends ((add_native_ll pkg.build_depends_indep) @ pkg.build_depends);
+        conflicts = conflicts ((add_native_l pkg.build_conflicts_indep) @ pkg.build_conflicts);
         architecture = String.concat "," pkg.architecture;
         extras = [("type",src);("binaries",bins pkg)]
       }
