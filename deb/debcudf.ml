@@ -321,15 +321,25 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
     let pkgarch = if options.host <> "" && String.starts_with pkg.name "src:" then options.host else pkg.architecture in
     let _name = add_arch options.native pkgarch pkg.name in
     let version = get_cudf_version tables (pkg.name,pkg.version)  in
-    let _provides = 
-      let l = 
-        match pkg.multiarch with
-        |`None -> [(CudfAdd.encode pkg.name,None)]
-        |`Foreign -> List.map (fun arch -> (add_arch options.native arch pkg.name,Some(`Eq,version))) (List.filter (fun arch -> arch != pkgarch) (options.native::options.foreign))
-        |`Allowed -> [(CudfAdd.encode pkg.name,None) ; (CudfAdd.encode (pkg.name^":any"),None)]
-        |`Same -> []
-      in
-      l@(add_arch_l options.native pkgarch (loadlp tables pkg.provides))
+    let _provides = match pkg.multiarch with
+      | `None ->
+         (* only arch-less package and pkgarch provides *)
+         (CudfAdd.encode pkg.name,None)::(add_arch_l options.native pkgarch (loadlp tables pkg.provides))
+      | `Foreign ->
+         (* packages of same name and version of itself in all arches except
+          * its own *)
+         (List.map (fun arch -> (add_arch options.native arch pkg.name,Some(`Eq,version))) (List.filter (fun arch -> arch != pkgarch) (options.native::options.foreign)))
+         (* each package this package provides is provided in all arches *)
+         @(List.fold_left (fun l a -> (add_arch_l options.native a (loadlp tables pkg.provides))@l) [] (options.native::options.foreign))
+      | `Allowed ->
+         (* archless package and arch: any package *)
+         (CudfAdd.encode pkg.name,None)::(CudfAdd.encode (pkg.name^":any"),None)
+         (* all provides as arch: any *)
+         ::(List.map (fun (name, v) -> (name^":any", v)) (loadlp tables pkg.provides))
+         (* pkgarch provides *)
+         @(add_arch_l options.native pkgarch (loadlp tables pkg.provides))
+      | `Same ->
+         (add_arch_l options.native pkgarch (loadlp tables pkg.provides))
     in
     let _conflicts = 
       (* self conflict / multi-arch conflict *)
