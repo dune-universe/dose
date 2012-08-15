@@ -669,6 +669,52 @@ let test_parsing =
     "test_parse_pin"          >::: make_test_cases parse_pin_triplets;
   ]
 
+let select_deps =
+  let function_to_test = (fun (archs,profile,dep) -> Sources.select archs profile dep) in
+  let returns = returns_result function_to_test in
+  (* testname archlist profilename     pkg    archlist           profilelist           return *)
+  [ ("00", (["amd64"], None,          ("foo", [],                [])),                 returns (Some "foo"));
+    ("01", (["amd64"], None,          ("foo", [],                [(true,"stage1")])),  returns None);
+    ("02", (["amd64"], None,          ("foo", [],                [(false,"stage1")])), returns (Some "foo"));
+    ("03", (["amd64"], None,          ("foo", [(true,"amd64")],  [])),                 returns (Some "foo"));
+    ("04", (["amd64"], None,          ("foo", [(true,"amd64")],  [(true,"stage1")])),  returns None);
+    ("05", (["amd64"], None,          ("foo", [(true,"amd64")],  [(false,"stage1")])), returns (Some "foo"));
+    ("06", (["amd64"], None,          ("foo", [(false,"amd64")], [])),                 returns None);
+    ("07", (["amd64"], None,          ("foo", [(false,"amd64")], [(true,"stage1")])),  returns None);
+    ("08", (["amd64"], None,          ("foo", [(false,"amd64")], [(false,"stage1")])), returns None);
+    ("09", (["amd64"], Some "stage1", ("foo", [],                [])),                 returns (Some "foo"));
+    ("10", (["amd64"], Some "stage1", ("foo", [],                [(true,"stage1")])),  returns (Some "foo"));
+    ("11", (["amd64"], Some "stage1", ("foo", [],                [(false,"stage1")])), returns None);
+    ("12", (["amd64"], Some "stage1", ("foo", [(true,"amd64")],  [])),                 returns (Some "foo"));
+    ("13", (["amd64"], Some "stage1", ("foo", [(true,"amd64")],  [(true,"stage1")])),  returns (Some "foo"));
+    ("14", (["amd64"], Some "stage1", ("foo", [(true,"amd64")],  [(false,"stage1")])), returns None);
+    ("15", (["amd64"], Some "stage1", ("foo", [(false,"amd64")], [])),                 returns None);
+    ("16", (["amd64"], Some "stage1", ("foo", [(false,"amd64")], [(true,"stage1")])),  returns None);
+    ("17", (["amd64"], Some "stage1", ("foo", [(false,"amd64")], [(false,"stage1")])), returns None);
+    ("18", (["i386"],  None,          ("foo", [],                [])),                 returns (Some "foo"));
+    ("19", (["i386"],  None,          ("foo", [],                [(true,"stage1")])),  returns None);
+    ("20", (["i386"],  None,          ("foo", [],                [(false,"stage1")])), returns (Some "foo"));
+    ("21", (["i386"],  None,          ("foo", [(true,"amd64")],  [])),                 returns None);
+    ("22", (["i386"],  None,          ("foo", [(true,"amd64")],  [(true,"stage1")])),  returns None);
+    ("23", (["i386"],  None,          ("foo", [(true,"amd64")],  [(false,"stage1")])), returns None);
+    ("24", (["i386"],  None,          ("foo", [(false,"amd64")], [])),                 returns (Some "foo"));
+    ("25", (["i386"],  None,          ("foo", [(false,"amd64")], [(true,"stage1")])),  returns None);
+    ("26", (["i386"],  None,          ("foo", [(false,"amd64")], [(false,"stage1")])), returns (Some "foo"));
+    ("27", (["i386"],  Some "stage1", ("foo", [],                [])),                 returns (Some "foo"));
+    ("28", (["i386"],  Some "stage1", ("foo", [],                [(true,"stage1")])),  returns (Some "foo"));
+    ("29", (["i386"],  Some "stage1", ("foo", [],                [(false,"stage1")])), returns None);
+    ("30", (["i386"],  Some "stage1", ("foo", [(true,"amd64")],  [])),                 returns None);
+    ("31", (["i386"],  Some "stage1", ("foo", [(true,"amd64")],  [(true,"stage1")])),  returns None);
+    ("32", (["i386"],  Some "stage1", ("foo", [(true,"amd64")],  [(false,"stage1")])), returns None);
+    ("33", (["i386"],  Some "stage1", ("foo", [(false,"amd64")], [])),                 returns (Some "foo"));
+    ("34", (["i386"],  Some "stage1", ("foo", [(false,"amd64")], [(true,"stage1")])),  returns (Some "foo"));
+    ("35", (["i386"],  Some "stage1", ("foo", [(false,"amd64")], [(false,"stage1")])), returns None);
+  ]
+
+let test_sources =
+  "test_sources" >::: [
+    "test select" >::: make_test_cases select_deps;
+  ]
 
 
 let all = 
@@ -680,7 +726,8 @@ let all =
     test_cluster;
     test_evolution;
     test_version_comparison;
-    test_architecture_matching
+    test_architecture_matching;
+    test_sources
   ]
 
 let main () =
