@@ -360,7 +360,7 @@ let cudf_load_universe file =
 (** return the name of the file *)
 let unpack (_,(_,_,_,_,file),_) = file
 
-let deb_parse_input options urilist =
+let deb_parse_input options ?(status=[]) urilist =
   let archs = 
     if options.Debian.Debcudf.native <> "" then
       options.Debian.Debcudf.native :: options.Debian.Debcudf.foreign 
@@ -372,7 +372,7 @@ let deb_parse_input options urilist =
       Debian.Packages.input_raw ~archs filelist
     ) urilist
   in
-  deb_load_list options dll
+  deb_load_list options ~status dll
 
 let eclipse_parse_input options urilist =
   let dll = 

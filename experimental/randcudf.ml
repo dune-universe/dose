@@ -55,10 +55,7 @@ end
 
 (* -------------------------------- *)
 
-let debug fmt = Util.make_debug __FILE__ fmt
-let info fmt = Util.make_info __FILE__ fmt
-let warning fmt = Util.make_warning __FILE__ fmt
-let fatal fmt = Util.make_fatal __FILE__ fmt
+  include Util.Logging(struct let label = __FILE__ end) ;;
 
 let get_random ?(ver=0.0) pkglist n =
   let a = Array.of_list pkglist in
@@ -163,24 +160,9 @@ let main () =
 
   (* raw -> cudf *)
   let (preamble,pkglist) = 
-    let extras_properties =
-      [("Size", ("size", `Nat (Some 0)));
-       ("Installed-Size", ("installedsize", `Nat (Some 0)))]
-    in
-    let default_preamble =
-      let l = List.map snd extras_properties in
-      CudfAdd.add_properties Debian.Debcudf.preamble l
-    in
     if not(OptParse.Opt.is_set Options.status) && (List.length posargs) > 0 then
-      let f = 
-        match Boilerplate.filter None [] posargs with
-        |(Url.Cudf,[f]) -> Boilerplate.unpack f
-        |_ -> (Printf.eprintf "No status provided. I expect a cudf\n" ; exit 1)
-      in
-      let preamble, pkglist, _ = Boilerplate.parse_cudf f in
-      match preamble with
-      |None -> (default_preamble,pkglist)
-      |Some preamble -> (preamble,pkglist)
+      let (preamble, pkglist,_,_) = Boilerplate.parse_input [posargs] in
+      (preamble,List.flatten pkglist)
     else 
       (* we assume the status file is alwasy in dpkg format ! *)
       let status =
@@ -189,15 +171,11 @@ let main () =
           (OptParse.Opt.get Options.status)
         else []
       in
-      let l = 
-        match Boilerplate.filter None [] posargs with
-        |(Url.Deb, l) ->
-            let filelist = List.map Boilerplate.unpack l in
-            Debian.Packages.input_raw filelist
-        |_ -> (Printf.eprintf "Only deb files are supported\n" ; exit 1)
+      let (preamble, pkglist,_,_) = 
+        let filelist = List.map (List.map Input.parse_uri) [posargs] in
+        Boilerplate.deb_parse_input Debian.Debcudf.default_options ~status filelist
       in
-      let (pkglist,_,_) = Boilerplate.deb_load_list ~extras:extras_properties ~status l in
-      (default_preamble, pkglist)
+        (preamble,List.flatten pkglist)
   in
 
   Printf.printf "Package %d\n%!" (List.length pkglist);
