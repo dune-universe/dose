@@ -490,7 +490,7 @@ let main () =
           let cudf_parser = Cudf_parser.from_file solver_out in
           try Cudf_parser.load_solution cudf_parser universe with
           |Cudf_parser.Parse_error _
-          |Cudf.Constraint_violation _ as exn ->
+          |Cudf.Constraint_violation _ ->
             print_error "(CRASH) Solution file contains an invalid solution"
         else print_error "(CRASH) Solution file is empty"
       in
