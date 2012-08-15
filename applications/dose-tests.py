@@ -31,6 +31,9 @@ def diff_files(fromfile,tofile):
 
 def test_application(self,expected_file,cmd):
     uid = uuid.uuid1()
+    if not os.path.exists("tmp"):
+        os.makedirs("tmp")
+
     output_file = "tmp/%s.cudf" % uid
     output = open(output_file,'w')
     if verbose == 2:
@@ -38,8 +41,9 @@ def test_application(self,expected_file,cmd):
     #print expected_file
     p = Popen(cmd, stdout=output)
     p.communicate()
-    output.close()
     d = diff_files(output_file,expected_file)
+    output.close()
+    os.remove(output_file)
     self.assertTrue(d)
 
 class DoseTests(unittest.TestCase):
