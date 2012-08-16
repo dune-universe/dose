@@ -711,9 +711,44 @@ let select_deps =
     ("35", (["i386"],  Some "stage1", ("foo", [(false,"amd64")], [(false,"stage1")])), returns None);
   ]
 
+let test_sources_input = "
+Package: source1
+Version: 0.1-1
+Architecture: any
+Build-Depends: bin1, bin2:any, bin3:native
+
+Package: source2
+Version: 0.1-1
+Architecture: any
+Build-Depends: bin1 [amd64] <!stage1>, bin2 | bin3 <stage1>, bin4 [!amd64] <!stage1>
+
+Package: source3
+Version: 0.1-1
+Architecture: any
+Build-Depends: bin1, bin2
+Build-Depends-Indep: bin3
+"
+
+let test_sources2packages =
+  let data = IO.input_string test_sources_input in
+  let packagelist = Sources.parse_sources_in "" data in
+  let sources = Sources.sources2packages ~profiles:true ["amd64"] packagelist in
+  let function_to_test src =
+    let src = List.find (fun s -> s.Packages.name = src) sources in
+    src.Packages.depends
+  in
+  let returns = returns_result function_to_test in
+  [
+    ("any/native", "src:source1", returns [[(("build-essential", Some "native"), None)]; [(("bin1", None), None)]; [(("bin2", Some "any"), None)]; [(("bin3", Some "native"), None)]]);
+    ("default", "src:source2", returns [[(("build-essential", Some "native"), None)]; [(("bin1", None), None)]; [(("bin2", None), None)]]);
+    ("stage1", "src-stage1:source2", returns [[(("build-essential", Some "native"), None)]; [(("bin2", None), None); (("bin3", None), None)]]);
+    ("indep", "src:source3", returns [[(("build-essential", Some "native"), None)]; [(("bin3", Some "native"), None)]; [(("bin1",None), None)]; [(("bin2",None), None)]])
+  ]
+
 let test_sources =
   "test_sources" >::: [
     "test select" >::: make_test_cases select_deps;
+    "test sources2packages" >::: make_test_cases test_sources2packages;
   ]
 
 
