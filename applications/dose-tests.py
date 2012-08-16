@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import unittest
-from subprocess import Popen
+from subprocess import Popen, PIPE
 import difflib
 import uuid
 import os,sys,time
@@ -47,7 +47,6 @@ def test_application(self,expected_file,cmd):
     self.assertTrue(d)
 
 class DoseTests(unittest.TestCase):
-
     def test_apt_cudf(self):
         expected_file = "tests/applications/dose-tests/apt-cudf-test1"
         cmd = ["./apt-cudf.native", "-e", "--solver=aspcud", "--native-arch=i386", "tests/deb/edsp/install-sarge-etch.edsp"]
@@ -113,6 +112,28 @@ class DoseTests(unittest.TestCase):
         expected_file = "tests/applications/dose-tests/ceve_cone_multiarch_dot"
         cmd = ["./ceve.native","-t","dot","-c", "3dchess:amd64", "--deb-native-arch", "amd64", "deb://tests/DebianPackages/sid.packages.bz2"]
         test_application(self,expected_file,cmd)
+
+    def test_deb_buildcheck_cross(self):
+        cmd = ["./deb-buildcheck.native", "--failures", "--successes", "--deb-native-arch=amd64", "--deb-foreign-archs=armel,linux-any", "--host=armel", "tests/DebianPackages/Sid-amd64-armel-Packages-050812.bz2", "tests/DebianPackages/Sid-Sources-single-version-050812.bz2"]
+        if verbose == 2:
+            print " ".join(cmd)
+        import yaml, urllib
+        p = Popen(cmd, stdout=PIPE)
+        data = yaml.load(p.communicate()[0])
+        apt_result = dict()
+        with open("tests/experimental/bootstrap/apt-get-build-dep-armel-results") as f:
+            for line in f:
+                k, v = line.split()
+                apt_result[k] = v
+        # see bug#683786 for explanation of exceptions
+        exceptions = [ 'bomberclone', 'libcatalyst-actionrole-acl-perl', 'obex-data-server', 'qdox', 'renattach', 'trueprint', 'worker' ]
+        for l in data.get('report', []):
+            if l['status'] == 'ok':
+                k = urllib.unquote(l['package']).split(':')[-1]
+                self.assertTrue(apt_result[k] == "OK" or k in exceptions)
+            else:
+                k = urllib.unquote(l['package']).split(':')[-1]
+                self.assertTrue(apt_result[k] == "FAIL" or k in exceptions)
 
 def main():
     global verbose
