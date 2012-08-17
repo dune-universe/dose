@@ -239,6 +239,7 @@ end
 (**/**)
 
 let merge status packages =
+  info "Merging status file";
   let merge_aux p1 p2 =
     if (p1 >% p2) = 0 then begin
       {p1 with
@@ -255,7 +256,7 @@ let merge status packages =
       with Not_found -> Set.add p acc
     ) Set.empty (status @ packages)
   in
-  Set.elements ps
+  Set.elements ps 
 
 let default_extras = [
   ("Status", None);

@@ -55,7 +55,7 @@ end
 
 (* -------------------------------- *)
 
-  include Util.Logging(struct let label = __FILE__ end) ;;
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 let get_random ?(ver=0.0) pkglist n =
   let a = Array.of_list pkglist in
@@ -156,6 +156,7 @@ let main () =
 
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
+  (* Util.Warning.all_disabled (); *)
   Random.init (OptParse.Opt.get Options.seed);
 
   (* raw -> cudf *)
@@ -178,12 +179,12 @@ let main () =
         (preamble,List.flatten pkglist)
   in
 
-  Printf.printf "Package %d\n%!" (List.length pkglist);
-  Printf.printf "Generating %d random documents with\n%!" (OptParse.Opt.get Options.documents);
-  Printf.printf "install : %d\n%!" (OptParse.Opt.get Options.install);
-  Printf.printf "remove : %d\n%!" (OptParse.Opt.get Options.remove);
-  Printf.printf "upgrade : %d\n%!" (OptParse.Opt.get Options.upgrade);
-  Printf.printf "and %d upgrade all document\n%!" (if (OptParse.Opt.get Options.upgradeAll) then 1 else 0);
+  info "Package %d" (List.length pkglist);
+  info "Generating %d random documents with" (OptParse.Opt.get Options.documents);
+  info "install : %d" (OptParse.Opt.get Options.install);
+  info "remove : %d" (OptParse.Opt.get Options.remove);
+  info "upgrade : %d" (OptParse.Opt.get Options.upgrade);
+  info "and %d upgrade all document" (if (OptParse.Opt.get Options.upgradeAll) then 1 else 0);
   
   let rp = OptParse.Opt.get Options.rem_relop in
   let ip = OptParse.Opt.get Options.inst_relop in
@@ -201,7 +202,7 @@ let main () =
           req_extra = [] ; }
       in
       if Diagnostic.is_solution (Depsolver.check_request (None,pkglist,request)) then begin 
-        Printf.printf "#%d (installed %d) %!" j (List.length installed);
+        info "#%d (installed %d) %!" j (List.length installed);
         create_cudf (preamble,universe,request)
       end else (Printf.printf ".%!" ; one () )
     in one ()

@@ -226,10 +226,7 @@ let enable_timers verbose l =
 
 (** read a debian Packages file - compressed or not *)
 let read_deb ?filter ?(extras=[]) fname =
-  let ch = Input.open_file fname in
-  let l = Debian.Packages.input_raw_ch ?filter ~extras ch in
-  let _ = Input.close_ch ch in
-  l
+  Debian.Packages.input_raw ?filter ~extras [fname]
 
 (* fll = file list list
  * dll = deb packages list list 
@@ -243,7 +240,8 @@ let deb_load_list options ?(status=[]) dll =
   let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
   let cll = 
     List.map (fun l ->
-      List.map (Debian.Debcudf.tocudf tables ~options) l
+      (* XXX this is stupid and slow *)
+      List.map (Debian.Debcudf.tocudf tables ~options) (Debian.Packages.merge status l)
     ) dll
   in
   let preamble = Debian.Debcudf.preamble in
