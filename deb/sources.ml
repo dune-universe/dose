@@ -135,12 +135,15 @@ let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") archs l =
    * by native packages. Despite that, both fields are each concatenated. B-D-I
    * and B-C-I can not contain :any or :native modifiers. Adding :native to
    * B-D-I and B-C-I makes sure they are satisfied by native packages *)
-  let add_native_l = List.map (fun (((name, ao), constr), al, pl) -> match ao with
-      | None -> (((name, Some "native"), constr), al, pl)
-      | Some a ->
+  let add_native_l =
+    List.map (function
+      |(((name, None), constr), al, pl) ->
+          (((name, Some "native"), constr), al, pl)
+      |(((name, Some a), constr), al, pl) ->
          warning "modifier %s for indep dependency %s used" a name;
-         (((name, ao), constr), al, pl)
-  ) in
+         (((name, Some a), constr), al, pl)
+    )
+  in
   let add_native_ll = List.map (fun deps -> add_native_l deps) in
   let bins pkg = String.concat "," pkg.binary in
 

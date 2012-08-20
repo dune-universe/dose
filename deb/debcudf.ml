@@ -318,55 +318,78 @@ let add_extra extras tables pkg =
 
 let tocudf tables ?(options=default_options) ?(inst=false) pkg =
   if options.native <> "" then begin
-    let pkgarch = if options.host <> "" && String.starts_with pkg.name "src:" then options.host else pkg.architecture in
+    let pkgarch =
+      if options.host <> "" && String.starts_with pkg.name "src:" then
+        options.host
+      else
+        pkg.architecture
+    in
     let _name = add_arch options.native pkgarch pkg.name in
     let version = get_cudf_version tables (pkg.name,pkg.version)  in
     let _provides = match pkg.multiarch with
-      | `None ->
+      |`None ->
          (* only arch-less package and pkgarch provides *)
          (CudfAdd.encode pkg.name,None)::(add_arch_l options.native pkgarch (loadlp tables pkg.provides))
-      | `Foreign ->
-         (* packages of same name and version of itself in all arches except
-          * its own *)
-         (List.map (fun arch -> (add_arch options.native arch pkg.name,Some(`Eq,version))) (List.filter (fun arch -> arch != pkgarch) (options.native::options.foreign)))
-         (* each package this package provides is provided in all arches *)
-         @(List.fold_left (fun l a -> (add_arch_l options.native a (loadlp tables pkg.provides))@l) [] (options.native::options.foreign))
-      | `Allowed ->
+      |`Foreign ->
+         (* packages of same name and version of itself in all arches except its own
+            each package this package provides is provided in all arches *)
+          List.flatten (
+            List.map (function
+              |arch when arch = pkgarch ->
+                  (add_arch_l options.native arch (loadlp tables pkg.provides))
+              |arch ->
+                  (add_arch options.native arch pkg.name,Some(`Eq,version)) ::
+                    (add_arch_l options.native arch (loadlp tables pkg.provides))
+            ) (options.native::options.foreign)
+          )
+      |`Allowed ->
          (* archless package and arch: any package *)
-         (CudfAdd.encode pkg.name,None)::(CudfAdd.encode (pkg.name^":any"),None)
          (* all provides as arch: any *)
-         ::(List.map (fun (name, v) -> (name^":any", v)) (loadlp tables pkg.provides))
          (* pkgarch provides *)
-         @(add_arch_l options.native pkgarch (loadlp tables pkg.provides))
-      | `Same ->
+         (CudfAdd.encode pkg.name,None)::
+           (CudfAdd.encode (pkg.name^":any"),None)::
+             (List.map (fun (name, v) -> (name^":any", v)) (loadlp tables pkg.provides))@
+                (add_arch_l options.native pkgarch (loadlp tables pkg.provides))
+      |`Same ->
          (add_arch_l options.native pkgarch (loadlp tables pkg.provides))
     in
     let _conflicts = 
       (* self conflict / multi-arch conflict *)
       let sc = (add_arch options.native pkgarch pkg.name,None) in
       let mac = (CudfAdd.encode pkg.name,None) in
-      let masc = (* multi-arch: same conflict to packages of same name but different arch and version*)
-        List.map (fun arch -> (add_arch options.native arch pkg.name,Some(`Neq,version)))
-        (List.filter (fun arch -> arch != pkgarch) (options.native::options.foreign))
+      (* multi-arch: same conflict to packages of same name but different arch and version*)
+      let masc =
+        List.filter_map (function
+          |arch when arch = pkgarch -> None
+          |arch -> Some(add_arch options.native arch pkg.name,Some(`Neq,version))
+        ) (options.native::options.foreign)
       in
       let l = pkg.breaks @ pkg.conflicts in
       match pkg.multiarch with
-      |(`None|`Foreign|`Allowed) -> 
-          sc::mac::(add_arch_l options.native pkgarch (loadl tables l))
-      |`Same -> sc::masc@(add_arch_l options.native pkgarch (loadl tables l))
+        |(`None|`Foreign|`Allowed) ->
+            sc :: mac :: (add_arch_l options.native pkgarch (loadl tables l))
+        |`Same ->
+            sc :: masc @ (add_arch_l options.native pkgarch (loadl tables l))
     in
     let _depends = 
       List.map (add_arch_l options.native pkgarch) 
       (loadll tables (pkg.pre_depends @ pkg.depends))
     in
+    let keep =
+      if options.ignore_essential ||
+      (pkgarch <> options.native && pkgarch <> "all") then
+        `Keep_none
+      else
+        add_essential pkg.essential
+    in
     { Cudf.default_package with
       Cudf.package = _name ;
       Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;
-      Cudf.keep = if options.ignore_essential || (pkgarch <> options.native && pkgarch <> "all") then `Keep_none else add_essential pkg.essential;
-      Cudf.depends = _depends;
+      Cudf.keep = keep ;
+      Cudf.depends = _depends ;
       Cudf.conflicts = _conflicts ;
       Cudf.provides = _provides ;
-      Cudf.installed = add_inst inst pkg;
+      Cudf.installed = add_inst inst pkg ;
       Cudf.pkg_extra = add_extra options.extras_opt tables pkg ;
     }
   end else

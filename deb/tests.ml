@@ -739,18 +739,39 @@ let test_sources2packages =
   in
   let returns = returns_result function_to_test in
   [
-    ("any/native", "src:source1", returns [[(("build-essential", Some "native"), None)]; [(("bin1", None), None)]; [(("bin2", Some "any"), None)]; [(("bin3", Some "native"), None)]]);
-    ("default", "src:source2", returns [[(("build-essential", Some "native"), None)]; [(("bin1", None), None)]; [(("bin2", None), None)]]);
-    ("stage1", "src-stage1:source2", returns [[(("build-essential", Some "native"), None)]; [(("bin2", None), None); (("bin3", None), None)]]);
-    ("indep", "src:source3", returns [[(("build-essential", Some "native"), None)]; [(("bin3", Some "native"), None)]; [(("bin1",None), None)]; [(("bin2",None), None)]])
+    (
+      "any/native", "src:source1", returns [[(("build-essential", Some "native"), None)];
+      [(("bin1", None), None)];
+      [(("bin2", Some "any"), None)];
+      [(("bin3", Some "native"), None)]]
+    );
+    (
+      "default", "src:source2", returns [[(("build-essential", Some "native"), None)];
+      [(("bin1", None), None)];
+      [(("bin2", None), None)]]
+    );
+    (
+      "stage1", "src-stage1:source2", returns [[(("build-essential", Some "native"), None)];
+      [
+        (("bin2", None), None);
+        (("bin3", None), None)]
+      ]
+    );
+    (
+      "indep", "src:source3", returns [[(("build-essential", Some "native"), None)];
+      [(("bin3", Some "native"), None)];
+      [(("bin1",None), None)];
+      [(("bin2",None), None)]]
+    )
   ]
+;;
 
 let test_sources =
   "test_sources" >::: [
     "test select" >::: make_test_cases select_deps;
     "test sources2packages" >::: make_test_cases test_sources2packages;
   ]
-
+;;
 
 let all = 
   "all tests" >::: [ 
