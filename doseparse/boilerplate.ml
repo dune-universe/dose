@@ -182,8 +182,8 @@ module MakeDistribOptions(O : sig val options : OptParse.OptParser.t end) = stru
   open OptParser ;;
   let deb_group = add_group O.options "Debian Specific Options" in
   add O.options ~group:deb_group ~long_name:"deb-native-arch" ~help:"Native architecture" deb_native_arch;
+  add O.options ~group:deb_group ~long_name:"deb-host-arch" ~help:"Host architecture" deb_host_arch;
   (*
-  add options ~group:deb_group ~long_name:"deb-host-arch" ~help:"Host architecture" deb_host_arch;
   add options ~group:deb_group ~long_name:"deb-build-arch" ~help:"Build architecture" deb_build_arch;
   *)
   add O.options ~group:deb_group ~long_name:"deb-foreign-archs" ~help:"Foreign architectures" deb_foreign_arch;

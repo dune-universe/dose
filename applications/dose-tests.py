@@ -114,7 +114,7 @@ class DoseTests(unittest.TestCase):
         test_application(self,expected_file,cmd)
 
     def test_deb_buildcheck_cross(self):
-        cmd = ["./deb-buildcheck.native", "--failures", "--successes", "--deb-native-arch=amd64", "--deb-foreign-archs=armel,linux-any", "--host=armel", "tests/DebianPackages/Sid-amd64-armel-Packages-050812.bz2", "tests/DebianPackages/Sid-Sources-single-version-050812.bz2"]
+        cmd = ["./deb-buildcheck.native", "--failures", "--successes", "--deb-native-arch=amd64", "--deb-foreign-archs=armel,linux-any", "--deb-host-arch=armel", "tests/DebianPackages/Sid-amd64-armel-Packages-050812.bz2", "tests/DebianPackages/Sid-Sources-single-version-050812.bz2"]
         if verbose == 2:
             print " ".join(cmd)
         import yaml, urllib
