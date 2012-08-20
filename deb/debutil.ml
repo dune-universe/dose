@@ -28,6 +28,7 @@ let get_source pkg =
  * otherwise add it to the table indexed by package version *)
 (* actually it should be sourceversion -> list of list of clusters grouped by
  * version *)
+(* (source,sourceversion) -> [= packageversion -> (ref[pkg],realversion) =] *)
 let cluster packagelist =
   let drop_epoch v = let (_,v,r,b) = Version.split v in Version.concat ("",v,r,b) in
   let th = Hashtbl.create (List.length packagelist) in

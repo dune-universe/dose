@@ -92,9 +92,7 @@ exception IgnorePackage of string
  * opt = Some s -> return s *)
 let parse_s ?opt ?err ?(multi=false) f field par =
   let field = String.lowercase field in
-  try 
-    let (_loc,s) = (assoc field par) in
-    f (_loc,s) 
+  try let (_loc,s) = (assoc field par) in f (_loc,s) 
   with Not_found ->
     if Option.is_none opt then
       if Option.is_none err then raise Not_found
@@ -206,21 +204,22 @@ let arch_filter archlist par =
   with Not_found -> false
 
 (* parse the entire file while filtering out unwanted stanzas *)
-let rec packages_parser stanza_parser acc p =
+let rec packages_parser fname stanza_parser acc p =
+  let filename = ("Filename",(Format822.dummy_loc,Filename.basename fname)) in
   match Format822_parser.stanza_822 Format822_lexer.token_822 p.Format822.lexbuf with
   |None -> acc
   |Some stanza -> begin
-      match (stanza_parser stanza) with
-      |None -> packages_parser stanza_parser acc p
-      |Some st -> packages_parser stanza_parser (st::acc) p
+      match stanza_parser (filename::stanza) with
+      |None -> packages_parser fname stanza_parser acc p
+      |Some st -> packages_parser fname stanza_parser (st::acc) p
   end
 
-let parse_packages_in ?filter ?(archs=[]) ?(extras=[]) file ic =
-  info "Parsing Packages file %s..." file;
+let parse_packages_in ?filter ?(archs=[]) ?(extras=[]) fname ic =
+  info "Parsing Packages file %s..." fname;
   try
     let stanza_parser = parse_package_stanza filter archs extras in
-    Format822.parse_from_ch (packages_parser stanza_parser []) ic
-  with ParseError (field,errmsg) -> fatal "Filename %s\n %s : %s" file field errmsg
+    Format822.parse_from_ch (packages_parser fname stanza_parser []) ic
+  with ParseError (field,errmsg) -> fatal "Filename %s\n %s : %s" fname field errmsg
 
 (**/**)
 let id p = (p.name,p.version,p.architecture)
@@ -258,10 +257,17 @@ let merge status packages =
   in
   Set.elements ps 
 
+let is_installed pkg =
+  try match String.nsplit (assoc "status" pkg.extras) " " with
+    |[_;_;"installed"] -> true
+    | _ -> false
+  with Not_found -> false
+
 let default_extras = [
   ("Status", None);
   ("Size", None);
   ("Installed-Size", None);
+  ("Filename", None);
 ]
 
 (** input_raw [file] : parse a debian Packages file from [file] *)

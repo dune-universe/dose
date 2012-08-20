@@ -62,11 +62,11 @@ let parse_package_stanza extras par =
       extras = parse_e extras par;
     }
 
-let parse_packages_in ?(extras=[]) file ic =
-  info "Parsing eclipse 822 file %s..." file;
+let parse_packages_in ?(extras=[]) fname ic =
+  info "Parsing eclipse 822 file %s..." fname;
   let stanza_parser = parse_package_stanza extras in
   Debian.Format822.parse_from_ch (
-    Debian.Packages.packages_parser stanza_parser []
+    Debian.Packages.packages_parser fname stanza_parser []
   ) ic
 
 (**/**)

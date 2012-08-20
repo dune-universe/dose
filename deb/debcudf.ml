@@ -259,6 +259,7 @@ let preamble =
     ("sourceversion",(`Int (Some 1))) ;
     ("essential",(`Bool (Some false))) ;
     ("buildessential",(`Bool (Some false))) ;
+    ("filename",(`String None));
     ]
   in
   CudfAdd.add_properties Cudf.default_preamble l
@@ -279,6 +280,9 @@ let add_extra_default extras tables pkg =
     let cv = get_cudf_version tables ("",v) in
     ("source",`String n), ("sourcenumber", `String v), ("sourceversion", `Int cv)
   in
+  let recommends = ("recommends", `Vpkgformula (loadll tables pkg.recommends)) in
+  let replaces = ("replaces", `Vpkglist (loadl tables pkg.replaces)) in
+  let extras = ("Filename",("filename",`String None))::extras in
   let l =
     List.filter_map (fun (debprop, (cudfprop,v)) ->
       try 
@@ -288,8 +292,6 @@ let add_extra_default extras tables pkg =
       with Not_found -> None
     ) extras
   in
-  let recommends = ("recommends", `Vpkgformula (loadll tables pkg.recommends)) in
-  let replaces = ("replaces", `Vpkglist (loadl tables pkg.replaces)) in
   List.filter_map (function
     |(_,`Vpkglist []) -> None
     |(_,`Vpkgformula []) -> None
@@ -308,12 +310,7 @@ let add_essential = function
 
 let add_inst inst pkg =
   if inst then true 
-  else
-    try
-      match String.nsplit (Packages.assoc "status" pkg.extras) " " with
-      |[_;_;"installed"] -> true
-      | _ -> false
-    with Not_found -> false
+  else Packages.is_installed pkg
 
 let add_extra extras tables pkg =
   add_extra_default extras tables pkg
