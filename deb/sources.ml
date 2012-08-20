@@ -89,34 +89,67 @@ let sep = ":" ;;
 (* as per policy, if the first arch restriction contains a !
  * then we assume that all archs on the lists are bang-ed.
  * cf: http://www.debian.org/doc/debian-policy/ch-relationships.html 7.1
- * use the same rule for buildprofile lists *)
+ * use the same rule for buildprofile lists
+ *
+ * given archs, profile and a dependency with an architecture and profile list,
+ * decide whether to select or drop that dependency *)
 let select archs profile dep = match dep,profile with
+  (* positive arch list, negative profiles, no profile selected
+   *  -> only select if any of archs is in the arch list *)
   |(v,(((true,_)::_) as al),(((false,_)::_))),None when
     List.exists (fun (_,a) -> List.mem a archs) al -> Some v
+  (* negative arch list, negative profiles, no profile selected
+   *  -> only select if none of archs is in the arch list *)
   |(v,(((false,_)::_) as al),(((false,_)::_))),None when
     List.for_all (fun (_,a) -> not(List.mem a archs)) al -> Some v
+  (* positive arch list, positive profiles, some profile selected
+   *  -> only select if any of archs is in the arch list
+   *     and the selected profile is in the profile list *)
   |(v,(((true,_)::_) as al),(((true,_)::_) as pl)),(Some p) when
     (List.exists (fun (_,a) -> List.mem a archs) al) &&
     (List.exists (fun (_,a) -> a = p) pl) -> Some v
+  (* positive arch list, negative profiles, some profile selected
+   *  -> only select if any of archs is in the arch list
+   *     and the selected profile is not in the profile list *)
   |(v,(((true,_)::_) as al),(((false,_)::_) as pl)),(Some p) when
     (List.exists (fun (_,a) -> List.mem a archs) al) &&
     (List.for_all (fun (_,a) -> a <> p) pl) -> Some v
+  (* negative arch list, positive profiles, some profile selected
+   *  -> only select if none of archs is in the arch list
+   *     and the selected profile is in the profile list *)
   |(v,(((false,_)::_) as al),(((true,_)::_) as pl)),(Some p) when
     (List.for_all (fun (_,a) -> not(List.mem a archs)) al) &&
     (List.exists (fun (_,a) -> a = p) pl) -> Some v
+  (* negative arch list, negative profiles, some profile selected
+   *  -> only select if none of archs is in the arch list
+   *     and the selected profile is not in the profile list *)
   |(v,(((false,_)::_) as al),(((false,_)::_) as pl)),(Some p) when
     (List.for_all (fun (_,a) -> not(List.mem a archs)) al) &&
     (List.for_all (fun (_,a) -> a <> p) pl) -> Some v
+  (* negative arch list, no profiles
+   *  -> only select if none of archs is in the arch list *)
   |(v,(((false,_)::_) as al),[]),_ when
     List.for_all (fun (_,a) -> not(List.mem a archs)) al -> Some v
+  (* positive arch list, no profiles
+   *  -> only select if any of archs is in the arch list *)
   |(v,(((true,_)::_) as al),[]),_ when
     List.exists (fun (_,a) -> List.mem a archs) al -> Some v
+  (* no arch list, negative profiles, some profile selected
+   *  -> only select if the selected profile is not in the profile list *)
   |(v,[],(((false,_)::_) as pl)),(Some p) when
     List.for_all (fun (_,a) -> a <> p) pl -> Some v
+  (* no arch list, positive profiles, some profile selected
+   *  -> only select if the selected profile is in the profile list *)
   |(v,[],(((true,_)::_) as pl)),(Some p) when
     List.exists (fun (_,a) -> a = p) pl -> Some v
+  (* no arch list, false profiles, no profile selected
+   *  -> select *)
   |(v,[],(((false,_)::_))),None -> Some v
+  (* no arch list, no profiles
+   *  -> select *)
   |(v,[],[]),_ -> Some v
+  (* any other case
+   *  -> drop *)
   |_ -> None
 ;;
 
