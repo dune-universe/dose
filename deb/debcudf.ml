@@ -393,11 +393,27 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
       Cudf.pkg_extra = add_extra options.extras_opt tables pkg ;
     }
   end else
+    (* :any and :native are not yet allowed in the Debian archive because of
+     * wanna-build not supporting it but at least :native is required to be
+     * removed because of build-essential:native
+     * :any and :native can safely be removed as only packages of native
+     * architecture are considered here anyways
+     * XXX: in the future, dependencies on :$arch will be introduced (for example
+     * for building cross compilers) they have to be handled here as well *)
+    let remove_qualifier = function
+      | n,v when String.ends_with n ":native" -> String.slice ~last:(-7) n, v
+      | n,v when String.ends_with n ":any" -> String.slice ~last:(-4) n, v
+      | n,v -> n, v
+    in
+    let _depends =
+      List.map (List.map remove_qualifier)
+      (loadll tables (pkg.pre_depends @ pkg.depends))
+    in
     { Cudf.default_package with
       Cudf.package = CudfAdd.encode pkg.name ;
       Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;
       Cudf.keep = if options.ignore_essential then `Keep_none else add_essential pkg.essential;
-      Cudf.depends = loadll tables (pkg.pre_depends @ pkg.depends);
+      Cudf.depends = _depends;
       Cudf.conflicts = loadlc tables pkg.name (pkg.breaks @ pkg.conflicts) ;
       Cudf.provides = loadlp tables pkg.provides ;
       Cudf.installed = add_inst inst pkg;
