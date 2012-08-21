@@ -46,12 +46,15 @@ module Options = struct
   add options ~short_name:'k' ~long_name:"keep" ~help:"add keep version to n random packages" keep;
   add options                 ~long_name:"status" ~help:"package status (822 debian format)" status;
   add options                 ~long_name:"all-upgrade" ~help:"generate one upgrade all cudf document" upgradeAll;
-  add options                 ~long_name:"cluster-upgrade" ~help:"upgrade package from big clusters" clusterUpgrade;
+  add options                 ~long_name:"cluster-upgrade" ~help:"choose upgrade candidates from large source clusters" clusterUpgrade;
   add options                 ~long_name:"rstatus" ~help:"add #n packages to the initial status" rstatus;
   add options                 ~long_name:"instrelop" ~help:"relop probability for install requests" inst_relop;
   add options                 ~long_name:"remrelop" ~help:"relop probability for remove requests" rem_relop;
   add options                 ~long_name:"outdir" ~help:"specify the output directory" outdir;
   add options                 ~long_name:"seed" ~help:"specify the random generator seed" seed;
+
+  include Boilerplate.MakeDistribOptions(struct let options = options end);;
+
 end
 
 (* -------------------------------- *)
@@ -182,7 +185,12 @@ let deb_load_list options ?(status=[]) dll =
   let tables = Debian.Debcudf.init_tables pkglist in
   let from_cudf (p,i) = (p,Debian.Debcudf.get_real_version tables (p,i)) in
   let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
-  let clusterUpgrade = select_packages_cluster to_cudf pkglist in
+  let clusterUpgrade = 
+    if OptParse.Opt.get Options.clusterUpgrade then
+      select_packages_cluster to_cudf pkglist 
+    else 
+      []
+  in
   let cll =
     List.map (fun l ->
       (* XXX this is stupid and slow *)
@@ -191,6 +199,42 @@ let deb_load_list options ?(status=[]) dll =
   in
   let preamble = Debian.Debcudf.preamble in
   (preamble,cll,clusterUpgrade,from_cudf,to_cudf)
+
+let edsp_load_list options file =
+  let archs =
+    if options.Debian.Debcudf.native <> "" then
+      options.Debian.Debcudf.native :: options.Debian.Debcudf.foreign
+    else []
+  in
+  let (_,pkglist) = Debian.Edsp.input_raw ~archs file in
+  let tables = Debian.Debcudf.init_tables pkglist in
+  let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
+  let from_cudf (p,i) = (p, Debian.Debcudf.get_real_version tables (p,i)) in
+  let clusterUpgrade = 
+    if OptParse.Opt.get Options.clusterUpgrade then
+      select_packages_cluster to_cudf pkglist 
+    else 
+      []
+  in
+  let preamble =
+    let l = List.map snd Debian.Edsp.extras_tocudf in
+    Common.CudfAdd.add_properties Debian.Debcudf.preamble l
+  in
+  let univ = Hashtbl.create (2*(List.length pkglist)-1) in
+  let cudfpkglist =
+    List.filter_map (fun pkg ->
+      let p = Debian.Edsp.tocudf tables ~options pkg in
+      if not(Hashtbl.mem univ (p.Cudf.package,p.Cudf.version)) then begin
+        Hashtbl.add univ (p.Cudf.package,p.Cudf.version) pkg;
+        Some p
+      end else begin
+        warning "Duplicated package (same version, name and architecture) : (%s,%s,%s)"
+          pkg.Debian.Packages.name pkg.Debian.Packages.version pkg.Debian.Packages.architecture;
+        None
+      end
+    ) pkglist
+  in
+  (preamble,[cudfpkglist],clusterUpgrade,from_cudf,to_cudf)
 
 let deb_parse_input options ?(status=[]) urilist =
   let archs =
@@ -210,28 +254,31 @@ let main () =
 
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
-  (* Util.Warning.all_disabled (); *)
+  Util.Warning.all_disabled ();
   Random.init (OptParse.Opt.get Options.seed);
 
   let (preamble,pkglist,clusterUpgrade) = 
-    (* cudf - contains information about installed packages *)
-    if not(OptParse.Opt.is_set Options.status) && (List.length posargs) > 0 then
-      let (preamble, pkglist,to_cudf,_) = Boilerplate.parse_input [posargs] in
-      (preamble,List.flatten pkglist,[])
-    else 
-      (* packages list + status *)
-      (* we assume the status file is alwasy in dpkg format ! *)
-      let status =
-        if OptParse.Opt.is_set Options.status then 
-          Boilerplate.read_deb ~filter:Debian.Packages.status_filter
-          (OptParse.Opt.get Options.status)
-        else []
-      in
-      let (preamble,pkglist,clusterUpgrade,_,_) = 
-        let filelist = List.map (List.map Input.parse_uri) [posargs] in
-        deb_parse_input Debian.Debcudf.default_options ~status filelist
-      in
-        (preamble,List.flatten pkglist,clusterUpgrade)
+    let (preamble,pkglist,clusterUpgrade,_,_) = 
+      let filelist = List.map (List.map Input.parse_uri) [posargs] in
+      match Input.guess_format [posargs] with
+      |Url.Cudf -> 
+          let (preamble,pkglist,t,f) = Boilerplate.parse_input [posargs] in
+          (preamble,pkglist,[],t,f)
+      |Url.Deb -> 
+          (* we assume the status file is alwasy in dpkg format ! *)
+          let status =
+            if OptParse.Opt.is_set Options.status then 
+              Boilerplate.read_deb ~filter:Debian.Packages.status_filter
+              (OptParse.Opt.get Options.status)
+            else []
+          in
+          deb_parse_input (Options.set_deb_options ()) ~status filelist
+      |Url.Edsp -> 
+          let filelist = List.map (List.map Boilerplate.unpack) filelist in
+          edsp_load_list (Options.set_deb_options ()) (List.hd (List.hd filelist))
+      |_ -> fatal "format not supported"
+    in
+      (preamble,List.flatten pkglist,clusterUpgrade)
   in
 
   info "Package %d" (List.length pkglist);
@@ -244,8 +291,20 @@ let main () =
   let rp = OptParse.Opt.get Options.rem_relop in
   let ip = OptParse.Opt.get Options.inst_relop in
   let (installed,pkglist,universe) = create_pkglist pkglist in
+  let upgrade_candidates =
+    if (List.length clusterUpgrade) = 0 && (OptParse.Opt.get Options.clusterUpgrade) && 
+      (OptParse.Opt.get Options.upgrade) > 1 then begin
+      warning "unable to indentify clusters of packages. Using installed packages instead";
+      installed
+    end else if (OptParse.Opt.get Options.clusterUpgrade) && 
+      (OptParse.Opt.get Options.upgrade) > 1 && (List.length clusterUpgrade) > 0 then begin
+      info "Selecting upgrade packages from large clusters";
+      List.map (fun (n,v) -> Cudf.lookup_package universe (n,v)) clusterUpgrade
+    end else
+      installed
+  in
   for j = 0 to (OptParse.Opt.get Options.documents) - 1 do
-    info "install / remove requests";
+    info "install / remove / upgrade requests";
     let rec one () = 
       (* we install with 20% probability to add a relop to the request
        * and we remove with 10% probability to add a relop to the request *)
@@ -253,7 +312,7 @@ let main () =
         let r = to_remove_random rp installed in
         { Cudf.request_id = "RAND-CUDF-GENERATOR" ;
           install = to_install_random r ip pkglist ;
-          upgrade = to_upgrade_random r installed ;
+          upgrade = to_upgrade_random r upgrade_candidates ;
           remove =  r ;
           req_extra = [] ; }
       in
@@ -263,26 +322,6 @@ let main () =
       end else (Printf.printf ".%!" ; one () )
     in one ()
   done
-  ;
-  if (OptParse.Opt.get Options.clusterUpgrade) then begin
-    info "cluster upgrade request";
-    let ul = List.map (fun (n,v) -> Cudf.lookup_package universe (n,v)) clusterUpgrade in
-    for j = 0 to (OptParse.Opt.get Options.documents) - 1 do
-      let rec one () = 
-        let request =
-          { Cudf.request_id = "RAND-CUDF-GENERATOR" ;
-            install = [];
-            remove = [];
-            upgrade = to_upgrade_random [] ul;
-            req_extra = [] ; }
-        in
-        if Diagnostic.is_solution (Depsolver.check_request (None,pkglist,request)) then begin 
-          info "#%d (installed %d) %!" j (List.length installed);
-          create_cudf (preamble,universe,request)
-        end else (Printf.printf ".%!" ; one () )
-      in one ()
-    done
-  end
   ;
   if (OptParse.Opt.get Options.upgradeAll) then begin
     info "upgrade all request";
