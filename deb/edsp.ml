@@ -143,6 +143,17 @@ let input_raw_ch ?(archs=[]) ic =
   ) ic
 ;;
 
+let input_raw ?(archs=[]) file =
+  let ch =
+    match file with
+    |"-" -> IO.input_channel stdin
+    |_   -> Input.open_file file
+  in
+  let l = input_raw_ch ~archs ch in
+  let _ = Input.close_ch ch in
+  l
+;;
+
 let extras_tocudf =
   [
   ("Hold", ("hold", `Bool (Some false)));

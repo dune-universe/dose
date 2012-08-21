@@ -61,6 +61,11 @@ let default_options = function
       Debian.Debcudf.default_options with
       Debian.Debcudf.ignore_essential = true
     })
+  |Url.Edsp -> Some (
+    Boilerplate.Edsp {
+      Debian.Debcudf.default_options with
+      Debian.Debcudf.ignore_essential = true
+    })
   |Url.Synthesis -> None
   |Url.Hdlist -> None
   |(Url.Pgsql|Url.Sqlite) -> None

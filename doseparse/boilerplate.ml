@@ -122,6 +122,7 @@ end
 type options =
   |Deb of Debian.Debcudf.options
   |Eclipse of Debian.Debcudf.options
+  |Edsp of Debian.Debcudf.options
   |Csw
   |Rpm
   |Cudf
@@ -135,42 +136,60 @@ module MakeDistribOptions(O : sig val options : OptParse.OptParser.t end) = stru
   let deb_build_arch = StdOpt.str_option ()
   let deb_ignore_essential = StdOpt.store_true ()
 
+  let set_deb_options () =
+    let host =
+      if Opt.is_set deb_host_arch then
+        Opt.get deb_host_arch
+      else ""
+    in
+    let build =
+      if Opt.is_set deb_build_arch then
+        Opt.get deb_build_arch
+      else ""
+    in
+    let native =
+      if Opt.is_set deb_native_arch then
+        Opt.get deb_native_arch
+      else ""
+    in
+
+    let archs =
+      let l = Opt.get deb_foreign_arch in
+      let l = if host <> "" then host::l else l in
+      let l = if build <> "" then build::l else l in
+      let l = if native <> "" then native::l else l in
+      l
+    in
+    {
+      Debian.Debcudf.default_options with
+      Debian.Debcudf.foreign = archs;
+      host = host;
+      build = build;
+      native = native;
+      ignore_essential = Opt.get deb_ignore_essential
+    }
+
+  let set_default_options = function
+    |Url.Deb -> Some (
+      Deb { 
+        Debian.Debcudf.default_options with
+        Debian.Debcudf.ignore_essential = true
+      })
+    |Url.Edsp -> Some (
+      Edsp { 
+        Debian.Debcudf.default_options with
+        Debian.Debcudf.ignore_essential = true
+      })
+    |Url.Synthesis -> None
+    |Url.Hdlist -> None
+    |(Url.Pgsql|Url.Sqlite) -> None
+    |Url.Eclipse -> Some (Eclipse Debian.Debcudf.default_options)
+    |Url.Cudf -> None
+    |Url.Csw -> None
+
   let set_options = function
-    |Url.Deb ->
-      let host =
-        if Opt.is_set deb_host_arch then
-          Opt.get deb_host_arch
-        else ""
-      in
-      let build =
-        if Opt.is_set deb_build_arch then
-          Opt.get deb_build_arch
-        else ""
-      in
-      let native =
-        if Opt.is_set deb_native_arch then
-          Opt.get deb_native_arch
-        else ""
-      in
-
-      let archs =
-        let l = Opt.get deb_foreign_arch in
-        let l = if host <> "" then host::l else l in
-        let l = if build <> "" then build::l else l in
-        let l = if native <> "" then native::l else l in
-        l
-      in
-
-      Some (
-        Deb {
-          Debian.Debcudf.default_options with
-          Debian.Debcudf.foreign = archs;
-          host = host;
-          build = build;
-          native = native;
-          ignore_essential = Opt.get deb_ignore_essential
-        }
-      )
+    |Url.Deb -> Some (Deb (set_deb_options ()))
+    |Url.Edsp -> Some (Edsp (set_deb_options ()))
     |Url.Synthesis -> None
     |Url.Hdlist -> None
     |(Url.Pgsql|Url.Sqlite) -> None
@@ -193,7 +212,6 @@ module MakeDistribOptions(O : sig val options : OptParse.OptParser.t end) = stru
     let eclipse_group = add_group options "Eclipse Specific Options" in
 *)
 end
-
 
 let enable_debug = function
   |0 -> () (* only warning messages : default *)
@@ -280,6 +298,40 @@ let csw_load_list dll =
   let preamble = Csw.Cswcudf.preamble in
   (preamble,cll,from_cudf,to_cudf)
  
+let edsp_load_list options file =
+  let archs = 
+    if options.Debian.Debcudf.native <> "" then
+      options.Debian.Debcudf.native :: options.Debian.Debcudf.foreign 
+    else []
+  in
+  let (_,pkglist) = Debian.Edsp.input_raw ~archs file in
+  let tables = Debian.Debcudf.init_tables pkglist in
+  let preamble =
+    let l = List.map snd Debian.Edsp.extras_tocudf in
+    Common.CudfAdd.add_properties Debian.Debcudf.preamble l
+  in  
+  let univ = Hashtbl.create (2*(List.length pkglist)-1) in
+  let cudfpkglist =
+    List.filter_map (fun pkg ->
+      let p = Debian.Edsp.tocudf tables ~options pkg in
+      if not(Hashtbl.mem univ (p.Cudf.package,p.Cudf.version)) then begin
+        Hashtbl.add univ (p.Cudf.package,p.Cudf.version) pkg;
+        Some p
+      end else begin
+        warning "Duplicated package (same version, name and architecture) : (%s,%s,%s)"
+          pkg.Debian.Packages.name pkg.Debian.Packages.version pkg.Debian.Packages.architecture;
+        None
+      end
+    ) pkglist
+  in
+  let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
+  let from_cudf (p,i) = (p, Debian.Debcudf.get_real_version tables (p,i)) in
+  (preamble,[cudfpkglist;[]],from_cudf,to_cudf)
+
+let edsp_load_universe options file =
+  let (pr,l,f,t) = edsp_load_list options file in
+  (pr,Cudf.load_universe (List.hd l), f, t)
+
 (** transform a list of debian control stanza into a cudf universe *)
 let deb_load_universe options l =
   let (pr,cll,f,t) = deb_load_list options [l] in
@@ -340,7 +392,6 @@ let load_cudf doc =
   l
 ;;
 
-(* XXX when parsing a cudf, I should also remember the preamble !! *)
 let cudf_load_list file =
   let preamble, pkglist =
     match parse_cudf file with
@@ -401,6 +452,17 @@ let cudf_parse_input urilist =
     cudf_load_list (unpack p)
 ;;
 
+let edsp_parse_input options urilist =
+  match urilist with
+  |[[p]] when (unpack p) = "-" -> fatal "no stdin for edsp yet"
+  |[[p]] -> edsp_load_list options (unpack p)
+  |l ->
+    if List.length (List.flatten l) > 1 then
+      warning "more then one cudf speficied on the command line";
+    let p = List.hd (List.flatten l) in 
+    edsp_load_list options (unpack p)
+;;
+
 (* Check that all uris are of type that is an instance of scheme *)
 (* If yes return that instance of scheme, and the list of paths  *)
 (* in uris.                                                      *)
@@ -414,6 +476,10 @@ let parse_input ?(options=None) urilist =
   |Url.Eclipse, None -> eclipse_parse_input Debian.Debcudf.default_options filelist
 
   |Url.Deb, Some (Deb opt) -> deb_parse_input opt filelist
+  
+  |Url.Edsp, Some (Edsp opt) -> edsp_parse_input opt filelist
+  |Url.Edsp, None -> edsp_parse_input Debian.Debcudf.default_options filelist
+
   |Url.Eclipse, Some (Eclipse opt) -> eclipse_parse_input opt filelist
 
   |Url.Csw, None -> csw_parse_input filelist
