@@ -114,11 +114,12 @@ class DoseTests(unittest.TestCase):
         test_application(self,expected_file,cmd)
 
     def test_deb_buildcheck(self):
-        expected_file = "deb-buildcheck-output"
+        expected_file = "tests/applications/dose-tests/deb-buildcheck-output"
         cmd = ["./deb-buildcheck.native", "--failures", "--explain", "--deb-native-arch=amd64", "tests/DebianPackages/Sid-amd64-Packages-050812.bz2", "tests/DebianPackages/Sid-Sources-single-version-050812.bz2"]
         test_application(self,expected_file,cmd)
 
     def test_deb_buildcheck_cross(self):
+        expected_file = "tests/applications/dose-tests/apt-get-build-dep-armel-results"
         cmd = ["./deb-buildcheck.native", "--failures", "--successes", "--deb-native-arch=amd64", "--deb-foreign-archs=armel,linux-any", "--deb-host-arch=armel", "tests/DebianPackages/Sid-amd64-armel-Packages-050812.bz2", "tests/DebianPackages/Sid-Sources-single-version-050812.bz2"]
         if verbose == 2:
             print " ".join(cmd)
@@ -126,7 +127,7 @@ class DoseTests(unittest.TestCase):
         p = Popen(cmd, stdout=PIPE)
         data = yaml.load(p.communicate()[0])
         apt_result = dict()
-        with open("tests/experimental/bootstrap/apt-get-build-dep-armel-results") as f:
+        with open(expected_file) as f:
             for line in f:
                 k, v = line.split()
                 apt_result[k] = v
