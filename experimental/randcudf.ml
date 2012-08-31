@@ -13,7 +13,7 @@
 open ExtLib
 open Common
 open Algo
-(* open Cudf *)
+open Debian
 
 module Boilerplate = BoilerplateNoRpm
 
@@ -197,7 +197,10 @@ let deb_load_list options ?(status=[]) dll =
       List.map (Debian.Debcudf.tocudf tables ~options) (Debian.Packages.merge status l)
     ) dll
   in
-  let preamble = Debian.Debcudf.preamble in
+  let preamble =
+    let l = List.map snd options.Debian.Debcudf.extras_opt in
+    Common.CudfAdd.add_properties Debian.Debcudf.preamble l
+  in
   (preamble,cll,clusterUpgrade,from_cudf,to_cudf)
 
 let edsp_load_list options file =
@@ -217,7 +220,7 @@ let edsp_load_list options file =
       []
   in
   let preamble =
-    let l = List.map snd Debian.Edsp.extras_tocudf in
+    let l = List.map snd (Debian.Edsp.extras_tocudf @ options.Debian.Debcudf.extras_opt) in
     Common.CudfAdd.add_properties Debian.Debcudf.preamble l
   in
   let univ = Hashtbl.create (2*(List.length pkglist)-1) in
@@ -250,12 +253,21 @@ let deb_parse_input options ?(status=[]) urilist =
   in
   deb_load_list options ~status dll
 
+let extras_properties = [
+  ("Size", ("size", `Nat (Some 0)));
+  ("Installed-Size", ("installedsize", `Nat (Some 0)))
+];;
+
 let main () =
 
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Util.Warning.all_disabled ();
   Random.init (OptParse.Opt.get Options.seed);
+  let options = { (Options.set_deb_options ()) with
+        Debcudf.extras_opt = extras_properties
+      } 
+  in
 
   let (preamble,pkglist,clusterUpgrade) = 
     let (preamble,pkglist,clusterUpgrade,_,_) = 
@@ -272,10 +284,10 @@ let main () =
               (OptParse.Opt.get Options.status)
             else []
           in
-          deb_parse_input (Options.set_deb_options ()) ~status filelist
+          deb_parse_input options ~status filelist
       |Url.Edsp -> 
           let filelist = List.map (List.map Boilerplate.unpack) filelist in
-          edsp_load_list (Options.set_deb_options ()) (List.hd (List.hd filelist))
+          edsp_load_list options (List.hd (List.hd filelist))
       |_ -> fatal "format not supported"
     in
       (preamble,List.flatten pkglist,clusterUpgrade)
