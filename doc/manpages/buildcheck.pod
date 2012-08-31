@@ -1,19 +1,19 @@
 =head1 NAME
 
-dose3-buildcheck - check installability of build-dependencies 
+dose-builddebcheck - Check if a package can be built on a Debian system 
 
 =head1 SYNOPSIS
 
 =over 
 
-=item B<dose3-buildcheck> [options] I<binary-repositories> I<source-repository> 
+=item B<dose-builddebcheck> [options] I<binary-repositories> I<source-repository> 
 
 =back
 =cut
 
 =head1 DESCRIPTION
 
-dose3-buildcheck determines, for a set of debian source package control
+dose-builddebcheck determines, for a set of debian source package control
 stanzas, called the source repository, whether a build environment for the
 packages of the source repository can be installed by using packages from the
 binary repository. For this, only package meta-information is taken into
@@ -41,13 +41,12 @@ control stanzas, separated by one blank line. For instance, the Sources files
 as found on a Debian mirror server, or in the directory I</var/lib/apt/lists/>
 of a Debian system, are suitable. 
 
-Multi-arch annotations are correctly considered by distcheck. Packages
-whose's architecture is neither the native architecture nor in the
-list of foreign architectures (see below) are ignored. Here, native
-and foreign refers at the same time to the architecture on which the
-compilation will be run, and to the target architecture of the
-compilation. Cross-compilation is not supported in the current
-version.
+Multi-arch annotations are correctly considered by dose-builddebcheck. Packages
+whose's architecture is neither the native architecture nor in the list of
+foreign architectures (see below) are ignored. Here, native and foreign refers
+at the same time to the architecture on which the compilation will be run, and
+to the target architecture of the compilation. Cross-compilation is supported
+by specifying the I<host> architecture.
 
 =cut
 
@@ -66,15 +65,17 @@ that has an architecture different from all.
 Specify a comma-separated list of foreign architectures. The default
 is an empty list of foreign architectures.
 
+=item B<--deb-host-arch=>I<name>...
+
+Specify the host architecture.
+
 =item B<-f --failures> 
 
-Only show broken packages that fail
-the installability check. 
+Only show broken packages that fail the installability check. 
 
 =item B<-v --successes> 
 
-Only show packages that do not fail
-the installability check. 
+Only show packages that do not fail the installability check. 
 
 =item B<-e --explain> 
 
@@ -101,6 +102,15 @@ the binary packages described in file Packages are available:
  dose-builddebcheck -v -f -e --arch amd64 \
  /var/lib/apt/lists/ftp.fr.debian.org_debian_dists_sid_main_binary-amd64_Packages\
  /var/lib/apt/lists/ftp.fr.debian.org_debian_dists_sid_main_source_Sources
+
+Compute the list of source packages for armel in Sources for which it is not
+possible to install a mix build environment on amd64 plus armel, assuming that
+the binary packages described in file Packages are available: 
+
+ deb-builddebcheck --failures --successes --deb-native-arch=amd64 \
+ --deb-foreign-archs=armel,linux-any --deb-host-arch=armel \
+ DebianPackages/Sid-amd64-armel-Packages-050812.bz2 
+ DebianPackages/Sid-Sources-single-version-050812.bz2
 
 =cut
 
