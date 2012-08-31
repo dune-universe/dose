@@ -426,7 +426,7 @@ let main () =
   Util.Progress.set_total progressbar (List.length l); 
   let options = 
     { Debian.Debcudf.default_options with 
-      Debian.Debcudf.extras = extras_property }
+      Debian.Debcudf.extras_opt = extras_property }
   in
   let pl =
     List.map (fun pkg ->
@@ -499,12 +499,13 @@ let main () =
         let il = List.fold_left (fun acc pkg -> (`Pkg pkg.Deb.name) :: acc) [] installed_packages in
         let l = List.map mapver il in
         { Cudf.request_id = request_id ; install = [] ; remove = [] ; upgrade = l ; req_extra = [] ; }
-    |Debian.Apt.Install l ->
+(*    |Debian.Apt.Install l ->
         let l = List.map mapver l in
         { Cudf.request_id = request_id ; install = l ; remove = [] ; upgrade = [] ; req_extra = [] ; } 
     |Debian.Apt.Remove l -> 
         let l = List.map (fun (`Pkg p) -> (p,None) ) l in
         { Cudf.request_id = request_id ; install = [] ; remove = l ; upgrade = [] ; req_extra = [] ;}
+*)
   in
 
   let oc =
