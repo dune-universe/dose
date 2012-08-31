@@ -260,7 +260,7 @@ let preamble =
     ("sourceversion",(`Int (Some 1))) ;
     ("essential",(`Bool (Some false))) ;
     ("buildessential",(`Bool (Some false))) ;
-    ("filename",(`String None));
+    ("filename",(`String (Some "")));
     ]
   in
   CudfAdd.add_properties Cudf.default_preamble l
@@ -325,20 +325,21 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
         pkg.architecture
     in
     let _name = add_arch options.native pkgarch pkg.name in
-    let version = get_cudf_version tables (pkg.name,pkg.version)  in
+    let _version = get_cudf_version tables (pkg.name,pkg.version)  in
     let _provides = match pkg.multiarch with
       |`None ->
          (* only arch-less package and pkgarch provides *)
-         (CudfAdd.encode pkg.name,None)::(add_arch_l options.native pkgarch (loadlp tables pkg.provides))
+         (CudfAdd.encode pkg.name,None)::
+           (add_arch_l options.native pkgarch (loadlp tables pkg.provides))
       |`Foreign ->
-         (* packages of same name and version of itself in all arches except its own
+         (* packages of same name and version of itself in all archs except its own
             each package this package provides is provided in all arches *)
           List.flatten (
             List.map (function
               |arch when arch = pkgarch ->
                   (add_arch_l options.native arch (loadlp tables pkg.provides))
               |arch ->
-                  (add_arch options.native arch pkg.name,Some(`Eq,version)) ::
+                  (add_arch options.native arch pkg.name,Some(`Eq,_version)) ::
                     (add_arch_l options.native arch (loadlp tables pkg.provides))
             ) (options.native::options.foreign)
           )
@@ -348,7 +349,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
          (* pkgarch provides *)
          (CudfAdd.encode pkg.name,None)::
            (CudfAdd.encode (pkg.name^":any"),None)::
-             (List.map (fun (name, v) -> (name^":any", v)) (loadlp tables pkg.provides))@
+             (List.map (fun (name, v) -> (CudfAdd.encode (name^":any"), v)) (loadlp tables pkg.provides))@
                 (add_arch_l options.native pkgarch (loadlp tables pkg.provides))
       |`Same ->
          (add_arch_l options.native pkgarch (loadlp tables pkg.provides))
@@ -361,7 +362,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
       let masc =
         List.filter_map (function
           |arch when arch = pkgarch -> None
-          |arch -> Some(add_arch options.native arch pkg.name,Some(`Neq,version))
+          |arch -> Some(add_arch options.native arch pkg.name,Some(`Neq,_version))
         ) (options.native::options.foreign)
       in
       let l = pkg.breaks @ pkg.conflicts in
@@ -384,7 +385,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
     in
     { Cudf.default_package with
       Cudf.package = _name ;
-      Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;
+      Cudf.version = _version ;
       Cudf.keep = keep ;
       Cudf.depends = _depends ;
       Cudf.conflicts = _conflicts ;
