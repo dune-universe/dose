@@ -42,47 +42,70 @@ let default_source = {
 let parse_s = Packages.parse_s
 let parse_name = Packages.parse_name
 let parse_version = Packages.parse_version
-let parse_arch = Packages.lexbuf_wrapper Packages_parser.archlist_top
 let parse_binary s = List.map fst (Packages.parse_vpkglist s) (* hack XXX *)
 let parse_builddepslist = Packages.lexbuf_wrapper Packages_parser.builddepslist_top
 let parse_builddepsformula = Packages.lexbuf_wrapper Packages_parser.builddepsformula_top
+
+let parse_architectures buildarchlist (_loc,s) =
+  let matchsource sourcearchlist buildarchlist = 
+    List.exists (fun arch ->
+      List.exists(fun source ->
+        Architecture.src_matches_arch source arch
+      ) sourcearchlist
+    ) buildarchlist
+  in
+  let sourcearchlist = Packages.lexbuf_wrapper Packages_parser.archlist_top (_loc,s) in
+  if buildarchlist = [] then sourcearchlist
+  else if matchsource sourcearchlist buildarchlist then sourcearchlist
+  else raise (Packages.IgnorePackage "")
+;;
 
 (* Relationships between source and binary packages
  * http://www.debian.org/doc/debian-policy/ch-relationships.html
  * Build-Depends, Build-Depends-Indep, Build-Conflicts, Build-Conflicts-Indep
 *)
-let parse_package_stanza filter par =
-  let p = {
-      name = parse_s ~err:"(MISSING NAME)" parse_name "Package" par;
-      version = parse_s ~err:"(MISSING VERSION)" parse_version "Version" par;
-      architecture = parse_s ~err:"(MISSING ARCH)" parse_arch "Architecture" par;
-      binary = []; (* parse_s ~opt:[] ~multi:true parse_binary "Binary" par; *)
-      build_depends = 
-        parse_s ~opt:[] ~multi:true parse_builddepsformula "Build-Depends" par; 
-      build_depends_indep =
-        parse_s ~opt:[] ~multi:true parse_builddepsformula "Build-Depends-Indep" par;
-      build_conflicts = 
-        parse_s ~opt:[] ~multi:true parse_builddepslist "Build-Conflicts" par;
-      build_conflicts_indep = 
-        parse_s ~opt:[] ~multi:true parse_builddepslist "Build-Conflicts-Indep" par 
-  }
+let parse_package_stanza filter archs par =
+  let parse_archs = parse_architectures archs in
+  let parse_arch = Packages.lexbuf_wrapper Packages_parser.archlist_top in
+  let p () = {
+    name = parse_s ~err:"(MISSING NAME)" parse_name "Package" par;
+    version = parse_s ~err:"(MISSING VERSION)" parse_version "Version" par;
+    architecture = parse_s ~err:"(MISSING ARCH)" parse_archs "Architecture" par;
+    binary = []; (* parse_s ~opt:[] ~multi:true parse_binary "Binary" par; *)
+    build_depends = 
+      parse_s ~opt:[] ~multi:true parse_builddepsformula "Build-Depends" par; 
+    build_depends_indep =
+      parse_s ~opt:[] ~multi:true parse_builddepsformula "Build-Depends-Indep" par;
+    build_conflicts = 
+      parse_s ~opt:[] ~multi:true parse_builddepslist "Build-Conflicts" par;
+    build_conflicts_indep = 
+      parse_s ~opt:[] ~multi:true parse_builddepslist "Build-Conflicts-Indep" par 
+    }
   in
-  if Option.is_none filter then Some p
-  else if (Option.get filter) p then Some(p) 
-  else None
+  try
+    if Option.is_none filter then Some (p ())
+    else if (Option.get filter) par then Some(p ()) 
+    else None
+  with Packages.IgnorePackage s -> begin
+    let n = parse_s ~opt:"?" parse_name "Package" par in
+    let v = parse_s ~opt:"?" parse_version "Version" par in
+    let al = [] (* XXX something wrong here ! parse_s ~opt:"?" parse_arch "Architecture" par *) in
+    debug "Ignoring Source Package (%s,%s,%s) : %s" n v (String.concat "," al) s;
+    None
+  end
 ;;
 
 (** parse a debian Sources file from channel *)
-let parse_sources_in fname ic =
+let parse_sources_in ?filter ?(archs=[]) fname ic =
   info "Parsing Sources file %s..." fname;
-  let stanza_parser = parse_package_stanza None in
+  let stanza_parser = parse_package_stanza filter archs in
   Format822.parse_from_ch (Packages.packages_parser fname stanza_parser []) ic
 
-(** parse a debian Sources file *)
-let input_raw =
+(** parse a debian Sources file. *)
+let input_raw ?filter ?(archs=[]) =
   let module Set = Set.Make(struct type t = source let compare = compare end) in
   let module M = Format822.RawInput(Set) in
-  M.input_raw parse_sources_in
+  M.input_raw (parse_sources_in ?filter ~archs)
 
 let sep = ":" ;;
 
@@ -153,13 +176,13 @@ let select archs profile dep = match dep,profile with
   |_ -> None
 ;;
 
-(** transform a list of sources into dummy packages to be then converted to cudf *)
-let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") archs l =
-  let archs = "all"::"any"::archs in
-  let conflicts profile l = List.filter_map (select archs profile) l in
+(** transform a list of sources packages into dummy binary packages *)
+let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") builddeparchs l =
+  let builddepsarchs = "all"::"any"::builddeparchs in
+  let conflicts profile l = List.filter_map (select builddeparchs profile) l in
   let depends profile ll =
     List.filter_map (fun l ->
-      match List.filter_map (select archs profile) l with
+      match List.filter_map (select builddeparchs profile) l with
       |[] -> None 
       | l -> Some l
     ) ll
@@ -177,19 +200,22 @@ let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") archs l =
          (((name, Some a), constr), al, pl)
     )
   in
-  let add_native_ll = List.map (fun deps -> add_native_l deps) in
+  let add_native_ll = List.map add_native_l in
   let bins pkg = String.concat "," pkg.binary in
 
+  (* the package name is encodes as src-<profile>:<package name> if
+   * a profile is selected, src:<package-name> otherwise *)
   let src2pkg ?(profile=None) srcpkg =
     let prefix = match profile with None -> src | Some s -> src^"-"^s in
-    let extras_profile = match profile with None -> [] | Some s -> [("profile", s)] in
-    let depends_indep = if noindep then [] else add_native_ll srcpkg.build_depends_indep in
+    let extras_profile  = match profile with None -> [] | Some s -> [("profile", s)] in
+    let depends_indep   = if noindep then [] else add_native_ll srcpkg.build_depends_indep in
     let conflicts_indep = if noindep then [] else add_native_l srcpkg.build_conflicts_indep in
+    let build_essential = [(("build-essential", Some "native"), None)] in
     { Packages.default_package with
       Packages.name = prefix ^ sep ^ srcpkg.name ;
       source = (srcpkg.name, Some srcpkg.version);
       version = srcpkg.version;
-      depends = [(("build-essential", Some "native"), None)]::(depends profile (depends_indep @ srcpkg.build_depends));
+      depends = build_essential::(depends profile (depends_indep @ srcpkg.build_depends));
       conflicts = conflicts profile (conflicts_indep @ srcpkg.build_conflicts);
       architecture = String.concat "," srcpkg.architecture;
       extras = extras_profile @ [("type",src);("binaries",bins srcpkg)]
@@ -199,18 +225,20 @@ let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") archs l =
   (* search in Build-Depends and Build-Conflicts for buildprofiles
      searching in Build-Depends-Indep and Build-Conflicts-Indep doesnt make sense *)
   let getprofiles pkg =
-    let deps = pkg.build_conflicts @ (List.concat pkg.build_depends) in
-    List.unique (List.map (fun (_,p) -> p) (List.fold_left (fun l (_,_,pl) -> pl @ l) [] deps))
+    let deps = pkg.build_conflicts @ (List.flatten pkg.build_depends) in
+    (* XXX certainly we could do better here ... *)
+    List.unique (List.map snd (List.fold_left (fun l (_,_,pl) -> pl @ l) [] deps))
   in
 
   (* right fold to not inverse the order *)
+  (* if a profile is selected we add an encoding of the package for each profile *)
   List.fold_right (fun srcpkg al ->
     let pkgarchs = srcpkg.architecture in
-    if List.exists (fun a -> List.mem a archs) pkgarchs then begin
+    (* if List.exists (fun a -> List.mem a archs) pkgarchs then *)
       let pkg = src2pkg srcpkg in
-      if profiles then begin
+      if profiles then
         pkg :: (List.map (fun p -> src2pkg ~profile:(Some p) srcpkg) (getprofiles srcpkg)) @ al
-      end else
+      else
         pkg::al
-    end else al
+    (* else al *)
   ) l []

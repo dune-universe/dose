@@ -133,12 +133,13 @@ class DoseTests(unittest.TestCase):
                 apt_result[k] = v
         # see bug#683786 for explanation of exceptions
         exceptions = [ 'bomberclone', 'libcatalyst-actionrole-acl-perl', 'obex-data-server', 'qdox', 'renattach', 'trueprint', 'worker' ]
+        #t = open("test-results",'w')
         for l in data.get('report', []):
+            k = urllib.unquote(l['package']).split(':')[-1]
+            #print >>t, k,apt_result[k]
             if l['status'] == 'ok':
-                k = urllib.unquote(l['package']).split(':')[-1]
                 self.assertTrue(apt_result[k] == "OK" or k in exceptions)
-            else:
-                k = urllib.unquote(l['package']).split(':')[-1]
+            else :
                 self.assertTrue(apt_result[k] == "FAIL" or k in exceptions)
 
 def main():

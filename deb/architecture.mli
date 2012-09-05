@@ -18,7 +18,7 @@
 (** Debian architecture strings, as described in Section 5.6.8 of the 
     Dbian policy. Compliant with Debian policy version 3.9.2 *)
 
-(** check wether a source architecture string matches a host
+(** check whether a source architecture string matches a host
     architecture. The source architecture string may contain
     architecture wildcards ("linux-any", "any-i386"), or be "any" or
     "all". The host architecure is one that may be obtained by

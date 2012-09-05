@@ -30,7 +30,7 @@ module Options = struct
   let successes = StdOpt.store_true ()
   let failures = StdOpt.store_true ()
   let explain = StdOpt.store_true ()
-  (* let checkonly = Boilerplate.vpkglist_option () *)
+  let checkonly = Boilerplate.vpkglist_option ()
   let summary = StdOpt.store_true ()
   let dump = StdOpt.str_option ()
 
@@ -39,7 +39,7 @@ module Options = struct
   add options ~short_name:'f' ~long_name:"failures" ~help:"Only show failures" failures;
   add options ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" successes;
 
-  (* add options ~long_name:"checkonly" ~help:"Check only these package" checkonly; *)
+  add options ~long_name:"checkonly" ~help:"Check only these package" checkonly;
   add options ~long_name:"summary" ~help:"Print a detailed summary" summary;
 
   add options ~long_name:"dump" ~help:"dump the cudf file" dump;
@@ -60,29 +60,32 @@ let main () =
   if not(OptParse.Opt.is_set Options.deb_native_arch) then 
       fatal "your must specify at least the native architecture";
 
-  (*
-   let options = Options.set_options (Input.guess_format [posargs]) in
-*)
+   let options = Options.set_deb_options () in
 
-  let archs = if OptParse.Opt.is_set Options.deb_host_arch then
-    (OptParse.Opt.get Options.deb_host_arch)::
-      (OptParse.Opt.get Options.deb_foreign_arch)
-  else
-    (OptParse.Opt.get Options.deb_native_arch)::
-      (OptParse.Opt.get Options.deb_foreign_arch)
-  in
-
-  let options = 
+  let buildarch = 
     if OptParse.Opt.is_set Options.deb_host_arch then
+      (OptParse.Opt.get Options.deb_host_arch)
+      (* :: (OptParse.Opt.get Options.deb_foreign_arch) *)
+    else
+      (OptParse.Opt.get Options.deb_native_arch)
+      (* ::(OptParse.Opt.get Options.deb_foreign_arch) *)
+  in
+  let builddepsarchs =
+    buildarch :: (OptParse.Opt.get Options.deb_foreign_arch)
+  in
+(*
+  let options = 
+(*    if OptParse.Opt.is_set Options.deb_host_arch then *)
       { Debcudf.default_options with
         Debcudf.native = OptParse.Opt.get Options.deb_native_arch;
         Debcudf.foreign = OptParse.Opt.get Options.deb_foreign_arch;
         Debcudf.host = OptParse.Opt.get Options.deb_host_arch;
       }
-    else
+(*    else
       Debcudf.default_options
+      *)
   in
-
+*)
   let pkglist, srclist =
     match posargs with
     |[] | [_] -> fatal 
@@ -92,8 +95,8 @@ let main () =
         begin match List.rev l with
         |h::t ->
           let srclist =
-            let l = Src.input_raw [h] in
-            Src.sources2packages archs l
+            let l = Src.input_raw ~archs:[buildarch] [h] in
+            Src.sources2packages builddepsarchs l
           in
           let pkglist = Deb.input_raw t in
           (pkglist,srclist)
@@ -101,6 +104,7 @@ let main () =
         end
   in
   let tables = Debcudf.init_tables (srclist @ pkglist) in
+  let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
  
   let pp pkg =
     let (p,i) = (pkg.Cudf.package,pkg.Cudf.version) in
@@ -122,6 +126,20 @@ let main () =
   let success = OptParse.Opt.get Options.successes in
   let explain = OptParse.Opt.get Options.explain in
   let summary = OptParse.Opt.get Options.summary in
+
+  let checklist =
+    if OptParse.Opt.is_set Options.checkonly then begin
+      List.flatten (
+        List.map (fun ((n,a),c) ->
+          let (name,filter) = Boilerplate.debvpkg to_cudf (("src:"^n,a),c) in
+          info "name: %s" name;
+          Cudf.lookup_packages ~filter universe name
+        ) (OptParse.Opt.get Options.checkonly)
+      )
+    end else sl
+  in
+  info "Checklist %d" (List.length checklist);
+
   let fmt = Format.std_formatter in
 
   let results = Diagnostic.default_result universe_size in
@@ -141,7 +159,7 @@ let main () =
   in
 
   Util.Timer.start timer;
-  let i = Depsolver.listcheck ~callback universe sl in
+  let i = Depsolver.listcheck ~callback universe checklist in
   ignore(Util.Timer.stop timer ());
 
   if failure || success then Format.fprintf fmt "@]@.";

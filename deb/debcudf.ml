@@ -316,15 +316,22 @@ let add_inst inst pkg =
 let add_extra extras tables pkg =
   add_extra_default extras tables pkg
 
+let is_source pkg = String.starts_with pkg.name "src:" ;;
+
 let tocudf tables ?(options=default_options) ?(inst=false) pkg =
   if options.native <> "" then begin
     let pkgarch =
-      if options.host <> "" && String.starts_with pkg.name "src:" then
-        options.host
-      else
-        pkg.architecture
+      match options.host,is_source pkg with
+      |"",true -> options.native   (* source package : build deps on the native arch *)
+      |_,true -> options.host      (* source package : build deps on the cross arch *)
+      |_,false -> pkg.architecture (* binary package : dependencies are package specific *)
     in
-    let _name = add_arch options.native pkgarch pkg.name in
+    let _name = 
+      (* if the package is a source package the name does not need an
+       * architecture annotation. Nobody depends on it *)
+      if is_source pkg then (CudfAdd.encode pkg.name) 
+      else add_arch options.native pkgarch pkg.name 
+    in
     let _version = get_cudf_version tables (pkg.name,pkg.version)  in
     let _provides = match pkg.multiarch with
       |`None ->

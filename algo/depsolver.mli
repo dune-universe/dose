@@ -40,7 +40,8 @@ val edos_coinstall : ?global_constraints:bool -> Cudf.universe -> Cudf.package l
     the cartesian product. *)
 val edos_coinstall_prod : ?global_constraints:bool -> Cudf.universe -> Cudf.package list list -> Diagnostic.diagnosis list
 
-(** remove uninstallable packages from the universe *)
+(** remove uninstallable packages from the universe . global_constraints is true
+    by default *)
 val trim : ?global_constraints:bool -> Cudf.universe -> Cudf.universe
 
 (** return the list of the broken packages *)
