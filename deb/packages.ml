@@ -230,7 +230,7 @@ module Set = struct
     let compare x y =
       let c = x >% y in 
       if c = 0 then 
-        warning "the input contains two packages with the same name, version and architecture (%s,%s,%s). Only the latter will be considered."
+        debug "the input contains two packages with the same name, version and architecture (%s,%s,%s). Only the latter will be considered."
         x.name x.version x.architecture;
       c
   end)

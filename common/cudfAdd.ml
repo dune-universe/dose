@@ -251,3 +251,17 @@ let cudfop = function
   |Some("ALL",v) -> None
   |None -> None
   |Some(c,v) -> fatal "%s %s" c v
+
+let latest pkglist =
+  let h = Hashtbl.create (List.length pkglist) in
+  List.iter (fun p ->
+    try
+      let q = Hashtbl.find h p.Cudf.package in
+      if (compare p q) > 0 then
+        Hashtbl.replace h p.Cudf.package p
+      else ()
+    with Not_found -> Hashtbl.add h p.Cudf.package p
+  ) pkglist;
+  Hashtbl.fold (fun _ v acc -> v::acc) h []
+;;
+

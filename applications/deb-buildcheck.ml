@@ -116,7 +116,9 @@ let main () =
       ) ["architecture";"source";"sourcenumber"]
     in (p,v,l)
   in
-  let sl = List.map (fun pkg -> Debcudf.tocudf ~options tables pkg) srclist in
+  (* XXX here latest could be a bit faster if done at the same time of the cudf
+     conversion *)
+  let sl = CudfAdd.latest (List.map (fun pkg -> Debcudf.tocudf ~options tables pkg) srclist) in
   let l = List.fold_left (fun acc pkg -> (Debcudf.tocudf ~options tables pkg)::acc) sl pkglist in
 
   let universe = Cudf.load_universe l in
@@ -132,13 +134,11 @@ let main () =
       List.flatten (
         List.map (fun ((n,a),c) ->
           let (name,filter) = Boilerplate.debvpkg to_cudf (("src:"^n,a),c) in
-          info "name: %s" name;
           Cudf.lookup_packages ~filter universe name
         ) (OptParse.Opt.get Options.checkonly)
       )
     end else sl
   in
-  info "Checklist %d" (List.length checklist);
 
   let fmt = Format.std_formatter in
 

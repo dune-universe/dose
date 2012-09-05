@@ -114,19 +114,8 @@ let main () =
   let (preamble,pkgll,from_cudf,to_cudf) = Boilerplate.load_list ~options [fg;bg] in
   let (fg_pkglist, bg_pkglist) = match pkgll with [fg;bg] -> (fg,bg) | _ -> assert false in
   let fg_pkglist = 
-    if OptParse.Opt.get Options.latest then
-      let h = Hashtbl.create (List.length fg_pkglist) in
-      List.iter (fun p ->
-        try
-          let q = Hashtbl.find h p.Cudf.package in
-          if (CudfAdd.compare p q) > 0 then
-            Hashtbl.replace h p.Cudf.package p
-          else ()
-        with Not_found -> Hashtbl.add h p.Cudf.package p
-      ) fg_pkglist;
-      Hashtbl.fold (fun _ v acc -> v::acc) h []
-    else
-      fg_pkglist
+    if OptParse.Opt.get Options.latest then CudfAdd.latest fg_pkglist
+    else fg_pkglist
   in
   let universe = 
     let s = CudfAdd.to_set (fg_pkglist @ bg_pkglist) in

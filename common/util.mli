@@ -151,3 +151,5 @@ end
 
 module IntHashtbl : Hashtbl.S with type key = int
 module StringHashtbl : Hashtbl.S with type key = string
+
+val range : int -> int -> int list

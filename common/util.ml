@@ -289,3 +289,10 @@ module IntHashtbl = Hashtbl.Make (
     let hash i = Hashtbl.hash i
   end
 )
+
+let range i j =
+ let rec aux acc n =
+   if n < i then acc else aux (n::acc) (n-1)
+ in aux [] j
+;;
+

@@ -76,6 +76,10 @@ val pkgnames : Cudf.universe -> StringSet.t
 
 (** {2 Additional functions on the CUDF data types. } *)
 
+(** Returns a list of packages containing for each package only the
+    latest version *)
+val latest: Cudf.package list -> Cudf.package list
+
 val add_properties :
   Cudf.preamble -> (string * Cudf_types.typedecl1) list -> Cudf.preamble
 val is_essential : Cudf.package -> bool
