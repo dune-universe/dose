@@ -31,6 +31,7 @@ module Options = struct
   let strong_deps = StdOpt.store_true ()
   let detrans = StdOpt.store_true ()
   let closure = StdOpt.store_true ()
+  let trim = StdOpt.store_true ()
   let combine_scatter = StdOpt.store_true ()
   let prefix = StdOpt.str_option ~default:"" ()
 
@@ -46,6 +47,7 @@ module Options = struct
   add options ~long_name:"combine-scatter" ~help:"" combine_scatter;
   add options ~long_name:"detrans" ~help:"" detrans;
   add options ~long_name:"transitive-closure" ~help:"" closure;
+  add options ~long_name:"trim" ~help:"Consider only installable packages" trim;
 end
 
 include Util.Logging(struct let label = __FILE__ end) ;;
@@ -94,7 +96,12 @@ let saveplot2 h outfile =
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
-  let (_,universe,_,_) = Boilerplate.load_universe posargs in
+  let universe = 
+    let (_,u,_,_) = Boilerplate.load_universe posargs in
+    if OptParse.Opt.get Options.trim then
+      Depsolver.trim ~global_constraints:false u
+    else u
+  in
   let gr = 
     let gr' = if OptParse.Opt.get Options.strong_deps then
       Strongdeps.strongdeps_univ universe
@@ -108,53 +115,56 @@ let main () =
   let prefix = OptParse.Opt.get Options.prefix in
   let outch = if prefix = "" then stdout else open_out ( prefix ^ "stats" ) in
   let generic = "Generic" >::: [
-    "Vertex" >:: (fun _ -> Printf.fprintf outch "%d" (G.nb_vertex gr));
-    "Edges" >:: (fun _ -> Printf.fprintf outch "%d" (G.nb_edges gr));
+    "  Vertex" >:: (fun _ -> Printf.fprintf outch "%d" (G.nb_vertex gr));
+    "  Edges" >:: (fun _ -> Printf.fprintf outch "%d" (G.nb_edges gr));
     ]
   in
   let connectivity = "Connectivity" >::: [
-    "Average Out-Degree" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageOutDegree gr));
-    "Average In-Degree"  >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageInDegree gr));
-    "Zero-degree Packages" >:: (fun _ -> Printf.fprintf outch "%d" (S.zdp gr));
+    "  Average Out-Degree" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageOutDegree gr));
+    "  Average In-Degree"  >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageInDegree gr));
+    "  Zero-degree Packages" >:: (fun _ -> Printf.fprintf outch "%d" (S.zdp gr));
     ]
   in
   let componentsSC = "Strongly Connected Components" >::: [
-    "Number of Components SC"  >:: (fun _ -> Printf.fprintf outch "%d" (S.numberComponentsSC gr));
-    "Average Components SC" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageComponentsSC gr));
-    "Larges Component SC" >:: (fun _ -> Printf.fprintf outch "%d" (S.largestComponentSC gr));
+    "  Number of Components SC"  >:: (fun _ -> Printf.fprintf outch "%d" (S.numberComponentsSC gr));
+    "  Average Components SC" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageComponentsSC gr));
+    "  Larges Component SC" >:: (fun _ -> Printf.fprintf outch "%d" (S.largestComponentSC gr));
     ]
   in
   let componentsWC = "Weakly Connected Components" >::: [
-    "Number of Components WC"  >:: (fun _ -> Printf.fprintf outch "%d" (S.numberComponentsWC gr));
-    "Average Components WC" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageComponentsWC gr));
-    "Larges Component WC" >:: (fun _ -> Printf.fprintf outch "%d" (S.largestComponentWC gr));
+    "  Number of Components WC"  >:: (fun _ -> Printf.fprintf outch "%d" (S.numberComponentsWC gr));
+    "  Average Components WC" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageComponentsWC gr));
+    "  Larges Component WC" >:: (fun _ -> Printf.fprintf outch "%d" (S.largestComponentWC gr));
     ]
   in
   let smallworld = "Small World" >::: [
-    "Clustering Coefficient" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.clustering gr));
-    "Average Shortest Path Length" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageShortestPathLength gr));
-    "Density" >:: (fun _ -> Printf.fprintf outch "%0.5f" (S.density gr));
-    "Average two step reach" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageTwoStepReach gr));
+    "  Clustering Coefficient" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.clustering gr));
+    "  Average Shortest Path Length" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageShortestPathLength gr));
+    "  Density" >:: (fun _ -> Printf.fprintf outch "%0.5f" (S.density gr));
+    "  Average two step reach" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageTwoStepReach gr));
     ]
   in
   let centrality = "Centrality" >::: [
-    "Centrality Out Degree" >:: (fun _ -> Printf.fprintf outch "%0.5f" (S.centralityOutDegree gr));
-    "Centrality In Degree" >:: (fun _ -> Printf.fprintf outch "%0.5f" (S.centralityInDegree gr));
+    "  Centrality Out Degree" >:: (fun _ -> Printf.fprintf outch "%0.5f" (S.centralityOutDegree gr));
+    "  Centrality In Degree" >:: (fun _ -> Printf.fprintf outch "%0.5f" (S.centralityInDegree gr));
     ]
   in
   let scatterplots = "Scattered Plots" >:::
     if OptParse.Opt.get Options.combine_scatter then
-      ["Combined" >:: (fun _ ->
-        saveplot2 (S.scatteredPlotBoth gr) (prefix^"degree.data"); print_string "Done";
-      )]
+      [
+        "  Combined" >:: (fun _ ->
+          saveplot2 (S.scatteredPlotBoth gr) (prefix^"degree.data"); print_string "Done";)
+      ]
     else
-    ["Scattered Plot In" >:: (fun _ ->
-      saveplot (S.scatteredPlotIn gr) (prefix^"indegree.data") ; print_string "Done" );
-    "Scattered Plot Out" >:: (fun _ ->
-      saveplot (S.scatteredPlotOut gr) (prefix^"outdegree.data"); print_string "Done" )
-(*    "Hops Plot" >:: (fun _ ->
-      saveplot (S.hopsplot gr 30) "hopsplot.data"; print_string "Done" );
-      *) ]
+    [
+      "  Scattered Plot In" >:: (fun _ ->
+        saveplot (S.scatteredPlotIn gr) (prefix^"indegree.data") ; print_string "Done" );
+      "  Scattered Plot Out" >:: (fun _ ->
+        saveplot (S.scatteredPlotOut gr) (prefix^"outdegree.data"); print_string "Done" )
+  (*    "Hops Plot" >:: (fun _ ->
+        saveplot (S.hopsplot gr 30) "hopsplot.data"; print_string "Done" );
+        *) 
+      ]
   in
   let t = ref [] in
   if not (OptParse.Opt.get Options.scatterplots) then t := scatterplots :: !t ;
@@ -163,7 +173,7 @@ let main () =
   if not (OptParse.Opt.get Options.components) then t := componentsWC :: componentsSC :: !t ;
   if not (OptParse.Opt.get Options.connectivity) then t := connectivity :: !t ;
   if not (OptParse.Opt.get Options.generic) then t := generic :: !t ;
-  run outch ("" >::: !t);
+  run outch ("Dependency Graph Statistical Analysis" >::: !t);
   close_out outch;
 ;;
 
