@@ -362,22 +362,32 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
          (add_arch_l options.native pkgarch (loadlp tables pkg.provides))
     in
     let _conflicts = 
-      (* self conflict / multi-arch conflict *)
+      let originalconflicts = pkg.breaks @ pkg.conflicts in
+      (* self conflict *)
       let sc = (add_arch options.native pkgarch pkg.name,None) in
-      let mac = (CudfAdd.encode pkg.name,None) in
-      (* multi-arch: same conflict to packages of same name but different arch and version*)
-      let masc =
-        List.filter_map (function
-          |arch when arch = pkgarch -> None
-          |arch -> Some(add_arch options.native arch pkg.name,Some(`Neq,_version))
-        ) (options.native::options.foreign)
+      let multiarchconstraints = match pkg.multiarch with
+        |(`None|`Foreign|`Allowed) -> 
+            (* conflict with all other packages with differents archs *)
+            let mac = (CudfAdd.encode pkg.name,None) in
+            [sc; mac] 
+        |`Same -> 
+            (* conflict with packages of same name but different arch and version*)
+            let masc =
+              List.filter_map (function
+                |arch when arch = pkgarch -> None
+                |arch -> Some(add_arch options.native arch pkg.name,Some(`Neq,_version))
+              ) (options.native::options.foreign)
+            in
+            sc :: masc 
       in
-      let l = pkg.breaks @ pkg.conflicts in
-      match pkg.multiarch with
-        |(`None|`Foreign|`Allowed) ->
-            sc :: mac :: (add_arch_l options.native pkgarch (loadl tables l))
-        |`Same ->
-            sc :: masc @ (add_arch_l options.native pkgarch (loadl tables l))
+      let multiarchconflicts =
+        List.flatten (
+          List.map (fun arch ->
+            add_arch_l options.native arch (loadl tables originalconflicts)
+          ) (options.native::options.foreign)
+        )
+      in
+      multiarchconflicts @ multiarchconstraints
     in
     let _depends = 
       List.map (add_arch_l options.native pkgarch) 
