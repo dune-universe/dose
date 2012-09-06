@@ -1,0 +1,39 @@
+This is a first proposal for encoding multiarch information into CUDF 2.0,
+while waiting for CUDF 3.0.
+
+(discussion Roberto, Pietro, Ralf and Zack, 25/5/2011)
+
+
+For each package (p,v, [deps=q1 op v1 ,..,qn op vn], [conf=c1 op w1 ,..,ck op wk], arch, multiarch)
+the translation is
+
+ (p:arch,v,[deps=q1:arch op v1,...,qn:arch op vn], [conf=c1:arch op w1,..,ck:arch op wk], arch, multiarch)
+
+with the proviso that if a package in a dependency is tagged with :any, it is not modified, so
+deps = q1:any op v1 will stay unchanged.
+
+and then we add extra conflicts and provides as follows:
+
+Co-installation:
+
+ for multiarch = none, foreing and allowed, we prevent coinstallations by using
+
+  provides p
+  conflicts p
+
+ for multiarch = same, coinstallation is allowed only with the same version of packages of other architectures,
+                       so we add conflicts with all packages other architectures and different versions
+
+Satisfying other dependencies:
+
+ for multiarch = none or same, we add nothing: p:arch only satisfyes deps on p:arch
+
+ for multiarch = foreign, we add 
+
+  provides (p:arch1,v), ..., (p:archn,v)
+
+ for multiarch = allowed, we add 
+
+  provides (p:any,v)
+
+
