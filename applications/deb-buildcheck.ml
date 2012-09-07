@@ -31,6 +31,7 @@ module Options = struct
   let failures = StdOpt.store_true ()
   let explain = StdOpt.store_true ()
   let checkonly = Boilerplate.vpkglist_option ()
+  let latest = StdOpt.store_true ()
   let summary = StdOpt.store_true ()
   let dump = StdOpt.str_option ()
 
@@ -40,6 +41,7 @@ module Options = struct
   add options ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" successes;
 
   add options ~long_name:"checkonly" ~help:"Check only these package" checkonly;
+  add options ~long_name:"latest" ~help:"Check only the latest version of each package" latest;
   add options ~long_name:"summary" ~help:"Print a detailed summary" summary;
 
   add options ~long_name:"dump" ~help:"dump the cudf file" dump;
@@ -65,27 +67,11 @@ let main () =
   let buildarch = 
     if OptParse.Opt.is_set Options.deb_host_arch then
       (OptParse.Opt.get Options.deb_host_arch)
-      (* :: (OptParse.Opt.get Options.deb_foreign_arch) *)
     else
       (OptParse.Opt.get Options.deb_native_arch)
-      (* ::(OptParse.Opt.get Options.deb_foreign_arch) *)
   in
-  let builddepsarchs =
-    buildarch :: (OptParse.Opt.get Options.deb_foreign_arch)
-  in
-(*
-  let options = 
-(*    if OptParse.Opt.is_set Options.deb_host_arch then *)
-      { Debcudf.default_options with
-        Debcudf.native = OptParse.Opt.get Options.deb_native_arch;
-        Debcudf.foreign = OptParse.Opt.get Options.deb_foreign_arch;
-        Debcudf.host = OptParse.Opt.get Options.deb_host_arch;
-      }
-(*    else
-      Debcudf.default_options
-      *)
-  in
-*)
+  let builddepsarchs = buildarch :: (OptParse.Opt.get Options.deb_foreign_arch) in
+
   let pkglist, srclist =
     match posargs with
     |[] | [_] -> fatal 
@@ -118,7 +104,13 @@ let main () =
   in
   (* XXX here latest could be a bit faster if done at the same time of the cudf
      conversion *)
-  let sl = CudfAdd.latest (List.map (fun pkg -> Debcudf.tocudf ~options tables pkg) srclist) in
+  let sl = 
+    let l = List.map (fun pkg -> Debcudf.tocudf ~options tables pkg) srclist in
+    if OptParse.Opt.get Options.latest then
+      CudfAdd.latest l
+    else
+      l
+  in
   let l = List.fold_left (fun acc pkg -> (Debcudf.tocudf ~options tables pkg)::acc) sl pkglist in
 
   let universe = Cudf.load_universe l in
