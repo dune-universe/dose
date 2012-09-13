@@ -172,7 +172,23 @@ let is_installed pkg =
     Packages.parse_bool (_loc,v)
   with Not_found -> false
 
+let is_on_hold pkg =
+  try
+    let _loc = Format822.dummy_loc in
+    let v = Packages.assoc "hold" pkg.Packages.extras in
+    (Packages.parse_bool (_loc,v))
+  with Not_found -> false
+
 let tocudf tables ?(options=Debcudf.default_options) ?(inst=false) pkg =
   let options = { options with Debcudf.extras_opt = extras_tocudf } in
-  Debcudf.tocudf tables ~options ~inst:(is_installed pkg) pkg 
+  let pkg = 
+    if is_installed pkg then
+      let s = 
+        if is_on_hold pkg then "hold ok installed" 
+        else "install ok installed"
+      in
+      { pkg with Packages.extras = ("status",s)::pkg.Packages.extras }
+    else pkg
+  in
+  Debcudf.tocudf tables ~options (* ~inst:(is_installed pkg) *) pkg
 ;;

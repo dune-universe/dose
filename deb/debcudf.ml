@@ -206,10 +206,13 @@ let get_real_version tables (name,cudfversion) =
   with Not_found ->
     fatal "Package (%s,%d) does not have an associated debian version" name cudfversion
 
-let loadl tables l =
+let loadl ?(enc=false) tables l =
   List.flatten (
     List.map (fun ((name,aop),sel) ->
-      let encname = match aop with Some a -> name^":"^a | None -> name in
+      let encname = 
+        let n = match aop with Some a -> name^":"^a | None -> name in
+        if enc then CudfAdd.encode n else n
+      in
       match CudfAdd.cudfop sel with
       |None ->
           if (Util.StringHashtbl.mem tables.virtual_table name) &&
@@ -222,13 +225,17 @@ let loadl tables l =
     ) l
   )
 
+let loadll ?(enc=false) tables ll = List.map (loadl ~enc tables) ll
+
 (* we add a self conflict here, because in debian each package is in conflict
    with all other versions of the same package *)
-let loadlc tables name l = (CudfAdd.encode name, None)::(loadl tables l)
+let loadlc ?(enc=false) tables name l =
+  let sc = if enc then (CudfAdd.encode name, None) else (name, None) in
+  sc::(loadl ~enc tables l)
 
-let loadlp tables l =
+let loadlp ?(enc=false) tables l =
   List.map (fun ((name,_),sel) ->
-    let encname = CudfAdd.encode name in
+    let encname = if enc then CudfAdd.encode name else name in
     match CudfAdd.cudfop sel with
     |None  ->
         if (Util.StringHashtbl.mem tables.unit_table name) || 
@@ -243,7 +250,6 @@ let loadlp tables l =
     |_ -> fatal "This should never happen : a provide can be either = or unversioned"
   ) l
 
-let loadll tables ll = List.map (loadl tables) ll
 
 (* ========================================= *)
 
@@ -305,9 +311,12 @@ let add_extra_default extras tables pkg =
   essential;build_essential]@ l
 ;;
 
-let add_essential = function
-  |false -> `Keep_none
-  |true -> `Keep_package
+let set_keep pkg =
+  match pkg.essential,Packages.is_on_hold pkg with
+  |_,true -> `Keep_version
+  |true,_ -> `Keep_package
+  |false,_ -> `Keep_none
+;;
 
 let add_inst inst pkg =
   if inst then true 
@@ -316,14 +325,16 @@ let add_inst inst pkg =
 let add_extra extras tables pkg =
   add_extra_default extras tables pkg
 
-let is_source pkg = String.starts_with pkg.name "src:" ;;
+(* let is_source pkg = String.starts_with pkg.name "src:" ;; *)
+(* XXX maybe adding a new field to the package record ? *)
+let is_source pkg = List.mem ("type", "src") pkg.extras;;
 
 let tocudf tables ?(options=default_options) ?(inst=false) pkg =
   if options.native <> "" then begin
     let pkgarch =
       match options.host,is_source pkg with
       |"",true -> options.native   (* source package : build deps on the native arch *)
-      |_,true -> options.host      (* source package : build deps on the cross arch *)
+      |_,true  -> options.host     (* source package : build deps on the cross arch *)
       |_,false -> pkg.architecture (* binary package : dependencies are package specific *)
     in
     let _name = 
@@ -362,10 +373,12 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
          (add_arch_l options.native pkgarch (loadlp tables pkg.provides))
     in
     let _conflicts = 
+            List.iter (fun s -> info "%s" s)(options.native::options.foreign) ;
       let originalconflicts = pkg.breaks @ pkg.conflicts in
       (* self conflict *)
       let sc = (add_arch options.native pkgarch pkg.name,None) in
-      let multiarchconstraints = match pkg.multiarch with
+      let multiarchconstraints = 
+        match pkg.multiarch with
         |(`None|`Foreign|`Allowed) -> 
             (* conflict with all other packages with differents archs *)
             let mac = (CudfAdd.encode pkg.name,None) in
@@ -393,17 +406,18 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
       List.map (add_arch_l options.native pkgarch) 
       (loadll tables (pkg.pre_depends @ pkg.depends))
     in
-    let keep =
+    let _keep =
+      (* XXX: if ignore essential for the moment we also ignore keep *)
       if options.ignore_essential ||
       (pkgarch <> options.native && pkgarch <> "all") then
         `Keep_none
       else
-        add_essential pkg.essential
+        set_keep pkg
     in
     { Cudf.default_package with
       Cudf.package = _name ;
       Cudf.version = _version ;
-      Cudf.keep = keep ;
+      Cudf.keep = _keep ;
       Cudf.depends = _depends ;
       Cudf.conflicts = _conflicts ;
       Cudf.provides = _provides ;
@@ -425,15 +439,15 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
     in
     let _depends =
       List.map (List.map remove_qualifier)
-      (loadll tables (pkg.pre_depends @ pkg.depends))
+      (loadll ~enc:true tables (pkg.pre_depends @ pkg.depends))
     in
     { Cudf.default_package with
       Cudf.package = CudfAdd.encode pkg.name ;
       Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;
-      Cudf.keep = if options.ignore_essential then `Keep_none else add_essential pkg.essential;
+      Cudf.keep = if options.ignore_essential then `Keep_none else set_keep pkg;
       Cudf.depends = _depends;
-      Cudf.conflicts = loadlc tables pkg.name (pkg.breaks @ pkg.conflicts) ;
-      Cudf.provides = loadlp tables pkg.provides ;
+      Cudf.conflicts = loadlc ~enc:true tables pkg.name (pkg.breaks @ pkg.conflicts) ;
+      Cudf.provides = loadlp ~enc:true tables pkg.provides ;
       Cudf.installed = add_inst inst pkg;
       Cudf.pkg_extra = add_extra options.extras_opt tables pkg ;
     }

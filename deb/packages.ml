@@ -263,6 +263,12 @@ let is_installed pkg =
     | _ -> false
   with Not_found -> false
 
+let is_on_hold pkg =
+  try match String.nsplit (assoc "status" pkg.extras) " " with
+    |["hold";_;_] -> true
+    | _ -> false
+  with Not_found -> false
+
 let default_extras = [
   ("Status", None);
   ("Size", None);
@@ -270,11 +276,15 @@ let default_extras = [
   ("Filename", None);
 ]
 
-(** input_raw [file] : parse a debian Packages file from [file] *)
+(** input_raw [file] : parse a debian Packages file from [file]
+    [~archs] determines which which architectures should be considered while
+    parsing the Packages file. if ~arch is [] then all archs are cosidered 
+*)
 let input_raw ?filter ?(archs=[]) ?(extras=[]) =
   let module M = Format822.RawInput(Set) in
   let extras = default_extras @ extras in
   M.input_raw (parse_packages_in ?filter ~archs ~extras)
+;;
 
 (** input_raw_ch ch : parse a debian Packages file from channel [ch] *)
 let input_raw_ch ?filter ?(archs=[]) ?(extras=[]) =

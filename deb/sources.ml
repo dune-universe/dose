@@ -100,12 +100,16 @@ let parse_sources_in ?filter ?(archs=[]) fname ic =
   info "Parsing Sources file %s..." fname;
   let stanza_parser = parse_package_stanza filter archs in
   Format822.parse_from_ch (Packages.packages_parser fname stanza_parser []) ic
+;;
 
-(** parse a debian Sources file. *)
+(** parse a debian Sources file. 
+ [~archs] determines which which architectures should be considered while
+ parsing the Souces file. if ~arch is [] then all archs are cosidered *)
 let input_raw ?filter ?(archs=[]) =
   let module Set = Set.Make(struct type t = source let compare = compare end) in
   let module M = Format822.RawInput(Set) in
   M.input_raw (parse_sources_in ?filter ~archs)
+;;
 
 let sep = ":" ;;
 
