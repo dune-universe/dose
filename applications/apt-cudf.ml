@@ -32,7 +32,7 @@ module Options = struct
   let explain = StdOpt.store_true ()
   let conffile = StdOpt.str_option ~default:"/etc/apt-cudf.conf" ()
   let native_arch = StdOpt.str_option ()
-  let foreign_arch = Boilerplate.str_list_option ()
+  let foreign_archs = Boilerplate.str_list_option ()
 
   open OptParser
   add options ~long_name:"conf" ~help:"configuration file (default:/etc/apt-cudf.conf)" conffile;
@@ -43,12 +43,12 @@ module Options = struct
   add options ~short_name:'e' ~long_name:"explain" ~help:"summary" explain;
 
   add options ~long_name:"native-arch" ~help:"Native architecture" native_arch;
-  add options ~long_name:"foreign-archs" ~help:"Foreign architectures" foreign_arch;
+  add options ~long_name:"foreign-archs" ~help:"Foreign architectures" foreign_archs;
 
 end
 
-let print_error fmt =
-  Printf.kprintf (fun s -> 
+let fatal fmt =
+  Printf.kprintf (fun s ->
     Format.printf "Error: %s@." (Util.timestamp ());
     Format.printf "Message: %s@." s;
     exit 0
@@ -81,11 +81,16 @@ let make_request tables universe native_arch request =
 	  with Not_found -> false) 
 	(CudfAdd.who_provides universe (name,constr))
     with Not_found -> 
-      print_error "Package %s does not have a suitable candidate" name
+      fatal "Package %s does not have a suitable candidate" name
   in
   let select_packages ?(remove=false) l = 
     List.map (fun ((n,a),c) -> 
-      let (name,constr) = Boilerplate.debvpkg ~native_arch to_cudf ((n,a),c) in
+      let (name,constr) = 
+        if native_arch <> "" then
+          Boilerplate.debvpkg ~native_arch to_cudf ((n,a),c) 
+        else
+          Boilerplate.debvpkg to_cudf ((n,a),c)
+      in
       if remove then
         (name,None)
       else
@@ -136,7 +141,7 @@ let pp_pkg fmt (s,univ) =
     Format.fprintf fmt "Package: %s\n" pkg.Packages.name;
     Format.fprintf fmt "Version: %s\n" pkg.Packages.version;
     Format.fprintf fmt "Architecture: %s\n" pkg.Packages.architecture;
-  with Not_found -> print_error "apt-cudf internal error"
+  with Not_found -> fatal "apt-cudf internal error"
 ;;
 
 let pp_pkg_list fmt (l,univ) =
@@ -151,7 +156,7 @@ let pp_pkg_list fmt (l,univ) =
         pkg.Packages.architecture
       ) l)
     )
-  with Not_found -> print_error "apt-cudf internal error"
+  with Not_found -> fatal "apt-cudf internal error"
 ;;
 
 let pp_pkg_list_tran fmt (l,univ) = pp_pkg_list fmt (List.map snd l,univ) ;;
@@ -243,17 +248,17 @@ let parse_solver_spec filename =
     done;
     close_in ic
     with
-      | Sys_error _ -> print_error "cannot parse CUDF solver specification %s" filename
+      | Sys_error _ -> fatal "cannot parse CUDF solver specification %s" filename
       | End_of_file -> ()
       | Scanf.Scan_failure err ->
-        print_error "parse error while reading CUDF solver specification %s: %s"
+        fatal "parse error while reading CUDF solver specification %s: %s"
 	  filename err
   end;
   if !exec = "" || !version = "" then
-    print_error "incomplete CUDF solver specification %s" filename;
+    fatal "incomplete CUDF solver specification %s" filename;
   if not (String.exists !exec "$in" && String.exists !exec "$out"
           && String.exists !exec "$pref") then
-    print_error
+    fatal
       "Incomplete solver specification %s: one or more of $in, $out, $pref is missing in exec line"
       filename;
   (!exec,!version)
@@ -280,48 +285,35 @@ let rmtmpdir path =
   if String.exists path "apt-cudf" then (* safe guard, sort of *)
     ignore (Unix.system (Printf.sprintf "rm -rf %s" path))
 
-let check_exit_status = function
-  | Unix.WEXITED 0 -> ()
-  | Unix.WEXITED r -> warning "warning: the process terminated with exit code (%d)\n%!" r
-  | Unix.WSIGNALED n -> warning "warning: the process was killed by a signal (number: %d)\n%!" n
-  | Unix.WSTOPPED n -> warning "warning: the process was stopped by a signal (number: %d)\n%!" n
-;;
-
-let syscall ?(env=[| |]) cmd =
-  let ic, oc, ec = Unix.open_process_full cmd env in
-  let buf1 = Buffer.create 96
-  and buf2 = Buffer.create 48 in
-  (try
-     while true do Buffer.add_channel buf1 ic 1 done
-   with End_of_file -> ());
-  (try
-     while true do Buffer.add_channel buf2 ec 1 done
-   with End_of_file -> ());
-  let exit_status = Unix.close_process_full (ic, oc, ec) in
-  check_exit_status exit_status;
-  (Buffer.contents buf1,
-   Buffer.contents buf2)
+let check_exit_status cmd = function
+  |Unix.WEXITED 0   -> ()
+  |Unix.WEXITED i   -> fatal "command '%s' failed with code %d" cmd i
+  |Unix.WSIGNALED i -> fatal "command '%s' killed by signal %d" cmd i
+  |Unix.WSTOPPED i  -> fatal "command '%s' stopped by signal %d" cmd i
 ;;
 
 let get_architectures native_opt foreign =
   let cmd = "apt-config dump" in
   let arch = ref "" in
   let archs = ref [] in
-  let out = Std.input_list (Unix.open_process_in cmd) in
-  List.iter (fun s ->
-    let key, value =  ExtString.String.split s " " in
-    if key = "APT::Architecture" then
-      arch := ExtString.String.slice ~first: 1 ~last:(-2) value
-    else if key = "APT::Architectures::" || key = "APT::Architectures" then
-      let s = ExtString.String.slice ~first:1 ~last:(-2) value in
-      if s <> "" then
-        archs := (ExtString.String.slice ~first:1 ~last:(-2) value)::!archs
-  ) out;
+  let aux () =
+    let out = Std.input_list (Unix.open_process_in cmd) in
+    List.iter (fun s ->
+      let key, value =  ExtString.String.split s " " in
+      if key = "APT::Architecture" then
+        arch := ExtString.String.slice ~first: 1 ~last:(-2) value
+      else if key = "APT::Architectures::" || key = "APT::Architectures" then
+        let s = ExtString.String.slice ~first:1 ~last:(-2) value in
+        if s <> "" then
+          archs := (ExtString.String.slice ~first:1 ~last:(-2) value)::!archs
+    ) out;
+    debug "Atomatically set native as %s and foreign archs as %s" !arch (String.concat "," !archs);
+  in
   match native_opt, foreign with 
-  |None,[] -> (!arch,List.filter ((<>) !arch) !archs)
-  |None, l -> (!arch, l)
-  |Some a, [] -> (a,List.filter ((<>) !arch) !archs)
-  |Some a, l -> (a,l)
+  |None,None     -> aux () ; (!arch,List.filter ((<>) !arch) !archs)
+  |None,Some l   -> fatal "Native arch is missing while Foregin archs are specified"
+  |Some a,None   -> (a,[])
+  |Some a,Some l -> (a,l)
 ;;
 
 let main () =
@@ -337,13 +329,10 @@ let main () =
   ["parsing";"cudfio";"conversion";"solver";"solution"];
   Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
 
-  (* Solver "exec:" line. Contains three named wildcards to be interpolated:
-     "$in", "$out", and "$pref"; corresponding to, respectively, input CUDF
-     document, output CUDF universe, user preferences. *)
   let (native_arch,foreign_archs) = 
     get_architectures 
       (OptParse.Opt.opt Options.native_arch) 
-      (OptParse.Opt.get Options.foreign_arch)
+      (OptParse.Opt.opt Options.foreign_archs)
   in
 
   let solver = 
@@ -353,6 +342,9 @@ let main () =
       Filename.basename(Sys.argv.(0))
   in
   let exec_pat = fst (parse_solver_spec (Filename.concat solver_dir solver)) in
+  (* Solver "exec:" line. Contains three named wildcards to be interpolated:
+     "$in", "$out", and "$pref"; corresponding to, respectively, input CUDF
+     document, output CUDF universe, user preferences. *)
   let interpolate_solver_pat exec cudf_in cudf_out pref =
     let _, exec = String.replace ~str:exec ~sub:"$in"   ~by:cudf_in  in
     let _, exec = String.replace ~str:exec ~sub:"$out"  ~by:cudf_out in
@@ -422,7 +414,7 @@ let main () =
   let universe = 
     try Cudf.load_universe cudfpkglist
     with Cudf.Constraint_violation s ->
-      print_error "(CUDF) Malformed universe %s" s;
+      fatal "(CUDF) Malformed universe %s" s;
   in
   let cudf_request = make_request tables universe native_arch request in
   let cudf = (default_preamble,universe,cudf_request) in
@@ -467,22 +459,17 @@ let main () =
   Util.Timer.start timer4;
   let lines_cin = input_all_lines [] cin in
   let lines = input_all_lines lines_cin cerr in
-  let stat = Unix.close_process_full (cin,cout,cerr) in
-  begin match stat with
-    |Unix.WEXITED 0 -> ()
-    |Unix.WEXITED i -> print_error "command '%s' failed with code %d" cmd i
-    |Unix.WSIGNALED i -> print_error "command '%s' killed by signal %d" cmd i
-    |Unix.WSTOPPED i -> print_error "command '%s' stopped by signal %d" cmd i
-  end;
-  info "%s" cmd; 
+  let exit_code = Unix.close_process_full (cin,cout,cerr) in
+  check_exit_status cmd exit_code;
+  info "%s!!" cmd; 
   debug "\n%s" (String.concat "\n" lines);
   Util.Timer.stop timer4 ();
 
   Util.Timer.start timer5;
   if not(Sys.file_exists solver_out) then 
-    print_error "(CRASH) Solution file not found"
+    fatal "(CRASH) Solution file not found"
   else if check_fail solver_out then
-    print_error "(UNSAT) No Solutions according to the give preferences"
+    fatal "(UNSAT) No Solutions according to the give preferences"
   else begin
     try begin
       let solpre,soluniv = 
@@ -491,8 +478,8 @@ let main () =
           try Cudf_parser.load_solution cudf_parser universe with
           |Cudf_parser.Parse_error _
           |Cudf.Constraint_violation _ ->
-            print_error "(CRASH) Solution file contains an invalid solution"
-        else print_error "(CRASH) Solution file is empty"
+            fatal "(CRASH) Solution file contains an invalid solution"
+        else fatal "(CRASH) Solution file is empty"
       in
 
       if OptParse.Opt.get Options.dump then begin
@@ -552,7 +539,7 @@ let main () =
       if !empty then 
         print_progress ~i:100 "No packages removed or installed"
     end with Cudf.Constraint_violation s ->
-      print_error "(CUDF) Malformed solution: %s" s
+      fatal "(CUDF) Malformed solution: %s" s
   end;
   Util.Timer.stop timer5 ();
   Sys.remove solver_in;

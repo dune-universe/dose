@@ -62,15 +62,29 @@ let main () =
   if not(OptParse.Opt.is_set Options.deb_native_arch) then 
       fatal "your must specify at least the native architecture";
 
-   let options = Options.set_deb_options () in
+  let options = Options.set_deb_options () in
 
+  let nativearch = OptParse.Opt.get Options.deb_native_arch in
   let buildarch = 
     if OptParse.Opt.is_set Options.deb_host_arch then
       (OptParse.Opt.get Options.deb_host_arch)
     else
-      (OptParse.Opt.get Options.deb_native_arch)
+      nativearch
   in
-  let builddepsarchs = buildarch :: (OptParse.Opt.get Options.deb_foreign_arch) in
+  info "nativearch '%s' buildarch '%s'" nativearch buildarch;
+  let builddepsarchs = 
+    if OptParse.Opt.is_set Options.deb_foreign_archs then
+      let foreign_archs = OptParse.Opt.get Options.deb_foreign_archs in
+      if List.mem buildarch foreign_archs then
+        nativearch::(OptParse.Opt.get Options.deb_foreign_archs) 
+      else
+        fatal "the host arch is not included in the list of foreign architectures"
+    else
+      if buildarch = nativearch then
+        [buildarch]
+      else
+        fatal "the host arch is not included in the list of foreign architectures"
+  in
 
   let pkglist, srclist =
     match posargs with
@@ -138,8 +152,8 @@ let main () =
 
   Format.fprintf fmt "native-architecture: %s@." (OptParse.Opt.get Options.deb_native_arch);
 
-  if (OptParse.Opt.get Options.deb_foreign_arch) != [] then
-    Format.fprintf fmt "foreign-architecture: %s@." (String.concat "," (OptParse.Opt.get Options.deb_foreign_arch));
+  if OptParse.Opt.is_set Options.deb_foreign_archs then
+    Format.fprintf fmt "foreign-architecture: %s@." (String.concat "," (OptParse.Opt.get Options.deb_foreign_archs));
 
   if OptParse.Opt.is_set Options.deb_host_arch then
     Format.fprintf fmt "host-architecture: %s@." (OptParse.Opt.get Options.deb_host_arch);

@@ -63,12 +63,12 @@ let pkglist_option ?default ?(metavar = "VPKGLST") () =
   parse_vpkglist (fun _ s -> Printf.sprintf "invalid package list '%s'" s)
 ;;
 
-let debvpkg ?(native_arch="") to_cudf ((n,a),c) =
+let debvpkg ?native_arch to_cudf ((n,a),c) =
   let name =
     CudfAdd.encode (
       if Option.is_none a then
-        if native_arch <> "" then
-          (native_arch^":"^n)
+        if not(Option.is_none native_arch) then
+          ((Option.get native_arch)^":"^n)
         else n
       else
         ((Option.get a)^":"^n)
@@ -93,12 +93,13 @@ let incr_str_list ?(default=Some []) ?(metavar = "STR") =
 ;;
 
 (* this is a ,-separated list of strings *)
-let str_list_option ?(default=Some []) ?(metavar = "STRLST") =
+let str_list_option ?default ?(metavar = "STRLST") =
   let sep = "," in
   let coerce s = ExtString.String.nsplit s sep in
   fun () ->
     OptParse.Opt.value_option metavar default coerce
     (fun _ s -> Printf.sprintf "Invalid String '%s'" s)
+;;
 
 (* *************************************** *)
 
@@ -130,7 +131,7 @@ type options =
 module MakeDistribOptions(O : sig val options : OptParse.OptParser.t end) = struct
   open OptParse ;;
 
-  let deb_foreign_arch = str_list_option ()
+  let deb_foreign_archs = str_list_option ()
   let deb_native_arch = StdOpt.str_option ()
   let deb_host_arch = StdOpt.str_option ()
   let deb_build_arch = StdOpt.str_option ()
@@ -152,14 +153,12 @@ module MakeDistribOptions(O : sig val options : OptParse.OptParser.t end) = stru
         Opt.get deb_native_arch
       else ""
     in
-
-    let archs =
-      let l = Opt.get deb_foreign_arch in
-      let l = if host <> "" then host::l else l in
-      let l = if build <> "" then build::l else l in
-      let l = if native <> "" then native::l else l in
-      l
+    let archs = 
+      if Opt.is_set deb_foreign_archs then
+        Opt.get deb_foreign_archs 
+      else []
     in
+
     {
       Debian.Debcudf.default_options with
       Debian.Debcudf.foreign = archs;
@@ -205,7 +204,7 @@ module MakeDistribOptions(O : sig val options : OptParse.OptParser.t end) = stru
   (*
   add options ~group:deb_group ~long_name:"deb-build-arch" ~help:"Build architecture" deb_build_arch;
   *)
-  add O.options ~group:deb_group ~long_name:"deb-foreign-archs" ~help:"Foreign architectures" deb_foreign_arch;
+  add O.options ~group:deb_group ~long_name:"deb-foreign-archs" ~help:"Foreign architectures" deb_foreign_archs;
   add O.options ~group:deb_group ~long_name:"deb-ignore-essential" ~help:"Ignore Essential Packages" deb_ignore_essential;
 
 (*  let rpm_group = add_group options "Rpm Specific Options" in
