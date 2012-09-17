@@ -63,60 +63,6 @@ let print_progress ?i msg =
     Format.printf "Message: %s@." msg
 ;;
 
-
-(* Debian specific assumption: only one version of a package 
-   can be installed at a given time.
-   Hence, when a remove request is issued without version constraint,
-   we return (candidate.Cudf.package,None) that designates the only
-   package installed.
- *)
-
-let make_request tables universe request = 
-  let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
-  let get_candidate (name,constr) = 
-    try
-      List.find 
-	(fun pkg -> 
-	  try (Cudf.lookup_package_property pkg "apt-candidate") = "true"
-	  with Not_found -> false) 
-	(CudfAdd.who_provides universe (name,constr))
-    with Not_found -> 
-      fatal "Package %s does not have a suitable candidate" name
-  in
-  let select_packages ?(remove=false) l = 
-    List.map (fun ((n,a),c) -> 
-      let (name,constr) = Boilerplate.debvpkg to_cudf ((n,a),c) in
-      if remove then (name,None)
-      else begin
-	match constr, request.Edsp.strict_pin with
-        |None, false -> (name, None)
-	|_, _ -> (name,Some(`Eq,(get_candidate (name,constr)).Cudf.version))
-        (* FIXME: when apt will accept version constraints different from `Eq,
-           we will need to pass them through. *)
-      end
-    ) l 
-  in
-  if request.Edsp.upgrade || request.Edsp.distupgrade then
-    let to_upgrade = function
-      |[] ->
-        let filter pkg = pkg.Cudf.installed in
-        let l = Cudf.get_packages ~filter universe in
-        List.map (fun pkg -> (pkg.Cudf.package,None)) l
-      |l -> select_packages l
-    in
-    {Cudf.default_request with 
-    Cudf.request_id = request.Edsp.request;
-    Cudf.upgrade = to_upgrade request.Edsp.install;
-    Cudf.remove = select_packages ~remove:true request.Edsp.remove;
-    }
-  else
-    {Cudf.default_request with
-    Cudf.request_id = request.Edsp.request;
-    Cudf.install = select_packages request.Edsp.install;
-    Cudf.remove = select_packages ~remove:true request.Edsp.remove;
-    }
-;;
-
 let rec input_all_lines acc chan =
   try input_all_lines ((input_line chan)::acc) chan
   with End_of_file -> acc
@@ -411,7 +357,7 @@ let main () =
     with Cudf.Constraint_violation s ->
       fatal "(CUDF) Malformed universe %s" s
   in
-  let cudf_request = make_request tables universe request in
+  let cudf_request = Edsp.requesttocudf tables universe request in
   let cudf = (default_preamble,universe,cudf_request) in
   Util.Timer.stop timer2 ();
 

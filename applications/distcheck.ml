@@ -132,7 +132,7 @@ let main () =
       info "--checkonly specified, consider all packages as background packages";
       List.flatten (
         List.map (fun ((n,a),c) ->
-          let (name,filter) = Boilerplate.debvpkg to_cudf ((n,a),c) in
+          let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
           Cudf.lookup_packages ~filter universe name
         ) (OptParse.Opt.get Options.checkonly)
       )
@@ -143,7 +143,7 @@ let main () =
     if OptParse.Opt.is_set Options.coinst then begin
       info "--coinst specified, consider all packages as background packages";
       List.map (fun ((n,a),c) ->
-        let (name,filter) = Boilerplate.debvpkg to_cudf ((n,a),c) in
+        let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
         Cudf.lookup_packages ~filter universe name
       ) (OptParse.Opt.get Options.coinst)
     end else []

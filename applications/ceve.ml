@@ -114,7 +114,7 @@ let main () =
   else
   let (preamble,universe,from_cudf,to_cudf) = Boilerplate.load_universe ~options posargs in
   let get_cudfpkg ((n,a),c) = 
-    let (name,filter) = Boilerplate.debvpkg to_cudf ((n,a),c) in
+    let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
     try List.hd(Cudf.lookup_packages ~filter universe name)
     with ExtList.List.Empty_list -> fatal "package %s not found" n
   in

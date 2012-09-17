@@ -139,7 +139,7 @@ let main () =
     if OptParse.Opt.is_set Options.checkonly then begin
       List.flatten (
         List.map (fun ((n,a),c) ->
-          let (name,filter) = Boilerplate.debvpkg to_cudf (("src:"^n,a),c) in
+          let (name,filter) = Debian.Debutil.debvpkg to_cudf (("src:"^n,a),c) in
           Cudf.lookup_packages ~filter universe name
         ) (OptParse.Opt.get Options.checkonly)
       )
