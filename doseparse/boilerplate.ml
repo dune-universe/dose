@@ -63,15 +63,11 @@ let pkglist_option ?default ?(metavar = "VPKGLST") () =
   parse_vpkglist (fun _ s -> Printf.sprintf "invalid package list '%s'" s)
 ;;
 
-let debvpkg ?native_arch to_cudf ((n,a),c) =
+let debvpkg to_cudf ((n,a),c) =
   let name =
     CudfAdd.encode (
-      if Option.is_none a then
-        if not(Option.is_none native_arch) then
-          ((Option.get native_arch)^":"^n)
-        else n
-      else
-        ((Option.get a)^":"^n)
+      if Option.is_none a then n
+      else ((Option.get a)^":"^n)
     )
   in
   let constr =

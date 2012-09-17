@@ -71,7 +71,7 @@ let print_progress ?i msg =
    package installed.
  *)
 
-let make_request tables universe native_arch request = 
+let make_request tables universe request = 
   let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
   let get_candidate (name,constr) = 
     try
@@ -85,20 +85,15 @@ let make_request tables universe native_arch request =
   in
   let select_packages ?(remove=false) l = 
     List.map (fun ((n,a),c) -> 
-      let (name,constr) = 
-        if native_arch <> "" then
-          Boilerplate.debvpkg ~native_arch to_cudf ((n,a),c) 
-        else
-          Boilerplate.debvpkg to_cudf ((n,a),c)
-      in
-      if remove then
-        (name,None)
-      else
+      let (name,constr) = Boilerplate.debvpkg to_cudf ((n,a),c) in
+      if remove then (name,None)
+      else begin
 	match constr, request.Edsp.strict_pin with
-          None, false -> (name, None)
-	| _, _ -> (name,Some(`Eq,(get_candidate (name,constr)).Cudf.version))
+        |None, false -> (name, None)
+	|_, _ -> (name,Some(`Eq,(get_candidate (name,constr)).Cudf.version))
         (* FIXME: when apt will accept version constraints different from `Eq,
            we will need to pass them through. *)
+      end
     ) l 
   in
   if request.Edsp.upgrade || request.Edsp.distupgrade then
@@ -414,9 +409,9 @@ let main () =
   let universe = 
     try Cudf.load_universe cudfpkglist
     with Cudf.Constraint_violation s ->
-      fatal "(CUDF) Malformed universe %s" s;
+      fatal "(CUDF) Malformed universe %s" s
   in
-  let cudf_request = make_request tables universe native_arch request in
+  let cudf_request = make_request tables universe request in
   let cudf = (default_preamble,universe,cudf_request) in
   Util.Timer.stop timer2 ();
 

@@ -12,6 +12,8 @@
 
 (** Debian Specific Cudf conversion routines *)
 
+module SSet = Set.Make(String)
+
 open ExtLib
 open Common
 open Packages
@@ -20,10 +22,10 @@ include Util.Logging(struct let label = __FILE__ end) ;;
 module SMap = Map.Make (String)
 
 type tables = {
-  virtual_table : unit Util.StringHashtbl.t;
-  unit_table : unit Util.StringHashtbl.t ;
-  versions_table : int Util.StringHashtbl.t;
-  versioned_table : unit Util.StringHashtbl.t;
+  virtual_table : SSet.t ref Util.StringHashtbl.t;   (** all names of virtual packages *)
+  unit_table : unit Util.StringHashtbl.t ;     (** all names of real packages    *)
+  versions_table : int Util.StringHashtbl.t;   (** version -> int table          *)
+  versioned_table : unit Util.StringHashtbl.t; (** all (versions,name) tuples    *)
   reverse_table : (string SMap.t) ref Util.IntHashtbl.t
 }
 
@@ -94,9 +96,14 @@ let add_v table k v =
   if not(Hashtbl.mem table k) then
     Hashtbl.add table k v
 
+let add_s h k v =
+  try let s = Util.StringHashtbl.find h k in s := SSet.add v !s
+  with Not_found -> Util.StringHashtbl.add h k (ref (SSet.singleton v))
+;;
+
 (* collect names of virtual packages *)
 let init_virtual_table table pkg =
-  List.iter (fun ((name,_),_) -> add table name ()) pkg.provides
+  List.iter (fun ((name,_),_) -> add_s table name pkg.name) pkg.provides
 
 (* collect names of real packages *)
 let init_unit_table table pkg = 
@@ -112,8 +119,7 @@ let init_versioned_table table pkg =
   cnf_iter pkg.depends
 ;;
 
-(* collect all versions mentioned anywhere in the universe, including source
-   fields *)
+(* collect all versions mentioned anywhere in the universe, including source fields *)
 let init_versions_table table pkg =
   let conj_iter l =
     List.iter (fun ((name,_),sel) ->
@@ -142,8 +148,9 @@ let init_tables ?(step=1) ?(versionlist=[]) pkglist =
   let n = List.length pkglist in
   let tables = create n in 
   let temp_versions_table = Hashtbl.create (10 * n) in
-  let ivt = init_versions_table temp_versions_table in
   let ivrt = init_virtual_table tables.virtual_table in
+  (* XXX init_versions_table and init_versioned_table can be done at the same time !!! *)
+  let ivt = init_versions_table temp_versions_table in
   let ivdt = init_versioned_table tables.versioned_table in
   let iut = init_unit_table tables.unit_table in
 
@@ -344,7 +351,8 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
       else add_arch options.native pkgarch pkg.name 
     in
     let _version = get_cudf_version tables (pkg.name,pkg.version)  in
-    let _provides = match pkg.multiarch with
+    let _provides = 
+      match pkg.multiarch with
       |`None ->
          (* only arch-less package and pkgarch provides *)
          (CudfAdd.encode pkg.name,None)::
@@ -373,7 +381,6 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
          (add_arch_l options.native pkgarch (loadlp tables pkg.provides))
     in
     let _conflicts = 
-            List.iter (fun s -> info "%s" s)(options.native::options.foreign) ;
       let originalconflicts = pkg.breaks @ pkg.conflicts in
       (* self conflict *)
       let sc = (add_arch options.native pkgarch pkg.name,None) in
@@ -394,11 +401,34 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
             sc :: masc 
       in
       let multiarchconflicts =
-        List.flatten (
-          List.map (fun arch ->
-            add_arch_l options.native arch (loadl tables originalconflicts)
-          ) (options.native::options.foreign)
-        )
+        match pkg.multiarch with
+        |(`None|`Foreign|`Allowed) -> 
+            List.flatten (
+              List.map (fun arch ->
+                add_arch_l options.native arch (loadl tables originalconflicts)
+              ) (options.native::options.foreign)
+            )
+        |`Same -> 
+            List.flatten (
+              List.map (fun arch ->
+                add_arch_l options.native arch (
+                  loadl tables (
+                    List.flatten (
+                      List.map (fun ((n,a),c) ->
+                        try
+                          List.filter_map (fun pn ->
+                            if pn <> pkg.name then
+                              Some((pn,a),c)
+                            else None
+                          ) (SSet.elements !(Util.StringHashtbl.find tables.virtual_table n))
+                        with Not_found ->
+                          if n <> pkg.name then [((n,a),c)] else []
+                      ) (originalconflicts)
+                    )
+                  ) 
+                )
+              ) (options.native::options.foreign)
+            )
       in
       multiarchconflicts @ multiarchconstraints
     in
