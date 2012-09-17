@@ -87,6 +87,11 @@ class DoseTests(unittest.TestCase):
         cmd = ["./apt-cudf.native", "-e", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-foreign.edsp"]
         test_application(self,expected_file,cmd)
 
+    def test_apt_cudf_multiarch_foreign(self):
+        expected_file = "tests/applications/dose-tests/multiarch-foreign-depends"
+        cmd = ["./apt-cudf.native", "-e", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-foreign-depends.edsp"]
+        test_application(self,expected_file,cmd)
+
     def test_apt_cudf_multiarch_allowed(self):
         expected_file = "tests/applications/dose-tests/multiarch-allowed"
         cmd = ["./apt-cudf.native", "-e", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-allowed.edsp"]
