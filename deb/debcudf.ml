@@ -352,33 +352,34 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
     in
     let _version = get_cudf_version tables (pkg.name,pkg.version)  in
     let _provides = 
-      match pkg.multiarch with
-      |`None ->
-         (* only arch-less package and pkgarch provides *)
-         (CudfAdd.encode pkg.name,None)::
-           (add_arch_l options.native pkgarch (loadlp tables pkg.provides))
-      |`Foreign ->
-         (* packages of same name and version of itself in all archs except its own
-            each package this package provides is provided in all arches *)
-          List.flatten (
-            List.map (function
-              |arch when arch = pkgarch ->
-                  (add_arch_l options.native arch (loadlp tables pkg.provides))
-              |arch ->
-                  (add_arch options.native arch pkg.name,Some(`Eq,_version)) ::
+      let archlessprovide = (CudfAdd.encode pkg.name,None) in
+      let multiarchprovides = 
+        match pkg.multiarch with
+        |`None ->
+           (* pkgarch provides *)
+             (add_arch_l options.native pkgarch (loadlp tables pkg.provides))
+        |`Foreign ->
+           (* packages of same name and version of itself in all archs except its own
+              each package this package provides is provided in all arches *)
+            List.flatten (
+              List.map (function
+                |arch when arch = pkgarch ->
                     (add_arch_l options.native arch (loadlp tables pkg.provides))
-            ) (options.native::options.foreign)
-          )
-      |`Allowed ->
-         (* archless package and arch: any package *)
-         (* all provides as arch: any *)
-         (* pkgarch provides *)
-         (CudfAdd.encode pkg.name,None)::
-           (CudfAdd.encode (pkg.name^":any"),None)::
-             (List.map (fun (name, v) -> (CudfAdd.encode (name^":any"), v)) (loadlp tables pkg.provides))@
-                (add_arch_l options.native pkgarch (loadlp tables pkg.provides))
-      |`Same ->
-         (add_arch_l options.native pkgarch (loadlp tables pkg.provides))
+                |arch ->
+                    (add_arch options.native arch pkg.name,Some(`Eq,_version)) ::
+                      (add_arch_l options.native arch (loadlp tables pkg.provides))
+              ) (options.native::options.foreign)
+            )
+        |`Allowed ->
+           (* archless package and arch: any package *)
+           (* all provides as arch: any *)
+           (* pkgarch provides *)
+             (CudfAdd.encode (pkg.name^":any"),None)::
+               (List.map (fun (name, v) -> (CudfAdd.encode (name^":any"), v)) (loadlp tables pkg.provides))@
+                  (add_arch_l options.native pkgarch (loadlp tables pkg.provides))
+        |`Same ->
+           (add_arch_l options.native pkgarch (loadlp tables pkg.provides))
+      in archlessprovide :: multiarchprovides
     in
     let _conflicts = 
       let originalconflicts = pkg.breaks @ pkg.conflicts in

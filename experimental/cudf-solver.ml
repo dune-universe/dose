@@ -31,6 +31,8 @@ module Options = struct
   add options ~short_name:'c' ~long_name:"cudf"  ~help:"print the cudf solution (if any)" cudf;
 end
 
+include Util.Logging(struct let label = __FILE__ end) ;;
+
 let pp_solution oc = function
   |{Diagnostic.result = Diagnostic.Success (f);} ->
       let is = f ~all:true () in
@@ -46,7 +48,7 @@ let main () =
       let (p,l,r) = 
         match Boilerplate.parse_cudf f with
         |(p,l,Some r) -> (p,l,r)
-        |_ ->  (Printf.eprintf "Not a void cudf document (missing request)\n" ; exit 1)
+        |_ ->  fatal "Not a void cudf document (missing request)"
       in 
       let r = Depsolver.check_request (p,l,r) in
       if Diagnostic.is_solution r then begin

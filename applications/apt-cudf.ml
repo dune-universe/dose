@@ -49,7 +49,8 @@ end
 
 let fatal fmt =
   Printf.kprintf (fun s ->
-    Format.printf "Error: %s@." (Util.timestamp ());
+    Format.printf "Error: %s (%s)@." 
+      (OptParse.Opt.get Options.solver) (OptParse.Opt.get Options.criteria) ;
     Format.printf "Message: %s@." s;
     exit 0
   ) fmt
@@ -381,9 +382,10 @@ let main () =
   Unix.mkfifo solver_in 0o600;
   let solver_out = Filename.concat tmpdir "out-cudf" in
 
-  let cmdline_criteria = OptParse.Opt.opt (Options.criteria) in
+  let cmdline_criteria = OptParse.Opt.opt Options.criteria in
   let conffile = OptParse.Opt.get Options.conffile in
   let criteria = choose_criteria ~criteria:cmdline_criteria ~conffile solver request in
+  OptParse.Opt.set Options.criteria criteria ;
   let cmd = interpolate_solver_pat exec_pat solver_in solver_out criteria in
   debug "%s" cmd;
 
