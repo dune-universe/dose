@@ -36,6 +36,7 @@ module Options = struct
     let error _ s = Printf.sprintf "%s format not supported" s in
     Opt.value_option metavar default corce error
 
+  let trim = StdOpt.store_true ()
   let src = Boilerplate.vpkglist_option ()
   let dst = Boilerplate.vpkg_option ()
   let cone = Boilerplate.vpkglist_option ()
@@ -47,6 +48,7 @@ module Options = struct
 
   open OptParser
 (*  add options ~short_name:'e' ~long_name:"extract" ~help:"dependency/conflict cone" extract; *)
+  add options                 ~long_name:"trim" ~help:"Consider only installable packages" trim;
   add options ~short_name:'c' ~long_name:"cone" ~help:"dependency cone" cone;
   add options ~short_name:'r' ~long_name:"rcone" ~help:"reverse dependency cone" reverse_cone;
   add options                 ~long_name:"depth" ~help:"max depth - in conjunction with cone" cone_maxdepth;
@@ -113,6 +115,11 @@ let main () =
     output_to_sqlite posargs
   else
   let (preamble,universe,from_cudf,to_cudf) = Boilerplate.load_universe ~options posargs in
+  let universe =
+    if OptParse.Opt.get Options.trim then
+      Depsolver.trim ~global_constraints universe
+    else universe
+  in
   let get_cudfpkg ((n,a),c) = 
     let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
     try List.hd(Cudf.lookup_packages ~filter universe name)
