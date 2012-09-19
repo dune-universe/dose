@@ -23,7 +23,6 @@
     let msg = Printf.sprintf "unexpected RFC 822 token : '%c'" c in
     let loc = (lexbuf.Lexing.lex_start_p, lexbuf.Lexing.lex_curr_p) in
     raise (Format822.Parse_error_822 (msg,loc))
-
 }
 
 let lower_letter = [ 'a' - 'z' ]

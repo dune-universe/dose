@@ -24,8 +24,9 @@ open Common
 
 include Util.Logging(struct let label = __FILE__ end) ;;
 
-module Make (G: Sig.G) = struct
+module Make (G: Sig.I ) = struct
   module VS = Set.Make (G.V)
+
   module UndG = Imperative.Graph.Concrete(G.V) 
 
   let undirect g =
@@ -42,6 +43,7 @@ module Make (G: Sig.G) = struct
     g2
   ;;
 
+  (* www.cs.cornell.edu/home/kleinber/...book/networks-book-ch20.pdf *)
   let clustering_coefficient graph vertex =
     let neighbours = G.succ graph vertex in
     let n = List.length neighbours in
@@ -88,90 +90,90 @@ module Make (G: Sig.G) = struct
   if sum = 0 then 0.0 else float_of_int sum /. float_of_int n
   ;;
 
-  let _maxindegree = ref None
-  let _maxoutdegree = ref None
-  let _avgindegree = ref None
-  let _avgoutdegree = ref None
+  module MSin = Map.Make (struct
+    type t = (G.V.t * G.t ref)
+    let compare (v1,g) (v2,g) = (G.in_degree !g v1) - (G.in_degree !g v2)
+  end)
+
+  module MSout = Map.Make (struct
+    type t = (G.V.t * G.t ref)
+    let compare (v1,g) (v2,g) = (G.out_degree !g v1) - (G.out_degree !g v2)
+  end)
+
+  let _avgdegree = ref None
   let _outdata = ref None
   let _indata = ref None
+  let _outdatadegree = ref MSout.empty
+  let _indatadegree = ref MSin.empty
 
-  let degree graph f =
-    let n = (G.nb_vertex graph) in
-    let m = ref 0 in
-    let h = Hashtbl.create 1031 in
-    let add h v =
-      (* we don't care about leaves *)
-      if v = 0 then () else
-      try Hashtbl.replace h v ((Hashtbl.find h v) + 1)
-      with Not_found -> Hashtbl.add h v 1
+  let degree graph =
+    let nv = G.nb_vertex graph in
+    let outmax = ref 0 in
+    let inmax = ref 0 in
+    let outh = Hashtbl.create 1031 in
+    let inh = Hashtbl.create 1031 in
+    (* how many vertices have degree X *)
+    let add h d =
+      if d = 0 then () else
+        try Hashtbl.replace h d ((Hashtbl.find h d) + 1)
+        with Not_found -> Hashtbl.add h d 1
     in
     let total = 
       G.fold_vertex (fun v sum ->
-        let s = (List.length (f graph v)) in
-        if s > !m then m := s ;
-        add h s ;
-        sum + s
+        let outdeg = G.out_degree graph v in
+        let indeg = G.in_degree graph v in
+        add outh outdeg;
+        add inh indeg;
+        _indatadegree := MSin.add (v,ref graph) indeg !_indatadegree;
+        _outdatadegree := MSout.add (v,ref graph) outdeg !_outdatadegree;
+        sum + indeg
       ) graph 0
     in
-    ( (float_of_int total) /. (float_of_int n) , !m, h)
+    ( (float_of_int total) /. (float_of_int nv) , !outmax, !inmax, outh, inh)
+  ;;
 
-  let computeOutDegree graph =
-    if !_maxoutdegree <> None then ()
+  let computeDegree graph =
+    if Option.is_some !_avgdegree then ()
     else begin
-      let (av, mx, h) = degree graph G.succ in
-      _maxoutdegree := Some(mx);
-      _avgoutdegree := Some(av);
-      _outdata := Some(h);
+      let (avdeg, maxout, maxin, outdata, indata) = degree graph in
+      _avgdegree := Some(avdeg);
+      _outdata := Some(outdata);
+      _indata := Some(indata);
     end
   ;;
 
-  let computeInDegree graph = 
-    if !_maxindegree <> None then ()
-    else begin
-      let (av, mx, h) = degree graph G.pred in
-      _maxindegree := Some(mx);
-      _avgindegree := Some(av);
-      _indata := Some(h);
-    end
-  ;;
-
-  let get_option = function None -> assert false | Some x -> x 
   let maxOutDegree graph =
-    computeOutDegree graph;
-    get_option !_maxoutdegree
+    computeDegree graph;
+    snd(MSout.max_binding !_outdatadegree)
   ;;
 
   let maxInDegree graph =
-    computeInDegree graph;
-    get_option !_maxindegree
+    computeDegree graph;
+    snd(MSin.max_binding !_indatadegree)
   ;;
 
-  let averageOutDegree graph =
-    computeOutDegree graph;
-    get_option !_avgoutdegree
-  ;;
-
-  let averageInDegree graph =
-    computeInDegree graph;
-    get_option !_avgindegree
+  let averageDegree graph =
+    computeDegree graph;
+    Option.get !_avgdegree
   ;;
 
   let zdp graph =
     G.fold_vertex (fun v sum ->
-      if G.in_degree graph v == 0 && G.out_degree graph v == 0 then
+      if G.in_degree graph v = 0 && G.out_degree graph v = 0 then
         sum + 1
       else
         sum
     ) graph 0
+  ;;
 
   let scatteredPlotIn graph =
-    computeInDegree graph;
-    get_option !_indata
+    computeDegree graph;
+    Option.get !_indata
   ;;
 
   let scatteredPlotOut graph =
-    computeInDegree graph;
-    get_option !_outdata
+    computeDegree graph;
+    Option.get !_outdata
   ;;
 
   let scatteredPlotBoth graph =
@@ -183,6 +185,7 @@ module Make (G: Sig.G) = struct
       add h (G.in_degree graph v) (G.out_degree graph v)
     ) graph; 
     h
+  ;;
 
   (* http://en.wikipedia.org/wiki/Centrality *)
   let centralityDegree graph fd =
@@ -223,37 +226,19 @@ module Make (G: Sig.G) = struct
     in c /. n
 
   (* strongly directed components *)
-  (* weakly directed compoenents == strongly directed compoenents if the graph
+  (* weakly directed compoenents = strongly directed compoenents if the graph
    * is not direct !!! *)
-  let components = 
-    let save = ref None in
-    fun graph ->
-      match !save with
-      |None -> begin
-          let module C = Components.Make(G) in
-          let c = C.scc_array graph in
-          save := Some c ;
-          c
-      end
-      |Some c -> c
+  let components graph = 
+    let module C = Components.Make(G) in
+    C.scc_array graph
 
-  let weaklycomponents = 
-    let save = ref None in
-    fun graph ->
-      match !save with
-      |None -> begin
-          let module C = Components.Make(UndG) in
-          let c = C.scc_array (undirect graph) in
-          save := Some c ;
-          c
-      end
-      |Some c -> c
+  let weaklycomponents graph = 
+    let module C = Components.Make(UndG) in
+    C.scc_array (undirect graph)
 
-  let numberComponents f graph =
-    Array.length (f graph)
+  let numberComponents c = Array.length c
 
-  let averageComponents f graph =
-    let c = f graph in
+  let averageComponents c =
     let sum =
       Array.fold_left (fun acc i ->
         acc + List.length i
@@ -261,19 +246,10 @@ module Make (G: Sig.G) = struct
     in
     (float_of_int sum /. float_of_int (Array.length c))
 
-  let largestComponent f graph =
-    let c = f graph in
+  let largestComponent c =
     Array.sort (fun x y -> compare (List.length x) (List.length y)) c;
     (List.length c.(Array.length c - 1))
   ;;
-
-  let numberComponentsSC graph = numberComponents components graph 
-  let averageComponentsSC graph = averageComponents components graph
-  let largestComponentSC graph = largestComponent components graph
-
-  let numberComponentsWC graph = numberComponents weaklycomponents graph 
-  let averageComponentsWC graph = averageComponents weaklycomponents graph
-  let largestComponentWC graph = largestComponent weaklycomponents graph
 
   let density graph =
     let n = float_of_int (G.nb_vertex graph) in
@@ -294,6 +270,15 @@ module Make (G: Sig.G) = struct
         in total +. (float_of_int (S.cardinal s));
       ) graph 0.0
     in t /. n
+
+  let removezdp graph =
+    let g = G.copy graph in
+    G.iter_vertex (fun v ->
+      if G.in_degree graph v = 0 && G.out_degree graph v = 0 then
+        G.remove_vertex g v;
+    ) graph;
+    g
+  ;;
 
 (*
   (* bullshit *)

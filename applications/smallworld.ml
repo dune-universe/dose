@@ -112,6 +112,7 @@ let main () =
     if OptParse.Opt.get Options.closure then O.O.transitive_closure gr'
     else gr'
   in
+  let zdpgr = S.removezdp gr in
   let prefix = OptParse.Opt.get Options.prefix in
   let outch = if prefix = "" then stdout else open_out ( prefix ^ "stats" ) in
   let generic = "Generic" >::: [
@@ -120,33 +121,47 @@ let main () =
     ]
   in
   let connectivity = "Connectivity" >::: [
-    "  Average Out-Degree" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageOutDegree gr));
-    "  Average In-Degree"  >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageInDegree gr));
-    "  Zero-degree Packages" >:: (fun _ -> Printf.fprintf outch "%d" (S.zdp gr));
+    "  Average Degree"  >:: (fun _ -> Printf.fprintf outch "%.02f" (S.averageDegree gr));
+    "  Density" >:: (fun _ -> Printf.fprintf outch "%0.5f" (S.density gr));
+    "  Zero-degree Packages" >:: (fun _ -> 
+      let total = float_of_int (G.nb_vertex gr) in
+      let zdp = float_of_int (S.zdp gr) in
+      let percent = (zdp /. total) *. 100. in
+      Printf.fprintf outch "%0.f (%0.2f%% of %0.f)" zdp percent total
+    );
     ]
   in
+  let scc = S.components gr in
+  let scczdp = S.components zdpgr in
   let componentsSC = "Strongly Connected Components" >::: [
-    "  Number of Components SC"  >:: (fun _ -> Printf.fprintf outch "%d" (S.numberComponentsSC gr));
-    "  Average Components SC" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageComponentsSC gr));
-    "  Larges Component SC" >:: (fun _ -> Printf.fprintf outch "%d" (S.largestComponentSC gr));
+    "  Number of Components SC"  >:: (fun _ -> Printf.fprintf outch "%d" (S.numberComponents scc));
+    "  Average Components SC" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageComponents scc));
+    "  Larges Component SC" >:: (fun _ -> Printf.fprintf outch "%d" (S.largestComponent scc));
+    "  Number of Components SC (zdp)"  >:: (fun _ -> Printf.fprintf outch "%d" (S.numberComponents scczdp));
+    "  Average Components SC (zpd)" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageComponents scczdp));
     ]
   in
+  let wcc = S.weaklycomponents gr in
+  let wcczdp = S.weaklycomponents zdpgr in
   let componentsWC = "Weakly Connected Components" >::: [
-    "  Number of Components WC"  >:: (fun _ -> Printf.fprintf outch "%d" (S.numberComponentsWC gr));
-    "  Average Components WC" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageComponentsWC gr));
-    "  Larges Component WC" >:: (fun _ -> Printf.fprintf outch "%d" (S.largestComponentWC gr));
+    "  Number of Components WC"  >:: (fun _ -> Printf.fprintf outch "%d" (S.numberComponents wcc));
+    "  Average Components WC" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageComponents wcc));
+    "  Larges Component WC" >:: (fun _ -> Printf.fprintf outch "%d" (S.largestComponent wcc));
+    "  Number of Components WC (zdp)"  >:: (fun _ -> Printf.fprintf outch "%d" (S.numberComponents wcczdp));
+    "  Average Components WC (zdp)" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageComponents wcczdp));
     ]
   in
   let smallworld = "Small World" >::: [
     "  Clustering Coefficient" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.clustering gr));
     "  Average Shortest Path Length" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageShortestPathLength gr));
-    "  Density" >:: (fun _ -> Printf.fprintf outch "%0.5f" (S.density gr));
     "  Average two step reach" >:: (fun _ -> Printf.fprintf outch "%0.2f" (S.averageTwoStepReach gr));
     ]
   in
   let centrality = "Centrality" >::: [
     "  Centrality Out Degree" >:: (fun _ -> Printf.fprintf outch "%0.5f" (S.centralityOutDegree gr));
     "  Centrality In Degree" >:: (fun _ -> Printf.fprintf outch "%0.5f" (S.centralityInDegree gr));
+    "  Centrality Out Degree (zdp)" >:: (fun _ -> Printf.fprintf outch "%0.5f" (S.centralityOutDegree zdpgr));
+    "  Centrality In Degree (zdp)" >:: (fun _ -> Printf.fprintf outch "%0.5f" (S.centralityInDegree zdpgr));
     ]
   in
   let scatterplots = "Scattered Plots" >:::
