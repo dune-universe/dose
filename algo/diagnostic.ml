@@ -317,24 +317,32 @@ let collect results = function
   |_  -> ()
 ;;
 
-let pp_summary_row pp fmt = function
+let pp_summary_row explain pp fmt = function
   |(Conflict (i,j,_),pl) ->
       Format.fprintf fmt "@[<v 1>conflict:@,";
       Format.fprintf fmt "@[<v 1>pkg1:@,%a@]@," (pp_package pp) i;
       Format.fprintf fmt "@[<v 1>pkg2:@,%a@]@," (pp_package pp) j;
-      Format.fprintf fmt "@[<v 1>packages:@," ;
-      pp_list (pp_package ~source:true pp) fmt pl;
-      Format.fprintf fmt "@]@]"
+      Format.fprintf fmt "@[<v 1>broken-by: %d@]@," (List.length pl);
+      if explain then begin
+        Format.fprintf fmt "@[<v 1>packages:@," ;
+        pp_list (pp_package ~source:true pp) fmt pl;
+        Format.fprintf fmt "@]"
+      end;
+      Format.fprintf fmt "@]"
   |(Missing (i,vpkgs) ,pl) -> 
       Format.fprintf fmt "@[<v 1>missing:@,";
       Format.fprintf fmt "@[<v 1>unsat-dependency: %a@]@," (pp_vpkglist pp) vpkgs;
-      Format.fprintf fmt "@[<v 1>packages:@," ;
-      pp_list (pp_package ~source:true pp) fmt pl;
-      Format.fprintf fmt "@]@]"
+      Format.fprintf fmt "@[<v 1>broken-by: %d@]@," (List.length pl);
+      if explain then begin
+        Format.fprintf fmt "@[<v 1>packages:@," ;
+        pp_list (pp_package ~source:true pp) fmt pl;
+        Format.fprintf fmt "@]"
+      end;
+      Format.fprintf fmt "@]"
   |_ -> ()
 ;;
 
-let pp_summary ?(pp=default_pp) () fmt result = 
+let pp_summary ?(pp=default_pp) ?(explain=false) () fmt result = 
   let l =
     ResultHash.fold (fun k v acc -> 
       let l1 = Util.list_unique !v in
@@ -346,7 +354,7 @@ let pp_summary ?(pp=default_pp) () fmt result =
       if List.length l1 > 1 then (k,l1)::acc else acc 
     ) result.summary [] 
   in
-  let l = List.sort ~cmp:(fun (_,l1) (_,l2) -> (List.length l1) - (List.length l2)) l in
+  let l = List.sort ~cmp:(fun (_,l1) (_,l2) -> (List.length l2) - (List.length l1)) l in
 
   Format.fprintf fmt "@[";
   Format.fprintf fmt "missing-packages: %d@." result.missing;
@@ -356,6 +364,6 @@ let pp_summary ?(pp=default_pp) () fmt result =
   Format.fprintf fmt "@]";
 
   Format.fprintf fmt "@[<v 1>summary:@," ;
-  pp_list (pp_summary_row pp) fmt l;
+  pp_list (pp_summary_row explain pp) fmt l;
   Format.fprintf fmt "@]"
 ;;

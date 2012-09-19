@@ -188,29 +188,25 @@ let main () =
   let number_broken =
     if OptParse.Opt.is_set Options.coinst then 
       let rl = Depsolver.edos_coinstall_prod universe coinstlist in
-      let number_broken_tuples =
-	List.length (List.filter (fun r -> not (Diagnostic.is_solution r)) rl) 
-      and number_checks = List.length rl
-      in begin
-	ignore(Util.Timer.stop timer ());
-	List.iter callback rl;
-	if failure || success then Format.fprintf fmt "@]@.";
-	Format.fprintf fmt "total-packages: %d@." universe_size;
-	Format.fprintf fmt "total-tuples: %d@." number_checks;
-	Format.fprintf fmt "broken-tuples: %d@." number_broken_tuples;
-	number_broken_tuples
-      end
+      let nbt = List.length (List.filter (fun r -> not (Diagnostic.is_solution r)) rl) in
+      let number_checks = List.length rl in 
+      ignore(Util.Timer.stop timer ());
+      List.iter callback rl;
+      if failure || success then Format.fprintf fmt "@]@.";
+      Format.fprintf fmt "total-packages: %d@." universe_size;
+      Format.fprintf fmt "total-tuples: %d@." number_checks;
+      Format.fprintf fmt "broken-tuples: %d@." nbt;
+      nbt
     else begin 
       let global_constraints = not(OptParse.Opt.get Options.deb_ignore_essential) in
-      let number_broken_packages =
+      let nbp =
 	if OptParse.Opt.is_set Options.checkonly then 
 	  Depsolver.listcheck ~global_constraints ~callback universe checklist
-	else begin
+	else
 	  if bg_pkglist = [] then
             Depsolver.univcheck ~global_constraints ~callback universe 
 	  else
             Depsolver.listcheck ~global_constraints ~callback universe fg_pkglist
-	end
       in
       ignore(Util.Timer.stop timer ());
       
@@ -227,10 +223,12 @@ let main () =
       Format.fprintf fmt "background-packages: %d@." nb;
       Format.fprintf fmt "foreground-packages: %d@." nf;
       Format.fprintf fmt "total-packages: %d@." universe_size;
-      Format.fprintf fmt "broken-packages: %d@." number_broken_packages;
+      Format.fprintf fmt "broken-percent: %0.2f%%@." 
+       ( (float_of_int nbp) /.  (float_of_int universe_size) *. 100. ) ;
+      Format.fprintf fmt "broken-packages: %d@." nbp;
       if summary then 
 	Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
-      number_broken_packages
+      nbp
     end
       
   in
