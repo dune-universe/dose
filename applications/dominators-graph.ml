@@ -39,7 +39,7 @@ include Util.Logging(struct let label = __FILE__ end) ;;
 
 module G = Defaultgraphs.PackageGraph.G
 module O = Defaultgraphs.PackageGraph.O
-module D = Defaultgraphs.PackageGraph.D
+module D = Defaultgraphs.PackageGraph.DotPrinter
 module S = Defaultgraphs.PackageGraph.S
 module Dom = Dominators
 

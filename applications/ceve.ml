@@ -28,9 +28,9 @@ module Options = struct
   include Boilerplate.MakeOptions(struct let options = options end)
 
   exception Format
-  let out_option ?default ?(metavar = "<dot|cnf|dimacs|cudf|table>") () =
+  let out_option ?default ?(metavar = "<dot|gml|cnf|dimacs|cudf|table>") () =
     let corce = function
-      |("cnf"|"dimacs"|"cudf"|"dot"|"table") as s -> s
+      |("cnf"|"dimacs"|"cudf"|"dot"|"gml"|"table") as s -> s
       | _ -> raise Format
     in
     let error _ s = Printf.sprintf "%s format not supported" s in
@@ -194,10 +194,18 @@ let main () =
       begin match OptParse.Opt.get Options.out_type with
       |"dot" -> 
 IFDEF HASOCAMLGRAPH THEN
-          DGraph.D.output_graph oc (DGraph.dependency_graph u)
+          DGraph.DotPrinter.output_graph oc (DGraph.dependency_graph u)
 ELSE
         failwith ("dot not supported: needs ocamlgraph")
 END
+      |"gml" -> 
+IFDEF HASOCAMLGRAPH THEN
+          let fmt = Format.formatter_of_out_channel oc in
+          DGraph.GmlPrinter.print fmt (DGraph.dependency_graph u)
+ELSE
+        failwith ("dot not supported: needs ocamlgraph")
+END
+
       |"cnf" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Cnf u)
       |"dimacs" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Dimacs u)
       |"cudf" -> output_cudf oc preamble u

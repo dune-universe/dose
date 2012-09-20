@@ -87,7 +87,7 @@ let main () =
       if OptParse.Opt.get Options.dot then begin
         if OptParse.Opt.get Options.detrans then
           O.transitive_reduction sdgraph;
-        Defaultgraphs.PackageGraph.D.output_graph stdout sdgraph;
+        Defaultgraphs.PackageGraph.DotPrinter.output_graph stdout sdgraph;
       end else begin
         let pp_list = Diagnostic.pp_list CudfAdd.pp_package in
         List.iter (fun q -> 
@@ -112,7 +112,7 @@ let main () =
     if OptParse.Opt.get Options.dot then begin
       if OptParse.Opt.get Options.detrans then
         O.transitive_reduction sdgraph;
-      Defaultgraphs.PackageGraph.D.output_graph stdout sdgraph;
+      Defaultgraphs.PackageGraph.DotPrinter.output_graph stdout sdgraph;
     end else begin
       let depgraph = Defaultgraphs.PackageGraph.dependency_graph universe in
       let l = 
