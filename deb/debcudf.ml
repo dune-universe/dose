@@ -332,14 +332,10 @@ let add_inst inst pkg =
 let add_extra extras tables pkg =
   add_extra_default extras tables pkg
 
-(* let is_source pkg = String.starts_with pkg.name "src:" ;; *)
-(* XXX maybe adding a new field to the package record ? *)
-let is_source pkg = List.mem ("type", "src") pkg.extras;;
-
 let tocudf tables ?(options=default_options) ?(inst=false) pkg =
   if options.native <> "" then begin
     let pkgarch =
-      match options.host,is_source pkg with
+      match options.host,Sources.is_source pkg with
       |"",true -> options.native   (* source package : build deps on the native arch *)
       |_,true  -> options.host     (* source package : build deps on the cross arch *)
       |_,false -> pkg.architecture (* binary package : dependencies are package specific *)
@@ -347,7 +343,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
     let _name = 
       (* if the package is a source package the name does not need an
        * architecture annotation. Nobody depends on it *)
-      if is_source pkg then (CudfAdd.encode pkg.name) 
+      if Sources.is_source pkg then (CudfAdd.encode pkg.name) 
       else add_arch options.native pkgarch pkg.name 
     in
     let _version = get_cudf_version tables (pkg.name,pkg.version)  in

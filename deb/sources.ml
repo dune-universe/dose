@@ -246,3 +246,7 @@ let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") builddeparc
         pkg::al
     (* else al *)
   ) l []
+;;
+
+let is_source pkg = List.mem ("type", "src") pkg.Packages.extras;;
+
