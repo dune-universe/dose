@@ -457,11 +457,13 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
      * removed because of build-essential:native
      * :any and :native can safely be removed as only packages of native
      * architecture are considered here anyways
-     * XXX: in the future, dependencies on :$arch will be introduced (for example
+     * XXX : in the future, dependencies on :$arch will be introduced (for example
      * for building cross compilers) they have to be handled here as well *)
+    (* XXX : hack I should look for : and not 3%a . encoding should be done
+     * after *)
     let remove_qualifier = function
-      | n,v when String.ends_with n ":native" -> String.slice ~last:(-7) n, v
-      | n,v when String.ends_with n ":any" -> String.slice ~last:(-4) n, v
+      | n,v when String.ends_with n "%3anative" -> String.slice ~last:(-9) n, v
+      | n,v when String.ends_with n "%3aany" -> String.slice ~last:(-6) n, v
       | n,v -> n, v
     in
     let _depends =
