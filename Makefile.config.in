@@ -28,6 +28,12 @@ ifeq ("@OCAML_OS_TYPE@","freebsd")
   LDFLAGS += -fstack-protector
 endif
 
+ifeq ("@OCAMLOPT@","ocamlopt.opt")
+  CAMLP4CMXS=camlp4cmxs
+else
+  CAMLP4CMXS=
+endif
+
 ifeq ("@OCAMLBEST@","opt")
   OCAMLBEST=native
   OCAMLBUILD=@OCAMLBUILD@ -ocamlc @OCAMLC@ -ocamlopt @OCAMLOPT@ -ocamldep @OCAMLDEP@

@@ -7,16 +7,20 @@ OBFLAGS := -j 10 -classic-display
 #OBFLAGS := $(OBFLAGS) -tag debug -tag profile
 #OBFLAGS := $(OBFLAGS) -classic-display
 
-realall: $(BYTELIBS) $(ALIBS) $(OPTLIBS) $(CMXSLIBS) man
+realall: $(CAMLP4CMXS) $(BYTELIBS) $(ALIBS) $(OPTLIBS) $(CMXSLIBS) man
 	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
 
-fast: $(OPTLIBS)
+fast: $(CAMLP4CMXS) $(OPTLIBS)
 	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
 
 apps:
 	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
 
 DOSELIBS = _build/doselibs
+
+camlp4cmxs:
+	mkdir -p _build
+	ocamlopt -shared $(shell ocamlc -where)/camlp4/Camlp4Parsers/Camlp4MacroParser.cmx -o _build/Camlp4MacroParser.cmxs
 
 cudf/cudf.%:
 	$(OCAMLBUILD) $(OBFLAGS) cudf/cudf.$*

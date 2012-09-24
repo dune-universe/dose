@@ -6,10 +6,17 @@ if test "$OCAMLC" = "no"; then
 fi
 
 AC_PROG_CAMLP4
-AC_SUBST(CAMLP4O)
 if test "$CAMLP4" = "no"; then
  AC_MSG_ERROR([You must install the Camlp4 pre-processor])
 fi
+
+if test "$CAMLP4OOPT" = "no" ; then
+  CAMLP4OMACRO="$CAMLP4O Camlp4MacroParser.cmx"
+else
+  CAMLP4OMACRO="$CAMLP4OOPT -I_build Camlp4MacroParser.cmxs"
+fi
+AC_SUBST(CAMLP4O)
+AC_SUBST(CAMLP4OMACRO)
 
 AC_PROG_FINDLIB
 AC_SUBST(OCAMLFIND)

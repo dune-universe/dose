@@ -1,12 +1,12 @@
-<*/*.ml{i,}>: pp(camlp4o Camlp4MacroParser.cmo)
+<*/*.ml{i,}>: pp(@CAMLP4OMACRO@)
 <*/*.ml{i,}>: package(extlib), @PKG_CUDF@, package(pcre)
 
-<doseparse/boilerplateNoRpm.ml>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
-<doseparse/boilerplate.ml>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
+<doseparse/boilerplateNoRpm.ml>: pp(@CAMLP4OMACRO@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
+<doseparse/boilerplate.ml>: pp(@CAMLP4OMACRO@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
 
-<{common,algo}/*.ml{i,}>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
+<{common,algo}/*.ml{i,}>: pp(@CAMLP4OMACRO@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
 
-<applications/*.ml> or <experimental/*/*.ml> or <experimental/*.ml>: pp(camlp4o Camlp4MacroParser.cmo @CONFIG_PARMAP@ @CONFIG_OCAMLGRAPH@)
+<applications/*.ml> or <experimental/*/*.ml> or <experimental/*.ml>: pp(@CAMLP4OMACRO@ @CONFIG_PARMAP@ @CONFIG_OCAMLGRAPH@)
 
 <*/tests.*>: package(oUnit), package(extlib), @PKG_CUDF@, package(pcre), package(zip), package(bz2)
 
