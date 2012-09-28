@@ -20,7 +20,6 @@ include Util.Logging(struct let label = __FILE__ end) ;;
 type source = {
   name : Format822.name;
   version : Format822.version;
-  binary : Format822.name list;
   architecture : Format822.architecture list;
   build_depends : Format822.builddepsformula;
   build_depends_indep : Format822.builddepsformula;
@@ -32,7 +31,6 @@ let default_source = {
   name = "";
   version = "";
   architecture = [];
-  binary = [];
   build_depends = [];
   build_depends_indep = [];
   build_conflicts = [];
@@ -42,7 +40,6 @@ let default_source = {
 let parse_s = Packages.parse_s
 let parse_name = Packages.parse_name
 let parse_version = Packages.parse_version
-let parse_binary s = List.map fst (Packages.parse_vpkglist s) (* hack XXX *)
 let parse_builddepslist = Packages.lexbuf_wrapper Packages_parser.builddepslist_top
 let parse_builddepsformula = Packages.lexbuf_wrapper Packages_parser.builddepsformula_top
 
@@ -71,7 +68,6 @@ let parse_package_stanza filter archs par =
     name = parse_s ~err:"(MISSING NAME)" parse_name "Package" par;
     version = parse_s ~err:"(MISSING VERSION)" parse_version "Version" par;
     architecture = parse_s ~err:"(MISSING ARCH)" parse_archs "Architecture" par;
-    binary = []; (* parse_s ~opt:[] ~multi:true parse_binary "Binary" par; *)
     build_depends = 
       parse_s ~opt:[] ~multi:true parse_builddepsformula "Build-Depends" par; 
     build_depends_indep =
@@ -205,7 +201,6 @@ let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") builddeparc
     )
   in
   let add_native_ll = List.map add_native_l in
-  let bins pkg = String.concat "," pkg.binary in
 
   (* the package name is encodes as src-<profile>:<package name> if
    * a profile is selected, src:<package-name> otherwise *)
@@ -222,7 +217,7 @@ let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") builddeparc
       depends = build_essential::(depends profile (depends_indep @ srcpkg.build_depends));
       conflicts = conflicts profile (conflicts_indep @ srcpkg.build_conflicts);
       architecture = String.concat "," srcpkg.architecture;
-      extras = extras_profile @ [("type",src);("binaries",bins srcpkg)]
+      extras = extras_profile @ [("type",src)]
     }
   in
 
