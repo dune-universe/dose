@@ -21,7 +21,7 @@ let test_deb_local =
   "deb local" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
       Input.parse_uri "deb://Packages.gz" 
-    in assert_equal true (protocol = Url.Deb && path = "Packages.gz")
+    in assert_equal true (protocol = `Deb && path = "Packages.gz")
   ) 
 ;;
 
@@ -29,7 +29,7 @@ let test_deb_path =
   "deb path" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
       Input.parse_uri "deb:///var/lib/Packages.gz" 
-    in assert_equal true (protocol = Url.Deb && path = "/var/lib/Packages.gz")
+    in assert_equal true (protocol = `Deb && path = "/var/lib/Packages.gz")
   )
 ;;
 
@@ -37,7 +37,7 @@ let test_hdlist =
   "hdlist" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
       Input.parse_uri "hdlist://path/to/file" 
-    in assert_equal true (protocol = Url.Hdlist && path = "path/to/file")
+    in assert_equal true (protocol = `Hdlist && path = "path/to/file")
   )
 ;;
 
@@ -45,7 +45,7 @@ let test_synth =
   "synthesis" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
       Input.parse_uri "synthesis://path/to/file" 
-    in assert_equal true (protocol = Url.Synthesis && path = "path/to/file")
+    in assert_equal true (protocol = `Synthesis && path = "path/to/file")
   )
 ;;
 
@@ -53,7 +53,7 @@ let test_cudf =
   "cudf" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
       Input.parse_uri "cudf://path/to/file" 
-    in assert_equal true (protocol = Url.Cudf && path = "path/to/file")
+    in assert_equal true (protocol = `Cudf && path = "path/to/file")
   )
 ;;
 
@@ -61,7 +61,7 @@ let test_sqlite =
   "sqlite" >:: (fun _ ->
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
       Input.parse_uri "sqlite:///path/to/file" 
-    in assert_equal true (protocol = Url.Sqlite && path = "/path/to/file")
+    in assert_equal true (protocol = `Sqlite && path = "/path/to/file")
   ) 
 ;;
 
@@ -70,7 +70,7 @@ let test_pgsql =
     let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
       Input.parse_uri "pgsql://test:tester@localhost:10/dbname?query=lalalal;v2=k2"
     in assert_equal true (
-      protocol = Url.Pgsql && 
+      protocol = `Pgsql && 
       userOpt = Some "test" &&
       passOpt = Some "tester" &&
       hostOpt = Some "localhost" &&

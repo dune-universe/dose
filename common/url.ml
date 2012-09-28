@@ -17,39 +17,43 @@ include Util.Logging(struct let label = __FILE__ end) ;;
 (***********************************************************************)
 (* Input schemes *******************************************************)
 
-type input_scheme =
-  | Edsp | Csw | Deb | Cudf | Eclipse | Synthesis | Hdlist  (* file types *)
-  | Sqlite | Pgsql                             (* data bases *)
-;;
+type debtypes = [ `Edsp | `Deb ]
+type rpmtypes = [ `Synthesis | `Hdlist ]
+type osgitypes = [ `Eclipse ]
+type othertypes = [ `Csw ]
+
+type filetypes = [ `Cudf | debtypes | rpmtypes | osgitypes | othertypes ]
+type datatypes = [ `Sqlite | `Pgsql ]
+type input_scheme = [ filetypes | datatypes ]
 
 let is_local_scheme = function
-  | Edsp | Csw | Deb | Cudf | Eclipse | Synthesis | Hdlist | Sqlite -> true
-  | Pgsql -> false
+  | #filetypes | `Sqlite -> true
+  | `Pgsql -> false
 ;;
 
 let scheme_to_string = function
-  | Edsp -> "edsp"
-  | Csw -> "csw"
-  | Deb -> "deb"
-  | Eclipse -> "eclipse"
-  | Cudf -> "cudf"
-  | Synthesis -> "synthesis"
-  | Hdlist -> "hdlist"
-  | Pgsql -> "pgsql"
-  | Sqlite -> "sqlite"
+  | `Edsp -> "edsp"
+  | `Csw -> "csw"
+  | `Deb -> "deb"
+  | `Eclipse -> "eclipse"
+  | `Cudf -> "cudf"
+  | `Synthesis -> "synthesis"
+  | `Hdlist -> "hdlist"
+  | `Pgsql -> "pgsql"
+  | `Sqlite -> "sqlite"
 ;;
 
 let scheme_of_string = function
-  | "edsp" -> Edsp
-  | "csw" -> Csw
-  | "deb" -> Deb
-  | "cudf" -> Cudf
-  | "eclipse" -> Eclipse
-  | "synthesis" -> Synthesis
-  | "hdlist" -> Hdlist
-  | "sqlite" -> Sqlite
-  | "pgsql" -> Pgsql
-  | s -> fatal "unknown scheme" s
+  | "edsp" -> `Edsp
+  | "csw" -> `Csw
+  | "deb" -> `Deb
+  | "cudf" -> `Cudf
+  | "eclipse" -> `Eclipse
+  | "synthesis" -> `Synthesis
+  | "hdlist" -> `Hdlist
+  | "sqlite" -> `Sqlite
+  | "pgsql" -> `Pgsql
+  | s -> fatal "unknown input scheme" s
 ;;
 
 (***********************************************************************)

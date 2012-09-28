@@ -281,7 +281,7 @@ let outdated
 let main () =
   let args = OptParse.OptParser.parse_argv Options.options in
   let options = 
-    match Option.get (Options.set_options Url.Deb) with
+    match Option.get (Options.set_options `Deb) with
     |Boilerplate.Deb o -> o
     |_ -> fatal "impossible"
   in

@@ -30,6 +30,8 @@ module Options = struct
   add options ~long_name:"detrans" ~help:"Print the transitive reduction of the strong dependency graph" detrans;
   add options ~long_name:"checkonly" ~help:"Check only these package" checkonly;
   add options ~long_name:"conj-only" ~help:"Use the conjunctive graph only" conj_only;
+
+  include Boilerplate.MakeDistribOptions(struct let options = options end);;
 end
 
 include Util.Logging(struct let label = __FILE__ end) ;;
@@ -43,22 +45,18 @@ let impactlist = Defaultgraphs.PackageGraph.pred_list
 let rev_impactlist = Defaultgraphs.PackageGraph.succ_list
 
 let default_options = function
-  |Url.Deb -> Some ( 
+  |`Deb -> Some ( 
     Boilerplate.Deb { 
       Debian.Debcudf.default_options with
       Debian.Debcudf.ignore_essential = true
     })
-  |Url.Edsp -> Some ( 
+  |`Edsp -> Some ( 
     Boilerplate.Edsp { 
       Debian.Debcudf.default_options with
       Debian.Debcudf.ignore_essential = true
     })
-  |Url.Synthesis -> None
-  |Url.Hdlist -> None
-  |(Url.Pgsql|Url.Sqlite) -> None
-  |Url.Eclipse -> Some (Boilerplate.Eclipse Debian.Debcudf.default_options)
-  |Url.Cudf -> None
-  |Url.Csw -> None
+  |`Eclipse -> Some (Boilerplate.Eclipse Debian.Debcudf.default_options)
+  |_ -> None
 ;;
 
 let main () =
@@ -66,7 +64,8 @@ let main () =
   let bars = ["Strongdeps_int.main";"Strongdeps_int.conj"] in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress) bars;
-  let options = default_options (Input.guess_format [posargs]) in
+  let options = Options.set_options (Input.guess_format [posargs]) in
+  (* let options = default_options (Input.guess_format [posargs]) in *)
   let (_,universe,_,to_cudf) = Boilerplate.load_universe ~options posargs in
   if OptParse.Opt.is_set Options.checkonly then begin
     let pkglistlist =

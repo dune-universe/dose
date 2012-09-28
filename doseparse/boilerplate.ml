@@ -160,32 +160,24 @@ module MakeDistribOptions(O : sig val options : OptParse.OptParser.t end) = stru
   ;;
 
   let set_default_options = function
-    |Url.Deb -> Some (
+    |`Deb -> Some (
       Deb { 
         Debian.Debcudf.default_options with
         Debian.Debcudf.ignore_essential = true
       })
-    |Url.Edsp -> Some (
+    |`Edsp -> Some (
       Edsp { 
         Debian.Debcudf.default_options with
         Debian.Debcudf.ignore_essential = true
       })
-    |Url.Synthesis -> None
-    |Url.Hdlist -> None
-    |(Url.Pgsql|Url.Sqlite) -> None
-    |Url.Eclipse -> Some (Eclipse Debian.Debcudf.default_options)
-    |Url.Cudf -> None
-    |Url.Csw -> None
+    |`Eclipse -> Some (Eclipse Debian.Debcudf.default_options)
+    |_ -> None
 
   let set_options = function
-    |Url.Deb -> Some (Deb (set_deb_options ()))
-    |Url.Edsp -> Some (Edsp (set_deb_options ()))
-    |Url.Synthesis -> None
-    |Url.Hdlist -> None
-    |(Url.Pgsql|Url.Sqlite) -> None
-    |Url.Eclipse -> Some (Eclipse Debian.Debcudf.default_options)
-    |Url.Cudf -> None
-    |Url.Csw -> None
+    |`Deb -> Some (Deb (set_deb_options ()))
+    |`Edsp -> Some (Edsp (set_deb_options ()))
+    |`Eclipse -> Some (Eclipse Debian.Debcudf.default_options)
+    |_ -> None
   ;;
 
   open OptParser ;;
@@ -457,21 +449,21 @@ let edsp_parse_input options urilist =
 let parse_input ?(options=None) urilist =
   let filelist = List.map (List.map Input.parse_uri) urilist in
   match Input.guess_format urilist, options with
-  |Url.Cudf, None -> cudf_parse_input filelist
+  |`Cudf, None -> cudf_parse_input filelist
 
-  |Url.Deb, None -> deb_parse_input Debian.Debcudf.default_options filelist
-  |Url.Eclipse, None -> eclipse_parse_input Debian.Debcudf.default_options filelist
+  |`Deb, None -> deb_parse_input Debian.Debcudf.default_options filelist
+  |`Eclipse, None -> eclipse_parse_input Debian.Debcudf.default_options filelist
 
-  |Url.Deb, Some (Deb opt) -> deb_parse_input opt filelist
+  |`Deb, Some (Deb opt) -> deb_parse_input opt filelist
   
-  |Url.Edsp, Some (Edsp opt) -> edsp_parse_input opt filelist
-  |Url.Edsp, None -> edsp_parse_input Debian.Debcudf.default_options filelist
+  |`Edsp, Some (Edsp opt) -> edsp_parse_input opt filelist
+  |`Edsp, None -> edsp_parse_input Debian.Debcudf.default_options filelist
 
-  |Url.Eclipse, Some (Eclipse opt) -> eclipse_parse_input opt filelist
+  |`Eclipse, Some (Eclipse opt) -> eclipse_parse_input opt filelist
 
-  |Url.Csw, None -> csw_parse_input filelist
+  |`Csw, None -> csw_parse_input filelist
 
-  |Url.Hdlist, None -> 
+  |`Hdlist, None -> 
 IFDEF HASRPM THEN
       let dll = 
         List.map (fun l ->
@@ -484,7 +476,7 @@ ELSE
     fatal "hdlist Not supported. re-configure with --with-rpm"
 END
 
-  |Url.Synthesis, None -> 
+  |`Synthesis, None -> 
 IFDEF HASRPM THEN
       let dll = 
         List.map (fun l ->

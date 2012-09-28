@@ -10,10 +10,14 @@
 (*  library, see the COPYING file for more information.                     *)
 (****************************************************************************)
 
-type input_scheme =
-  | Edsp | Csw | Deb | Cudf | Eclipse | Synthesis | Hdlist  (* file types *)
-  | Sqlite | Pgsql                             (* data bases *)
-;;
+type debtypes = [ `Edsp | `Deb ]
+type rpmtypes = [ `Synthesis | `Hdlist ]
+type osgitypes = [ `Eclipse ]
+type othertypes = [ `Csw ]
+
+type filetypes = [ `Cudf | debtypes | rpmtypes | osgitypes | othertypes ]
+type datatypes = [ `Sqlite | `Pgsql ]
+type input_scheme = [ filetypes | datatypes ]
 
 type url = {
   scheme : input_scheme;

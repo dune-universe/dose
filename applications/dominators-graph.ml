@@ -31,6 +31,8 @@ module Options = struct
   add options ~short_name:'o' ~long_name:"output" ~help:"Send output to file" outfile;
   add options ~long_name:"clean" ~help:"Remove all clusters with less then #n nodes" clean_threshold;
   add options ~long_name:"approx" ~help:"Use approximate strong dominance (with percentage)" approximate;
+
+  include Boilerplate.MakeDistribOptions(struct let options = options end);;
 end
 
 (* ----------------------------------- *)
@@ -55,23 +57,20 @@ let clean_graph n g =
   ) (connected_components (undirect g))
 ;;
 
+
 let default_options = function
-  |Url.Deb -> Some (
+  |`Deb -> Some (
     Boilerplate.Deb {
       Debian.Debcudf.default_options with
       Debian.Debcudf.ignore_essential = true
     })
-  |Url.Edsp -> Some (
+  |`Edsp -> Some (
     Boilerplate.Edsp {
       Debian.Debcudf.default_options with
       Debian.Debcudf.ignore_essential = true
     })
-  |Url.Synthesis -> None
-  |Url.Hdlist -> None
-  |(Url.Pgsql|Url.Sqlite) -> None
-  |Url.Eclipse -> Some (Boilerplate.Eclipse Debian.Debcudf.default_options)
-  |Url.Cudf -> None
-  |Url.Csw -> None
+  |`Eclipse -> Some (Boilerplate.Eclipse Debian.Debcudf.default_options)
+  |_ -> None
 ;;
 
 let main () =
@@ -93,7 +92,8 @@ let main () =
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) timers;
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress) bars; 
   Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
-  let options = default_options (Input.guess_format [posargs]) in
+  (* let options = default_options (Input.guess_format [posargs]) in *)
+  let options = Options.set_options (Input.guess_format [posargs]) in
   let (_,universe,_,_) = Boilerplate.load_universe ~options posargs in
 
   let dom_graph =

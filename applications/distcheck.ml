@@ -75,9 +75,9 @@ let timer = Util.Timer.create "Solver"
 (* (input_format * add_format ?) *)
 let guess_format t l =
   match Filename.basename(Sys.argv.(0)) with
-  |"debcheck"|"dose-debcheck" -> (Url.Deb, true)
-  |"eclipsecheck"|"dose-eclipsecheck" -> (Url.Eclipse, true)
-  |"rpmcheck"|"dose-rpmcheck" -> (Url.Synthesis,true)
+  |"debcheck"|"dose-debcheck" -> (`Deb, true)
+  |"eclipsecheck"|"dose-eclipsecheck" -> (`Eclipse, true)
+  |"rpmcheck"|"dose-rpmcheck" -> (`Synthesis,true)
   |_ when OptParse.Opt.is_set t -> 
       (Url.scheme_of_string (OptParse.Opt.get t),true)
   |_ -> (Input.guess_format [l], false)
@@ -177,7 +177,7 @@ let main () =
   let callback d =
     if summary then Diagnostic.collect results d ;
     let pp =
-      if input_format = Url.Cudf then 
+      if input_format = `Cudf then 
         fun pkg -> pp ~decode:(fun x -> x) pkg 
       else fun pkg -> pp pkg
     in
