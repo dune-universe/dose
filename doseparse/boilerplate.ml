@@ -112,42 +112,52 @@ type options =
 module MakeDistribOptions(O : sig val options : OptParse.OptParser.t end) = struct
   open OptParse ;;
 
-  let deb_foreign_archs = str_list_option ()
   let deb_native_arch = StdOpt.str_option ()
-  let deb_host_arch = StdOpt.str_option ()
-  let deb_build_arch = StdOpt.str_option ()
+  let deb_foreign_archs = str_list_option ()
+  let deb_target_arch = StdOpt.str_option ()
   let deb_ignore_essential = StdOpt.store_true ()
 
   let set_deb_options () =
-    let host =
-      if Opt.is_set deb_host_arch then
-        Opt.get deb_host_arch
-      else ""
-    in
-    let build =
-      if Opt.is_set deb_build_arch then
-        Opt.get deb_build_arch
-      else ""
-    in
     let native =
       if Opt.is_set deb_native_arch then
         Opt.get deb_native_arch
       else ""
     in
-    let archs = 
+    let foreign = 
       if Opt.is_set deb_foreign_archs then
         Opt.get deb_foreign_archs 
       else []
     in
-
+    let target =
+      if Opt.is_set deb_target_arch then
+        Opt.get deb_target_arch
+      else native
+    in
     {
       Debian.Debcudf.default_options with
-      Debian.Debcudf.foreign = archs;
-      host = host;
-      build = build;
-      native = native;
+      Debian.Debcudf.native = native;
+      foreign = foreign;
+      target = target;
       ignore_essential = Opt.get deb_ignore_essential
     }
+  ;;
+
+  let get_deb_buildarchs opt =
+    let native = opt.Debian.Debcudf.native in
+    let foreign = opt.Debian.Debcudf.foreign in
+    let target = opt.Debian.Debcudf.target in
+    if native = "" then 
+      fatal "you must specify at least the native architecture" ;
+    if Opt.is_set deb_foreign_archs then
+      if List.mem target foreign then
+        native::foreign
+      else
+        fatal "the target architecture is not included in the list of foreign architectures"
+    else
+      if target = native then [target]
+      else
+        fatal "the target architecture is not included in the list of foreign architectures"
+  ;;
 
   let set_default_options = function
     |Url.Deb -> Some (
@@ -181,10 +191,7 @@ module MakeDistribOptions(O : sig val options : OptParse.OptParser.t end) = stru
   open OptParser ;;
   let deb_group = add_group O.options "Debian Specific Options" in
   add O.options ~group:deb_group ~long_name:"deb-native-arch" ~help:"Native architecture" deb_native_arch;
-  add O.options ~group:deb_group ~long_name:"deb-host-arch" ~help:"Host architecture" deb_host_arch;
-  (*
-  add options ~group:deb_group ~long_name:"deb-build-arch" ~help:"Build architecture" deb_build_arch;
-  *)
+  add O.options ~group:deb_group ~long_name:"deb-host-arch" ~help:"XCompile Target architecture" deb_target_arch;
   add O.options ~group:deb_group ~long_name:"deb-foreign-archs" ~help:"Foreign architectures" deb_foreign_archs;
   add O.options ~group:deb_group ~long_name:"deb-ignore-essential" ~help:"Ignore Essential Packages" deb_ignore_essential;
 
@@ -519,6 +526,12 @@ ELSE
 END
    in
    standard@rpm@db
+;;
+
+(** return a list of Debian packages from a debian source file *)
+let deb_load_source ?(profiles=true) ?(noindep=true) target builddeparchs sourcefile =
+  let l = Debian.Sources.input_raw ~archs:[target] [sourcefile] in
+  Debian.Sources.sources2packages ~noindep ~profiles builddeparchs l
 ;;
 
 (** parse and merge a list of files into a cudf package list *)

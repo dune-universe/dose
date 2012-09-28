@@ -19,9 +19,8 @@ type extramap = (string * (string * Cudf_types.typedecl1)) list
 type options = {
   extras_opt : extramap ;
   native : string ;
-  host : string ;
-  build : string ;
   foreign : string list ;
+  target : string ;
   ignore_essential : bool ;
 }
 

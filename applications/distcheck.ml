@@ -223,8 +223,10 @@ let main () =
       Format.fprintf fmt "background-packages: %d@." nb;
       Format.fprintf fmt "foreground-packages: %d@." nf;
       Format.fprintf fmt "total-packages: %d@." universe_size;
+      (*
       Format.fprintf fmt "broken-percent: %0.2f%%@." 
        ( (float_of_int nbp) /.  (float_of_int universe_size) *. 100. ) ;
+      *)
       Format.fprintf fmt "broken-packages: %d@." nbp;
       if summary then 
 	Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;

@@ -46,19 +46,17 @@ type extramap = (string * (string * Cudf_types.typedecl1)) list
 
 type options = {
   extras_opt : extramap ;
-  native : string;
-  host : string;
-  build : string;
-  foreign : string list ;
+  native : string;        (* the native architecture *)
+  foreign : string list ; (* list of foreign architectures *)
+  target : string;        (* the target architecture - cross compile *)
   ignore_essential : bool;
 }
 
 let default_options = {
   extras_opt = [] ;
   native = "";
-  build = "";   (* the default architecture 'dpkg -print-architecture' *)
-  host = "";    (* used to resolv cross dependencies *)
-  foreign = []; (* list of foreign architectures *)
+  foreign = [];
+  target = "";
   ignore_essential = false
 }
 
@@ -335,9 +333,9 @@ let add_extra extras tables pkg =
 let tocudf tables ?(options=default_options) ?(inst=false) pkg =
   if options.native <> "" then begin
     let pkgarch =
-      match options.host,Sources.is_source pkg with
+      match options.target,Sources.is_source pkg with
       |"",true -> options.native   (* source package : build deps on the native arch *)
-      |_,true  -> options.host     (* source package : build deps on the cross arch *)
+      |_,true  -> options.target   (* source package : build deps on the cross arch *)
       |_,false -> pkg.architecture (* binary package : dependencies are package specific *)
     in
     let _name = 
