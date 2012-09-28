@@ -165,7 +165,7 @@ let parse_package_stanza filter archs extras par =
       breaks = parse_s ~opt:[] ~multi:true parse_vpkglist "Breaks" par;
       replaces = parse_s ~opt:[] ~multi:true parse_vpkglist "Replaces" par;
       provides = parse_s ~opt:[] ~multi:true parse_vpkglist "Provides" par;
-      extras = parse_e extras par;
+      extras = ("Type","bin") :: (parse_e extras par);
   }
   in
   try

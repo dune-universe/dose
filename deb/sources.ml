@@ -217,7 +217,7 @@ let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") builddeparc
       depends = build_essential::(depends profile (depends_indep @ srcpkg.build_depends));
       conflicts = conflicts profile (conflicts_indep @ srcpkg.build_conflicts);
       architecture = String.concat "," srcpkg.architecture;
-      extras = extras_profile @ [("type",src)]
+      extras = extras_profile @ [("Type",src)]
     }
   in
 
@@ -243,5 +243,4 @@ let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") builddeparc
   ) l []
 ;;
 
-let is_source pkg = List.mem ("type", "src") pkg.Packages.extras;;
-
+let is_source ?(src="src") pkg = List.mem ("Type", src) pkg.Packages.extras;;

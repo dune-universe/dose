@@ -260,6 +260,7 @@ let loadlp ?(enc=false) tables l =
 
 let preamble = 
   (* number is a mandatory property -- no default *)
+  (* type a mandatory property -- no default *)
   let l = [
     ("replaces",(`Vpkglist (Some [])));
     ("recommends",(`Vpkgformula (Some [])));
@@ -272,6 +273,7 @@ let preamble =
     ("essential",(`Bool (Some false))) ;
     ("buildessential",(`Bool (Some false))) ;
     ("filename",(`String (Some "")));
+    ("type",(`String None));
     ]
   in
   CudfAdd.add_properties Cudf.default_preamble l
@@ -294,7 +296,11 @@ let add_extra_default extras tables pkg =
   in
   let recommends = ("recommends", `Vpkgformula (loadll tables pkg.recommends)) in
   let replaces = ("replaces", `Vpkglist (loadl tables pkg.replaces)) in
-  let extras = ("Filename",("filename",`String None))::extras in
+  let extras = 
+    ("Type",("type",`String None))::
+      ("Filename",("filename",`String None))::
+        extras 
+  in
   let l =
     List.filter_map (fun (debprop, (cudfprop,v)) ->
       try 
