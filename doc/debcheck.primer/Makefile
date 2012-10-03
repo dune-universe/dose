@@ -3,9 +3,15 @@ SHELL=/bin/bash
 HEVEA=hevea -exec xxdate.exe
 DEPS = $(wildcard *.tex) version.tex mancoosi.bib
 
-default: $(MAIN).html 
-
 include ../../Makefile.config
+
+html: $(MAIN).html 
+
+ps: $(MAIN).ps
+
+pdf: $(MAIN).pdf
+
+all: html ps pdf
 
 $(MAIN).html: $(DEPS) $(MAIN).aux
 	bibtex $(MAIN)	
@@ -13,6 +19,9 @@ $(MAIN).html: $(DEPS) $(MAIN).aux
 
 $(MAIN).ps: $(MAIN).dvi
 	dvips $<
+
+$(MAIN).pdf: $(DEPS)
+	pdflatex $(MAIN)
 
 $(MAIN).dvi: $(DEPS)
 	latex $(MAIN)
@@ -28,10 +37,8 @@ version.tex:
 headers:
 	headache -h headache.header -c headache.conf $(DEPS)
 
-clean:
-	-rm -f $(MAIN).{dvi,aux,toc,haux,htoc,log,bbl,blg} version.tex
+distclean clean:
+	-rm -f $(MAIN).{dvi,aux,toc,haux,htoc,log,bbl,blg,html,ps,pdf}\
+		 version.tex
 
-distclean: clean
-	-rm -f $(MAIN).{html,ps}	
-
-.phony: clean distclean headers
+.phony: clean distclean headers all ps pdf html
