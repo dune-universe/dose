@@ -1,4 +1,4 @@
-SUBDIRS = manpages debcheck.primer
+SUBDIRS = manpages debcheck.primer apt-external-solvers.primer
 
 all:
 	@for subdir in $(SUBDIRS); do \
