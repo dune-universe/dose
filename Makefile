@@ -1,3 +1,6 @@
+#this is a forward reference to the target all below
+all: all
+
 include Makefile.config
 
 DIST_DIR = $(NAME)-$(VERSION)
@@ -7,7 +10,7 @@ OBFLAGS := -j 10 -classic-display
 #OBFLAGS := $(OBFLAGS) -tag debug -tag profile
 #OBFLAGS := $(OBFLAGS) -classic-display
 
-realall: $(CAMLP4CMXS) $(BYTELIBS) $(ALIBS) $(OPTLIBS) $(CMXSLIBS) man
+all: $(CAMLP4CMXS) $(BYTELIBS) $(ALIBS) $(OPTLIBS) $(CMXSLIBS) man
 	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
 
 fast: $(CAMLP4CMXS) $(OPTLIBS)

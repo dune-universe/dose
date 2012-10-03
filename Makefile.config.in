@@ -28,7 +28,7 @@ ifeq ("@OCAML_OS_TYPE@","freebsd")
   LDFLAGS += -fstack-protector
 endif
 
-ifeq ("@OCAMLOPT@","ocamlopt.opt")
+ifeq ("@CAMLP4OOPT@","camlp4o.opt")
   CAMLP4CMXS=camlp4cmxs
 else
   CAMLP4CMXS=
@@ -65,9 +65,6 @@ ifeq ("@HAS_LIBCUDF@","no")
     CMXSLIBS += cudf/cudf.cmxs
   endif
 endif
-
-#AH I hate hacks !
-all: realall
 
 ifeq ("@HAS_LIBCUDF@","no")
 installcudf:
