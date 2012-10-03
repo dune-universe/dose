@@ -1,3 +1,4 @@
+true: -traverse
 <*/*.ml{i,}>: pp(@CAMLP4OMACRO@)
 <*/*.ml{i,}>: package(extlib), @PKG_CUDF@, package(pcre)
 
