@@ -121,7 +121,6 @@ distclean: clean
 	rm -f common/versionInfo.ml
 	rm -f db/db.mlpack
 	rm -f _tags META
-	rm -f doc/manpages/*.1
 
 $(DOSELIBS)/%:
 	$(OCAMLBUILD) $(OBFLAGS) $*
