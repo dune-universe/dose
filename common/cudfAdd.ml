@@ -265,3 +265,13 @@ let latest pkglist =
   Hashtbl.fold (fun _ v acc -> v::acc) h []
 ;;
 
+let pp from_cudf ?(decode=decode) pkg =
+  let (p,i) = (pkg.Cudf.package,pkg.Cudf.version) in
+  let v = if i > 0 then snd(from_cudf (p,i)) else "nan" in
+  let l =
+    List.filter_map (fun k ->
+      try Some(k,decode(Cudf.lookup_package_property pkg k))
+      with Not_found -> None
+    ) ["architecture";"source";"sourcenumber";"essential"]
+  in (decode p,decode v,l)
+;;

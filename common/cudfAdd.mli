@@ -116,3 +116,18 @@ val compute_pool : Cudf.universe -> int list list array * int list array
 val cudfop :
   (string * string) option ->
   ([> `Eq | `Geq | `Gt | `Leq | `Lt ] * string) option
+
+(** [pp ?decode from_cudf pkg] package pretty printer.
+    [from_cudf] a function that gets a (name,cudfversion) pair and returns a 
+    (name,realversion).
+    [?decode] a function that decode the package name and version
+    
+    returns : a pair (name,versiom,property list)
+
+    note that if the package has version less then 0, then the version is printed
+    as "nan"
+*)
+val pp :
+  (Cudf_types.pkgname * Cudf_types.version -> 'a * Cudf_types.pkgname) ->
+  ?decode:(Cudf_types.pkgname -> string) ->
+  Cudf.package -> string * string * (string * string) list

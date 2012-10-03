@@ -232,8 +232,8 @@ let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") builddeparc
   (* right fold to not inverse the order *)
   (* if a profile is selected we add an encoding of the package for each profile *)
   List.fold_right (fun srcpkg al ->
-    let pkgarchs = srcpkg.architecture in
-    (* if List.exists (fun a -> List.mem a archs) pkgarchs then *)
+    (* let pkgarchs = srcpkg.architecture in
+      if List.exists (fun a -> List.mem a archs) pkgarchs then *)
       let pkg = src2pkg srcpkg in
       if profiles then
         pkg :: (List.map (fun p -> src2pkg ~profile:(Some p) srcpkg) (getprofiles srcpkg)) @ al

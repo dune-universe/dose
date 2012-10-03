@@ -148,16 +148,8 @@ let main () =
       ) (OptParse.Opt.get Options.coinst)
     end else []
   in
+  let pp = CudfAdd.pp from_cudf in
 
-  let pp ?(decode=CudfAdd.decode) pkg =
-    let (p,v) = from_cudf (pkg.Cudf.package,pkg.Cudf.version) in 
-    let l = 
-      List.filter_map (fun k ->
-        try Some(k,decode(Cudf.lookup_package_property pkg k))
-        with Not_found -> None
-      ) ["architecture";"source";"sourcenumber";"essential"]
-    in (decode p,decode v,l)
-  in
   info "Solving..." ;
   let failure = OptParse.Opt.get Options.failures in
   let success = OptParse.Opt.get Options.successes in

@@ -58,7 +58,7 @@ let input_raw_priv parse_packages files =
 
 exception Eof
 
-let rec parse_paragraph pkg ch =
+let parse_paragraph pkg ch =
   let line =
     try IO.read_line ch
     with IO.No_more_input -> raise Eof | End_of_file -> assert false

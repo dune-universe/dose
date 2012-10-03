@@ -143,7 +143,9 @@ let pp_vpkglist pp fmt =
     | `Lt -> "<"
   in
   let pp_item fmt = function
-    |(p,None) -> Format.fprintf fmt "%s" p
+    |(p,None) -> 
+        let (p,_,_) = pp {Cudf.default_package with Cudf.package = p} in
+        Format.fprintf fmt "%s" p
     |(p,Some(c,v)) ->
         let (p,v,_) = pp {Cudf.default_package with Cudf.package = p ; version = v} in
         Format.fprintf fmt "%s (%s %s)" p (string_of_relop c) v
@@ -241,7 +243,15 @@ let minimize roots l =
   H.fold (fun k _ l -> k::l) acc []
 ;;
 
-let default_pp pkg = (pkg.Cudf.package,CudfAdd.string_of_version pkg,[])
+(** [default_pp] default package printer. If the version of the package is
+  * a negative number, the version version if printed as "nan" *)
+let default_pp pkg =
+  let v = 
+    if pkg.Cudf.version > 0 then 
+      CudfAdd.string_of_version pkg
+    else "nan"
+  in
+  (pkg.Cudf.package,v,[])
 
 let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) ?(minimal=false) fmt = function
   |{result = Success (f); request = req } when success ->

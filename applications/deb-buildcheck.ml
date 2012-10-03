@@ -79,17 +79,9 @@ let main () =
   in
   let tables = Debcudf.init_tables (srclist @ pkglist) in
   let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
- 
-  let pp pkg =
-    let (p,i) = (pkg.Cudf.package,pkg.Cudf.version) in
-    let v = Debian.Debcudf.get_real_version tables (p,i) in
-    let l =
-      List.filter_map (fun k ->
-        try Some(k,Cudf.lookup_package_property pkg k)
-        with Not_found -> None
-      ) ["architecture";"source";"sourcenumber"]
-    in (p,v,l)
-  in
+  let from_cudf (p,v) = (p,Debian.Debcudf.get_real_version tables (p,v)) in
+  let pp = CudfAdd.pp from_cudf in 
+
   (* XXX here latest could be a bit faster if done at the same time of the cudf
      conversion *)
   let sl = 
@@ -99,9 +91,9 @@ let main () =
     else
       l
   in
-  let l = List.fold_left (fun acc pkg -> (Debcudf.tocudf ~options tables pkg)::acc) sl pkglist in
+  let bl = List.fold_left (fun acc pkg -> (Debcudf.tocudf ~options tables pkg)::acc) sl pkglist in
 
-  let universe = Cudf.load_universe l in
+  let universe = Cudf.load_universe bl in
   let universe_size = Cudf.universe_size universe in
 
   let failure = OptParse.Opt.get Options.failures in
