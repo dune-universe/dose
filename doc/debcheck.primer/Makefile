@@ -31,7 +31,7 @@ headers:
 clean:
 	-rm -f $(MAIN).{dvi,aux,toc,haux,htoc,log,bbl,blg} version.tex
 
-veryclean: clean
+distclean: clean
 	-rm -f $(MAIN).{html,ps}	
 
-.phony: clean realclean headers
+.phony: clean distclean headers
