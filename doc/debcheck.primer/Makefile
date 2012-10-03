@@ -3,6 +3,8 @@ SHELL=/bin/bash
 HEVEA=hevea -exec xxdate.exe
 DEPS = $(wildcard *.tex) version.tex mancoosi.bib
 
+all: html ps pdf
+
 include ../../Makefile.config
 
 html: $(MAIN).html 
@@ -11,7 +13,6 @@ ps: $(MAIN).ps
 
 pdf: $(MAIN).pdf
 
-all: html ps pdf
 
 $(MAIN).html: $(DEPS) $(MAIN).aux
 	bibtex $(MAIN)	
