@@ -12,7 +12,6 @@ OBFLAGS := -j 10 -classic-display
 
 all: $(CAMLP4CMXS) $(BYTELIBS) $(ALIBS) $(OPTLIBS) $(CMXSLIBS) man
 	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
-	(cd doc/manpages && $(MAKE))
 
 fast: $(CAMLP4CMXS) $(OPTLIBS)
 	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
@@ -200,4 +199,7 @@ doc: fast
 	dot -Grotate=0 -Tsvg -o dose3.docdir/index.svg dose3.docdir/index.dot
 	(cd doc && $(MAKE) all)
 
-.PHONY: all opt clean top-level headers test tags install uninstall dist doc
+man:
+	cd doc/manpages && $(MAKE)
+
+.PHONY: all opt clean top-level headers test tags install uninstall dist doc man
