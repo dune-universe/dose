@@ -229,7 +229,7 @@ module Set = struct
     type t = package
     let compare x y =
       let c = x >% y in 
-      if c = 0 then 
+      if c = 0 && not("all" = x.architecture) then 
         debug "the input contains two packages with the same name, version and architecture (%s,%s,%s). Only the latter will be considered."
         x.name x.version x.architecture;
       c
