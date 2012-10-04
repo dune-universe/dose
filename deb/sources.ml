@@ -85,7 +85,7 @@ let parse_package_stanza filter archs par =
   with Packages.IgnorePackage s -> begin
     let n = parse_s ~opt:"?" parse_name "Package" par in
     let v = parse_s ~opt:"?" parse_version "Version" par in
-    let al = [] (* XXX something wrong here ! parse_s ~opt:"?" parse_arch "Architecture" par *) in
+    let al = parse_s ~opt:[] parse_arch "Architecture" par in
     debug "Ignoring Source Package (%s,%s,%s) : %s" n v (String.concat "," al) s;
     None
   end
@@ -184,7 +184,7 @@ let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") builddeparc
     List.filter_map (fun l ->
       match List.filter_map (select builddeparchs profile) l with
       |[] -> None 
-      | l -> Some l
+      |l -> Some l
     ) ll
   in
   (* In contrast to B-D and B-C, B-D-I and B-C-I requirements must be satisfied
