@@ -1,3 +1,23 @@
+dose3 (3.1) UNRELEASED; urgency=low
+
+  * Speed up compilation
+  * Add multi-arch support and cross-compilation options to deb-buildcheck
+  * Add --trim to ceve
+  * Add multi-arch unit-tests
+  * Fix Hold and Essential handling in edsp
+  * Add --latest to deb-buildcheck
+  * Add --checkonly to deb-buildcheck
+
+ -- Pietro Abate <pietro.abate@pps.jussieu.fr>  Thu, 4 Oct 2012 09:00:00 +0200
+
+dose3 (3.0.2-hotfix) UNRELEASED; urgency=low
+
+  * Fix debian bug #685171 and regression
+  * Fix candidate selection problem in apt-cudf
+  * Update manpage for deb-buildcheck
+
+ -- Pietro Abate <pietro.abate@pps.jussieu.fr>  Thu, 4 Oct 2012 09:00:00 +0200
+
 dose3 (3.0.2) UNRELEASED; urgency=low
 
   * Fix  performance regression introduced in version 3.0
