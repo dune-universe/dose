@@ -148,6 +148,9 @@ let main () =
   if OptParse.Opt.is_set Options.dump then begin
     let oc = open_out (OptParse.Opt.get Options.dump) in
     info "Dumping Cudf file";
+    
+    Cudf_printer.pp_preamble oc Debcudf.preamble;
+    Printf.fprintf oc "\n";
     Cudf_printer.pp_universe oc universe
   end
 
