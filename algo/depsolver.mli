@@ -44,8 +44,11 @@ val edos_coinstall_prod : ?global_constraints:bool -> Cudf.universe -> Cudf.pack
     by default *)
 val trim : ?global_constraints:bool -> Cudf.universe -> Cudf.universe
 
-(** return the list of the broken packages *)
+(** return the list of broken packages *)
 val find_broken : ?global_constraints:bool -> Cudf.universe -> Cudf.package list
+
+(** return the list of installable packages *)
+val find_installable : ?global_constraints:bool -> Cudf.universe -> Cudf.package list
 
 (** [univcheck ] check if all packages in the universe can be installed.
     Since not all packages are directly tested for installation, if a packages
