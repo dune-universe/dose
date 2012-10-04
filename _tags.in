@@ -1,4 +1,6 @@
 true: -traverse
+<{common,algo,doseparse,deb,rpm,applications,experimental}/**>: traverse
+
 <*/*.ml{i,}>: pp(@CAMLP4OMACRO@)
 <*/*.ml{i,}>: package(extlib), @PKG_CUDF@, package(pcre)
 
