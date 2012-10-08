@@ -258,7 +258,6 @@ let find_listinstallable ?(global_constraints=true) universe pkglist =
   !acc
 ;;
 
-
 let dependency_closure ?maxdepth ?conjunctive univ pkglist =
   Depsolver_int.dependency_closure ?maxdepth ?conjunctive univ pkglist
 
