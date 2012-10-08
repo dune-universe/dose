@@ -169,6 +169,7 @@ let rec pp_list pp fmt = function
 let create_pathlist root deps =
   let dl = List.map (function Dependency x -> x |_ -> assert false) deps in
   build_paths (List.unique dl) root
+;;
 
 let pp_dependencies pp fmt pathlist =
   let rec aux fmt = function
@@ -243,6 +244,18 @@ let minimize roots l =
   H.fold (fun k _ l -> k::l) acc []
 ;;
 
+let get_installationset ?(minimal=false) = function
+  |{result = Success f ; request = req} -> 
+     let s = f ~all:true () in
+     if minimal then minimize req s else s
+  |{result = Failure _ } -> raise Not_found
+;;
+
+let is_solution = function
+  |{result = Success _ } -> true
+  |{result = Failure _ } -> false
+;;
+
 (** [default_pp] default package printer. If the version of the package is
   * a negative number, the version version if printed as "nan" *)
 let default_pp pkg =
@@ -253,8 +266,9 @@ let default_pp pkg =
   in
   (pkg.Cudf.package,v,[])
 
-let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) ?(minimal=false) fmt = function
-  |{result = Success (f); request = req } when success ->
+let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) ?(minimal=false) fmt d = 
+  match d with
+  |{result = Success f; request = req } when success ->
        Format.fprintf fmt "@[<v 1>-@,";
        begin match req with
        |Package r -> 
@@ -265,10 +279,7 @@ let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
        end;
        Format.fprintf fmt "status: ok@,";
        if explain then begin
-         let is =
-           let s = f ~all:true () in
-           if minimal then minimize req s else s
-         in
+         let is = get_installationset ~minimal d in
          if is <> [] then begin
            Format.fprintf fmt "@[<v 1>installationset:@," ;
            Format.fprintf fmt "@[<v>%a@]" (pp_list (pp_package pp)) is;
@@ -276,7 +287,7 @@ let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
          end
        end;
        Format.fprintf fmt "@]@,"
-  |{result = Failure (f) ; request = Package r } when failure -> 
+  |{result = Failure f; request = Package r } when failure -> 
        Format.fprintf fmt "@[<v 1>-@,";
        Format.fprintf fmt "@[<v>%a@]@," (pp_package ~source:true pp) r;
        Format.fprintf fmt "status: broken@,";
@@ -286,7 +297,7 @@ let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
          Format.fprintf fmt "@]"
        end;
        Format.fprintf fmt "@]@,"
-  |{result = Failure (f) ; request = PackageList rl } when failure -> 
+  |{result = Failure f; request = PackageList rl } when failure -> 
        Format.fprintf fmt "@[<v 1>-@,";
        Format.fprintf fmt "coinst: %s@," (String.concat " , " (List.map CudfAdd.string_of_package rl));
        Format.fprintf fmt "status: broken@,";
@@ -304,15 +315,12 @@ let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
 let printf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) d =
   fprintf ~pp ~failure ~success ~explain Format.std_formatter d
 
-let is_solution = function
-  |{result = Success _ } -> true
-  |{result = Failure _ } -> false
-
-let add h k v =
-  try let l = ResultHash.find h k in l := v :: !l
-  with Not_found -> ResultHash.add h k (ref [v])
-
-let collect results = function
+let collect results d = 
+  let add h k v =
+    try let l = ResultHash.find h k in l := v :: !l
+    with Not_found -> ResultHash.add h k (ref [v])
+  in
+  match d with 
   |{result = Failure (f) ; request = Package r } -> 
       List.iter (fun reason ->
         match reason with
