@@ -116,47 +116,49 @@ let sep = ":" ;;
  *
  * given archs, profile and a dependency with an architecture and profile list,
  * decide whether to select or drop that dependency *)
-let select archs profile dep = match dep,profile with
+let select builddeparch profile dep = 
+  let matcharch arch = Architecture.src_matches_arch arch builddeparch in
+  match dep,profile with
   (* positive arch list, negative profiles, no profile selected
    *  -> only select if any of archs is in the arch list *)
   |(v,(((true,_)::_) as al),(((false,_)::_))),None when
-    List.exists (fun (_,a) -> List.mem a archs) al -> Some v
+    List.exists (fun (_,a) -> matcharch a) al -> Some v
   (* negative arch list, negative profiles, no profile selected
    *  -> only select if none of archs is in the arch list *)
   |(v,(((false,_)::_) as al),(((false,_)::_))),None when
-    List.for_all (fun (_,a) -> not(List.mem a archs)) al -> Some v
+    List.for_all (fun (_,a) -> not(matcharch a)) al -> Some v
   (* positive arch list, positive profiles, some profile selected
    *  -> only select if any of archs is in the arch list
    *     and the selected profile is in the profile list *)
   |(v,(((true,_)::_) as al),(((true,_)::_) as pl)),(Some p) when
-    (List.exists (fun (_,a) -> List.mem a archs) al) &&
+    (List.exists (fun (_,a) -> matcharch a) al) &&
     (List.exists (fun (_,a) -> a = p) pl) -> Some v
   (* positive arch list, negative profiles, some profile selected
    *  -> only select if any of archs is in the arch list
    *     and the selected profile is not in the profile list *)
   |(v,(((true,_)::_) as al),(((false,_)::_) as pl)),(Some p) when
-    (List.exists (fun (_,a) -> List.mem a archs) al) &&
+    (List.exists (fun (_,a) -> matcharch a) al) &&
     (List.for_all (fun (_,a) -> a <> p) pl) -> Some v
   (* negative arch list, positive profiles, some profile selected
    *  -> only select if none of archs is in the arch list
    *     and the selected profile is in the profile list *)
   |(v,(((false,_)::_) as al),(((true,_)::_) as pl)),(Some p) when
-    (List.for_all (fun (_,a) -> not(List.mem a archs)) al) &&
+    (List.for_all (fun (_,a) -> not(matcharch a)) al) &&
     (List.exists (fun (_,a) -> a = p) pl) -> Some v
   (* negative arch list, negative profiles, some profile selected
    *  -> only select if none of archs is in the arch list
    *     and the selected profile is not in the profile list *)
   |(v,(((false,_)::_) as al),(((false,_)::_) as pl)),(Some p) when
-    (List.for_all (fun (_,a) -> not(List.mem a archs)) al) &&
+    (List.for_all (fun (_,a) -> not(matcharch a)) al) &&
     (List.for_all (fun (_,a) -> a <> p) pl) -> Some v
   (* negative arch list, no profiles
    *  -> only select if none of archs is in the arch list *)
   |(v,(((false,_)::_) as al),[]),_ when
-    List.for_all (fun (_,a) -> not(List.mem a archs)) al -> Some v
+    List.for_all (fun (_,a) -> not(matcharch a)) al -> Some v
   (* positive arch list, no profiles
    *  -> only select if any of archs is in the arch list *)
   |(v,(((true,_)::_) as al),[]),_ when
-    List.exists (fun (_,a) -> List.mem a archs) al -> Some v
+    List.exists (fun (_,a) -> matcharch a) al -> Some v
   (* no arch list, negative profiles, some profile selected
    *  -> only select if the selected profile is not in the profile list *)
   |(v,[],(((false,_)::_) as pl)),(Some p) when
@@ -177,12 +179,12 @@ let select archs profile dep = match dep,profile with
 ;;
 
 (** transform a list of sources packages into dummy binary packages *)
-let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") builddeparchs l =
-  let builddepsarchs = "all"::"any"::builddeparchs in
-  let conflicts profile l = List.filter_map (select builddeparchs profile) l in
+let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") builddeparch l =
+  (* let builddepsarchs = "all"::"any"::builddeparchs in *)
+  let conflicts profile l = List.filter_map (select builddeparch profile) l in
   let depends profile ll =
     List.filter_map (fun l ->
-      match List.filter_map (select builddeparchs profile) l with
+      match List.filter_map (select builddeparch profile) l with
       |[] -> None 
       |l -> Some l
     ) ll
