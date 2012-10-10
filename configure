@@ -627,10 +627,12 @@ PKG_XML
 PKG_CURL
 CONFIG_OCAMLGRAPH
 PKG_OCAMLGRAPH
+DOC_OCAMLGRAPH
 MLPACK_OCAMLGRAPH
 HAS_DB
 PKG_CUDF
 INCLUDE_CUDF
+DOC_RPM
 HAS_RPM
 USE_RPM
 INCLUDE_RPM
@@ -4270,6 +4272,8 @@ PKG_OCAMLGRAPH=pkg_
 PKG_CURL=pkg_
 PKG_OUNIT=pkg_
 PKG_BENCHMARK=pkg_
+DOC_OCAMLGRAPH=""
+DOC_RPM=""
 
 
 # Check whether --with-libcudf was given.
@@ -4680,11 +4684,9 @@ $as_echo "not found" >&6; }
    as_fn_error $? "Please install OCaml findlib module 'ocamlgraph'." "$LINENO" 5
   fi
   TMPVERSION=`$OCAMLFIND query -format %v ocamlgraph`
-#  if test $(echo "$TMPVERSION < 1.5" | bc) -eq 1; then
-#      AC_MSG_ERROR([found ocamlgraph with version $TMPVERSION (<= 1.5 is required )])
-#  fi
   PKG_OCAMLGRAPH="package(ocamlgraph)"
   MLPACK_OCAMLGRAPH="Defaultgraphs Statistics Dominators Strongdeps Strongdeps_int Strongconflicts Strongconflicts_int"
+  DOC_OCAMLGRAPH="algo/Strongdeps algo/Strongconflicts algo/Strongdeps_int algo/Strongconflicts_int algo/Defaultgraphs algo/Statistics"
   CONFIG_OCAMLGRAPH="-DHASOCAMLGRAPH"
 fi
 
@@ -6108,6 +6110,10 @@ done
 
   CONFIG_RPM="-DHASRPM"
   USE_RPM="use_rpm, use_rpm4"
+  DOC_RPM="#rpm/Packages
+  #rpm/Hdlists
+  #rpm/Version
+  #rpm/Rpmcudf"
   LINK_RPM="link_rpm4"
   HAS_RPM=yes
 fi
@@ -6144,6 +6150,10 @@ done
 #  AC_CHECK_HEADERS([rpm/rpm4compat.h],,AC_MSG_ERROR([missing rpm4compat.h]))
   CONFIG_RPM="-DHASRPM"
   USE_RPM="use_rpm, use_rpm5"
+  DOC_RPM="#rpm/Packages
+  #rpm/Hdlists
+  #rpm/Version
+  #rpm/Rpmcudf"
   LINK_RPM="link_rpm5"
   HAS_RPM=yes
 fi
@@ -6153,6 +6163,7 @@ fi
 #                #define _GNU_SOURCE 1
 #                #include <sched.h>
 #                ]])
+
 
 
 
@@ -6206,6 +6217,7 @@ fi
 
 
 
+
 LDFLAGS="-fstack-protector"
 
 
@@ -6225,7 +6237,7 @@ if test "$BUILD_EXP" = "yes" ; then
 
 fi
 
-ac_config_files="$ac_config_files Makefile.config _tags META db/db.mlpack algo/algo.mlpack common/versionInfo.ml"
+ac_config_files="$ac_config_files Makefile.config _tags META dose3.odocl db/db.mlpack algo/algo.mlpack common/versionInfo.ml"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6936,6 +6948,7 @@ do
     "Makefile.config") CONFIG_FILES="$CONFIG_FILES Makefile.config" ;;
     "_tags") CONFIG_FILES="$CONFIG_FILES _tags" ;;
     "META") CONFIG_FILES="$CONFIG_FILES META" ;;
+    "dose3.odocl") CONFIG_FILES="$CONFIG_FILES dose3.odocl" ;;
     "db/db.mlpack") CONFIG_FILES="$CONFIG_FILES db/db.mlpack" ;;
     "algo/algo.mlpack") CONFIG_FILES="$CONFIG_FILES algo/algo.mlpack" ;;
     "common/versionInfo.ml") CONFIG_FILES="$CONFIG_FILES common/versionInfo.ml" ;;

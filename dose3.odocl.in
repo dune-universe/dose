@@ -6,13 +6,7 @@ algo/Depsolver
 algo/Diagnostic
 algo/Depsolver_int
 algo/Diagnostic_int
-algo/Strongdeps
-algo/Strongconflicts
-algo/Strongdeps_int
-algo/Strongconflicts_int
 algo/Flatten
-algo/Defaultgraphs
-algo/Statistics
 deb/Version
 deb/Debcudf
 deb/Packages
@@ -30,9 +24,5 @@ applications/Outdated
 applications/Challenged
 doseparse/BoilerplateNoRpm
 doseparse/Boilerplate
-#rpm/Packages
-#rpm/Hdlists
-#rpm/Version
-#rpm/Rpmcudf
-#db/Backend
-#db/Idbr
+@DOC_OCAMLGRAPH@
+@DOC_RPM@

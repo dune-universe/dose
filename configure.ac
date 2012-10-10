@@ -48,6 +48,8 @@ PKG_OCAMLGRAPH=pkg_
 PKG_CURL=pkg_
 PKG_OUNIT=pkg_
 PKG_BENCHMARK=pkg_
+DOC_OCAMLGRAPH=""
+DOC_RPM=""
 
 AC_ARG_WITH(libcudf,
         [ --without-libcudf ],
@@ -174,11 +176,9 @@ if test "$HAS_OCAMLGRAPH" = "yes" ; then
    AC_MSG_ERROR([Please install OCaml findlib module 'ocamlgraph'.])
   fi
   TMPVERSION=`$OCAMLFIND query -format %v ocamlgraph`
-#  if test $(echo "$TMPVERSION < 1.5" | bc) -eq 1; then
-#      AC_MSG_ERROR([found ocamlgraph with version $TMPVERSION (<= 1.5 is required )])
-#  fi
   PKG_OCAMLGRAPH="package(ocamlgraph)"
   MLPACK_OCAMLGRAPH="Defaultgraphs Statistics Dominators Strongdeps Strongdeps_int Strongconflicts Strongconflicts_int"
+  DOC_OCAMLGRAPH="algo/Strongdeps algo/Strongconflicts algo/Strongdeps_int algo/Strongconflicts_int algo/Defaultgraphs algo/Statistics"
   CONFIG_OCAMLGRAPH="-DHASOCAMLGRAPH"
 fi
 
@@ -254,6 +254,10 @@ if test "$HAS_RPM4" = "yes" ; then
   AC_CHECK_HEADERS([rpm/rpmtypes.h],,AC_MSG_ERROR([missing rpmtypes.h]))
   CONFIG_RPM="-DHASRPM"
   USE_RPM="use_rpm, use_rpm4"
+  DOC_RPM="#rpm/Packages
+  #rpm/Hdlists
+  #rpm/Version
+  #rpm/Rpmcudf"
   LINK_RPM="link_rpm4"
   HAS_RPM=yes
 fi
@@ -272,6 +276,10 @@ if test "$HAS_RPM5" = "yes"; then
 #  AC_CHECK_HEADERS([rpm/rpm4compat.h],,AC_MSG_ERROR([missing rpm4compat.h]))
   CONFIG_RPM="-DHASRPM"
   USE_RPM="use_rpm, use_rpm5"
+  DOC_RPM="#rpm/Packages
+  #rpm/Hdlists
+  #rpm/Version
+  #rpm/Rpmcudf"
   LINK_RPM="link_rpm5"
   HAS_RPM=yes
 fi
@@ -315,6 +323,7 @@ AC_SUBST(INCLUDE_RPM)
 AC_SUBST(USE_RPM)
 AC_SUBST(LINK_RPM)
 AC_SUBST(HAS_RPM)
+AC_SUBST(DOC_RPM)
 
 AC_SUBST(INCLUDE_CUDF)
 AC_SUBST(PKG_CUDF)
@@ -327,6 +336,7 @@ fi
 AC_SUBST(HAS_DB)
 
 AC_SUBST(MLPACK_OCAMLGRAPH)
+AC_SUBST(DOC_OCAMLGRAPH)
 AC_SUBST(PKG_OCAMLGRAPH)
 AC_SUBST(CONFIG_OCAMLGRAPH)
 
@@ -354,6 +364,7 @@ AC_CONFIG_FILES([
   Makefile.config
   _tags
   META
+  dose3.odocl
   db/db.mlpack
   algo/algo.mlpack
   common/versionInfo.ml
