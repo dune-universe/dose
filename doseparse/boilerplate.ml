@@ -51,7 +51,7 @@ let vpkglist_option ?default ?(metavar = "VPKGLST") () =
 ;;
 
 (* this is a ,-separated list of vpkgs of the form "a (= v)" *)
-let pkglist_option ?default ?(metavar = "VPKGLST") () =
+let pkglist_option ?default ?(metavar = "PKGLST") () =
   let parse_vpkglist s = 
     let _loc = Debian.Format822.dummy_loc in
     List.map (function
@@ -143,20 +143,9 @@ module MakeDistribOptions(O : sig val options : OptParse.OptParser.t end) = stru
   ;;
 
   let get_deb_buildarchs opt =
-    let native = opt.Debian.Debcudf.native in
-    let foreign = opt.Debian.Debcudf.foreign in
-    let target = opt.Debian.Debcudf.target in
-    if native = "" then 
+    if opt.Debian.Debcudf.native = "" then 
       fatal "you must specify at least the native architecture" ;
-    if Opt.is_set deb_foreign_archs then
-      if List.mem target foreign then
-        native::foreign
-      else
-        fatal "the target architecture is not included in the list of foreign architectures"
-    else
-      if target = native then [target]
-      else
-        fatal "the target architecture is not included in the list of foreign architectures"
+    opt.Debian.Debcudf.target
   ;;
 
   let set_default_options = function
@@ -521,9 +510,9 @@ END
 ;;
 
 (** return a list of Debian packages from a debian source file *)
-let deb_load_source ?(profiles=true) ?(noindep=true) target builddeparchs sourcefile =
+let deb_load_source ?(profiles=false) ?(noindep=false) target builddeparch sourcefile =
   let l = Debian.Sources.input_raw ~archs:[target] [sourcefile] in
-  Debian.Sources.sources2packages ~noindep ~profiles builddeparchs l
+  Debian.Sources.sources2packages ~noindep ~profiles builddeparch l
 ;;
 
 (** parse and merge a list of files into a cudf package list *)
