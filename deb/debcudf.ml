@@ -437,10 +437,11 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
       List.map (add_arch_l options.native pkgarch) 
       (loadll tables (pkg.pre_depends @ pkg.depends))
     in
+    (* XXX: if ignore essential for the moment we also ignore keep *)
     let _keep =
-      (* XXX: if ignore essential for the moment we also ignore keep *)
-      if options.ignore_essential ||
-      (pkgarch <> options.native && pkgarch <> "all") then
+      if options.ignore_essential then
+        `Keep_none
+      else if (pkgarch <> options.native && pkgarch <> "all") then
         `Keep_none
       else
         set_keep pkg
