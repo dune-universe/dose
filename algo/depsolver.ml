@@ -319,7 +319,8 @@ let output_clauses ?(global_constraints=true) ?(enc=Cnf) univ =
 
 (** check if a cudf request is satisfiable. we do not care about
  * universe consistency . We try to install a dummy package *)
-let check_request (_,pkglist,request) =
+let check_request cudf =
+  let (_,pkglist,request) = cudf in
   let deps = 
     let k = 
       List.filter_map (fun pkg ->

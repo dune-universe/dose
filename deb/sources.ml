@@ -180,7 +180,6 @@ let select builddeparch profile dep =
 
 (** transform a list of sources packages into dummy binary packages *)
 let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") builddeparch l =
-  (* let builddepsarchs = "all"::"any"::builddeparchs in *)
   let conflicts profile l = List.filter_map (select builddeparch profile) l in
   let depends profile ll =
     List.filter_map (fun l ->
