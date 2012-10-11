@@ -319,37 +319,36 @@ let output_clauses ?(global_constraints=true) ?(enc=Cnf) univ =
 
 (** check if a cudf request is satisfiable. we do not care about
  * universe consistency . We try to install a dummy package *)
-let check_request cudf =
-  let (_,pkglist,request) = cudf in
-  let deps = 
-    let k = 
-      List.filter_map (fun pkg ->
-        if pkg.Cudf.installed then
-          match pkg.Cudf.keep with
-          |`Keep_package -> Some(pkg.Cudf.package,None)
-          |`Keep_version -> Some(pkg.Cudf.package,Some(`Eq,pkg.Cudf.version))
-          |_ -> None
-        else None
-      ) pkglist
+let check_request ?cmd ?criteria cudf =
+  if Option.is_none cmd then begin
+    let (_,pkglist,request) = cudf in
+    let deps = 
+      let k = 
+        List.filter_map (fun pkg ->
+          if pkg.Cudf.installed then
+            match pkg.Cudf.keep with
+            |`Keep_package -> Some(pkg.Cudf.package,None)
+            |`Keep_version -> Some(pkg.Cudf.package,Some(`Eq,pkg.Cudf.version))
+            |_ -> None
+          else None
+        ) pkglist
+      in
+      let l = request.Cudf.install @ request.Cudf.upgrade in
+      debug "request consistency (keep %d) (install %d) (upgrade %d) (remove %d) (# %d)"
+      (List.length k) (List.length request.Cudf.install) 
+      (List.length request.Cudf.upgrade)
+      (List.length request.Cudf.remove)
+      (List.length pkglist);
+      List.map (fun j -> [j]) (l @ k) 
     in
-    let l = request.Cudf.install @ request.Cudf.upgrade in
-    debug "request consistency (keep %d) (install %d) (upgrade %d) (remove %d) (# %d)"
-    (List.length k) (List.length request.Cudf.install) 
-    (List.length request.Cudf.upgrade)
-    (List.length request.Cudf.remove)
-    (List.length pkglist);
-    List.map (fun j -> [j]) (l @ k) 
-  in
-  let dummy = {
-    Cudf.default_package with
-    Cudf.package = "dose-dummy-request";
-    version = 1;
-    depends = deps;
-    conflicts = request.Cudf.remove}
-  in
-  let universe = Cudf.load_universe (dummy::pkglist) in
-(*  let solver = load ~check:false universe in
-  let solver = Depsolver_int.init_solver_closure pool closure in
-*)
-  edos_install universe dummy
+    let dummy = {
+      Cudf.default_package with
+      Cudf.package = "dose-dummy-request";
+      version = 1;
+      depends = deps;
+      conflicts = request.Cudf.remove}
+    in
+    let universe = Cudf.load_universe (dummy::pkglist) in
+    edos_install universe dummy
+  end else failwith "not implemented yet"
 ;;

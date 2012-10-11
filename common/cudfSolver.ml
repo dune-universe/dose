@@ -60,11 +60,12 @@ let interpolate_solver_pat exec cudf_in cudf_out pref =
   exec
 ;;
 
-exception FatalError of string
+exception Error of string
+exception Unsat
 
 let fatal fmt =
   Printf.kprintf (fun s ->
-    raise (FatalError s)
+    raise (Error s)
   ) fmt
 ;;
 
@@ -73,7 +74,7 @@ let fatal fmt =
     cudf : a cudf document (preamble, universe, request)
     criteria : optimization criteria
 *)
-let execsolver exec_pat cudf criteria = 
+let execsolver exec_pat criteria cudf = 
   let timer3 = Util.Timer.create "cudfio" in
   let timer4 = Util.Timer.create "solver" in
   let (_,universe,_) = cudf in
@@ -109,7 +110,7 @@ let execsolver exec_pat cudf criteria =
   if not(Sys.file_exists solver_out) then
     fatal "(CRASH) Solution file not found"
   else if check_fail solver_out then
-    fatal "(UNSAT) No Solutions according to the give preferences"
+    raise Unsat
   else 
     try begin
       if (Unix.stat solver_out).Unix.st_size <> 0 then

@@ -342,8 +342,10 @@ let main () =
   OptParse.Opt.set Options.criteria criteria ;
 
   let solpre,soluniv = 
-    try CudfSolver.execsolver exec_pat cudf criteria
-    with CudfSolver.FatalError s -> fatal "%s" s
+    try CudfSolver.execsolver exec_pat criteria cudf
+    with
+    |CudfSolver.Error s -> fatal "%s" s
+    |CudfSolver.Unsat -> fatal "(UNSAT) No Solutions according to the give preferences"
   in
 
   if OptParse.Opt.get Options.dump then begin
