@@ -317,29 +317,33 @@ let output_clauses ?(global_constraints=true) ?(enc=Cnf) univ =
   Buffer.contents buff
 ;;
 
+type solver_result =
+  |Sat of (Cudf.preamble option * Cudf.universe)
+  |Unsat of Diagnostic.diagnosis option
+  |Error of string
+
 (** check if a cudf request is satisfiable. we do not care about
  * universe consistency . We try to install a dummy package *)
-let check_request ?cmd ?criteria cudf =
-  if Option.is_none cmd then begin
-    let (_,pkglist,request) = cudf in
+let check_request ?cmd ?criteria ?(explain=false) (pre,universe,request) =
+  let intSolver universe request =
     let deps = 
-      let k = 
-        List.filter_map (fun pkg ->
+      let k =
+        Cudf.fold_packages (fun acc pkg ->
           if pkg.Cudf.installed then
             match pkg.Cudf.keep with
-            |`Keep_package -> Some(pkg.Cudf.package,None)
-            |`Keep_version -> Some(pkg.Cudf.package,Some(`Eq,pkg.Cudf.version))
-            |_ -> None
-          else None
-        ) pkglist
+            |`Keep_package -> (pkg.Cudf.package,None)::acc
+            |`Keep_version -> (pkg.Cudf.package,Some(`Eq,pkg.Cudf.version))::acc
+            |_ -> acc
+          else acc
+        ) [] universe
       in
       let l = request.Cudf.install @ request.Cudf.upgrade in
       debug "request consistency (keep %d) (install %d) (upgrade %d) (remove %d) (# %d)"
       (List.length k) (List.length request.Cudf.install) 
       (List.length request.Cudf.upgrade)
       (List.length request.Cudf.remove)
-      (List.length pkglist);
-      List.map (fun j -> [j]) (l @ k) 
+      (Cudf.universe_size universe);
+      List.fold_left (fun acc j -> [j]::acc) (List.map (fun j -> [j]) l) k
     in
     let dummy = {
       Cudf.default_package with
@@ -348,7 +352,24 @@ let check_request ?cmd ?criteria cudf =
       depends = deps;
       conflicts = request.Cudf.remove}
     in
+    (* XXX it should be possible to add a package to a cudf document ! *)
+    let pkglist = Cudf.get_packages universe in
     let universe = Cudf.load_universe (dummy::pkglist) in
     edos_install universe dummy
-  end else failwith "not implemented yet"
+  in
+  if Option.is_none cmd then begin
+    let d = intSolver universe request in
+    if Diagnostic.is_solution d then
+      let is = Diagnostic.get_installationset d in
+      Sat (Some pre,Cudf.load_universe is)
+    else
+      if explain then Unsat (Some d) else Unsat None
+  end else begin
+    let cmd = Option.get cmd in
+    let criteria = if Option.is_none criteria then "-removed,-new" else Option.get criteria in
+    try Sat(CudfSolver.execsolver cmd criteria (pre,universe,request)) with
+    |CudfSolver.Unsat when not explain -> Unsat None
+    |CudfSolver.Unsat when explain -> Unsat (Some (intSolver universe request))
+    |CudfSolver.Error s -> Error s
+  end
 ;;

@@ -342,10 +342,11 @@ let main () =
   OptParse.Opt.set Options.criteria criteria ;
 
   let solpre,soluniv = 
-    try CudfSolver.execsolver exec_pat criteria cudf
-    with
-    |CudfSolver.Error s -> fatal "%s" s
-    |CudfSolver.Unsat -> fatal "(UNSAT) No Solutions according to the give preferences"
+    let explain = OptParse.Opt.get Options.explain in
+    match Algo.Depsolver.check_request ~cmd:exec_pat ~criteria ~explain cudf with
+    |Algo.Depsolver.Error s -> fatal "%s" s
+    |Algo.Depsolver.Unsat _ -> fatal "(UNSAT) No Solutions according to the give preferences"
+    |Algo.Depsolver.Sat s -> s
   in
 
   if OptParse.Opt.get Options.dump then begin

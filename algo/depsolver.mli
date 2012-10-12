@@ -107,5 +107,10 @@ type enc = Cnf | Dimacs
   *)
 val output_clauses : ?global_constraints:bool -> ?enc:enc -> Cudf.universe -> string
 
+type solver_result =
+  |Sat of (Cudf.preamble option * Cudf.universe)
+  |Unsat of Diagnostic.diagnosis option
+  |Error of string
+
 (** [check_request] check if there exists a solution for the give cudf document *)
-val check_request : ?cmd : string -> ?criteria : string -> Cudf.cudf_doc -> Diagnostic.diagnosis
+val check_request : ?cmd : string -> ?criteria : string -> ?explain : bool -> Cudf.cudf -> solver_result
