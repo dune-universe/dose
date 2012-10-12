@@ -60,13 +60,17 @@ if test "$HAS_LIBCUDF" = "yes" ; then
   AC_CHECK_OCAML_PKG([cudf])
   if (test "$OCAML_PKG_cudf" = "no"); then
     AC_MSG_NOTICE([you asked to use an external libcudf, but ocamlfind cannot find it])
-    AC_MSG_NOTICE([using local libcudf instead])
+    AC_MSG_ERROR([Please specify --without-libcudf to compile cudf locally])
     PKG_CUDF=use_cudf
   else
     PKG_CUDF="package(cudf)"
   fi
 else
-  AC_MSG_NOTICE([using local libcudf])
+  if test -f "cudf/cudf.mli" ; then
+    AC_MSG_NOTICE([using local libcudf])
+  else
+    AC_MSG_ERROR([you asked to compile cudf locally, but the cudf submodule is not present])
+  fi
 fi
 
 AC_CHECK_OCAML_PKG([extlib])

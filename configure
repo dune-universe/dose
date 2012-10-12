@@ -4312,15 +4312,18 @@ $as_echo "not found" >&6; }
   if (test "$OCAML_PKG_cudf" = "no"); then
     { $as_echo "$as_me:${as_lineno-$LINENO}: you asked to use an external libcudf, but ocamlfind cannot find it" >&5
 $as_echo "$as_me: you asked to use an external libcudf, but ocamlfind cannot find it" >&6;}
-    { $as_echo "$as_me:${as_lineno-$LINENO}: using local libcudf instead" >&5
-$as_echo "$as_me: using local libcudf instead" >&6;}
+    as_fn_error $? "Please specify --without-libcudf to compile cudf locally" "$LINENO" 5
     PKG_CUDF=use_cudf
   else
     PKG_CUDF="package(cudf)"
   fi
 else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: using local libcudf" >&5
+  if test -f "cudf/cudf.mli" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: using local libcudf" >&5
 $as_echo "$as_me: using local libcudf" >&6;}
+  else
+    as_fn_error $? "you asked to compile cudf, but the cudf submodule is not present" "$LINENO" 5
+  fi
 fi
 
 
