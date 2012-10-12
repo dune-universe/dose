@@ -112,5 +112,11 @@ type solver_result =
   |Unsat of Diagnostic.diagnosis option
   |Error of string
 
-(** [check_request] check if there exists a solution for the give cudf document *)
+(** [check_request] check if there exists a solution for the give cudf document 
+    if ?cmd is specified, it will be used to call an external cudf solver to
+    satisfy the request.
+    if ?criteria is specified it will be used as optimization criteria. 
+    if ?explain is specified and there is no solution for the give request, the
+    result will contain the failure reason.
+*)
 val check_request : ?cmd : string -> ?criteria : string -> ?explain : bool -> Cudf.cudf -> solver_result
