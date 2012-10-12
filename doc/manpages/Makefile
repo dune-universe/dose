@@ -14,13 +14,13 @@ MANA = $(MAN1) $(MAN5) $(MAN8)
 # manpages in HTML to be generated
 HTMLA = $(patsubst %.pod,%.html,$(PODA))
 
+all: man html
+
 man: $(MANA)
 
 html: $(HTMLA)
 	mkdir -p ../../dose3.docdir/manpages
 	cp $(HTMLA) ../../dose3.docdir/manpages
-
-all: man html
 
 %.1: %.pod
 	pod2man --section 1 --center="DOSE Tools" \
