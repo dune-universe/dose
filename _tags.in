@@ -42,7 +42,7 @@ true: -traverse
 <{applications,experimental}/*>: package(extlib), package(pcre), package(unix)
 <{applications,experimental}/*>: @PKG_CUDF@, @PKG_OCAMLGRAPH@, @PKG_ZIP@, @PKG_BZ2@
 
-<applications/apt-cudf.*>: use_boilerplateNoRpm
+<applications/apt-cudf.*>: use_boilerplateNoRpm, use_algo
 <applications/deb-buildcheck.*>: use_algo, use_boilerplateNoRpm
 
 <applications/distcheck.*>: @USE_RPM@, use_algo, use_boilerplate, package(str)
