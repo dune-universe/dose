@@ -6,7 +6,6 @@ the package \texttt{dpkg} and is effectively chosen at install time by the user
 (for example, a user can choose to have a native architecture i386 on an amd64
 machine). \texttt{Foreign} architectures are a list of additional
 architectures that are considered by dpkg and apt while resolving dependencies. 
-
 In pre-Multi Architecture system, dependency resolution was restricted to
 packages with the same architecture (with the exception of Architecture: all
 packages), and a package of the same name but a different architecture was
@@ -71,8 +70,8 @@ to be considered as installed on the system.
 
 \subsection{Multi Arch : None}
 
-packages a1:arch1 and a1:arch2 cannot be installed together.
-
+\begin{figure}
+\begin{lstlisting}[style=debctrl,numbers=left,xleftmargin=20pt,basicstyle=\footnotesize\normalfont\ttfamily]
 Package: a1
 Architecture: arch1
 Version: 1
@@ -84,12 +83,15 @@ Architecture: arch2
 Version: 1
 Provides: a
 Conflicts: a
+\end{lstlisting}
+\caption{packages a1:arch1 and a1:arch2 cannot be installed together.}
+\label{fig:arch-none}
+\end{figure}
 
 \subsection{Multi Arch : Allowed}
 
-Package a2:arch2 can be installed because the package a1:arch1 is currently
-installed.
-
+\begin{figure}
+\begin{lstlisting}[style=debctrl,numbers=left,xleftmargin=20pt,basicstyle=\footnotesize\normalfont\ttfamily]
 Package: a1
 Architecture: arch1
 Version: 1
@@ -108,12 +110,16 @@ Architecture: arch2
 Version: 1
 Depends: a1:any
 Multi-Arch: same
+\end{lstlisting}
+\caption{Package a2:arch2 can be installed because the package a1:arch1
+is currently installed.}
+\label{fig:arch-allowed}
+\end{figure}
 
 \subsection{Multi Arch : Foreign}
 
-Packages a1:arch1 and a2:arch2 are not coinstallable, but package
-a2:arch2 can be installed 
-
+\begin{figure}
+\begin{lstlisting}[style=debctrl,numbers=left,xleftmargin=20pt,basicstyle=\footnotesize\normalfont\ttfamily]
 Package: a1
 Architecture: arch1
 Version: 1
@@ -128,12 +134,21 @@ Package: a2
 Architecture: arch2
 Version: 1
 Depends: a1
+\end{lstlisting}
+\caption{Packages a1:arch1 and a2:arch2 are not coinstallable, but
+package a2:arch2 can be installed}
+\label{fig:arch-foreign}
+\end{figure}
+
+
 
 \subsection{Multi Arch : Same}
 
 Packages a1:arch1 and a1:arch2 are coinstallable. Self conflicts are
 ignored.
 
+\begin{figure}
+\begin{lstlisting}[style=debctrl,numbers=left,xleftmargin=20pt,basicstyle=\footnotesize\normalfont\ttfamily]
 Package: a1
 Architecture: arch1
 Version: 1
@@ -145,10 +160,14 @@ Architecture: arch2
 Version: 1
 Conflicts: a2
 Multi-Arch: same
+\end{lstlisting}
+\caption{Packages a1:arch1 and a1:arch2 are coinstallable. Self
+conflicts are ignored.}
+\label{fig:arch-same-1}
+\end{figure}
 
-Likewise, implicit self conflicts declared thought virtual packages are
-ignored. Packages a1:arch1 and a1:arch2 are coinstallable
-
+\begin{figure}
+\begin{lstlisting}[style=debctrl,numbers=left,xleftmargin=20pt,basicstyle=\footnotesize\normalfont\ttfamily]
 Package: a1
 Architecture: arch1
 Version: 1
@@ -162,10 +181,14 @@ Version: 1
 Provides: a
 Conflicts: a
 Multi-Arch: same
+\end{lstlisting}
+\caption{implicit self conflicts declared thought virtual packages are
+ignored. Packages a1:arch1 and a1:arch2 are coinstallable}
+\label{fig:arch-same-2}
+\end{figure}
 
-However, packages a1:arch1 and a1:arch2 are not coinstallable with package
-a2:arch2. 
-
+\begin{figure}
+\begin{lstlisting}[style=debctrl,numbers=left,xleftmargin=20pt,basicstyle=\footnotesize\normalfont\ttfamily]
 Package: a1
 Architecture: arch1
 Version: 1
@@ -186,10 +209,14 @@ Version: 1
 Provides: a
 Conflicts: a
 Multi-Arch: same
+\end{lstlisting}
+\caption{packages a1:arch1 and a1:arch2 are not coinstallable with
+package a2:arch2.}
+\label{fig:arch-same-3}
+\end{figure}
 
-Coinstallability is possible only if all interested packages are declared multi arch same.
-Packages a1:arch1 and a1:arch2 are not coinstallable
-
+\begin{figure}
+\begin{lstlisting}[style=debctrl,numbers=left,xleftmargin=20pt,basicstyle=\footnotesize\normalfont\ttfamily]
 Package: a1
 Architecture: arch1
 Version: 1
@@ -203,3 +230,11 @@ Version: 1
 Provides: a
 Conflicts: a
 Multi-Arch: none
+\end{lstlisting}
+\caption{Coinstallability is possible only if all interested packages
+are declared multi arch same.  Packages a1:arch1 and a1:arch2 are not
+coinstallable}
+\label{fig:arch-same-4}
+\end{figure}
+
+

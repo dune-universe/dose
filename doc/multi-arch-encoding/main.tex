@@ -2,6 +2,16 @@
 \usepackage[utf8]{inputenc}
 \usepackage{slashbox}
 \usepackage{alltt}
+\usepackage{listings}
+
+\lstdefinestyle{debctrl}
+               {basicstyle=\small\normalfont\ttfamily,
+                 showstringspaces=false,
+                 %% frame=tb,
+                 emph={Package,Version,Build,Depends,Conflicts,Provides,Architecture},
+                 keywordstyle=\color{black}\bf,
+                 emphstyle=\bf,
+               }
 
 \title{Debian multi architecture encoding in CUDF 2.0}
 \author{Pietro Abate, Roberto Di Cosmo, Ralf Treinen, Stefano Zacchiroli}
