@@ -19,8 +19,8 @@ module Options = struct
   open OptParse
 
   let verbose = StdOpt.incr_option ()
-  let cudf = StdOpt.store_true ()
   let out = StdOpt.str_option ()
+  let explain = StdOpt.store_true ()
 
   let description = "Check if there exists a (non optimal) solution for a cudf problem"
   let options = OptParser.make ~description ()
@@ -28,40 +28,40 @@ module Options = struct
   open OptParser
   add options ~short_name:'v' ~help:"Print information (can be repeated)" verbose;
   add options                 ~long_name:"out"   ~help:"Output file" out;
-  add options ~short_name:'c' ~long_name:"cudf"  ~help:"print the cudf solution (if any)" cudf;
+  add options ~short_name:'e' ~long_name:"explain"  ~help:"print the solution or a failure report" explain;
 end
 
 include Util.Logging(struct let label = __FILE__ end) ;;
 
-let pp_solution oc = function
-  |{Diagnostic.result = Diagnostic.Success (f);} ->
-      let is = f ~all:true () in
-      Cudf_printer.pp_packages oc is
-  |_ -> assert false
-
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
+  let explain = OptParse.Opt.get Options.explain in
 
   match posargs with
-  |[f] ->
+  |[f] -> begin
       let (p,l,r) = 
-        match Boilerplate.parse_cudf f with
-        |(p,l,Some r) -> (p,l,r)
+        match Boilerplate.load_cudf f with
+        |(None,u,Some r) -> (Cudf.default_preamble,u,r)
+        |(Some p,u,Some r) -> (p,u,r)
         |_ ->  fatal "Not a void cudf document (missing request)"
       in 
-      let r = Depsolver.check_request (p,l,r) in
-      if Diagnostic.is_solution r then begin
-        if OptParse.Opt.get Options.cudf then
+      match Depsolver.check_request ~explain (p,l,r) with
+      |Depsolver.Sat (p,u) -> begin
+        Printf.printf "Sat %s\n" f;
+        if explain then begin 
           if not(Option.is_none p) then 
             Cudf_printer.pp_preamble stdout (Option.get p);
-          pp_solution stdout r
+          Cudf_printer.pp_universe stdout u
         end
-      ;
-      if not(Diagnostic.is_solution r && OptParse.Opt.get Options.cudf) then begin
-        Printf.printf "Check %s\n" f;
-        Diagnostic.printf ~failure:true ~explain:true r
       end
+      |Depsolver.Unsat (Some d) -> begin
+        Printf.printf "Unsat %s\n" f;
+        Diagnostic.printf ~failure:true ~explain:true d
+      end
+      |Depsolver.Unsat None -> Printf.printf "Unsat %s\n" f
+      |_ -> ()
+  end
   |_ -> (Printf.eprintf "Too many arguments\n" ; exit 1)
 ;;
 
