@@ -337,6 +337,7 @@ let add_extra extras tables pkg =
   add_extra_default extras tables pkg
 
 let tocudf tables ?(options=default_options) ?(inst=false) pkg =
+  let bind m f = List.flatten (List.map f m) in
   if options.native <> "" then begin
     let pkgarch =
       match options.target,Sources.is_source pkg with
@@ -361,22 +362,24 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
         |`Foreign ->
            (* packages of same name and version of itself in all archs except its own
               each package this package provides is provided in all arches *)
-            List.flatten (
-              List.map (function
+           bind (options.native::options.foreign) (function
                 |arch when arch = pkgarch ->
                     (add_arch_l options.native arch (loadlp tables pkg.provides))
                 |arch ->
                     (add_arch options.native arch pkg.name,Some(`Eq,_version)) ::
                       (add_arch_l options.native arch (loadlp tables pkg.provides))
-              ) (options.native::options.foreign)
-            )
+              )
         |`Allowed ->
            (* archless package and arch: any package *)
            (* all provides as arch: any *)
            (* pkgarch provides *)
-             (CudfAdd.encode (pkg.name^":any"),None)::
-               (List.map (fun (name, v) -> (CudfAdd.encode (name^":any"), v)) (loadlp tables pkg.provides))@
-                  (add_arch_l options.native pkgarch (loadlp tables pkg.provides))
+           let any = (CudfAdd.encode (pkg.name^":any"),None) in
+           let l = 
+             bind (loadlp tables pkg.provides) (fun (name, c) ->
+               [(CudfAdd.encode (name^":any"), c);
+               ((add_arch options.native pkgarch name),c)]
+             )
+           in any::l
         |`Same ->
            (add_arch_l options.native pkgarch (loadlp tables pkg.provides))
       in archlessprovide :: multiarchprovides
@@ -404,31 +407,21 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
       let multiarchconflicts =
         match pkg.multiarch with
         |(`None|`Foreign|`Allowed) -> 
-            List.flatten (
-              List.map (fun arch ->
+            bind (options.native::options.foreign) (fun arch ->
                 add_arch_l options.native arch (loadl tables originalconflicts)
-              ) (options.native::options.foreign)
-            )
+              )
         |`Same -> 
-            List.flatten (
-              List.map (fun arch ->
-                add_arch_l options.native arch (
-                  loadl tables (
-                    List.flatten (
-                      List.map (fun ((n,a),c) ->
-                        try
-                          List.filter_map (fun pn ->
-                            if pn <> pkg.name then
-                              Some((pn,a),c)
-                            else None
-                          ) (SSet.elements !(Util.StringHashtbl.find tables.virtual_table n))
-                        with Not_found ->
-                          if n <> pkg.name then [((n,a),c)] else []
-                      ) (originalconflicts)
-                    )
-                  ) 
+            bind (options.native::options.foreign) (fun arch ->
+              let l =
+                bind originalconflicts (fun ((n,a),c) ->
+                   try
+                     List.filter_map (fun pn ->
+                       if pn <> pkg.name then Some((pn,a),c) else None
+                     ) (SSet.elements !(Util.StringHashtbl.find tables.virtual_table n))
+                   with Not_found -> if n <> pkg.name then [((n,a),c)] else []
                 )
-              ) (options.native::options.foreign)
+              in
+              add_arch_l options.native arch (loadl tables l)
             )
       in
       multiarchconflicts @ multiarchconstraints
