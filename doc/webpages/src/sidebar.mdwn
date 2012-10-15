@@ -1,0 +1,10 @@
+<div id="menu">
+  <ul class="menu">
+    <li class="l0"><a href="https://gforge.inria.fr/projects/dose/">Project</a></li>
+    <li class="l0"><a href="https://gforge.inria.fr/frs/?group_id=4395">Download</a></li>
+    <li class="l0"><a href="docs/index.html">Documentation</a></li>
+    <li class="l0"><a href="http://dose.gforge.inria.fr/doc/api/">API (ocamldoc)</a></li>
+    <li class="l0"><a href="https://gforge.inria.fr/mail/?group_id=4395">Mailing Lists</a></li>
+  </ul>
+  <div class="foot"></div>
+</div>

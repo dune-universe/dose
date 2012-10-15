@@ -1,0 +1,72 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+ "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title><TMPL_VAR TITLE></title>
+<TMPL_IF NAME="FAVICON">
+<link rel="icon" href="<TMPL_VAR BASEURL><TMPL_VAR FAVICON>" type="image/x-icon" />
+</TMPL_IF>
+<link rel="stylesheet" href="<TMPL_VAR BASEURL>/public_html/css/purple.css" type="text/css" />
+<TMPL_IF NAME="META"><TMPL_VAR META></TMPL_IF>
+</head>
+
+<body id="body">
+  <div id="layout">
+    <div id="header">
+      <a href="/index.html" id="logo" title="Click for the Home Page">
+        <span class="alt">Dose library</span>
+      </a>
+      <div id="trail" class="blank"></div>
+      <h1 class="headline">Dose Library Home Page</h1>
+    </div>
+    <div id="page">
+      <TMPL_IF SIDEBAR>
+      <div id="sidebar">
+        <TMPL_VAR SIDEBAR>
+      </div>
+      </TMPL_IF>
+    <div id="content">
+      <TMPL_VAR CONTENT>
+    </div>
+    <div id="footer">
+      <TMPL_IF COPYRIGHT>
+      <div class="pagecopyright">
+        <a name="pagecopyright"></a>
+      <TMPL_VAR COPYRIGHT>
+      </div>
+      </TMPL_IF>
+
+      <TMPL_IF LICENSE>
+      <div class="pagelicense">
+        <a name="pagelicense"></a>
+      License: <TMPL_VAR LICENSE>
+      </div>
+      </TMPL_IF>
+
+      </div>
+      <TMPL_IF EXTRAFOOTER><TMPL_VAR EXTRAFOOTER></TMPL_IF>
+      </div>
+    </div>
+  </div>
+  <div id="preload"> 
+    <span class="logo"></span>
+    <span class="tab"></span>
+
+    <span class="hide"></span>
+    <span class="show"></span>
+    <span class="arrow1"></span>
+    <span class="arrow2"></span>
+    <span class="ext"></span>
+    <span class="talk"></span>
+    <span class="menu"></span>
+    <span class="menu_head"></span>
+    <span class="menu_foot"></span>
+
+    <span class="top"></span>
+    <span class="dotminus1"></span>
+    <span class="dotminus2"></span>
+    <span class="dotplus1"></span>
+  </div> 
+</body>
+</html>
