@@ -1,0 +1,29 @@
+
+# Quick start #
+
+Dose is an ocaml library designed to analyse large software repositories.
+The library core does not make any assumption of the semantic and syntax
+of any specific packages systems and it is based on the [[Cudf|cudf]] format.
+
+In this tutorial we will work from the ocaml command line.
+
+## Create a simple package repository ##
+
+First we instantiate three cudf packages (p1,p2,p3) and the create a cudf 
+universe containing these three packages.
+
+    #let p1 = { Cudf.default_package with Cudf.package = "p1" ; version = 1 } 
+     and p2 = { Cudf.default_package with Cudf.package = "p2" ; version = 1 } 
+     and p3 = { Cudf.default_package with Cudf.package = "p3" ; version = 1 }
+     ;;
+    val p1 : Cudf.package =
+      {Cudf.package = "p1"; Cudf.version = 1; Cudf.depends = [];
+       Cudf.conflicts = []; Cudf.provides = []; Cudf.installed = false;
+       Cudf.was_installed = false; Cudf.keep = `Keep_none; Cudf.pkg_extra = []}
+    val p2 : Cudf.package = [...]
+    val p3 : Cudf.package = [...]
+    #
+    #let universe = Cudf.load_universe [p1;p2;p3] ;;
+    val universe : Cudf.universe = <abstr>
+
+
