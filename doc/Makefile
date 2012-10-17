@@ -1,4 +1,5 @@
 SUBDIRS = manpages debcheck.primer apt-external-solvers.primer
+SHELL=/bin/bash
 
 all:
 	@for subdir in $(SUBDIRS); do \
@@ -12,3 +13,4 @@ clean:
 
 upload:
 	rsync -avz manpages/*.html scm.gforge.inria.fr:/home/groups/dose/htdocs/doc/man/
+	rsync -avz debcheck.primer/*.{html,pdf} scm.gforge.inria.fr:/home/groups/dose/htdocs/doc/tools/

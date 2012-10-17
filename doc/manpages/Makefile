@@ -19,8 +19,6 @@ all: man html
 man: $(MANA)
 
 html: $(HTMLA)
-	mkdir -p ../../dose3.docdir/manpages
-	cp $(HTMLA) ../../dose3.docdir/manpages
 
 %.1: %.pod
 	pod2man --section 1 --center="DOSE Tools" \
