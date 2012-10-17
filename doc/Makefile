@@ -11,6 +11,10 @@ clean:
 	  (cd $$subdir && $(MAKE) clean); \
 	done
 
-upload:
+webpages:
+	cd webpages && $(MAKE)
+
+upload: webpages
 	rsync -avz manpages/*.html scm.gforge.inria.fr:/home/groups/dose/htdocs/doc/man/
 	rsync -avz debcheck.primer/*.{html,pdf} scm.gforge.inria.fr:/home/groups/dose/htdocs/doc/tools/
+	rsync -avz webpages/public_html/* scm.gforge.inria.fr:/home/groups/dose/htdocs/public_html
