@@ -1,6 +1,6 @@
 [[!meta title="dose FAQ"]]
 
-# Not all packages are taken into consideration by dose-builddebcheck
+# Not all source packages are considered by dose-builddebcheck
 
   % dose-builddebcheck --deb-native-arch=amd64 --dump=cudf Packages.bz2 Sources.bz2
   native-architecture: amd64
