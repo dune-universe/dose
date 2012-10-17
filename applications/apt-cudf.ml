@@ -334,7 +334,7 @@ let main () =
   end;
 
   (* do nothing, we exit here after dumping the universe *)
-  if OptParse.Opt.get Options.noop then exit(0);
+(*  if OptParse.Opt.get Options.noop then exit(0); *)
 
   let cmdline_criteria = OptParse.Opt.opt Options.criteria in
   let conffile = OptParse.Opt.get Options.conffile in
@@ -379,6 +379,15 @@ let main () =
     end
     |true,true -> ()
   ) diff;
+
+  (* always specify the version of the packages in the request   *)
+  List.iter 
+    (fun (n,_) ->
+      match Cudf.get_installed soluniv n with
+      |[pkg] -> 
+          Format.printf "Install: %a@." pp_pkg (CudfAdd.Cudf_set.singleton pkg,univ)
+      |_ -> ()
+    ) cudf_request.Cudf.install;
 
   if OptParse.Opt.get Options.explain then begin
     let (i,u,d,r) = CudfDiff.summary universe diff in
