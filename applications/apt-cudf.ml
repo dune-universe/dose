@@ -334,7 +334,7 @@ let main () =
   end;
 
   (* do nothing, we exit here after dumping the universe *)
-  if OptParse.Opt.get Options.noop then exit(0);
+(*  if OptParse.Opt.get Options.noop then exit(0); *)
 
   let cmdline_criteria = OptParse.Opt.opt Options.criteria in
   let conffile = OptParse.Opt.get Options.conffile in
