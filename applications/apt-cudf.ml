@@ -380,6 +380,12 @@ let main () =
     |true,true -> ()
   ) diff;
 
+  List.iter (fun (n,c) ->
+    List.iter (fun pkg -> 
+      Format.printf "Install: %a@." pp_pkg ((CudfAdd.Cudf_set.singleton pkg),univ)
+    ) (CudfAdd.who_provides soluniv (n,c))
+  ) cudf_request.Cudf.install;
+
   if OptParse.Opt.get Options.explain then begin
     let (i,u,d,r) = CudfDiff.summary universe diff in
     Format.printf "Summary: " ;
