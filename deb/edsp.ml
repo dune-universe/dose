@@ -40,15 +40,23 @@ let default_request = {
 }
 
 (* convert a apt command line request to edsp request *)
-let from_apt_request request = function
+let from_apt_request arch request = function
   |Apt.Install vpkgreqlist ->
       List.fold_left (fun acc -> function
+        |(Some Format822.I, ((n,None),c), _) -> {acc with install = ((n,Some arch),c) :: acc.install}
+        |(Some Format822.R, ((n,None),c), _) -> {acc with remove =  ((n,Some arch),c) :: acc.remove}
+        |(None, ((n,None),c), _) -> {acc with install = ((n,Some arch),c) :: acc.install}
+
         |(Some Format822.I, vpkg, _) -> {acc with install = vpkg :: acc.install}
         |(Some Format822.R, vpkg, _) -> {acc with remove = vpkg :: acc.remove}
         |(None, vpkg, _) -> {acc with install = vpkg :: acc.install}
       ) request vpkgreqlist
   |Apt.Remove vpkgreqlist ->
       List.fold_left (fun acc -> function
+        |(Some Format822.I, ((n,None),c), _) -> {acc with install = ((n,Some arch),c) :: acc.install}
+        |(Some Format822.R, ((n,None),c), _) -> {acc with remove = ((n,Some arch),c) :: acc.remove}
+        |(None, ((n,None),c), _) -> {acc with remove = ((n,Some arch),c) :: acc.remove}
+
         |(Some Format822.I, vpkg, _) -> {acc with install = vpkg :: acc.install}
         |(Some Format822.R, vpkg, _) -> {acc with remove = vpkg :: acc.remove}
         |(None, vpkg, _) -> {acc with remove = vpkg :: acc.remove}

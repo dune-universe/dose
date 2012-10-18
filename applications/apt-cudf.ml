@@ -269,7 +269,7 @@ let main () =
     |"" -> request
     |_ -> 
       let apt_req = Apt.parse_request_apt apt_get_cmdline in
-      Edsp.from_apt_request {request with Edsp.install = []; remove = []} apt_req
+      Edsp.from_apt_request native_arch {request with Edsp.install = []; remove = []} apt_req
   in
 
   Util.Timer.stop timer1 ();
@@ -334,7 +334,7 @@ let main () =
   end;
 
   (* do nothing, we exit here after dumping the universe *)
-(*  if OptParse.Opt.get Options.noop then exit(0); *)
+  if OptParse.Opt.get Options.noop then exit(0);
 
   let cmdline_criteria = OptParse.Opt.opt Options.criteria in
   let conffile = OptParse.Opt.get Options.conffile in
@@ -380,10 +380,14 @@ let main () =
     |true,true -> ()
   ) diff;
 
+  (* Print also all packages that are were requested, but don't show up in the 
+   * diff because already installed *)
   List.iter (fun (n,c) ->
-    List.iter (fun pkg -> 
-      Format.printf "Install: %a@." pp_pkg ((CudfAdd.Cudf_set.singleton pkg),univ)
-    ) (CudfAdd.who_provides soluniv (n,c))
+    if not(Hashtbl.mem diff n) then begin
+      List.iter (fun pkg -> 
+        Format.printf "Install: %a@." pp_pkg ((CudfAdd.Cudf_set.singleton pkg),univ)
+      ) (CudfAdd.who_provides soluniv (n,c))
+    end
   ) cudf_request.Cudf.install;
 
   if OptParse.Opt.get Options.explain then begin
