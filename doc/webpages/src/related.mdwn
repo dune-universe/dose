@@ -1,0 +1,11 @@
+[[!meta title="dose - the dependency toolkit"]]
+
+# Related Projects
+
+## Debian Bootstrap
+
+## OPAM : ocaml package manager
+
+## apt-cudf
+
+

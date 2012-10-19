@@ -12,9 +12,9 @@ clean:
 	done
 
 webpages:
-	cd webpages && $(MAKE)
+	cd webpages && $(MAKE) rebuild
 
 upload: webpages
-	rsync -avz manpages/*.html scm.gforge.inria.fr:/home/groups/dose/htdocs/doc/man/
-	rsync -avz debcheck.primer/*.{html,pdf} scm.gforge.inria.fr:/home/groups/dose/htdocs/doc/tools/
-	rsync -avz webpages/public_html/* scm.gforge.inria.fr:/home/groups/dose/htdocs/public_html
+	rsync -avz --no-perms manpages/*.html scm.gforge.inria.fr:/home/groups/dose/htdocs/doc/man/
+	rsync -avz --no-perms debcheck.primer/*.{html,pdf} scm.gforge.inria.fr:/home/groups/dose/htdocs/doc/tools/
+	rsync -avz --no-perms webpages/public_html/* scm.gforge.inria.fr:/home/groups/dose/htdocs/public_html
