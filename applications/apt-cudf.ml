@@ -69,10 +69,14 @@ let rec input_all_lines acc chan =
   with End_of_file -> acc
 
 let solver_dir = 
-  try Sys.getenv("CUDFSOLVERS") with Not_found -> "/usr/share/cudf/solvers"
+  try Sys.getenv("CUDFSOLVERS") 
+  with Not_found -> "/usr/share/cudf/solvers"
+;;
 
 let apt_get_cmdline = 
-  try Sys.getenv("APT_GET_CUDF_CMDLINE") with Not_found -> ""
+  try Sys.getenv("APT_GET_CUDF_CMDLINE")
+  with Not_found -> ""
+;;
 
 let pp_pkg fmt (s,univ) = 
   try
@@ -239,6 +243,10 @@ let main () =
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers)
   ["parsing";"cudfio";"conversion";"solver";"solution"];
   Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
+  if apt_get_cmdline <> "" then
+    debug "APT_GET_CUDF_CMDLINE=%s" apt_get_cmdline;
+  debug "CUDFSOLVERS=%s" solver_dir;
+  (* debug "TMPDIR=%s" waiting for ocaml 4.0 *)
 
   let (native_arch,foreign_archs) = 
     get_architectures 
@@ -268,7 +276,6 @@ let main () =
     match apt_get_cmdline with
     |"" -> request
     |_ -> begin
-      debug "APT_GET_CUDF_CMDLINE = %s" apt_get_cmdline;
       let apt_req = Apt.parse_request_apt apt_get_cmdline in
       Edsp.from_apt_request native_arch {request with Edsp.install = []; remove = []} apt_req
     end
