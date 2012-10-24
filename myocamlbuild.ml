@@ -46,6 +46,9 @@ let _ = dispatch begin function
          A"-lrpmio";
        ];
 
+       (* Disable Warning 24: bad source file name *)
+       flag ["ocaml"; "compile"] & S[A"-w"; A"-24"];
+
        (* optimization to ocaml code *)
        flag ["ocaml"; "compile"] & S[A"-ccopt"; A"-O9"];
 
