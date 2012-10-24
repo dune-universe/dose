@@ -267,9 +267,11 @@ let main () =
   let request =
     match apt_get_cmdline with
     |"" -> request
-    |_ -> 
+    |_ -> begin
+      debug "APT_GET_CUDF_CMDLINE = %s" apt_get_cmdline;
       let apt_req = Apt.parse_request_apt apt_get_cmdline in
       Edsp.from_apt_request native_arch {request with Edsp.install = []; remove = []} apt_req
+    end
   in
 
   Util.Timer.stop timer1 ();
@@ -383,11 +385,15 @@ let main () =
   (* Print also all packages that are were requested, but don't show up in the 
    * diff because already installed *)
   List.iter (fun (n,c) ->
-    if not(Hashtbl.mem diff n) then begin
-      List.iter (fun pkg -> 
-        Format.printf "Install: %a@." pp_pkg ((CudfAdd.Cudf_set.singleton pkg),univ)
-      ) (CudfAdd.who_provides soluniv (n,c))
-    end
+    try
+      let s = Hashtbl.find diff n in
+      if (CudfAdd.Cudf_set.is_empty s.CudfDiff.installed) then begin
+        List.iter (fun pkg -> 
+          empty := false;
+          Format.printf "Install: %a@." pp_pkg ((CudfAdd.Cudf_set.singleton pkg),univ)
+        ) (CudfAdd.who_provides soluniv (n,c))
+      end
+    with Not_found -> ()
   ) cudf_request.Cudf.install;
 
   if OptParse.Opt.get Options.explain then begin
