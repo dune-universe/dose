@@ -8,7 +8,6 @@ import os,sys,time
 import argparse
 
 # TODO
-# apt-cudf.native  ceve.native  challenged.native  deb-buildcheck.native
 # dominators-graph.native  
 # smallworld.native  strong-deps.native
 
@@ -50,6 +49,11 @@ class DoseTests(unittest.TestCase):
     def test_apt_cudf(self):
         expected_file = "tests/applications/dose-tests/apt-cudf-install-i386"
         cmd = ["./apt-cudf.native", "-e", "--solver=aspcud", "--native-arch=i386", "tests/deb/edsp/install-sarge-etch.edsp"]
+        test_application(self,expected_file,cmd)
+
+    def test_apt_cudf_textlive(self):
+        expected_file = "tests/applications/dose-tests/apt-cudf-install-textlive"
+        cmd = ["./apt-cudf.native", "--solver=aspcud", "--native-arch=amd64", "--foreign-archs=i386", "tests/deb/edsp/textlive.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_multiarch_same_provides_multi(self):
