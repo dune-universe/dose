@@ -103,7 +103,6 @@ let execsolver exec_pat criteria cudf =
   let lines = input_all_lines lines_cin cerr in
   let exit_code = Unix.close_process_full (cin,cout,cerr) in
   check_exit_status cmd exit_code;
-  info "%s!!" cmd;
   debug "\n%s" (String.concat "\n" lines);
   Util.Timer.stop timer4 ();
 
