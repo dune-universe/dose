@@ -112,14 +112,12 @@ let execsolver exec_pat criteria cudf =
     raise Unsat
   else 
     try begin
-      if (Unix.stat solver_out).Unix.st_size <> 0 then
-        let cudf_parser = Cudf_parser.from_file solver_out in
-        Sys.remove solver_in; Sys.remove solver_out ;
-        try Cudf_parser.load_solution cudf_parser universe with
-        |Cudf_parser.Parse_error _
-        |Cudf.Constraint_violation _ ->
-          fatal "(CRASH) Solution file contains an invalid solution"
-      else fatal "(CRASH) Solution file is empty"
+      let cudf_parser = Cudf_parser.from_file solver_out in
+      Sys.remove solver_in; Sys.remove solver_out ;
+      try Cudf_parser.load_solution cudf_parser universe with
+      |Cudf_parser.Parse_error _
+      |Cudf.Constraint_violation _ ->
+        fatal "(CRASH) Solution file contains an invalid solution"
    end with Cudf.Constraint_violation s ->
      fatal "(CUDF) Malformed solution: %s" s ;
 ;;
