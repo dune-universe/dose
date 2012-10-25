@@ -35,6 +35,8 @@ module Options = struct
   let summary = StdOpt.store_true ()
   let dump = StdOpt.str_option ()
 
+  let maforeign = StdOpt.store_true ()
+
   open OptParser
   add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
   add options ~short_name:'f' ~long_name:"failures" ~help:"Only show failures" failures;
@@ -43,6 +45,8 @@ module Options = struct
   add options ~long_name:"checkonly" ~help:"Check only these package" checkonly;
   add options ~long_name:"latest" ~help:"Check only the latest version of each package" latest;
   add options ~long_name:"summary" ~help:"Print a detailed summary" summary;
+
+  add options ~long_name:"defaultedMAforeign" ~help:"Convert Arch:all packages to Multi-Arch: foreign" maforeign;
 
   add options ~long_name:"dump" ~help:"dump the cudf file" dump;
 
@@ -91,7 +95,16 @@ let main () =
     else
       l
   in
-  let bl = List.fold_left (fun acc pkg -> (Debcudf.tocudf ~options tables pkg)::acc) sl pkglist in
+  let bl = 
+    List.fold_left (fun acc pkg ->
+      let pkg = 
+        if OptParse.Opt.get Options.maforeign && pkg.Packages.architecture = "all" then
+          { pkg with Packages.multiarch = `Foreign }
+        else pkg
+      in
+      (Debcudf.tocudf ~options tables pkg)::acc
+    ) sl pkglist 
+  in
 
   let universe = Cudf.load_universe bl in
   let universe_size = Cudf.universe_size universe in
