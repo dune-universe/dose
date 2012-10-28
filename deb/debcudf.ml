@@ -420,7 +420,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
 			if pn <> pkg.name then Some((pn,a),c) else None
 				      ) (SSet.elements !(Util.StringHashtbl.find tables.virtual_table n))
                     with Not_found -> []
-		  in if Util.StringHashtbl.mem tables.unit_table n then ((n,a),c)::vpkgs else vpkgs
+		  in if Util.StringHashtbl.mem tables.unit_table n && n <> pkg.name then ((n,a),c)::vpkgs else vpkgs
                 )
               in
               add_arch_l options.native arch (loadl tables l)
