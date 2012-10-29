@@ -76,6 +76,11 @@ class DoseTests(unittest.TestCase):
         cmd = ["./apt-cudf.native", "-e", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-same-conflicts.edsp"]
         test_application(self,expected_file,cmd)
 
+    def test_apt_cudf_multiarch_same_conflictsi_virtual(self):
+        expected_file = "tests/applications/dose-tests/multiarch-same-conflicts-virtual"
+        cmd = ["./apt-cudf.native", "-e", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-same-conflicts-virtual.edsp"]
+        test_application(self,expected_file,cmd)
+
     def test_apt_cudf_multiarch_same_no_deps(self):
         expected_file = "tests/applications/dose-tests/multiarch-same-no-deps"
         cmd = ["./apt-cudf.native", "-e", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-same-no-deps.edsp"]
