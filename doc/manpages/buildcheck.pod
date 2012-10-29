@@ -45,7 +45,7 @@ Multi-arch annotations are correctly considered by dose-builddebcheck. Packages
 whose's architecture is neither the native architecture nor in the list of
 foreign architectures (see below) are ignored. Here, native and foreign refers
 at the same time to the architecture on which the compilation will be run, and
-to the target architecture of the compilation. Cross-compilation is supported
+to the host architecture of the compilation. Cross-compilation is supported
 by specifying the I<host> architecture.
 
 =cut
@@ -63,11 +63,13 @@ that has an architecture different from all.
 =item B<--deb-foreign-archs=>I<name> [,I<name>] ...
 
 Specify a comma-separated list of foreign architectures. The default
-is an empty list of foreign architectures.
+is an empty list of foreign architectures. If B<--deb-host-arch> is set, it
+is used as an implicit foreign architecture.
 
 =item B<--deb-host-arch=>I<name>...
 
-Specify the host architecture.
+Specify the host architecture. If this option is given, B<--deb-native-arch>
+must also be set.
 
 =item B<-f --failures> 
 

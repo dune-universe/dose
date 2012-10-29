@@ -64,8 +64,7 @@ let main () =
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
 
   let options = Options.set_deb_options () in
-  let target = options.Debian.Debcudf.target in
-  let builddepsarchs = Options.get_deb_buildarchs options in
+  let hostarch = options.Debian.Debcudf.host in
 
   let pkglist, srclist =
     match posargs with
@@ -75,7 +74,7 @@ let main () =
     |l -> 
         begin match List.rev l with
         |h::t ->
-          let srclist = Boilerplate.deb_load_source target builddepsarchs h in
+          let srclist = Boilerplate.deb_load_source hostarch h in
           let pkglist = Deb.input_raw t in
           (pkglist,srclist)
         |_ -> fatal "An impossible situation occurred ?!#"
@@ -134,8 +133,8 @@ let main () =
   if OptParse.Opt.is_set Options.deb_foreign_archs then
     Format.fprintf fmt "foreign-architecture: %s@." (String.concat "," (OptParse.Opt.get Options.deb_foreign_archs));
 
-  if OptParse.Opt.is_set Options.deb_target_arch then
-    Format.fprintf fmt "host-architecture: %s@." (OptParse.Opt.get Options.deb_target_arch);
+  if OptParse.Opt.is_set Options.deb_host_arch then
+    Format.fprintf fmt "host-architecture: %s@." (OptParse.Opt.get Options.deb_host_arch);
 
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
   let callback d = 

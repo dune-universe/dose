@@ -48,7 +48,7 @@ type options = {
   extras_opt : extramap ;
   native : string;        (* the native architecture *)
   foreign : string list ; (* list of foreign architectures *)
-  target : string;        (* the target architecture - cross compile *)
+  host : string;        (* the host architecture - cross compile *)
   ignore_essential : bool;
 }
 
@@ -56,7 +56,7 @@ let default_options = {
   extras_opt = [] ;
   native = "";
   foreign = [];
-  target = "";
+  host = "";
   ignore_essential = false
 }
 
@@ -340,9 +340,9 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
   let bind m f = List.flatten (List.map f m) in
   if options.native <> "" then begin
     let pkgarch =
-      match options.target,Sources.is_source pkg with
+      match options.host,Sources.is_source pkg with
       |"",true -> options.native   (* source package : build deps on the native arch *)
-      |_,true  -> options.target   (* source package : build deps on the cross arch *)
+      |_,true  -> options.host     (* source package : build deps on the cross arch *)
       |_,false -> pkg.architecture (* binary package : dependencies are package specific *)
     in
     let _name = 

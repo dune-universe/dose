@@ -114,7 +114,7 @@ module MakeDistribOptions(O : sig val options : OptParse.OptParser.t end) = stru
 
   let deb_native_arch = StdOpt.str_option ()
   let deb_foreign_archs = str_list_option ()
-  let deb_target_arch = StdOpt.str_option ()
+  let deb_host_arch = StdOpt.str_option ()
   let deb_ignore_essential = StdOpt.store_true ()
 
   let set_deb_options () =
@@ -123,29 +123,37 @@ module MakeDistribOptions(O : sig val options : OptParse.OptParser.t end) = stru
         Opt.get deb_native_arch
       else ""
     in
-    let foreign = 
-      if Opt.is_set deb_foreign_archs then
-        Opt.get deb_foreign_archs 
-      else []
-    in
-    let target =
-      if Opt.is_set deb_target_arch then
-        Opt.get deb_target_arch
+    let host =
+      if Opt.is_set deb_host_arch then begin
+        (* if host arch is set, native arch must be set *)
+        if native = "" then
+          fatal "you must specify at least the native architecture" ;
+        Opt.get deb_host_arch
+      end
       else native
+    in
+    let foreign =
+      (* if host arch is set, it is an implicit foreign arch *)
+      if Opt.is_set deb_foreign_archs then begin
+        let f = Opt.get deb_foreign_archs in
+        if Opt.is_set deb_host_arch then
+          host::f
+        else
+          f
+      end else begin
+        if Opt.is_set deb_host_arch then
+          [host]
+        else
+          []
+      end
     in
     {
       Debian.Debcudf.default_options with
       Debian.Debcudf.native = native;
       foreign = foreign;
-      target = target;
+      host = host;
       ignore_essential = Opt.get deb_ignore_essential
     }
-  ;;
-
-  let get_deb_buildarchs opt =
-    if opt.Debian.Debcudf.native = "" then 
-      fatal "you must specify at least the native architecture" ;
-    opt.Debian.Debcudf.target
   ;;
 
   let set_default_options = function
@@ -172,8 +180,8 @@ module MakeDistribOptions(O : sig val options : OptParse.OptParser.t end) = stru
   open OptParser ;;
   let deb_group = add_group O.options "Debian Specific Options" in
   add O.options ~group:deb_group ~long_name:"deb-native-arch" ~help:"Native architecture" deb_native_arch;
-  add O.options ~group:deb_group ~long_name:"deb-host-arch" ~help:"XCompile Target architecture" deb_target_arch;
-  add O.options ~group:deb_group ~long_name:"deb-foreign-archs" ~help:"Foreign architectures" deb_foreign_archs;
+  add O.options ~group:deb_group ~long_name:"deb-host-arch" ~help:"Native/cross compile host architecture, defaults to native architecture" deb_host_arch;
+  add O.options ~group:deb_group ~long_name:"deb-foreign-archs" ~help:"Foreign architectures in addition to native and host architectures" deb_foreign_archs;
   add O.options ~group:deb_group ~long_name:"deb-ignore-essential" ~help:"Ignore Essential Packages" deb_ignore_essential;
 
 (*  let rpm_group = add_group options "Rpm Specific Options" in
@@ -510,9 +518,9 @@ END
 ;;
 
 (** return a list of Debian packages from a debian source file *)
-let deb_load_source ?(profiles=false) ?(noindep=false) target builddeparch sourcefile =
-  let l = Debian.Sources.input_raw ~archs:[target] [sourcefile] in
-  Debian.Sources.sources2packages ~noindep ~profiles builddeparch l
+let deb_load_source ?(profiles=false) ?(noindep=false) hostarch sourcefile =
+  let l = Debian.Sources.input_raw ~archs:[hostarch] [sourcefile] in
+  Debian.Sources.sources2packages ~noindep ~profiles hostarch l
 ;;
 
 (** parse and merge a list of files into a cudf package list *)

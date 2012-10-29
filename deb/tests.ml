@@ -754,8 +754,8 @@ Build-Depends-Indep: bin3
 let test_sources2packages =
   let data = IO.input_string test_sources_input in
   let packagelist = Sources.parse_sources_in "" data in
-  let builddeparch = "amd64" in
-  let sources = Sources.sources2packages ~profiles:true builddeparch packagelist in
+  let hostarch = "amd64" in
+  let sources = Sources.sources2packages ~profiles:true hostarch packagelist in
   let function_to_test src =
     let src = List.find (fun s -> s.Packages.name = src) sources in
     src.Packages.depends

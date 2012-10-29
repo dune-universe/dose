@@ -116,8 +116,8 @@ let sep = ":" ;;
  *
  * given archs, profile and a dependency with an architecture and profile list,
  * decide whether to select or drop that dependency *)
-let select builddeparch profile dep = 
-  let matcharch arch = Architecture.src_matches_arch arch builddeparch in
+let select hostarch profile dep =
+  let matcharch arch = Architecture.src_matches_arch arch hostarch in
   match dep,profile with
   (* positive arch list, negative profiles, no profile selected
    *  -> only select if any of archs is in the arch list *)
@@ -179,11 +179,11 @@ let select builddeparch profile dep =
 ;;
 
 (** transform a list of sources packages into dummy binary packages *)
-let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") builddeparch l =
-  let conflicts profile l = List.filter_map (select builddeparch profile) l in
+let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") hostarch l =
+  let conflicts profile l = List.filter_map (select hostarch profile) l in
   let depends profile ll =
     List.filter_map (fun l ->
-      match List.filter_map (select builddeparch profile) l with
+      match List.filter_map (select hostarch profile) l with
       |[] -> None 
       |l -> Some l
     ) ll

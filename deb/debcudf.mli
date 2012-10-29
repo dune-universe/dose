@@ -20,7 +20,7 @@ type options = {
   extras_opt : extramap ;
   native : string ;
   foreign : string list ;
-  target : string ;
+  host : string ;
   ignore_essential : bool ;
 }
 
