@@ -102,7 +102,7 @@ module GraphmlPrinter (G : GraphmlSig) : GraphmlPrinterSig with type t = G.t = s
 
     (* node attributed declaration *)
     List.iter (fun (prop,typ,default) ->
-      Format.fprintf fmt "<key id=\"%s\" for=\"node\" attr.name=\"%s\" attr.type=\"%s\">@," prop prop typ;
+      Format.fprintf fmt "<key id=\"%s\" for=\"node\" attr.name=\"%s\" attr.type=\"%s\"/>@," prop prop typ;
       match default with
       |None -> ()
       |Some s -> Format.fprintf fmt "<default>%s</default></key>@," s
@@ -110,7 +110,7 @@ module GraphmlPrinter (G : GraphmlSig) : GraphmlPrinterSig with type t = G.t = s
 
     (* edge attributed declaration *)
     List.iter (fun (prop,typ,default) ->
-      Format.fprintf fmt "<key id=\"%s\" for=\"edge\" attr.name=\"%s\" attr.type=\"%s\">@," prop prop typ;
+      Format.fprintf fmt "<key id=\"%s\" for=\"edge\" attr.name=\"%s\" attr.type=\"%s\"/>@," prop prop typ;
       match default with
       |None -> ()
       |Some s -> Format.fprintf fmt "<default>%s</default></key>@," s
