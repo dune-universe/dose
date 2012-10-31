@@ -203,6 +203,8 @@ let resolve_deps univ vpkgs =
 let who_depends univ pkg = 
   List.map (resolve_deps univ) pkg.Cudf.depends
 
+type ctable = (int, int list ref) ExtLib.Hashtbl.t
+
 let who_conflicts conflicts_packages univ pkg = 
   if (Hashtbl.length conflicts_packages) = 0 then
     warning "Either there are no conflicting packages in the universe or you

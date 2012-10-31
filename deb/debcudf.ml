@@ -411,6 +411,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
                 add_arch_l options.native arch (loadl tables originalconflicts)
               )
         |`Same -> 
+            (* XXX : Duplicated conflicts ! *)
             bind (options.native::options.foreign) (fun arch ->
               let l =
                 bind originalconflicts (fun ((n,a),c) ->
