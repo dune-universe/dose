@@ -81,7 +81,7 @@ end
 
 module GraphPrinter = GraphmlPrinter (Gr)
 *)
-module GraphmlPrinter (G : GraphmlSig) : GraphmlPrinterSig = struct
+module GraphmlPrinter (G : GraphmlSig) : GraphmlPrinterSig with type t = G.t = struct
   type t = G.t
 
   let header =
