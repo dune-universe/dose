@@ -146,7 +146,6 @@ let pkgnames universe =
     StringSet.add pkg.Cudf.package names
   ) StringSet.empty universe
 
-
 let add_properties preamble l =
   List.fold_left (fun pre prop ->
     {pre with Cudf.property = prop :: pre.Cudf.property }

@@ -50,6 +50,121 @@ module GraphOper (G : Sig.I) = struct
 
 end
 
+module type GraphmlSig =
+  sig
+    include Graph.Sig.G
+    val default_vertex_properties : (string * string * string option) list
+    val default_edge_properties : (string * string * string option) list
+    val data_map_vertex : vertex -> (string * string) list
+    val data_map_edge : edge -> (string * string) list
+  end
+;;
+
+module type GraphmlPrinterSig =
+  sig
+    type t
+    val pp_graph : Format.formatter -> t -> unit
+    val to_file : t -> string -> unit
+  end
+
+(** Generic GraphMl Printer 
+
+Ex : 
+
+module Gr : GraphmlSig = struct
+  include SyntacticDependencyGraph.G
+  let default_vertex_properties = []
+  let default_edge_properties = []
+  let data_map_edge e = []
+  let data_map_vertex v = []
+end
+
+module GraphPrinter = GraphmlPrinter (Gr)
+*)
+module GraphmlPrinter (G : GraphmlSig) : GraphmlPrinterSig = struct
+  type t = G.t
+
+  let header =
+"<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<graphml xmlns=\"http://graphml.graphdrawing.org/xmlns\"
+    xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"
+    xsi:schemaLocation=\"http://graphml.graphdrawing.org/xmlns
+     http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd\">"
+  ;;
+
+  let trailer = "</graphml>"
+
+  let pp_graph fmt graph =
+
+    Format.fprintf fmt "%s" header;
+
+    Format.fprintf fmt "@[<v 1>";
+
+    (* node attributed declaration *)
+    List.iter (fun (prop,typ,default) ->
+      Format.fprintf fmt "<key id=\"%s\" for=\"node\" attr.name=\"%s\" attr.type=\"%s\">@," prop prop typ;
+      match default with
+      |None -> ()
+      |Some s -> Format.fprintf fmt "<default>%s</default></key>@," s
+    ) G.default_vertex_properties ;
+
+    (* edge attributed declaration *)
+    List.iter (fun (prop,typ,default) ->
+      Format.fprintf fmt "<key id=\"%s\" for=\"edge\" attr.name=\"%s\" attr.type=\"%s\">@," prop prop typ;
+      match default with
+      |None -> ()
+      |Some s -> Format.fprintf fmt "<default>%s</default></key>@," s
+    ) G.default_edge_properties ;
+
+    Format.fprintf fmt "@]@.";
+
+    begin if G.is_directed then
+      Format.fprintf fmt "<graph id=\"G\" edgedefault=\"directed\">@."
+    else
+      Format.fprintf fmt "<graph id=\"G\" >@."
+    end;
+
+    Format.fprintf fmt "@[<v 1>";
+
+    (* vertex printer *)
+    G.iter_vertex (fun vertex ->
+      let id = Hashtbl.hash vertex in
+      Format.fprintf fmt "<node id=\"n%d\">@," id;
+      List.iter (fun (key,value) ->
+        Format.fprintf fmt "<data key=\"%s\">%s</data>" key value
+      ) (G.data_map_vertex vertex);
+      Format.fprintf fmt "</node>@,"
+    ) graph ;
+
+    Format.fprintf fmt "@]@.";
+
+    Format.fprintf fmt "@[<v 1>";
+
+    (* edge printer *)
+    G.iter_edges_e (fun edge ->
+      let n1 = Hashtbl.hash (G.E.src edge) in
+      let n2 = Hashtbl.hash (G.E.dst edge) in
+      let eid = Hashtbl.hash edge in
+      Format.fprintf fmt "<edge id=\"e%d\" source=\"n%d\" target=\"n%d\">@," eid n1 n2 ;
+      List.iter (fun (key,value) ->
+        Format.fprintf fmt "<data key=\"%s\">%s</data>" key value
+      ) (G.data_map_edge edge);
+      Format.fprintf fmt "</edge>@,"
+    ) graph ;
+
+    Format.fprintf fmt "@]@.";
+
+    Format.fprintf fmt "</graph>%s" trailer
+  ;;
+
+  let to_file graph fname =
+    let oc = open_out fname in
+    let fmt = Format.formatter_of_out_channel oc in
+    pp_graph fmt graph;
+    Format.pp_print_flush fmt ();
+    close_out oc
+end
+
 (** syntactic dependency graph. Vertex are Cudf packages and
     are indexed considering only the pair name,version .
     Edges are labelled with
@@ -138,7 +253,7 @@ module SyntacticDependencyGraph = struct
     struct
        let node (v: G.V.label) = []
        let edge (e: G.E.label) = []
-     end)
+    end)
 
   let depgraphbar = Util.Progress.create "SyntacticDependencyGraph.dependency_graph"
 
@@ -200,8 +315,7 @@ module MakePackageGraph(PkgV : Sig.COMPARABLE with type t = Cudf.package )= stru
   module O = GraphOper(G)
   module S = Set.Make(PkgV)
 
-  module DisplayF (G : Sig.I) =
-    struct
+  module Display = struct
       include G
       let vertex_name v = Printf.sprintf "\"%s\"" (CudfAdd.string_of_package v)
 
@@ -216,7 +330,6 @@ module MakePackageGraph(PkgV : Sig.COMPARABLE with type t = Cudf.package )= stru
 
       let edge_attributes e = []
     end
-  module Display = DisplayF(G)
   module DotPrinter = Graph.Graphviz.Dot(Display)
 
   module GmlPrinter = Gml.Print (G) (
@@ -483,8 +596,7 @@ module IntPkgGraph = struct
   module S = Set.Make(PkgV)
   module O = GraphOper(G)
 
-  module Display =
-    struct
+  module Display = struct
       include G
       let vertex_name uid = Printf.sprintf "\"%d\"" uid
 
@@ -640,3 +752,5 @@ module IntPkgGraph = struct
     Util.Timer.stop timer sg
 
 end
+
+

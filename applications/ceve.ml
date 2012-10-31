@@ -203,7 +203,7 @@ IFDEF HASOCAMLGRAPH THEN
           let fmt = Format.formatter_of_out_channel oc in
           DGraph.GmlPrinter.print fmt (DGraph.dependency_graph u)
 ELSE
-        failwith ("dot not supported: needs ocamlgraph")
+        failwith ("gml not supported: needs ocamlgraph")
 END
 
       |"cnf" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Cnf u)
