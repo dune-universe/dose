@@ -57,6 +57,8 @@ module type GraphmlSig =
     val default_edge_properties : (string * string * string option) list
     val data_map_vertex : vertex -> (string * string) list
     val data_map_edge : edge -> (string * string) list
+    val vertex_id : vertex -> int
+    val edge_id : edge -> int
   end
 ;;
 
@@ -128,11 +130,13 @@ module GraphmlPrinter (G : GraphmlSig) : GraphmlPrinterSig with type t = G.t = s
 
     (* vertex printer *)
     G.iter_vertex (fun vertex ->
-      let id = Hashtbl.hash vertex in
+      let id = G.vertex_id vertex in
       Format.fprintf fmt "<node id=\"n%d\">@," id;
+      Format.fprintf fmt "@[<v 1>";
       List.iter (fun (key,value) ->
-        Format.fprintf fmt "<data key=\"%s\">%s</data>" key value
+        Format.fprintf fmt "<data key=\"%s\">%s</data>@," key value
       ) (G.data_map_vertex vertex);
+      Format.fprintf fmt "@]";
       Format.fprintf fmt "</node>@,"
     ) graph ;
 
@@ -142,13 +146,15 @@ module GraphmlPrinter (G : GraphmlSig) : GraphmlPrinterSig with type t = G.t = s
 
     (* edge printer *)
     G.iter_edges_e (fun edge ->
-      let n1 = Hashtbl.hash (G.E.src edge) in
-      let n2 = Hashtbl.hash (G.E.dst edge) in
-      let eid = Hashtbl.hash edge in
+      let n1 = G.vertex_id (G.E.src edge) in
+      let n2 = G.vertex_id (G.E.dst edge) in
+      let eid = G.edge_id edge in
       Format.fprintf fmt "<edge id=\"e%d\" source=\"n%d\" target=\"n%d\">@," eid n1 n2 ;
+      Format.fprintf fmt "@[<v 1>";
       List.iter (fun (key,value) ->
-        Format.fprintf fmt "<data key=\"%s\">%s</data>" key value
+        Format.fprintf fmt "<data key=\"%s\">%s</data>@," key value
       ) (G.data_map_edge edge);
+      Format.fprintf fmt "@]";
       Format.fprintf fmt "</edge>@,"
     ) graph ;
 
