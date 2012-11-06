@@ -37,7 +37,7 @@ module type Messages = sig
    * set to verbose using the function [make_verbose] and
    * either the handle [t] is enable or all handles were enabled with
    * the function [all_enabled] *)
-  val eprintf: t -> ('a, unit, string, unit) format4 -> 'a
+  val eprintf: ?raw : bool -> t -> ('a, unit, string, unit) format4 -> 'a
 
   (** [enable l] the handle with label [l] *)
   val enable : label -> unit
