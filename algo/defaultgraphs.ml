@@ -47,6 +47,23 @@ module GraphOper (G : Sig.I) = struct
   ;;
 
   module O = Oper.I(G) 
+  module S = Set.Make(G.V)
+
+  (** extract the subgraph induced by the list l *)
+  let subgraph g l =
+    let to_set l = List.fold_left (fun s v -> S.add v s) S.empty l in
+    let s = to_set l in
+    let sg = G.create () in
+    S.iter (fun v1 ->
+      G.add_vertex sg v1;
+      List.iter (fun e ->
+        let v2 = G.E.dst e in
+        if S.mem v2 s then
+          G.add_edge_e sg e
+      ) (G.succ_e g v1)
+    ) s;
+    sg
+  ;;
 
 end
 
