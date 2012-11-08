@@ -28,7 +28,6 @@ module GraphOper (G : Sig.I) = struct
       with the proviso that we know that our graph already is a transitive 
       closure *)
   (* this is a VERY expensive operation on Labelled graphs ... *)
-
   let transitive_reduction graph =
     Util.Progress.set_total trbar (G.nb_vertex graph);
     Util.Timer.start tr_timer;
@@ -70,12 +69,18 @@ end
 module type GraphmlSig =
   sig
     include Graph.Sig.G
+    (** List of the type of the vertex proprierties.
+        the format is (id,type,default). *)
     val default_vertex_properties : (string * string * string option) list
+    (** List of the type of the edge proprierties. *)
     val default_edge_properties : (string * string * string option) list
+    (** Associate to each vertex a key/value list where the key is the id
+       of a vertex attribute and the value is the value associated to this
+       vertex *)
     val data_map_vertex : vertex -> (string * string) list
+
+    (** Associate to each edge a key/value list *)
     val data_map_edge : edge -> (string * string) list
-    val vertex_id : vertex -> int
-    val edge_id : edge -> int
   end
 ;;
 
@@ -102,6 +107,8 @@ module GraphPrinter = GraphmlPrinter (Gr)
 *)
 module GraphmlPrinter (G : GraphmlSig) : GraphmlPrinterSig with type t = G.t = struct
   type t = G.t
+  let vertex_id = G.V.hash
+  let edge_id e = Hashtbl.hash (vertex_id (G.E.src e),G.E.label e,vertex_id (G.E.dst e))
 
   let header =
 "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
@@ -147,7 +154,7 @@ module GraphmlPrinter (G : GraphmlSig) : GraphmlPrinterSig with type t = G.t = s
 
     (* vertex printer *)
     G.iter_vertex (fun vertex ->
-      let id = G.vertex_id vertex in
+      let id = vertex_id vertex in
       Format.fprintf fmt "<node id=\"n%d\">@," id;
       Format.fprintf fmt "@[<v 1>";
       List.iter (fun (key,value) ->
@@ -163,9 +170,9 @@ module GraphmlPrinter (G : GraphmlSig) : GraphmlPrinterSig with type t = G.t = s
 
     (* edge printer *)
     G.iter_edges_e (fun edge ->
-      let n1 = G.vertex_id (G.E.src edge) in
-      let n2 = G.vertex_id (G.E.dst edge) in
-      let eid = G.edge_id edge in
+      let n1 = vertex_id (G.E.src edge) in
+      let n2 = vertex_id (G.E.dst edge) in
+      let eid = edge_id edge in
       Format.fprintf fmt "<edge id=\"e%d\" source=\"n%d\" target=\"n%d\">@," eid n1 n2 ;
       Format.fprintf fmt "@[<v 1>";
       List.iter (fun (key,value) ->
