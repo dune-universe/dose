@@ -21,7 +21,7 @@ open Algo
 
 module Options = struct
   open OptParse
-  let description = "Report the broken packages in a Packages list"
+  let description = "Compute the list broken packages in a repository"
   let options = OptParser.make ~description
   include Boilerplate.MakeOptions(struct let options = options end)
 
@@ -177,60 +177,61 @@ let main () =
   in
   Util.Timer.start timer;
 
-  let number_broken =
-    if OptParse.Opt.is_set Options.coinst then 
-      let rl = Depsolver.edos_coinstall_prod universe coinstlist in
-      let nbt = List.length (List.filter (fun r -> not (Diagnostic.is_solution r)) rl) in
-      let number_checks = List.length rl in 
-      ignore(Util.Timer.stop timer ());
-      List.iter callback rl;
-      if failure || success then Format.fprintf fmt "@]@.";
-      Format.fprintf fmt "total-packages: %d@." universe_size;
-      Format.fprintf fmt "total-tuples: %d@." number_checks;
-      Format.fprintf fmt "broken-tuples: %d@." nbt;
-      nbt
-    else begin 
-      let global_constraints = not(OptParse.Opt.get Options.deb_ignore_essential) in
-      let nbp =
-	if OptParse.Opt.is_set Options.checkonly then 
-	  Depsolver.listcheck ~global_constraints ~callback universe checklist
-	else
-	  if bg_pkglist = [] then
-            Depsolver.univcheck ~global_constraints ~callback universe 
-	  else
-            Depsolver.listcheck ~global_constraints ~callback universe fg_pkglist
-      in
-      ignore(Util.Timer.stop timer ());
-      
-      if failure || success then Format.fprintf fmt "@]@.";
-      
-      let fn = List.length fg_pkglist in
-      let bn = List.length bg_pkglist in
-      
-      let nb,nf = 
-	let cl = List.length checklist in
-	if cl != 0 then ((fn + bn) - cl,cl) else (bn,fn)
-      in
-      
-      if nb > 0 then begin
-        Format.fprintf fmt "background-packages: %d@." nb;
-        Format.fprintf fmt "foreground-packages: %d@." nf
-      end;
+  if OptParse.Opt.is_set Options.coinst then begin
+    let rl = Depsolver.edos_coinstall_prod universe coinstlist in
+    let nbt = List.length (List.filter (fun r -> not (Diagnostic.is_solution r)) rl) in
+    let number_checks = List.length rl in 
+    ignore(Util.Timer.stop timer ());
+    List.iter callback rl;
+    if failure || success then Format.fprintf fmt "@]@.";
+    Format.fprintf fmt "total-packages: %d@." universe_size;
+    Format.fprintf fmt "total-tuples: %d@." number_checks;
+    Format.fprintf fmt "broken-tuples: %d@." nbt;
+    nbt
+  end else begin 
+    let global_constraints = not(OptParse.Opt.get Options.deb_ignore_essential) in
+    let nbp =
+      if OptParse.Opt.is_set Options.checkonly then 
+        Depsolver.listcheck ~global_constraints ~callback universe checklist
+      else
+        if bg_pkglist = [] then
+          Depsolver.univcheck ~global_constraints ~callback universe 
+        else
+          Depsolver.listcheck ~global_constraints ~callback universe fg_pkglist
+    in
+    ignore(Util.Timer.stop timer ());
+    
+    if failure || success then Format.fprintf fmt "@]@.";
+    
+    let fn = List.length fg_pkglist in
+    let bn = List.length bg_pkglist in
+    
+    let nb,nf = 
+      let cl = List.length checklist in
+      if cl != 0 then ((fn + bn) - cl,cl) else (bn,fn)
+    in
+    
+    if nb > 0 then begin
+      Format.fprintf fmt "background-packages: %d@." nb;
+      Format.fprintf fmt "foreground-packages: %d@." nf
+    end;
 
-      Format.fprintf fmt "total-packages: %d@." universe_size;
-      (*
-      Format.fprintf fmt "broken-percent: %0.2f%%@." 
-       ( (float_of_int nbp) /.  (float_of_int universe_size) *. 100. ) ;
-      *)
-      Format.fprintf fmt "broken-packages: %d@." nbp;
-      if summary then 
-	Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
-      nbp
-    end
-      
-  in
-  (* if at least one broken package then we set the exit code = 1 *)
-  if number_broken > 0 then exit(1);
+    Format.fprintf fmt "total-packages: %d@." universe_size;
+    (*
+    Format.fprintf fmt "broken-percent: %0.2f%%@." 
+     ( (float_of_int nbp) /.  (float_of_int universe_size) *. 100. ) ;
+    *)
+    Format.fprintf fmt "broken-packages: %d@." nbp;
+    if summary then 
+      Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
+    nbp
+  end
 ;;
 
-main () ;;
+(* if at least one broken package then we set the exit code = 1 .
+   we catch all other exceptions and we exit with code > 63 *)
+try
+  if main () > 0 then exit(1)
+with exn ->
+  fatal "%s" (Printexc.to_string exn)
+;;
