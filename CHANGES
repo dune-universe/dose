@@ -1,3 +1,14 @@
+dose3 (3.1.4) UNRELEASED; urgency=low
+  
+  * Add new option to deb-buildcheck (--defaultedMAforeign)
+  * Add Graphml printer to Defaultgraphs
+  * Apt-cudf: Always print packages that were specified in the request
+  * Add external solver API (CudfSolver)
+  * Consider build-indep by default when loading dependencies from debian
+    source packages
+
+ -- Pietro Abate <pietro.abate@pps.jussieu.fr>  Fri, 9 Nov 2012 09:00:00 +0200
+
 dose3 (3.1) UNRELEASED; urgency=low
 
   * Speed up compilation
