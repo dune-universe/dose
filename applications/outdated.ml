@@ -273,7 +273,7 @@ let outdated
   if failure then Format.fprintf fmt "@]@.";
 
   Format.fprintf fmt "total-packages: %d@." universe_size;
-  Format.fprintf fmt "total-broken: %d@." i;
+  Format.fprintf fmt "broken-packages: %d@." i;
 
   if summary then
         Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;

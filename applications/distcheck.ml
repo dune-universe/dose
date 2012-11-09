@@ -212,8 +212,11 @@ let main () =
 	if cl != 0 then ((fn + bn) - cl,cl) else (bn,fn)
       in
       
-      Format.fprintf fmt "background-packages: %d@." nb;
-      Format.fprintf fmt "foreground-packages: %d@." nf;
+      if nb > 0 then begin
+        Format.fprintf fmt "background-packages: %d@." nb;
+        Format.fprintf fmt "foreground-packages: %d@." nf
+      end;
+
       Format.fprintf fmt "total-packages: %d@." universe_size;
       (*
       Format.fprintf fmt "broken-percent: %0.2f%%@." 
