@@ -75,31 +75,15 @@ let hex_char char = Printf.sprintf "%%%02x" (Char.code char);;
     e.g. DecodingHashtable.find dec_ht "%2b" = "+" 
 *)
 let init_hashtables enc_ht dec_ht =
-
-  (* "all_ascii_chars" is a list containing characters with 
-     all possible ASCII codes (i.e. between 0 and 255). *)
-  let all_ascii_chars = 
-    (*  "all_numbers_from_to first last" generates a list of
-	all integers between the first one and the last one
-	(including both ends). *)
-    let rec all_numbers_from_to first last =
-      if first <= last
-      then first :: (all_numbers_from_to (first + 1) last)
-      else []
-    in
-    (* Convert each number from 0 to 255 to a character with the given ASCII code. *)
-    List.map Char.chr (all_numbers_from_to 0 255)
-      
-  in
-  (* One by one add all the possible pairs (char, hexed_char)
-      to both hashtables. *)
-  List.iter (fun char -> 
-    let char_as_string = String.make 1 char in
-    let hexed_char = hex_char char in
-    EncodingHashtable.add enc_ht char_as_string hexed_char;
-    DecodingHashtable.add dec_ht hexed_char char_as_string
-      ) all_ascii_chars
-    ;;
+  let n = ref 255 in
+  while !n >= 0 do
+    let schr = String.make 1 (Char.chr !n) in
+    let hchr = Printf.sprintf "%%%02x" !n in
+    EncodingHashtable.add enc_ht schr hchr;
+    DecodingHashtable.add dec_ht hchr schr;
+    decr n;
+  done
+;;
 
 (* Create and initialize twin hashtables,
    one for encoding and one for decoding. *)
@@ -108,7 +92,7 @@ let dec_ht = DecodingHashtable.create 256;;
 init_hashtables enc_ht dec_ht;;
 
 (* encode *)
-let encode_single s   = EncodingHashtable.find enc_ht s;;
+let encode_single s = EncodingHashtable.find enc_ht s;;
 let not_allowed_regexp = Pcre.regexp "[^a-zA-Z0-9@/+().-]";;
 
 let encode s =
