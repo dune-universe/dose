@@ -30,14 +30,14 @@ module Options = struct
   include Boilerplate.MakeOptions(struct let options = options end)
 
   let explain = StdOpt.store_true ()
-  let checkonly = Boilerplate.pkglist_option ()
+  let checkonly = Boilerplate.vpkglist_option ()
   let failure = StdOpt.store_true ()
   let explain = StdOpt.store_true ()
   let summary = StdOpt.store_true ()
   let dump = StdOpt.store_true ()
 
   open OptParser
-  add options ~long_name:"checkonly" ~help:"Check only these package" checkonly;
+  add options ~long_name:"checkonly" ~help:"Check only these package. ex p1 (=v1)" checkonly;
 
   add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
   add options ~short_name:'f' ~long_name:"failure" ~help:"Show failure" failure;
@@ -215,11 +215,15 @@ let outdated
   Hashtbl.clear constraints_table;
 
   let checklist =
-    if Option.is_none checklist then []
-    else
-      List.map (fun (p,_,v) ->
-        Cudf.lookup_package universe (p,getv v)
-      ) (Option.get checklist)
+    let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
+    if OptParse.Opt.is_set Options.checkonly then begin
+      List.flatten (
+        List.map (fun ((n,a),c) ->
+          let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
+          Cudf.lookup_packages ~filter universe name
+        ) (OptParse.Opt.get Options.checkonly)
+      )
+    end else []
   in
 
   let pp pkg =

@@ -53,8 +53,11 @@ generated and exit (mostly useful for debugging purposes).
 
 =item B<--checkonly> I<package>[,I<package>] ...
 
-Specifies a list of packages to check. By default all packages are
-checked.
+Specifies a list of packages to check. By default all packages are checked.
+Takes a comma-separated list of package names, each of them possibly with a
+version constraint, as argument. 
+
+Example: --checkonly "libc6 , 2ping (>= 1.2.3-1)"
 
 =item B<-v>
  
