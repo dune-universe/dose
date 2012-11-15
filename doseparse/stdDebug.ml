@@ -15,14 +15,32 @@
 open ExtLib
 open Common
 
-(* common command line options *)
-include StdOptions
+include Util.Logging(struct let label = __FILE__ end) ;;
 
-(* debugging functions *)
-include StdDebug
+let enable_debug = function
+  |0 -> () (* only warning messages : default *)
+  |1 -> Util.Info.all_enabled ()
+  |_ ->
+      begin
+        Util.Info.all_enabled () ;
+        Util.Debug.all_enabled ()
+      end
+;;
 
-(* multi-format loaders and parsers *)
-include StdLoaders
+let all_quiet t =
+  if t then begin
+    Util.Info.all_disabled ();
+    Util.Warning.all_disabled ();
+    Util.Debug.all_disabled ();
+    List.iter Util.Progress.disable (Util.Progress.available ())
+  end
+;;
 
-(* utils *)
-include StdUtils
+let enable_bars verbose l =
+  if verbose then List.iter Util.Progress.enable l
+
+let enable_timers verbose l = 
+  at_exit (Util.Timer.dump Format.err_formatter);
+  if verbose then List.iter Util.Timer.enable l
+;;
+
