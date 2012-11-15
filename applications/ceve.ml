@@ -224,4 +224,4 @@ END
   in output [plist]
 ;;
 
-main ();;
+Boilerplate.if_application ~alternatives:["dose-ceve";"ceve"] __FILE__ (fun () -> main (); 0) ;;

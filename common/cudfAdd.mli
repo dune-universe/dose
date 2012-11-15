@@ -94,7 +94,11 @@ val string_of : (Format.formatter -> 'a -> 'b) -> 'a -> string
 val pp_version : Format.formatter -> Cudf.package -> unit
 val pp_package : Format.formatter -> Cudf.package -> unit
 
+(** return a string containg either the value of the optional field
+    "number" or the cudf version *)
 val string_of_version : Cudf.package -> string
+
+(** return a string of the form "name ( = version)" *)
 val string_of_package : Cudf.package -> string
 
 (** {2 Additional functions on the CUDF data types. } *)

@@ -59,7 +59,6 @@ module DecodingHashtable =
     let hash = (fun s -> (Char.code s.[1]) * 1000 + (Char.code s.[2]) )
   end)
 
-
 (*  "hex_char char" returns the ASCII code of the given character
     in the hexadecimal form, prefixed with the '%' sign.
     e.g. hex_char '+' = "%2b" *)

@@ -1,3 +1,6 @@
+- Remove all references to Format in diagnostic.ml and all applications.
+  Format is too slow !
+
 - make apt-cudf output explanations when a request is not satisfiable,
   in the same style as what dose-distcheck does, if possible (beware
   of apt string mangling)
