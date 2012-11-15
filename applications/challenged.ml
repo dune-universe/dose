@@ -159,6 +159,9 @@ let pp tables pkg =
       if (pkg.Cudf.version mod 2) = 1 then
         Debian.Debcudf.get_real_version tables
         (pkg.Cudf.package,pkg.Cudf.version)
+      else if pkg.Cudf.version = 0 then
+        (* this is a dependency without constraint *)
+        ""
       else
         fatal "Package %s without debian version" 
         (CudfAdd.string_of_package pkg)
@@ -256,11 +259,11 @@ END
       let discr = Debian.Evolution.discriminant ~bottom:true (evalsel getv) vl constr in
       debug "Discriminants: %d" (List.length discr);
       if print_cluster then begin
-        let pp fmt pkg = 
+        let pp_item fmt pkg = 
           let pp_io_property fmt (n, s) = Format.fprintf fmt "%s: %s@," n s in
           Cudf_printer.pp_package_gen pp_io_property fmt pkg
         in
-        let pp_list = Diagnostic.pp_list pp in
+        let pp_list = Diagnostic.pp_list pp_item in
         let cudf_cluster = 
           List.map (fun pkg -> 
             let (pn,pv) = (pkg.Debian.Packages.name, getv pkg.Debian.Packages.version) in
