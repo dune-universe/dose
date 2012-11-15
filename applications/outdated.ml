@@ -266,7 +266,7 @@ let outdated
   in
 
   Util.Timer.start timer;
-  let i =
+  let broken =
     if checklist <> [] then
       Depsolver.listcheck ~callback ~global_constraints:false universe checklist
     else
@@ -277,7 +277,7 @@ let outdated
   if failure then Format.fprintf fmt "@]@.";
 
   Format.fprintf fmt "total-packages: %d@." universe_size;
-  Format.fprintf fmt "broken-packages: %d@." i;
+  Format.fprintf fmt "broken-packages: %d@." broken;
 
   if summary then
         Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
@@ -312,7 +312,10 @@ let main () =
   in
   let packagelist = Debian.Packages.input_raw ~archs args in
 
-  ignore(outdated ~summary ~failure ~explain ~dump ~checklist ~options packagelist)
+  let result = outdated ~summary ~failure ~explain ~dump ~checklist ~options packagelist in
+  if (result.Diagnostic.missing = 0) && (result.Diagnostic.conflict = 0)
+  then Boilerplate.exit(0) (* no broken packages *)
+  else Boilerplate.exit(1) (* at least one broken package *)
 ;;
 
 Boilerplate.if_application

@@ -160,7 +160,8 @@ let pp tables pkg =
         Debian.Debcudf.get_real_version tables
         (pkg.Cudf.package,pkg.Cudf.version)
       else
-        fatal "Real package without Debian Version"
+        fatal "Package %s without debian version" 
+        (CudfAdd.string_of_package pkg)
   in
   let l =
     List.filter_map (fun k ->
@@ -203,7 +204,7 @@ let challenged
       begin try
         let l = Hashtbl.find clusters (sn,sv) in
         cluster_iter (sn,sv) l
-      with Not_found -> fatal "cluster %s %s is not correctly specified" sn sv end
+      with Not_found -> fatal "Cluster %s %s is not correctly specified" sn sv end
     ) (Option.get clusterlist) 
   ;
 
@@ -308,6 +309,7 @@ let main () =
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress) ["challenged"] ;
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) [];
+  Util.Debug.disable "Depsolver_int";
   let clusterlist = OptParse.Opt.opt Options.checkonly in 
   let broken = OptParse.Opt.get Options.brokenlist in
   let cluster = OptParse.Opt.get Options.cluster in
@@ -323,10 +325,11 @@ let main () =
     ));
     Format.printf "breaks: %d@." broken;
     Format.printf "---@."
-  ) pred
+  ) pred;
+
+  Boilerplate.exit(0)
 ;;
 
 Boilerplate.if_application 
 ~alternatives:["dose-challenged";"dose3-challenged";"edos-challenged";"deb-challenged"]
 __FILE__ main ;;
-

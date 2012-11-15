@@ -35,7 +35,9 @@ let if_application ?(alternatives=[]) filename main =
   let invoked_as = normalize Sys.argv.(0) in
   if List.exists ((=) invoked_as) names then 
     try if main () > 0 then Pervasives.exit(1)
-    with exn -> fatal "%s" (Printexc.to_string exn)
+    with
+    |Unix.Unix_error(err, _, arg) -> fatal "%s %s" (Unix.error_message err) arg
+    |exn -> fatal "%s" (Printexc.to_string exn)
   else begin
     Printf.eprintf "you are using %s as a module and not as an executable\n" Sys.argv.(0);
     Printf.eprintf "%s can be run as an exactable if named : %s\n" Sys.argv.(0) 

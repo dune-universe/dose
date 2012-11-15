@@ -187,7 +187,7 @@ let main () =
     Format.fprintf fmt "total-packages: %d@." universe_size;
     Format.fprintf fmt "total-tuples: %d@." number_checks;
     Format.fprintf fmt "broken-tuples: %d@." nbt;
-    nbt
+    Boilerplate.exit(nbt)
   end else begin 
     let global_constraints = not(OptParse.Opt.get Options.deb_ignore_essential) in
     let nbp =
@@ -224,14 +224,14 @@ let main () =
     Format.fprintf fmt "broken-packages: %d@." nbp;
     if summary then 
       Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
-    nbp
+    Boilerplate.exit(nbp)
   end
 ;;
 
-(* if at least one broken package then we set the exit code = 1 .
-   we catch all other exceptions and we exit with code > 63 *)
-try
-  if main () > 0 then exit(1)
-with exn ->
-  fatal "%s" (Printexc.to_string exn)
-;;
+Boilerplate.if_application
+~alternatives:[
+  "debcheck";"dose-debcheck"; "dose-distcheck";
+  "eclipsecheck";"dose-eclipsecheck";
+  "rpmcheck";"dose-rpmcheck"]
+__FILE__ main ;;
+
