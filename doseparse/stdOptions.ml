@@ -114,6 +114,14 @@ module MakeDistribOptions(O : sig val options : OptParse.OptParser.t end) = stru
   let deb_foreign_archs = str_list_option ()
   let deb_host_arch = StdOpt.str_option ()
   let deb_ignore_essential = StdOpt.store_true ()
+  let default_deb_options = ref 
+    ["deb-native-arch";
+     "deb-host-arch";
+     "deb-foreign-archs";
+     "deb-ignore-essential"]
+
+  let remove_deb_option o =
+    default_deb_options := List.remove !default_deb_options o
 
   let set_deb_options () =
     let native =
@@ -176,14 +184,25 @@ module MakeDistribOptions(O : sig val options : OptParse.OptParser.t end) = stru
   ;;
 
   open OptParser ;;
-  let deb_group = add_group O.options "Debian Specific Options" in
-  add O.options ~group:deb_group ~long_name:"deb-native-arch" ~help:"Native architecture" deb_native_arch;
-  add O.options ~group:deb_group ~long_name:"deb-host-arch" ~help:"Native/cross compile host architecture, defaults to native architecture" deb_host_arch;
-  add O.options ~group:deb_group ~long_name:"deb-foreign-archs" ~help:"Foreign architectures in addition to native and host architectures" deb_foreign_archs;
-  add O.options ~group:deb_group ~long_name:"deb-ignore-essential" ~help:"Ignore Essential Packages" deb_ignore_essential;
+  if List.length !default_deb_options > 0 then begin
+    let deb_group = add_group O.options "Debian Specific Options" in
+    if List.mem "deb-native-arch" !default_deb_options then
+      add O.options ~group:deb_group ~long_name:"deb-native-arch"
+      ~help:"Native architecture" deb_native_arch;
+    if List.mem "deb-host-arch" !default_deb_options then
+      add O.options ~group:deb_group ~long_name:"deb-host-arch" 
+      ~help:"Native/cross compile host architecture, defaults to native architecture" deb_host_arch;
+    if List.mem "deb-foreign-archs" !default_deb_options then
+      add O.options ~group:deb_group ~long_name:"deb-foreign-archs" 
+      ~help:"Foreign architectures in addition to native and host architectures" deb_foreign_archs;
+    if List.mem "deb-ignore-essential" !default_deb_options then
+      add O.options ~group:deb_group ~long_name:"deb-ignore-essential" 
+      ~help:"Ignore Essential Packages" deb_ignore_essential;
+  end
 
 (*  let rpm_group = add_group options "Rpm Specific Options" in
     let eclipse_group = add_group options "Eclipse Specific Options" in
 *)
 end
+
 
