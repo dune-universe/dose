@@ -62,6 +62,8 @@ let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
+  Util.Debug.disable "Depsolver_int";
+  Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
 
   let options = Options.set_deb_options () in
   let hostarch = options.Debian.Debcudf.host in
