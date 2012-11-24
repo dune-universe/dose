@@ -38,7 +38,7 @@ let vpkg_option ?default ?(metavar = "VPKG") () =
   parse_vpkg (fun _ s -> Printf.sprintf "invalid vpackage '%s'" s)
 ;;
 
-(* this is a ,-separated list of vpkgs of the form "a (= v)" *)
+(* this is a ,-separated list of vpkgs of the form "a (<c> v)" *)
 let vpkglist_option ?default ?(metavar = "VPKGLST") () =
   let parse_vpkglist s = 
     let _loc = Debian.Format822.dummy_loc in
@@ -54,6 +54,8 @@ let pkglist_option ?default ?(metavar = "PKGLST") () =
     let _loc = Debian.Format822.dummy_loc in
     List.map (function
       |((n,a),Some("=",v)) -> (n,a,v)
+      |((n,a),None) ->
+          raise (Debian.Packages.ParseError (s,"you must specify a version" ))
       |_ -> raise (Debian.Packages.ParseError (s,""))
     ) (Debian.Packages.parse_vpkglist (_loc,s))
   in
