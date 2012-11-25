@@ -56,6 +56,10 @@ let scheme_of_string = function
   | s -> fatal "unknown input scheme" s
 ;;
 
+let supported_input_types =
+  [`Edsp; `Deb ; `Synthesis ; `Hdlist ; `Eclipse ; `Csw ; `Cudf ]
+;;
+
 (***********************************************************************)
 
 type url = {

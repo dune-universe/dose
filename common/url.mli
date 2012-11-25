@@ -19,6 +19,8 @@ type filetypes = [ `Cudf | debtypes | rpmtypes | osgitypes | othertypes ]
 type datatypes = [ `Sqlite | `Pgsql ]
 type input_scheme = [ filetypes | datatypes ]
 
+val supported_input_types : input_scheme list
+
 type url = {
   scheme : input_scheme;
   host   : string option;
