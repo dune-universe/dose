@@ -34,6 +34,7 @@ let f_strongcfl_triangle = Filename.concat test_dir "strongcfl-triangle.cudf"
 
 let f_selfprovide = Filename.concat test_dir "selfprovide.cudf"
 let f_coinst = Filename.concat test_dir "coinst.cudf"
+let f_coinst_constraints = Filename.concat test_dir "coinst-constraints.cudf"
 
 let f_legacy = Filename.concat cudf_dir "legacy.cudf"
 let f_legacy_sol = Filename.concat cudf_dir "legacy-sol.cudf"
@@ -86,9 +87,54 @@ let test_coinst_real =
     let exim4 = Cudf.lookup_package universe_debian ("exim4",1) in
     let sendmail = Cudf.lookup_package universe_debian ("sendmail",3) in
     let d = Depsolver.edos_coinstall universe_debian [exim4;sendmail] in
-    match d.Diagnostic.result with
-    |Diagnostic.Success f -> assert_failure "fail"
-    |Diagnostic.Failure f -> assert_bool "pass" true 
+    assert_bool "pass" (not(Diagnostic.is_solution d))
+  )
+
+(* try to coinstall a and b while b has a conflict with c
+ * that is declared as keep. Since global_constraints:true
+ * this should not be possible *)
+let test_coinst_constraints =
+  "coinst constraints" >:: (fun _ ->
+    let a = { Cudf.default_package with 
+      Cudf.package = "a";
+      Cudf.version = 1;
+    } in
+    let b = { Cudf.default_package with 
+      Cudf.package = "b";
+      Cudf.version = 1;
+      conflicts = [("c",None)];
+    } in
+    let c = { Cudf.default_package with 
+      Cudf.package = "c";
+      Cudf.version = 1;
+      keep = `Keep_package;
+    } in
+    let universe = Cudf.load_universe [a;b;c] in
+    let d = Depsolver.edos_coinstall ~global_constraints:true universe [a;b] in
+    assert_bool "pass" (not(Diagnostic.is_solution d))
+  )
+
+(* Like above but since the default for global_constraints is false
+ * then a and b can be co-installed *)
+let test_coinst_negative_constraints =
+  "coinst constraints" >:: (fun _ ->
+    let a = { Cudf.default_package with 
+      Cudf.package = "a";
+      Cudf.version = 1;
+    } in
+    let b = { Cudf.default_package with 
+      Cudf.package = "b";
+      Cudf.version = 1;
+      conflicts = [("c",None)];
+    } in
+    let c = { Cudf.default_package with 
+      Cudf.package = "c";
+      Cudf.version = 1;
+      keep = `Keep_package;
+    } in
+    let universe = Cudf.load_universe [a;b;c] in
+    let d = Depsolver.edos_coinstall universe [a;b] in
+    assert_bool "pass" (Diagnostic.is_solution d)
   )
 
 let test_coinst_prod = 
@@ -138,9 +184,7 @@ let test_essential_broken =
     } in
     let universe = Cudf.load_universe [pkg1;pkg2] in
     let d = Depsolver.edos_install ~global_constraints:true universe pkg2 in
-    match d.Diagnostic.result with
-    |Diagnostic.Success _ -> assert_failure "fail"
-    |Diagnostic.Failure _ -> assert_bool "pass" true
+    assert_bool "pass" (not(Diagnostic.is_solution d))
   ) 
 
 let test_essential_multi =
@@ -162,11 +206,8 @@ let test_essential_multi =
     } in
     let universe = Cudf.load_universe [pkg1a;pkg1b;pkg2] in
     let d = Depsolver.edos_install ~global_constraints:true universe pkg2 in
-    match d.Diagnostic.result with
-    |Diagnostic.Failure _ -> assert_failure "fail"
-    |Diagnostic.Success _ -> assert_bool "pass" true
+    assert_bool "pass" (Diagnostic.is_solution d)
   ) 
-
 
 (* debian testing 18/11/2009 *)
 let test_distribcheck =
@@ -292,6 +333,8 @@ let test_depsolver =
     test_coinst_real ;
     test_coinst_legacy ;
     test_coinst_prod ;
+    test_coinst_constraints ;
+    test_coinst_negative_constraints ;
     test_trim ;
     test_essential_broken ;
     test_essential_multi ;
