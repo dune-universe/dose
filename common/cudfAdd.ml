@@ -145,7 +145,15 @@ let realversionmap pkglist =
   ) pkglist ;
   h
 
-let vartoint = Cudf.uid_by_package 
+let vartoint universe p =
+  try Cudf.uid_by_package universe p
+  with Not_found-> begin
+    warning 
+    "package %s is not associate with an integer in the given universe"
+    (string_of_package p);
+    raise Not_found
+  end
+
 let inttovar = Cudf.package_by_uid
 
 let add_to_package_list h n p =
