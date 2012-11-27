@@ -16,7 +16,7 @@ open Packages
 
 let pp_source oc = function
   |source,None -> Printf.fprintf oc "%s" source
-  |source,Some version -> Printf.fprintf oc "%s %s" source version
+  |source,Some version -> Printf.fprintf oc "%s (%s)" source version
 ;;
 
 let pp_multiarch oc = function
@@ -59,15 +59,25 @@ let pp_package oc pkg =
   Printf.fprintf oc "Architecture: %s\n" pkg.architecture ;
   Printf.fprintf oc "Multi-Arch: %a\n" pp_multiarch pkg.multiarch;
   Printf.fprintf oc "Essential: %b\n" pkg.essential ;
-  Printf.fprintf oc "Priority: %s\n" pkg.priority ;
-  Printf.fprintf oc "Source: %a\n" pp_source pkg.source;
+  if pkg.priority <> "" then
+    Printf.fprintf oc "Priority: %s\n" pkg.priority ;
+  if pkg.source <> ("",None) then
+    Printf.fprintf oc "Source: %a\n" pp_source pkg.source;
 
-  Printf.fprintf oc "Provides: %a\n" pp_vpkglist pkg.provides;
-  Printf.fprintf oc "Depends: %a\n" pp_vpkgformula pkg.depends;
-  Printf.fprintf oc "Conflicts: %a\n" pp_vpkglist pkg.conflicts;
-  Printf.fprintf oc "Breaks: %a\n" pp_vpkglist pkg.breaks;
-  Printf.fprintf oc "Suggests: %a\n" pp_vpkgformula pkg.suggests;
-  Printf.fprintf oc "Enhances: %a\n" pp_vpkgformula pkg.enhances;
-  Printf.fprintf oc "Recommends: %a\n" pp_vpkgformula pkg.recommends;
-  Printf.fprintf oc "Replaces: %a\n" pp_vpkglist pkg.replaces
+  if List.length pkg.provides > 0 then
+    Printf.fprintf oc "Provides: %a\n" pp_vpkglist pkg.provides;
+  if List.length pkg.depends > 0 then
+    Printf.fprintf oc "Depends: %a\n" pp_vpkgformula pkg.depends;
+  if List.length pkg.conflicts > 0 then
+    Printf.fprintf oc "Conflicts: %a\n" pp_vpkglist pkg.conflicts;
+  if List.length pkg.breaks > 0 then
+    Printf.fprintf oc "Breaks: %a\n" pp_vpkglist pkg.breaks;
+  if List.length pkg.suggests > 0 then
+    Printf.fprintf oc "Suggests: %a\n" pp_vpkgformula pkg.suggests;
+  if List.length pkg.enhances > 0 then
+    Printf.fprintf oc "Enhances: %a\n" pp_vpkgformula pkg.enhances;
+  if List.length pkg.recommends > 0 then
+    Printf.fprintf oc "Recommends: %a\n" pp_vpkgformula pkg.recommends;
+  if List.length pkg.replaces > 0 then
+    Printf.fprintf oc "Replaces: %a\n" pp_vpkglist pkg.replaces
 ;;
