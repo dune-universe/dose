@@ -48,7 +48,7 @@ class intprojection size = object
   method add v =
     if (size = 0) then assert false ;
     if (counter > size - 1) then assert false;
-    debug "intprojection : var %d -> int %d" v counter;
+    (* debug "intprojection : var %d -> int %d" v counter; *)
     Util.IntHashtbl.add vartoint v counter;
     inttovar.(counter) <- v;
     counter <- counter + 1
