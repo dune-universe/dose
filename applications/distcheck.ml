@@ -41,7 +41,7 @@ module Options = struct
 
   open OptParser
 
-  add options ~short_name:'t' ~help:"input type format" inputtype;
+  add options ~short_name:'t' ~help:"Set the input type format" inputtype;
 
   add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
   add options ~short_name:'m' ~long_name:"explain-minimal" ~help:"" minimal;
@@ -61,7 +61,7 @@ module Options = struct
   add options ~long_name:"bg" 
   ~help:"Additional Packages lists that are NOT checked but used for resolving dependencies (can be repeated)" background;
 
-  add options ~short_name:'o' ~long_name:"outfile" ~help:"output file" outfile;
+  add options ~short_name:'o' ~long_name:"outfile" ~help:"Set the output file" outfile;
 
   include Boilerplate.MakeDistribOptions(struct let options = options end);;
 
