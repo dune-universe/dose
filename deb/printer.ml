@@ -54,7 +54,11 @@ let pp_vpkgformula oc vpkgformula =
 ;;
 
 let pp_package oc pkg =
-  Printf.fprintf oc "Package: %s\n" pkg.name ;
+  let name =
+    if Sources.is_source pkg then String.slice ~first:4 pkg.name 
+    else pkg.name 
+  in
+  Printf.fprintf oc "Package: %s\n" name ;
   Printf.fprintf oc "Version: %s\n" pkg.version ;
   Printf.fprintf oc "Architecture: %s\n" pkg.architecture ;
   Printf.fprintf oc "Multi-Arch: %a\n" pp_multiarch pkg.multiarch;
