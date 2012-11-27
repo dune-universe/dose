@@ -133,8 +133,16 @@ let add_properties preamble l =
     {pre with Cudf.property = prop :: pre.Cudf.property }
   ) preamble l
 
+let get_property prop pkg =
+   try Cudf.lookup_package_property pkg prop
+   with Not_found -> begin
+     warning "%s missing" prop;
+     raise Not_found
+   end
+;;
+
 let is_essential pkg =
-  try (Cudf.lookup_package_property pkg "essential") = "yes"
+  try Cudf.lookup_package_property pkg "essential" = "yes"
   with Not_found -> false
 
 let realversionmap pkglist =
