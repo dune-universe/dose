@@ -301,3 +301,20 @@ let range i j =
  in aux [] j
 ;;
 
+let string_of_list string_of_item sep l =
+  let buf = Buffer.create 1023 in
+  let rec aux = function
+    | [] -> assert false
+    | [last] -> (* last item, no trailing sep *)
+        Buffer.add_string buf (string_of_item last)
+    | item :: tl -> (* at least one item in tl *)
+        Buffer.add_string buf (string_of_item item);
+        Buffer.add_string buf sep;
+        aux tl in
+  let _ =
+    match l with
+      | [] -> ()
+      | [sole] -> Buffer.add_string buf (string_of_item sole)
+      | _ -> aux l in
+  Buffer.contents buf
+;;

@@ -153,3 +153,5 @@ module IntHashtbl : Hashtbl.S with type key = int
 module StringHashtbl : Hashtbl.S with type key = string
 
 val range : int -> int -> int list
+
+val string_of_list : ('a -> string) -> string -> 'a list -> string
