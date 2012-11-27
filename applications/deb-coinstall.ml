@@ -18,10 +18,13 @@
 open ExtLib
 open Common
 open Algo
+open Debian
 
 module Options = struct
   open OptParse
-  let description = "Check for Debian Package Coinstallability"
+  let description = ("Check for Debian Package Coinstallability."^
+    "Return the list of binary package. If --src <Sources> is specified"^
+    "then we return the list of corresponding source packages")
   let options = OptParser.make ~description
   include Boilerplate.MakeOptions(struct let options = options end)
 
@@ -37,6 +40,7 @@ module Options = struct
   let outfile = StdOpt.str_option ()
   let background = Boilerplate.incr_str_list ()
   let foreground = Boilerplate.incr_str_list ()
+  let sources = StdOpt.str_option ()
 
   open OptParser
 
@@ -55,6 +59,8 @@ module Options = struct
 
   add options ~long_name:"bg" 
   ~help:"Additional Packages lists that are NOT checked but used for resolving dependencies (can be repeated)" background;
+
+  add options ~long_name:"src" ~help:"Associate Sources file" sources;
 
   add options ~short_name:'o' ~long_name:"outfile" ~help:"Set the output file" outfile;
 
@@ -89,11 +95,13 @@ let main () =
   in
 
   let cudftodeb_table = Hashtbl.create 30000 in
+  let cudftosrc_table = Hashtbl.create 30000 in
 
-  let deb_load_list options ?(status=[]) urilist =
+  let deb_load_list options ?(status=[]) sources urilist =
+    let native = options.Debian.Debcudf.native in
     let archs =
-      if options.Debian.Debcudf.native <> "" then
-        options.Debian.Debcudf.native :: options.Debian.Debcudf.foreign
+      if native <> "" then
+        native :: options.Debian.Debcudf.foreign
       else []
     in
     let dll =
@@ -103,9 +111,24 @@ let main () =
     in
     let pkglist = List.flatten dll in
     let pkglist = if status = [] then pkglist else Debian.Packages.merge status pkglist in
-    let tables = Debian.Debcudf.init_tables pkglist in
+    let srclist = 
+      if not(Option.is_none sources) then
+        let l = Sources.input_raw ~archs [Option.get sources] in
+        Sources.sources2packages ~noindep:true ~profiles:false native l
+      else []
+    in
+    let tables = Debian.Debcudf.init_tables (srclist@pkglist) in
     let from_cudf (p,i) = (p,Debian.Debcudf.get_real_version tables (p,i)) in
     let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
+    let srcl =
+      let dl = List.map (Debian.Debcudf.tocudf tables ~options) srclist in
+      List.iter2 (fun cudfpkg -> fun srcpkg ->
+        let id = (cudfpkg.Cudf.package,cudfpkg.Cudf.version) in
+        Hashtbl.add cudftosrc_table id srcpkg
+      ) dl srclist;
+      dl
+    in
+
     let cll =
       List.map (fun l ->
         List.map (fun debpkg ->
@@ -117,10 +140,11 @@ let main () =
       ) dll
     in
     let preamble = Debian.Debcudf.preamble in
-    (preamble,cll,from_cudf,to_cudf)
+    (preamble,cll,srcl,from_cudf,to_cudf)
   in
 
-  let (preamble,pkgll,from_cudf,to_cudf) = deb_load_list options [fg;bg] in
+  let sources = OptParse.Opt.opt Options.sources in
+  let (preamble,pkgll,srclist,from_cudf,to_cudf) = deb_load_list options sources [fg;bg] in
 
   let (fg_pkglist, bg_pkglist) = match pkgll with [fg;bg] -> (fg,bg) | _ -> assert false in
 
@@ -129,7 +153,7 @@ let main () =
     else fg_pkglist
   in
   let universe = 
-    let s = CudfAdd.to_set (fg_pkglist @ bg_pkglist) in
+    let s = CudfAdd.to_set (srclist @ fg_pkglist @ bg_pkglist) in
     Cudf.load_universe (CudfAdd.Cudf_set.elements s) 
   in
   let universe_size = Cudf.universe_size universe in
@@ -169,13 +193,26 @@ let main () =
   ignore(Util.Timer.stop timer ());
 
   if Diagnostic.is_solution result then
-    List.iter (fun cudfpkg ->
-      try
-        let id = (cudfpkg.Cudf.package,cudfpkg.Cudf.version) in
-        let debpkg = Hashtbl.find cudftodeb_table id  in
-        Printf.printf "%a\n" Debian.Printer.pp_package debpkg
-      with Not_found -> assert false
-    ) (Diagnostic.get_installationset result)
+    let is = Diagnostic.get_installationset result in
+    if Option.is_none sources then 
+      List.iter (fun cudfpkg ->
+        try
+          let id = (cudfpkg.Cudf.package,cudfpkg.Cudf.version) in
+          let debpkg = Hashtbl.find cudftodeb_table id in
+          Printf.printf "%a\n" Debian.Printer.pp_package debpkg
+        with Not_found -> assert false
+      ) is
+    else
+      let l = 
+        CudfAdd.unique (
+          List.map (fun binpkg ->
+            let cudfpkg = Sources.get_src_package universe binpkg in
+            let id = (cudfpkg.Cudf.package,cudfpkg.Cudf.version) in
+            Hashtbl.find cudftosrc_table id
+          ) is
+        )
+      in
+      List.iter (Printf.printf "%a\n" Debian.Printer.pp_package) l
   else
     Diagnostic.fprintf ~pp ~minimal ~failure ~explain fmt result;
   
