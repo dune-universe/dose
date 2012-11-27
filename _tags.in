@@ -53,6 +53,7 @@ true: -traverse
 <applications/dominators-graph.*>: @USE_RPM@, use_boilerplate, use_algo
 <applications/challenged.*>: use_algo, use_boilerplateNoRpm, @PKG_PARMAP@
 <applications/outdated.*>: use_algo, use_boilerplateNoRpm
+<applications/deb-coinstall.*>: @USE_RPM@, use_algo, use_boilerplate
 
 <experimental/strong-conflicts.*>: @USE_RPM@, use_algo, use_boilerplate
 <experimental/randcudf.*>: use_algo, use_boilerplateNoRpm
