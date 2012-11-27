@@ -239,24 +239,29 @@ end
 (**/**)
 
 let merge status packages =
-  info "Merging status file";
-  let merge_aux p1 p2 =
-    if (p1 >% p2) = 0 then begin
-      {p1 with
-        essential = p1.essential || p2.essential;
-        extras = List.unique (p1.extras @ p2.extras)
-      }
-    end else fatal "Something went wrong while merging status+packages"
-  in
-  let h = Hashtbl.create (List.length status) in
-  List.iter (fun p -> Hashtbl.add h (id p) p) status ;
-  let ps =
-    List.fold_left (fun acc p ->
-      try Set.add (merge_aux p (Hashtbl.find h (id p))) acc
-      with Not_found -> Set.add p acc
-    ) Set.empty (status @ packages)
-  in
-  Set.elements ps 
+  if List.length status > 0 then begin
+    info "Merging status file";
+    let merge_aux p1 p2 =
+      if (p1 >% p2) = 0 then begin
+        {p1 with
+          essential = p1.essential || p2.essential;
+          extras = List.unique (p1.extras @ p2.extras)
+        }
+      end else fatal "Something went wrong while merging status+packages"
+    in
+    let h = Hashtbl.create (List.length status) in
+    List.iter (fun p -> Hashtbl.add h (id p) p) status ;
+    let ps =
+      List.fold_left (fun acc p ->
+        try Set.add (merge_aux p (Hashtbl.find h (id p))) acc
+        with Not_found -> Set.add p acc
+      ) Set.empty (status @ packages)
+    in
+    Set.elements ps 
+  end
+  else 
+    packages
+;;
 
 let is_installed pkg =
   try match String.nsplit (assoc "status" pkg.extras) " " with

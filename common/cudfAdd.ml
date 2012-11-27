@@ -40,7 +40,6 @@ module Cudf_set =
 
 let to_set l = List.fold_right Cudf_set.add l Cudf_set.empty
 
-
 (* encode - decode *)
 
 (* Specialized hashtable for encoding strings efficiently. *)
