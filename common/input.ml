@@ -28,6 +28,9 @@ END
 
 IFDEF HASBZ2 THEN
 let bzip_open_file file =
+  (* workaround to avoid segfault :
+   * http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=602170 *)
+  let _ = Bz2.version in 
   let s = " " in
   let ch = Bz2.open_in (open_in file) in
   let input_char ch = 
