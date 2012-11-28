@@ -111,10 +111,10 @@ let main () =
     in
     let pkglist = List.flatten dll in
     let pkglist = if status = [] then pkglist else Debian.Packages.merge status pkglist in
+    let origsourcelist = Sources.input_raw ~archs [Option.get sources] in
     let srclist = 
       if not(Option.is_none sources) then
-        let l = Sources.input_raw ~archs [Option.get sources] in
-        Sources.sources2packages ~noindep:true ~profiles:false native l
+        Sources.sources2packages ~noindep:true ~profiles:false native origsourcelist
       else []
     in
     let tables = Debian.Debcudf.init_tables (srclist@pkglist) in
@@ -125,7 +125,7 @@ let main () =
       List.iter2 (fun cudfpkg -> fun srcpkg ->
         let id = (cudfpkg.Cudf.package,cudfpkg.Cudf.version) in
         Hashtbl.add cudftosrc_table id srcpkg
-      ) dl srclist;
+      ) dl origsourcelist;
       dl
     in
 
@@ -212,7 +212,7 @@ let main () =
           ) is
         )
       in
-      List.iter (Printf.printf "%a\n" Debian.Printer.pp_package) l
+      List.iter (Printf.printf "%a\n" Debian.Printer.pp_source) l
   else
     Diagnostic.fprintf ~pp ~minimal ~failure ~explain fmt result;
   

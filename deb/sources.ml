@@ -21,6 +21,7 @@ type source = {
   name : Format822.name;
   version : Format822.version;
   architecture : Format822.architecture list;
+  binaries : string list ;
   build_depends : Format822.builddepsformula;
   build_depends_indep : Format822.builddepsformula;
   build_conflicts : Format822.builddepslist;
@@ -31,6 +32,7 @@ let default_source = {
   name = "";
   version = "";
   architecture = [];
+  binaries = [];
   build_depends = [];
   build_depends_indep = [];
   build_conflicts = [];
@@ -68,6 +70,7 @@ let parse_package_stanza filter archs par =
     name = parse_s ~err:"(MISSING NAME)" parse_name "Package" par;
     version = parse_s ~err:"(MISSING VERSION)" parse_version "Version" par;
     architecture = parse_s ~err:"(MISSING ARCH)" parse_archs "Architecture" par;
+    binaries = [];
     build_depends = 
       parse_s ~opt:[] ~multi:true parse_builddepsformula "Build-Depends" par; 
     build_depends_indep =

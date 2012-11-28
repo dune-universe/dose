@@ -12,7 +12,6 @@
 
 open ExtLib
 open Common
-open Packages
 
 let pp_source oc = function
   |source,None -> Printf.fprintf oc "%s" source
@@ -45,7 +44,7 @@ let pp_vpkglist oc vpkglist =
 
 let string_of_vpkgformula vpkgformula =
   let string_of_OR = Util.string_of_list string_of_vpkg " | " in
-  let string_of_AND = Util.string_of_list string_of_OR " , " in
+  let string_of_AND = Util.string_of_list string_of_OR ", " in
   string_of_AND vpkgformula
 ;;
 
@@ -54,11 +53,8 @@ let pp_vpkgformula oc vpkgformula =
 ;;
 
 let pp_package oc pkg =
-  let name =
-    if Sources.is_source pkg then String.slice ~first:4 pkg.name 
-    else pkg.name 
-  in
-  Printf.fprintf oc "Package: %s\n" name ;
+  let open Packages in
+  Printf.fprintf oc "Package: %s\n" pkg.name ;
   Printf.fprintf oc "Version: %s\n" pkg.version ;
   Printf.fprintf oc "Architecture: %s\n" pkg.architecture ;
   Printf.fprintf oc "Multi-Arch: %a\n" pp_multiarch pkg.multiarch;
@@ -84,4 +80,61 @@ let pp_package oc pkg =
     Printf.fprintf oc "Recommends: %a\n" pp_vpkgformula pkg.recommends;
   if List.length pkg.replaces > 0 then
     Printf.fprintf oc "Replaces: %a\n" pp_vpkglist pkg.replaces
+;;
+
+let strinf_of_builddep (vpkg,archfilter,buildfilter) =
+  let string_of_filter l =
+    String.concat " " (
+      List.map (fun (b,s) ->
+        if b then s else "!"^s
+      ) l
+    )
+  in
+  match archfilter,buildfilter with
+  |[],[] -> string_of_vpkg vpkg
+  |_,[] -> Printf.sprintf "%s [%s]" (string_of_vpkg vpkg) (string_of_filter archfilter)
+  |[],_ -> Printf.sprintf "%s <%s>" (string_of_vpkg vpkg) (string_of_filter buildfilter)
+  |_,_ ->
+      Printf.sprintf "%s [%s] <%s>"
+      (string_of_vpkg vpkg) 
+      (string_of_filter archfilter)
+      (string_of_filter buildfilter)
+;;
+
+let string_of_builddepformula builddepformula =
+  let string_of_OR = Util.string_of_list strinf_of_builddep " | " in
+  let string_of_AND = Util.string_of_list string_of_OR ", " in
+  string_of_AND builddepformula
+;;
+
+let pp_builddepformula oc builddepformula =
+    Printf.fprintf oc "%s" (string_of_builddepformula builddepformula)
+;;
+
+let string_of_builddeplist builddeplist =
+  Util.string_of_list strinf_of_builddep ", " builddeplist
+;;
+
+let pp_builddeplist oc builddeplist =
+  Printf.fprintf oc "%s" (string_of_builddeplist builddeplist)
+;;
+
+let pp_source oc pkg =
+  let open Sources in
+  Printf.fprintf oc "Package: %s\n" pkg.name ;
+  Printf.fprintf oc "Version: %s\n" pkg.version ;
+  Printf.fprintf oc "Architecture: %s\n" (String.concat " " pkg.architecture) ;
+
+  if List.length pkg.binaries > 0 then
+    Printf.fprintf oc "Binaries: %s\n" (String.concat ", " pkg.binaries);
+
+  if List.length pkg.build_depends > 0 then
+    Printf.fprintf oc "Build-Depends: %a\n" pp_builddepformula pkg.build_depends;
+  if List.length pkg.build_conflicts > 0 then
+    Printf.fprintf oc "Build-Conflicts: %a\n" pp_builddeplist pkg.build_conflicts;
+
+  if List.length pkg.build_depends_indep > 0 then
+    Printf.fprintf oc "Build-Depends-Indeps: %a\n" pp_builddepformula pkg.build_depends_indep;
+  if List.length pkg.build_conflicts_indep > 0 then
+    Printf.fprintf oc "Build-Conflicts-Indeps: %a\n" pp_builddeplist pkg.build_conflicts_indep;
 ;;

@@ -51,6 +51,7 @@ TARGETS= \
    applications/apt-cudf.$(OCAMLBEST) \
    applications/outdated.$(OCAMLBEST) \
    applications/challenged.$(OCAMLBEST) \
+   applications/deb-coinstall.$(OCAMLBEST) \
 
 BYTELIBS=
 OPTLIBS=
