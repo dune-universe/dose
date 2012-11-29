@@ -25,45 +25,18 @@ module Options = struct
   let options = OptParser.make ~description
   include Boilerplate.MakeOptions(struct let options = options end)
 
-  let inputtype = StdOpt.str_option ()
-  let successes = StdOpt.store_true ()
-  let failures = StdOpt.store_true ()
-  let explain = StdOpt.store_true ()
-  let minimal = StdOpt.store_true ()
-  let summary = StdOpt.store_true ()
-  let latest = StdOpt.store_true ()
-  let checkonly = Boilerplate.vpkglist_option ()
+  include Boilerplate.DistcheckOptions
+  Boilerplate.DistcheckOptions.add_options options ;;
+
+  include Boilerplate.InputOptions
+  Boilerplate.InputOptions.add_options options ;;
+
+  include Boilerplate.DistribOptions;;
+  Boilerplate.DistribOptions.add_options options ;;
+
   let coinst = Boilerplate.vpkglist_option ()
-
-  let outfile = StdOpt.str_option ()
-  let background = Boilerplate.incr_str_list ()
-  let foreground = Boilerplate.incr_str_list ()
-
   open OptParser
-
-  add options ~short_name:'t' ~help:"Set the input type format" inputtype;
-
-  add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
-  add options ~short_name:'m' ~long_name:"explain-minimal" ~help:"" minimal;
-  add options ~short_name:'f' ~long_name:"failures" ~help:"Only show failures" failures;
-  add options ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" successes;
-
-  add options ~long_name:"checkonly" ~help:"Check only these package" checkonly;
-  add options ~long_name:"summary" ~help:"Print a detailed summary" summary;
-
-  add options ~long_name:"latest" ~help:"Check only the latest version of each package" latest;
-
   add options ~long_name:"coinst" ~help:"Check if these packages are coinstallable" coinst;
-
-  add options ~long_name:"fg" 
-  ~help:"Additional Packages lists that are checked and used for resolving dependencies (can be repeated)" foreground;
-
-  add options ~long_name:"bg" 
-  ~help:"Additional Packages lists that are NOT checked but used for resolving dependencies (can be repeated)" background;
-
-  add options ~short_name:'o' ~long_name:"outfile" ~help:"Set the output file" outfile;
-
-  include Boilerplate.MakeDistribOptions(struct let options = options end);;
 
 end
 
@@ -151,8 +124,8 @@ let main () =
   let pp = CudfAdd.pp from_cudf in
 
   info "Solving..." ;
-  let failure = OptParse.Opt.get Options.failures in
-  let success = OptParse.Opt.get Options.successes in
+  let failure = OptParse.Opt.get Options.failure in
+  let success = OptParse.Opt.get Options.success in
   let explain = OptParse.Opt.get Options.explain in
   let minimal = OptParse.Opt.get Options.minimal in
   let summary = OptParse.Opt.get Options.summary in

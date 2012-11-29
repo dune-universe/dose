@@ -26,28 +26,21 @@ module Options = struct
   let description =
     "Report packages that aren't installable in any futures of a repository"
   let options = OptParser.make ~description
-
   include Boilerplate.MakeOptions(struct let options = options end)
 
-  let explain = StdOpt.store_true ()
-  let checkonly = Boilerplate.vpkglist_option ()
-  let failure = StdOpt.store_true ()
-  let explain = StdOpt.store_true ()
-  let summary = StdOpt.store_true ()
+  include Boilerplate.DistcheckOptions
+  Boilerplate.DistcheckOptions.add_options options ;;
+
+  include Boilerplate.InputOptions
+  Boilerplate.InputOptions.add_options ~default:["checkonly"] options ;;
+
+  include Boilerplate.DistribOptions;;
+  Boilerplate.DistribOptions.add_options options ;;
+
   let dump = StdOpt.store_true ()
 
   open OptParser
-  add options ~long_name:"checkonly" ~help:"Check only these package. ex p1 (=v1)" checkonly;
-
-  add options ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
-  add options ~short_name:'f' ~long_name:"failure" ~help:"Show failure" failure;
-
-  add options ~short_name:'s' ~help:"Print summary of broken packages" summary;
-
   add options ~long_name:"dump" ~help:"Dump the cudf package list and exit" dump;
-
-  include Boilerplate.MakeDistribOptions(struct let options = options end);;
-
 end
 
 let sync (sn,sv,v) p =

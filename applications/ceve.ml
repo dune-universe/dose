@@ -55,7 +55,8 @@ module Options = struct
   add options ~short_name:'t' ~long_name:"outtype" ~help:"Output type" out_type;
   add options ~short_name:'o' ~long_name:"outfile" ~help:"Output file" out_file;
 
-  include Boilerplate.MakeDistribOptions(struct let options = options end);;
+  include Boilerplate.DistribOptions;;
+  Boilerplate.DistribOptions.add_options options ;;
 
 end;;
 

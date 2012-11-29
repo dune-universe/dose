@@ -20,6 +20,9 @@ module Options = struct
   let options = OptParser.make ~description
   include Boilerplate.MakeOptions(struct let options = options end)
 
+  include Boilerplate.DistribOptions;;
+  Boilerplate.DistribOptions.add_options options ;;
+
   let dot = StdOpt.store_true ()
   let detrans = StdOpt.store_true ()
   let checkonly = Boilerplate.vpkglist_option ()
@@ -31,7 +34,6 @@ module Options = struct
   add options ~long_name:"checkonly" ~help:"Check only these package" checkonly;
   add options ~long_name:"conj-only" ~help:"Use the conjunctive graph only" conj_only;
 
-  include Boilerplate.MakeDistribOptions(struct let options = options end);;
 end
 
 include Util.Logging(struct let label = __FILE__ end) ;;

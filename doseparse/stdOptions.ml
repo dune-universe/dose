@@ -101,6 +101,87 @@ module MakeOptions(O : Ot) = struct
 
 end
 
+module DistcheckOptions = struct
+  open OptParse ;;
+
+  let success = StdOpt.store_true ()
+  let failure = StdOpt.store_true ()
+  let explain = StdOpt.store_true ()
+  let minimal = StdOpt.store_true ()
+  let summary = StdOpt.store_true ()
+
+  let default_options = [
+    "success";
+    "failure";
+    "explain";
+    "minimal";
+    "summary"
+  ]
+
+  let add_options ?(default=default_options) options =
+    let open OptParser in 
+    if List.length default > 0 then begin
+      let group = add_group options "Distcheck Options" in
+      if List.mem "explain" default then
+        add options ~group ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
+      if List.mem "minimal" default then
+        add options ~group ~short_name:'m' ~long_name:"explain-minimal" ~help:"" minimal;
+      if List.mem "failure" default then
+        add options ~group ~short_name:'f' ~long_name:"failures" ~help:"Only show failures" failure;
+      if List.mem "success" default then
+        add options ~group ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" success;
+    end
+  ;;
+end
+
+module InputOptions = struct
+  open OptParse ;;
+
+  let inputtype = StdOpt.str_option ()
+  let latest = StdOpt.store_true ()
+  let checkonly = StdDebian.vpkglist_option ()
+  let background = incr_str_list ()
+  let foreground = incr_str_list ()
+  let outfile = StdOpt.str_option ()
+
+  let default_options = [
+    "latest";
+    "checkonly";
+    "bg";
+    "fg";
+    "outfile"
+  ]
+
+  let add_options ?(default=default_options) options =
+    let open OptParser in 
+    if List.length default > 0 then begin
+      let group = add_group options "Input Options" in
+
+      if List.mem "inputtype" default then
+        add options ~group ~short_name:'t' ~help:"Set the input type format" inputtype;
+
+      if List.mem "checkonly" default then
+        add options ~group ~long_name:"checkonly" ~help:"Check only these package" checkonly;
+
+      if List.mem "latest" default then
+      add options ~group ~long_name:"latest" ~help:"Check only the latest version of each package" latest;
+
+      if List.mem "fg" default then
+        add options ~group ~long_name:"fg"
+        ~help:("Additional Packages lists that are checked and used"^
+               "for resolving dependencies (can be repeated)") foreground;
+
+      if List.mem "fg" default then
+        add options ~group ~long_name:"bg"
+        ~help:("Additional Packages lists that are NOT checked but used"^
+               "for resolving dependencies (can be repeated)") background;
+
+      if List.mem "outfile" default then
+        add options ~group ~short_name:'o' ~long_name:"outfile" ~help:"Set the output file" outfile
+    end
+  ;;
+end
+
 type options =
   |Deb of Debian.Debcudf.options
   |Eclipse of Debian.Debcudf.options
@@ -109,21 +190,20 @@ type options =
   |Rpm
   |Cudf
 
-module MakeDistribOptions(O : sig val options : OptParse.OptParser.t end) = struct
+module DistribOptions = struct
   open OptParse ;;
 
   let deb_native_arch = StdOpt.str_option ()
   let deb_foreign_archs = str_list_option ()
   let deb_host_arch = StdOpt.str_option ()
   let deb_ignore_essential = StdOpt.store_true ()
-  let default_deb_options = ref 
-    ["deb-native-arch";
-     "deb-host-arch";
-     "deb-foreign-archs";
-     "deb-ignore-essential"]
 
-  let remove_deb_option o =
-    default_deb_options := List.remove !default_deb_options o
+  let default_options = [
+    "deb-native-arch";
+    "deb-host-arch";
+    "deb-foreign-archs";
+    "deb-ignore-essential"
+  ]
 
   let set_deb_options () =
     let native =
@@ -185,22 +265,23 @@ module MakeDistribOptions(O : sig val options : OptParse.OptParser.t end) = stru
     |_ -> None
   ;;
 
-  open OptParser ;;
-  if List.length !default_deb_options > 0 then begin
-    let deb_group = add_group O.options "Debian Specific Options" in
-    if List.mem "deb-native-arch" !default_deb_options then
-      add O.options ~group:deb_group ~long_name:"deb-native-arch"
-      ~help:"Native architecture" deb_native_arch;
-    if List.mem "deb-host-arch" !default_deb_options then
-      add O.options ~group:deb_group ~long_name:"deb-host-arch" 
-      ~help:"Native/cross compile host architecture, defaults to native architecture" deb_host_arch;
-    if List.mem "deb-foreign-archs" !default_deb_options then
-      add O.options ~group:deb_group ~long_name:"deb-foreign-archs" 
-      ~help:"Foreign architectures in addition to native and host architectures" deb_foreign_archs;
-    if List.mem "deb-ignore-essential" !default_deb_options then
-      add O.options ~group:deb_group ~long_name:"deb-ignore-essential" 
-      ~help:"Ignore Essential Packages" deb_ignore_essential;
-  end
+  let add_options ?(default=default_options) options =
+    let open OptParser in
+    if List.length default > 0 then begin
+      let group = add_group options "Debian Specific Options" in
+      if List.mem "deb-native-arch" default then
+        add options ~group ~long_name:"deb-native-arch"
+        ~help:"Native architecture" deb_native_arch;
+      if List.mem "deb-host-arch" default then
+        add options ~group ~long_name:"deb-host-arch" 
+        ~help:"Native/cross compile host architecture, defaults to native architecture" deb_host_arch;
+      if List.mem "deb-foreign-archs" default then
+        add options ~group ~long_name:"deb-foreign-archs" 
+        ~help:"Foreign architectures in addition to native and host architectures" deb_foreign_archs;
+      if List.mem "deb-ignore-essential" default then
+        add options ~group ~long_name:"deb-ignore-essential" 
+        ~help:"Ignore Essential Packages" deb_ignore_essential;
+    end
 
 (*  let rpm_group = add_group options "Rpm Specific Options" in
     let eclipse_group = add_group options "Eclipse Specific Options" in
