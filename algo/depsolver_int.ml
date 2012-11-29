@@ -406,8 +406,7 @@ let dependency_closure_cache ?(maxdepth=max_int) ?(conjunctive=false) pool idlis
         |(_,dsj) when conjunctive = false ->
           List.iter (fun i ->
             if not(Hashtbl.mem visited i) then
-              if not(Hashtbl.mem visited i) then
-                Queue.add (i,level+1) queue
+              Queue.add (i,level+1) queue
           ) dsj
         |_ -> ()
       ) l
