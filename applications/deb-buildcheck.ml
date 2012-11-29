@@ -136,7 +136,7 @@ let main () =
   in
 
   Util.Timer.start timer;
-  let i = Depsolver.listcheck ~callback universe checklist in
+  let nbp = Depsolver.listcheck ~callback universe checklist in
   ignore(Util.Timer.stop timer ());
 
   if failure || success then Format.fprintf fmt "@]@.";
@@ -145,7 +145,7 @@ let main () =
   let nf = List.length sl in
   Format.fprintf fmt "background-packages: %d@." nb;
   Format.fprintf fmt "foreground-packages: %d@." (if nf = 0 then nb else nf);
-  Format.fprintf fmt "broken-packages: %d@." i;
+  Format.fprintf fmt "broken-packages: %d@." nbp;
 
   if summary then
     Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
@@ -157,8 +157,15 @@ let main () =
     Cudf_printer.pp_preamble oc Debcudf.preamble;
     Printf.fprintf oc "\n";
     Cudf_printer.pp_universe oc universe
-  end
+  end;
 
+  Boilerplate.exit(nbp)
 ;;
 
-main () ;;
+Boilerplate.if_application
+  ~alternatives:[
+    "deb-buildcheck"; "debbuildcheck";"dose-builddebcheck";
+    "deb-crossbuildcheck";"debcrossbuildcheck";
+    "dose-debcrossbuildcheck"]
+  __FILE__ main
+;;
