@@ -114,7 +114,7 @@ module DistcheckOptions = struct
     "success";
     "failure";
     "explain";
-    "minimal";
+    "explain-minimal";
     "summary"
   ]
 
@@ -124,7 +124,7 @@ module DistcheckOptions = struct
       let group = add_group options "Distcheck Options" in
       if List.mem "explain" default then
         add options ~group ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
-      if List.mem "minimal" default then
+      if List.mem "explain-minimal" default then
         add options ~group ~short_name:'m' ~long_name:"explain-minimal" ~help:"" minimal;
       if List.mem "failure" default then
         add options ~group ~short_name:'f' ~long_name:"failures" ~help:"Only show failures" failure;
@@ -137,7 +137,6 @@ end
 module InputOptions = struct
   open OptParse ;;
 
-  let inputtype = StdOpt.str_option ()
   let latest = StdOpt.store_true ()
   let checkonly = StdDebian.vpkglist_option ()
   let background = incr_str_list ()
@@ -152,15 +151,23 @@ module InputOptions = struct
     "outfile"
   ]
 
+  let parse_cmdline (it,im) posargs = 
+    let add_format t = List.map (fun s -> (Url.scheme_to_string t)^"://"^s) in
+    let fg = OptParse.Opt.get foreground in
+    let bg = OptParse.Opt.get background in
+    let fg = (if List.length (posargs@fg) = 0 then ["-"] else posargs)@fg in
+    if im then
+      (add_format it fg, add_format it bg)
+    else
+      (fg,bg)
+  ;;
+
   let add_options ?(default=default_options) options =
     let open OptParser in 
     if List.length default > 0 then begin
       let group = add_group options "Input Options" in
 
-      if List.mem "inputtype" default then
-        add options ~group ~short_name:'t' ~help:"Set the input type format" inputtype;
-
-      if List.mem "checkonly" default then
+     if List.mem "checkonly" default then
         add options ~group ~long_name:"checkonly" ~help:"Check only these package" checkonly;
 
       if List.mem "latest" default then
@@ -197,12 +204,14 @@ module DistribOptions = struct
   let deb_foreign_archs = str_list_option ()
   let deb_host_arch = StdOpt.str_option ()
   let deb_ignore_essential = StdOpt.store_true ()
+  let inputtype = StdOpt.str_option ()
 
   let default_options = [
     "deb-native-arch";
     "deb-host-arch";
     "deb-foreign-archs";
-    "deb-ignore-essential"
+    "deb-ignore-essential";
+    "inputtype"
   ]
 
   let set_deb_options () =
@@ -268,6 +277,9 @@ module DistribOptions = struct
   let add_options ?(default=default_options) options =
     let open OptParser in
     if List.length default > 0 then begin
+      if List.mem "inputtype" default then
+        add options ~short_name:'t' ~help:"Set the input type format" inputtype;
+
       let group = add_group options "Debian Specific Options" in
       if List.mem "deb-native-arch" default then
         add options ~group ~long_name:"deb-native-arch"
@@ -281,6 +293,7 @@ module DistribOptions = struct
       if List.mem "deb-ignore-essential" default then
         add options ~group ~long_name:"deb-ignore-essential" 
         ~help:"Ignore Essential Packages" deb_ignore_essential;
+
     end
 
 (*  let rpm_group = add_group options "Rpm Specific Options" in

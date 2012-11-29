@@ -56,7 +56,8 @@ module Options = struct
   add options ~short_name:'o' ~long_name:"outfile" ~help:"Output file" out_file;
 
   include Boilerplate.DistribOptions;;
-  Boilerplate.DistribOptions.add_options options ;;
+  let default = List.remove Boilerplate.DistribOptions.default_options "inputtype" in
+  Boilerplate.DistribOptions.add_options ~default options ;;
 
 end;;
 

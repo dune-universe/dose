@@ -22,22 +22,26 @@ open Debian
 
 module Options = struct
   open OptParse
-  let description = ("Check for Debian Package Coinstallability."^
+  let description = (
+    "Check for Debian Package Coinstallability."^
     "Return the list of binary package. If --src <Sources> is specified"^
     "then we return the list of corresponding source packages")
+
   let options = OptParser.make ~description
   include Boilerplate.MakeOptions(struct let options = options end)
 
   include Boilerplate.DistcheckOptions
-  Boilerplate.DistcheckOptions.add_options options ;;
+  let default = List.remove Boilerplate.InputOptions.default_options "successes" in
+  Boilerplate.DistcheckOptions.add_options ~default options ;;
 
   include Boilerplate.InputOptions
-  (* XXX remove success *)
-  Boilerplate.InputOptions.add_options options ;;
+  let default = List.remove Boilerplate.InputOptions.default_options "inputtype" in
+  Boilerplate.InputOptions.add_options ~default options ;;
 
   include Boilerplate.DistribOptions;;
   (* remove other not used --deb options *)
-  Boilerplate.DistribOptions.add_options options ;;
+  let default = List.remove Boilerplate.DistribOptions.default_options "deb-host-arch" in
+  Boilerplate.DistribOptions.add_options ~default options ;;
   
   let sources = StdOpt.str_option ()
 
@@ -60,17 +64,7 @@ let main () =
 
   let options = Options.set_deb_options () in
 
-  let fg = OptParse.Opt.get Options.foreground in
-  let bg = OptParse.Opt.get Options.background in
-  let fg =
-    let pos =
-      if List.length (posargs@fg@bg) = 0 then 
-        ["-"] 
-      else 
-        posargs
-    in
-    pos@fg
-  in
+  let (fg,bg) = Options.parse_cmdline (`Deb,false) posargs in
 
   let cudftodeb_table = Hashtbl.create 30000 in
   let cudftosrc_table = Hashtbl.create 30000 in

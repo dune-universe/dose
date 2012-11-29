@@ -32,7 +32,8 @@ module Options = struct
   Boilerplate.InputOptions.add_options options ;;
 
   include Boilerplate.DistribOptions;;
-  Boilerplate.DistribOptions.add_options options ;;
+  let default = List.remove Boilerplate.DistribOptions.default_options "deb-host-arch" in
+  Boilerplate.DistribOptions.add_options ~default options ;;
 
   let coinst = Boilerplate.vpkglist_option ()
   open OptParser
@@ -56,12 +57,10 @@ let guess_format t l =
   |_ -> (Input.guess_format [l], false)
 ;;
 
-let add_format t = List.map (fun s -> (Url.scheme_to_string t)^"://"^s)
-
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
   let inputlist = posargs@(OptParse.Opt.get Options.foreground) in
-  let (input_format,implicit_format) = guess_format Options.inputtype inputlist in
+  let (input_type,implicit) = guess_format Options.inputtype inputlist in
 
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
@@ -69,20 +68,8 @@ let main () =
     ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
   Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
 
-  let options = Options.set_options input_format in
-
-  let fg = OptParse.Opt.get Options.foreground in
-  let bg = OptParse.Opt.get Options.background in
-  let fg =
-    let pos =
-      if List.length (posargs@fg@bg) = 0 && implicit_format then 
-        ["-"] 
-      else 
-        posargs
-    in
-    if implicit_format then add_format input_format (pos@fg) else (pos@fg)
-  in
-  let bg = if implicit_format then add_format input_format bg else bg in
+  let options = Options.set_options input_type in
+  let (fg,bg) = Options.parse_cmdline (input_type,implicit) posargs in
 
   let (preamble,pkgll,from_cudf,to_cudf) = Boilerplate.load_list ~options [fg;bg] in
   let (fg_pkglist, bg_pkglist) = match pkgll with [fg;bg] -> (fg,bg) | _ -> assert false in
@@ -142,7 +129,7 @@ let main () =
   let callback d =
     if summary then Diagnostic.collect results d ;
     let pp =
-      if input_format = `Cudf then 
+      if input_type = `Cudf then 
         fun pkg -> pp ~decode:(fun x -> x) pkg 
       else fun pkg -> pp pkg
     in
