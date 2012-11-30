@@ -49,10 +49,14 @@ end
 
 let fatal fmt =
   Printf.kprintf (fun s ->
-    Format.printf "Error: %s (%s)@." 
-      (OptParse.Opt.get Options.solver) (OptParse.Opt.get Options.criteria) ;
+    if OptParse.Opt.is_set Options.solver then begin
+      Format.printf "Error: %s" (OptParse.Opt.get Options.solver);
+      if OptParse.Opt.is_set Options.criteria then
+        Format.printf " (%s)" (OptParse.Opt.get Options.criteria);
+      Format.printf "@."
+    end;
     Format.printf "Message: %s@." s;
-    exit 0
+    exit 1
   ) fmt
 ;;
 
@@ -184,21 +188,24 @@ let choose_criteria ?(criteria=None) ~conffile solver request =
 let parse_solver_spec filename =
   let (exec, version) = (ref "", ref "") in
   begin try
-    let ic = open_in filename in
-    while true do
-      let l = input_line ic in
-      if String.starts_with l "exec: " then
-        exec := String.strip (snd (String.split l " "))
-      else if String.starts_with l "cudf-version: " then
-        Scanf.sscanf l "cudf-version: %s " (fun s -> version := s);
-    done;
-    close_in ic
-    with
-      | Sys_error _ -> fatal "cannot parse CUDF solver specification %s" filename
-      | End_of_file -> ()
-      | Scanf.Scan_failure err ->
-        fatal "parse error while reading CUDF solver specification %s: %s"
-	  filename err
+    if Sys.file_exists filename then begin
+      let ic = open_in filename in
+      while true do
+        let l = input_line ic in
+        if String.starts_with l "exec: " then
+          exec := String.strip (snd (String.split l " "))
+        else if String.starts_with l "cudf-version: " then
+          Scanf.sscanf l "cudf-version: %s " (fun s -> version := s);
+      done;
+      close_in ic
+    end else
+      fatal "Solver %s not found" filename
+  with
+    | Sys_error _ -> fatal "cannot parse CUDF solver specification %s" filename
+    | End_of_file -> ()
+    | Scanf.Scan_failure err ->
+      fatal "parse error while reading CUDF solver specification %s: %s"
+        filename err
   end;
   if !exec = "" || !version = "" then
     fatal "incomplete CUDF solver specification %s" filename;
