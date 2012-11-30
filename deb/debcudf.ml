@@ -193,7 +193,7 @@ let get_real_version tables (name,cudfversion) =
   let package = 
     (* XXX this is a hack. I should record the name with the architecture *)
     let n = CudfAdd.decode name in
-    try snd(ExtString.String.split n ":") 
+    try let (n,a) = ExtString.String.split n ":" in if a <> "any" then a else n
     with Invalid_string _ -> n
   in
   try
