@@ -29,7 +29,7 @@ end
 
 (* *************************************** *)
 
-let vpkg_option ?default ?(metavar = "VPKG") () =
+let vpkg_option ?default ?(metavar = " <vpkg>") () =
   let parse_vpkg s = 
     let _loc = Debian.Format822.dummy_loc in
     Debian.Packages.parse_vpkg (_loc,s)
@@ -39,7 +39,7 @@ let vpkg_option ?default ?(metavar = "VPKG") () =
 ;;
 
 (* this is a ,-separated list of vpkgs of the form "a (<c> v)" *)
-let vpkglist_option ?default ?(metavar = "VPKGLST") () =
+let vpkglist_option ?default ?(metavar = " <vpkglst>") () =
   let parse_vpkglist s = 
     let _loc = Debian.Format822.dummy_loc in
     Debian.Packages.parse_vpkglist (_loc,s)
@@ -49,7 +49,7 @@ let vpkglist_option ?default ?(metavar = "VPKGLST") () =
 ;;
 
 (* this is a ,-separated list of vpkgs of the form "a (= v)" *)
-let pkglist_option ?default ?(metavar = "PKGLST") () =
+let pkglist_option ?default ?(metavar = " <pkglst>") () =
   let parse_vpkglist s = 
     let _loc = Debian.Format822.dummy_loc in
     List.map (function
@@ -65,7 +65,7 @@ let pkglist_option ?default ?(metavar = "PKGLST") () =
 
 (* *************************************** *)
 
-let incr_str_list ?(default=Some []) ?(metavar = "STR") =
+let incr_str_list ?(default=Some []) ?(metavar = " <str>") =
   let acc = ref [] in 
   let coerce s = acc := s :: !acc ; !acc in
   fun () ->
@@ -74,7 +74,7 @@ let incr_str_list ?(default=Some []) ?(metavar = "STR") =
 ;;
 
 (* this is a ,-separated list of strings *)
-let str_list_option ?default ?(metavar = "STRLST") =
+let str_list_option ?default ?(metavar = " <strlst>") =
   let sep = "," in
   let coerce s = ExtString.String.nsplit s sep in
   fun () ->
