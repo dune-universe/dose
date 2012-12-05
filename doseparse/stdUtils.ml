@@ -15,8 +15,6 @@
 open ExtLib
 open Common
 
-include Util.Logging(struct let label = __FILE__ end) ;;
-
 let pp_versions_table fmt (from_cudf, pkglist) =
   List.iter (fun pkg ->
     let (p,v) = from_cudf (pkg.Cudf.package,pkg.Cudf.version) in
@@ -39,7 +37,8 @@ let if_application ?(alternatives=[]) filename main =
     |Unix.Unix_error(err, _, arg) -> Printf.eprintf "%s %s" (Unix.error_message err) arg
     |exn -> begin
         Printexc.print_backtrace stderr; 
-        fatal "The applications raised this exception : %s" (Printexc.to_string exn)
+        Printf.eprintf "The applications raised this exception : ";
+        Printf.eprintf "%s\n" (Printexc.to_string exn)
     end
   else begin
     Printf.eprintf "you are using %s as a module and not as an executable\n" Sys.argv.(0);
