@@ -83,7 +83,11 @@ let main () =
     in
     let pkglist = List.flatten dll in
     let pkglist = if status = [] then pkglist else Debian.Packages.merge status pkglist in
-    let origsourcelist = Sources.input_raw ~archs [Option.get sources] in
+    let origsourcelist = 
+      if not(Option.is_none sources) then
+        Sources.input_raw ~archs [Option.get sources]
+      else []
+    in
     let srclist = 
       if not(Option.is_none sources) then
         Sources.sources2packages ~noindep:true ~profiles:false native origsourcelist

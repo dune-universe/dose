@@ -222,15 +222,26 @@ let find_broken ?(global_constraints=true) universe =
   !broken_pkgs
 ;;
 
+let callback_aux acc d =
+  match d.Diagnostic.request with
+  |Diagnostic.Package p when (Diagnostic.is_solution d) -> 
+      acc := p::!acc
+  |Diagnostic.Package p ->
+      warning "Package %s is not installable" (CudfAdd.string_of_package p)
+  |_ -> ()
+;;
+
 let find_installable ?(global_constraints=true) universe =
   let acc = ref [] in
-  let callback d =
-    if Diagnostic.is_solution d then
-      match d.Diagnostic.request with
-      |Diagnostic.Package p -> acc := p::!acc
-      |_ -> assert false
-  in
+  let callback = callback_aux acc in
   ignore (univcheck ~global_constraints ~callback universe);
+  !acc
+;;
+
+let find_listinstallable ?(global_constraints=true) universe pkglist =
+  let acc = ref [] in
+  let callback = callback_aux acc in
+  ignore (listcheck ~global_constraints ~callback universe pkglist);
   !acc
 ;;
 
@@ -244,18 +255,6 @@ let find_listbroken ?(global_constraints=true) universe pkglist =
   in
   ignore (listcheck ~global_constraints ~callback universe pkglist);
   !broken_pkgs
-;;
-
-let find_listinstallable ?(global_constraints=true) universe pkglist =
-  let acc = ref [] in
-  let callback d =
-    if Diagnostic.is_solution d then
-      match d.Diagnostic.request with
-      |Diagnostic.Package p -> acc := p::!acc
-      |_ -> assert false
-  in
-  ignore (listcheck ~global_constraints ~callback universe pkglist);
-  !acc
 ;;
 
 let dependency_closure ?maxdepth ?conjunctive univ pkglist =
