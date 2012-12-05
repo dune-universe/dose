@@ -38,9 +38,11 @@ module Options = struct
 
   let dump = StdOpt.str_option ()
   let maforeign = StdOpt.store_true ()
+  let noindep = StdOpt.store_true ()
 
   open OptParser
   add options ~long_name:"defaultedMAforeign" ~help:"Convert Arch:all packages to Multi-Arch: foreign" maforeign;
+  add options ~long_name:"DropBuildIndep" ~help:"Drop Build-Indep dependencies" noindep;
   add options ~long_name:"dump" ~help:"dump the cudf file" dump;
 
 end
@@ -58,6 +60,7 @@ let main () =
 
   let options = Options.set_deb_options () in
   let hostarch = options.Debian.Debcudf.host in
+  let noindep = OptParse.Opt.get Options.noindep in
 
   let pkglist, srclist =
     match posargs with
@@ -67,7 +70,7 @@ let main () =
     |l -> 
         begin match List.rev l with
         |h::t ->
-          let srclist = Boilerplate.deb_load_source hostarch h in
+          let srclist = Boilerplate.deb_load_source ~noindep hostarch h in
           let pkglist = Deb.input_raw t in
           (pkglist,srclist)
         |_ -> fatal "An impossible situation occurred ?!#"
@@ -132,7 +135,11 @@ let main () =
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
   let callback d = 
     if summary then Diagnostic.collect results d ;
-    Diagnostic.fprintf ~pp ~failure ~success ~explain fmt d
+(*
+    if success && not explain && not failure then
+    else
+*)
+      Diagnostic.fprintf ~pp ~failure ~success ~explain fmt d
   in
 
   Util.Timer.start timer;
