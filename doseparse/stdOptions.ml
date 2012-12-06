@@ -151,6 +151,9 @@ module InputOptions = struct
     "outfile"
   ]
 
+  (** give a list of positional arguments returns two list of resources,
+      foreground and background. Positional arguments are assumed to be 
+      foreground resources. *)
   let parse_cmdline (it,im) posargs = 
     let add_format t = List.map (fun s -> (Url.scheme_to_string t)^"://"^s) in
     let fg = OptParse.Opt.get foreground in
