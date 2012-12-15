@@ -13,6 +13,9 @@ val compare : Cudf.package -> Cudf.package -> int
 (** A hash function for CUDF packages, using only their name and version. *)
 val hash : Cudf.package -> int
 
+(** Sort function: sorts a CUDF packages list using the standard CUDF comparison operator in ascending order *)
+val sort : Cudf.package list -> Cudf.package list
+
 (** Data structures: *)
 
 (** Specialized hashtable for CUDF packages. *)

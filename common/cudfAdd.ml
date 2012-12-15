@@ -23,6 +23,7 @@ include Util.Logging(struct let label = __FILE__ end) ;;
 let equal = Cudf.(=%)
 let compare = Cudf.(<%)
 
+let sort = List.sort ~cmp:compare
 let hash p = Hashtbl.hash (p.Cudf.package,p.Cudf.version)
 
 module Cudf_hashtbl =
