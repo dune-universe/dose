@@ -249,20 +249,34 @@ let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") hostarch l 
 let is_source ?(src="src") pkg = List.mem ("Type", src) pkg.Packages.extras;;
 
 exception MismatchSrc of Cudf.package list
+exception NotfoundSrc
 
-(** precondition : the package has "Type" bin and the universe contains
- * packages of "Type" src encoded with sources2packages.
- * Raise MismatchSrc if there exists a source package with the same name
- * but with a different version *)
+(**
+ [get_src_package universe binpkg] returns the source package associate
+ with the given binary package.
+ 
+ precondition : the package has "type" bin and the universe contains
+ packages of "type" src encoded with sources2packages.
+ 
+ Raise MismatchSrc if there exists a source package with the same name
+ but with a different version . Raise NotfoundSrc if the univese does not
+ contain either a source package associated with the binary package or
+ a source package with the same name but different version.
+*)
 let get_src_package universe binpkg =
   let sn = CudfAdd.encode ("src:"^(CudfAdd.get_property "source" binpkg)) in
   let sv = int_of_string (CudfAdd.get_property "sourceversion" binpkg) in
   try Cudf.lookup_package universe (sn,sv)
   with Not_found -> begin
-    let name = (CudfAdd.decode sn) in
+    let name = CudfAdd.decode sn in
     let number = CudfAdd.get_property "sourcenumber" binpkg in
-    try
-      let othersl = Cudf.lookup_packages universe sn in
+    match Cudf.lookup_packages universe sn with
+    |[] -> begin
+        warning "Cannot find source package %s %s associated to the binary package %s"
+        name number (CudfAdd.string_of_package binpkg);
+        raise NotfoundSrc
+    end
+    |othersl -> begin
       let othersrcnumbers = 
         List.map (fun othersrc ->
           CudfAdd.get_property "number" othersrc
@@ -273,25 +287,33 @@ let get_src_package universe binpkg =
       warning "There exist other versions (%s) of the source package %s in the repository"
       (String.concat " , " othersrcnumbers) name;
       raise (MismatchSrc othersl)
-    with ExtList.List.Empty_list | Not_found ->
-      fatal
-      "Cannot find source package %s %s associated to the binary package %s"
-      name number (CudfAdd.string_of_package binpkg)
+    end
   end
 ;;
 
 (** Returns an hash table that associates source packages (encoded by the
-    function sources2packages) to binary packages in the universe. Raise
-    MismatchSrc sourcepackagelist if the source package associated with a 
-    binary package cannot be found in the repository but there is another
-    source package with the same name but different version. *)
+    function sources2packages) to binary packages in the universe. It is
+    possible that a source package is not associated with any binary
+    packages.
+*)
 let srcbin_table universe =
   let h = CudfAdd.Cudf_hashtbl.create (Cudf.universe_size universe) in
-  let aux pkg = 
-    if CudfAdd.get_property "type" pkg = "src" then
-      let srcpkg = get_src_package universe pkg in
-      try let l = CudfAdd.Cudf_hashtbl.find h srcpkg in l := pkg::!l
-      with Not_found -> CudfAdd.Cudf_hashtbl.add h srcpkg (ref [pkg])
+  let aux binpkg = 
+    if CudfAdd.get_property "type" binpkg = "bin" then begin
+      try
+        let srcpkg = get_src_package universe binpkg in
+        try let l = CudfAdd.Cudf_hashtbl.find h srcpkg in l := binpkg::!l
+        with Not_found -> CudfAdd.Cudf_hashtbl.add h srcpkg (ref [binpkg])
+      with
+      |NotfoundSrc -> () (* this binary is not associated to any src *)
+      |MismatchSrc sl ->
+          (* we add the src to the table, but we do not associate to any
+             binary *)
+        List.iter (fun srcpkg -> 
+          if not(CudfAdd.Cudf_hashtbl.mem h srcpkg) then
+            CudfAdd.Cudf_hashtbl.add h srcpkg (ref [])
+        ) sl
+    end
   in
   Cudf.iter_packages aux universe ;
   h
