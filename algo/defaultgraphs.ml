@@ -88,6 +88,7 @@ module type GraphmlPrinterSig =
   sig
     type t
     val pp_graph : Format.formatter -> t -> unit
+    val print : Format.formatter -> t -> unit
     val to_file : t -> string -> unit
   end
 
@@ -187,11 +188,15 @@ module GraphmlPrinter (G : GraphmlSig) : GraphmlPrinterSig with type t = G.t = s
     Format.fprintf fmt "</graph>%s" trailer
   ;;
 
+  let print fmt graph =
+    pp_graph fmt graph;
+    Format.pp_print_flush fmt ()
+  ;;
+
   let to_file graph fname =
     let oc = open_out fname in
     let fmt = Format.formatter_of_out_channel oc in
-    pp_graph fmt graph;
-    Format.pp_print_flush fmt ();
+    print fmt graph;
     close_out oc
 end
 
@@ -284,6 +289,17 @@ module SyntacticDependencyGraph = struct
        let node (v: G.V.label) = []
        let edge (e: G.E.label) = []
     end)
+
+  module GraphmlPrinter = GraphmlPrinter (
+    struct
+        include G
+        let default_vertex_properties = []
+        let default_edge_properties = []
+        let data_map_edge e = []
+        let data_map_vertex v = []
+    end)
+
+
 
   let depgraphbar = Util.Progress.create "SyntacticDependencyGraph.dependency_graph"
 
