@@ -12,6 +12,7 @@
 
 (** Specialized Ocamlgraph modules *)
 
+open ExtLib
 open Graph
 open Common
 
@@ -293,13 +294,37 @@ module SyntacticDependencyGraph = struct
   module GraphmlPrinter = GraphmlPrinter (
     struct
         include G
-        let default_vertex_properties = []
-        let default_edge_properties = []
+        let default_vertex_properties =
+            ["name","string",None;
+             "version","string",None;
+             "architecture","string",None;
+             "type","string",None;
+             "source","string",None;
+             "sourcenumber","string",None;
+            ]
+       
+        let default_edge_properties = [
+          "vpkglist","string",None;
+          "binaries","string",None;
+          ]
+
         let data_map_edge e = []
-        let data_map_vertex v = []
+        let data_map_vertex = function
+          |PkgV.Pkg pkg ->
+            let name = ("name",CudfAdd.decode pkg.Cudf.package) in
+            let version = ("version",CudfAdd.string_of_version pkg) in
+       
+            let props =
+              List.filter_map (fun (key,_,_) ->
+                try let value = Cudf.lookup_package_property pkg key in
+                Some(key,value)
+                with Not_found -> None
+              ) default_vertex_properties
+            in
+            name :: version :: props
+          |PkgV.Or (pkg, _) -> []
+
     end)
-
-
 
   let depgraphbar = Util.Progress.create "SyntacticDependencyGraph.dependency_graph"
 
@@ -384,6 +409,39 @@ module MakePackageGraph(PkgV : Sig.COMPARABLE with type t = Cudf.package )= stru
        let edge (e: G.E.label) = []
      end
   )
+
+  module GraphmlPrinter = GraphmlPrinter (
+    struct
+        include G
+        let default_vertex_properties =
+            ["name","string",None;
+             "version","string",None;
+             "architecture","string",None;
+             "type","string",None;
+             "source","string",None;
+             "sourcenumber","string",None;
+            ]
+       
+        let default_edge_properties = [
+          "vpkglist","string",None;
+          "binaries","string",None;
+          ]
+
+        let data_map_edge e = []
+        let data_map_vertex pkg =
+          let name = ("name",CudfAdd.decode pkg.Cudf.package) in
+          let version = ("version",CudfAdd.string_of_version pkg) in
+     
+          let props =
+            List.filter_map (fun (key,_,_) ->
+              try let value = Cudf.lookup_package_property pkg key in
+              Some(key,value)
+              with Not_found -> None
+            ) default_vertex_properties
+          in
+          name :: version :: props
+
+    end)
 
   (* Maintenance Of Transitive Closures And Transitive Reductions Of Graphs *)
   (* J.A. La Poutre and J. van Leeuwen *)
@@ -529,7 +587,7 @@ module MakePackageGraph(PkgV : Sig.COMPARABLE with type t = Cudf.package )= stru
       (* Somewhere, v should be in path. This is the cycle. *)
       let (other, c) = get_cycle [] path v in
       let nv = 
-        let name = String.concat "/" (List.sort compare (List.map (fun p -> p.Cudf.package) (v::c))) in
+        let name = String.concat "/" (List.sort ~cmp:compare (List.map (fun p -> p.Cudf.package) (v::c))) in
         { Cudf.default_package with
           Cudf.package = CudfAdd.encode name;
           Cudf.version = 1;
@@ -605,7 +663,6 @@ module MakePackageGraph(PkgV : Sig.COMPARABLE with type t = Cudf.package )= stru
       end else graph
     in
     Util.Timer.stop timer sg
-
 
 end
 
