@@ -30,9 +30,7 @@ module Options = struct
   add options ~long_name:"output" ~help:"Use output file" out_file;
 end
 
-let debug fmt = Util.make_debug "StrongConflict" fmt
-let info fmt = Util.make_info "StrongConflict" fmt
-let warning fmt = Util.make_warning "StrongConflict" fmt
+include Util.Logging(struct let label = __FILE__ end) ;;
 
 let lc = ref None;;
 let oc = ref stdout;;
@@ -57,7 +55,7 @@ let main () =
   if OptParse.Opt.is_set Options.out_file then
     oc := open_out (OptParse.Opt.get Options.out_file);
 
-  let (universe,from_cudf,to_cudf) = Boilerplate.load_universe posargs in
+  let (_,universe,from_cudf,to_cudf) = Boilerplate.load_universe posargs in
   let universe = Depsolver.trim universe in
   let sc = Strongconflicts.strongconflicts universe in
 
@@ -79,21 +77,21 @@ let main () =
       List.iter (fun (c2, ct) -> 
         Printf.fprintf !oc "    * %s" c2.Cudf.package;
         (match ct with
-        | Strongconflicts.Explicit -> Printf.fprintf !oc " (explicit)\n"
-        | Strongconflicts.Conjunctive -> Printf.fprintf !oc " (conjunctive)\n"
-        | Strongconflicts.Other d ->
-					begin
-						Printf.fprintf !oc " (other)\n";
-						List.iter (function
-							| Diagnostic.Dependency (p1, l, pl) ->
-								Printf.fprintf !oc "      - dependency: %s / %s / %s\n"
-									p1.Cudf.package
-									(String.concat ", " (List.rev_map fst l))
-									(String.concat "," (List.rev_map (fun p2 -> p2.Cudf.package) pl));
-							| Diagnostic.Missing _    -> Printf.fprintf !oc "      - mss\n";
-							| Diagnostic.Conflict _   -> Printf.fprintf !oc "      - cfl\n";
-						) d;
-					end)
+        |Strongconflicts.Explicit -> Printf.fprintf !oc " (explicit)\n"
+        |Strongconflicts.Conjunctive -> Printf.fprintf !oc " (conjunctive)\n"
+        |Strongconflicts.Other d ->
+            begin
+              Printf.fprintf !oc " (other)\n";
+              List.iter (function
+                |Diagnostic.Dependency (p1, l, pl) ->
+                        Printf.fprintf !oc "      - dependency: %s / %s / %s\n"
+                          p1.Cudf.package
+                          (String.concat ", " (List.rev_map fst l))
+                          (String.concat "," (List.rev_map (fun p2 -> p2.Cudf.package) pl));
+                |Diagnostic.Missing _    -> Printf.fprintf !oc "      - mss\n";
+                |Diagnostic.Conflict _   -> Printf.fprintf !oc "      - cfl\n";
+              ) d;
+            end)
       ) cl
     ) cf_ht
   ) sc
