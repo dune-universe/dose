@@ -40,20 +40,18 @@ module Options = struct
   let src = Boilerplate.vpkglist_option ()
   let dst = Boilerplate.vpkg_option ()
   let cone = Boilerplate.vpkglist_option ()
-(*  let extract = StdOpt.str_option () *)
   let reverse_cone = Boilerplate.vpkglist_option ()
   let cone_maxdepth = StdOpt.int_option ()
   let out_type = out_option ~default:"cnf" ()
   let out_file = StdOpt.str_option ()
 
   open OptParser
-(*  add options ~short_name:'e' ~long_name:"extract" ~help:"dependency/conflict cone" extract; *)
   add options                 ~long_name:"trim" ~help:"Consider only installable packages" trim;
   add options ~short_name:'c' ~long_name:"cone" ~help:"dependency cone" cone;
   add options ~short_name:'r' ~long_name:"rcone" ~help:"reverse dependency cone" reverse_cone;
   add options                 ~long_name:"depth" ~help:"max depth - in conjunction with cone" cone_maxdepth;
-  add options ~short_name:'t' ~long_name:"outtype" ~help:"Output type" out_type;
-  add options ~short_name:'o' ~long_name:"outfile" ~help:"Output file" out_file;
+  add options ~short_name:'T' ~help:"Output type" out_type;
+  add options ~short_name:'o' ~help:"Output file" out_file;
 
   include Boilerplate.DistribOptions;;
   let default = List.remove Boilerplate.DistribOptions.default_options "inputtype" in
@@ -105,7 +103,14 @@ let output_cudf oc pr univ =
 
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  let input_format = Input.guess_format [posargs] in
+  let input_format =
+    (*
+    if OptParse.Opt.is_set Options.inputtype then 
+      Url.scheme_of_string (OptParse.Opt.get Options.inputtype)
+    else
+    *)
+      Input.guess_format [posargs]
+  in
   let options = Options.set_options input_format in
 
   Boilerplate.enable_debug(OptParse.Opt.get Options.verbose);
