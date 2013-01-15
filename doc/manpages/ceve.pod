@@ -6,7 +6,7 @@ ceve - parse package metadata
 
 =over 
 
-=item B<ceve> [-h] [-v] [-e I<pkgspec>] [-c I<pkgspec>] [-r I<pkgspec>] [--depth=I<n>]I<> [-t I<format>] [-o I<filename>] I<input-spec> 
+=item B<ceve> [-h] [-v] [-e I<pkgspec>] [-c I<pkgspec>] [-r I<pkgspec>] [--depth=I<n>]I<> [-T I<format>] [-G I<graph type>] [-o I<filename>] I<input-spec> 
 
 =back
 
@@ -51,63 +51,95 @@ as --rcone=I<pkgspec>.I<>
 
 In combination with the B<-e>, B<-c> or B<-r> options, this
 specifies the maximum depth for the transitive closure. 
-=item B<-t >I<format> 
+=item B<-T >I<format> 
 
-Specifies
-the output format to use. Possible values are B<dot> for a graph output in
-Dot/GraphViz format, B<cnf> for an output in CNF format, B<dimacs> for an output
-in the DIMACS format for CNF formulae, and B<cudf> for a pretty-print output
-in an RFC 822-like format. This option can also be specified as --outtype=I<format>.I<>
+Specifies the output format to use. Possible values are B<dot> for a graph
+output in Dot/GraphViz format, B<cnf> for an output in CNF format, B<dimacs>
+for an output in the DIMACS format for CNF formulae, and B<cudf> for a
+pretty-print output in an RFC 822-like format.
+
+=item B<-G >I<graph type> 
+
+Specifies the graph type format to compute. This option must be used together
+with the option B<-T >I<dot|gml|grml>. Possible values are:
+
+=item
+
+B<syn> for the syntactic graph where disjunctions nodes and conflicts are
+explicitely added to the graph. 
+
+=item
+
+B<pkg> for the package graph where all dependencies are threated uniformely and
+conflicts are not added to the graph.
+
+=item
+
+B<strong> the strong dependency graph.
+
+=item
+
+B<conj> the conjunctive graph where only conjunctive dependencies are
+considered.
 
 =item B<-o >I<filename> 
 
-Instead of stdout, send output to the file I<filename>. This option
-can also be specified as --outfile=I<filename>.I<> 
+Instead of stdout, send output to the file I<filename>.
+
 =item I<input-spec> 
 
 This is a URL specifying
 both the input format and the file to get the input from. Possible schemes
 are: 
-=item *
+
+=item
 
 B<cudf> for cudf files 
-=item *
 
-B<deb> for Debian package files (possibly compressed
-with L<gzip(1)> or L<bzip2(1)>, depending on compile-time options for dose3) 
-=item *
+=item
 
-B<debstdin>
-for Debian package files read from standard input 
-=item *
+B<deb> for Debian package files (possibly compressed with L<gzip(1)> or
+L<bzip2(1)>, depending on compile-time options for dose3) 
 
-B<eclipse> for Eclipse (p2)
-package files 
-=item *
+=item
+
+B<debstdin> for Debian package files read from standard input 
+
+=item
+
+B<edsp> for apt-get External Dependency Solver Protocol
+
+=item 
+
+B<eclipse> for Eclipse (p2) package files 
+
+=item
 
 B<pgsql> for PostgreSQL databasess 
-=item *
+
+=item
 
 B<sqlite> for sqlite databases
 
-=item *
+=item
 
 B<hdlist> for RPM hdlists 
-=item *
+
+=item
 
 B<synth> for urpmi synthesis hdlists 
- Some examples
-of URLs: 
+
+Some examples of URLs: 
  
-=item *
+=item
 
 deb://Packages.gz (the Debian file packages.gz in the current directory)
 
-=item *
+=item
 
 cudf:///home/examples/cudf/test.cudf (the CUDF file /home/examples/cudf/test.cudf)
 
-=item *
+=item
 
 psql://user@db.mancoosi.org:723/packages (the database I<packages> on host I<db.mancoosi.org>
 on port 723, accessed as user I<user>) 
