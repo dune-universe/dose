@@ -255,34 +255,35 @@ module SyntacticDependencyGraph = struct
     label
     (string_of_vertex dst)
 
-  module Display = struct
-      include G
-      let vertex_name v =
-        match G.V.label v with
-        |PkgV.Pkg i -> Printf.sprintf "\"%s\"" (CudfAdd.string_of_package i)
-        |PkgV.Or (i,c) -> Printf.sprintf "\"Or%s-%d\"" (CudfAdd.string_of_package i) c
+  module DotPrinter = struct
+    module Display = struct
+        include G
+        let vertex_name v =
+          match G.V.label v with
+          |PkgV.Pkg i -> Printf.sprintf "\"%s\"" (CudfAdd.string_of_package i)
+          |PkgV.Or (i,c) -> Printf.sprintf "\"Or%s-%d\"" (CudfAdd.string_of_package i) c
 
-      let graph_attributes = fun _ -> [`Rankdir `LeftToRight]
-      let get_subgraph = fun _ -> None
+        let graph_attributes = fun _ -> [`Rankdir `LeftToRight]
+        let get_subgraph = fun _ -> None
 
-      let default_edge_attributes = fun _ -> []
-      let default_vertex_attributes = fun _ -> [`Shape `Box]
+        let default_edge_attributes = fun _ -> []
+        let default_vertex_attributes = fun _ -> [`Shape `Box]
 
-      let vertex_attributes v =
-        match G.V.label v with
-        |PkgV.Or _ -> [`Label "Or" ; `Shape `Diamond]
-        |PkgV.Pkg p when p.Cudf.installed -> [ `Color 0x00FF00 ]
-        |_ -> []
+        let vertex_attributes v =
+          match G.V.label v with
+          |PkgV.Or _ -> [`Label "Or" ; `Shape `Diamond]
+          |PkgV.Pkg p when p.Cudf.installed -> [ `Color 0x00FF00 ]
+          |_ -> []
 
-      let edge_attributes e =
-        match G.E.label e with
-        |PkgE.DirDepends -> [`Style `Solid]
-        |PkgE.OrDepends -> [`Style `Dashed]
-        |PkgE.Conflict -> [`Color 0xFF0000; `Style `Solid; `Label "#"]
-    end
-
-  (** Graphviz outoput module *)
-  module DotPrinter = Graph.Graphviz.Dot(Display) 
+        let edge_attributes e =
+          match G.E.label e with
+          |PkgE.DirDepends -> [`Style `Solid]
+          |PkgE.OrDepends -> [`Style `Dashed]
+          |PkgE.Conflict -> [`Color 0xFF0000; `Style `Solid; `Label "#"]
+      end
+    include Graph.Graphviz.Dot(Display)
+    let print fmt g = fprint_graph fmt g
+  end 
   module S = Set.Make(PkgV)
 
   module GmlPrinter = Gml.Print (G) (
@@ -386,6 +387,8 @@ module MakePackageGraph(PkgV : Sig.COMPARABLE with type t = Cudf.package )= stru
   module O = GraphOper(G)
   module S = Set.Make(PkgV)
 
+ 
+  module DotPrinter = struct
   module Display = struct
       include G
       let vertex_name v = Printf.sprintf "\"%s\"" (CudfAdd.string_of_package v)
@@ -401,7 +404,9 @@ module MakePackageGraph(PkgV : Sig.COMPARABLE with type t = Cudf.package )= stru
 
       let edge_attributes e = []
     end
-  module DotPrinter = Graph.Graphviz.Dot(Display)
+    include Graph.Graphviz.Dot(Display)
+    let print fmt g = fprint_graph fmt g
+  end 
 
   module GmlPrinter = Gml.Print (G) (
     struct
@@ -699,22 +704,24 @@ module IntPkgGraph = struct
   module S = Set.Make(PkgV)
   module O = GraphOper(G)
 
-  module Display = struct
-      include G
-      let vertex_name uid = Printf.sprintf "\"%d\"" uid
+  module DotPrinter = struct
+    module Display = struct
+        include G
+        let vertex_name uid = Printf.sprintf "\"%d\"" uid
 
-      let graph_attributes = fun _ -> []
-      let get_subgraph = fun _ -> None
+        let graph_attributes = fun _ -> []
+        let get_subgraph = fun _ -> None
 
-      let default_edge_attributes = fun _ -> []
-      let default_vertex_attributes = fun _ -> []
+        let default_edge_attributes = fun _ -> []
+        let default_vertex_attributes = fun _ -> []
 
-      let vertex_attributes v = []
+        let vertex_attributes v = []
 
-      let edge_attributes e = []
-    end
-
-  module DotPrinter = Graph.Graphviz.Dot(Display)
+        let edge_attributes e = []
+      end
+    include Graph.Graphviz.Dot(Display)
+    let print fmt g = fprint_graph fmt g
+  end 
 
   module DIn = Dot.Parse (Builder.I(G))(
     struct
