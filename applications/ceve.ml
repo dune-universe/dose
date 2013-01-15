@@ -19,6 +19,7 @@ include Util.Logging(struct let label = __FILE__ end) ;;
 
 IFDEF HASOCAMLGRAPH THEN
   module DGraph = Defaultgraphs.SyntacticDependencyGraph
+  module PGraph = Defaultgraphs.PackageGraph
 END
 
 module Options = struct
@@ -36,6 +37,14 @@ module Options = struct
     let error _ s = Printf.sprintf "%s format not supported" s in
     Opt.value_option metavar default corce error
 
+  let grp_option ?default ?(metavar = "<syn|pkg|conj|strdeps|strcnf>") () =
+    let corce = function
+      |("syn"|"pkg"|"conj"|"strdeps"|"strcnf") as s -> s
+      | _ -> raise Format
+    in
+    let error _ s = Printf.sprintf "%s format not supported" s in
+    Opt.value_option metavar default corce error
+
   let trim = StdOpt.store_true ()
   let src = Boilerplate.vpkglist_option ()
   let dst = Boilerplate.vpkg_option ()
@@ -43,6 +52,7 @@ module Options = struct
   let reverse_cone = Boilerplate.vpkglist_option ()
   let cone_maxdepth = StdOpt.int_option ()
   let out_type = out_option ~default:"cnf" ()
+  let grp_type = grp_option ~default:"syn" ()
   let out_file = StdOpt.str_option ()
 
   open OptParser
@@ -50,8 +60,9 @@ module Options = struct
   add options ~short_name:'c' ~long_name:"cone" ~help:"dependency cone" cone;
   add options ~short_name:'r' ~long_name:"rcone" ~help:"reverse dependency cone" reverse_cone;
   add options                 ~long_name:"depth" ~help:"max depth - in conjunction with cone" cone_maxdepth;
-  add options ~short_name:'T' ~help:"Output type" out_type;
-  add options ~short_name:'o' ~help:"Output file" out_file;
+  add options ~short_name:'G' ~help:"Graph output type (with -T<dot|gml|grml>).  Default syn" grp_type;
+  add options ~short_name:'T' ~help:"Output type format. Default cnf" out_type;
+  add options ~short_name:'o' ~help:"Output file name" out_file;
 
   include Boilerplate.DistribOptions;;
   let default = List.remove Boilerplate.DistribOptions.default_options "inputtype" in
@@ -199,25 +210,34 @@ let main () =
         else stdout
       in
       begin match OptParse.Opt.get Options.out_type with
-      |"dot" -> 
+      |("dot" | "gml" | "grml") as t -> 
 IFDEF HASOCAMLGRAPH THEN
-          DGraph.DotPrinter.output_graph oc (DGraph.dependency_graph u)
+        let fmt = Format.formatter_of_out_channel oc in
+        begin match OptParse.Opt.get Options.grp_type with
+          |"syn" ->
+            let g = DGraph.dependency_graph u in
+            if t = "dot" then DGraph.DotPrinter.print fmt g
+            else if t = "gml" then DGraph.GmlPrinter.print fmt g
+            else if t = "grml" then DGraph.GraphmlPrinter.print fmt g
+            else assert false
+          |("pkg" | "strdeps" | "conj") as gt ->
+            let g =
+              if gt = "pkg" then PGraph.dependency_graph u
+              else if gt = "strdeps" then Strongdeps.strongdeps_univ u
+              else if gt = "conj" then Strongdeps.conjdeps_univ u
+              else assert false
+            in
+            if t = "dot" then
+              PGraph.DotPrinter.print fmt g
+            else if t = "gml" then
+              PGraph.GmlPrinter.print fmt g
+            else if t = "grml" then
+              PGraph.GraphmlPrinter.print fmt g
+            else assert false
+          |s -> failwith (Printf.sprintf "type %s not supported" s)
+        end
 ELSE
-        failwith ("dot not supported: needs ocamlgraph")
-END
-      |"gml" -> 
-IFDEF HASOCAMLGRAPH THEN
-          let fmt = Format.formatter_of_out_channel oc in
-          DGraph.GmlPrinter.print fmt (DGraph.dependency_graph u)
-ELSE
-        failwith ("gml not supported: needs ocamlgraph")
-END
-      |"grml" -> 
-IFDEF HASOCAMLGRAPH THEN
-          let fmt = Format.formatter_of_out_channel oc in
-          DGraph.GraphmlPrinter.print fmt (DGraph.dependency_graph u)
-ELSE
-        failwith ("gml not supported: needs ocamlgraph")
+        failwith (Printf.sprintf "format %s not supported: needs ocamlgraph" t)
 END
       |"cnf" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Cnf u)
       |"dimacs" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Dimacs u)
