@@ -296,7 +296,7 @@ module SyntacticDependencyGraph = struct
     struct
         include G
         let default_vertex_properties =
-            ["name","string",None;
+            ["package","string",None;
              "version","string",None;
              "architecture","string",None;
              "type","string",None;
@@ -312,7 +312,7 @@ module SyntacticDependencyGraph = struct
         let data_map_edge e = []
         let data_map_vertex = function
           |PkgV.Pkg pkg ->
-            let name = ("name",CudfAdd.decode pkg.Cudf.package) in
+            let name = ("package",CudfAdd.decode pkg.Cudf.package) in
             let version = ("version",CudfAdd.string_of_version pkg) in
        
             let props =
@@ -419,7 +419,7 @@ module MakePackageGraph(PkgV : Sig.COMPARABLE with type t = Cudf.package )= stru
     struct
         include G
         let default_vertex_properties =
-            ["name","string",None;
+            ["package","string",None;
              "version","string",None;
              "architecture","string",None;
              "type","string",None;
@@ -434,7 +434,7 @@ module MakePackageGraph(PkgV : Sig.COMPARABLE with type t = Cudf.package )= stru
 
         let data_map_edge e = []
         let data_map_vertex pkg =
-          let name = ("name",CudfAdd.decode pkg.Cudf.package) in
+          let name = ("package",CudfAdd.decode pkg.Cudf.package) in
           let version = ("version",CudfAdd.string_of_version pkg) in
      
           let props =
