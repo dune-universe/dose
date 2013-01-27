@@ -54,6 +54,7 @@ module Options = struct
   let out_type = out_option ~default:"cnf" ()
   let grp_type = grp_option ~default:"syn" ()
   let out_file = StdOpt.str_option ()
+  let request = Boilerplate.incr_str_list ()
 
   open OptParser
   add options                 ~long_name:"trim" ~help:"Consider only installable packages" trim;
@@ -62,6 +63,7 @@ module Options = struct
   add options                 ~long_name:"depth" ~help:"max depth - in conjunction with cone" cone_maxdepth;
   add options ~short_name:'G' ~help:"Graph output type (with -T<dot|gml|grml>).  Default syn" grp_type;
   add options ~short_name:'T' ~help:"Output type format. Default cnf" out_type;
+  add options                 ~long_name:"request" ~help:"Installation Request (can be repeated)" request;
   add options ~short_name:'o' ~help:"Output file name" out_file;
 
   include Boilerplate.DistribOptions;;
@@ -71,14 +73,33 @@ module Options = struct
 end;;
 
 (* -------------------------------- *)
+let parse_request tables l =
+  let open Debian in
+  let parse acc s =
+    if String.starts_with s "install: " then
+      let rs = String.strip (snd (String.split s " ")) in
+      let f = Packages.lexbuf_wrapper Packages_parser.vpkglist_top in
+      { acc with Cudf.install = Debcudf.ltocudf tables (f (Format822.dummy_loc,rs)) }
+    else if String.starts_with s "remove: " then
+      let rs = String.strip (snd (String.split s " ")) in
+      let f = Packages.lexbuf_wrapper Packages_parser.vpkglist_top in
+      { acc with Cudf.remove = Debcudf.ltocudf tables (f (Format822.dummy_loc,rs)) } 
+    else if String.starts_with s "upgrade: " then
+      let rs = String.strip (snd (String.split s " ")) in
+      let f = Packages.lexbuf_wrapper Packages_parser.vpkglist_top in
+      { acc with Cudf.upgrade = Debcudf.ltocudf tables (f (Format822.dummy_loc,rs)) }
+    else acc
+  in
+  List.fold_left parse Cudf.default_request l
+;;
 
 let output_to_sqlite args =
 IFDEF HASDB THEN
   begin
     let pl = List.unique (List.flatten (List.map (function u ->
       match Input.parse_uri u with
-      | ("deb", (_, _, _, _, f), _) -> Debian.Packages.input_raw [f]
-      | _ -> failwith "Other file formats than Debian are not yet supported for SQLite insertion"
+      |("deb", (_, _, _, _, f), _) -> Debian.Packages.input_raw [f]
+      |_ -> failwith "Other file formats than Debian are not yet supported for SQLite insertion"
      ) args)) in
     let db = Backend.open_database "sqlite" (None, None, Some "localhost", None, "cudf") in
     Backend.create_tables db; 
@@ -106,10 +127,12 @@ let nr_conflicts univ =
   ) 0 univ
 ;;
 
-let output_cudf oc pr univ =
+let output_cudf oc pr univ req =
   Cudf_printer.pp_preamble oc pr;
   Printf.fprintf oc "\n";
-  Cudf_printer.pp_universe oc univ
+  Cudf_printer.pp_universe oc univ;
+  Printf.fprintf oc "\n";
+  Cudf_printer.pp_request oc req
 ;;
 
 let main () =
@@ -133,6 +156,7 @@ let main () =
     output_to_sqlite posargs
   else
   let (preamble,universe,from_cudf,to_cudf) = Boilerplate.load_universe ~options posargs in
+  let request = Cudf.default_request in
   let universe =
     if OptParse.Opt.get Options.trim then
       Depsolver.trim ~global_constraints universe
@@ -241,7 +265,7 @@ ELSE
 END
       |"cnf" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Cnf u)
       |"dimacs" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Dimacs u)
-      |"cudf" -> output_cudf oc preamble u
+      |"cudf" -> output_cudf oc preamble u request
       |"table" ->
 IFDEF HASOCAMLGRAPH THEN
         Printf.fprintf oc "%d\t%d\t%d\n"
