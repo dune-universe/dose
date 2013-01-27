@@ -274,7 +274,7 @@ let preamble =
     ("buildessential",(`Bool (Some false))) ;
     ("filename",(`String (Some "")));
     ("type",(`String None));
-    ("installed-size",(`Int (Some 0)));
+    ("installedsize",(`Int (Some 0)));
     ]
   in
   CudfAdd.add_properties Cudf.default_preamble l
@@ -300,7 +300,7 @@ let add_extra_default extras tables pkg =
   let extras = 
     ("Type",("type",`String None))::
       ("Filename",("filename",`String None))::
-      ("Installed-Size",("installed-size",`Int (Some 0)))::
+      ("Installed-Size",("installedsize",`Int (Some 0)))::
         extras 
   in
   let l =
