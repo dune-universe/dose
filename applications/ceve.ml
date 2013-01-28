@@ -53,7 +53,6 @@ module Options = struct
   let cone_maxdepth = StdOpt.int_option ()
   let out_type = out_option ~default:"cnf" ()
   let grp_type = grp_option ~default:"syn" ()
-  let out_file = StdOpt.str_option ()
   let request = Boilerplate.incr_str_list ()
 
   open OptParser
@@ -64,11 +63,14 @@ module Options = struct
   add options ~short_name:'G' ~help:"Graph output type (with -T<dot|gml|grml>).  Default syn" grp_type;
   add options ~short_name:'T' ~help:"Output type format. Default cnf" out_type;
   add options                 ~long_name:"request" ~help:"Installation Request (can be repeated)" request;
-  add options ~short_name:'o' ~help:"Output file name" out_file;
+
+  include Boilerplate.InputOptions
+  Boilerplate.InputOptions.add_options ~default:["outfile"] options ;;
 
   include Boilerplate.DistribOptions;;
-  let default = List.remove Boilerplate.DistribOptions.default_options "inputtype" in
-  Boilerplate.DistribOptions.add_options ~default options ;;
+  (* let default = List.remove Boilerplate.DistribOptions.default_options
+   * "inputtype" in *)
+  Boilerplate.DistribOptions.add_options options ;;
 
 end;;
 
@@ -153,15 +155,13 @@ let output_cudf oc pr univ req =
 
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  let input_format =
-    (*
+  let (input_type,implicit) =
     if OptParse.Opt.is_set Options.inputtype then 
-      Url.scheme_of_string (OptParse.Opt.get Options.inputtype)
+      (Url.scheme_of_string (OptParse.Opt.get Options.inputtype),true)
     else
-    *)
-      Input.guess_format [posargs]
+      (Input.guess_format [posargs],false)
   in
-  let options = Options.set_options input_format in
+  let options = Options.set_options input_type in
 
   Boilerplate.enable_debug(OptParse.Opt.get Options.verbose);
   Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
@@ -171,7 +171,15 @@ let main () =
   if OptParse.Opt.get Options.out_type = "sqlite" then
     output_to_sqlite posargs
   else
-  let (preamble,universe,from_cudf,to_cudf) = Boilerplate.load_universe ~options posargs in
+  let (fg,bg) = Options.parse_cmdline (input_type,implicit) posargs in
+  let (preamble,pkgll,from_cudf,to_cudf) = Boilerplate.load_list ~options [fg;bg] in
+  let (fg_pkglist, bg_pkglist) = match pkgll with [fg;bg] -> (fg,bg) | _ -> assert false in
+  let universe =
+    let s = CudfAdd.to_set (fg_pkglist @ bg_pkglist) in
+    Cudf.load_universe (CudfAdd.Cudf_set.elements s)
+  in
+
+  (* let (preamble,universe,from_cudf,to_cudf) = Boilerplate.load_universe ~options [fg;bg] in *)
   let request = parse_request to_cudf (OptParse.Opt.get Options.request) in
   let universe =
     if OptParse.Opt.get Options.trim then
@@ -245,8 +253,8 @@ let main () =
     List.iter (fun l ->
       let u = Cudf.load_universe l in
       let oc =
-        if OptParse.Opt.is_set Options.out_file then 
-          open_out (OptParse.Opt.get Options.out_file)
+        if OptParse.Opt.is_set Options.outfile then 
+          open_out (OptParse.Opt.get Options.outfile)
         else stdout
       in
       begin match OptParse.Opt.get Options.out_type with
