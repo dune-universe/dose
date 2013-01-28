@@ -73,21 +73,37 @@ module Options = struct
 end;;
 
 (* -------------------------------- *)
-let parse_request tables l =
+
+let loadl to_cudf l =
+  List.flatten (
+    List.map (fun ((name,aop),sel) ->
+      let encname =
+        let n = match aop with Some a -> name^":"^a | None -> name in
+        CudfAdd.encode n
+      in
+      match CudfAdd.cudfop sel with
+      |None -> [(encname, None)]
+      |Some(op,v) ->
+          [(encname,Some(op,snd(to_cudf (encname,v))))]
+    ) l
+  )
+;;
+
+let parse_request to_cudf l =
   let open Debian in
   let parse acc s =
     if String.starts_with s "install: " then
       let rs = String.strip (snd (String.split s " ")) in
       let f = Packages.lexbuf_wrapper Packages_parser.vpkglist_top in
-      { acc with Cudf.install = Debcudf.ltocudf tables (f (Format822.dummy_loc,rs)) }
+      { acc with Cudf.install = loadl to_cudf (f (Format822.dummy_loc,rs)) }
     else if String.starts_with s "remove: " then
       let rs = String.strip (snd (String.split s " ")) in
       let f = Packages.lexbuf_wrapper Packages_parser.vpkglist_top in
-      { acc with Cudf.remove = Debcudf.ltocudf tables (f (Format822.dummy_loc,rs)) } 
+      { acc with Cudf.remove = loadl to_cudf (f (Format822.dummy_loc,rs)) } 
     else if String.starts_with s "upgrade: " then
       let rs = String.strip (snd (String.split s " ")) in
       let f = Packages.lexbuf_wrapper Packages_parser.vpkglist_top in
-      { acc with Cudf.upgrade = Debcudf.ltocudf tables (f (Format822.dummy_loc,rs)) }
+      { acc with Cudf.upgrade = loadl to_cudf (f (Format822.dummy_loc,rs)) }
     else acc
   in
   List.fold_left parse Cudf.default_request l
@@ -156,7 +172,7 @@ let main () =
     output_to_sqlite posargs
   else
   let (preamble,universe,from_cudf,to_cudf) = Boilerplate.load_universe ~options posargs in
-  let request = Cudf.default_request in
+  let request = parse_request to_cudf (OptParse.Opt.get Options.request) in
   let universe =
     if OptParse.Opt.get Options.trim then
       Depsolver.trim ~global_constraints universe
