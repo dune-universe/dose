@@ -137,6 +137,7 @@ end
 module InputOptions = struct
   open OptParse ;;
 
+  let trim = StdOpt.store_true ()
   let latest = StdOpt.store_true ()
   let checkonly = StdDebian.vpkglist_option ()
   let background = incr_str_list ()
@@ -144,6 +145,7 @@ module InputOptions = struct
   let outfile = StdOpt.str_option ()
 
   let default_options = [
+    (* "trim"; *)
     "latest";
     "checkonly";
     "bg";
@@ -170,11 +172,17 @@ module InputOptions = struct
     if List.length default > 0 then begin
       let group = add_group options "Input Options" in
 
-     if List.mem "checkonly" default then
-        add options ~group ~long_name:"checkonly" ~help:"Check only these package" checkonly;
+      if List.mem "checkonly" default then
+        add options ~group ~long_name:"checkonly" 
+        ~help:"Check only these package" checkonly;
+
+      if List.mem "trim" default then
+        add options ~group ~long_name:"trim" 
+        ~help:"Consider only installable packages" trim;
 
       if List.mem "latest" default then
-      add options ~group ~long_name:"latest" ~help:"Check only the latest version of each package" latest;
+        add options ~group ~long_name:"latest" 
+        ~help:"Check only the latest version of each package" latest;
 
       if List.mem "fg" default then
         add options ~group ~long_name:"fg"
