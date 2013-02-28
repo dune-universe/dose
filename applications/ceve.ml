@@ -45,7 +45,6 @@ module Options = struct
     let error _ s = Printf.sprintf "%s format not supported" s in
     Opt.value_option metavar default corce error
 
-  let trim = StdOpt.store_true ()
   let src = Boilerplate.vpkglist_option ()
   let dst = Boilerplate.vpkg_option ()
   let cone = Boilerplate.vpkglist_option ()
@@ -56,7 +55,6 @@ module Options = struct
   let request = Boilerplate.incr_str_list ()
 
   open OptParser
-  add options                 ~long_name:"trim" ~help:"Consider only installable packages" trim;
   add options ~short_name:'c' ~long_name:"cone" ~help:"dependency cone" cone;
   add options ~short_name:'r' ~long_name:"rcone" ~help:"reverse dependency cone" reverse_cone;
   add options                 ~long_name:"depth" ~help:"max depth - in conjunction with cone" cone_maxdepth;
@@ -65,7 +63,7 @@ module Options = struct
   add options                 ~long_name:"request" ~help:"Installation Request (can be repeated)" request;
 
   include Boilerplate.InputOptions
-  Boilerplate.InputOptions.add_options ~default:["outfile"] options ;;
+  Boilerplate.InputOptions.add_options ~default:["outfile";"latest";"trim"] options ;;
 
   include Boilerplate.DistribOptions;;
   (* let default = List.remove Boilerplate.DistribOptions.default_options
@@ -176,16 +174,17 @@ let main () =
   let (fg_pkglist, bg_pkglist) = match pkgll with [fg;bg] -> (fg,bg) | _ -> assert false in
   let universe =
     let s = CudfAdd.to_set (fg_pkglist @ bg_pkglist) in
-    Cudf.load_universe (CudfAdd.Cudf_set.elements s)
+    let u = 
+      if OptParse.Opt.get Options.latest then
+        Cudf.load_universe (CudfAdd.latest (CudfAdd.Cudf_set.elements s))
+      else 
+        Cudf.load_universe (CudfAdd.Cudf_set.elements s)
+    in
+    if OptParse.Opt.get Options.trim then Depsolver.trim ~global_constraints u else u
   in
 
   (* let (preamble,universe,from_cudf,to_cudf) = Boilerplate.load_universe ~options [fg;bg] in *)
   let request = parse_request to_cudf (OptParse.Opt.get Options.request) in
-  let universe =
-    if OptParse.Opt.get Options.trim then
-      Depsolver.trim ~global_constraints universe
-    else universe
-  in
   let get_cudfpkg ((n,a),c) = 
     let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
     try List.hd(Cudf.lookup_packages ~filter universe name)

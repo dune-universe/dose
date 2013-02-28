@@ -47,7 +47,7 @@ Similar to the B<-e> and B<-c> options, but uses the reverse dependency
 relation to make the transitive closure. This option can also be specified
 as --rcone=I<pkgspec>.I<> 
 
-=item B<--depth=>I<n> 
+=item B<--depth >I<n> 
 
 In combination with the B<-e>, B<-c> or B<-r> options, this
 specifies the maximum depth for the transitive closure. 
@@ -57,6 +57,22 @@ Specifies the output format to use. Possible values are B<dot> for a graph
 output in Dot/GraphViz format, B<cnf> for an output in CNF format, B<dimacs>
 for an output in the DIMACS format for CNF formulae, and B<cudf> for a
 pretty-print output in an RFC 822-like format.
+
+=item B<-t >I<input-spec>
+
+Select the input type.
+
+=item B<--request >I<installation-request>
+
+Specifies an installation request of the form "B<install:> I<vpkglist>" or
+"B<remove:> I<vpkglist>" or "B<upgrade:> I<vpkglist>" where I<vpkglist> is a list of (real)
+packages possibly associated with a constraint. Ex.: bash (< 2.0), exim (=
+3.1-debian1). This option can be repeated to specify install, remove and
+upgrade actions.
+
+Examples:
+
+=item --request "install: bash (< 2.0), exim (= 3.1-debian1)" --request "upgrade: apt-cudf"
 
 =item B<-G >I<graph type> 
 
@@ -88,9 +104,8 @@ Instead of stdout, send output to the file I<filename>.
 
 =item I<input-spec> 
 
-This is a URL specifying
-both the input format and the file to get the input from. Possible schemes
-are: 
+This is a URL specifying both the input format and the file to get the input
+from. Possible schemes are: 
 
 =item
 
