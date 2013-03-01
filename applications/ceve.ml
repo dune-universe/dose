@@ -37,9 +37,9 @@ module Options = struct
     let error _ s = Printf.sprintf "%s format not supported" s in
     Opt.value_option metavar default corce error
 
-  let grp_option ?default ?(metavar = "<syn|pkg|conj|strdeps|strcnf>") () =
+  let grp_option ?default ?(metavar = "<syn|pkg|conj|strdeps|strcnf|dom>") () =
     let corce = function
-      |("syn"|"pkg"|"conj"|"strdeps"|"strcnf") as s -> s
+      |("syn"|"pkg"|"conj"|"strdeps"|"strcnf"|"dom") as s -> s
       | _ -> raise Format
     in
     let error _ s = Printf.sprintf "%s format not supported" s in
@@ -267,11 +267,14 @@ IFDEF HASOCAMLGRAPH THEN
             else if t = "gml" then DGraph.GmlPrinter.print fmt g
             else if t = "grml" then DGraph.GraphmlPrinter.print fmt g
             else assert false
-          |("pkg" | "strdeps" | "conj") as gt ->
+          |("pkg" | "strdeps" | "conj"| "dom") as gt ->
             let g =
               if gt = "pkg" then PGraph.dependency_graph u
               else if gt = "strdeps" then Strongdeps.strongdeps_univ u
               else if gt = "conj" then Strongdeps.conjdeps_univ u
+              else if gt = "dom" then
+                let g = Strongdeps.strongdeps_univ ~transitive:true universe in
+                Dominators.dominators_tarjan g
               else assert false
             in
             if t = "dot" then
