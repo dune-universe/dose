@@ -92,13 +92,7 @@ let version_of_target getv = function
 
 let timer = Util.Timer.create "Solver"
 
-let outdated 
-  ?(dump=false) 
-  ?(failure=false) 
-  ?(explain=false) 
-  ?(summary=false)
-  ?(checklist=None) 
-  ?options repository =
+let future ?options repository =
 
   let worktable = Hashtbl.create 1024 in
   let version_acc = ref [] in
@@ -191,22 +185,36 @@ let outdated
       ) worktable [] 
     )
   in
-  let pkglist = (CudfAdd.Cudf_set.elements pkgset) in
-  
-  if dump then begin
-    Cudf_printer.pp_preamble stdout Debian.Debcudf.preamble;
-    print_newline ();
-    Cudf_printer.pp_packages stdout (List.sort pkglist);
-    exit(0)
-  end;
-      
+  let pkglist = CudfAdd.Cudf_set.elements pkgset in
   let universe = Cudf.load_universe pkglist in
-  let universe_size = Cudf.universe_size universe in
-  info "Total future: %d" universe_size;
 
   Hashtbl.clear worktable;
   Hashtbl.clear constraints_table;
 
+  universe, tables
+
+;;
+ 
+let outdated 
+  ?(dump=false) 
+  ?(failure=false) 
+  ?(explain=false) 
+  ?(summary=false)
+  ?(checklist=None) 
+  ?options repository =
+
+  let universe, tables = future ?options repository in
+ 
+  let universe_size = Cudf.universe_size universe in
+  info "Total future: %d" universe_size;
+
+  if dump then begin
+    Cudf_printer.pp_preamble stdout Debian.Debcudf.preamble;
+    print_newline ();
+    Cudf_printer.pp_universe stdout universe;
+    exit(0)
+  end;
+      
   let checklist =
     let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
     if OptParse.Opt.is_set Options.checkonly then begin
@@ -273,7 +281,7 @@ let outdated
   Format.fprintf fmt "broken-packages: %d@." broken;
 
   if summary then
-        Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
+    Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
 
   results
 ;; 
