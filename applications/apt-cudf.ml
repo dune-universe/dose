@@ -381,17 +381,13 @@ let main () =
     let inst = s.CudfDiff.installed in
     let rem = s.CudfDiff.removed in
     match CudfAdd.Cudf_set.is_empty inst, CudfAdd.Cudf_set.is_empty rem with
-    |false,true -> begin
-        empty := false;
-        Format.printf "Install: %a@." pp_pkg (inst,univ)
+    |false,_ -> begin
+      empty := false;
+      Format.printf "Install: %a@." pp_pkg (inst,univ)
     end
     |true,false -> begin
-        empty := false;
-        Format.printf "Remove: %a@." pp_pkg (rem,univ)
-    end
-    |false,false -> begin
-        empty := false;
-        Format.printf "Install: %a@." pp_pkg (inst,univ)
+      empty := false;
+      Format.printf "Remove: %a@." pp_pkg (rem,univ)
     end
     |true,true -> ()
   ) diff;
