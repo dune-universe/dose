@@ -48,62 +48,62 @@ def test_application(self,expected_file,cmd):
 class DoseTests(unittest.TestCase):
     def test_apt_cudf(self):
         expected_file = "tests/applications/dose-tests/apt-cudf-install-i386"
-        cmd = ["./apt-cudf.native", "-e", "--solver=aspcud", "--native-arch=i386", "tests/deb/edsp/install-sarge-etch.edsp"]
+        cmd = ["./apt-cudf.native", "--conf", "doc/apt-cudf/apt-cudf.conf", "-e", "--solver=aspcud", "--native-arch=i386", "tests/deb/edsp/install-sarge-etch.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_textlive(self):
         expected_file = "tests/applications/dose-tests/apt-cudf-install-textlive"
-        cmd = ["./apt-cudf.native", "--solver=aspcud", "--native-arch=amd64", "--foreign-archs=i386", "tests/deb/edsp/textlive.edsp"]
+        cmd = ["./apt-cudf.native", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=amd64", "--foreign-archs=i386", "tests/deb/edsp/textlive.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_multiarch_same_provides_multi(self):
         expected_file = "tests/applications/dose-tests/multiarch-same-provides-multi"
-        cmd = ["./apt-cudf.native", "-e", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-same-provides-multi.edsp"]
+        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-same-provides-multi.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_multiarch_same_provides(self):
         expected_file = "tests/applications/dose-tests/multiarch-same-provides"
-        cmd = ["./apt-cudf.native", "-e", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-same-provides.edsp"]
+        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-same-provides.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_multiarch_same_half(self):
         expected_file = "tests/applications/dose-tests/multiarch-same-half"
-        cmd = ["./apt-cudf.native", "-e", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-same-half.edsp"]
+        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-same-half.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_multiarch_same_conflicts(self):
         expected_file = "tests/applications/dose-tests/multiarch-same-conflicts"
-        cmd = ["./apt-cudf.native", "-e", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-same-conflicts.edsp"]
+        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-same-conflicts.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_multiarch_same_conflictsi_virtual(self):
         expected_file = "tests/applications/dose-tests/multiarch-same-conflicts-virtual"
-        cmd = ["./apt-cudf.native", "-e", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-same-conflicts-virtual.edsp"]
+        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-same-conflicts-virtual.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_multiarch_same_no_deps(self):
         expected_file = "tests/applications/dose-tests/multiarch-same-no-deps"
-        cmd = ["./apt-cudf.native", "-e", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-same-no-deps.edsp"]
+        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-same-no-deps.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_multiarch_none(self):
         expected_file = "tests/applications/dose-tests/multiarch-none"
-        cmd = ["./apt-cudf.native", "-e", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-none.edsp"]
+        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-none.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_multiarch_foreign(self):
         expected_file = "tests/applications/dose-tests/multiarch-foreign"
-        cmd = ["./apt-cudf.native", "-e", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-foreign.edsp"]
+        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-foreign.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_multiarch_foreign(self):
         expected_file = "tests/applications/dose-tests/multiarch-foreign-depends"
-        cmd = ["./apt-cudf.native", "-e", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-foreign-depends.edsp"]
+        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-foreign-depends.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_multiarch_allowed(self):
         expected_file = "tests/applications/dose-tests/multiarch-allowed"
-        cmd = ["./apt-cudf.native", "-e", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-allowed.edsp"]
+        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-allowed.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_failure_distcheck(self):
@@ -154,17 +154,17 @@ class DoseTests(unittest.TestCase):
 
     def test_ceve_cnf(self):
         expected_file = "tests/applications/dose-tests/ceve_cnf"
-        cmd = ["./ceve.native","-t","cnf","deb://tests/DebianPackages/sid.packages.bz2"]
+        cmd = ["./ceve.native","-T","cnf","deb://tests/DebianPackages/sid.packages.bz2"]
         test_application(self,expected_file,cmd)
 
     def test_ceve_cone_dot(self):
         expected_file = "tests/applications/dose-tests/ceve_cone_dot"
-        cmd = ["./ceve.native","-t","dot","-c", "3dchess", "deb://tests/DebianPackages/sid.packages.bz2"]
+        cmd = ["./ceve.native","-T","dot","-c", "3dchess", "deb://tests/DebianPackages/sid.packages.bz2"]
         test_application(self,expected_file,cmd)
 
     def test_ceve_cone_multiarch_dot(self):
         expected_file = "tests/applications/dose-tests/ceve_cone_multiarch_dot"
-        cmd = ["./ceve.native","-t","dot","-c", "3dchess:amd64", "--deb-native-arch", "amd64", "deb://tests/DebianPackages/sid.packages.bz2"]
+        cmd = ["./ceve.native","-T","dot","-c", "3dchess:amd64", "--deb-native-arch", "amd64", "-t", "deb", "tests/DebianPackages/sid.packages.bz2"]
         test_application(self,expected_file,cmd)
 
     def test_deb_buildcheck(self):
@@ -172,29 +172,29 @@ class DoseTests(unittest.TestCase):
         cmd = ["./deb-buildcheck.native", "--failures", "--explain", "--latest", "--deb-native-arch=amd64", "tests/DebianPackages/Sid-amd64-Packages-050812.bz2", "tests/DebianPackages/Sid-Sources-050812.bz2"]
         test_application(self,expected_file,cmd)
 
-    def test_deb_buildcheck_cross(self):
-        expected_file = "tests/applications/dose-tests/apt-get-build-dep-armel-results"
-        cmd = ["./deb-buildcheck.native", "--failures", "--successes", "--latest", "--deb-native-arch=amd64", "--deb-foreign-archs=armel", "--deb-host-arch=armel", "tests/DebianPackages/Sid-amd64-Packages-050812.bz2", "tests/DebianPackages/Sid-armel-Packages-050812.bz2", "tests/DebianPackages/Sid-Sources-050812.bz2"]
-        if verbose == 2:
-            print " ".join(cmd)
-        import yaml, urllib
-        p = Popen(cmd, stdout=PIPE)
-        data = yaml.load(p.communicate()[0])
-        apt_result = dict()
-        with open(expected_file) as f:
-            for line in f:
-                k, v = line.split()
-                apt_result[k] = v
-        # see bug#683786 for explanation of exceptions
-        exceptions = [ 'bomberclone', 'libcatalyst-actionrole-acl-perl', 'obex-data-server', 'qdox', 'renattach', 'trueprint', 'worker' ]
-        #t = open("test-results",'w')
-        for l in data.get('report', []):
-            k = urllib.unquote(l['package']).split(':')[-1]
-            #print >>t, k,apt_result[k]
-            if l['status'] == 'ok':
-                self.assertTrue(apt_result[k] == "OK" or k in exceptions)
-            else :
-                self.assertTrue(apt_result[k] == "FAIL" or k in exceptions)
+#    def test_deb_buildcheck_cross(self):
+#        expected_file = "tests/applications/dose-tests/apt-get-build-dep-armel-results"
+#        cmd = ["./deb-buildcheck.native", "--failures", "--successes", "--latest", "--deb-native-arch=amd64", "--deb-foreign-archs=armel", "--deb-host-arch=armel", "tests/DebianPackages/Sid-amd64-Packages-050812.bz2", "tests/DebianPackages/Sid-armel-Packages-050812.bz2", "tests/DebianPackages/Sid-Sources-050812.bz2"]
+#        if verbose == 2:
+#            print " ".join(cmd)
+#        import yaml, urllib
+#        p = Popen(cmd, stdout=PIPE)
+#        data = yaml.load(p.communicate()[0])
+#        apt_result = dict()
+#        with open(expected_file) as f:
+#            for line in f:
+#                k, v = line.split()
+#                apt_result[k] = v
+#        # see bug#683786 for explanation of exceptions
+#        exceptions = [ 'bomberclone', 'libcatalyst-actionrole-acl-perl', 'obex-data-server', 'qdox', 'renattach', 'trueprint', 'worker' ]
+#        #t = open("test-results",'w')
+#        for l in data.get('report', []):
+#            k = urllib.unquote(l['package']).split(':')[-1]
+#            #print >>t, k,apt_result[k]
+#            if l['status'] == 'ok':
+#                self.assertTrue(apt_result[k] == "OK" or k in exceptions)
+#            else :
+#                self.assertTrue(apt_result[k] == "FAIL" or k in exceptions)
 
 def main():
     global verbose
