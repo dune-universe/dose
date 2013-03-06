@@ -10,6 +10,7 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
+(** This module compute the difference between a cudf universe and a cudf solution *)
 
 open ExtLib
 
@@ -29,7 +30,9 @@ let to_set univ l =
   ) Cudf_set.empty l
 ;;
 
-(* for each pkgname I've the list of all versions that were installed or removed *)
+(** [diff univ sol] for each pkgname returns the list of all 
+    versions that were installed (in the solution) or removed (from the
+    universe) *)
 let diff univ sol =
   let pkgnames = CudfAdd.pkgnames univ in
   let h = Hashtbl.create (StringSet.cardinal pkgnames) in
@@ -42,8 +45,9 @@ let diff univ sol =
     Hashtbl.add h pkgname s
   ) pkgnames ;
   h
+;;
 
-(* 
+(**
    [all] : all versions of a package in the universe . 
    [s] : the set of version for version of a package in a solution 
    returns a list that contains for each version its status : installed, 
