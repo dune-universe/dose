@@ -52,7 +52,7 @@ let fatal fmt =
     if OptParse.Opt.is_set Options.solver then begin
       Format.printf "Error: %s" (OptParse.Opt.get Options.solver);
       if OptParse.Opt.is_set Options.criteria then
-        Format.printf " (%s)" (OptParse.Opt.get Options.criteria);
+        Format.printf " \"%s\"" (OptParse.Opt.get Options.criteria);
       Format.printf "@."
     end;
     Format.printf "Message: %s@." s;
@@ -167,12 +167,12 @@ let choose_criteria ?(criteria=None) ~conffile solver request =
     with Not_found ->
       try List.assoc "*" conf 
       with Not_found -> [
-        ("install", "-removed,-changed");
-        ("remove", "-removed,-changed");
-        ("upgrade","-new,-removed,-notuptodate");
-        ("dist-upgrade","-notuptodate,-new,-removed");
-        ("trendy","-removed,-notuptodate,-unsat_recommends,-new");
-        ("paranoid","-removed,-changed")
+        "upgrade", "-count(new),-count(removed),-notuptodate(solution)";
+        "dist-upgrade", "-notuptodate(solution),-count(new)";
+        "install", "-count(removed),-count(changed)";
+        "remove", "-count(removed),-count(changed)";
+        "trendy", "-count(removed),-notuptodate(solution),-unsat_recommends(solution),-count(new)";
+        "paranoid", "-count(removed),-count(changed)";
       ]
   in
   match criteria,request.Edsp.preferences with
