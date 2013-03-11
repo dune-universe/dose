@@ -3,53 +3,240 @@
 Debian packages can be represented by a tuple composed of name,
 version, architecture, multiarch, depends, conflicts, provides.
 
-In a multi architecture environment there might be more then one
-package with the same name and version, but different architectures.
-Since cudf semantics does not allow duplicated packages with the same
-pair $(name,version)$ the encoding to cudf 2.0 must regain this
-property by encoding each debian package $(name,version,architecture)$
-to a cudf package identified only by the pair $(name,version)$.
-Different strategies are possible : to maintain readability of the
-cudf document we encode each debian package as $(name:architecture,
-version)$, therefore identifying the corresponding cudf package by
-concatenating name with the architecture using the character ``:'' as
-separator. Note that since the character ``:'' is not part of the
-character sets used to denote cudf packages, it will be encoded in a
-cudf document as its hexadecimal encoding ``\%\ldots''.
+The multi-arch encoding in relation with two factors : a reference
+architecture, that we call ``native'' architecture and set of
+``foreign'' architectures. For the same repository, we can have a
+different cudf translation. This is in contrast with pre-multi
+architecture cudf encoding of a Debian repository where one encoding
+was used for all architectures. We define the set of foreign plus the
+native architecture as $\cal{A}$.
+
+Let \names{} be a set of names, \architectures{} a set of architecture
+names and \versions{} be an ordered set of version strings. The exact
+nature of versions are not important for our purpose safe the knowledge
+that a closed set of Debian version can be safely associated with a
+set cudf versions. We define the set of multi-architecture identifiers
+as $\cal{M} = \{ \texttt{None, Same, Allowed,Foreign} \}$.
+
+A \emph{constraint} is a unary predicate on versions: for any $v \in
+\versions$ we may write constraints $=v$, $\neq v$, $<v$, $>v$, $\leq
+v$, and $\geq v$.  The set of constraints is denoted by $\con$.
+
+\begin{definition} 
+  A \emph{package} $p$ is a tuple $(n,v,a,D,C)$ consisting of:
+  \begin{itemize}
+    \item a {\rm package name} $n \in \names$,
+    \item a {\em version} $v \in \versions$,
+    \item a {\em architecture name} $a \in \architectures{}$,
+    \item a {\em multi-arch identifier} $m \in \multiarchs{M}$,
+    \item a set of dependencies $D \in\power{\power{\names\times\con}}$,
+    \item a set of conflicts $C \in\power{\names\times\con}$.
+    \item a set of provides $C \in\power{\names\times \{ = \} }$.
+  \end{itemize}
+\end{definition}
+where we use $\power{X}$ for the set of all subsets of $X$.
+
+\begin{definition}
+  For a set of packages $P$ we define
+  \(\dep{P} := \bigcup_{d\in \dependency{p}} d\), and\linebreak
+  \(\depnames{P} := \{ n | (n,c) \in\dep{P}\}\).
+\end{definition}
+That is, $\dep{P}$ is the set of all pairs of names and
+constraints occurring in dependencies in $P$, and $\depnames{P}$ its
+projection to names. We abbreviate $\dep{\{p\}}$ to $\dep{p}$.
+
+A Debian repository is a set of Debian packages that are uniquely
+identified by package name, version, and architecture name :
+\begin{definition}
+  \label{def:repository}
+  A \emph{repository} is a set $R$ of packages such that for all $p, q
+  \in R$: if $\name{p}=\name{q}$ and $\version{p}=\version{q}$ and 
+  $\architecture{p}=\architecture{q}$ then $p=q$.
+\end{definition}
+
+We use the infix notation $(.)$ to access individual package
+components (e.g.~$p.n$ stands for the name of package $p$). This
+notion extends to sets of packages, e.g.~$R.n$ is the set of names of
+packages in the repository $R$.
+
+Provides encoding \ldots
+\begin{definition}
+  Given a repository of packages, we define the function 
+  \[
+    \rel{(n,c)} := \{ p \in R | p.n = n || \}
+  \]
+\end{definition}
+
+In this section we will present the encoding of a Debian repository to
+a cudf repository.
+
+\paragraph{Uniqueness}.
+Given a Debian repository, packages are uniquely identified by name,
+version and architecture. Cudf packages, on the other hand are
+identified by a tuple, namely $(name,version)$. To encode Debian
+packages in cudf 2.0 without hampering readability, cudf packages are
+written as $(name:architecture, version)$, therefore identifying the
+corresponding cudf package by concatenating name with the architecture
+using the character ``:'' as separator. \footnote{Note that since the
+  character ``:'' is not part of the character sets used to denote
+cudf packages, it will be encoded in a cudf document as its
+hexadecimal encoding ``\%\ldots''.}
 
 The multi architecture field in the debian stanza determines the
 encoding of dependencies, conflicts and provides of the cudf package.
-The encoding for each value of the field \texttt{MutliArch} is given
-in Table \ref{tab:encoding} with the proviso that if a dependency is
-tagged with \texttt{:any}, this dependency will not be affected by the
-encoding above and stay unchanged as ${\tt d_i:any},dc_i,dv_i$ for some $i$.
 
-\begin{table}
-  \centering
-  \begin{tabular*}{1.18\textwidth}{ | c | c | c | c | c | }
-    \hline
-    \backslashbox{Type}{Value} & None & Same & Foreign & Allowed \\
-    \hline 
-    Depends   & $({\tt d_i:a},dc_i,dv_i)$     & 
-                $({\tt d_i:a},dc_i,dv_i)$ & 
-                $({\tt d_i:a},dc_i,dv_i)$ & 
-                $({\tt d_i:a},dc_i,dv_i)$   \\
-    Conflicts & $({\tt c_i:a},cc_i,cv_i), p$  &
-                $({\tt c_i:a},cc_i,cv_i)$ & 
-                $({\tt c_i:a},cc_i,cv_i),p$ & 
-                $({\tt c_i:a},cc_i,cv_i),p$ \\
-    Provides  & $p$ & & 
-                $({\tt p:a_i},v)$ & 
-                $({\tt p:any},v)$ \\
-    \hline
-  \end{tabular*}
-  \caption{Multi Arch dependency encoding}
-  \label{tab:encoding}
-\end{table}
+\paragraph{Dependencies : \texttt{None, Same, Allowed,Foreign}}
+Given a Debian repository, and a package $p$ the set of dependencies
+$p.D$\footnote{we are abusing notation here\ldots} is encoded in the
+same way for all multi-architecture cases. For each constraint $(n,c)
+\in p.D$ we create a cudf constraint of the form $(n:p.a,c)$. This
+constraints enforce the fact that this dependency must be satisfied by
+a package providing a name $n:p.a$.
 
-The encoding takes care of enforcing co-installability w.r.t. the value of the 
-\texttt{MutliArch} field and to allow packages to correctly satisfy dependencies of
-multi architecture enable packages.
+To this general rule there are two exception. The first is that if the
+dependency has the form $(n:any,c)$, then the we do not append the
+package architecture : the dependency should be satisfied by ``any''
+package providing the name $n$ (that is a package providing the name
+$n:any$). Secondly, if the architecture of the package
+is of type \texttt{all}, then we append to all dependencies $n$ then
+native architecture. Formally we define the following function :
+
+\begin{definition}
+  Given a Debian package $p$, a native architecture, we define the
+  function $\phi : \power{\names\times\con} ->
+  \power{\names_cudf\times\con}$
+\[
+  \phi ((n,c)) = \left\{ 
+    \begin{array}{rl}
+      (n,c)          & \mbox{ if } n:any \\
+      (n:\cal{na},c) &  \mbox{ if } p.a = \tt{all} \\
+      (n:p.a,c)      & \mbox{ otherwise }
+    \end{array} 
+  \right.
+\]
+
+The set of cudf dependencies by extending the function $\phi$ to the
+set $p.D$.
+
+\end{definition}
+
+\paragraph{Conflicts : \texttt{None, Allowed,Foreign}}
+Conflicts $p.C$, for all cases except for multi architecture {\texttt
+Same}, are encoded appending the package architecture to all
+$(n:p.a,c)$. Moreover, to enforce the flatness condition\footnote{to
+be defined}, we also add an additional conflict with all the packages
+that provides the name $p$.
+
+\begin{definition}
+  Given a Debian package $p$, a native architecture $\cal{na}$ and a set of
+  foreign architectures $\cal{F}$, we define the function $\gamma :
+  \power{\names\times\con} -> \power{\names_cudf\times\con}$ :
+\[
+  \gamma ((n,c),a) = \left\{ 
+    \begin{array}{rl}
+      (n:\cal{na},c) & \mbox{ if } a = \tt{all} \\
+      (n:a,c)        &  \mbox{ otherwise }
+    \end{array} 
+  \right.
+\]
+
+The set of cudf constraints is encoded as follows : 
+\[
+  \begin{array}{rl}
+    C(p) = & \{ p \} \cup \\ 
+           & \bigcup_{\cal{a} \in \cal{F} \cup \cal{na}} \gamma(p.C,a)
+  \end{array}
+\]
+\end{definition}
+
+\paragraph{Conflicts : \texttt{Some}}
+Packages declared multi-arch \texttt{Some} are co-installable with
+packages that have same version but different architectures, but they
+must not be used to satisfy the dependency of any package of a
+different architecture from itself. We encode these constraints by
+first adding a self conflicts (that is a conflict with all packages of
+any version and same architecture), a conflict with all packages with
+same name but a different architecture and different version. Then for
+each conflict $(n,c)$ and for each foreign architecture $a$ we add a
+conflict to each real package $p$ providing the name $n$ of the form
+$(p.name:a,c)$.
+
+\begin{definition}
+  Given a Debian package $p$, a native architecture $\cal{na}$ and a set of
+  foreign architectures $\cal{F}$, and let $\cal{A} = \{ \cal{n} \}
+  \cup \cal{F}$. We define the function $\gamma :
+  \power{\names\times\con} -> \power{\names_cudf\times\con}$ :
+\[
+  \gamma ((n,c),a) = \left\{ 
+    \begin{array}{rl}
+      (n:\cal{na},c) & \mbox{ if } a = \tt{all} \\
+      (n:a,c)        &  \mbox{ otherwise }
+    \end{array} 
+  \right.
+\]
+
+The set of cudf constraints is encoded as follows : 
+\[
+  \begin{array}{rl}
+    C(p) = & \{ p \} \cup \\ 
+    & \bigcup_{\cal{a} \in \cal{A}} \{ (n:a:, \neq p.v) | (n,c) \in P.C \}\\
+    & \bigcup_{\cal{a} \in \cal{A}} \{ (\name{rn}:a:,c) | (n,c) \in \in
+    P.C \mbox{ and } rn \in \rel{(n,c)} \} \\
+
+  \end{array}
+\]
+\end{definition}
+
+
+\paragraph{Provides : \texttt{None, Some}}
+
+Provides are encoded appending the package architecture
+to the package name as follows, with the exception of packages with
+architecture \texttt{all}.
+
+\[
+  \phi ((n,c)) = \left\{ 
+    \begin{array}{rl}
+      n:native &  \mbox{ if } p.a = \tt{all} \\
+      n:p.a & \mbox{ otherwise }
+    \end{array} 
+  \right.
+\]
+\[
+  P(p) = \{ p \} \cup \gamma(p.P)
+\]
+
+\paragraph{Provides : \texttt{Foreign}}
+
+A package that is declared \texttt{Multi-Arch: Foreign} cannot be
+co-installed with a package with a same name, but different
+architecture, but it can be used to satisfy the dependencies of
+packages with different architectures. This constraint is reflected 
+encoding provides as follows:
+
+\[
+  \begin{array}{rl}
+    P(p) = & \{ p.name \} \cup \\
+           & \{ \forall (n,c) \in p.P \phi((n,c), p.arch) \} \cup \\
+           & \{ \forall a \in A \setminus \{ p.arch \}, \forall (n,c) \in p.P \phi(( n,c),a) \}
+   \end{array}
+\]
+
+
+\paragraph{Provides : \texttt{Allowed}}
+A package that is declared \texttt{Multi-Arch: Allowed} can be used to 
+satisfy dependencies of type $:any$. The provides are encoded using
+the following rule:
+
+\[
+  P(p) = \{ p.name \} \cup \{ p.name:any \} \cup \\
+  \{ \forall (n,c) \in p.P \phi(( n,c), p.arch) \} \cup \\
+  \{ \forall (n,c) \in p.P ( n:any,c) \} 
+\]
+
+The encoding takes care of enforcing co-installability w.r.t. the value of the
+\texttt{MutliArch} field and to allow packages to correctly satisfy
+dependencies of multi architecture enable packages.
 
 
 \par{Co-installation}: For multiarch equal to \texttt{None}, \texttt{Foreign}
@@ -64,3 +251,4 @@ additional constraints.
 same architecture. For multiarch \texttt{Foreign} we add one versioned provide
 for each known foreign architecture. For \texttt{Allowed} we add a provide to
 architecture \texttt{any}.
+

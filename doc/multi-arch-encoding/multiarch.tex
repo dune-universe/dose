@@ -19,6 +19,7 @@ The Multi Architecture specify that if the field is present, the semantics are a
   \item{Multi-Arch: same} This package is co-installable with itself,
     but it must not be used to satisfy the dependency of any package
     of a different architecture from itself. 
+
   \item{Multi-Arch: foreign} The package is not co-installable with
     itself, but should be allowed to satisfy the dependencies of a
     package of a different arch from itself.
@@ -28,6 +29,7 @@ The Multi Architecture specify that if the field is present, the semantics are a
     is not available, the package manager may automatically install
     any available package, regardless of architecture, or it may
     choose to make this an option controlled by user configuration. 
+
   \item{Multi-Arch: allowed} This permits the reverse-dependencies of
     the package to annotate their Depends: field to indicate that a
     foreign architecture version of the package satisfies the
@@ -36,6 +38,7 @@ The Multi Architecture specify that if the field is present, the semantics are a
     incorrectly annotating dependencies as being architecture-neutral
     without coordination with the maintainer of the depended-on
     package. 
+
   \item{Multi-Arch: none}
     The package can be installed and used to satisfy dependencies only
     on architectures equal to the arch from itself.
@@ -45,7 +48,7 @@ Moreover, a package for a foreign architecture is only installable if
 all of its (recursive) dependencies are either marked as multiarch or
 do not have corresponding packages installed for the native
 architecture. An incomplete multiarch conversion for a given
-dependency tree is equivalent to the status quo. 
+dependency tree is equivalent to the status-quo. 
 
 Since there are packages that can contain both architecture-specific
 and architecture-agnostic components (python, contains that
