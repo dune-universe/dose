@@ -13,41 +13,47 @@ assumed to not be co-installable. The Multi Architecture specification adds new
 binary package field \texttt{Multi-Arch}, to be set on any package wanting to
 be installed or used to satisfy dependencies on multiple architectures.
 
-The Multi Architecture specify that if the field is present, the semantics are as follows:
+The \texttt{Multi-Arch} field can have four values :
 
 \begin{itemize}
-  \item{Multi-Arch: same} This package is co-installable with itself,
-    but it must not be used to satisfy the dependency of any package
-    of a different architecture from itself. 
+  \item{\texttt{Multi-Arch:Same}.} The package is co-installable with packages
+    that have the same name and version, but different architecture,
+    but it cannot be used to satisfy dependencies of any package
+    with a different architecture of the package itself.
 
-  \item{Multi-Arch: foreign} The package is not co-installable with
-    itself, but should be allowed to satisfy the dependencies of a
-    package of a different arch from itself.
+  \item{\texttt{Multi-Arch:Foreign}.} 
+    The package is not co-installable with packages
+    that have the same name and version, but it can be used to satisfy 
+    dependencies of packages with a different architecture of the
+    package itself..
 
-    If a package is declared Multi-Arch: foreign, preference should be
-    given to a package for the native architecture if available; if it
-    is not available, the package manager may automatically install
-    any available package, regardless of architecture, or it may
-    choose to make this an option controlled by user configuration. 
+    If a package is declared \texttt{Multi-Arch: foreign}, preference
+    should be given to a package for the native architecture if
+    available; if it is not available, the package manager may
+    automatically install any available package, regardless of
+    architecture, or it may choose to make this an option controlled
+    by user configuration. 
 
-  \item{Multi-Arch: allowed} This permits the reverse-dependencies of
-    the package to annotate their Depends: field to indicate that a
-    foreign architecture version of the package satisfies the
-    dependencies, but does not change the resolution of any existing
-    dependencies. This value exists to prevent any packages from
-    incorrectly annotating dependencies as being architecture-neutral
-    without coordination with the maintainer of the depended-on
-    package. 
+  \item{\texttt{Multi-Arch:Allowed}.}
+    The package is not co-installable with packages that have the same
+    name and version, but is can be used to satisfy any dependencies
+    of the form \texttt{p:any}, where ``any'' is a special decoration
+    associated to the dependency constraint. This value exists to
+    prevent any packages from incorrectly annotating dependencies as
+    being architecture-neutral without coordination with the
+    maintainer of the depended-on package. 
 
-  \item{Multi-Arch: none}
+  \item{\texttt{Multi-Arch:None}.}
     The package can be installed and used to satisfy dependencies only
-    on architectures equal to the arch from itself.
+    on architectures equal to the architecture of the package itself.
+    Packages with \texttt{Multi-Arch: none} have the same semantics of
+    pre-multi-architecture packages.
 \end{itemize}
 
-Moreover, a package for a foreign architecture is only installable if
-all of its (recursive) dependencies are either marked as multiarch or
+A package for a foreign architecture is only installable if all of its
+(recursive) dependencies are either marked as \texttt{Multi-Arch} or
 do not have corresponding packages installed for the native
-architecture. An incomplete multiarch conversion for a given
+architecture. An incomplete \texttt{Multi-Arch} conversion for a given
 dependency tree is equivalent to the status-quo. 
 
 Since there are packages that can contain both architecture-specific
@@ -57,187 +63,11 @@ on any architecture), the multi-arch specification extend the
 dependency relation language with a new attribute (\texttt{p:any})
 that declares that a package's dependency on $p$ may be satisfied by a
 package of any architecture, so long as the $p$ package declares
-itself as \texttt{Multi-Arch: allowed}. 
+itself as \texttt{Multi-Arch:Allowed}. 
 
 A special exception are packages with \texttt{Architecture: all} that
 are treated as equivalent to packages of the native architecture for
 all dependency resolution. This means that for an Architecture: all
 package to satisfy the dependencies of a foreign-architecture package,
 it must be marked Multi-Arch: foreign or Multi-Arch: allowed. 
-
-\subsection{Examples}
-
-In the following examples, arch1 is declared as native architecture and arch2
-is the foreign architecture. Installed: yes means that the package has
-to be considered as installed on the system.
-
-\subsection{Multi Arch : None}
-
-\begin{figure}
-\begin{lstlisting}[style=debctrl,numbers=left,xleftmargin=20pt,basicstyle=\footnotesize\normalfont\ttfamily]
-Package: a1
-Architecture: arch1
-Version: 1
-Provides: a
-Conflicts: a
-
-Package: a1
-Architecture: arch2
-Version: 1
-Provides: a
-Conflicts: a
-\end{lstlisting}
-\caption{packages a1:arch1 and a1:arch2 cannot be installed together.}
-\label{fig:arch-none}
-\end{figure}
-
-\subsection{Multi Arch : Allowed}
-
-\begin{figure}
-\begin{lstlisting}[style=debctrl,numbers=left,xleftmargin=20pt,basicstyle=\footnotesize\normalfont\ttfamily]
-Package: a1
-Architecture: arch1
-Version: 1
-APT-ID: 1
-Multi-Arch: allowed
-Installed: yes
-
-Package: a1
-Architecture: arch2
-Version: 1
-APT-ID: 1
-Multi-Arch: allowed
-
-Package: a2
-Architecture: arch2
-Version: 1
-Depends: a1:any
-Multi-Arch: same
-\end{lstlisting}
-\caption{Package a2:arch2 can be installed because the package a1:arch1
-is currently installed.}
-\label{fig:arch-allowed}
-\end{figure}
-
-\subsection{Multi Arch : Foreign}
-
-\begin{figure}
-\begin{lstlisting}[style=debctrl,numbers=left,xleftmargin=20pt,basicstyle=\footnotesize\normalfont\ttfamily]
-Package: a1
-Architecture: arch1
-Version: 1
-Multi-Arch: foreign
-
-Package: a1
-Architecture: arch2
-Version: 1
-Multi-Arch: foreign
-
-Package: a2
-Architecture: arch2
-Version: 1
-Depends: a1
-\end{lstlisting}
-\caption{Packages a1:arch1 and a2:arch2 are not coinstallable, but
-package a2:arch2 can be installed}
-\label{fig:arch-foreign}
-\end{figure}
-
-
-
-\subsection{Multi Arch : Same}
-
-Packages a1:arch1 and a1:arch2 are coinstallable. Self conflicts are
-ignored.
-
-\begin{figure}
-\begin{lstlisting}[style=debctrl,numbers=left,xleftmargin=20pt,basicstyle=\footnotesize\normalfont\ttfamily]
-Package: a1
-Architecture: arch1
-Version: 1
-Conflicts: a1
-Multi-Arch: same
-
-Package: a1
-Architecture: arch2
-Version: 1
-Conflicts: a2
-Multi-Arch: same
-\end{lstlisting}
-\caption{Packages a1:arch1 and a1:arch2 are coinstallable. Self
-conflicts are ignored.}
-\label{fig:arch-same-1}
-\end{figure}
-
-\begin{figure}
-\begin{lstlisting}[style=debctrl,numbers=left,xleftmargin=20pt,basicstyle=\footnotesize\normalfont\ttfamily]
-Package: a1
-Architecture: arch1
-Version: 1
-Provides: a
-Conflicts: a
-Multi-Arch: same
-
-Package: a1
-Architecture: arch2
-Version: 1
-Provides: a
-Conflicts: a
-Multi-Arch: same
-\end{lstlisting}
-\caption{implicit self conflicts declared thought virtual packages are
-ignored. Packages a1:arch1 and a1:arch2 are coinstallable}
-\label{fig:arch-same-2}
-\end{figure}
-
-\begin{figure}
-\begin{lstlisting}[style=debctrl,numbers=left,xleftmargin=20pt,basicstyle=\footnotesize\normalfont\ttfamily]
-Package: a1
-Architecture: arch1
-Version: 1
-Provides: a
-Conflicts: a
-Multi-Arch: same
-
-Package: a1
-Architecture: arch2
-Version: 1
-Provides: a
-Conflicts: a
-Multi-Arch: same
-
-Package: a2
-Architecture: arch2
-Version: 1
-Provides: a
-Conflicts: a
-Multi-Arch: same
-\end{lstlisting}
-\caption{packages a1:arch1 and a1:arch2 are not coinstallable with
-package a2:arch2.}
-\label{fig:arch-same-3}
-\end{figure}
-
-\begin{figure}
-\begin{lstlisting}[style=debctrl,numbers=left,xleftmargin=20pt,basicstyle=\footnotesize\normalfont\ttfamily]
-Package: a1
-Architecture: arch1
-Version: 1
-Provides: a
-Conflicts: a
-Multi-Arch: same
-
-Package: a1
-Architecture: arch2
-Version: 1
-Provides: a
-Conflicts: a
-Multi-Arch: none
-\end{lstlisting}
-\caption{Coinstallability is possible only if all interested packages
-are declared multi arch same.  Packages a1:arch1 and a1:arch2 are not
-coinstallable}
-\label{fig:arch-same-4}
-\end{figure}
-
 
