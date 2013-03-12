@@ -65,13 +65,17 @@ let add_name_arch a n = CudfAdd.encode (Printf.sprintf "%s:%s" n a)
 (* add arch info to a vpkg 
  - if it's a :any dependency then just encode the name without arch information :
    means that this dependency/conflict can be satified by any packages
+ - if it is a package:arch dependency, then encode it as such
  - if the package is architecture all, then all dependencies are interpreted as
    dependencies on native architecture packages.
  - otherwise all dependencies are satisfied by packages of the same architecture
    of the package we are considering *)
+(* XXX we should use one regexp and check there results instead of three
+ * different String.* functions *)
 let add_arch native_arch package_arch = function
   |name when String.ends_with name ":any" -> (CudfAdd.encode name)
   |name when String.ends_with name ":native" -> add_name_arch (String.slice ~last:(-7) name) native_arch
+  |name when String.contains name ':' -> CudfAdd.encode name
   |name when package_arch = "all" -> add_name_arch name native_arch
   |name -> add_name_arch name package_arch
 
