@@ -152,9 +152,15 @@ let main () =
   let failure = OptParse.Opt.get Options.failure in
   let explain = OptParse.Opt.get Options.explain in
   let minimal = OptParse.Opt.get Options.minimal in
+  let oc = 
+    if OptParse.Opt.is_set Options.outfile then
+      open_out (OptParse.Opt.get Options.outfile)
+    else
+      stdout
+  in
+
   let fmt =
     if OptParse.Opt.is_set Options.outfile then
-      let oc = open_out (OptParse.Opt.get Options.outfile) in
       Format.formatter_of_out_channel oc
     else
       Format.std_formatter
@@ -175,7 +181,7 @@ let main () =
         try
           let id = (cudfpkg.Cudf.package,cudfpkg.Cudf.version) in
           let debpkg = Hashtbl.find cudftodeb_table id in
-          Printf.printf "%a\n" Debian.Printer.pp_package debpkg
+          Printf.fprintf oc "%a\n" Debian.Printer.pp_package debpkg
         with Not_found -> assert false
       ) is
     else
@@ -188,7 +194,7 @@ let main () =
           ) is
         )
       in
-      List.iter (Printf.printf "%a\n" Debian.Printer.pp_source) l
+      List.iter (Printf.fprintf oc "%a\n" Debian.Printer.pp_source) l
   else
     Diagnostic.fprintf ~pp ~minimal ~failure ~explain fmt result;
   
