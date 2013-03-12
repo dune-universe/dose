@@ -358,7 +358,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
       let archlessprovide = (CudfAdd.encode pkg.name,None) in
       let multiarchprovides = 
         match pkg.multiarch with
-        |`None ->
+        |(`None|`Same) ->
            (* pkgarch provides *)
              (add_arch_l options.native pkgarch (loadlp tables pkg.provides))
         |`Foreign ->
@@ -382,8 +382,6 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
                ((add_arch options.native pkgarch name),c)]
              )
            in any::l
-        |`Same ->
-           (add_arch_l options.native pkgarch (loadlp tables pkg.provides))
       in archlessprovide :: multiarchprovides
     in
     let _conflicts = 

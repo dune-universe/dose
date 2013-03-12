@@ -92,19 +92,19 @@ let version_of_target getv = function
 
 let timer = Util.Timer.create "Solver"
 
-let future ?options repository =
+(* the repository should contain only the most recent version of each
+   package *)
+let future ?options ?(checklist=[]) repository =
 
   let worktable = Hashtbl.create 1024 in
   let version_acc = ref [] in
   let constraints_table = Debian.Evolution.constraints repository in
-  (* the repository here should contain only the most recent version of each
-   * package *)
   let realpackages = Hashtbl.create 1023 in
 
   let clusters = Debian.Debutil.cluster repository in
 
-  (* for each cluster, I associate to it its discriminants,
-   * cluster name and binary version *)
+  (* for each cluster, I associate to it: its discriminants,
+   * its cluster name and its binary version *)
   let cluster_iter (sn,sv) l =
     List.iter (fun (version,realversion,cluster) ->
       List.iter (fun pkg ->
@@ -121,12 +121,10 @@ let future ?options repository =
     ) l
   in
 
-  Hashtbl.iter cluster_iter clusters;
-
   (* for each package name, that is not a real package,
    * I create a package with version 1 and I put it in a
    * cluster by itself *)
-  Hashtbl.iter (fun name constr ->
+  let constraints_iter name constr =
     if not(Hashtbl.mem realpackages name) then begin
       let vl = Debian.Evolution.all_versions constr in
       let pkg = {
@@ -139,9 +137,20 @@ let future ?options repository =
       version_acc := vl @ !version_acc;
       Hashtbl.add worktable (name,"1") (cluster,vl,constr)
     end
-  ) constraints_table;
+  in
+  
+(*  if List.length checklist > 0 then
+    List.iter (fun (sn,_,sv) ->
+      begin try cluster_iter (sn,sv) (Hashtbl.find clusters (sn,sv)) with Not_found -> () end;
+      begin try constraints_iter sn (Hashtbl.find constraints_table sn) with Not_found -> () end;
+    ) checklist
+  else *) begin
+    Hashtbl.iter cluster_iter clusters;
+    Hashtbl.iter constraints_iter constraints_table;
+  end;
 
   Hashtbl.clear realpackages;
+
   let versionlist = Util.list_unique ("1"::!version_acc) in
 
   info "Total Names: %d" (Hashtbl.length worktable);
@@ -149,6 +158,7 @@ let future ?options repository =
 
   let tables = Debian.Debcudf.init_tables ~step:2 ~versionlist repository in
   let getv v = Debian.Debcudf.get_cudf_version tables ("",v) in
+
   let pkgset = 
     Hashtbl.fold (fun (sn,version) (cluster,vl,constr) acc0 ->
       let sync_index = ref 1 in
@@ -183,11 +193,11 @@ let future ?options repository =
       ) acc0 discr
     ) worktable CudfAdd.Cudf_set.empty
   in
-  let pkglist = CudfAdd.Cudf_set.elements pkgset in
-  let universe = Cudf.load_universe pkglist in
 
   Hashtbl.clear worktable;
   Hashtbl.clear constraints_table;
+
+  let universe = Cudf.load_universe (CudfAdd.Cudf_set.elements pkgset) in
 
   universe, tables
 
