@@ -4,14 +4,23 @@
 \usepackage{alltt}
 \usepackage{listings}
 
-\lstdefinestyle{debctrl}
+\lstdefinestyle{cudf}   % CUDF
                {basicstyle=\small\normalfont\ttfamily,
                  showstringspaces=false,
                  %% frame=tb,
-                 emph={Package,Version,Build,Depends,Conflicts,Provides,Architecture},
+                 emph={package,version,depends,conflicts,provides,preamble,installed,request,install,remove,upgrade,property},
                  keywordstyle=\color{black}\bf,
                  emphstyle=\bf,
                }
+\lstdefinestyle{debctrl}
+               {basicstyle=\small\normalfont\ttfamily,
+                showstringspaces=false,
+                %% frame=tb,
+                emph={Package,Version,Build,Depends,Conflicts,Provides,Description},
+                keywordstyle=\color{black}\bf,
+                emphstyle=\bf,
+               }
+\lstset{style=cudf}     % set default style
 
 \title{Debian multi architecture encoding in CUDF 2.0}
 \author{Pietro Abate, Roberto Di Cosmo, Ralf Treinen, Stefano Zacchiroli}
@@ -38,6 +47,16 @@
 \newcommand{\dep}[1]{\mathit{dep(#1)}}
 \newcommand{\rel}[1]{\mathit{rel(#1)}}
 
+\newcommand{\CUDF}{\textrm{CUDF}}
+
+% CUDF typesetting macros
+\newcommand{\PROP}[1]{\mbox{\texttt{#1}}}
+\newcommand{\TYPE}[1]{\mbox{\texttt{#1}}}
+\newcommand{\LEXSPACE}[1]{\ensuremath{\mathcal{L}(#1)}}
+\newcommand{\VALSPACE}[1]{\ensuremath{\mathcal{V}(#1)}}
+\newcommand{\SYMB}[1]{\ensuremath{\mathtt{'#1}}}
+
+
 \begin{document}
 
 \maketitle
@@ -45,6 +64,7 @@
 \tableofcontents
 
 \input{multiarch}
+\input{cudf}
 \input{encoding}
 \input{example}
 \input{cudf3}

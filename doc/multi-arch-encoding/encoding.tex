@@ -104,13 +104,13 @@ native architecture. Formally we define the following function :
 \begin{definition}
   Given a Debian package $p$, a native architecture, we define the
   function $\phi : \power{\names\times\con} ->
-  \power{\names_cudf\times\con}$
+  \power{\names_{cudf}\times\con}$
 \[
   \phi ((n,c)) = \left\{ 
     \begin{array}{rl}
-      (n,c)          & \mbox{ if } n:any \\
-      (n:\cal{na},c) &  \mbox{ if } p.a = \tt{all} \\
-      (n:p.a,c)      & \mbox{ otherwise }
+      (n,c)           & \mbox{ if } n:any \\
+      (n:na,c) & \mbox{ if } p.a = \tt{all} \\
+      (n:p.a,c)       & \mbox{ otherwise }
     \end{array} 
   \right.
 \]
@@ -128,13 +128,13 @@ be defined}, we also add an additional conflict with all the packages
 that provides the name $p$.
 
 \begin{definition}
-  Given a Debian package $p$, a native architecture $\cal{na}$ and a set of
+  Given a Debian package $p$, a native architecture $na$ and a set of
   foreign architectures $\cal{F}$, we define the function $\gamma :
-  \power{\names\times\con} -> \power{\names_cudf\times\con}$ :
+  \power{\names\times\con} -> \power{\names_{cudf}\times\con}$ :
 \[
   \gamma ((n,c),a) = \left\{ 
     \begin{array}{rl}
-      (n:\cal{na},c) & \mbox{ if } a = \tt{all} \\
+      (n:na,c) & \mbox{ if } a = \tt{all} \\
       (n:a,c)        &  \mbox{ otherwise }
     \end{array} 
   \right.
@@ -142,10 +142,7 @@ that provides the name $p$.
 
 The set of cudf constraints is encoded as follows : 
 \[
-  \begin{array}{rl}
-    C(p) = & \{ p \} \cup \\ 
-           & \bigcup_{\cal{a} \in \cal{F} \cup \cal{na}} \gamma(p.C,a)
-  \end{array}
+  C(p) = \{ p \} \cup \bigcup_{a \in \cal{F} \cup \{ na \} } \gamma(p.C,a)
 \]
 \end{definition}
 
@@ -162,14 +159,14 @@ conflict to each real package $p$ providing the name $n$ of the form
 $(p.name:a,c)$.
 
 \begin{definition}
-  Given a Debian package $p$, a native architecture $\cal{na}$ and a set of
-  foreign architectures $\cal{F}$, and let $\cal{A} = \{ \cal{n} \}
+  Given a Debian package $p$, a native architecture $na$ and a set of
+  foreign architectures $\cal{F}$, and let $\cal{A} = \{ na \}
   \cup \cal{F}$. We define the function $\gamma :
-  \power{\names\times\con} -> \power{\names_cudf\times\con}$ :
+  \power{\names\times\con} -> \power{\names_{cudf}\times\con}$ :
 \[
   \gamma ((n,c),a) = \left\{ 
     \begin{array}{rl}
-      (n:\cal{na},c) & \mbox{ if } a = \tt{all} \\
+      (n:na,c) & \mbox{ if } a = \tt{all} \\
       (n:a,c)        &  \mbox{ otherwise }
     \end{array} 
   \right.
@@ -179,8 +176,8 @@ The set of cudf constraints is encoded as follows :
 \[
   \begin{array}{rl}
     C(p) = & \{ p \} \cup \\ 
-    & \bigcup_{\cal{a} \in \cal{A}} \{ (n:a:, \neq p.v) | (n,c) \in P.C \}\\
-    & \bigcup_{\cal{a} \in \cal{A}} \{ (\name{rn}:a:,c) | (n,c) \in \in
+    & \bigcup_{a \in \cal{A}} \{ (n:a:, \neq p.v) | (n,c) \in P.C \}\\
+    & \bigcup_{a \in \cal{A}} \{ (\name{rn}:a:,c) | (n,c) \in \in
     P.C \mbox{ and } rn \in \rel{(n,c)} \} \\
 
   \end{array}
