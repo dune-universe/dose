@@ -459,7 +459,6 @@ let strongdep_conj =
 let strongdep_deep_dsj =
   "strongdep deep disj" >:: (fun _ ->
     let edge_list = [
-      (("a",1),("c",1)) ;
       (("f",1),("b",1)) ;
       (("f",1),("c",1)) ;
       ]

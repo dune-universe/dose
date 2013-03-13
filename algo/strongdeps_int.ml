@@ -91,23 +91,9 @@ let strongdeps_int ?(transitive=true) graph univ pkglist =
 ;;
 
 let strongdeps ?(transitive=true) univ pkglist =
-  let closure = Depsolver.dependency_closure univ pkglist in
   let size = Cudf.universe_size univ in
   let graph = G.create ~size () in
-  Util.Progress.set_total conjbar size;
-
-  Util.Timer.start conjtimer;
-  List.iter (fun pkg ->
-    Util.Progress.progress conjbar;
-    Defaultgraphs.PackageGraph.conjdepgraph_int ~transitive graph univ pkg
-  ) closure;
-  Util.Progress.reset conjbar;
-  Util.Timer.stop conjtimer ();
-
-  debug "conj dep graph: nodes %d , edges %d" (G.nb_vertex graph) (G.nb_edges graph);
   let g = strongdeps_int ~transitive graph univ pkglist in
-  (* because the graph might still be transitive *)
-  (* if not transitive then O.transitive_reduction g; *)
   g
 ;;
 
