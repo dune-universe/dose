@@ -29,6 +29,8 @@ let f_strongdeps_conflict = Filename.concat test_dir "strongdep-conflict.cudf"
 let f_strongdeps_cycle = Filename.concat test_dir "strongdep-cycle.cudf"
 let f_strongdeps_conj = Filename.concat test_dir "strongdep-conj.cudf"
 
+let f_strongdeps_deep_dsj = Filename.concat test_dir "strongdep-deep-dsj.cudf"
+
 let f_strongcfl_simple = Filename.concat test_dir "strongcfl-simple.cudf"
 let f_strongcfl_triangle = Filename.concat test_dir "strongcfl-triangle.cudf"
 
@@ -351,10 +353,16 @@ let solution_set =
   let (_,pl,_) = Cudf_parser.parse_from_file f_legacy_sol in
   List.fold_right S.add pl S.empty
 
-let test_strong ?(transitive=true) file l =
+let test_strong ?(transitive=true) file ?(checkonly=[]) l =
   let module G = Defaultgraphs.PackageGraph.G in
   let (_,universe,_) = Cudf_parser.load_from_file file in
-  let g = Strongdeps.strongdeps_univ ~transitive universe in
+  let g = 
+    if List.length checkonly = 0 then
+      Strongdeps.strongdeps_univ ~transitive universe
+    else
+      let cl = List.map (Cudf.lookup_package universe) checkonly in
+      Strongdeps.strongdeps ~transitive universe cl
+  in
   let sdedges = G.fold_edges (fun p q l -> (p,q)::l) g [] in
   let testedges =
     List.map (fun (v,z) ->
@@ -448,6 +456,17 @@ let strongdep_conj =
     test_strong f_strongdeps_conj edge_list
   )
 
+let strongdep_deep_dsj =
+  "strongdep deep disj" >:: (fun _ ->
+    let edge_list = [
+      (("a",1),("c",1)) ;
+      (("f",1),("b",1)) ;
+      (("f",1),("c",1)) ;
+      ]
+    in
+    test_strong ~checkonly:[("f",1)] f_strongdeps_deep_dsj edge_list
+  )
+
 (* This test is no longer true.
  * transitive = false does not mean that the result is
  * the transitive reduction of the strong dependency
@@ -489,6 +508,7 @@ let test_strongdep =
     strongdep_conflict ;
     strongdep_cycle ;
     strongdep_conj ;
+    strongdep_deep_dsj ;
   ]
 
 let test_strongcfl = 

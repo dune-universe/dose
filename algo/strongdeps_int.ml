@@ -61,16 +61,22 @@ let somedisj pool id =
 
 (** [strongdeps l] build the strong dependency graph of l *)
 (* each package has a node in the graph, even if it does not have  
- * any strong dependencies *)
+   any strong dependencies. If pkglist_size <> universe_size then we have to
+   check the strong dependencies in any cases, as a disjunctive dependency
+   might be hidden in the closure.
+*)
 let strongdeps_int ?(transitive=true) graph univ pkglist =
   let cudfpool = Depsolver_int.init_pool_univ ~global_constraints:false univ in
-  Util.Progress.set_total mainbar (List.length pkglist);
+  let pkglist_size = List.length pkglist in
+  let universe_size = Cudf.universe_size univ in
+
+  Util.Progress.set_total mainbar pkglist_size;
   Util.Timer.start strongtimer;
   List.iter (fun pkg ->
     Util.Progress.progress mainbar;
     G.add_vertex graph pkg;
     let id = CudfAdd.vartoint univ pkg in
-    if somedisj cudfpool id then begin 
+    if (pkglist_size <> universe_size) || (somedisj cudfpool id) then begin 
       let closure = Depsolver_int.dependency_closure_cache cudfpool [id] in
       let solver = Depsolver_int.init_solver_closure cudfpool closure in
       match Depsolver_int.solve solver (Diagnostic_int.Sng (None,id)) with
