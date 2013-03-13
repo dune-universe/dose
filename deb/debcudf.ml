@@ -60,7 +60,7 @@ let default_options = {
   ignore_essential = false
 }
 
-let add_name_arch a n = CudfAdd.encode (Printf.sprintf "%s:%s" n a)
+let add_name_arch n a = CudfAdd.encode (Printf.sprintf "%s:%s" a n)
 
 (* add arch info to a vpkg 
  - if it's a :any dependency then just encode the name without arch information :
@@ -75,7 +75,9 @@ let add_name_arch a n = CudfAdd.encode (Printf.sprintf "%s:%s" n a)
 let add_arch native_arch package_arch = function
   |name when String.ends_with name ":any" -> (CudfAdd.encode name)
   |name when String.ends_with name ":native" -> add_name_arch (String.slice ~last:(-7) name) native_arch
-  |name when String.contains name ':' -> CudfAdd.encode name
+  |name when String.contains name ':' -> 
+      let name, arch = String.split name ":" in
+      add_name_arch name arch
   |name when package_arch = "all" -> add_name_arch name native_arch
   |name -> add_name_arch name package_arch
 
