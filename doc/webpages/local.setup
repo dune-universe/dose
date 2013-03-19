@@ -16,9 +16,9 @@ use IkiWiki::Setup::Standard {
 	# users who are banned from the wiki
 	banned_users => [],
 	# where the source of the wiki is located
-	srcdir => '/home/abate/Projects/repos/mancoosi-tools/dose/doc/webpages/src',
+	srcdir => 'src',
 	# where to build the wiki
-	destdir => '/home/abate/Projects/repos/mancoosi-tools/dose/doc/webpages/public_html',
+	destdir => 'public_html',
 	# base url to the wiki
 	url => 'http://dose.gforge.inria.fr/',
 	# url to the ikiwiki.cgi
