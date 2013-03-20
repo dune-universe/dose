@@ -72,7 +72,24 @@ let add_name_arch n a = CudfAdd.encode (Printf.sprintf "%s:%s" a n)
    of the package we are considering *)
 (* XXX we should use one regexp and check there results instead of three
  * different String.* functions *)
-let add_arch native_arch package_arch = function
+let add_arch native_arch package_arch name = 
+    if package_arch = "all" then 
+      add_name_arch name native_arch
+    else
+      add_name_arch name package_arch
+;;
+
+let add_arch_deps native_arch package_arch name = 
+  try 
+    match String.split name ":" with
+    |n,"any" -> CudfAdd.encode n
+    |n,"native" -> add_name_arch n native_arch
+    |n,a -> add_name_arch n a
+  with ExtString.Invalid_string ->
+    add_arch native_arch package_arch name
+;;
+(*
+  function
   |name when String.ends_with name ":any" -> (CudfAdd.encode name)
   |name when String.ends_with name ":native" -> add_name_arch (String.slice ~last:(-7) name) native_arch
   |name when String.contains name ':' -> 
@@ -80,9 +97,14 @@ let add_arch native_arch package_arch = function
       add_name_arch name arch
   |name when package_arch = "all" -> add_name_arch name native_arch
   |name -> add_name_arch name package_arch
+*)
 
-let add_arch_l native_arch package_arch l = 
-  List.map (fun (n,c) -> ((add_arch native_arch package_arch n),c)) l
+let add_arch_l ?(deps=false) native_arch package_arch l = 
+  if deps then
+    List.map (fun (n,c) -> ((add_arch_deps native_arch package_arch n),c)) l
+  else
+    List.map (fun (n,c) -> ((add_arch native_arch package_arch n),c)) l
+;;
 
 let clear tables =
   Util.StringHashtbl.clear tables.virtual_table;
@@ -439,7 +461,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
       multiarchconflicts @ multiarchconstraints
     in
     let _depends = 
-      List.map (add_arch_l options.native pkgarch) 
+      List.map (add_arch_l ~deps:true options.native pkgarch) 
       (loadll tables (pkg.pre_depends @ pkg.depends))
     in
     (* XXX: if ignore essential for the moment we also ignore keep *)
