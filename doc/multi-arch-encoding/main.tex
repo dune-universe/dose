@@ -36,9 +36,11 @@
 \newcommand{\power}[1]{\mathcal{P}(#1)}
 \newcommand{\dependency}[1]{#1.D}
 \newcommand{\conflicts}[1]{#1.C}
+\newcommand{\provides}[1]{#1.P}
 \newcommand{\cluster}[1]{\textit{cluster}(#1)}
 \newcommand{\version}[1]{#1.v}
 \newcommand{\arch}[1]{#1.a}
+\newcommand{\any}{\texttt{any}}
 \newcommand{\multiarch}[1]{#1.m}
 \newcommand{\name}[1]{#1.n}
 \newcommand{\crel}{\sim}
@@ -57,6 +59,10 @@
 \newcommand{\VALSPACE}[1]{\ensuremath{\mathcal{V}(#1)}}
 \newcommand{\SYMB}[1]{\ensuremath{\mathtt{'#1}}}
 
+% propositional logic
+\let\Or\vee
+\let\And\wedge
+\let\Implies\rightarrow
 
 \begin{document}
 
