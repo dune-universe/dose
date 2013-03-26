@@ -29,19 +29,15 @@ module Options = struct
   include Boilerplate.MakeOptions(struct let options = options end)
 
   exception Format
-  let out_option ?default ?(metavar = "<dot|gml|grml|cnf|dimacs|cudf|table>") () =
-    let corce = function
-      |("cnf"|"dimacs"|"cudf"|"dot"|"gml"|"grml"|"table") as s -> s
-      | _ -> raise Format
-    in
+  let otypes = ["cnf";"dimacs";"mzn";"cudf";"dot";"gml";"grml";"table"] 
+  let out_option ?default ?(metavar = Printf.sprintf "<%s>" (String.concat "|" otypes)) () =
+    let corce s = if List.mem s otypes then s else raise Format in
     let error _ s = Printf.sprintf "%s format not supported" s in
     Opt.value_option metavar default corce error
 
-  let grp_option ?default ?(metavar = "<syn|pkg|conj|strdeps|strcnf|dom>") () =
-    let corce = function
-      |("syn"|"pkg"|"conj"|"strdeps"|"strcnf"|"dom") as s -> s
-      | _ -> raise Format
-    in
+  let gtypes = ["syn";"pkg";"conj";"strdeps";"strcnf";"dom"]
+  let grp_option ?default ?(metavar = Printf.sprintf "<%s>" (String.concat "|" gtypes)) () =
+    let corce s = if List.mem s gtypes then s else raise Format in
     let error _ s = Printf.sprintf "%s format not supported" s in
     Opt.value_option metavar default corce error
 
@@ -58,7 +54,7 @@ module Options = struct
   add options ~short_name:'c' ~long_name:"cone" ~help:"dependency cone" cone;
   add options ~short_name:'r' ~long_name:"rcone" ~help:"reverse dependency cone" reverse_cone;
   add options                 ~long_name:"depth" ~help:"max depth - in conjunction with cone" cone_maxdepth;
-  add options ~short_name:'G' ~help:"Graph output type (with -T<dot|gml|grml>).  Default syn" grp_type;
+  add options ~short_name:'G' ~help:"Graph output type. Default syn" grp_type;
   add options ~short_name:'T' ~help:"Output type format. Default cnf" out_type;
   add options                 ~long_name:"request" ~help:"Installation Request (can be repeated)" request;
 
@@ -290,6 +286,7 @@ ELSE
         failwith (Printf.sprintf "format %s not supported: needs ocamlgraph" t)
 END
       |"cnf" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Cnf u)
+      |"mzn" -> Printf.fprintf oc "%s" (Depsolver.output_minizinc ~global_constraints u)
       |"dimacs" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Dimacs u)
       |"cudf" -> output_cudf oc preamble u request
       |"table" ->
