@@ -316,6 +316,56 @@ let output_clauses ?(global_constraints=true) ?(enc=Cnf) univ =
   Buffer.contents buff
 ;;
 
+let output_minizinc ?(global_constraints=true) univ = 
+  let cudfpool = Depsolver_int.init_pool_univ global_constraints univ in
+  let size = Cudf.universe_size univ in
+  let buff = Buffer.create size in
+
+  let conflicts pkg_id dl =
+    List.iter (fun (_,l) ->
+      if l <> [] then 
+        Printf.bprintf buff "constraint pkg[%d] -> (%s);\n" pkg_id (
+          String.concat " \\/ " (List.map (Printf.sprintf "pkg[%d]") l) 
+        )
+    ) dl
+  in
+
+  let depends pkg_id dll =
+    Printf.bprintf buff "constraint pkg[%d] -> (%s);\n" pkg_id (
+      String.concat " /\\ " (
+        List.map (fun (vpkgs,dl) ->
+          Printf.sprintf "( %s )" (
+            String.concat " \\/ " (List.map (Printf.sprintf "pkg[%d]") dl) 
+          )
+        ) dll
+      )
+    )
+  in
+
+  Printf.bprintf buff "int: n = %d;\n" size;
+  Printf.bprintf buff "array[0..n] of var bool : pkg;\n";
+  Printf.bprintf buff "array[0..n] of string: pname;\n\n";
+  Printf.bprintf buff "pname = [%s];\n\n" (
+    String.concat "," (
+      List.map 
+      (Printf.sprintf "\"%s\"") (
+        List.map (fun id -> 
+          CudfAdd.string_of_package (Cudf.package_by_uid univ id)
+(*          (Cudf.package_by_uid univ id).Cudf.package *)
+        ) (Util.range 0 (size - 2))
+      )
+    )
+  );
+  Array.iteri (fun id (dll,cl) ->
+    if dll <> [] then depends id dll;
+    if cl <> [] then conflicts id cl
+  ) (Depsolver_int.strip_cudf_pool cudfpool);
+  Printf.bprintf buff "solve satisfy;\n";
+  Printf.bprintf buff "output [ show (pname[id]) ++ \"=\" ++ show(pkg[id]) | id in 0..n ];\n";
+
+  Buffer.contents buff
+;;
+
 type solver_result =
   |Sat of (Cudf.preamble option * Cudf.universe)
   |Unsat of Diagnostic.diagnosis option
