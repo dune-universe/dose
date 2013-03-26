@@ -126,14 +126,18 @@ let init_pool_univ ~global_constraints univ =
           ) pkg.Cudf.conflicts
         in
         if pkg.Cudf.keep = `Keep_package then
-          CudfAdd.add_to_package_list keep pkg.Cudf.package uid;
+          CudfAdd.add_to_package_list keep (pkg.Cudf.package,None) uid;
+          (*
+        if pkg.Cudf.keep = `Keep_version then
+          CudfAdd.add_to_package_list keep (pkg.Cudf.package,Some (`Eq pkg.Cudf.version)) uid;
+          *)
         (dll,cl)
     )
   in
   if global_constraints then begin
     let keep_dll =
-      Hashtbl.fold (fun name {contents = l} acc ->
-        ([(name,None)],l) :: acc
+      Hashtbl.fold (fun cnstr {contents = l} acc ->
+        ([cnstr],l) :: acc
       ) keep []
     in
     (* here in theory we could encode more complex contraints .

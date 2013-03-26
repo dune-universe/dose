@@ -111,7 +111,12 @@ let test_coinst_constraints =
       Cudf.version = 1;
       keep = `Keep_package;
     } in
-    let universe = Cudf.load_universe [a;b;c] in
+    let d = { Cudf.default_package with 
+      Cudf.package = "d";
+      Cudf.version = 1;
+      keep = `Keep_version;
+    } in
+    let universe = Cudf.load_universe [a;b;c;d] in
     let d = Depsolver.edos_coinstall ~global_constraints:true universe [a;b] in
     assert_bool "pass" (not(Diagnostic.is_solution d))
   )
