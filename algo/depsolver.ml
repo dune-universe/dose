@@ -316,7 +316,7 @@ let output_clauses ?(global_constraints=true) ?(enc=Cnf) univ =
   Buffer.contents buff
 ;;
 
-let output_minizinc ?(global_constraints=true) univ = 
+let output_minizinc ?(global_constraints=true) (pre,univ,req) = 
   let cudfpool = Depsolver_int.init_pool_univ global_constraints univ in
   let size = Cudf.universe_size univ in
   let buff = Buffer.create size in
@@ -351,7 +351,6 @@ let output_minizinc ?(global_constraints=true) univ =
       (Printf.sprintf "\"%s\"") (
         List.map (fun id -> 
           CudfAdd.string_of_package (Cudf.package_by_uid univ id)
-(*          (Cudf.package_by_uid univ id).Cudf.package *)
         ) (Util.range 0 (size - 2))
       )
     )
@@ -360,6 +359,27 @@ let output_minizinc ?(global_constraints=true) univ =
     if dll <> [] then depends id dll;
     if cl <> [] then conflicts id cl
   ) (Depsolver_int.strip_cudf_pool cudfpool);
+
+(*
+  if req.Cudf.install <> [] then
+    Printf.bprintf buff "constraint %s;" (
+      String.concat " /\\ " (
+        List.map (fun pkg ->
+          Printf.sprintf "pkg[%d] = true" (Cudf.uid_by_package univ pkg)
+        )
+      )
+    );
+
+  if req.Cudf.remove <> [] then
+    Printf.bprintf buff "constraint %s;" (
+      String.concat " /\\ " (
+        List.map (fun pkg ->
+          Printf.sprintf "pkg[%d] = false" (Cudf.uid_by_package univ pkg)
+        )
+      )
+    );
+*)
+
   Printf.bprintf buff "solve satisfy;\n";
   Printf.bprintf buff "output [ show (pname[id]) ++ \"=\" ++ show(pkg[id]) | id in 0..n ];\n";
 

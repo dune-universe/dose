@@ -251,9 +251,9 @@ module SyntacticDependencyGraph = struct
     let src = G.E.src edge in
     let dst = G.E.dst edge in
     Printf.sprintf "%s %s %s"
-    (string_of_vertex src)
-    label
-    (string_of_vertex dst)
+      (string_of_vertex src)
+      label
+      (string_of_vertex dst)
 
   module DotPrinter = struct
     module Display = struct
@@ -339,6 +339,7 @@ module SyntacticDependencyGraph = struct
     Cudf.iter_packages (fun pkg ->
       Util.Progress.progress depgraphbar;
       let vpid = G.V.create (PkgV.Pkg pkg) in
+      G.add_vertex gr vpid;
       let c = ref 0 in
       List.iter (fun vpkgs ->
         match CudfAdd.resolve_deps univ vpkgs with 

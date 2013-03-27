@@ -62,8 +62,6 @@ module Options = struct
   Boilerplate.InputOptions.add_options ~default:["outfile";"latest";"trim"] options ;;
 
   include Boilerplate.DistribOptions;;
-  (* let default = List.remove Boilerplate.DistribOptions.default_options
-   * "inputtype" in *)
   Boilerplate.DistribOptions.add_options options ;;
 
 end;;
@@ -139,14 +137,6 @@ let nr_conflicts univ =
   ) 0 univ
 ;;
 
-let output_cudf oc pr univ req =
-  Cudf_printer.pp_preamble oc pr;
-  Printf.fprintf oc "\n";
-  Cudf_printer.pp_universe oc univ;
-  Printf.fprintf oc "\n";
-  Cudf_printer.pp_request oc req
-;;
-
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
   let (input_type,implicit) =
@@ -179,13 +169,13 @@ let main () =
     if OptParse.Opt.get Options.trim then Depsolver.trim ~global_constraints u else u
   in
 
-  (* let (preamble,universe,from_cudf,to_cudf) = Boilerplate.load_universe ~options [fg;bg] in *)
   let request = parse_request to_cudf (OptParse.Opt.get Options.request) in
-  let get_cudfpkg ((n,a),c) = 
+  let get_cudfpkglist ((n,a),c) = 
     let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
-    try List.hd(Cudf.lookup_packages ~filter universe name)
+    try Cudf.lookup_packages ~filter universe name
     with ExtList.List.Empty_list -> fatal "package %s not found" n
   in
+  let get_cudfpkg ((n,a),c) = List.hd (get_cudfpkglist ((n,a),c)) in
 
   let pkg_src () = List.map get_cudfpkg (OptParse.Opt.get Options.src) in
   let pkg_dst () =
@@ -199,23 +189,23 @@ let main () =
     ) (Cudf.get_packages universe) 
   in
   let pkg_cone () =
-    List.unique (List.fold_left (fun acc (p,v) ->
-      let pid = get_cudfpkg (p,v) in
+    List.unique (List.fold_left (fun acc (p,c) ->
+      let l = get_cudfpkglist (p,c) in
       if OptParse.Opt.is_set Options.cone_maxdepth then
         let md = OptParse.Opt.get Options.cone_maxdepth in
-        (Depsolver.dependency_closure ~maxdepth:md universe [pid]) @ acc
+        (Depsolver.dependency_closure ~maxdepth:md universe l) @ acc
       else
-        (Depsolver.dependency_closure universe [pid]) @ acc
+        (Depsolver.dependency_closure universe l) @ acc
     ) [] (OptParse.Opt.get Options.cone))
   in
   let pkg_reverse_cone () =
-    List.unique (List.fold_left (fun acc (p,v) ->
-      let pid = get_cudfpkg (p,v) in
+    List.unique (List.fold_left (fun acc (p,c) ->
+      let l = get_cudfpkglist (p,c) in
       if OptParse.Opt.is_set Options.cone_maxdepth then
         let md = OptParse.Opt.get Options.cone_maxdepth in
-        (Depsolver.reverse_dependency_closure ~maxdepth:md universe [pid]) @ acc
+        (Depsolver.reverse_dependency_closure ~maxdepth:md universe l) @ acc
       else
-        (Depsolver.reverse_dependency_closure universe [pid]) @ acc
+        (Depsolver.reverse_dependency_closure universe l) @ acc
     ) [] (OptParse.Opt.get Options.reverse_cone))
   in
 
@@ -247,12 +237,26 @@ let main () =
   let output ll =
     List.iter (fun l ->
       let u = Cudf.load_universe l in
+      let doc = (preamble,u,request) in
       let oc =
         if OptParse.Opt.is_set Options.outfile then 
           open_out (OptParse.Opt.get Options.outfile)
         else stdout
       in
       begin match OptParse.Opt.get Options.out_type with
+      |"cnf" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Cnf u)
+      |"mzn" -> Printf.fprintf oc "%s" (Depsolver.output_minizinc ~global_constraints doc)
+      |"dimacs" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Dimacs u)
+      |"cudf" -> Cudf_printer.pp_cudf oc doc
+      |"table" ->
+IFDEF HASOCAMLGRAPH THEN
+        Printf.fprintf oc "%d\t%d\t%d\n"
+        (Cudf.universe_size u) (DGraph.G.nb_edges (DGraph.dependency_graph u))
+        (nr_conflicts u)
+ELSE
+        failwith (Printf.sprintf "format %s not supported: needs ocamlgraph" t)
+END
+
       |("dot" | "gml" | "grml") as t -> 
 IFDEF HASOCAMLGRAPH THEN
         let fmt = Format.formatter_of_out_channel oc in
@@ -284,18 +288,6 @@ IFDEF HASOCAMLGRAPH THEN
         end
 ELSE
         failwith (Printf.sprintf "format %s not supported: needs ocamlgraph" t)
-END
-      |"cnf" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Cnf u)
-      |"mzn" -> Printf.fprintf oc "%s" (Depsolver.output_minizinc ~global_constraints u)
-      |"dimacs" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Dimacs u)
-      |"cudf" -> output_cudf oc preamble u request
-      |"table" ->
-IFDEF HASOCAMLGRAPH THEN
-        Printf.fprintf oc "%d\t%d\t%d\n"
-        (Cudf.universe_size u) (DGraph.G.nb_edges (DGraph.dependency_graph u))
-        (nr_conflicts u)
-ELSE
-        failwith ("table not supported: needs ocamlgraph")
 END
       |_ -> assert false
       end ;
