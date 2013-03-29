@@ -156,7 +156,7 @@ let main () =
     output_to_sqlite posargs
   else
   let (fg,bg) = Options.parse_cmdline (input_type,implicit) posargs in
-  let (preamble,pkgll,from_cudf,to_cudf) = Boilerplate.load_list ~options [fg;bg] in
+  let (preamble,pkgll,request,from_cudf,to_cudf) = Boilerplate.load_list ~options [fg;bg] in
   let (fg_pkglist, bg_pkglist) = match pkgll with [fg;bg] -> (fg,bg) | _ -> assert false in
   let universe =
     let s = CudfAdd.to_set (fg_pkglist @ bg_pkglist) in

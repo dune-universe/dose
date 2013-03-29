@@ -38,7 +38,8 @@ let deb_load_list options ?(status=[]) dll =
     ) dll
   in
   let preamble = Debian.Debcudf.preamble in
-  (preamble,cll,from_cudf,to_cudf)
+  let request = Cudf.default_request in
+  (preamble,cll,request,from_cudf,to_cudf)
       
 let eclipse_load_list options dll =
   let extras = [] in
@@ -52,7 +53,8 @@ let eclipse_load_list options dll =
     ) dll
   in
   let preamble = Eclipse.Eclipsecudf.preamble in
-  (preamble,cll,from_cudf,to_cudf)
+  let request = Cudf.default_request in
+  (preamble,cll,request,from_cudf,to_cudf)
  
 let csw_load_list dll =
   let pkglist = List.flatten dll in
@@ -65,7 +67,8 @@ let csw_load_list dll =
     ) dll
   in
   let preamble = Csw.Cswcudf.preamble in
-  (preamble,cll,from_cudf,to_cudf)
+  let request = Cudf.default_request in
+  (preamble,cll,request,from_cudf,to_cudf)
  
 let edsp_load_list options file =
   let archs = 
@@ -95,16 +98,17 @@ let edsp_load_list options file =
   in
   let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
   let from_cudf (p,i) = (p, Debian.Debcudf.get_real_version tables (p,i)) in
-  (preamble,[cudfpkglist;[]],from_cudf,to_cudf)
+  let request = Cudf.default_request in
+  (preamble,[cudfpkglist;[]],request,from_cudf,to_cudf)
 
 let edsp_load_universe options file =
-  let (pr,l,f,t) = edsp_load_list options file in
-  (pr,Cudf.load_universe (List.hd l), f, t)
+  let (pr,l,r,f,t) = edsp_load_list options file in
+  (pr,Cudf.load_universe (List.hd l), r, f, t)
 
 (** transform a list of debian control stanza into a cudf universe *)
 let deb_load_universe options l =
-  let (pr,cll,f,t) = deb_load_list options [l] in
-  (pr,Cudf.load_universe (List.flatten cll), f, t)
+  let (pr,cll,r,f,t) = deb_load_list options [l] in
+  (pr,Cudf.load_universe (List.flatten cll), r, f, t)
 
 (* XXX double minded ... this code is kinda similar to the code in rpmcudf 
  * refactor or not refactor ? *)
@@ -121,15 +125,16 @@ IFDEF HASRPM THEN
   let from_cudf (p,i) = (p,string_of_int i) in
   let to_cudf (p,v) = (p,Rpm.Rpmcudf.get_cudf_version tables (p,v)) in
   let preamble = Rpm.Rpmcudf.preamble in
-  (preamble,cll,from_cudf,to_cudf)
+  let request = Cudf.default_request in
+  (preamble,cll,request,from_cudf,to_cudf)
 ELSE
   failwith "librpm not available. re-configure with --with-rpm"
 END
 
 (** transform a list of rpm control stanza into a cudf universe *)
 let rpm_load_universe l =
-  let (pr,cll,f,t) = rpm_load_list [l] in
-  (pr,Cudf.load_universe (List.flatten cll), f, t)
+  let (pr,cll,r,f,t) = rpm_load_list [l] in
+  (pr,Cudf.load_universe (List.flatten cll), r, f, t)
 
 (** parse a cudf file and return a triple (preamble,package list,request
     option). If the package is not valid fails and exit *)
@@ -162,18 +167,18 @@ let load_cudf doc =
 ;;
 
 let cudf_load_list file =
-  let preamble, pkglist =
+  let preamble, pkglist ,request =
     match parse_cudf file with
-    |None, pkglist, _ -> Cudf.default_preamble, pkglist
-    |Some p , pkglist, _ -> p, pkglist
+    |None, pkglist, None -> Cudf.default_preamble, pkglist, Cudf.default_request
+    |Some p , pkglist, Some req -> p, pkglist, req
   in
   let from_cudf (p,i) = (p,string_of_int i) in
   let to_cudf (p,v) = (p,int_of_string v) in
-  (preamble,[pkglist;[]],from_cudf,to_cudf)
+  (preamble,[pkglist;[]],request,from_cudf,to_cudf)
 
 let cudf_load_universe file =
-  let (pr,l,f,t) = cudf_load_list file in
-  (pr,Cudf.load_universe (List.hd l), f, t)
+  let (pr,l,r,f,t) = cudf_load_list file in
+  (pr,Cudf.load_universe (List.hd l), r, f, t)
 
 (** return the name of the file *)
 let unpack (_,(_,_,_,_,file),_) = file
@@ -330,8 +335,8 @@ let load_universe ?(options=None) uris =
   info "Parsing and normalizing..." ;
   let timer = Util.Timer.create "Parsing and normalizing" in
   Util.Timer.start timer;
-  let (pr,cll,f,t) = parse_input ~options [uris] in
-  let u = (pr,Cudf.load_universe (List.flatten cll), f, t) in
+  let (pr,cll,r,f,t) = parse_input ~options [uris] in
+  let u = (pr,Cudf.load_universe (List.flatten cll), r, f, t) in
   Util.Timer.stop timer u
 ;;
 

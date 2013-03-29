@@ -68,7 +68,7 @@ let main () =
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress) bars;
   let options = Options.set_options (Input.guess_format [posargs]) in
   (* let options = default_options (Input.guess_format [posargs]) in *)
-  let (_,universe,_,to_cudf) = Boilerplate.load_universe ~options posargs in
+  let (_,universe,_,_,to_cudf) = Boilerplate.load_universe ~options posargs in
   if OptParse.Opt.is_set Options.checkonly then begin
     let pkglistlist =
         List.map (fun ((n,a),c) ->
