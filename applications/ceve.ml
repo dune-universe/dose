@@ -157,6 +157,10 @@ let main () =
   else
   let (fg,bg) = Options.parse_cmdline (input_type,implicit) posargs in
   let (preamble,pkgll,request,from_cudf,to_cudf) = Boilerplate.load_list ~options [fg;bg] in
+  let request = 
+    let l = OptParse.Opt.get Options.request in
+    if l <> [] then parse_request to_cudf l else request 
+  in
   let (fg_pkglist, bg_pkglist) = match pkgll with [fg;bg] -> (fg,bg) | _ -> assert false in
   let universe =
     let s = CudfAdd.to_set (fg_pkglist @ bg_pkglist) in
@@ -168,8 +172,6 @@ let main () =
     in
     if OptParse.Opt.get Options.trim then Depsolver.trim ~global_constraints u else u
   in
-
-  let request = parse_request to_cudf (OptParse.Opt.get Options.request) in
   let get_cudfpkglist ((n,a),c) = 
     let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
     try Cudf.lookup_packages ~filter universe name
@@ -245,7 +247,7 @@ let main () =
       in
       begin match OptParse.Opt.get Options.out_type with
       |"cnf" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Cnf u)
-      |"mzn" -> Printf.fprintf oc "%s" (Depsolver.output_minizinc ~global_constraints doc)
+      |"mzn" -> Printf.fprintf oc "%s" (Depsolver.output_minizinc doc)
       |"dimacs" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Dimacs u)
       |"cudf" -> Cudf_printer.pp_cudf oc doc
       |"table" ->

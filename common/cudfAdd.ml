@@ -179,7 +179,7 @@ let unique l =
 
 let normalize_set (l : int list) = unique l
 
-(* (pkgname,constr) -> pkg *)
+(* vpkg -> pkg list *)
 let who_provides univ (pkgname,constr) = 
   let pkgl = Cudf.lookup_packages ~filter:constr univ pkgname in
   let prol = Cudf.who_provides ~installed:false univ (pkgname,constr) in

@@ -76,7 +76,7 @@ let edsp_load_list options file =
       options.Debian.Debcudf.native :: options.Debian.Debcudf.foreign 
     else []
   in
-  let (_,pkglist) = Debian.Edsp.input_raw ~archs file in
+  let (request,pkglist) = Debian.Edsp.input_raw ~archs file in
   let tables = Debian.Debcudf.init_tables pkglist in
   let preamble =
     let l = List.map snd Debian.Edsp.extras_tocudf in
@@ -96,9 +96,9 @@ let edsp_load_list options file =
       end
     ) pkglist
   in
+  let request = Debian.Edsp.requesttocudf tables (Cudf.load_universe cudfpkglist) request in
   let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
   let from_cudf (p,i) = (p, Debian.Debcudf.get_real_version tables (p,i)) in
-  let request = Cudf.default_request in
   (preamble,[cudfpkglist;[]],request,from_cudf,to_cudf)
 
 let edsp_load_universe options file =
@@ -170,6 +170,8 @@ let cudf_load_list file =
   let preamble, pkglist ,request =
     match parse_cudf file with
     |None, pkglist, None -> Cudf.default_preamble, pkglist, Cudf.default_request
+    |None , pkglist, Some req -> Cudf.default_preamble, pkglist, req
+    |Some p , pkglist, None -> p, pkglist, Cudf.default_request
     |Some p , pkglist, Some req -> p, pkglist, req
   in
   let from_cudf (p,i) = (p,string_of_int i) in

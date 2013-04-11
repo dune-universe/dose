@@ -316,72 +316,201 @@ let output_clauses ?(global_constraints=true) ?(enc=Cnf) univ =
   Buffer.contents buff
 ;;
 
-let output_minizinc ?(global_constraints=true) (pre,univ,req) = 
-  let cudfpool = Depsolver_int.init_pool_univ global_constraints univ in
+let output_minizinc (pre,univ,req) = 
+  let cudfpool = Depsolver_int.init_pool_univ false univ in
   let size = Cudf.universe_size univ in
   let buff = Buffer.create size in
 
+  let names =
+    let h = Hashtbl.create (Cudf.universe_size univ) in
+    Cudf.iter_packages (fun p ->
+      if not (Hashtbl.mem h p.Cudf.package) then
+        Hashtbl.add h p.Cudf.package ()
+    ) univ;
+    Hashtbl.fold (fun k _ l -> k::l) h [] 
+  in
+
   let conflicts pkg_id dl =
-    List.iter (fun (_,l) ->
-      if l <> [] then 
-        Printf.bprintf buff "constraint pkg[%d] -> (%s);\n" pkg_id (
-          String.concat " \\/ " (List.map (Printf.sprintf "pkg[%d]") l) 
-        )
-    ) dl
+    let cl = List.flatten (List.map (fun (_,l) -> l) dl) in
+    let n = List.length cl in
+    Printf.bprintf buff "constraint %d * bool2int(pkg[%d]) + " n (pkg_id+1);
+    Printf.bprintf buff "sum ([bool2int(pkg[p]) | p in [%s]]) <= %d;\n"
+      (String.concat "," (List.map (fun i -> string_of_int (i+1)) cl)) n;
   in
 
   let depends pkg_id dll =
-    Printf.bprintf buff "constraint pkg[%d] -> (%s);\n" pkg_id (
+    Printf.bprintf buff "constraint pkg[%d] -> (%s);\n" (pkg_id+1) (
       String.concat " /\\ " (
         List.map (fun (vpkgs,dl) ->
           Printf.sprintf "( %s )" (
-            String.concat " \\/ " (List.map (Printf.sprintf "pkg[%d]") dl) 
+            String.concat " \\/ " (List.map (fun i -> Printf.sprintf "pkg[%d]" (i+1)) dl) 
           )
         ) dll
       )
     )
   in
 
-  Printf.bprintf buff "int: n = %d;\n" size;
-  Printf.bprintf buff "array[0..n] of var bool : pkg;\n";
-  Printf.bprintf buff "array[0..n] of string: pname;\n\n";
-  Printf.bprintf buff "pname = [%s];\n\n" (
+  let removed () =
+    Printf.bprintf buff "array[Pnames] of var bool : remvpkg;\n";
+
+    Printf.bprintf buff "constraint forall (id in [i | i in Pnames where exists (q in pname[i]) (instpkg[q] = true)]) (\n";
+    Printf.bprintf buff "  (bool2int(remvpkg[id]) + sum([bool2int(pkg[i]) | i in pname[id]])\n"; 
+    Printf.bprintf buff "  >= 1) \\/ \n";
+
+    Printf.bprintf buff "  ( card(pname[id]) * bool2int(remvpkg[id])\n";
+    Printf.bprintf buff "  + sum([bool2int(pkg[i]) | i in pname[id]])\n";
+    Printf.bprintf buff "  <= card(pname[id])));\n\n";
+
+    Printf.bprintf buff "var int : removed = sum([bool2int(remvpkg[id]) | id in [i | i in Pnames where exists (q in pname[i]) (instpkg[q] = true)]]);\n";
+  in
+
+  let changed () =
+    Printf.bprintf buff "array[Pnames] of var bool : chanpkg;\n";
+
+    Printf.bprintf buff "constraint forall (id in Pnames) (\n";
+    Printf.bprintf buff "  (- bool2int(chanpkg[id])\n";
+    Printf.bprintf buff "  - sum([bool2int(pkg[i]) | i in [p | p in pname[id] where instpkg[p] = true]])\n";
+    Printf.bprintf buff "  + sum([bool2int(pkg[i]) | i in [p | p in pname[id] where instpkg[p] = false]])\n";
+    Printf.bprintf buff "  >= - (length([p | p in pname[id] where instpkg[p] = true]))) \\/ \n ";
+
+    Printf.bprintf buff "  (- length([p | p in pname[id] where instpkg[p] = true]) * bool2int(chanpkg[id])\n";
+    Printf.bprintf buff "  - sum([bool2int(pkg[i]) | i in [p | p in pname[id] where instpkg[p] = true]])\n";
+    Printf.bprintf buff "  + sum([bool2int(pkg[i]) | i in [p | p in pname[id] where instpkg[p] = false]])\n";
+    Printf.bprintf buff "  <= - length([p | p in pname[id] where instpkg[p] = true])));\n\n";
+
+    Printf.bprintf buff "var int : changed = sum([bool2int(chanpkg[id]) | id in Pnames]);\n";
+  in
+
+  let newp () =
+    Printf.bprintf buff "array[Pnames] of var bool : newpkg;\n";
+    Printf.bprintf buff "constraint forall (id in Pnames) (\n";
+    Printf.bprintf buff "  (- bool2int(newpkg[id])\n";
+    Printf.bprintf buff "  + sum([bool2int(pkg[i]) | i in pname[id]])\n";
+    Printf.bprintf buff "  >= 0) \\/ \n";
+
+    Printf.bprintf buff "  (- card(pname[id]) * bool2int(newpkg[id])\n";
+    Printf.bprintf buff "  + sum([bool2int(pkg[i]) | i in pname[id]])\n";
+    Printf.bprintf buff "  <= 0));\n\n";
+
+    Printf.bprintf buff "%%var int : new = sum([bool2int(newpkg[i]) | i in Pnames where forall (q in pname[i]) (instpkg[q] = false)]);\n";
+    Printf.bprintf buff "var int : new = sum([bool2int(newpkg[i]) | i in Pnames where (sum ([bool2int(instpkg[q]) | q in pname[i]]) = 0)]);\n";
+  in
+
+  let unsat () = () in
+  let notuptodate () = () in
+  let count () = () in
+
+  Printf.bprintf buff "\n%%declarations\n";
+  Printf.bprintf buff "int: univsize = %d;\n" size;
+  Printf.bprintf buff "int: pnamesize = %d;\n" (List.length names);
+  Printf.bprintf buff "set of 1..univsize : Packages = 1..univsize;\n";
+  Printf.bprintf buff "set of 1..pnamesize : Pnames = 1..pnamesize;\n";
+  Printf.bprintf buff "array[Packages] of var bool : pkg;\n";
+  Printf.bprintf buff "array[Packages] of bool : instpkg;\n";
+  Printf.bprintf buff "array[Pnames] of set of Packages : pname;\n\n";
+
+  Printf.bprintf buff "\n%%optimization functions\n";
+
+  removed ();
+  Printf.bprintf buff "\n";
+  changed ();
+  Printf.bprintf buff "\n";
+  newp ();
+  Printf.bprintf buff "solve satisfy;\n";
+
+  Printf.bprintf buff "\n%%pretty print\n";
+  Printf.bprintf buff "array[Packages] of string: realpname;\n\n";
+  Printf.bprintf buff "output [ if fix(pkg[id]) then show (\"install: \" ++ realpname[id] ++ \"\\n\") else \"\" endif | id in Packages ];\n";
+
+  Printf.bprintf buff "\n%%data\n";
+  Printf.bprintf buff "realpname = [%s];\n\n" (
     String.concat "," (
       List.map 
       (Printf.sprintf "\"%s\"") (
         List.map (fun id -> 
           CudfAdd.string_of_package (Cudf.package_by_uid univ id)
-        ) (Util.range 0 (size - 2))
+        ) (Util.range 0 (size-1))
       )
     )
   );
+
+  Printf.bprintf buff "instpkg = [%s];\n\n" (
+    String.concat "," (
+      List.map (fun id ->
+        let pkg = (Cudf.package_by_uid univ id) in
+        string_of_bool pkg.Cudf.installed
+      ) (Util.range 0 (size-1))
+    )
+  );
+
+  Printf.bprintf buff "pname = [%s];\n\n" (
+    String.concat "," (
+      List.mapi (fun id name ->
+        let pkgversions = Cudf.lookup_packages univ name in
+        Printf.sprintf "{%s} %% %d\n" 
+        (String.concat "," (List.map (fun p -> string_of_int ((Cudf.uid_by_package univ p)+1)) pkgversions)) (id+1);
+      ) (List.rev names)
+    )
+  );
+
+  Printf.bprintf buff "\n%%constraints\n";
   Array.iteri (fun id (dll,cl) ->
-    if dll <> [] then depends id dll;
-    if cl <> [] then conflicts id cl
+    if id <> size then begin
+      if dll <> [] then depends id dll;
+      if cl <> [] then conflicts id cl
+    end
   ) (Depsolver_int.strip_cudf_pool cudfpool);
 
-(*
-  if req.Cudf.install <> [] then
-    Printf.bprintf buff "constraint %s;" (
+  Printf.bprintf buff "\n%%request\n";
+
+  if req.Cudf.install <> [] then begin
+    Printf.bprintf buff "%%install\n";
+    Printf.bprintf buff "constraint %s;\n" (
       String.concat " /\\ " (
-        List.map (fun pkg ->
-          Printf.sprintf "pkg[%d] = true" (Cudf.uid_by_package univ pkg)
-        )
+        List.map (fun vpkg ->
+          Printf.sprintf "( %s )" (
+            String.concat " \\/ " (
+              List.map (fun id ->
+                Printf.sprintf "pkg[%d] = true" (id+1)
+              ) (CudfAdd.resolve_vpkg_int univ vpkg)
+            )
+          )
+        ) req.Cudf.install
+      )
+    )
+  end;
+
+  if req.Cudf.remove <> [] then begin
+    Printf.bprintf buff "%%remove\n";
+    Printf.bprintf buff "constraint %s;\n" (
+      String.concat " /\\ " (
+        List.map (fun id ->
+          Printf.sprintf "(pkg[%d] = false)" (id+1)
+        ) (CudfAdd.resolve_vpkgs_int univ req.Cudf.remove)
+      )
+    )
+  end;
+
+  if req.Cudf.upgrade <> [] then begin
+    Printf.bprintf buff "%%upgrade\n";
+    Printf.bprintf buff "constraint %s;\n" (
+      String.concat " /\\ " (
+        List.map (fun ((name,_) as vpkg) ->
+          let pkginstlist = List.map (Cudf.uid_by_package univ) (Cudf.get_installed univ name) in
+          Printf.sprintf "( %s )" (
+            String.concat " \\/ " (
+              List.filter_map (fun id ->
+                if not (List.mem id pkginstlist) then
+                  (* what if I cannot upgrade any packages ? *)
+                  Some (Printf.sprintf "pkg[%d]" (id+1))
+                else None
+              ) (CudfAdd.resolve_vpkg_int univ vpkg)
+            )
+          )
+        ) req.Cudf.upgrade
       )
     );
-
-  if req.Cudf.remove <> [] then
-    Printf.bprintf buff "constraint %s;" (
-      String.concat " /\\ " (
-        List.map (fun pkg ->
-          Printf.sprintf "pkg[%d] = false" (Cudf.uid_by_package univ pkg)
-        )
-      )
-    );
-*)
-
-  Printf.bprintf buff "solve satisfy;\n";
-  Printf.bprintf buff "output [ show (pname[id]) ++ \"=\" ++ show(pkg[id]) | id in 0..n ];\n";
+  end;
 
   Buffer.contents buff
 ;;
