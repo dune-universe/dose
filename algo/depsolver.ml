@@ -320,6 +320,7 @@ let output_minizinc (pre,univ,req) =
   let cudfpool = Depsolver_int.init_pool_univ false univ in
   let size = Cudf.universe_size univ in
   let buff = Buffer.create size in
+  let conf = Hashtbl.create size in
 
   let names =
     let h = Hashtbl.create (Cudf.universe_size univ) in
@@ -338,6 +339,15 @@ let output_minizinc (pre,univ,req) =
       (String.concat "," (List.map (fun i -> string_of_int (i+1)) cl)) n;
   in
 
+  let conflicts pkg_id dl =
+    List.iter (fun id ->
+      if (pkg_id <> id) && not (Hashtbl.mem conf (min(pkg_id+1) (id+1), max(pkg_id+1) (id+1))) then begin
+        Hashtbl.add conf (min(pkg_id+1) (id+1), max(pkg_id+1) (id+1)) ();
+        Printf.bprintf buff "constraint not (pkg[%d] /\\ pkg[%d]);\n" (pkg_id+1) (id+1)
+      end
+    ) (List.flatten (List.map (fun (_,l) -> l) dl))
+  in
+
   let depends pkg_id dll =
     Printf.bprintf buff "constraint pkg[%d] -> (%s);\n" (pkg_id+1) (
       String.concat " /\\ " (
@@ -353,61 +363,67 @@ let output_minizinc (pre,univ,req) =
   let removed () =
     Printf.bprintf buff "array[Pnames] of var bool : remvpkg;\n";
 
-    Printf.bprintf buff "constraint forall (id in [i | i in Pnames where exists (q in pname[i]) (instpkg[q] = true)]) (\n";
+    Printf.bprintf buff "predicate removedpred (Pnames:id) = \n";
     Printf.bprintf buff "  (bool2int(remvpkg[id]) + sum([bool2int(pkg[i]) | i in pname[id]])\n"; 
-    Printf.bprintf buff "  >= 1) \\/ \n";
+    Printf.bprintf buff "  >= 1) /\\ \n";
 
     Printf.bprintf buff "  ( card(pname[id]) * bool2int(remvpkg[id])\n";
     Printf.bprintf buff "  + sum([bool2int(pkg[i]) | i in pname[id]])\n";
-    Printf.bprintf buff "  <= card(pname[id])));\n\n";
+    Printf.bprintf buff "  <= card(pname[id]));\n\n";
 
-    Printf.bprintf buff "var int : removed = sum([bool2int(remvpkg[id]) | id in [i | i in Pnames where exists (q in pname[i]) (instpkg[q] = true)]]);\n";
+    Printf.bprintf buff "constraint forall (id in [i | i in Pnames where exists (q in pname[i]) (instpkg[q] = true)]) (removedpred(id));\n";
   in
 
   let changed () =
     Printf.bprintf buff "array[Pnames] of var bool : chanpkg;\n";
-
-    Printf.bprintf buff "constraint forall (id in Pnames) (\n";
+    Printf.bprintf buff "predicate changedpred (Pnames : id) =\n";
+    Printf.bprintf buff "  let {\n";
+    Printf.bprintf buff "    set of Packages : Vp =  pname[id],\n";
+    Printf.bprintf buff "    set of Packages : IVp = {p | p in Vp where instpkg[p] = true},\n";
+    Printf.bprintf buff "    set of Packages : UVp = {p | p in Vp where instpkg[p] = false}\n";
+    Printf.bprintf buff "  } in\n";
     Printf.bprintf buff "  (- bool2int(chanpkg[id])\n";
-    Printf.bprintf buff "  - sum([bool2int(pkg[i]) | i in [p | p in pname[id] where instpkg[p] = true]])\n";
-    Printf.bprintf buff "  + sum([bool2int(pkg[i]) | i in [p | p in pname[id] where instpkg[p] = false]])\n";
-    Printf.bprintf buff "  >= - (length([p | p in pname[id] where instpkg[p] = true]))) \\/ \n ";
+    Printf.bprintf buff "  - sum([bool2int(pkg[i]) | i in IVp])\n";
+    Printf.bprintf buff "  + sum([bool2int(pkg[i]) | i in UVp])\n";
+    Printf.bprintf buff "  >= - card(IVp)) /\\ \n";
+    Printf.bprintf buff "  (- card(Vp) * bool2int(chanpkg[id])\n";
+    Printf.bprintf buff "  - sum([bool2int(pkg[i]) | i in IVp])\n";
+    Printf.bprintf buff "  + sum([bool2int(pkg[i]) | i in UVp])\n";
+    Printf.bprintf buff "  <= - card(IVp));\n";
 
-    Printf.bprintf buff "  (- length([p | p in pname[id] where instpkg[p] = true]) * bool2int(chanpkg[id])\n";
-    Printf.bprintf buff "  - sum([bool2int(pkg[i]) | i in [p | p in pname[id] where instpkg[p] = true]])\n";
-    Printf.bprintf buff "  + sum([bool2int(pkg[i]) | i in [p | p in pname[id] where instpkg[p] = false]])\n";
-    Printf.bprintf buff "  <= - length([p | p in pname[id] where instpkg[p] = true])));\n\n";
-
-    Printf.bprintf buff "var int : changed = sum([bool2int(chanpkg[id]) | id in Pnames]);\n";
+    Printf.bprintf buff "constraint forall (id in Pnames) (changedpred(id));\n";
   in
 
   let newp () =
     Printf.bprintf buff "array[Pnames] of var bool : newpkg;\n";
-    Printf.bprintf buff "constraint forall (id in Pnames) (\n";
+    Printf.bprintf buff "predicate newpred (Pnames : id) = \n";
     Printf.bprintf buff "  (- bool2int(newpkg[id])\n";
     Printf.bprintf buff "  + sum([bool2int(pkg[i]) | i in pname[id]])\n";
-    Printf.bprintf buff "  >= 0) \\/ \n";
+    Printf.bprintf buff "  >= 0) /\\ \n";
 
     Printf.bprintf buff "  (- card(pname[id]) * bool2int(newpkg[id])\n";
     Printf.bprintf buff "  + sum([bool2int(pkg[i]) | i in pname[id]])\n";
-    Printf.bprintf buff "  <= 0));\n\n";
+    Printf.bprintf buff "  <= 0);\n\n";
 
-    Printf.bprintf buff "%%var int : new = sum([bool2int(newpkg[i]) | i in Pnames where forall (q in pname[i]) (instpkg[q] = false)]);\n";
-    Printf.bprintf buff "var int : new = sum([bool2int(newpkg[i]) | i in Pnames where (sum ([bool2int(instpkg[q]) | q in pname[i]]) = 0)]);\n";
+    Printf.bprintf buff "constraint forall (id in Pnames) (newpred(id));\n";
   in
 
   let unsat () = () in
   let notuptodate () = () in
   let count () = () in
+  let criteria = [1;2;3] in
 
   Printf.bprintf buff "\n%%declarations\n";
   Printf.bprintf buff "int: univsize = %d;\n" size;
   Printf.bprintf buff "int: pnamesize = %d;\n" (List.length names);
+  Printf.bprintf buff "int: criteriasize = %d;\n" (List.length criteria);
   Printf.bprintf buff "set of 1..univsize : Packages = 1..univsize;\n";
   Printf.bprintf buff "set of 1..pnamesize : Pnames = 1..pnamesize;\n";
+  Printf.bprintf buff "set of 1..criteriasize : Criteria = 1..criteriasize;\n";
   Printf.bprintf buff "array[Packages] of var bool : pkg;\n";
   Printf.bprintf buff "array[Packages] of bool : instpkg;\n";
   Printf.bprintf buff "array[Pnames] of set of Packages : pname;\n\n";
+  Printf.bprintf buff "array[Criteria] of var int: criteria;\n";
 
   Printf.bprintf buff "\n%%optimization functions\n";
 
@@ -416,11 +432,24 @@ let output_minizinc (pre,univ,req) =
   changed ();
   Printf.bprintf buff "\n";
   newp ();
-  Printf.bprintf buff "solve satisfy;\n";
+  Printf.bprintf buff "
+criteria = [
+  sum([bool2int(remvpkg[id]) | id in [i | i in Pnames where exists (q in pname[i]) (instpkg[q] = true)]]),
+  sum([bool2int(chanpkg[id]) | id in Pnames]),
+  sum([bool2int(newpkg[i]) | i in Pnames where (sum ([bool2int(instpkg[q]) | q in pname[i]]) = 0)])
+  %%sum([bool2int(newpkg[i]) | i in Pnames where (forall (q in pname[i]) (instpkg[q] = false))])
+];\n";
+
+  Printf.bprintf buff "array[Criteria] of int : weigths = [1,2,3];\n";
+  Printf.bprintf buff "solve minimize sum (i in Criteria) (weigths[i] * criteria[i]);\n";
 
   Printf.bprintf buff "\n%%pretty print\n";
   Printf.bprintf buff "array[Packages] of string: realpname;\n\n";
-  Printf.bprintf buff "output [ if fix(pkg[id]) then show (\"install: \" ++ realpname[id] ++ \"\\n\") else \"\" endif | id in Packages ];\n";
+  Printf.bprintf buff "output 
+[ \"removed:\" ++ show(criteria[1]) ++ \"\\n\" ++
+  \"changed:\" ++ show(criteria[2]) ++ \"\\n\" ++
+  \"new:\"     ++ show(criteria[3]) ++ \"\\n\" ] ++
+[ if fix(pkg[id]) then show (\"install: \" ++ realpname[id] ++ \"\\n\") else \"\" endif | id in Packages ];\n";
 
   Printf.bprintf buff "\n%%data\n";
   Printf.bprintf buff "realpname = [%s];\n\n" (
@@ -447,8 +476,10 @@ let output_minizinc (pre,univ,req) =
     String.concat "," (
       List.mapi (fun id name ->
         let pkgversions = Cudf.lookup_packages univ name in
-        Printf.sprintf "{%s} %% %d\n" 
-        (String.concat "," (List.map (fun p -> string_of_int ((Cudf.uid_by_package univ p)+1)) pkgversions)) (id+1);
+        Printf.sprintf "{%s} %% (%d) %s\n" 
+        (String.concat "," (List.map (fun p -> string_of_int ((Cudf.uid_by_package univ p)+1)) pkgversions)) (id+1)
+        name
+        ;
       ) (List.rev names)
     )
   );
