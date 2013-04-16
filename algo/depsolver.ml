@@ -316,7 +316,7 @@ let output_clauses ?(global_constraints=true) ?(enc=Cnf) univ =
   Buffer.contents buff
 ;;
 
-let output_minizinc (pre,univ,req) = 
+let output_minizinc ?(criteria=[1;2;3;4;]) (pre,univ,req) = 
   let cudfpool = Depsolver_int.init_pool_univ false univ in
   let size = Cudf.universe_size univ in
   let buff = Buffer.create size in
@@ -409,9 +409,26 @@ let output_minizinc (pre,univ,req) =
   in
 
   let unsat () = () in
-  let notuptodate () = () in
+  let notuptodate () = 
+    Printf.bprintf buff "array[Pnames] of var bool : nupkg;\n"; 
+    Printf.bprintf buff "predicate nupred (Pnames : id) = \n";
+    Printf.bprintf buff "  let {\n";
+    Printf.bprintf buff "    set of Packages : Vp =  pname[id],\n";
+    Printf.bprintf buff "    Packages : SupVp = min(pname[id])\n";
+    Printf.bprintf buff "  } in\n";
+    Printf.bprintf buff "  (- card(Vp) * bool2int(nupkg[id])\n";
+    Printf.bprintf buff "   - (card(Vp) - 1) * bool2int(pkg[SupVp])\n";
+    Printf.bprintf buff "   + sum (i in (Vp diff {SupVp})) (bool2int(pkg[i]))\n";
+    Printf.bprintf buff "  <= 0) /\\ \n";
+    Printf.bprintf buff "  (- card(Vp) * bool2int(nupkg[id])\n";
+    Printf.bprintf buff "   - (card(Vp) - 1) * bool2int(pkg[SupVp])\n";
+    Printf.bprintf buff "   + sum (i in (Vp diff {SupVp})) (bool2int(pkg[i]))\n";
+    Printf.bprintf buff "  >= - card(Vp) +1);\n\n";
+
+    Printf.bprintf buff "constraint forall (id in Pnames) (nupred(id));\n";
+  in
+
   let count () = () in
-  let criteria = [1;2;3] in
 
   Printf.bprintf buff "\n%%declarations\n";
   Printf.bprintf buff "int: univsize = %d;\n" size;
@@ -432,23 +449,26 @@ let output_minizinc (pre,univ,req) =
   changed ();
   Printf.bprintf buff "\n";
   newp ();
+  Printf.bprintf buff "\n";
+  notuptodate ();
   Printf.bprintf buff "
 criteria = [
   sum([bool2int(remvpkg[id]) | id in [i | i in Pnames where exists (q in pname[i]) (instpkg[q] = true)]]),
   sum([bool2int(chanpkg[id]) | id in Pnames]),
-  sum([bool2int(newpkg[i]) | i in Pnames where (sum ([bool2int(instpkg[q]) | q in pname[i]]) = 0)])
-  %%sum([bool2int(newpkg[i]) | i in Pnames where (forall (q in pname[i]) (instpkg[q] = false))])
+  sum([bool2int(newpkg[i]) | i in Pnames where (sum ([bool2int(instpkg[q]) | q in pname[i]]) = 0)]),
+  sum([bool2int(nupkg[id]) | id in Pnames]),
 ];\n";
 
-  Printf.bprintf buff "array[Criteria] of int : weigths = [1,2,3];\n";
+  Printf.bprintf buff "array[Criteria] of int : weigths = [1,2,3,4];\n";
   Printf.bprintf buff "solve minimize sum (i in Criteria) (weigths[i] * criteria[i]);\n";
 
   Printf.bprintf buff "\n%%pretty print\n";
   Printf.bprintf buff "array[Packages] of string: realpname;\n\n";
   Printf.bprintf buff "output 
-[ \"removed:\" ++ show(criteria[1]) ++ \"\\n\" ++
-  \"changed:\" ++ show(criteria[2]) ++ \"\\n\" ++
-  \"new:\"     ++ show(criteria[3]) ++ \"\\n\" ] ++
+[ \"removed:\"     ++ show(criteria[1]) ++ \"\\n\" ++
+  \"changed:\"     ++ show(criteria[2]) ++ \"\\n\" ++
+  \"new:\"         ++ show(criteria[3]) ++ \"\\n\" ++
+  \"notuptodate:\" ++ show(criteria[4]) ++ \"\\n\" ] ++
 [ if fix(pkg[id]) then show (\"install: \" ++ realpname[id] ++ \"\\n\") else \"\" endif | id in Packages ];\n";
 
   Printf.bprintf buff "\n%%data\n";
@@ -475,6 +495,7 @@ criteria = [
   Printf.bprintf buff "pname = [%s];\n\n" (
     String.concat "," (
       List.mapi (fun id name ->
+        (* this should be ordered by version, most recent first *)
         let pkgversions = Cudf.lookup_packages univ name in
         Printf.sprintf "{%s} %% (%d) %s\n" 
         (String.concat "," (List.map (fun p -> string_of_int ((Cudf.uid_by_package univ p)+1)) pkgversions)) (id+1)

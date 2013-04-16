@@ -114,7 +114,7 @@ type enc = Cnf | Dimacs
 
   *)
 val output_clauses : ?global_constraints:bool -> ?enc:enc -> Cudf.universe -> string
-val output_minizinc : Cudf.cudf -> string
+val output_minizinc : ?criteria:int list -> Cudf.cudf -> string
 
 type solver_result =
   |Sat of (Cudf.preamble option * Cudf.universe)
