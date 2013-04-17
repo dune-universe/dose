@@ -316,8 +316,8 @@ let output_clauses ?(global_constraints=true) ?(enc=Cnf) univ =
   Buffer.contents buff
 ;;
 
-let output_minizinc ?(criteria=[1;2;3;4;]) (pre,univ,req) = 
-  let cudfpool = Depsolver_int.init_pool_univ false univ in
+let output_minizinc ?(global_constraints=true) ?(criteria=[1;2;3;4;]) (pre,univ,req) = 
+  let cudfpool = Depsolver_int.init_pool_univ global_constraints univ in
   let size = Cudf.universe_size univ in
   let buff = Buffer.create size in
   let conf = Hashtbl.create size in
@@ -431,13 +431,14 @@ let output_minizinc ?(criteria=[1;2;3;4;]) (pre,univ,req) =
   let count () = () in
 
   Printf.bprintf buff "\n%%declarations\n";
-  Printf.bprintf buff "int: univsize = %d;\n" size;
+  Printf.bprintf buff "int: univsize = %d;\n" (size +1);
   Printf.bprintf buff "int: pnamesize = %d;\n" (List.length names);
   Printf.bprintf buff "int: criteriasize = %d;\n" (List.length criteria);
-  Printf.bprintf buff "set of 1..univsize : Packages = 1..univsize;\n";
+  Printf.bprintf buff "set of 1..univsize : Universe = 1..univsize;\n";
+  Printf.bprintf buff "set of 1..(univsize-1) : Packages = 1..(univsize-1);\n";
   Printf.bprintf buff "set of 1..pnamesize : Pnames = 1..pnamesize;\n";
   Printf.bprintf buff "set of 1..criteriasize : Criteria = 1..criteriasize;\n";
-  Printf.bprintf buff "array[Packages] of var bool : pkg;\n";
+  Printf.bprintf buff "array[Universe] of var bool : pkg;\n";
   Printf.bprintf buff "array[Packages] of bool : instpkg;\n";
   Printf.bprintf buff "array[Pnames] of set of Packages : pname;\n\n";
   Printf.bprintf buff "array[Criteria] of var int: criteria;\n";
@@ -469,7 +470,7 @@ criteria = [
   \"changed:\"     ++ show(criteria[2]) ++ \"\\n\" ++
   \"new:\"         ++ show(criteria[3]) ++ \"\\n\" ++
   \"notuptodate:\" ++ show(criteria[4]) ++ \"\\n\" ] ++
-[ if fix(pkg[id]) then show (\"install: \" ++ realpname[id] ++ \"\\n\") else \"\" endif | id in Packages ];\n";
+[ if fix(pkg[id]) then show (\"install: \" ++ realpname[id] ++ \"\\n\") else \"\" endif | id in Packages];\n";
 
   Printf.bprintf buff "\n%%data\n";
   Printf.bprintf buff "realpname = [%s];\n\n" (
@@ -510,8 +511,13 @@ criteria = [
     if id <> size then begin
       if dll <> [] then depends id dll;
       if cl <> [] then conflicts id cl
-    end
+    end else
+      (* here we honour keep packages *)
+      if dll <> [] then depends id dll
   ) (Depsolver_int.strip_cudf_pool cudfpool);
+
+  Printf.bprintf buff "\n%%keep packages\n";
+  Printf.bprintf buff "constraint pkg[%d] = true;\n" (size+1);
 
   Printf.bprintf buff "\n%%request\n";
 
