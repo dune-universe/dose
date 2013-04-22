@@ -318,26 +318,60 @@ let output_clauses ?(global_constraints=true) ?(enc=Cnf) univ =
 
 let output_minizinc ?(global_constraints=true) ?(criteria=[1;2;3;4;]) (pre,univ,req) = 
   let cudfpool = Depsolver_int.init_pool_univ global_constraints univ in
+  let (depsarray,confarray) = CudfAdd.compute_pool univ in
   let size = Cudf.universe_size univ in
   let buff = Buffer.create size in
   let conf = Hashtbl.create size in
+
+  let module Iset = Set.Make(struct type t = int let compare = (-) end) in
+  let to_set l = List.fold_right Iset.add l Iset.empty in
+
+  let searchvars =
+    (CudfAdd.resolve_vpkgs_int univ req.Cudf.install) @
+    (CudfAdd.resolve_vpkgs_int univ req.Cudf.remove) @
+    (CudfAdd.resolve_vpkgs_int univ req.Cudf.upgrade)
+  in
+
+  let installedorkeep = 
+    List.filter_map (fun id ->
+      let pkg = Cudf.package_by_uid univ id in
+      if pkg.Cudf.installed || pkg.Cudf.keep <> `Keep_none then Some id else None
+    ) (Util.range 0 (size-1)) 
+  in
+
+  let depclsure = to_set (
+    Depsolver_int.dependency_closure_cache cudfpool (searchvars @ installedorkeep)
+    )
+  in
 
   let names =
     let h = Hashtbl.create (Cudf.universe_size univ) in
     Cudf.iter_packages (fun p ->
       if not (Hashtbl.mem h p.Cudf.package) then
-        Hashtbl.add h p.Cudf.package ()
+        let l = List.map (Cudf.uid_by_package univ) (Cudf.lookup_packages univ p.Cudf.package) in
+        Hashtbl.add h p.Cudf.package (to_set l)
     ) univ;
-    Hashtbl.fold (fun k _ l -> k::l) h [] 
+    Hashtbl.fold (fun k vl l -> 
+      if not (Iset.is_empty (Iset.inter vl depclsure)) then
+        k::l
+      else l
+    ) h [] 
   in
 
-  let conflicts pkg_id dl =
-    let cl = List.flatten (List.map (fun (_,l) -> l) dl) in
-    let n = List.length cl in
-    Printf.bprintf buff "constraint %d * bool2int(pkg[%d]) + " n (pkg_id+1);
-    Printf.bprintf buff "sum ([bool2int(pkg[p]) | p in [%s]]) <= %d;\n"
-      (String.concat "," (List.map (fun i -> string_of_int (i+1)) cl)) n;
+  let predicates () = Printf.bprintf buff "
+predicate conflicts (int : id, set of Universe : conj) =
+  card(conj) * bool2int(pkg[id]) + sum (i in conj) (bool2int(pkg[i])) <= card(conj);
+
+predicate conjunction (int : id, set of Universe : conj ) =
+  - card(conj) * bool2int(pkg[id]) + sum (i in conj) (bool2int(pkg[i])) >= 0
+;
+
+predicate disjunction (int : id, set of Universe : disj) =
+   - bool2int(pkg[id]) + sum (i in disj) (bool2int(pkg[i])) >= 0
+;";
   in
+
+  predicates ();
 
   let conflicts pkg_id dl =
     List.iter (fun id ->
@@ -359,26 +393,26 @@ let output_minizinc ?(global_constraints=true) ?(criteria=[1;2;3;4;]) (pre,univ,
       )
     )
   in
-
   let removed () =
     Printf.bprintf buff "array[Pnames] of var bool : remvpkg;\n";
 
-    Printf.bprintf buff "predicate removedpred (Pnames:id) = \n";
-    Printf.bprintf buff "  (bool2int(remvpkg[id]) + sum([bool2int(pkg[i]) | i in pname[id]])\n"; 
+    Printf.bprintf buff "predicate removedpred (Pnames:id, set of Packages : Vp) = \n";
+    Printf.bprintf buff "  (bool2int(remvpkg[id]) + sum([bool2int(pkg[i]) | i in Vp])\n"; 
     Printf.bprintf buff "  >= 1) /\\ \n";
 
-    Printf.bprintf buff "  ( card(pname[id]) * bool2int(remvpkg[id])\n";
-    Printf.bprintf buff "  + sum([bool2int(pkg[i]) | i in pname[id]])\n";
-    Printf.bprintf buff "  <= card(pname[id]));\n\n";
+    Printf.bprintf buff "  ( card(Vp) * bool2int(remvpkg[id])\n";
+    Printf.bprintf buff "  + sum([bool2int(pkg[i]) | i in Vp])\n";
+    Printf.bprintf buff "  <= card(Vp));\n\n";
 
-    Printf.bprintf buff "constraint forall (id in [i | i in Pnames where exists (q in pname[i]) (instpkg[q] = true)]) (removedpred(id));\n";
+    (*
+    Printf.bprintf buff "constraint forall (id in [i | i in Pnames where exists (q in pname[i]) (instpkg[q] = true)]) (removedpred(id,pname[id]));\n";
+    *)
   in
 
   let changed () =
     Printf.bprintf buff "array[Pnames] of var bool : chanpkg;\n";
-    Printf.bprintf buff "predicate changedpred (Pnames : id) =\n";
+    Printf.bprintf buff "predicate changedpred (Pnames : id, set of Packages : Vp) =\n";
     Printf.bprintf buff "  let {\n";
-    Printf.bprintf buff "    set of Packages : Vp =  pname[id],\n";
     Printf.bprintf buff "    set of Packages : IVp = {p | p in Vp where instpkg[p] = true},\n";
     Printf.bprintf buff "    set of Packages : UVp = {p | p in Vp where instpkg[p] = false}\n";
     Printf.bprintf buff "  } in\n";
@@ -390,31 +424,32 @@ let output_minizinc ?(global_constraints=true) ?(criteria=[1;2;3;4;]) (pre,univ,
     Printf.bprintf buff "  - sum([bool2int(pkg[i]) | i in IVp])\n";
     Printf.bprintf buff "  + sum([bool2int(pkg[i]) | i in UVp])\n";
     Printf.bprintf buff "  <= - card(IVp));\n";
-
-    Printf.bprintf buff "constraint forall (id in Pnames) (changedpred(id));\n";
+(*
+    Printf.bprintf buff "constraint forall (id in Pnames) (changedpred(id,pname[id]));\n";
+    *)
   in
 
   let newp () =
     Printf.bprintf buff "array[Pnames] of var bool : newpkg;\n";
-    Printf.bprintf buff "predicate newpred (Pnames : id) = \n";
+    Printf.bprintf buff "predicate newpred (Pnames : id,  set of Packages : Vp) = \n";
     Printf.bprintf buff "  (- bool2int(newpkg[id])\n";
-    Printf.bprintf buff "  + sum([bool2int(pkg[i]) | i in pname[id]])\n";
+    Printf.bprintf buff "  + sum([bool2int(pkg[i]) | i in Vp])\n";
     Printf.bprintf buff "  >= 0) /\\ \n";
 
-    Printf.bprintf buff "  (- card(pname[id]) * bool2int(newpkg[id])\n";
-    Printf.bprintf buff "  + sum([bool2int(pkg[i]) | i in pname[id]])\n";
+    Printf.bprintf buff "  (- card(Vp) * bool2int(newpkg[id])\n";
+    Printf.bprintf buff "  + sum([bool2int(pkg[i]) | i in Vp])\n";
     Printf.bprintf buff "  <= 0);\n\n";
-
-    Printf.bprintf buff "constraint forall (id in Pnames) (newpred(id));\n";
+(*
+    Printf.bprintf buff "constraint forall (id in Pnames) (newpred(id,pname[id]));\n";
+    *)
   in
 
   let unsat () = () in
   let notuptodate () = 
     Printf.bprintf buff "array[Pnames] of var bool : nupkg;\n"; 
-    Printf.bprintf buff "predicate nupred (Pnames : id) = \n";
+    Printf.bprintf buff "predicate nupred (Pnames : id, set of Packages : Vp) = \n";
     Printf.bprintf buff "  let {\n";
-    Printf.bprintf buff "    set of Packages : Vp =  pname[id],\n";
-    Printf.bprintf buff "    Packages : SupVp = min(pname[id])\n";
+    Printf.bprintf buff "    Packages : SupVp = min(Vp)\n";
     Printf.bprintf buff "  } in\n";
     Printf.bprintf buff "  (- card(Vp) * bool2int(nupkg[id])\n";
     Printf.bprintf buff "   - (card(Vp) - 1) * bool2int(pkg[SupVp])\n";
@@ -424,8 +459,9 @@ let output_minizinc ?(global_constraints=true) ?(criteria=[1;2;3;4;]) (pre,univ,
     Printf.bprintf buff "   - (card(Vp) - 1) * bool2int(pkg[SupVp])\n";
     Printf.bprintf buff "   + sum (i in (Vp diff {SupVp})) (bool2int(pkg[i]))\n";
     Printf.bprintf buff "  >= - card(Vp) +1);\n\n";
-
-    Printf.bprintf buff "constraint forall (id in Pnames) (nupred(id));\n";
+(*
+    Printf.bprintf buff "constraint forall (id in Pnames) (nupred(id,pname[id]));\n";
+    *)
   in
 
   let count () = () in
@@ -461,7 +497,6 @@ criteria = [
 ];\n";
 
   Printf.bprintf buff "array[Criteria] of int : weigths = [1,2,3,4];\n";
-  Printf.bprintf buff "solve minimize sum (i in Criteria) (weigths[i] * criteria[i]);\n";
 
   Printf.bprintf buff "\n%%pretty print\n";
   Printf.bprintf buff "array[Packages] of string: realpname;\n\n";
@@ -501,12 +536,36 @@ criteria = [
         Printf.sprintf "{%s} %% (%d) %s\n" 
         (String.concat "," (List.map (fun p -> string_of_int ((Cudf.uid_by_package univ p)+1)) pkgversions)) (id+1)
         name
-        ;
       ) (List.rev names)
     )
   );
-
+  
   Printf.bprintf buff "\n%%constraints\n";
+  List.mapi (fun nameid name ->
+    let pkgversions = Cudf.lookup_packages univ name in
+
+    if List.exists (fun p -> p.Cudf.installed) pkgversions then
+      Printf.bprintf buff "constraint removedpred (%d,{%s});\n" (nameid+1)
+      (String.concat "," (List.map (fun p -> string_of_int ((Cudf.uid_by_package univ p)+1)) pkgversions));
+
+    Printf.bprintf buff "constraint changedpred (%d,{%s});\n" (nameid+1)
+    (String.concat "," (List.map (fun p -> string_of_int ((Cudf.uid_by_package univ p)+1)) pkgversions));
+
+    Printf.bprintf buff "constraint nupred (%d,{%s});\n" (nameid+1)
+    (String.concat "," (List.map (fun p -> string_of_int ((Cudf.uid_by_package univ p)+1)) pkgversions));
+
+    Printf.bprintf buff "constraint newpred (%d,{%s});\n" (nameid+1)
+    (String.concat "," (List.map (fun p -> string_of_int ((Cudf.uid_by_package univ p)+1)) pkgversions));
+  ) (List.rev names);
+
+  Array.iteri (fun id _ ->
+    if id <> size then
+      let p = Cudf.package_by_uid univ id in
+      if not(List.mem p.Cudf.package names) then
+        Printf.bprintf buff "constraint pkg[%d] = false;\n" (id+1)
+  )(Depsolver_int.strip_cudf_pool cudfpool);
+
+(*
   Array.iteri (fun id (dll,cl) ->
     if id <> size then begin
       if dll <> [] then depends id dll;
@@ -515,9 +574,47 @@ criteria = [
       (* here we honour keep packages *)
       if dll <> [] then depends id dll
   ) (Depsolver_int.strip_cudf_pool cudfpool);
+*)
+
+  Array.iteri (fun id cl ->
+    if id <> size && List.length cl > 0 then
+      if Iset.mem id depclsure then
+        Printf.bprintf buff "constraint conflicts(%d, {%s});\n" (id+1)
+        (String.concat "," (List.map (fun i -> string_of_int (i+1)) cl))
+  ) confarray ;
+
+  Array.iteri (fun id dll ->
+    if Iset.mem id depclsure then begin
+      let conj,disj = List.partition (fun l -> List.length l = 1) dll in
+      if List.length (List.flatten conj) > 0 then
+        Printf.bprintf buff "constraint conjunction (%d, {%s});\n" (id+1)
+        (String.concat "," (List.map (fun i -> string_of_int (i+1)) (List.flatten conj)));
+
+      List.iter (fun dl ->
+        if List.length dl > 0 then
+          Printf.bprintf buff "constraint disjunction (%d, {%s});\n" (id+1)
+          (String.concat "," (List.map (fun i -> string_of_int (i+1)) dl));
+      ) disj;
+    end
+  ) depsarray;
+
+  let (dll,_) = (Depsolver_int.strip_cudf_pool cudfpool).(size) in
+  depends size dll;
+  (*
+  Printf.bprintf buff "constraint conjunction (%d, {%s});\n" (size+1)
+  (String.concat "," (List.map (fun i -> string_of_int (i+1)) (List.flatten dll)));
+  *)
 
   Printf.bprintf buff "\n%%keep packages\n";
   Printf.bprintf buff "constraint pkg[%d] = true;\n" (size+1);
+
+  Printf.bprintf buff "ann : searchann  = 
+      bool_search(
+        [pkg[i] | i in { %s } ],
+        input_order, indomain_min, complete);\n"
+  (String.concat "," (List.map string_of_int (List.map ((+) 1) (searchvars @ installedorkeep))));
+
+  Printf.bprintf buff "solve :: searchann minimize sum (i in Criteria) (weigths[i] * criteria[i]);\n";
 
   Printf.bprintf buff "\n%%request\n";
 

@@ -247,7 +247,7 @@ let main () =
       in
       begin match OptParse.Opt.get Options.out_type with
       |"cnf" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Cnf u)
-      |"mzn" -> Printf.fprintf oc "%s" (Depsolver.output_minizinc doc)
+      |"mzn" -> Printf.fprintf oc "%s" (Depsolver.output_minizinc ~global_constraints doc)
       |"dimacs" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Dimacs u)
       |"cudf" -> Cudf_printer.pp_cudf oc doc
       |"table" ->
