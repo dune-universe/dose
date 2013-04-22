@@ -272,7 +272,7 @@ let get_src_package universe binpkg =
     let number = CudfAdd.get_property "sourcenumber" binpkg in
     match Cudf.lookup_packages universe sn with
     |[] -> begin
-        warning "Cannot find source package %s %s associated to the binary package %s"
+        debug "Cannot find source package %s %s associated to the binary package %s"
         name number (CudfAdd.string_of_package binpkg);
         raise NotfoundSrc
     end
@@ -282,9 +282,9 @@ let get_src_package universe binpkg =
           CudfAdd.get_property "number" othersrc
         ) othersl
       in
-      warning "Cannot find source package %s %s associated to the binary package %s"
+      debug "Cannot find source package %s %s associated to the binary package %s"
       name number (CudfAdd.string_of_package binpkg);
-      warning "There exist other versions (%s) of the source package %s in the repository"
+      debug "There exist other versions (%s) of the source package %s in the repository"
       (String.concat " , " othersrcnumbers) name;
       raise (MismatchSrc othersl)
     end
