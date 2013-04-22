@@ -29,7 +29,7 @@ module Options = struct
   include Boilerplate.MakeOptions(struct let options = options end)
 
   exception Format
-  let otypes = ["cnf";"dimacs";"mzn";"cudf";"dot";"gml";"grml";"table"] 
+  let otypes = ["cnf";"dimacs";"cudf";"dot";"gml";"grml";"table"] 
   let out_option ?default ?(metavar = Printf.sprintf "<%s>" (String.concat "|" otypes)) () =
     let corce s = if List.mem s otypes then s else raise Format in
     let error _ s = Printf.sprintf "%s format not supported" s in
@@ -247,7 +247,6 @@ let main () =
       in
       begin match OptParse.Opt.get Options.out_type with
       |"cnf" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Cnf u)
-      |"mzn" -> Printf.fprintf oc "%s" (Depsolver.output_minizinc ~global_constraints doc)
       |"dimacs" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Dimacs u)
       |"cudf" -> Cudf_printer.pp_cudf oc doc
       |"table" ->
