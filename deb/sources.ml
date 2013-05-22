@@ -327,7 +327,7 @@ let get_bin_packages h srcpkg =
   with Not_found -> begin
     let sn = CudfAdd.decode srcpkg.Cudf.package in
     let sv = CudfAdd.get_property "number" srcpkg in
-    debug "Source package %s %s not associated with any binary package" sn sv
+    debug "Source package %s %s not associated with any binary package" sn sv;
     raise Not_found
   end
 ;;
