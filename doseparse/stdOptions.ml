@@ -130,6 +130,8 @@ module DistcheckOptions = struct
         add options ~group ~short_name:'f' ~long_name:"failures" ~help:"Only show failures" failure;
       if List.mem "success" default then
         add options ~group ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" success;
+      if List.mem "summary" default then
+        add options ~long_name:"summary" ~help:"Show Failures Summary" success;
     end
   ;;
 end
