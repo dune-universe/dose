@@ -77,6 +77,7 @@ module type T = sig
       will use this information to guide the search heuristic *)
   val associate_vars : state -> lit -> var list -> unit
 
+  val solve_all : (state -> unit) -> state -> var -> bool
   (** [solve st v] finds a variable assignment that makes [v] [True] *)
   val solve : state -> var -> bool
 

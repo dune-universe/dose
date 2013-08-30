@@ -34,6 +34,7 @@ module type T = sig
   val assignment_true : state -> var list
   val add_rule : state -> lit array -> X.reason list -> unit
   val associate_vars : state -> lit -> var list -> unit
+  val solve_all : (state -> unit) -> state -> var -> bool
   val solve : state -> var -> bool
   val solve_lst : state -> var list -> bool
   val collect_reasons : state -> var -> X.reason list
@@ -487,6 +488,78 @@ module M (X : S) = struct
       lits;
     !i
 
+  let backjump f st r =
+    let (learnt, reasons, level) = analyze st r in
+    let level = max st.st_min_level level in
+    while st.st_cur_level > level do cancel st done;
+    assert (val_of_lit st learnt.(0) = Unknown);
+    let rule = { lits = learnt; all_lits = learnt; reasons = reasons } in
+    if !debug then Format.eprintf "Learning %a@." (print_rule st) rule;
+    if Array.length learnt > 1 then begin
+      let i = find_highest_level st learnt in
+      assert (i > 0);
+      let p' = learnt.(i) in
+      learnt.(i) <- learnt.(1);
+      learnt.(1) <- p';
+      let p = lit_neg learnt.(0) in
+      let p' = lit_neg p' in
+      st.st_watched.(p) <- rule :: st.st_watched.(p);
+      st.st_watched.(p') <- rule :: st.st_watched.(p')
+    end;
+    enqueue st learnt.(0) (Some rule);
+    st.st_cur_level > st.st_min_level && f st
+
+  let val_of = function
+    |True -> true
+    |False -> false 
+    |Unknown -> assert false 
+
+  (* find all solutions *)
+  let rec solve_all_rec callback st =
+    match try propagate st; None with Conflict r -> Some r with
+      None ->
+        let x = dequeue_var st in
+        if x < 0 then begin
+          (* we do something with the solution that we just found *)
+          callback st ; 
+          if st.st_cur_level = 0 then begin
+            (* we exhausted the search space *)
+            if !debug then Format.eprintf "Search Completed.@."; 
+            true
+          end else begin
+            if !debug then Format.eprintf "Solution found.@."; 
+            (* we remove this solution from the search space and backjump *)
+            let assignment =
+              (* XXX : I should keep trace of this list incrementally *)
+              let acc = ref [] in
+              for v = 0 to (Array.length st.st_assign) - 1 do
+                match st.st_assign.(v) with
+                |True -> acc := (lit_of_var v true)::!acc
+                |False -> acc := (lit_of_var v false)::!acc
+                |Unknown -> ()
+              done;
+              !acc
+            in
+            let m = Array.of_list (List.map lit_neg assignment) in
+            let r = { lits = m; all_lits = m; reasons = [] } in
+            backjump (solve_all_rec callback) st r;
+          end
+        end else
+          begin
+            (* we didn't find any solution yet *)
+            assume st (lit_of_var x false);
+            solve_all_rec callback st
+          end
+    | Some r ->
+        let r =
+          match r with
+            None   -> assert false
+          | Some r -> r
+        in
+        (* we found a conflict *)
+        backjump (solve_all_rec callback) st r
+
+  (* find one solution *)
   let rec solve_rec st =
     match try propagate st; None with Conflict r -> Some r with
       None ->
@@ -502,42 +575,32 @@ module M (X : S) = struct
             None   -> assert false
           | Some r -> r
         in
-        let (learnt, reasons, level) = analyze st r in
-        let level = max st.st_min_level level in
-        while st.st_cur_level > level do cancel st done;
-        assert (val_of_lit st learnt.(0) = Unknown);
-        let rule = { lits = learnt; all_lits = learnt; reasons = reasons } in
-        if !debug then Format.eprintf "Learning %a@." (print_rule st) rule;
-        if Array.length learnt > 1 then begin
-          let i = find_highest_level st learnt in
-          assert (i > 0);
-          let p' = learnt.(i) in
-          learnt.(i) <- learnt.(1);
-          learnt.(1) <- p';
-          let p = lit_neg learnt.(0) in
-          let p' = lit_neg p' in
-          st.st_watched.(p) <- rule :: st.st_watched.(p);
-          st.st_watched.(p') <- rule :: st.st_watched.(p')
-        end;
-        enqueue st learnt.(0) (Some rule);
-        st.st_cur_level > st.st_min_level &&
-        solve_rec st
+        backjump solve_rec st r
 
-  let rec solve st x =
+  let rec solve_aux ?callback st x =
+    let s = 
+      if Option.is_none callback then
+        solve_rec
+      else
+        solve_all_rec (Option.get callback)
+    in
     assert (st.st_cur_level = st.st_min_level);
     propagate st;
     try
       let p = lit_of_var x true in
       assume st p;
       assert (st.st_cur_level = st.st_min_level + 1);
-      if solve_rec st then begin
+      if s st then begin
         protect st;
         true
       end else
-        solve st x
+        solve_aux st ?callback x
     with Conflict _ ->
       st.st_coherent <- false;
       false
+
+  let solve st x = solve_aux st x
+  let solve_all callback st x = solve_aux ~callback st x
 
   let rec solve_lst_rec st l0 l =
     match l with
