@@ -23,6 +23,7 @@ module type T = sig
   type lit
   val lit_of_var : var -> bool -> lit
   val initialize_problem :
+    ?pbo:int array ->
     ?print_var:(Format.formatter -> int -> unit) -> 
       ?buffer: bool -> int -> state
   val copy : state -> state
@@ -104,7 +105,41 @@ module M (X : S) = struct
       st_print_var : Format.formatter -> int -> unit;
       mutable st_coherent : bool;
       mutable st_buffer : (int * bool) list list;
+      st_pbo_len : int array;
+      mutable st_pbo_obj : int array;
+      mutable st_pbo_assign : value array;
+      st_nvar : int;
     }
+
+  class pbomap ith st = object (self)
+    (* idx is the index in the st_assign of the i-th accumulator array *)
+    val id = ith
+    val idx = 
+      let j = ref st.st_nvar in
+      for h = 0 to ith - 1 do
+        j := !j + st.st_pbo_len.(h)
+      done;
+      !j
+
+    (* j is the index of the j-th variable in the i-th accumulator array *)
+    method get i = st.st_assign.(idx + i)
+
+    (* fold over all index in the i-th accumulator array *)
+    method fold : 'a. (value -> 'a -> 'a) -> 'a -> 'a = fun f acc ->
+      let rec aux acc i =
+        if i > st.st_pbo_len.(id) then acc 
+        else aux (f (self#get i) acc) (i+1)
+      in
+      aux acc 0
+
+    method sum =
+      let acc = ref 0 in
+      for i = idx to st.st_pbo_len.(id) - 1 do
+        if self#get i = True then incr acc 
+      done;
+      !acc
+
+  end
 
   let copy_clause p =
       let n = Array.length p in
@@ -164,6 +199,10 @@ module M (X : S) = struct
       st_print_var = st.st_print_var;
       st_coherent = st.st_coherent;
       st_buffer = st.st_buffer;
+      st_pbo_len =  Array.copy st.st_pbo_len;
+      st_pbo_obj =  Array.copy st.st_pbo_obj;
+      st_pbo_assign = Array.copy st.st_pbo_assign;
+      st_nvar = st.st_nvar;
     }
 
   (****)
@@ -514,6 +553,51 @@ module M (X : S) = struct
     |False -> false 
     |Unknown -> assert false 
 
+  (* find the optimal solution *)
+  let rec solve_pbo_rec callback st =
+    match try propagate st; None with Conflict r -> Some r with
+      None ->
+        let x = dequeue_var st in
+        if x < 0 then begin
+          (* we do something with the solution that we just found *)
+          callback st ; 
+          if st.st_cur_level = 0 then begin
+            (* we exhausted the search space *)
+            if !debug then Format.eprintf "Search Completed.@."; 
+            true
+          end else begin
+            if !debug then Format.eprintf "Solution found.@."; 
+            (* we remove this solution from the search space and backjump *)
+            let assignment =
+              (* XXX : I should keep trace of this list incrementally *)
+              let acc = ref [] in
+              for v = 0 to (Array.length st.st_assign) - 1 do
+                match st.st_assign.(v) with
+                |True -> acc := (lit_of_var v true)::!acc
+                |False -> acc := (lit_of_var v false)::!acc
+                |Unknown -> ()
+              done;
+              !acc
+            in
+            let m = Array.of_list (List.map lit_neg assignment) in
+            let r = { lits = m; all_lits = m; reasons = [] } in
+            backjump (solve_pbo_rec callback) st r;
+          end
+        end else
+          begin
+            (* we didn't find any solution yet *)
+            assume st (lit_of_var x false);
+            solve_pbo_rec callback st
+          end
+    | Some r ->
+        let r =
+          match r with
+            None   -> assert false
+          | Some r -> r
+        in
+        (* we found a conflict *)
+        backjump (solve_pbo_rec callback) st r
+
   (* find all solutions *)
   let rec solve_all_rec callback st =
     match try propagate st; None with Conflict r -> Some r with
@@ -577,12 +661,17 @@ module M (X : S) = struct
         in
         backjump solve_rec st r
 
-  let rec solve_aux ?callback st x =
-    let s = 
-      if Option.is_none callback then
-        solve_rec
-      else
-        solve_all_rec (Option.get callback)
+  type callback =
+    |AllSat of (state -> unit)
+    |Pbo of (state -> unit)
+    |Sat
+
+  let rec solve_aux ~callback st x =
+    let s =
+      match callback with
+      |Sat -> solve_rec
+      |AllSat f -> solve_all_rec f
+      |Pbo f -> solve_pbo_rec f
     in
     assert (st.st_cur_level = st.st_min_level);
     propagate st;
@@ -591,16 +680,21 @@ module M (X : S) = struct
       assume st p;
       assert (st.st_cur_level = st.st_min_level + 1);
       if s st then begin
+        begin match callback with
+        |Sat | AllSat _ -> ()
+        |Pbo _ -> st.st_pbo_assign <- Array.copy st.st_assign
+        end;
         protect st;
         true
       end else
-        solve_aux st ?callback x
+        solve_aux st ~callback x
     with Conflict _ ->
       st.st_coherent <- false;
       false
 
-  let solve st x = solve_aux st x
-  let solve_all callback st x = solve_aux ~callback st x
+  let solve st x = solve_aux ~callback:Sat st x
+  let solve_all f st x = solve_aux ~callback:(AllSat f) st x
+  let solve_pbo f st x = solve_aux ~callback:(Pbo f) st x
 
   let rec solve_lst_rec st l0 l =
     match l with
@@ -621,14 +715,15 @@ module M (X : S) = struct
   let debug b = debug := b
   let set_buffer b = buffer := b
 
-  let initialize_problem 
-    ?(print_var = (fun fmt -> Format.fprintf fmt "%d")) ?(buffer=false) n =
+  let initialize_problem ?(pbo = [||])
+    ?(print_var = (fun fmt -> Format.fprintf fmt "%d")) ?(buffer=false) nvar =
       if buffer then set_buffer true;
       Gc.set { (Gc.get()) with
         Gc.minor_heap_size = 4 * 1024 * 1024; (*4M*)
         Gc.major_heap_increment = 32 * 1024 * 1024; (*32M*)
         Gc.max_overhead = 150;
       } ; (* let's fly ! *)
+      let n = nvar + (Array.fold_left (+) nvar pbo) in
       { st_assign = Array.make n Unknown;
         st_assign_true = IntHash.create n;
         st_reason = Array.make n None;
@@ -654,6 +749,10 @@ module M (X : S) = struct
         st_print_var = print_var;
         st_coherent = true;
         st_buffer = [];
+        st_pbo_len = pbo;
+        st_pbo_obj = Array.make (Array.length pbo) max_int;
+        st_pbo_assign = Array.make n Unknown;
+        st_nvar = nvar;
       }
 
   let insert_simpl_prop st r p p' =

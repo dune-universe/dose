@@ -50,6 +50,7 @@ module type T = sig
       variables to consider
   *)
   val initialize_problem :
+    ?pbo:int array ->
     ?print_var:(Format.formatter -> int -> unit) -> 
       ?buffer: bool -> int -> state
 
