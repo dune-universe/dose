@@ -124,10 +124,22 @@ let string_of_package = string_of pp_package
 
 module StringSet = Set.Make(String)
 
+let add_to_package_list h n p =
+  try let l = Hashtbl.find h n in l := p :: !l
+  with Not_found -> Hashtbl.add h n (ref [p])
+
+let get_package_list h n = try !(Hashtbl.find h n) with Not_found -> []
+
 let pkgnames universe =
   Cudf.fold_packages (fun names pkg ->
     StringSet.add pkg.Cudf.package names
   ) StringSet.empty universe
+
+let pkgnames_ universe =
+  let h = Hashtbl.create (Cudf.universe_size universe) in
+  Cudf.iter_packages (fun pkg ->
+    add_to_package_list h pkg.Cudf.package pkg
+  ) universe
 
 let add_properties preamble l =
   List.fold_left (fun pre prop ->
@@ -163,12 +175,6 @@ let vartoint universe p =
   end
 
 let inttovar = Cudf.package_by_uid
-
-let add_to_package_list h n p =
-  try let l = Hashtbl.find h n in l := p :: !l
-  with Not_found -> Hashtbl.add h n (ref [p])
-
-let get_package_list h n = try !(Hashtbl.find h n) with Not_found -> []
 
 let unique l = 
   List.rev (List.fold_left (fun results x -> 

@@ -197,13 +197,139 @@ let init_solver_pool map pool closure =
   SolverPool solverpool
 ;;
 
+
+(** pseudo boolean optimization *) 
+
+let newpred constraints id vp =
+  let neg_lit_vp = List.map (fun i -> S.lit_of_var i false) vp in
+  let pos_lit_vp = List.map (fun i -> S.lit_of_var i true) vp in
+  let neg_lit_id = S.lit_of_var id false in
+  let pos_lit_id = S.lit_of_var id true in
+  S.add_rule constraints (Array.of_list (neg_lit_id::pos_lit_vp)) [];
+  List.iter (fun lit ->
+    S.add_rule constraints [|lit;pos_lit_id|] []
+  ) neg_lit_vp
+;;
+
+let rempred constraints id vp =
+  let neg_lit_vp = List.map (fun i -> S.lit_of_var i false) vp in
+  let pos_lit_vp = List.map (fun i -> S.lit_of_var i true) vp in
+  let neg_lit_id = S.lit_of_var id false in
+  let pos_lit_id = S.lit_of_var id true in
+  S.add_rule constraints (Array.of_list (neg_lit_id::neg_lit_vp)) [];
+  List.iter (fun lit ->
+    S.add_rule constraints [|lit;pos_lit_id|] []
+  ) pos_lit_vp
+;;
+
+let changepred constraints id ivp uvp =
+  let pos_lit_ivp = List.map (fun i -> S.lit_of_var i true) ivp in
+  let neg_lit_uvp = List.map (fun i -> S.lit_of_var i false) uvp in
+  let neg_lit_id = S.lit_of_var id false in
+  let pos_lit_id = S.lit_of_var id true in
+  List.iter (fun lit ->
+    S.add_rule constraints [|lit;neg_lit_id|] []
+  ) pos_lit_ivp;
+  List.iter (fun lit ->
+    S.add_rule constraints [|lit;pos_lit_id|] []
+  ) neg_lit_uvp
+;;
+
+type criteria = New | Rem | Chg | NoUp | RecUnsat
+
+let init_criteria ?(closure=[]) criteria univ =
+  let module ISet = Set.Make(struct type t = int let compare = compare end) in
+  let to_set l = List.fold_right ISet.add l ISet.empty in
+  let tmppool = Array.init (Array.length criteria) (fun _ -> RefList.empty ()) in
+  let closure = to_set closure in
+  Cudf.iter_packages_by_name (fun name packages -> 
+    if name = "dose-dummy-request" then () else begin
+      let pkgidset = (to_set (List.map (Cudf.uid_by_package univ) packages)) in
+      let vpset = ISet.inter pkgidset closure in
+      let vpidl = ISet.elements vpset in
+      (*
+      debug "iter init_criteria : %s : %d - closure %d" name (List.length vpidl) (ISet.cardinal closure);
+      *)
+      if ISet.is_empty closure || not (ISet.is_empty vpset) then begin
+        let ivp,uvp = List.partition (fun id -> (Cudf.package_by_uid univ id).Cudf.installed) vpidl in
+        Array.iteri (fun criteriaid -> function
+          |Chg -> (* sum over all package names *)
+              RefList.push tmppool.(criteriaid) (ivp,uvp)
+          |Rem when ivp <> [] -> (* at least one installed version *)
+              RefList.push tmppool.(criteriaid) (vpidl,[])
+          |New when ivp = [] -> (* no installed versions *)
+              RefList.push tmppool.(criteriaid) (vpidl,[])
+          |RecUnsat -> ()
+          |NoUp -> ()
+          |_ -> ()
+        ) criteria
+      end
+    end;
+  ) univ;
+  let pbopool = ref [] in
+  Array.iteri (fun criteriaid t ->
+    let l = RefList.to_list tmppool.(criteriaid) in
+    let s = List.length l in
+    debug "pull criteriaid %d - len %d" criteriaid s;
+    pbopool := (t,l,s,criteriaid) :: !pbopool
+  ) criteria;
+  !pbopool
+;;
+
+let init_solver_criteria map solver pbopool =
+  (*
+  debug "init_solver_criteria";
+  *)
+  List.iter (function
+    |New,l,s,cid ->
+      let nameid = ref 0 in
+      List.iter (fun (vpidl,_) ->
+        let vpid = (List.map map#vartoint vpidl) in
+        (*
+        debug "new crit : %d - cid : %d - nameid : %d - versions : %s" !nameid cid (S.pboidx solver cid !nameid) (String.concat "," (List.map string_of_int vpid)) ;
+        *)
+        newpred solver (S.pboidx solver cid !nameid) vpid;
+        incr nameid;
+      ) l
+    
+    |Rem,l,s,cid ->
+      let nameid = ref 0 in
+      List.iter (fun (vpidl,_) ->
+        let vpid = (List.map map#vartoint vpidl) in 
+        (*
+        debug "rem crit : %d - cid : %d - nameid : %d - versions : %s" !nameid cid (S.pboidx solver cid !nameid) (String.concat "," (List.map string_of_int vpid)) ;
+        *)
+        rempred solver (S.pboidx solver cid !nameid) vpid;
+        incr nameid;
+      ) l
+
+    |RecUnsat,l,s,cid -> ()
+    |NoUp,l,s,cid -> ()
+ 
+    |Chg,l,s,cid -> 
+      let nameid = ref 0 in
+      List.iter (fun (l1,l2) ->
+        let ivp = List.map map#vartoint l1 in
+        let uvp = List.map map#vartoint l2 in 
+        (*
+        debug "chg crit : %d - cid : %d - nameid : %d - inst versions : %s - uninst versions : %s" 
+        !nameid cid (S.pboidx solver cid !nameid) (String.concat "," (List.map string_of_int ivp))
+        (String.concat "," (List.map string_of_int uvp)) ;
+        *)
+        changepred solver (S.pboidx solver cid !nameid) ivp uvp;
+        incr nameid;
+      ) l
+  ) pbopool
+;;
+
+
 (** initalise the sat solver. operate only on solver ids *)
-let init_solver_cache ?(buffer=false) pool =
-  let pool = strip_solver_pool pool in
+let init_solver_cache ?(buffer=false) ?(pbopool=[]) varpool =
+  let varpool = strip_solver_pool varpool in
   let num_conflicts = ref 0 in
   let num_disjunctions = ref 0 in
   let num_dependencies = ref 0 in
-  let size = Array.length pool in
+  let varsize = Array.length varpool in
 
   let add_depend constraints vpkgs pkg_id l =
     let lit = S.lit_of_var pkg_id false in 
@@ -219,7 +345,7 @@ let init_solver_cache ?(buffer=false) pool =
     end
   in
 
-  let conflicts = Hashtbl.create (size / 10) in
+  let conflicts = Hashtbl.create (varsize / 10) in
   let add_conflict constraints vpkg (i,j) =
     if i <> j then begin
       let pair = (min i j,max i j) in
@@ -249,14 +375,20 @@ let init_solver_cache ?(buffer=false) pool =
     ) cl
   in
 
-  Util.Progress.set_total progressbar_init size ;
-  let constraints = S.initialize_problem ~buffer size in
+  Util.Progress.set_total progressbar_init varsize ;
+  let pbo = Array.make (List.length pbopool) 0 in
+  List.iter (fun (_,_,x,cid) -> pbo.(cid) <- x) pbopool;
+  if pbopool <> [] then 
+    Array.iteri (fun criteriaid len ->
+      debug "init_solver_cache criteriaid : %d - pbovar : %d - nvar : %d" criteriaid len varsize;
+    ) pbo;
+  let constraints = S.initialize_problem ~buffer ~pbo varsize in
 
   Array.iteri (fun id (dll,cl) ->
     Util.Progress.progress progressbar_init;
     exec_depends constraints id dll;
     exec_conflicts constraints id cl
-  ) pool;
+  ) varpool;
     
   Hashtbl.clear conflicts;
 
@@ -269,7 +401,7 @@ let init_solver_cache ?(buffer=false) pool =
 ;;
 
 (** low level call to the sat solver
-    
+  
     @param tested: optional int array used to cache older results
 *)
 let solve ?tested solver request =
@@ -302,6 +434,48 @@ let solve ?tested solver request =
       result S.solve_lst S.collect_reasons_lst (List.map solver.map#vartoint (k::il))
 ;;
 
+(* callback : (int array, Diagnostic_int.result) -> unit *)
+let solve_pbo ?callback solver request =
+  S.reset solver.constraints;
+
+  let result solve collect var =
+    if solve solver.constraints var then
+      let get_assignent ?(all=true) () =
+        List.map (solver.map#inttovar)
+        (S.assignment_true solver.constraints)
+      in
+      Diagnostic_int.Success(get_assignent)
+    else
+      let get_reasons () = collect solver.constraints var in
+      Diagnostic_int.Failure(get_reasons)
+  in
+
+  let callback =
+    match callback with
+    |None -> fun _ -> ()
+    |Some f -> fun (criteria,state) ->
+      let get_assignent ?(all=true) () =
+        List.map (solver.map#inttovar)
+        (S.assignment_true state)
+      in
+      f (criteria,Diagnostic_int.Success(get_assignent))
+  in
+
+  match request with
+  |Diagnostic_int.Sng (None,i) ->
+      begin
+        let ss = S.solve_pbo callback in
+        result ss S.collect_reasons (solver.map#vartoint i)
+      end
+  |Diagnostic_int.Sng (Some k,i) ->
+      failwith "Not implemented yet"
+      (*
+      result S.solve_lst S.collect_reasons_lst (List.map solver.map#vartoint [k;i])
+*)
+;;
+
+
+(* this function is used to "distcheck" a list of packages *)
 let pkgcheck global_constraints callback solver tested id =
   (* global id is a fake package id encoding the global constraints of the
    * universe. it is the last element of the id array *)
@@ -347,8 +521,10 @@ let pkgcheck global_constraints callback solver tested id =
 let init_solver_univ ?(global_constraints=true) ?(buffer=false) univ =
   let map = new identity in
   let cudfpool = init_pool_univ global_constraints univ in
-  let solverpool = SolverPool (strip_cudf_pool cudfpool) in
-  let solver = { constraints = init_solver_cache ~buffer solverpool ; map = map } in
+  (* let globalid = (Array.length (strip_cudf_pool cudfpool)) - 1 in *)
+  let varpool = SolverPool (strip_cudf_pool cudfpool) in
+  let constraints = init_solver_cache ~buffer varpool in
+  let solver = { constraints = constraints ; map = map } in
   solver
 ;;
 
@@ -359,11 +535,14 @@ let init_solver_univ ?(global_constraints=true) ?(buffer=false) univ =
     @param closure subset of packages used to initialize the solver
 *)
 (* pool = cudf pool - closure = dependency clousure . cudf uid list *)
-let init_solver_closure ?(buffer=false) cudfpool closure =
+let init_solver_closure ?(buffer=false) ?(pbopool=[]) cudfpool closure =
   let map = new intprojection (List.length closure) in
   List.iter map#add closure;
-  let solverpool = init_solver_pool map cudfpool closure in
-  let solver = { constraints = init_solver_cache ~buffer solverpool ; map = map } in
+  (* let globalid = (Array.length (strip_cudf_pool cudfpool)) - 1 in *)
+  let varpool = init_solver_pool map cudfpool closure in
+  let constraints = init_solver_cache ~buffer ~pbopool varpool in
+  init_solver_criteria map constraints pbopool;
+  let solver = { constraints = constraints ; map = map } in
   solver
 ;;
 

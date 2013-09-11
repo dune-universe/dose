@@ -127,4 +127,5 @@ type solver_result =
     if ?explain is specified and there is no solution for the give request, the
     result will contain the failure reason.
 *)
-val check_request : ?cmd : string -> ?criteria : string -> ?explain : bool -> Cudf.cudf -> solver_result
+val check_request : ?cmd : string -> ?callback:(int array * Diagnostic.diagnosis -> unit) -> 
+  ?criteria:Depsolver_int.criteria list -> ?explain : bool -> Cudf.cudf -> solver_result

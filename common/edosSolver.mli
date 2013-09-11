@@ -79,6 +79,7 @@ module type T = sig
   val associate_vars : state -> lit -> var list -> unit
 
   val solve_all : (state -> unit) -> state -> var -> bool
+  val solve_pbo : (int array * state -> unit) -> state -> var -> bool
   (** [solve st v] finds a variable assignment that makes [v] [True] *)
   val solve : state -> var -> bool
 
@@ -100,6 +101,7 @@ module type T = sig
 
   (* print detailed information about the internal status of the solver *)
   val stats : state -> unit
+  val pboidx : state -> int -> int -> int
 end
 
 (** functor *)
