@@ -336,7 +336,18 @@ let check_request ?cmd ?criteria ?(explain=false) (pre,universe,request) =
           else acc
         ) [] universe
       in
-      let l = request.Cudf.install @ request.Cudf.upgrade in
+      let il = request.Cudf.install in
+      let ul = 
+        List.filter_map (function (name,None) ->
+          match Cudf.get_installed universe name with
+          |[] -> Some((name,None))
+          |[p] -> Some(name,Some(`Geq,p.Cudf.version))
+          |pl ->
+              let p = List.hd(List.sort ~cmp:Cudf.(>%) pl) in
+              Some(name,Some(`Geq,p.Cudf.version))
+        ) request.Cudf.upgrade  
+      in
+      let l = il @ ul in
       debug "request consistency (keep %d) (install %d) (upgrade %d) (remove %d) (# %d)"
       (List.length k) (List.length request.Cudf.install) 
       (List.length request.Cudf.upgrade)
