@@ -328,6 +328,7 @@ let add_extra_default extras tables pkg =
   let extras = 
     ("Type",("type",`String None))::
       ("Filename",("filename",`String None))::
+      ("Multi-Arch",("multiarch",`String None))::
       ("Installed-Size",("installedsize",`Int (Some 0)))::
         extras 
   in

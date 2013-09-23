@@ -302,6 +302,7 @@ module SyntacticDependencyGraph = struct
              "type","string",None;
              "source","string",None;
              "sourcenumber","string",None;
+             "multiarch","string",None;
             ]
        
         let default_edge_properties = [
@@ -426,6 +427,7 @@ module MakePackageGraph(PkgV : Sig.COMPARABLE with type t = Cudf.package )= stru
              "type","string",None;
              "source","string",None;
              "sourcenumber","string",None;
+             "multiarch","string",None;
             ]
        
         let default_edge_properties = [

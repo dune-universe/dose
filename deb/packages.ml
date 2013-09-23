@@ -279,6 +279,7 @@ let default_extras = [
   ("Status", None);
   ("Size", None);
   ("Installed-Size", None);
+  ("Multi-Arch", None);
   ("Filename", None);
 ]
 
