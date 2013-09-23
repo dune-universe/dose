@@ -186,7 +186,7 @@ let main () =
       ) is
     else
       let l = 
-        CudfAdd.unique (
+        List.unique (
           List.map (fun binpkg ->
             let cudfpkg = Sources.get_src_package universe binpkg in
             let id = (cudfpkg.Cudf.package,cudfpkg.Cudf.version) in

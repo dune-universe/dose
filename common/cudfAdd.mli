@@ -165,8 +165,5 @@ val add_to_package_list :
 
 val get_package_list : ('a, 'b list ref) ExtLib.Hashtbl.t -> 'a -> 'b list
 
-(** unique l returns the list l without any duplicate element. *)
-val unique : 'a list -> 'a list
-
-(** Like unique but specialized for ints *)
+(** normalize_set l returns the list l without any duplicate element. *)
 val normalize_set : int list -> int list
