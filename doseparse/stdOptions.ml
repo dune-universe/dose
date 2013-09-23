@@ -188,12 +188,12 @@ module InputOptions = struct
 
       if List.mem "fg" default then
         add options ~group ~long_name:"fg"
-        ~help:("Additional Packages lists that are checked and used"^
+        ~help:("Additional Packages lists that are checked and used "^
                "for resolving dependencies (can be repeated)") foreground;
 
-      if List.mem "fg" default then
+      if List.mem "bg" default then
         add options ~group ~long_name:"bg"
-        ~help:("Additional Packages lists that are NOT checked but used"^
+        ~help:("Additional Packages lists that are NOT checked but used "^
                "for resolving dependencies (can be repeated)") background;
 
       if List.mem "outfile" default then
