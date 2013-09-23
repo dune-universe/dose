@@ -174,29 +174,35 @@ let main () =
   let result = Depsolver.edos_coinstall ~global_constraints universe checklist in
   ignore(Util.Timer.stop timer ());
 
-  if Diagnostic.is_solution result then
-    let is = Diagnostic.get_installationset result in
-    if Option.is_none sources then 
-      List.iter (fun cudfpkg ->
-        try
-          let id = (cudfpkg.Cudf.package,cudfpkg.Cudf.version) in
-          let debpkg = Hashtbl.find cudftodeb_table id in
-          Printf.fprintf oc "%a\n" Debian.Printer.pp_package debpkg
-        with Not_found -> assert false
-      ) is
-    else
-      let l = 
-        List.unique (
-          List.map (fun binpkg ->
-            let cudfpkg = Sources.get_src_package universe binpkg in
+  let exitcode = 
+    if Diagnostic.is_solution result then begin
+      let is = Diagnostic.get_installationset result in
+      begin if Option.is_none sources then
+        List.iter (fun cudfpkg ->
+          try
             let id = (cudfpkg.Cudf.package,cudfpkg.Cudf.version) in
-            Hashtbl.find cudftosrc_table id
-          ) is
-        )
-      in
-      List.iter (Printf.fprintf oc "%a\n" Debian.Printer.pp_source) l
-  else
-    Diagnostic.fprintf ~pp ~minimal ~failure ~explain fmt result;
+            let debpkg = Hashtbl.find cudftodeb_table id in
+            Printf.fprintf oc "%a\n" Debian.Printer.pp_package debpkg
+          with Not_found -> assert false
+        ) is
+      else
+        let l = 
+          List.unique (
+            List.map (fun binpkg ->
+              let cudfpkg = Sources.get_src_package universe binpkg in
+              let id = (cudfpkg.Cudf.package,cudfpkg.Cudf.version) in
+              Hashtbl.find cudftosrc_table id
+            ) is
+          )
+        in
+        List.iter (Printf.fprintf oc "%a\n" Debian.Printer.pp_source) l
+      end; 0 (* exit code 0 . All packages are installable *)
+    end
+    else begin
+      Diagnostic.fprintf ~pp ~minimal ~failure ~explain fmt result;
+      1 (* at least one package is not installable *)
+    end
+  in
   
   if failure then Format.fprintf fmt "@]@.";
   
@@ -217,7 +223,7 @@ let main () =
     Format.fprintf fmt "total-packages: %d@." universe_size;
   (*  Format.fprintf fmt "broken-packages: %d@." nbp; *)
   end;
-  Boilerplate.exit(0)
+  Boilerplate.exit(exitcode)
 ;;
 
 Boilerplate.if_application
