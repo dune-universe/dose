@@ -23,6 +23,7 @@ module type T = sig
   type lit
   val lit_of_var : var -> bool -> lit
   val initialize_problem :
+    ?pbo:int array ->
     ?print_var:(Format.formatter -> int -> unit) -> 
       ?buffer: bool -> int -> state
   val copy : state -> state
@@ -34,6 +35,8 @@ module type T = sig
   val assignment_true : state -> var list
   val add_rule : state -> lit array -> X.reason list -> unit
   val associate_vars : state -> lit -> var list -> unit
+  val solve_all : (state -> unit) -> state -> var -> bool
+  val solve_pbo : (int array * state -> unit) -> state -> var -> bool
   val solve : state -> var -> bool
   val solve_lst : state -> var list -> bool
   val collect_reasons : state -> var -> X.reason list
@@ -41,6 +44,7 @@ module type T = sig
   val dump : state -> (int * bool) list list
   val debug : bool -> unit
   val stats : state -> unit
+  val pboidx : state -> int -> int -> int
 end
 
 include Util.Logging(struct let label = __FILE__ end) ;;
@@ -78,8 +82,9 @@ module M (X : S) = struct
 
   type state =
     { (* Indexed by var *)
-      st_assign : value array;
-      st_assign_true : unit IntHash.t;
+      (* XXX these two are mutable but it could be done better *)
+      mutable st_assign : value array;
+      mutable st_assign_true : unit IntHash.t;
       st_reason : clause option array;
       st_level : int array;
       st_seen_var : int array;
@@ -103,7 +108,27 @@ module M (X : S) = struct
       st_print_var : Format.formatter -> int -> unit;
       mutable st_coherent : bool;
       mutable st_buffer : (int * bool) list list;
+      st_pbo_len : int array;
+      mutable st_pbo_obj : int array;
+      mutable st_pbo_assign : value array;
+      mutable st_pbo_assign_true : unit IntHash.t;
+      st_nvar : int;
     }
+
+  (* return the solver variable index of the ith variable of the 
+   * related to the given criteriaid *)
+  let pboidx st criteriaid i =
+    let idx = 
+      let j = ref st.st_nvar in
+      for h = 0 to criteriaid - 1 do
+        j := !j + st.st_pbo_len.(h)
+      done;
+      !j
+    in
+    (*
+    Printf.eprintf "c = %d : %d -> %d\n" criteriaid i (idx + i);
+    *)
+    idx + i
 
   let copy_clause p =
       let n = Array.length p in
@@ -163,6 +188,11 @@ module M (X : S) = struct
       st_print_var = st.st_print_var;
       st_coherent = st.st_coherent;
       st_buffer = st.st_buffer;
+      st_pbo_len = Array.copy st.st_pbo_len;
+      st_pbo_obj = Array.copy st.st_pbo_obj;
+      st_pbo_assign = Array.copy st.st_pbo_assign;
+      st_pbo_assign_true = IntHash.copy st.st_pbo_assign_true;
+      st_nvar = st.st_nvar;
     }
 
   (****)
@@ -287,7 +317,8 @@ module M (X : S) = struct
         end;
         let x = var_of_lit p in
         st.st_assign.(x) <- val_of_bool (pol_of_lit p);
-        if st.st_assign.(x) = True then IntHash.add st.st_assign_true x ();
+        if st.st_assign.(x) = True && 0 <= x && x <= st.st_nvar then 
+          IntHash.add st.st_assign_true x ();
         st.st_reason.(x) <- reason;
         st.st_level.(x) <- st.st_cur_level;
         st.st_trail <- p :: st.st_trail;
@@ -373,7 +404,8 @@ module M (X : S) = struct
   let undo_one st p =
     let x = var_of_lit p in
     if !debug then Format.eprintf "Cancelling %a@." st.st_print_var x;
-    if st.st_assign.(x) = True then IntHash.remove st.st_assign_true x;
+    if st.st_assign.(x) = True && 0 <= x && x <= st.st_nvar then 
+      IntHash.remove st.st_assign_true x;
     st.st_assign.(x) <- Unknown;
     st.st_reason.(x) <- None;
     st.st_level.(x) <- -1;
@@ -487,6 +519,173 @@ module M (X : S) = struct
       lits;
     !i
 
+  let learn f st r =
+    let (learnt, reasons, level) = analyze st r in
+    let level = max st.st_min_level level in
+    while st.st_cur_level > level do cancel st done;
+    assert (val_of_lit st learnt.(0) = Unknown);
+    let rule = { lits = learnt; all_lits = learnt; reasons = reasons } in
+    if !debug then Format.eprintf "Learning %a@." (print_rule st) rule;
+    if Array.length learnt > 1 then begin
+      let i = find_highest_level st learnt in
+      assert (i > 0);
+      let p' = learnt.(i) in
+      learnt.(i) <- learnt.(1);
+      learnt.(1) <- p';
+      let p = lit_neg learnt.(0) in
+      let p' = lit_neg p' in
+      st.st_watched.(p) <- rule :: st.st_watched.(p);
+      st.st_watched.(p') <- rule :: st.st_watched.(p')
+    end;
+    enqueue st learnt.(0) (Some rule);
+    (st.st_cur_level > st.st_min_level) && f st
+
+  let arraysum st criteriaid = 
+    let acc = ref 0 in
+    for i = 0 to st.st_pbo_len.(criteriaid) - 1 do
+      if st.st_assign.(pboidx st criteriaid i) = True then
+        incr acc;
+    done;
+    !acc
+
+  exception UnEqual
+  let pbocompare st criteriaid =
+    try begin
+      for i = 0 to criteriaid - 1 do 
+        if (arraysum st i) > st.st_pbo_obj.(i) then raise UnEqual
+      done;
+      (arraysum st criteriaid) < st.st_pbo_obj.(criteriaid)
+    end with UnEqual -> false
+
+  (* find the optimal solution *)
+  let solve_pbo_rec callback st =
+    let solfound = ref false in
+    let rec solve_pbo_rec_aux criteriaid callback st =
+      match try propagate st; None with Conflict r -> Some r with
+        None ->
+          let x = dequeue_var st in
+          let localbest = arraysum st criteriaid in 
+          let assignment () =
+            (* XXX : I should keep trace of this list incrementally *)
+            let acc = ref [] in
+            for v = 0 to (Array.length st.st_assign) - 1 do
+              match st.st_assign.(v) with
+              |True -> acc := (lit_of_var v true)::!acc
+              |False -> acc := (lit_of_var v false)::!acc
+              |Unknown -> ()
+            done;
+            !acc
+          in
+
+          if x < 0 then begin
+            (* we found a solution *)
+            (* we still have work to do *)
+            if pbocompare st criteriaid then begin
+              (* the solution is the best so far *)
+              if !debug then Format.eprintf "Best Solution found (%d) %d.@." criteriaid localbest;
+              st.st_pbo_obj.(criteriaid) <- localbest;
+              st.st_pbo_assign <- Array.copy st.st_assign;
+              st.st_pbo_assign_true <- IntHash.copy st.st_assign_true;
+              callback (st.st_pbo_obj,st);
+              solfound := true;
+            end
+            else
+              if !debug then Format.eprintf "Solution found %d.@." localbest;
+
+            (* we remove this solution from the search space and learn *)
+            let m = Array.of_list (List.map lit_neg (assignment ())) in
+            let r = { lits = m; all_lits = m; reasons = [] } in
+            learn (solve_pbo_rec_aux criteriaid callback) st r;
+          end else
+            begin
+              (* we didn't find any solution yet *)
+              if not(pbocompare st criteriaid) then begin
+                (* partial solution that cannot become optimal : pruning *)
+                if !debug then Format.eprintf "Partial Solution : pruning .@.";
+                let m = Array.of_list (List.map lit_neg (assignment ())) in
+                let r = { lits = m; all_lits = m; reasons = [] } in
+                learn (solve_pbo_rec_aux criteriaid callback) st r;
+              end else begin
+                (* we keep exploring the rest of the search space *)
+                if !debug then Format.eprintf "Partial Solution : keep exploring .@.";
+                assume st (lit_of_var x false);
+                solve_pbo_rec_aux criteriaid callback st
+              end
+            end
+      | Some r ->
+          (* we found a conflict *)
+          let r =
+            match r with
+              None   -> assert false
+            | Some r -> r
+          in
+          if !debug then Format.eprintf "Conflict .@.";
+          learn (solve_pbo_rec_aux criteriaid callback) st r
+    in
+    (* lexicographic ordering *)
+    begin try
+      for criteriaid = 0 to (Array.length st.st_pbo_obj) - 1 do
+        let tmpst = copy st in
+        Printf.eprintf "Round %d\n" criteriaid;
+        ignore(solve_pbo_rec_aux criteriaid callback tmpst);
+        reset tmpst;
+        if !solfound = true then 
+          st.st_pbo_obj.(criteriaid) <- tmpst.st_pbo_obj.(criteriaid)
+        else raise (Conflict(None)) (* unsat conflict ! *)
+      done
+    with Conflict None -> (); end;
+    (*
+    st.st_assign <- pristine.st_pbo_assign;
+    st.st_assign_true <- pristine.st_pbo_assign_true;
+    *)
+    !solfound
+
+  (* find all solutions *)
+  let rec solve_all_rec callback st =
+    match try propagate st; None with Conflict r -> Some r with
+      None ->
+        let x = dequeue_var st in
+        if x < 0 then begin
+          (* we do something with the solution that we just found *)
+          callback st ; 
+          if st.st_cur_level = 0 then begin
+            (* we exhausted the search space XXX ??? *)
+            if !debug then Format.eprintf "Search Completed.@."; 
+            true
+          end else begin
+            if !debug then Format.eprintf "Solution found.@."; 
+            (* we remove this solution from the search space and learn *)
+            let assignment =
+              (* XXX : I should keep trace of this list incrementally *)
+              let acc = ref [] in
+              for v = 0 to (Array.length st.st_assign) - 1 do
+                match st.st_assign.(v) with
+                |True -> acc := (lit_of_var v true)::!acc
+                |False -> acc := (lit_of_var v false)::!acc
+                |Unknown -> ()
+              done;
+              !acc
+            in
+            let m = Array.of_list (List.map lit_neg assignment) in
+            let r = { lits = m; all_lits = m; reasons = [] } in
+            learn (solve_all_rec callback) st r;
+          end
+        end else
+          begin
+            (* we didn't find any solution yet *)
+            assume st (lit_of_var x false);
+            solve_all_rec callback st
+          end
+    | Some r ->
+        let r =
+          match r with
+            None   -> assert false
+          | Some r -> r
+        in
+        (* we found a conflict *)
+        learn (solve_all_rec callback) st r
+
+  (* find one solution *)
   let rec solve_rec st =
     match try propagate st; None with Conflict r -> Some r with
       None ->
@@ -502,41 +701,52 @@ module M (X : S) = struct
             None   -> assert false
           | Some r -> r
         in
-        let (learnt, reasons, level) = analyze st r in
-        let level = max st.st_min_level level in
-        while st.st_cur_level > level do cancel st done;
-        assert (val_of_lit st learnt.(0) = Unknown);
-        let rule = { lits = learnt; all_lits = learnt; reasons = reasons } in
-        if !debug then Format.eprintf "Learning %a@." (print_rule st) rule;
-        if Array.length learnt > 1 then begin
-          let i = find_highest_level st learnt in
-          assert (i > 0);
-          let p' = learnt.(i) in
-          learnt.(i) <- learnt.(1);
-          learnt.(1) <- p';
-          let p = lit_neg learnt.(0) in
-          let p' = lit_neg p' in
-          st.st_watched.(p) <- rule :: st.st_watched.(p);
-          st.st_watched.(p') <- rule :: st.st_watched.(p')
-        end;
-        enqueue st learnt.(0) (Some rule);
-        st.st_cur_level > st.st_min_level &&
-        solve_rec st
+        learn solve_rec st r
 
-  let rec solve st x =
+  type callback =
+    |AllSat of (state -> unit)
+    |Pbo of (int array * state -> unit)
+    |Sat
+
+  let rec solve_aux ~callback st x =
+    let srec =
+      match callback with
+      |Sat -> solve_rec
+      |AllSat f -> solve_all_rec f
+      (* XXX here I select criteriaid 0 just for testing ... *)
+      |Pbo f -> solve_pbo_rec f
+    in
     assert (st.st_cur_level = st.st_min_level);
     propagate st;
     try
       let p = lit_of_var x true in
       assume st p;
       assert (st.st_cur_level = st.st_min_level + 1);
-      if solve_rec st then begin
+      if srec st then begin
         protect st;
         true
       end else
-        solve st x
+        solve_aux st ~callback x
     with Conflict _ ->
-      st.st_coherent <- false;
+      match callback with
+      |Pbo _ | AllSat _ ->
+          (* this means we found at least one solution *)
+          if ExtLib.Array.for_all ((<) max_int) st.st_pbo_obj then true 
+          else (st.st_coherent <- false; false)
+      |Sat -> (st.st_coherent <- false; false)
+
+  let solve st x = solve_aux ~callback:Sat st x
+
+  (* always return false *)
+  let solve_all f st x = solve_aux ~callback:(AllSat f) st x
+
+  (* always return false *)
+  let solve_pbo callback st x = 
+    if solve_aux ~callback:(Pbo callback) st x then begin
+      st.st_assign <- (* Array.copy *) st.st_pbo_assign;
+      st.st_assign_true <- (* IntHash.copy *) st.st_pbo_assign_true;
+      true
+    end else 
       false
 
   let rec solve_lst_rec st l0 l =
@@ -558,14 +768,15 @@ module M (X : S) = struct
   let debug b = debug := b
   let set_buffer b = buffer := b
 
-  let initialize_problem 
-    ?(print_var = (fun fmt -> Format.fprintf fmt "%d")) ?(buffer=false) n =
+  let initialize_problem ?(pbo = [||])
+    ?(print_var = (fun fmt -> Format.fprintf fmt "%d")) ?(buffer=false) nvar =
       if buffer then set_buffer true;
       Gc.set { (Gc.get()) with
         Gc.minor_heap_size = 4 * 1024 * 1024; (*4M*)
         Gc.major_heap_increment = 32 * 1024 * 1024; (*32M*)
         Gc.max_overhead = 150;
       } ; (* let's fly ! *)
+      let n = nvar + (Array.fold_left (+) nvar pbo) in
       { st_assign = Array.make n Unknown;
         st_assign_true = IntHash.create n;
         st_reason = Array.make n None;
@@ -591,6 +802,11 @@ module M (X : S) = struct
         st_print_var = print_var;
         st_coherent = true;
         st_buffer = [];
+        st_pbo_len = pbo;
+        st_pbo_obj = Array.make (Array.length pbo) max_int;
+        st_pbo_assign = Array.make n Unknown;
+        st_pbo_assign_true = IntHash.create n;
+        st_nvar = nvar;
       }
 
   let insert_simpl_prop st r p p' =
@@ -660,7 +876,7 @@ module M (X : S) = struct
 
   let assignment st = st.st_assign
   let assignment_true st =
-    IntHash.fold (fun k _ acc -> k::acc ) st.st_assign_true []
+    IntHash.fold (fun k _ acc -> if k < st.st_nvar then k::acc else acc ) st.st_assign_true []
 
   let stats st =
     let (t,f,u) =
