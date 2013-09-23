@@ -21,22 +21,28 @@ type request = {
   request : string;
   install : Format822.vpkg list;
   remove : Format822.vpkg list;
+  architecture : Format822.architecture;
+  architectures : Format822.architectures;
   autoremove : bool;
   upgrade : bool;
   distupgrade : bool;
   strict_pin : bool;
   preferences: string;
+  commandline: string;
 }
 
 let default_request = {
   request = "";
   install = [];
   remove = [];
+  architecture = "";
+  architectures = [];
   autoremove = false;
   upgrade = false;
   distupgrade = false;
   strict_pin = false;
-  preferences = ""
+  preferences = "";
+  commandline = ""
 }
 
 (* convert a apt command line request to edsp request *)
@@ -67,6 +73,7 @@ let from_apt_request arch request = function
 
 let parse_s = Packages.parse_s
 let parse_string (_,s) = s
+let parse_string_list (_,s) = String.nsplit s " "
 let parse_int_s (_,s) = string_of_int(int_of_string s)
 let parse_req (loc,s) = 
   let aux = Packages.lexbuf_wrapper Packages_parser.vpkg_top in
@@ -79,10 +86,13 @@ let parse_request_stanza par =
     install = parse_s ~opt:[] parse_req "Install" par;
     remove = parse_s ~opt:[] parse_req "Remove" par;
     upgrade = parse_s ~opt:false Packages.parse_bool "Upgrade" par;
+    architecture = parse_s ~err:"(MISSING ARCH)" Packages.parse_string "Architecture" par;
+    architectures = parse_s ~opt:[] parse_string_list "Architectures" par;
     distupgrade = parse_s ~opt:false Packages.parse_bool "Dist-Upgrade" par;
     autoremove = parse_s ~opt:false Packages.parse_bool "Autoremove" par;
     strict_pin = parse_s ~opt:true Packages.parse_bool "Strict-Pinning" par;
     preferences = parse_s ~opt:"" Packages.parse_string "Preferences" par;
+    commandline = parse_s ~opt:"" Packages.parse_string "Command-Line" par;
   }
 ;;
 
@@ -109,6 +119,7 @@ let extras = [
   ("APT-Candidate", Some parse_candidate);
   ("APT-Automatic", Some parse_automatic);
   ("Section", Some parse_section);
+  ("APT-Release", None);
   ]
 
 (* parse the entire file while filtering out unwanted stanzas *)
