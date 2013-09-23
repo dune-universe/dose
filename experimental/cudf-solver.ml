@@ -70,13 +70,13 @@ let main () =
       in 
       let r = 
         if OptParse.Opt.get Options.critparanoid then 
-          Depsolver.check_request ~callback:pp_solution_callback ~criteria:[Depsolver_int.Rem;Depsolver_int.New] (p,l,r) 
+          Depsolver.check_request ~callback:pp_solution_callback ~criteria:"-count(removed),-count(new)" (p,l,r) 
         else if OptParse.Opt.get Options.critrem then 
-          Depsolver.check_request ~callback:pp_solution_callback ~criteria:[Depsolver_int.Rem] (p,l,r) 
+          Depsolver.check_request ~callback:pp_solution_callback ~criteria:"-count(removed)" (p,l,r) 
         else if OptParse.Opt.get Options.critnew then
-          Depsolver.check_request ~callback:pp_solution_callback ~criteria:[Depsolver_int.New] (p,l,r) 
+          Depsolver.check_request ~callback:pp_solution_callback ~criteria:"-count(new)" (p,l,r) 
         else if OptParse.Opt.get Options.critchg then
-          Depsolver.check_request ~callback:pp_solution_callback ~criteria:[Depsolver_int.Chg] (p,l,r) 
+          Depsolver.check_request ~callback:pp_solution_callback ~criteria:"-count(changed)" (p,l,r) 
         else
           Depsolver.check_request (p,l,r) 
       in

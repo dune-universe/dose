@@ -348,9 +348,21 @@ type solver_result =
   |Unsat of Diagnostic.diagnosis option
   |Error of string
 
+(* XXX this should be replaced by a proper parser *)
+let criteria_parser s =
+  let open Depsolver_int in
+  List.map (function
+    |"-count(new)" -> Count(New)
+    |"-count(removed)" -> Count(Removed)
+    |"-count(changed)" -> Count(Changed)
+    |"-notuptodate(solution)" -> NotUpToDate(Solution)
+    |"-unsat_recommends(solution)" -> UnsatRecommends(Solution)
+    |s -> fatal "Criteria parsing error : %s" s
+  ) (String.nsplit s ",")
+
 (** check if a cudf request is satisfiable. we do not care about
  * universe consistency . We try to install a dummy package *)
-let check_request ?cmd ?callback ?(criteria=[]) ?(explain=false) (pre,universe,request) =
+let check_request ?cmd ?callback ?criteria ?(explain=false) (pre,universe,request) =
   let intSolver universe request =
     let deps = 
       let k =
@@ -365,13 +377,16 @@ let check_request ?cmd ?callback ?(criteria=[]) ?(explain=false) (pre,universe,r
       in
       let il = request.Cudf.install in
       let ul = 
-        List.filter_map (function (name,None) ->
-          match Cudf.get_installed universe name with
-          |[] -> Some((name,None))
-          |[p] -> Some(name,Some(`Geq,p.Cudf.version))
-          |pl ->
-              let p = List.hd(List.sort ~cmp:Cudf.(>%) pl) in
-              Some(name,Some(`Geq,p.Cudf.version))
+        List.map (function
+          |(name,None) ->
+            begin match Cudf.get_installed universe name with
+            |[] -> ((name,None))
+            |[p] -> (name,Some(`Geq,p.Cudf.version))
+            |pl ->
+                let p = List.hd(List.sort ~cmp:Cudf.(>%) pl) in
+                (name,Some(`Geq,p.Cudf.version))
+            end
+          |c -> c
         ) request.Cudf.upgrade  
       in
       let l = il @ ul in
@@ -392,10 +407,11 @@ let check_request ?cmd ?callback ?(criteria=[]) ?(explain=false) (pre,universe,r
     (* XXX it should be possible to add a package to a cudf document ! *)
     let pkglist = Cudf.get_packages universe in
     let universe = Cudf.load_universe (dummy::pkglist) in
-    if criteria = [] then
+    if Option.is_none criteria then
       edos_install universe dummy
     else
-      minimize ?callback (Array.of_list criteria) universe dummy
+      let criteria_array = Array.of_list (criteria_parser (Option.get criteria)) in
+      minimize ?callback criteria_array universe dummy
   in
   if Option.is_none cmd then begin
     let d = intSolver universe request in
@@ -406,7 +422,7 @@ let check_request ?cmd ?callback ?(criteria=[]) ?(explain=false) (pre,universe,r
       if explain then Unsat (Some d) else Unsat None
   end else begin
     let cmd = Option.get cmd in
-    let criteria = "-removed,-new" in
+    let criteria = if Option.is_none criteria then "-removed,-new" else Option.get criteria in
     try Sat(CudfSolver.execsolver cmd criteria (pre,universe,request)) with
     |CudfSolver.Unsat when not explain -> Unsat None
     |CudfSolver.Unsat when explain -> Unsat (Some (intSolver universe request))

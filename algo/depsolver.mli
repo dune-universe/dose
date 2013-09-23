@@ -128,4 +128,4 @@ type solver_result =
     result will contain the failure reason.
 *)
 val check_request : ?cmd : string -> ?callback:(int array * Diagnostic.diagnosis -> unit) -> 
-  ?criteria:Depsolver_int.criteria list -> ?explain : bool -> Cudf.cudf -> solver_result
+  ?criteria:string -> ?explain : bool -> Cudf.cudf -> solver_result

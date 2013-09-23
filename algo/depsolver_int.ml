@@ -197,7 +197,6 @@ let init_solver_pool map pool closure =
   SolverPool solverpool
 ;;
 
-
 (** pseudo boolean optimization *) 
 
 let newpred constraints id vp =
@@ -235,7 +234,15 @@ let changepred constraints id ivp uvp =
   ) neg_lit_uvp
 ;;
 
-type criteria = New | Rem | Chg | NoUp | RecUnsat
+type domain =
+  |New
+  |Removed
+  |Solution
+  |Changed 
+and criteria =
+  |Count of domain
+  |NotUpToDate of domain
+  |UnsatRecommends of domain
 
 let init_criteria ?(closure=[]) criteria univ =
   let module ISet = Set.Make(struct type t = int let compare = compare end) in
@@ -253,14 +260,14 @@ let init_criteria ?(closure=[]) criteria univ =
       if ISet.is_empty closure || not (ISet.is_empty vpset) then begin
         let ivp,uvp = List.partition (fun id -> (Cudf.package_by_uid univ id).Cudf.installed) vpidl in
         Array.iteri (fun criteriaid -> function
-          |Chg -> (* sum over all package names *)
+          |Count(Changed) -> (* sum over all package names *)
               RefList.push tmppool.(criteriaid) (ivp,uvp)
-          |Rem when ivp <> [] -> (* at least one installed version *)
+          |Count(Removed) when ivp <> [] -> (* at least one installed version *)
               RefList.push tmppool.(criteriaid) (vpidl,[])
-          |New when ivp = [] -> (* no installed versions *)
+          |Count(New) when ivp = [] -> (* no installed versions *)
               RefList.push tmppool.(criteriaid) (vpidl,[])
-          |RecUnsat -> ()
-          |NoUp -> ()
+          |UnsatRecommends(Solution) -> ()
+          |NotUpToDate(Solution) -> ()
           |_ -> ()
         ) criteria
       end
@@ -270,7 +277,7 @@ let init_criteria ?(closure=[]) criteria univ =
   Array.iteri (fun criteriaid t ->
     let l = RefList.to_list tmppool.(criteriaid) in
     let s = List.length l in
-    debug "pull criteriaid %d - len %d" criteriaid s;
+    (*  debug "pull criteriaid %d - len %d" criteriaid s; *)
     pbopool := (t,l,s,criteriaid) :: !pbopool
   ) criteria;
   !pbopool
@@ -281,7 +288,7 @@ let init_solver_criteria map solver pbopool =
   debug "init_solver_criteria";
   *)
   List.iter (function
-    |New,l,s,cid ->
+    |Count(New),l,s,cid ->
       let nameid = ref 0 in
       List.iter (fun (vpidl,_) ->
         let vpid = (List.map map#vartoint vpidl) in
@@ -292,7 +299,7 @@ let init_solver_criteria map solver pbopool =
         incr nameid;
       ) l
     
-    |Rem,l,s,cid ->
+    |Count(Removed),l,s,cid ->
       let nameid = ref 0 in
       List.iter (fun (vpidl,_) ->
         let vpid = (List.map map#vartoint vpidl) in 
@@ -303,10 +310,10 @@ let init_solver_criteria map solver pbopool =
         incr nameid;
       ) l
 
-    |RecUnsat,l,s,cid -> ()
-    |NoUp,l,s,cid -> ()
+    |UnsatRecommends(Solution),l,s,cid -> ()
+    |NotUpToDate(Solution),l,s,cid -> ()
  
-    |Chg,l,s,cid -> 
+    |Count(Changed),l,s,cid -> 
       let nameid = ref 0 in
       List.iter (fun (l1,l2) ->
         let ivp = List.map map#vartoint l1 in
@@ -319,6 +326,7 @@ let init_solver_criteria map solver pbopool =
         changepred solver (S.pboidx solver cid !nameid) ivp uvp;
         incr nameid;
       ) l
+    |_ -> warning "Optimization criteria unsupported"
   ) pbopool
 ;;
 
