@@ -705,9 +705,9 @@ OCAMLBUILD
 OCAMLDOC
 OCAMLMKLIB
 OCAMLMKTOP
-OCAMLDEPDOTOPT
 OCAMLDEP
 OCAML
+OCAMLNATDYNLINK
 OCAMLOPTDOTOPT
 OCAMLCDOTOPT
 OCAMLBEST
@@ -2186,7 +2186,7 @@ fi
 $as_echo "OCaml version is $OCAMLVERSION" >&6; }
      # If OCAMLLIB is set, use it
      if test "$OCAMLLIB" = ""; then
-        OCAMLLIB=`$OCAMLC -where 2>/dev/null || $OCAMLC -v|tail -1|cut -d ' ' -f 4`
+        OCAMLLIB=`$OCAMLC -where 2>/dev/null | tr -d '\015' || $OCAMLC -v|tail -1|cut -d ' ' -f 4`
      else
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: OCAMLLIB previously set; preserving it." >&5
 $as_echo "OCAMLLIB previously set; preserving it." >&6; }
@@ -2292,17 +2292,17 @@ fi
 
      OCAMLBEST=byte
      if test "$OCAMLOPT" = "no"; then
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Cannot find ocamlopt; bytecode compilation only." >&5
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Cannot find ocamlopt; bytecode compilation only." >&5
 $as_echo "$as_me: WARNING: Cannot find ocamlopt; bytecode compilation only." >&2;}
      else
-	TMPVERSION=`$OCAMLOPT -v | sed -n -e 's|.*version* *\(.*\)$|\1|p' `
-	if test "$TMPVERSION" != "$OCAMLVERSION" ; then
-	    { $as_echo "$as_me:${as_lineno-$LINENO}: result: versions differs from ocamlc; ocamlopt discarded." >&5
+        TMPVERSION=`$OCAMLOPT -v | sed -n -e 's|.*version* *\(.*\)$|\1|p' `
+        if test "$TMPVERSION" != "$OCAMLVERSION" ; then
+           { $as_echo "$as_me:${as_lineno-$LINENO}: result: versions differs from ocamlc; ocamlopt discarded." >&5
 $as_echo "versions differs from ocamlc; ocamlopt discarded." >&6; }
-	    OCAMLOPT=no
-	else
-	    OCAMLBEST=opt
-	fi
+           OCAMLOPT=no
+        else
+           OCAMLBEST=opt
+        fi
      fi
 
 
@@ -2401,18 +2401,18 @@ else
 fi
 
      if test "$OCAMLCDOTOPT" != "no"; then
-	TMPVERSION=`$OCAMLCDOTOPT -v | sed -n -e 's|.*version* *\(.*\)$|\1|p' `
-	if test "$TMPVERSION" != "$OCAMLVERSION" ; then
-	    { $as_echo "$as_me:${as_lineno-$LINENO}: result: versions differs from ocamlc; ocamlc.opt discarded." >&5
+        TMPVERSION=`$OCAMLCDOTOPT -v | sed -n -e 's|.*version* *\(.*\)$|\1|p' `
+        if test "$TMPVERSION" != "$OCAMLVERSION" ; then
+           { $as_echo "$as_me:${as_lineno-$LINENO}: result: versions differs from ocamlc; ocamlc.opt discarded." >&5
 $as_echo "versions differs from ocamlc; ocamlc.opt discarded." >&6; }
-	else
-	    OCAMLC=$OCAMLCDOTOPT
-	fi
+        else
+           OCAMLC=$OCAMLCDOTOPT
+        fi
      fi
 
      # checking for ocamlopt.opt
      if test "$OCAMLOPT" != "no" ; then
-	if test -n "$ac_tool_prefix"; then
+        if test -n "$ac_tool_prefix"; then
   # Extract the first word of "${ac_tool_prefix}ocamlopt.opt", so it can be a program name with args.
 set dummy ${ac_tool_prefix}ocamlopt.opt; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
@@ -2504,18 +2504,33 @@ else
   OCAMLOPTDOTOPT="$ac_cv_prog_OCAMLOPTDOTOPT"
 fi
 
-	if test "$OCAMLOPTDOTOPT" != "no"; then
-	   TMPVERSION=`$OCAMLOPTDOTOPT -v | sed -n -e 's|.*version* *\(.*\)$|\1|p' `
-	   if test "$TMPVERSION" != "$OCAMLVERSION" ; then
-	      { $as_echo "$as_me:${as_lineno-$LINENO}: result: version differs from ocamlc; ocamlopt.opt discarded." >&5
+        if test "$OCAMLOPTDOTOPT" != "no"; then
+           TMPVERSION=`$OCAMLOPTDOTOPT -v | sed -n -e 's|.*version* *\(.*\)$|\1|p' `
+           if test "$TMPVERSION" != "$OCAMLVERSION" ; then
+              { $as_echo "$as_me:${as_lineno-$LINENO}: result: version differs from ocamlc; ocamlopt.opt discarded." >&5
 $as_echo "version differs from ocamlc; ocamlopt.opt discarded." >&6; }
-	   else
-	      OCAMLOPT=$OCAMLOPTDOTOPT
-	   fi
-        fi
+           else
+              OCAMLOPT=$OCAMLOPTDOTOPT
+           fi
+       fi
      fi
 
 
+  fi
+
+
+
+  # checking for native dynlink
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for dynlink.cmxa" >&5
+$as_echo_n "checking for dynlink.cmxa... " >&6; }
+  if test -f "$OCAMLLIB/dynlink.cmxa" ; then
+     OCAMLNATDYNLINK=yes
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+  else
+     OCAMLNATDYNLINK=no
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
   fi
 
 
@@ -2706,106 +2721,6 @@ esac
 else
   OCAMLDEP="$ac_cv_prog_OCAMLDEP"
 fi
-
-
-  # checking for ocamldep.opt
-  if test "$OCAMLDEP" != "no" ; then
-     if test -n "$ac_tool_prefix"; then
-  # Extract the first word of "${ac_tool_prefix}ocamldep.opt", so it can be a program name with args.
-set dummy ${ac_tool_prefix}ocamldep.opt; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_prog_OCAMLDEPDOTOPT+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  if test -n "$OCAMLDEPDOTOPT"; then
-  ac_cv_prog_OCAMLDEPDOTOPT="$OCAMLDEPDOTOPT" # Let the user override the test.
-else
-as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_prog_OCAMLDEPDOTOPT="${ac_tool_prefix}ocamldep.opt"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-fi
-fi
-OCAMLDEPDOTOPT=$ac_cv_prog_OCAMLDEPDOTOPT
-if test -n "$OCAMLDEPDOTOPT"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $OCAMLDEPDOTOPT" >&5
-$as_echo "$OCAMLDEPDOTOPT" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-fi
-if test -z "$ac_cv_prog_OCAMLDEPDOTOPT"; then
-  ac_ct_OCAMLDEPDOTOPT=$OCAMLDEPDOTOPT
-  # Extract the first word of "ocamldep.opt", so it can be a program name with args.
-set dummy ocamldep.opt; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_prog_ac_ct_OCAMLDEPDOTOPT+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  if test -n "$ac_ct_OCAMLDEPDOTOPT"; then
-  ac_cv_prog_ac_ct_OCAMLDEPDOTOPT="$ac_ct_OCAMLDEPDOTOPT" # Let the user override the test.
-else
-as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_prog_ac_ct_OCAMLDEPDOTOPT="ocamldep.opt"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-fi
-fi
-ac_ct_OCAMLDEPDOTOPT=$ac_cv_prog_ac_ct_OCAMLDEPDOTOPT
-if test -n "$ac_ct_OCAMLDEPDOTOPT"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_ct_OCAMLDEPDOTOPT" >&5
-$as_echo "$ac_ct_OCAMLDEPDOTOPT" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-  if test "x$ac_ct_OCAMLDEPDOTOPT" = x; then
-    OCAMLDEPDOTOPT="no"
-  else
-    case $cross_compiling:$ac_tool_warned in
-yes:)
-{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
-$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
-ac_tool_warned=yes ;;
-esac
-    OCAMLDEPDOTOPT=$ac_ct_OCAMLDEPDOTOPT
-  fi
-else
-  OCAMLDEPDOTOPT="$ac_cv_prog_OCAMLDEPDOTOPT"
-fi
-
-     if test "$OCAMLDEPDOTOPT" != "no"; then
-         OCAMLDEP=$OCAMLDEPDOTOPT
-     fi
-  fi
 
 
   # checking for ocamlmktop
@@ -3285,7 +3200,7 @@ fi
   if test "$CAMLP4" != "no"; then
      TMPVERSION=`$CAMLP4 -v 2>&1| sed -n -e 's|.*version *\(.*\)$|\1|p'`
      if test "$TMPVERSION" != "$OCAMLVERSION" ; then
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: versions differs from ocamlc" >&5
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: versions differs from ocamlc" >&5
 $as_echo "versions differs from ocamlc" >&6; }
         CAMLP4=no
      fi
@@ -4135,10 +4050,10 @@ if test "$CAMLP4" = "no"; then
  as_fn_error $? "You must install the Camlp4 pre-processor" "$LINENO" 5
 fi
 
-if test "$CAMLP4OOPT" = "no" ; then
-  CAMLP4OMACRO="$CAMLP4O Camlp4MacroParser.cmx"
+if test "$CAMLP4OOPT" = "no" || test "$OCAMLNATDYNLINK" = "no" ; then
+ CAMLP4OMACRO="$CAMLP4O Camlp4MacroParser.cmo"
 else
-  CAMLP4OMACRO="$CAMLP4OOPT -I_build Camlp4MacroParser.cmxs"
+ CAMLP4OMACRO="$CAMLP4OOPT -I_build Camlp4MacroParser.cmxs"
 fi
 
 
@@ -4294,17 +4209,17 @@ $as_echo_n "checking for OCaml findlib package cudf... " >&6; }
   found=no
   for pkg in cudf  ; do
     if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
 $as_echo "found" >&6; }
-      OCAML_PKG_cudf=$pkg
-      found=yes
-      break
+       OCAML_PKG_cudf=$pkg
+       found=yes
+       break
     fi
   done
   if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
-    OCAML_PKG_cudf=no
+     OCAML_PKG_cudf=no
   fi
 
 
@@ -4335,17 +4250,17 @@ $as_echo_n "checking for OCaml findlib package extlib... " >&6; }
   found=no
   for pkg in extlib  ; do
     if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
 $as_echo "found" >&6; }
-      OCAML_PKG_extlib=$pkg
-      found=yes
-      break
+       OCAML_PKG_extlib=$pkg
+       found=yes
+       break
     fi
   done
   if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
-    OCAML_PKG_extlib=no
+     OCAML_PKG_extlib=no
   fi
 
 
@@ -4363,17 +4278,17 @@ $as_echo_n "checking for OCaml findlib package pcre... " >&6; }
   found=no
   for pkg in pcre  ; do
     if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
 $as_echo "found" >&6; }
-      OCAML_PKG_pcre=$pkg
-      found=yes
-      break
+       OCAML_PKG_pcre=$pkg
+       found=yes
+       break
     fi
   done
   if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
-    OCAML_PKG_pcre=no
+     OCAML_PKG_pcre=no
   fi
 
 
@@ -4401,17 +4316,17 @@ $as_echo_n "checking for OCaml findlib package parmap... " >&6; }
   found=no
   for pkg in parmap  ; do
     if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
 $as_echo "found" >&6; }
-      OCAML_PKG_parmap=$pkg
-      found=yes
-      break
+       OCAML_PKG_parmap=$pkg
+       found=yes
+       break
     fi
   done
   if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
-    OCAML_PKG_parmap=no
+     OCAML_PKG_parmap=no
   fi
 
 
@@ -4444,17 +4359,17 @@ $as_echo_n "checking for OCaml findlib package zip... " >&6; }
   found=no
   for pkg in zip  ; do
     if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
 $as_echo "found" >&6; }
-      OCAML_PKG_zip=$pkg
-      found=yes
-      break
+       OCAML_PKG_zip=$pkg
+       found=yes
+       break
     fi
   done
   if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
-    OCAML_PKG_zip=no
+     OCAML_PKG_zip=no
   fi
 
 
@@ -4486,17 +4401,17 @@ $as_echo_n "checking for OCaml findlib package bz2... " >&6; }
   found=no
   for pkg in bz2  ; do
     if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
 $as_echo "found" >&6; }
-      OCAML_PKG_bz2=$pkg
-      found=yes
-      break
+       OCAML_PKG_bz2=$pkg
+       found=yes
+       break
     fi
   done
   if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
-    OCAML_PKG_bz2=no
+     OCAML_PKG_bz2=no
   fi
 
 
@@ -4527,17 +4442,17 @@ $as_echo_n "checking for OCaml findlib package sqlite3... " >&6; }
   found=no
   for pkg in sqlite3  ; do
     if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
 $as_echo "found" >&6; }
-      OCAML_PKG_sqlite3=$pkg
-      found=yes
-      break
+       OCAML_PKG_sqlite3=$pkg
+       found=yes
+       break
     fi
   done
   if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
-    OCAML_PKG_sqlite3=no
+     OCAML_PKG_sqlite3=no
   fi
 
 
@@ -4554,17 +4469,17 @@ $as_echo_n "checking for OCaml findlib package json-static... " >&6; }
   found=no
   for pkg in json-static  ; do
     if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
 $as_echo "found" >&6; }
-      OCAML_PKG_json_static=$pkg
-      found=yes
-      break
+       OCAML_PKG_json_static=$pkg
+       found=yes
+       break
     fi
   done
   if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
-    OCAML_PKG_json_static=no
+     OCAML_PKG_json_static=no
   fi
 
 
@@ -4597,17 +4512,17 @@ $as_echo_n "checking for OCaml findlib package postgresql... " >&6; }
   found=no
   for pkg in postgresql  ; do
     if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
 $as_echo "found" >&6; }
-      OCAML_PKG_postgresql=$pkg
-      found=yes
-      break
+       OCAML_PKG_postgresql=$pkg
+       found=yes
+       break
     fi
   done
   if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
-    OCAML_PKG_postgresql=no
+     OCAML_PKG_postgresql=no
   fi
 
 
@@ -4624,17 +4539,17 @@ $as_echo_n "checking for OCaml findlib package json-static... " >&6; }
   found=no
   for pkg in json-static  ; do
     if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
 $as_echo "found" >&6; }
-      OCAML_PKG_json_static=$pkg
-      found=yes
-      break
+       OCAML_PKG_json_static=$pkg
+       found=yes
+       break
     fi
   done
   if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
-    OCAML_PKG_json_static=no
+     OCAML_PKG_json_static=no
   fi
 
 
@@ -4668,17 +4583,17 @@ $as_echo_n "checking for OCaml findlib package ocamlgraph... " >&6; }
   found=no
   for pkg in ocamlgraph  ; do
     if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
 $as_echo "found" >&6; }
-      OCAML_PKG_ocamlgraph=$pkg
-      found=yes
-      break
+       OCAML_PKG_ocamlgraph=$pkg
+       found=yes
+       break
     fi
   done
   if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
-    OCAML_PKG_ocamlgraph=no
+     OCAML_PKG_ocamlgraph=no
   fi
 
 
@@ -4712,17 +4627,17 @@ $as_echo_n "checking for OCaml findlib package curl... " >&6; }
   found=no
   for pkg in curl  ; do
     if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
 $as_echo "found" >&6; }
-      OCAML_PKG_curl=$pkg
-      found=yes
-      break
+       OCAML_PKG_curl=$pkg
+       found=yes
+       break
     fi
   done
   if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
-    OCAML_PKG_curl=no
+     OCAML_PKG_curl=no
   fi
 
 
@@ -4752,17 +4667,17 @@ $as_echo_n "checking for OCaml findlib package expat... " >&6; }
   found=no
   for pkg in expat  ; do
     if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
 $as_echo "found" >&6; }
-      OCAML_PKG_expat=$pkg
-      found=yes
-      break
+       OCAML_PKG_expat=$pkg
+       found=yes
+       break
     fi
   done
   if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
-    OCAML_PKG_expat=no
+     OCAML_PKG_expat=no
   fi
 
 
@@ -4779,17 +4694,17 @@ $as_echo_n "checking for OCaml findlib package xml-light... " >&6; }
   found=no
   for pkg in xml-light  ; do
     if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
 $as_echo "found" >&6; }
-      OCAML_PKG_xml_light=$pkg
-      found=yes
-      break
+       OCAML_PKG_xml_light=$pkg
+       found=yes
+       break
     fi
   done
   if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
-    OCAML_PKG_xml_light=no
+     OCAML_PKG_xml_light=no
   fi
 
 
@@ -4819,17 +4734,17 @@ $as_echo_n "checking for OCaml findlib package oUnit... " >&6; }
   found=no
   for pkg in oUnit  ; do
     if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
 $as_echo "found" >&6; }
-      OCAML_PKG_oUnit=$pkg
-      found=yes
-      break
+       OCAML_PKG_oUnit=$pkg
+       found=yes
+       break
     fi
   done
   if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
-    OCAML_PKG_oUnit=no
+     OCAML_PKG_oUnit=no
   fi
 
 
@@ -4859,17 +4774,17 @@ $as_echo_n "checking for OCaml findlib package benchmark... " >&6; }
   found=no
   for pkg in benchmark  ; do
     if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
 $as_echo "found" >&6; }
-      OCAML_PKG_benchmark=$pkg
-      found=yes
-      break
+       OCAML_PKG_benchmark=$pkg
+       found=yes
+       break
     fi
   done
   if test "$found" = "no" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
-    OCAML_PKG_benchmark=no
+     OCAML_PKG_benchmark=no
   fi
 
 
