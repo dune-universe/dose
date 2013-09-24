@@ -80,6 +80,12 @@ let parse_req (loc,s) =
   let l = Pcre.split ~rex:Apt.blank_regexp s in 
   List.map (fun s -> aux (loc,s)) l
 
+let parse_edsp_version (_,s) =
+  match String.nsplit s " " with
+  |["EDSP";"0.5"] -> s
+  |["EDSP";"0.4"] -> raise Not_found
+  |[] -> raise Not_found
+
 (*
 let get_architectures native_opt foreign =
   let cmd = "apt-config dump" in
@@ -107,8 +113,10 @@ let get_architectures native_opt foreign =
 *)
 
 let parse_request_stanza par =
+  (* request must be parse before any other fields *)
+  let request = parse_s ~err:"(Invalid Request/Compatibility version)" parse_edsp_version "Request" par in
   {
-    request = parse_s ~err:"(Empty REQUEST)" parse_string "Request" par;
+    request = request; 
     install = parse_s ~opt:[] parse_req "Install" par;
     remove = parse_s ~opt:[] parse_req "Remove" par;
     upgrade = parse_s ~opt:false Packages.parse_bool "Upgrade" par;

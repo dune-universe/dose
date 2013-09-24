@@ -48,62 +48,62 @@ def test_application(self,expected_file,cmd):
 class DoseTests(unittest.TestCase):
     def test_apt_cudf(self):
         expected_file = "tests/applications/dose-tests/apt-cudf-install-i386"
-        cmd = ["./apt-cudf.native", "--conf", "doc/apt-cudf/apt-cudf.conf", "-e", "--solver=aspcud", "--native-arch=i386", "tests/deb/edsp/install-sarge-etch.edsp"]
+        cmd = ["./apt-cudf.native", "--conf", "doc/apt-cudf/apt-cudf.conf", "-e", "--solver=aspcud", "tests/deb/edsp/install-sarge-etch.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_textlive(self):
         expected_file = "tests/applications/dose-tests/apt-cudf-install-textlive"
-        cmd = ["./apt-cudf.native", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=amd64", "--foreign-archs=i386", "tests/deb/edsp/textlive.edsp"]
+        cmd = ["./apt-cudf.native", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "tests/deb/edsp/textlive.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_multiarch_same_provides_multi(self):
         expected_file = "tests/applications/dose-tests/multiarch-same-provides-multi"
-        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-same-provides-multi.edsp"]
+        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "tests/deb/edsp/multiarch-same-provides-multi.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_multiarch_same_provides(self):
         expected_file = "tests/applications/dose-tests/multiarch-same-provides"
-        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-same-provides.edsp"]
+        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "tests/deb/edsp/multiarch-same-provides.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_multiarch_same_half(self):
         expected_file = "tests/applications/dose-tests/multiarch-same-half"
-        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-same-half.edsp"]
+        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "tests/deb/edsp/multiarch-same-half.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_multiarch_same_conflicts(self):
         expected_file = "tests/applications/dose-tests/multiarch-same-conflicts"
-        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-same-conflicts.edsp"]
+        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "tests/deb/edsp/multiarch-same-conflicts.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_multiarch_same_conflictsi_virtual(self):
         expected_file = "tests/applications/dose-tests/multiarch-same-conflicts-virtual"
-        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-same-conflicts-virtual.edsp"]
+        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "tests/deb/edsp/multiarch-same-conflicts-virtual.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_multiarch_same_no_deps(self):
         expected_file = "tests/applications/dose-tests/multiarch-same-no-deps"
-        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-same-no-deps.edsp"]
+        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "tests/deb/edsp/multiarch-same-no-deps.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_multiarch_none(self):
         expected_file = "tests/applications/dose-tests/multiarch-none"
-        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-none.edsp"]
+        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "tests/deb/edsp/multiarch-none.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_multiarch_foreign(self):
         expected_file = "tests/applications/dose-tests/multiarch-foreign"
-        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-foreign.edsp"]
+        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "tests/deb/edsp/multiarch-foreign.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_multiarch_foreign(self):
         expected_file = "tests/applications/dose-tests/multiarch-foreign-depends"
-        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-foreign-depends.edsp"]
+        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "tests/deb/edsp/multiarch-foreign-depends.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_apt_cudf_multiarch_allowed(self):
         expected_file = "tests/applications/dose-tests/multiarch-allowed"
-        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "--native-arch=arch1", "--foreign-archs=arch2", "tests/deb/edsp/multiarch-allowed.edsp"]
+        cmd = ["./apt-cudf.native", "-e", "--conf", "doc/apt-cudf/apt-cudf.conf", "--solver=aspcud", "tests/deb/edsp/multiarch-allowed.edsp"]
         test_application(self,expected_file,cmd)
 
     def test_failure_distcheck(self):

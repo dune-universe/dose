@@ -39,7 +39,7 @@ module Options = struct
   add options ~long_name:"noop" ~help:"Do nothing, implies --dump" noop;
   add options ~short_name:'s' ~long_name:"solver" ~help:"external solver" solver;
   add options ~short_name:'c' ~long_name:"criteria" ~help:"optimization criteria" criteria;
-  add options ~long_name:"explain" ~help:"print installation summary" explain;
+  add options ~short_name:'e' ~long_name:"explain" ~help:"print installation summary" explain;
   add options ~long_name:"human" ~help:"print human readable installation errors" human;
 
 end
