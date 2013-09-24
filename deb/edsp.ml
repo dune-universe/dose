@@ -80,6 +80,32 @@ let parse_req (loc,s) =
   let l = Pcre.split ~rex:Apt.blank_regexp s in 
   List.map (fun s -> aux (loc,s)) l
 
+(*
+let get_architectures native_opt foreign =
+  let cmd = "apt-config dump" in
+  let arch = ref "" in
+  let archs = ref [] in
+  let aux () =
+    let out = Std.input_list (Unix.open_process_in cmd) in
+    List.iter (fun s ->
+      let key, value =  ExtString.String.split s " " in
+      if key = "APT::Architecture" then
+        arch := ExtString.String.slice ~first: 1 ~last:(-2) value
+      else if key = "APT::Architectures::" || key = "APT::Architectures" then
+        let s = ExtString.String.slice ~first:1 ~last:(-2) value in
+        if s <> "" then
+          archs := (ExtString.String.slice ~first:1 ~last:(-2) value)::!archs
+    ) out;
+    debug "Atomatically set native as %s and foreign archs as %s" !arch (String.concat "," !archs);
+  in
+  match native_opt, foreign with 
+  |None,None     -> aux () ; (!arch,List.filter ((<>) !arch) !archs)
+  |None,Some l   -> fatal "Native arch is missing while Foregin archs are specified"
+  |Some a,None   -> (a,[])
+  |Some a,Some l -> (a,l)
+;;
+*)
+
 let parse_request_stanza par =
   {
     request = parse_s ~err:"(Empty REQUEST)" parse_string "Request" par;
@@ -123,7 +149,9 @@ let extras = [
   ]
 
 (* parse the entire file while filtering out unwanted stanzas *)
-let rec packages_parser ?(request=false) archs (req,acc) p =
+let rec packages_parser ?(request=false) (req,acc) p =
+  (* if strict pin = true we filter packages that are installed and
+     apt-candidate *)
   let filter par = 
     let match_field f p =
       try 
@@ -138,37 +166,38 @@ let rec packages_parser ?(request=false) archs (req,acc) p =
     let candidate () = match_field "apt-candidate" par in
     ((inst ()) || (candidate ()))
   in
+  let archs = req.architecture::req.architectures in
   match Format822_parser.stanza_822 Format822_lexer.token_822 p.Format822.lexbuf with
   |None -> (req,acc) (* end of file *)
   |Some stanza when request = true -> 
       let req = parse_request_stanza stanza in
-      packages_parser archs (req,acc) p
+      packages_parser (req,acc) p
   |Some stanza when req.strict_pin = true -> begin
     match (Packages.parse_package_stanza (Some(filter)) archs extras stanza) with
-    |None -> packages_parser archs (req,acc) p
-    |Some st -> packages_parser archs (req,st::acc) p
+    |None -> packages_parser (req,acc) p
+    |Some st -> packages_parser (req,st::acc) p
   end
   |Some stanza when req.strict_pin = false -> begin
     match (Packages.parse_package_stanza None archs extras stanza) with
     |None -> assert false (* this is not possible in this branch *)
-    |Some st -> packages_parser archs (req,st::acc) p
+    |Some st -> packages_parser (req,st::acc) p
   end
   |_ -> assert false
 ;;
 
-let input_raw_ch ?(archs=[]) ic =
+let input_raw_ch ic =
   Format822.parse_from_ch (
-    packages_parser ~request:true archs (default_request,[])
+    packages_parser ~request:true (default_request,[])
   ) ic
 ;;
 
-let input_raw ?(archs=[]) file =
+let input_raw file =
   let ch =
     match file with
     |"-" -> IO.input_channel stdin
     |_   -> Input.open_file file
   in
-  let l = input_raw_ch ~archs ch in
+  let l = input_raw_ch ch in
   let _ = Input.close_ch ch in
   l
 ;;

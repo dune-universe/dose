@@ -363,7 +363,7 @@ let criteria_parser s =
 (** check if a cudf request is satisfiable. we do not care about
  * universe consistency . We try to install a dummy package *)
 let check_request ?cmd ?callback ?criteria ?(explain=false) (pre,universe,request) =
-  let intSolver universe request =
+  let intSolver ?(explain=false) universe request =
     let deps = 
       let k =
         Cudf.fold_packages (fun acc pkg ->
@@ -407,7 +407,7 @@ let check_request ?cmd ?callback ?criteria ?(explain=false) (pre,universe,reques
     (* XXX it should be possible to add a package to a cudf document ! *)
     let pkglist = Cudf.get_packages universe in
     let universe = Cudf.load_universe (dummy::pkglist) in
-    if Option.is_none criteria then
+    if Option.is_none criteria || explain then
       edos_install universe dummy
     else
       let criteria_array = Array.of_list (criteria_parser (Option.get criteria)) in
@@ -425,7 +425,7 @@ let check_request ?cmd ?callback ?criteria ?(explain=false) (pre,universe,reques
     let criteria = if Option.is_none criteria then "-removed,-new" else Option.get criteria in
     try Sat(CudfSolver.execsolver cmd criteria (pre,universe,request)) with
     |CudfSolver.Unsat when not explain -> Unsat None
-    |CudfSolver.Unsat when explain -> Unsat (Some (intSolver universe request))
+    |CudfSolver.Unsat when explain -> Unsat (Some (intSolver ~explain universe request))
     |CudfSolver.Error s -> Error s
   end
 ;;

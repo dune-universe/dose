@@ -21,7 +21,7 @@ include Util.Logging(struct let label = "apt-cudf backend" end) ;;
 
 module Options = struct
   open OptParse
-  let description = "apt-get backend (EDSP v. 0.4)"
+  let description = "apt-get backend (EDSP v. 0.5)"
   let options = OptParser.make ~description
   include Boilerplate.MakeOptions(struct let options = options end)
 
@@ -31,8 +31,6 @@ module Options = struct
   let criteria = StdOpt.str_option ()
   let explain = StdOpt.store_true ()
   let conffile = StdOpt.str_option ~default:"/etc/apt-cudf.conf" ()
-  let native_arch = StdOpt.str_option ()
-  let foreign_archs = Boilerplate.str_list_option ()
 
   open OptParser
   add options ~long_name:"conf" ~help:"configuration file (default:/etc/apt-cudf.conf)" conffile;
@@ -41,9 +39,6 @@ module Options = struct
   add options ~short_name:'s' ~long_name:"solver" ~help:"external solver" solver;
   add options ~short_name:'c' ~long_name:"criteria" ~help:"optimization criteria" criteria;
   add options ~short_name:'e' ~long_name:"explain" ~help:"summary" explain;
-
-  add options ~long_name:"native-arch" ~help:"Native architecture" native_arch;
-  add options ~long_name:"foreign-archs" ~help:"Foreign architectures" foreign_archs;
 
 end
 
@@ -217,30 +212,6 @@ let parse_solver_spec filename =
   (!exec,!version)
 ;;
 
-let get_architectures native_opt foreign =
-  let cmd = "apt-config dump" in
-  let arch = ref "" in
-  let archs = ref [] in
-  let aux () =
-    let out = Std.input_list (Unix.open_process_in cmd) in
-    List.iter (fun s ->
-      let key, value =  ExtString.String.split s " " in
-      if key = "APT::Architecture" then
-        arch := ExtString.String.slice ~first: 1 ~last:(-2) value
-      else if key = "APT::Architectures::" || key = "APT::Architectures" then
-        let s = ExtString.String.slice ~first:1 ~last:(-2) value in
-        if s <> "" then
-          archs := (ExtString.String.slice ~first:1 ~last:(-2) value)::!archs
-    ) out;
-    debug "Atomatically set native as %s and foreign archs as %s" !arch (String.concat "," !archs);
-  in
-  match native_opt, foreign with 
-  |None,None     -> aux () ; (!arch,List.filter ((<>) !arch) !archs)
-  |None,Some l   -> fatal "Native arch is missing while Foregin archs are specified"
-  |Some a,None   -> (a,[])
-  |Some a,Some l -> (a,l)
-;;
-
 let main () =
   let timer1 = Util.Timer.create "parsing" in
   let timer2 = Util.Timer.create "conversion" in
@@ -254,12 +225,6 @@ let main () =
     debug "APT_GET_CUDF_CMDLINE=%s" apt_get_cmdline;
   debug "CUDFSOLVERS=%s" solver_dir;
   (* debug "TMPDIR=%s" waiting for ocaml 4.0 *)
-
-  let (native_arch,foreign_archs) = 
-    get_architectures 
-      (OptParse.Opt.opt Options.native_arch) 
-      (OptParse.Opt.opt Options.foreign_archs)
-  in
 
   let solver = 
     if OptParse.Opt.is_set Options.solver then
@@ -276,15 +241,13 @@ let main () =
   in
   
   Util.Timer.start timer1;
-  (* archs are inferred by calling apt-config dump *)
-  let archs = native_arch::foreign_archs in
-  let (request,pkglist) = Edsp.input_raw_ch ~archs ch in
+  let (request,pkglist) = Edsp.input_raw_ch ch in
   let request =
     match apt_get_cmdline with
     |"" -> request
     |_ -> begin
       let apt_req = Apt.parse_request_apt apt_get_cmdline in
-      Edsp.from_apt_request native_arch {request with Edsp.install = []; remove = []} apt_req
+      Edsp.from_apt_request request.Edsp.architecture {request with Edsp.install = []; remove = []} apt_req
     end
   in
 
@@ -302,8 +265,8 @@ let main () =
   let univ = Hashtbl.create (2*(List.length pkglist)-1) in
   let options = {
     Debcudf.default_options with 
-    Debcudf.native = native_arch;
-    Debcudf.foreign = foreign_archs }
+    Debcudf.native = request.Edsp.architecture;
+    Debcudf.foreign = request.Edsp.architectures }
   in 
   let cudfpkglist = 
     List.filter_map (fun pkg ->

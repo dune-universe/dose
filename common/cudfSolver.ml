@@ -92,7 +92,7 @@ let execsolver exec_pat criteria cudf =
   let (cin,cout,cerr) = Unix.open_process_full cmd env in
 
   Util.Timer.start timer3;
-  let solver_in_fd = Unix.openfile solver_in [Unix.O_WRONLY ; Unix.O_SYNC] 0 in
+  let solver_in_fd = Unix.openfile solver_in [Unix.O_WRONLY;Unix.O_SYNC] 0 in
   let oc = Unix.out_channel_of_descr solver_in_fd in
   Cudf_printer.pp_cudf oc cudf;
   close_out oc ;

@@ -71,12 +71,20 @@ let csw_load_list dll =
   (preamble,cll,request,from_cudf,to_cudf)
  
 let edsp_load_list options file =
+  (*
   let archs = 
     if options.Debian.Debcudf.native <> "" then
       options.Debian.Debcudf.native :: options.Debian.Debcudf.foreign 
     else []
   in
-  let (request,pkglist) = Debian.Edsp.input_raw ~archs file in
+  *)
+  let (request,pkglist) = Debian.Edsp.input_raw file in
+  let archs = request.Debian.Edsp.architecture::request.Debian.Edsp.architectures in
+  let options = { 
+    options with 
+    Debian.Debcudf.native = request.Debian.Edsp.architecture;
+    Debian.Debcudf.foreign = request.Debian.Edsp.architectures
+  } in
   let tables = Debian.Debcudf.init_tables pkglist in
   let preamble =
     let l = List.map snd Debian.Edsp.extras_tocudf in
@@ -253,8 +261,8 @@ let parse_input ?(options=None) urilist =
 
   |`Deb, Some (StdOptions.Deb opt) -> deb_parse_input opt filelist
   
-  |`Edsp, Some (StdOptions.Edsp opt) -> edsp_parse_input opt filelist
-  |`Edsp, None -> edsp_parse_input Debian.Debcudf.default_options filelist
+(*  |`Edsp, Some (StdOptions.Edsp opt) -> edsp_parse_input opt filelist *)
+  |`Edsp, _ -> edsp_parse_input Debian.Debcudf.default_options filelist
 
   |`Eclipse, Some (StdOptions.Eclipse opt) -> eclipse_parse_input opt filelist
 
