@@ -176,10 +176,17 @@ let vartoint universe p =
 
 let inttovar = Cudf.package_by_uid
 
-let normalize_set (l : int list) =
+let normalize_set (l : int list) = 
+  (* List.rev(Util.list_unique l) *)
+  List.rev (List.fold_left (fun results x ->
+    if List.mem x results then results
+    else x::results) [] l
+  )
+(*
   let module Int = struct type t = int let compare = (-) end in
   let module ISet = Set.Make(Int) in
   ISet.elements (List.fold_left (fun acc x -> ISet.add x acc) ISet.empty l)
+*)
 
 (* vpkg -> pkg list *)
 let who_provides univ (pkgname,constr) = 
