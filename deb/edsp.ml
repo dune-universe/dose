@@ -28,7 +28,7 @@ type request = {
   distupgrade : bool;
   strict_pin : bool;
   preferences: string;
-  commandline: string;
+  cmdline: string;
 }
 
 let default_request = {
@@ -42,7 +42,7 @@ let default_request = {
   distupgrade = false;
   strict_pin = false;
   preferences = "";
-  commandline = ""
+  cmdline = ""
 }
 
 (* convert a apt command line request to edsp request *)
@@ -126,7 +126,7 @@ let parse_request_stanza par =
     autoremove = parse_s ~opt:false Packages.parse_bool "Autoremove" par;
     strict_pin = parse_s ~opt:true Packages.parse_bool "Strict-Pinning" par;
     preferences = parse_s ~opt:"" Packages.parse_string "Preferences" par;
-    commandline = parse_s ~opt:"" Packages.parse_string "Command-Line" par;
+    cmdline = parse_s ~opt:"" Packages.parse_string "Command-Line" par;
   }
 ;;
 
