@@ -103,26 +103,6 @@ let parse_request to_cudf l =
   List.fold_left parse Cudf.default_request l
 ;;
 
-let output_to_sqlite args =
-IFDEF HASDB THEN
-  begin
-    let pl = List.unique (List.flatten (List.map (function u ->
-      match Input.parse_uri u with
-      |("deb", (_, _, _, _, f), _) -> Debian.Packages.input_raw [f]
-      |_ -> failwith "Other file formats than Debian are not yet supported for SQLite insertion"
-     ) args)) in
-    let db = Backend.open_database "sqlite" (None, None, Some "localhost", None, "cudf") in
-    Backend.create_tables db; 
-    List.iter (fun p ->
-      Backend.insert_package db p
-    ) pl;
-    (* !Sql.database.close_db db.Backend.connection; *)
-  end 
-ELSE
-  failwith "DB not available"
-END
-;;
-
 let nr_conflicts univ =
   let open Cudf in
   Cudf.fold_packages (fun acc p ->
@@ -152,9 +132,6 @@ let main () =
 
   let global_constraints = not(OptParse.Opt.get Options.deb_ignore_essential) in
 
-  if OptParse.Opt.get Options.out_type = "sqlite" then
-    output_to_sqlite posargs
-  else
   let (fg,bg) = Options.parse_cmdline (input_type,implicit) posargs in
   let (preamble,pkgll,request,from_cudf,to_cudf) = Boilerplate.load_list ~options [fg;bg] in
   let request = 
@@ -255,7 +232,7 @@ IFDEF HASOCAMLGRAPH THEN
         (Cudf.universe_size u) (DGraph.G.nb_edges (DGraph.dependency_graph u))
         (nr_conflicts u)
 ELSE
-        failwith (Printf.sprintf "format %s not supported: needs ocamlgraph" t)
+        failwith (Printf.sprintf "format table not supported: needs ocamlgraph")
 END
 
       |("dot" | "gml" | "grml") as t -> 

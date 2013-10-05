@@ -4,10 +4,10 @@ true: -traverse
 <*/*.ml{i,}>: pp(@CAMLP4OMACRO@)
 <*/*.ml{i,}>: package(extlib), @PKG_CUDF@, package(pcre)
 
-<doseparse/boilerplateNoRpm.ml>: pp(@CAMLP4OMACRO@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
-<doseparse/boilerplate.ml>: pp(@CAMLP4OMACRO@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
+<doseparse/boilerplateNoRpm.ml>: pp(@CAMLP4OMACRO@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_OCAMLGRAPH@)
+<doseparse/boilerplate.ml>: pp(@CAMLP4OMACRO@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_OCAMLGRAPH@)
 
-<{common,algo}/*.ml{i,}>: pp(@CAMLP4OMACRO@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_DB@ @CONFIG_OCAMLGRAPH@)
+<{common,algo}/*.ml{i,}>: pp(@CAMLP4OMACRO@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_OCAMLGRAPH@)
 
 <applications/*.ml> or <experimental/*/*.ml> or <experimental/*.ml>: pp(@CAMLP4OMACRO@ @CONFIG_PARMAP@ @CONFIG_OCAMLGRAPH@)
 

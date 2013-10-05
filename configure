@@ -629,7 +629,6 @@ CONFIG_OCAMLGRAPH
 PKG_OCAMLGRAPH
 DOC_OCAMLGRAPH
 MLPACK_OCAMLGRAPH
-HAS_DB
 PKG_CUDF
 INCLUDE_CUDF
 DOC_RPM
@@ -647,14 +646,6 @@ CONFIG_PARMAP
 ZIP
 PKG_ZIP
 CONFIG_ZIP
-CONFIG_DB
-CONFIG_DBBACKEND
-MLPACK_SQLITE
-PKG_SQLITE
-TAGS_SQLITE
-MLPACK_PGSQL
-PKG_PGSQL
-TAGS_PGSQL
 EGREP
 GREP
 CPP
@@ -676,9 +667,6 @@ OCAML_PKG_curl
 HAS_CURL
 OCAML_PKG_ocamlgraph
 HAS_OCAMLGRAPH
-OCAML_PKG_postgresql
-OCAML_PKG_json_static
-OCAML_PKG_sqlite3
 OCAML_PKG_bz2
 HAS_BZ2
 OCAML_PKG_zip
@@ -761,8 +749,6 @@ with_libcudf
 with_parmap
 with_zip
 with_bz2
-with_sqlite
-with_postgresql
 with_ocamlgraph
 with_curl
 with_xml
@@ -1394,8 +1380,6 @@ Optional Packages:
  --with-parmap
  --with-zip
  --with-bz2
- --with-sqlite
- --with-postgresql
  --with-ocamlgraph
  --with-curl
  --with-xml
@@ -4176,8 +4160,6 @@ fi
 USE_RPM=use_
 LINK_RPM=link_
 HAS_RPM=no
-PKG_SQLITE=pkg_
-PKG_PGSQL=pkg_
 PKG_BZ2=pkg_
 PKG_ZIP=pkg_
 PKG_PARMAP=pkg_
@@ -4422,146 +4404,6 @@ $as_echo "not found" >&6; }
   CONFIG_BZ2="-DHASBZ2"
   PKG_BZ2="package(bz2)"
   BZ2=bz2
-fi
-
-
-# Check whether --with-sqlite was given.
-if test "${with_sqlite+set}" = set; then :
-  withval=$with_sqlite; HAS_SQLITE=yes
-else
-  HAS_SQLITE=no
-fi
-
-if test "$HAS_SQLITE" = "yes" ; then
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package sqlite3" >&5
-$as_echo_n "checking for OCaml findlib package sqlite3... " >&6; }
-
-  unset found
-  unset pkg
-  found=no
-  for pkg in sqlite3  ; do
-    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
-$as_echo "found" >&6; }
-       OCAML_PKG_sqlite3=$pkg
-       found=yes
-       break
-    fi
-  done
-  if test "$found" = "no" ; then
-     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-     OCAML_PKG_sqlite3=no
-  fi
-
-
-
-  if test "$OCAML_PKG_sqlite3" = "no"; then
-   as_fn_error $? "Please install OCaml findlib module 'sqlite3'." "$LINENO" 5
-  fi
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package json-static" >&5
-$as_echo_n "checking for OCaml findlib package json-static... " >&6; }
-
-  unset found
-  unset pkg
-  found=no
-  for pkg in json-static  ; do
-    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
-$as_echo "found" >&6; }
-       OCAML_PKG_json_static=$pkg
-       found=yes
-       break
-    fi
-  done
-  if test "$found" = "no" ; then
-     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-     OCAML_PKG_json_static=no
-  fi
-
-
-
-  if test "$OCAML_PKG_json-static" = "no"; then
-   as_fn_error $? "Please install OCaml findlib module 'json-static'." "$LINENO" 5
-  fi
-  TAGS_SQLITE=sqlite
-  PKG_SQLITE="pkg_sqlite3, pkg_json-static"
-  MLPACK_SQLITE=Sqlite
-  CONFIG_DBBACKEND="-DSQLITE"
-  CONFIG_DB="-DHASDB"
-fi
-
-
-# Check whether --with-postgresql was given.
-if test "${with_postgresql+set}" = set; then :
-  withval=$with_postgresql; HAS_PGSQL=yes
-else
-  HAS_PGSQL=no
-fi
-
-if test "$HAS_PGSQL" = "yes" ; then
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package postgresql" >&5
-$as_echo_n "checking for OCaml findlib package postgresql... " >&6; }
-
-  unset found
-  unset pkg
-  found=no
-  for pkg in postgresql  ; do
-    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
-$as_echo "found" >&6; }
-       OCAML_PKG_postgresql=$pkg
-       found=yes
-       break
-    fi
-  done
-  if test "$found" = "no" ; then
-     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-     OCAML_PKG_postgresql=no
-  fi
-
-
-
-  if test "$OCAML_PKG_postgresql" = "no"; then
-   as_fn_error $? "Please install OCaml findlib module 'postgresql'." "$LINENO" 5
-  fi
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package json-static" >&5
-$as_echo_n "checking for OCaml findlib package json-static... " >&6; }
-
-  unset found
-  unset pkg
-  found=no
-  for pkg in json-static  ; do
-    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
-$as_echo "found" >&6; }
-       OCAML_PKG_json_static=$pkg
-       found=yes
-       break
-    fi
-  done
-  if test "$found" = "no" ; then
-     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-     OCAML_PKG_json_static=no
-  fi
-
-
-
-  if test "$OCAML_PKG_json-static" = "no"; then
-   as_fn_error $? "Please install OCaml findlib module 'json-static'." "$LINENO" 5
-  fi
-  TAGS_PGSQL=pgsql
-  PKG_PGSQL="pkg_postgresql, pkg_json-static, pkg_threads"
-  MLPACK_PGSQL=Pgsql
-  CONFIG_DBBACKEND="$CONFIG_DBBACKEND -DPGSQL"
-  CONFIG_DB="-DHASDB"
 fi
 
 
@@ -6116,26 +5958,6 @@ fi
 
 
 
-
-
-
-
-if (test "$HAS_SQLITE" = "yes") || (test "$HAS_PGSQL" = "yes") then
-  HAS_DB=yes
-else
-  HAS_DB=no
-fi
-
-
-
-
-
-
-
-
-
-
-
 LDFLAGS="-fstack-protector"
 
 
@@ -6155,7 +5977,7 @@ if test "$BUILD_EXP" = "yes" ; then
 
 fi
 
-ac_config_files="$ac_config_files Makefile.config _tags META dose3.odocl db/db.mlpack algo/algo.mlpack common/versionInfo.ml"
+ac_config_files="$ac_config_files Makefile.config _tags META dose3.odocl algo/algo.mlpack common/versionInfo.ml"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6867,7 +6689,6 @@ do
     "_tags") CONFIG_FILES="$CONFIG_FILES _tags" ;;
     "META") CONFIG_FILES="$CONFIG_FILES META" ;;
     "dose3.odocl") CONFIG_FILES="$CONFIG_FILES dose3.odocl" ;;
-    "db/db.mlpack") CONFIG_FILES="$CONFIG_FILES db/db.mlpack" ;;
     "algo/algo.mlpack") CONFIG_FILES="$CONFIG_FILES algo/algo.mlpack" ;;
     "common/versionInfo.ml") CONFIG_FILES="$CONFIG_FILES common/versionInfo.ml" ;;
 

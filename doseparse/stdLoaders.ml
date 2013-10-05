@@ -293,16 +293,6 @@ IFDEF HASRPM THEN
 ELSE
     fatal "synthesis input format not supported. re-configure with --with-rpm"
 END
-(*
-  |Some (Url.Pgsql|Url.Sqlite), [((Url.Pgsql|Url.Sqlite) as dbtype,info,(Some query))] ->
-IFDEF HASDB THEN
-      let db = Db.Backend.init_database dbtype info (Idbr.parse_query query) in
-      let l = Db.Backend.load_selection db (`All) in
-      deb_load_list ~extras [l]
-ELSE
-    fatal "%s Not supported. re-configure with --with-??" (Url.scheme_to_string dbtype)
-END
-*)
     |s,_ -> fatal "%s Not supported" (Url.scheme_to_string s)
 ;;
 
@@ -315,14 +305,7 @@ ELSE
      []
 END
    in
-   let db =
-IFDEF HASDB THEN
-     ["pgsql://";"sqlite://"]
-ELSE
-     []
-END
-   in
-   standard@rpm@db
+   standard@rpm
 ;;
 
 (** return a list of Debian packages from a debian source file *)

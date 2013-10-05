@@ -37,8 +37,6 @@ fi
 USE_RPM=use_
 LINK_RPM=link_
 HAS_RPM=no
-PKG_SQLITE=pkg_
-PKG_PGSQL=pkg_
 PKG_BZ2=pkg_
 PKG_ZIP=pkg_
 PKG_PARMAP=pkg_
@@ -127,46 +125,6 @@ if test "$HAS_BZ2" = "yes" ; then
   CONFIG_BZ2="-DHASBZ2"
   PKG_BZ2="package(bz2)"
   BZ2=bz2
-fi
-
-AC_ARG_WITH(sqlite,
-        [ --with-sqlite ],
-        HAS_SQLITE=yes,
-        HAS_SQLITE=no)
-if test "$HAS_SQLITE" = "yes" ; then
-  AC_CHECK_OCAML_PKG([sqlite3])
-  if test "$OCAML_PKG_sqlite3" = "no"; then
-   AC_MSG_ERROR([Please install OCaml findlib module 'sqlite3'.])
-  fi
-  AC_CHECK_OCAML_PKG([json-static])
-  if test "$OCAML_PKG_json-static" = "no"; then
-   AC_MSG_ERROR([Please install OCaml findlib module 'json-static'.])
-  fi
-  TAGS_SQLITE=sqlite
-  PKG_SQLITE="pkg_sqlite3, pkg_json-static"
-  MLPACK_SQLITE=Sqlite
-  CONFIG_DBBACKEND="-DSQLITE"
-  CONFIG_DB="-DHASDB"
-fi
-
-AC_ARG_WITH(postgresql,
-        [ --with-postgresql ],
-        HAS_PGSQL=yes,
-        HAS_PGSQL=no)
-if test "$HAS_PGSQL" = "yes" ; then
-  AC_CHECK_OCAML_PKG([postgresql])
-  if test "$OCAML_PKG_postgresql" = "no"; then
-   AC_MSG_ERROR([Please install OCaml findlib module 'postgresql'.])
-  fi
-  AC_CHECK_OCAML_PKG([json-static])
-  if test "$OCAML_PKG_json-static" = "no"; then
-   AC_MSG_ERROR([Please install OCaml findlib module 'json-static'.])
-  fi
-  TAGS_PGSQL=pgsql
-  PKG_PGSQL="pkg_postgresql, pkg_json-static, pkg_threads"
-  MLPACK_PGSQL=Pgsql
-  CONFIG_DBBACKEND="$CONFIG_DBBACKEND -DPGSQL"
-  CONFIG_DB="-DHASDB"
 fi
 
 AC_ARG_WITH(ocamlgraph,
@@ -296,19 +254,6 @@ fi
 
 
 
-AC_SUBST(TAGS_PGSQL)
-AC_SUBST(PKG_PGSQL)
-AC_SUBST(MLPACK_PGSQL)
-AC_SUBST(PKG_PGSQL)
-
-AC_SUBST(TAGS_SQLITE)
-AC_SUBST(PKG_SQLITE)
-AC_SUBST(MLPACK_SQLITE)
-AC_SUBST(PKG_SQLITE)
-
-AC_SUBST(CONFIG_DBBACKEND)
-AC_SUBST(CONFIG_DB)
-
 AC_SUBST(CONFIG_ZIP)
 AC_SUBST(PKG_ZIP)
 AC_SUBST(ZIP)
@@ -331,13 +276,6 @@ AC_SUBST(DOC_RPM)
 
 AC_SUBST(INCLUDE_CUDF)
 AC_SUBST(PKG_CUDF)
-
-if (test "$HAS_SQLITE" = "yes") || (test "$HAS_PGSQL" = "yes") then
-  HAS_DB=yes
-else
-  HAS_DB=no
-fi
-AC_SUBST(HAS_DB)
 
 AC_SUBST(MLPACK_OCAMLGRAPH)
 AC_SUBST(DOC_OCAMLGRAPH)
@@ -369,7 +307,6 @@ AC_CONFIG_FILES([
   _tags
   META
   dose3.odocl
-  db/db.mlpack
   algo/algo.mlpack
   common/versionInfo.ml
 ])
