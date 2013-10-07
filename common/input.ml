@@ -14,8 +14,8 @@ open ExtLib
 
 include Util.Logging(struct let label = __FILE__ end) ;;
 
-IFDEF HASZIP THEN
 let gzip_open_file file =
+IFDEF HASZIP THEN
   let ch = Gzip.open_in file in
   let input_char ch = try Gzip.input_char ch with End_of_file -> raise IO.No_more_input in
   let read ch = try Gzip.input ch with End_of_file -> raise IO.No_more_input in
@@ -23,11 +23,13 @@ let gzip_open_file file =
   ~read:(fun () -> input_char ch)
   ~input:(read ch)
   ~close:(fun () -> Gzip.close_in ch)
-;;
+ELSE
+    fatal "gzip not supported. re-configure with --with-zip"
 END
+;;
 
-IFDEF HASBZ2 THEN
 let bzip_open_file file =
+IFDEF HASBZ2 THEN
   (* workaround to avoid segfault :
    * http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=602170 *)
   let _ = Bz2.version in 
@@ -45,9 +47,11 @@ let bzip_open_file file =
   ~read:(fun () -> input_char ch)
   ~input:(read ch)
   ~close:(fun () -> Bz2.close_in ch)
-;;
+ELSE
+    fatal "bzip not supported. re-configure with --with-bz2"
 END
 
+;;
 let std_open_file file = IO.input_channel (open_in file)
 let open_ch ch = IO.input_channel ch
 let close_ch ch = IO.close_in ch
@@ -55,18 +59,9 @@ let close_ch ch = IO.close_in ch
 let open_file file =
   if (Unix.stat file).Unix.st_size = 0 then fatal "Input file %s is empty" file;
   if Filename.check_suffix file ".gz" || Filename.check_suffix file ".cz" then
-IFDEF HASZIP THEN
     gzip_open_file file
-ELSE
-    fatal "gzip not supported. re-configure with --with-zip"
-END
-  else 
-  if Filename.check_suffix file ".bz2" then
-IFDEF HASBZ2 THEN
+  else if Filename.check_suffix file ".bz2" then
     bzip_open_file file
-ELSE
-    fatal "bzip not supported. re-configure with --with-bz2"
-END
   else 
     std_open_file file
 ;;
