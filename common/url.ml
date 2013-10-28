@@ -71,28 +71,6 @@ let to_string u = (scheme_to_string u.scheme)^"://"^u.path
 (********************************************************************)
 (* parsing **********************************************************)
 
-(* parse a query from the string [s], starting from position [from] *)
-(* until the end of [s]. [length] is the length of [s].             *)
-(* pairs in the query are separated by ';'. In each pair, key and   *)
-(* are separated by '='. A teminating ';' is accepted but not       *)
-(* required                                                         *)
-let rec parse_query_from s from length =
-  if from >= length
-  then []
-  else
-    try
-      let pos_equal = String.index_from s from '=' in
-      try
-	let pos_semicolon = String.index_from s (pos_equal+1) ';' in
-	((String.sub s from (pos_equal-from)),
-	 (String.sub s (pos_equal+1) (pos_semicolon-pos_equal-1)))::
-	  (parse_query_from s (pos_semicolon+1) length)
-      with Not_found ->
-	[(String.sub s from (pos_equal-from)),
-	 (String.sub s (pos_equal+1) (length-pos_equal-1))]
-    with
-	Not_found -> fatal "no '=' found after position %d %s" from s
-
 let of_string s =
   let l = String.length s in
   let pos_colon =
