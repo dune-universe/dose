@@ -130,14 +130,6 @@ B<eclipse> for Eclipse (p2) package files
 
 =item
 
-B<pgsql> for PostgreSQL databasess 
-
-=item
-
-B<sqlite> for sqlite databases
-
-=item
-
 B<hdlist> for RPM hdlists 
 
 =item
@@ -154,7 +146,3 @@ deb://Packages.gz (the Debian file packages.gz in the current directory)
 
 cudf:///home/examples/cudf/test.cudf (the CUDF file /home/examples/cudf/test.cudf)
 
-=item
-
-psql://user@db.mancoosi.org:723/packages (the database I<packages> on host I<db.mancoosi.org>
-on port 723, accessed as user I<user>) 
