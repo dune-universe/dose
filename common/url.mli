@@ -16,8 +16,7 @@ type osgitypes = [ `Eclipse ]
 type othertypes = [ `Csw ]
 
 type filetypes = [ `Cudf | debtypes | rpmtypes | osgitypes | othertypes ]
-type datatypes = [ `Sqlite | `Pgsql ]
-type input_scheme = [ filetypes | datatypes ]
+type input_scheme = filetypes
 
 val supported_input_types : input_scheme list
 
