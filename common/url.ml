@@ -1,6 +1,6 @@
 (****************************************************************************)
-(*  Copyright (C) 2011 Ralf Treinen <ralf.treinen@pps.jussieu.fr>           *)
-(*  Copyright (C) 2011 Mancoosi Project                                     *)
+(*  Copyright (C) 2011,2012,2013 Ralf Treinen                               *)
+(*                       <ralf.treinen@pps.univ-paris-diderot.fr>           *)
 (*                                                                          *)
 (*  This library is free software: you can redistribute it and/or modify    *)
 (*  it under the terms of the GNU Lesser General Public License as          *)
@@ -50,26 +50,15 @@ let supported_input_types =
 ;;
 
 (***********************************************************************)
+(* URLs ****************************************************************)
 
 type url = {
   scheme : filetypes;
-  host   : string option;
-  port   : string option;
-  path   : string; (** db name or filename *)
-  user   : string option;
-  passwd : string option;
-  query  : (string * string) list; (** query string *)
+  path   : string;     (* filename *)
 };;
-
-
-(************************************************************************)
-(* printing *************************************************************)
 
 let to_string u = (scheme_to_string u.scheme)^"://"^u.path
 ;;
-
-(********************************************************************)
-(* parsing **********************************************************)
 
 let of_string s =
   let l = String.length s in
@@ -85,10 +74,5 @@ let of_string s =
   and start_rest = pos_colon+3 in
   { scheme  = scheme;
     path    = String.sub s start_rest (l-start_rest);
-    user    = None;
-    passwd  = None;
-    host    = None;
-    port    = None;
-    query   = []
   }
 ;;

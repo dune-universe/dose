@@ -1,6 +1,6 @@
 (****************************************************************************)
-(*  Copyright (C) 2011 Ralf Treinen <ralf.treinen@pps.jussieu.fr>           *)
-(*  Copyright (C) 2011 Mancoosi Project                                     *)
+(*  Copyright (C) 2011, 2012, 2013 Ralf Treinen                             *)
+(*                       <ralf.treinen@pps.univ-paris-diedrot.fr>           *)
 (*                                                                          *)
 (*  This library is free software: you can redistribute it and/or modify    *)
 (*  it under the terms of the GNU Lesser General Public License as          *)
@@ -21,18 +21,14 @@ val supported_input_types : filetypes list
 
 type url = {
   scheme : filetypes;
-  host   : string option;
-  port   : string option;
   path   : string; (** db name or filename *)
-  user   : string option;
-  passwd : string option;
-  query  : (string * string) list; (** query string *)
 };;
 
 (* parsing of a string as url. Raises Invalid_url in case of error *)
 val of_string: string -> url
 exception Invalid_url of string;;
 
+(* printable representation of an url *)
 val to_string: url -> string
 val scheme_to_string: filetypes -> string
 val scheme_of_string: string -> filetypes
