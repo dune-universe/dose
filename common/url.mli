@@ -16,12 +16,11 @@ type osgitypes = [ `Eclipse ]
 type othertypes = [ `Csw ]
 
 type filetypes = [ `Cudf | debtypes | rpmtypes | osgitypes | othertypes ]
-type input_scheme = filetypes
 
-val supported_input_types : input_scheme list
+val supported_input_types : filetypes list
 
 type url = {
-  scheme : input_scheme;
+  scheme : filetypes;
   host   : string option;
   port   : string option;
   path   : string; (** db name or filename *)
@@ -35,5 +34,5 @@ val of_string: string -> url
 exception Invalid_url of string;;
 
 val to_string: url -> string
-val scheme_to_string: input_scheme -> string
-val scheme_of_string: string -> input_scheme
+val scheme_to_string: filetypes -> string
+val scheme_of_string: string -> filetypes

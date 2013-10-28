@@ -41,13 +41,11 @@ val close_ch : IO.input -> unit
     i.e. :
       deb://path/to/file
       rpm://path/to/file
-      pgsql://test:tester@localhost/dbname?v1=k1&v2=k2
-      sqlite://path/to/file
       cudf://path/to/file
 
     @return a tuple representing the uri *)
 val parse_uri : string -> (
-  Url.input_scheme *            (* format *)
+  Url.filetypes *     (* format *)
   (string option      (* username *)
   * string option     (* password *)
   * string option     (* hostname *)
@@ -58,4 +56,4 @@ val parse_uri : string -> (
 
 (** guess the input format from a list of list of uris and check
  *  if the list is omogenueous w.r.t the guessed format. Fails otherwise *)
-val guess_format : string list list -> Url.input_scheme
+val guess_format : string list list -> Url.filetypes
