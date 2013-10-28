@@ -23,12 +23,10 @@ type osgitypes = [ `Eclipse ]
 type othertypes = [ `Csw ]
 
 type filetypes = [ `Cudf | debtypes | rpmtypes | osgitypes | othertypes ]
-type datatypes = [ `Sqlite | `Pgsql ]
-type input_scheme = [ filetypes | datatypes ]
+type input_scheme = filetypes
 
 let is_local_scheme = function
-  | #filetypes | `Sqlite -> true
-  | `Pgsql -> false
+  | #filetypes -> true
 ;;
 
 let scheme_to_string = function
@@ -39,8 +37,6 @@ let scheme_to_string = function
   | `Cudf -> "cudf"
   | `Synthesis -> "synthesis"
   | `Hdlist -> "hdlist"
-  | `Pgsql -> "pgsql"
-  | `Sqlite -> "sqlite"
 ;;
 
 let scheme_of_string = function
@@ -51,8 +47,6 @@ let scheme_of_string = function
   | "eclipse" -> `Eclipse
   | "synthesis" -> `Synthesis
   | "hdlist" -> `Hdlist
-  | "sqlite" -> `Sqlite
-  | "pgsql" -> `Pgsql
   | s -> fatal "unknown input scheme" s
 ;;
 
