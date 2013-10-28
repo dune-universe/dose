@@ -57,30 +57,6 @@ let test_cudf =
   )
 ;;
 
-let test_sqlite =
-  "sqlite" >:: (fun _ ->
-    let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
-      Input.parse_uri "sqlite:///path/to/file" 
-    in assert_equal true (protocol = `Sqlite && path = "/path/to/file")
-  ) 
-;;
-
-let test_pgsql =
-  "pgsql" >:: (fun _ ->
-    let (protocol,(userOpt,passOpt,hostOpt,portOpt,path),queryOpt) =
-      Input.parse_uri "pgsql://test:tester@localhost:10/dbname?query=lalalal;v2=k2"
-    in assert_equal true (
-      protocol = `Pgsql && 
-      userOpt = Some "test" &&
-      passOpt = Some "tester" &&
-      hostOpt = Some "localhost" &&
-      portOpt = Some "10" &&
-      path = "dbname" &&
-      queryOpt = Some "lalalal;v2=k2"
-    )
-  ) 
-;;
-
 let parse_uri =
   "parse uri" >::: [
     test_deb_local;
@@ -88,8 +64,6 @@ let parse_uri =
     test_hdlist;
     test_synth;
     test_cudf;
-    test_sqlite;
-    (* test_pgsql; *)
   ]
 
 module S = CudfAdd.Cudf_set
