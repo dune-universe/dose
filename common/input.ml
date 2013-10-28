@@ -66,21 +66,11 @@ let open_file file =
     std_open_file file
 ;;
 
-let string_of_opt = function
-  | None -> ""
-  | Some s -> s
-;;
-
 let parse_uri s =
   let url = Url.of_string s in
-  let user = url.Url.user 
-  and pass = url.Url.passwd 
-  and host = url.Url.host 
-  and port = url.Url.port
-  and query = try Some (List.assoc "query" url.Url.query) with Not_found -> None in
-  let db = Printf.sprintf "%s%s" (string_of_opt url.Url.host) url.Url.path
+  let path =  url.Url.path
   in
-  (url.Url.scheme,(user,pass,host,port,db),query)
+  (url.Url.scheme,(None,None,None,None,path),None)
 
 let guess_format urilist =
   match List.flatten urilist with
