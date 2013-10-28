@@ -23,7 +23,6 @@ type osgitypes = [ `Eclipse ]
 type othertypes = [ `Csw ]
 
 type filetypes = [ `Cudf | debtypes | rpmtypes | osgitypes | othertypes ]
-type input_scheme = filetypes
 
 let is_local_scheme = function
   | #filetypes -> true
@@ -57,7 +56,7 @@ let supported_input_types =
 (***********************************************************************)
 
 type url = {
-  scheme : input_scheme;
+  scheme : filetypes;
   host   : string option;
   port   : string option;
   path   : string; (** db name or filename *)
