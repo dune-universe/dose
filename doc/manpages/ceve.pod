@@ -79,21 +79,21 @@ Examples:
 Specifies the graph type format to compute. This option must be used together
 with the option B<-T >I<dot|gml|grml>. Possible values are:
 
-=item
+=item .
 
 B<syn> for the syntactic graph where disjunctions nodes and conflicts are
 explicitely added to the graph. 
 
-=item
+=item .
 
 B<pkg> for the package graph where all dependencies are threated uniformely and
 conflicts are not added to the graph.
 
-=item
+=item .
 
 B<strong> the strong dependency graph.
 
-=item
+=item .
 
 B<conj> the conjunctive graph where only conjunctive dependencies are
 considered.
@@ -107,54 +107,43 @@ Instead of stdout, send output to the file I<filename>.
 This is a URL specifying both the input format and the file to get the input
 from. Possible schemes are: 
 
-=item
+=item .
 
 B<cudf> for cudf files 
 
-=item
+=item .
 
 B<deb> for Debian package files (possibly compressed with L<gzip(1)> or
 L<bzip2(1)>, depending on compile-time options for dose3) 
 
-=item
+=item .
 
 B<debstdin> for Debian package files read from standard input 
 
-=item
+=item .
 
 B<edsp> for apt-get External Dependency Solver Protocol
 
-=item 
+=item .
 
 B<eclipse> for Eclipse (p2) package files 
 
-=item
-
-B<pgsql> for PostgreSQL databasess 
-
-=item
-
-B<sqlite> for sqlite databases
-
-=item
+=item .
 
 B<hdlist> for RPM hdlists 
 
-=item
+=item .
 
 B<synth> for urpmi synthesis hdlists 
 
 Some examples of URLs: 
  
-=item
+=item .
 
 deb://Packages.gz (the Debian file packages.gz in the current directory)
 
-=item
+=item .
 
 cudf:///home/examples/cudf/test.cudf (the CUDF file /home/examples/cudf/test.cudf)
 
-=item
-
-psql://user@db.mancoosi.org:723/packages (the database I<packages> on host I<db.mancoosi.org>
-on port 723, accessed as user I<user>) 
+=back
