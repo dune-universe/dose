@@ -7,8 +7,6 @@ required libraries ( DEBIAN / RPM ) :
  - camlp4
 
 additional libraries (enable compilation with --with-<library>) :
- - libpostgresql-ocaml-dev / ocaml-postgresql-devel
- - libsqlite3-ocaml-dev / ocaml-sqlite-devel
  - libzip-ocaml-dev / ?
  - libbz2-ocaml-dev and libbz2-dev / ?
  - libjson-static-camlp4-dev / ?
@@ -19,7 +17,7 @@ additional libraries (enable compilation with --with-<library>) :
  - libbenchmark-ocaml-dev (for --with-benchmark)
 
 To use rpm support, dose3 needs librpm > 4.6
-To use ocamlgraph support, dose3 needs libocamlgraph-ocaml-dev >= 1.5.1
+To use ocamlgraph support, dose3 needs libocamlgraph-ocaml-dev >= 1.8.3
 
 To compile from git :
 aclocal -I m4
@@ -32,8 +30,6 @@ make
 --with-xml
 --with-ocamlgraph
 --with-parmap
---with-sqlite
---with-postgresql
 --with-zip
 --with-bz2
 --with-oUnit
