@@ -67,140 +67,6 @@ module GraphOper (G : Sig.I) = struct
 
 end
 
-module type GraphmlSig =
-  sig
-    include Graph.Sig.G
-    (** List of the type of the vertex proprierties.
-        the format is (id,type,default). *)
-    val default_vertex_properties : (string * string * string option) list
-    (** List of the type of the edge proprierties. *)
-    val default_edge_properties : (string * string * string option) list
-    (** Associate to each vertex a key/value list where the key is the id
-       of a vertex attribute and the value is the value associated to this
-       vertex *)
-    val data_map_vertex : vertex -> (string * string) list
-
-    (** Associate to each edge a key/value list *)
-    val data_map_edge : edge -> (string * string) list
-  end
-;;
-
-module type GraphmlPrinterSig =
-  sig
-    type t
-    val pp_graph : Format.formatter -> t -> unit
-    val print : Format.formatter -> t -> unit
-    val to_file : t -> string -> unit
-  end
-
-(** Generic GraphMl Printer 
-
-Ex : 
-
-module Gr : GraphmlSig = struct
-  include SyntacticDependencyGraph.G
-  let default_vertex_properties = []
-  let default_edge_properties = []
-  let data_map_edge e = []
-  let data_map_vertex v = []
-end
-
-module GraphPrinter = GraphmlPrinter (Gr)
-*)
-module GraphmlPrinter (G : GraphmlSig) : GraphmlPrinterSig with type t = G.t = struct
-  type t = G.t
-  let vertex_id = G.V.hash
-  let edge_id e = Hashtbl.hash (vertex_id (G.E.src e),G.E.label e,vertex_id (G.E.dst e))
-
-  let header =
-"<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-<graphml xmlns=\"http://graphml.graphdrawing.org/xmlns\"
-    xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"
-    xsi:schemaLocation=\"http://graphml.graphdrawing.org/xmlns
-     http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd\">"
-  ;;
-
-  let trailer = "</graphml>"
-
-  let pp_graph fmt graph =
-
-    Format.fprintf fmt "%s" header;
-
-    Format.fprintf fmt "@[<v 1>";
-
-    (* node attributed declaration *)
-    List.iter (fun (prop,typ,default) ->
-      Format.fprintf fmt "<key id=\"%s\" for=\"node\" attr.name=\"%s\" attr.type=\"%s\">@," prop prop typ;
-      match default with
-      |None -> Format.fprintf fmt "</key>@,"
-      |Some s -> Format.fprintf fmt "<default>%s</default></key>@," s
-    ) G.default_vertex_properties ;
-
-    (* edge attributed declaration *)
-    List.iter (fun (prop,typ,default) ->
-      Format.fprintf fmt "<key id=\"%s\" for=\"edge\" attr.name=\"%s\" attr.type=\"%s\">@," prop prop typ;
-      match default with
-      |None -> Format.fprintf fmt "</key>@,"
-      |Some s -> Format.fprintf fmt "<default>%s</default></key>@," s
-    ) G.default_edge_properties ;
-
-    Format.fprintf fmt "@]@.";
-
-    begin if G.is_directed then
-      Format.fprintf fmt "<graph id=\"G\" edgedefault=\"directed\">@."
-    else
-      Format.fprintf fmt "<graph id=\"G\" >@."
-    end;
-
-    Format.fprintf fmt "@[<v 1>";
-
-    (* vertex printer *)
-    G.iter_vertex (fun vertex ->
-      let id = vertex_id vertex in
-      Format.fprintf fmt "<node id=\"n%d\">@," id;
-      Format.fprintf fmt "@[<v 1>";
-      List.iter (fun (key,value) ->
-        Format.fprintf fmt "<data key=\"%s\">%s</data>@," key value
-      ) (G.data_map_vertex vertex);
-      Format.fprintf fmt "@]";
-      Format.fprintf fmt "</node>@,"
-    ) graph ;
-
-    Format.fprintf fmt "@]@.";
-
-    Format.fprintf fmt "@[<v 1>";
-
-    (* edge printer *)
-    G.iter_edges_e (fun edge ->
-      let n1 = vertex_id (G.E.src edge) in
-      let n2 = vertex_id (G.E.dst edge) in
-      let eid = edge_id edge in
-      Format.fprintf fmt "<edge id=\"e%d\" source=\"n%d\" target=\"n%d\">@," eid n1 n2 ;
-      Format.fprintf fmt "@[<v 1>";
-      List.iter (fun (key,value) ->
-        Format.fprintf fmt "<data key=\"%s\">%s</data>@," key value
-      ) (G.data_map_edge edge);
-      Format.fprintf fmt "@]";
-      Format.fprintf fmt "</edge>@,"
-    ) graph ;
-
-    Format.fprintf fmt "@]@.";
-
-    Format.fprintf fmt "</graph>%s" trailer
-  ;;
-
-  let print fmt graph =
-    pp_graph fmt graph;
-    Format.pp_print_flush fmt ()
-  ;;
-
-  let to_file graph fname =
-    let oc = open_out fname in
-    let fmt = Format.formatter_of_out_channel oc in
-    print fmt graph;
-    close_out oc
-end
-
 (** syntactic dependency graph. Vertex are Cudf packages and
     are indexed considering only the pair name,version .
     Edges are labelled with
@@ -292,10 +158,9 @@ module SyntacticDependencyGraph = struct
        let edge (e: G.E.label) = []
     end)
 
-  module GraphmlPrinter = GraphmlPrinter (
+  module GraphmlPrinter = Graphml.Print (G) (
     struct
-        include G
-        let default_vertex_properties =
+        let vertex_properties =
             ["package","string",None;
              "version","string",None;
              "architecture","string",None;
@@ -305,13 +170,13 @@ module SyntacticDependencyGraph = struct
              "multiarch","string",None;
             ]
        
-        let default_edge_properties = [
+        let edge_properties = [
           "vpkglist","string",None;
           "binaries","string",None;
           ]
 
-        let data_map_edge e = []
-        let data_map_vertex = function
+        let map_edge e = []
+        let map_vertex = function
           |PkgV.Pkg pkg ->
             let name = ("package",CudfAdd.decode pkg.Cudf.package) in
             let version = ("version",CudfAdd.string_of_version pkg) in
@@ -321,10 +186,13 @@ module SyntacticDependencyGraph = struct
                 try let value = Cudf.lookup_package_property pkg key in
                 Some(key,value)
                 with Not_found -> None
-              ) default_vertex_properties
+              ) vertex_properties
             in
             name :: version :: props
           |PkgV.Or (pkg, _) -> []
+
+        let edge_uid e = Hashtbl.hash e
+        let vertex_uid v = Hashtbl.hash v
 
     end)
 
@@ -417,10 +285,9 @@ module MakePackageGraph(PkgV : Sig.COMPARABLE with type t = Cudf.package )= stru
      end
   )
 
-  module GraphmlPrinter = GraphmlPrinter (
+  module GraphmlPrinter = Graphml.Print (G)(
     struct
-        include G
-        let default_vertex_properties =
+        let vertex_properties =
             ["package","string",None;
              "version","string",None;
              "architecture","string",None;
@@ -430,13 +297,13 @@ module MakePackageGraph(PkgV : Sig.COMPARABLE with type t = Cudf.package )= stru
              "multiarch","string",None;
             ]
        
-        let default_edge_properties = [
+        let edge_properties = [
           "vpkglist","string",None;
           "binaries","string",None;
           ]
 
-        let data_map_edge e = []
-        let data_map_vertex pkg =
+        let map_edge e = []
+        let map_vertex pkg =
           let name = ("package",CudfAdd.decode pkg.Cudf.package) in
           let version = ("version",CudfAdd.string_of_version pkg) in
      
@@ -445,9 +312,12 @@ module MakePackageGraph(PkgV : Sig.COMPARABLE with type t = Cudf.package )= stru
               try let value = Cudf.lookup_package_property pkg key in
               Some(key,value)
               with Not_found -> None
-            ) default_vertex_properties
+            ) vertex_properties
           in
           name :: version :: props
+
+        let edge_uid e = Hashtbl.hash e
+        let vertex_uid v = Hashtbl.hash v
 
     end)
 
