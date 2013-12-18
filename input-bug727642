@@ -1,0 +1,57 @@
+Package: libc6
+Source: eglibc
+Version: 2.17-92
+Architecture: m68k
+Maintainer: GNU Libc Maintainers <debian-glibc@lists.debian.org>
+Installed-Size: 8557
+Suggests: glibc-doc, debconf | debconf-2.0, locales
+Conflicts: prelink (<= 0.0.20090311-1), tzdata (<< 2007k-1), tzdata-etch
+Breaks: locales (<< 2.17), locales-all (<< 2.17), nscd (<< 2.17)
+Provides: glibc-2.17-1
+Filename: dists/sid/main/0_Essential/eglibc/libc6_2.17-92_m68k.deb
+Size: 2047460
+MD5sum: ac5cd6a7fee0621ce747a2baf20c6a7c
+SHA1: 842393ab17ccf0f8c0f1bca5db873035e0c13ad4
+SHA256: f2c09d9af2b2c56236af965ce0d301442c75f70448b53134da60e3de8a90b6ea
+Section: libs
+Priority: required
+Multi-Arch: same
+Homepage: http://www.eglibc.org
+Description: Embedded GNU C Library: Shared libraries
+ Contains the standard libraries that are used by nearly all programs on
+ the system. This package includes shared versions of the standard C library
+ and the standard math library, as well as many others.
+
+Package: unscd
+Source: unscd (0.48-2)
+Version: 0.48-2+b1
+Architecture: m68k
+Maintainer: Don Armstrong <don@debian.org>
+Installed-Size: 74
+Depends: libc6 (>> 2.17), libc6 (<< 2.18)
+Conflicts: nscd
+Replaces: nscd
+Provides: nscd
+Filename: dists/sid/main/8_Nice/unscd/unscd_0.48-2+b1_m68k.deb
+Size: 19016
+MD5sum: 4a617bd9b133ac3ab9859c90e75498c8
+SHA1: e476ab3e1e09d42b6d035498f58fa80dc1a7b8f7
+SHA256: 11dc8c377d6d45b3b759576ae37e31ba6a21b584f26f959f9d5b1f7eb361eeeb
+Section: admin
+Priority: extra
+Homepage: http://busybox.net/~vda/unscd/
+Description: Micro Name Service Caching Daemon
+ A daemon which handles passwd, group and host lookups for running
+ programs and caches the results for the next query. You only need
+ this package if you are using slow Name Services like LDAP, NIS or
+ NIS+.
+ .
+ This particular NSCD is a complete rewrite of the GNU glibc nscd
+ which is a single threaded server process which offloads all NSS
+ lookups to worker children; cache hits are handled by the parent,
+ and only cache misses start worker children, making the parent immune
+ to resource leaks, hangs, and crashes in NSS libraries.
+ .
+ It should mostly be a drop-in replacement for existing installs using
+ nscd.
+
