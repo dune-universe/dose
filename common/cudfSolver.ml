@@ -27,7 +27,7 @@ let check_fail file =
 (** see mktemp(1) for the syntax of [tmp_pattern] *)
 let mktmpdir tmp_pattern =
   let ic =
-    Unix.open_process_in (Printf.sprintf "mktemp --tmpdir -d %s" tmp_pattern) in
+    Unix.open_process_in (Printf.sprintf "mktemp --tmpdir -d %s || mktemp -d -t %s " tmp_pattern tmp_pattern) in
   let path = input_line ic in
   ignore (Unix.close_process_in ic);
   path
