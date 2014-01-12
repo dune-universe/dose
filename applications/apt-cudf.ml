@@ -329,9 +329,9 @@ let main () =
     match Algo.Depsolver.check_request ~cmd:exec_pat ~criteria ~explain cudf with
     |Algo.Depsolver.Error s -> fatal "%s" s
     |Algo.Depsolver.Unsat None ->
-      fatal "(UNSAT) No Solutions according to the give preferences"
+      fatal "(UNSAT) No Solutions according to the given preferences"
     |Algo.Depsolver.Unsat Some d -> begin
-      Format.printf "Error: (UNSAT) No Solutions according to the give preferences@.";
+      Format.printf "Error: (UNSAT) No Solutions according to the given preferences@.";
       Format.printf "%a@." (Algo.Diagnostic.fprintf_human ~prefix:"Message: " ~pp) d;
       exit 1
     end
