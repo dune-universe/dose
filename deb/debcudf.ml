@@ -323,8 +323,8 @@ let add_extra_default extras tables pkg =
     let cv = get_cudf_version tables ("",v) in
     ("source",`String n), ("sourcenumber", `String v), ("sourceversion", `Int cv)
   in
-  let recommends = ("recommends", `Vpkgformula (loadll tables pkg.recommends)) in
-  let replaces = ("replaces", `Vpkglist (loadl tables pkg.replaces)) in
+  let recommends = ("recommends", `Vpkgformula (loadll ~enc:true tables pkg.recommends)) in
+  let replaces = ("replaces", `Vpkglist (loadl tables ~enc:true pkg.replaces)) in
   let extras = 
     ("Type",("type",`String None))::
       ("Filename",("filename",`String None))::
