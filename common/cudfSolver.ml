@@ -53,10 +53,14 @@ let rec input_all_lines acc chan =
 (** Solver "exec:" line. Contains three named wildcards to be interpolated:
    "$in", "$out", and "$pref"; corresponding to, respectively, input CUDF
    document, output CUDF universe, user preferences. *)
+
+(* quote string for the shell, after removing all characters disallowed in criteria *)
+let sanitize s = Printf.sprintf "\"%s\"" (Pcre.substitute ~rex:(Pcre.regexp "[^+()a-z,\"-]") ~subst:(fun _ -> "") s);;
+
 let interpolate_solver_pat exec cudf_in cudf_out pref =
   let _, exec = String.replace ~str:exec ~sub:"$in"   ~by:cudf_in  in
   let _, exec = String.replace ~str:exec ~sub:"$out"  ~by:cudf_out in
-  let _, exec = String.replace ~str:exec ~sub:"$pref" ~by:pref     in
+  let _, exec = String.replace ~str:exec ~sub:"$pref" ~by:(sanitize pref) in
   exec
 ;;
 
