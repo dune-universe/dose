@@ -127,7 +127,8 @@ let add_s h k v =
   with Not_found -> Util.StringHashtbl.add h k (ref (SSet.singleton v))
 ;;
 
-(* collect names of virtual packages *)
+(* collect names of virtual packages 
+ * associates to each virtual package a list of real packages *)
 let init_virtual_table table pkg =
   List.iter (fun ((name,_),_) -> add_s table name pkg.name) pkg.provides
 
@@ -184,24 +185,26 @@ let init_tables ?(step=1) ?(versionlist=[]) pkglist =
   List.iter (fun pkg -> ivt pkg ; ivrt pkg ; ivdt pkg ; iut pkg) pkglist ;
   let l = Hashtbl.fold (fun v _ acc -> v::acc) temp_versions_table [] in
   let add_reverse i (n,v) =
-     try 
-       let m = Util.IntHashtbl.find tables.reverse_table i in 
-       m := (SMap.add n v !m)
-     with Not_found ->
-       let m = SMap.add n v SMap.empty in
-       Util.IntHashtbl.add tables.reverse_table i (ref m)
+    debug "Add Reverse (%s,%s) %i" n v i;
+    try 
+      let m = Util.IntHashtbl.find tables.reverse_table i in 
+      m := (SMap.add n v !m)
+    with Not_found ->
+      let m = SMap.add n v SMap.empty in
+      Util.IntHashtbl.add tables.reverse_table i (ref m)
   in
   let sl = List.sort ~cmp:(fun x y -> Version.compare (fst x) (fst y)) l in
   let rec numbers (prec,i) = function
     |[] -> ()
     |(v,n)::t ->
+      debug "Numbers %s %s" n v;
       if Version.equal v prec then begin
         add tables.versions_table v i;
-        add_reverse i (n,v);
+        if n <> "" then add_reverse i (n,v);
         numbers (prec,i) t
       end else begin
         add tables.versions_table v (i+step);
-        add_reverse (i+step) (n,v);
+        if n <> "" then add_reverse (i+step) (n,v);
         numbers (v,(i+step)) t
       end
   in
@@ -235,7 +238,7 @@ let get_real_version tables (name,cudfversion) =
           ) (SMap.bindings m)
         )
       in
-      fatal "Unable to get real version for %s\n All Known versions for this package are %s" package known
+      fatal "Unable to get real version for %s (%i)\n All Known versions for this package are %s" package cudfversion known 
   with Not_found ->
     fatal "Package (%s,%d) does not have an associated debian version" name cudfversion
 
@@ -254,7 +257,15 @@ let loadl ?(enc=false) tables l =
           else
             [(encname, None)]
       |Some(op,v) ->
-          [(encname,Some(op,get_cudf_version tables (name,v)))]
+          (* debian policy 7.5 . If a relationship field has 
+           * a version number attached, only real packages will 
+           * be considered to see whether the relationship is satisfied *)
+          if (Util.StringHashtbl.mem tables.virtual_table name) && 
+             not (Util.StringHashtbl.mem tables.versioned_table name) then []
+          else (
+            debug "Conflict %s < %s %s" encname name v;
+            [(encname,Some(op,get_cudf_version tables (name,v)))]
+          )
     ) l
   )
 
@@ -434,6 +445,8 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
             sc :: masc 
       in
       let multiarchconflicts =
+        let notselfconflict = (<>) pkg.name in
+        let realpackage = Util.StringHashtbl.mem tables.unit_table in
         match pkg.multiarch with
         |(`None|`Foreign|`Allowed) -> 
             bind (options.native::options.foreign) (fun arch ->
@@ -444,16 +457,17 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
             bind (options.native::options.foreign) (fun arch ->
               let l =
                 bind originalconflicts (fun ((n,a),c) ->
-                  let vpkgs =
+                  if realpackage n && notselfconflict n then [((n,a),c)] 
+                  else if (* not a real package && *) notselfconflict n then 
+                    (* if it is not a real package I ignore the constraint *)
+                    [((n,a),None)]
+                  else
+                    (* a virtual package and a self conflict *)
                     try
                       List.filter_map (fun pn ->
-			if pn <> pkg.name then Some((pn,a),c) else None
+                        if pn <> pkg.name then Some((pn,a),None) else None
                       ) (SSet.elements !(Util.StringHashtbl.find tables.virtual_table n))
                     with Not_found -> []
-		  in
-                  if Util.StringHashtbl.mem tables.unit_table n && n <> pkg.name 
-                  then ((n,a),c)::vpkgs 
-                  else vpkgs
                 )
               in
               add_arch_l options.native arch (loadl tables l)

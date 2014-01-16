@@ -122,6 +122,7 @@ let init_pool_univ ~global_constraints univ =
         in
         let cl = 
           List.map (fun vpkg ->
+            debug "Conflict %s" (Cudf_types_pp.string_of_vpkg vpkg);
             (vpkg, CudfAdd.resolve_vpkg_int univ vpkg)
           ) pkg.Cudf.conflicts
         in
@@ -477,9 +478,8 @@ let solve_pbo ?callback solver request =
       end
   |Diagnostic_int.Sng (Some k,i) ->
       failwith "Not implemented yet"
-      (*
-      result S.solve_lst S.collect_reasons_lst (List.map solver.map#vartoint [k;i])
-*)
+      (* result S.solve_lst S.collect_reasons_lst (List.map solver.map#vartoint [k;i]) *)
+  |_ -> failwith "Not implemented yet"
 ;;
 
 

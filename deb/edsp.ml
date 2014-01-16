@@ -84,7 +84,7 @@ let parse_edsp_version (_,s) =
   match String.nsplit s " " with
   |["EDSP";"0.5"] -> s
   |["EDSP";"0.4"] -> raise Not_found
-  |[] -> raise Not_found
+  |_ -> raise Not_found
 
 (*
 let get_architectures native_opt foreign =

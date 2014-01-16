@@ -147,6 +147,7 @@ let pp_vpkglist pp fmt =
         let (p,_,_) = pp {Cudf.default_package with Cudf.package = p} in
         Format.fprintf fmt "%s" p
     |(p,Some(c,v)) ->
+        debug "pp_vpkglist %s %s %i" p (string_of_relop c) v;
         let (p,v,_) = pp {Cudf.default_package with Cudf.package = p ; version = v} in
         Format.fprintf fmt "%s (%s %s)" p (string_of_relop c) v
   in
