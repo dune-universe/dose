@@ -136,5 +136,6 @@ How to run unit tests
   --with-zip --with-oUnit --with-bz2 --with-rpm4
 make
 make test
+make testlib
 
 
