@@ -314,6 +314,7 @@ let preamble =
     ("filename",(`String (Some "")));
     ("type",(`String None));
     ("installedsize",(`Int (Some 0)));
+    ("multiarch",`String None);
     ]
   in
   CudfAdd.add_properties Cudf.default_preamble l
