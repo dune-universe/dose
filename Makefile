@@ -130,7 +130,7 @@ testapps: apps
 
 testlib: 
 	@for i in $(TESTS); do\
-		echo "#######TESTING $$i" ;\
+		echo "\n#######START TESTING $$i" ;\
 		$(OCAMLBUILD) $(OBFLAGS) $$i/tests.$(OCAMLBEST) ;\
 		./tests.$(OCAMLBEST) ;\
 	done
