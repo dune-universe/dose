@@ -130,11 +130,13 @@ autoconf
 make
 make dist
 
-How to run unit tests
----------------------
+How to run the tests
+----------------
 ./configure --without-libcudf --with-xml --with-curl --with-ocamlgraph \
   --with-zip --with-oUnit --with-bz2 --with-rpm4
 make
 make test
+
+To run only the unit tests : make testlib
 
 
