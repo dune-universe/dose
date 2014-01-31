@@ -606,7 +606,7 @@ let parse_inst_triplets =
   ]
 
 let list_of_hashtbl ht = 
-  ExtLib.List.of_enum (ExtLib.Hashtbl.enum ht)
+  List.sort compare (ExtLib.List.of_enum (ExtLib.Hashtbl.enum ht))
 
 let test_parse_inst = 
   let parse_inst_test_cases =
