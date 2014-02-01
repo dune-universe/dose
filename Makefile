@@ -134,7 +134,6 @@ testlib:
 		$(OCAMLBUILD) $(OBFLAGS) $$i/tests.$(OCAMLBEST) ;\
 		./tests.$(OCAMLBEST) ;\
 	done
-	@make apps
 
 test: testapps testlib
 
