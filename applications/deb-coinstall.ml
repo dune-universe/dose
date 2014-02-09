@@ -31,7 +31,7 @@ module Options = struct
   include Boilerplate.MakeOptions(struct let options = options end)
 
   include Boilerplate.DistcheckOptions
-  let default = List.remove Boilerplate.InputOptions.default_options "successes" in
+  let default = List.remove Boilerplate.DistcheckOptions.default_options "successes" in
   Boilerplate.DistcheckOptions.add_options ~default options ;;
 
   include Boilerplate.InputOptions
@@ -44,9 +44,11 @@ module Options = struct
   Boilerplate.DistribOptions.add_options ~default options ;;
   
   let sources = StdOpt.str_option ()
+  let dump = StdOpt.str_option ()
 
   open OptParser
   add options ~long_name:"src" ~help:"Associate Sources file" sources;
+  add options ~long_name:"dump" ~help:"dump the cudf file" dump;
 
 end
 
@@ -133,6 +135,15 @@ let main () =
     Cudf.load_universe (CudfAdd.Cudf_set.elements s) 
   in
   let universe_size = Cudf.universe_size universe in
+
+  if OptParse.Opt.is_set Options.dump then begin
+    let oc = open_out (OptParse.Opt.get Options.dump) in
+    info "Dumping Cudf file";
+
+    Cudf_printer.pp_preamble oc Debcudf.preamble;
+    Printf.fprintf oc "\n";
+    Cudf_printer.pp_universe oc universe
+  end;
 
   let checklist = 
     if OptParse.Opt.is_set Options.checkonly then begin
