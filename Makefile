@@ -126,7 +126,7 @@ $(DOSELIBS)/%:
 	@touch $@
 
 testapps: apps 
-	@applications/dose-tests.py -pwd `pwd` -v
+	@applications/dose-tests.py applications/dose-tests.list
 
 testlib: 
 	@for i in $(TESTS); do\
