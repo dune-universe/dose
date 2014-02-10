@@ -123,7 +123,7 @@ def suite(f,runtest,rungroup):
     suite = unittest.TestSuite()
     for stanza in parse822(f):
         s = dict(stanza)
-        if (len(runtest) == 0 and rungroup is None) :
+        if (len(runtest) == 0 and len(rungroup) == 0) :
             suite.addTest(DoseTests(s))
         elif s['Name'] in runtest :
             suite.addTest(DoseTests(s))
