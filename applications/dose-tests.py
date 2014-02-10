@@ -99,7 +99,8 @@ def test_application(self,expected_file,cmd,diff):
 class DoseTests(unittest.TestCase):
     def __init__(self, test):
         super(DoseTests, self).__init__()
-        self.description = test['Description']
+        self.name = test['Name'] 
+        self.comment = test['Comment'] if 'Comment' in test else None
         self.expected = test['Expected'] 
         self.cmd = test['Cmd'].split(' ') + test['Input'].split(' ')
         if test['Type'] == '822' :
@@ -111,28 +112,37 @@ class DoseTests(unittest.TestCase):
         else :
             self.difftype = diff_text
     def shortDescription(self):
-        return "Description = " + self.description + "\n" + ("Cmd = ") + " ".join(self.cmd) + "\nExpected file = %s" % self.expected + "\n"
+        if self.comment :
+            return "Description = " + self.comment + "\n" + ("Cmd = ") + " ".join(self.cmd) + "\nExpected file = %s" % self.expected + "\n"
+        else :
+            return "Test = %s" % self.name + "\n" + ("Cmd = ") + " ".join(self.cmd) + "\nExpected file = %s" % self.expected + "\n"
     def runTest(self):
         test_application(self,self.expected,self.cmd,self.difftype)
 
-def suite(f):
+def suite(f,runtest,rungroup):
     suite = unittest.TestSuite()
     for stanza in parse822(f):
         s = dict(stanza)
-        #print "Add %s" % s['Cmd']
-        suite.addTest(DoseTests(s))
+        if (len(runtest) == 0 and rungroup is None) :
+            suite.addTest(DoseTests(s))
+        elif s['Name'] in runtest :
+            suite.addTest(DoseTests(s))
+        elif len(rungroup) > 0 and s['Group'] in rungroup :
+            suite.addTest(DoseTests(s))
     return suite
 
 def main():
     global verbose
     parser = argparse.ArgumentParser(description='Unit test for Dose applications')
     parser.add_argument('-v', '--verbose', type=int, nargs=1, default=2) 
+    parser.add_argument('--runtest', nargs='+', default=[]) 
+    parser.add_argument('--rungroup', nargs=1, default=[]) 
     parser.add_argument('inputfile', type=str, nargs=1, help="test file")
     args = parser.parse_args()
 
     verbose = args.verbose
 
-    unittest.TextTestRunner(verbosity=args.verbose).run(suite(args.inputfile[0]))
+    unittest.TextTestRunner(verbosity=args.verbose).run(suite(args.inputfile[0],args.runtest,args.rungroup))
 
 if __name__ == '__main__':
     main()
