@@ -309,9 +309,9 @@ END
 ;;
 
 (** return a list of Debian packages from a debian source file *)
-let deb_load_source ?(profiles=false) ?(noindep=false) hostarch sourcefile =
+let deb_load_source ?(profiles=false) ?(noindep=false) buildarch hostarch sourcefile =
   let l = Debian.Sources.input_raw ~archs:[hostarch] [sourcefile] in
-  Debian.Sources.sources2packages ~noindep ~profiles hostarch l
+  Debian.Sources.sources2packages ~noindep ~profiles buildarch hostarch l
 ;;
 
 (** parse and merge a list of files into a cudf package list *)
