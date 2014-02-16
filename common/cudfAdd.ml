@@ -257,6 +257,7 @@ let cudfop = function
   |Some("<=",v) -> Some(`Leq,v)
   |Some(">=",v) -> Some(`Geq,v)
   |Some("=",v) -> Some(`Eq,v)
+  |Some("!=",v) -> Some(`Neq,v)
   |Some("ALL",v) -> None
   |None -> None
   |Some(c,v) -> fatal "%s %s" c v

@@ -141,7 +141,7 @@ val inttovar : Cudf.universe -> int -> Cudf.package
 
 val cudfop :
   (string * string) option ->
-  ([> `Eq | `Geq | `Gt | `Leq | `Lt ] * string) option
+  ([> `Eq | `Neq | `Geq | `Gt | `Leq | `Lt ] * string) option
 
 (** [pp ?decode from_cudf pkg] package pretty printer.
     [from_cudf] a function that gets a (name,cudfversion) pair and returns a 
