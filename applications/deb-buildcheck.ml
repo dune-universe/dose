@@ -59,6 +59,7 @@ let main () =
   Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
 
   let options = Options.set_deb_options () in
+  let buildarch = options.Debian.Debcudf.native in
   let hostarch = options.Debian.Debcudf.host in
   let noindep = OptParse.Opt.get Options.noindep in
 
@@ -70,7 +71,7 @@ let main () =
     |l -> 
         begin match List.rev l with
         |h::t ->
-          let srclist = Boilerplate.deb_load_source ~noindep hostarch h in
+          let srclist = Boilerplate.deb_load_source ~noindep buildarch hostarch h in
           let pkglist = Deb.input_raw t in
           (pkglist,srclist)
         |_ -> fatal "An impossible situation occurred ?!#"

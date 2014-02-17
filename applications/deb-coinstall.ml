@@ -92,7 +92,7 @@ let main () =
     in
     let srclist = 
       if not(Option.is_none sources) then
-        Sources.sources2packages ~noindep:true ~profiles:false native origsourcelist
+        Sources.sources2packages ~noindep:true ~profiles:false native native origsourcelist
       else []
     in
     let tables = Debian.Debcudf.init_tables (srclist@pkglist) in

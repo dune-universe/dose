@@ -183,7 +183,7 @@ let select hostarch profile dep =
 
 (** transform a list of sources packages into dummy binary packages.
   * This function preserve the order *)
-let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") hostarch l =
+let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") buildarch hostarch l =
   let conflicts profile l = List.filter_map (select hostarch profile) l in
   let depends profile ll =
     List.filter_map (fun l ->
@@ -214,12 +214,19 @@ let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") hostarch l 
     let extras_profile  = match profile with None -> [] | Some s -> [("profile", s)] in
     let depends_indep   = if noindep then [] else add_native_ll srcpkg.build_depends_indep in
     let conflicts_indep = if noindep then [] else add_native_l srcpkg.build_conflicts_indep in
-    let build_essential = [(("build-essential", Some "native"), None)] in
+    (* when crossbuilding (host != build), implicitly depend on build-essential
+     * and crossbuild-essential-$hostarch. When compiling natively, implicitly
+     * depend on build-essential *)
+    let build_essential = if buildarch<>hostarch then
+      [[(("build-essential", Some buildarch), None)];[(("crossbuild-essential-"^hostarch, None), None)]]
+    else
+      [[(("build-essential", Some buildarch), None)]]
+    in
     { Packages.default_package with
       Packages.name = prefix ^ sep ^ srcpkg.name ;
       source = (srcpkg.name, Some srcpkg.version);
       version = srcpkg.version;
-      depends = build_essential::(depends profile (depends_indep @ srcpkg.build_depends));
+      depends = build_essential @ (depends profile (depends_indep @ srcpkg.build_depends));
       conflicts = conflicts profile (conflicts_indep @ srcpkg.build_conflicts);
       architecture = String.concat "," srcpkg.architecture;
       extras = extras_profile @ [("Type",src)]
