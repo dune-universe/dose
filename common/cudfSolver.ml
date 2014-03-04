@@ -38,13 +38,6 @@ let rmtmpdir path =
     ignore (Unix.system (Printf.sprintf "rm -rf %s" path))
 ;;
 
-let check_exit_status cmd = function
-  |Unix.WEXITED 0   -> ()
-  |Unix.WEXITED i   -> fatal "command '%s' failed with code %d" cmd i
-  |Unix.WSIGNALED i -> fatal "command '%s' killed by signal %d" cmd i
-  |Unix.WSTOPPED i  -> fatal "command '%s' stopped by signal %d" cmd i
-;;
-
 let rec input_all_lines acc chan =
   try input_all_lines ((input_line chan)::acc) chan
   with End_of_file -> acc
@@ -75,6 +68,13 @@ let fatal fmt =
   ) fmt
 ;;
 
+let check_exit_status cmd = function
+  |Unix.WEXITED 0   -> ()
+  |Unix.WEXITED i   -> fatal "command '%s' failed with code %d" cmd i
+  |Unix.WSIGNALED i -> fatal "command '%s' killed by signal %d" cmd i
+  |Unix.WSTOPPED i  -> fatal "command '%s' stopped by signal %d" cmd i
+;;
+
 (** [execsolver] execute an external cudf solver.
     exec_pat : execution string
     cudf : a cudf document (preamble, universe, request)
@@ -92,7 +92,7 @@ let execsolver exec_pat criteria cudf =
   let solver_out = Filename.concat tmpdir "out-cudf" in
   let cmd = interpolate_solver_pat exec_pat solver_in solver_out criteria in
 
-  debug "%s" cmd;
+  notice "%s" cmd;
 
   let env = Unix.environment () in
   let (cin,cout,cerr) = Unix.open_process_full cmd env in
@@ -109,7 +109,7 @@ let execsolver exec_pat criteria cudf =
   let lines = input_all_lines lines_cin cerr in
   let exit_code = Unix.close_process_full (cin,cout,cerr) in
   check_exit_status cmd exit_code;
-  debug "\n%s" (String.concat "\n" lines);
+  notice "\n%s" (String.concat "\n" lines);
   Util.Timer.stop timer4 ();
 
   if not(Sys.file_exists solver_out) then
