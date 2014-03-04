@@ -128,6 +128,7 @@ end
 
 (* this way we can have the same label for different messages *)
 module Info = MakeMessages(struct let label = "I" end)
+module Notice = MakeMessages(struct let label = "N" end)
 module Warning = MakeMessages(struct let label = "W" end)
 module Debug = MakeMessages(struct let label = "D" end)
 
@@ -135,6 +136,9 @@ module Logging(X : sig val label : string end) = struct
 
   let it = Info.create X.label
   let info fmt = Info.eprintf it fmt
+
+  let nt = Notice.create X.label
+  let notice fmt = Notice.eprintf nt fmt
 
 (* warning is enabled by default *)
   let wt = Warning.create ~enabled:true X.label

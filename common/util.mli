@@ -63,6 +63,7 @@ end
 module Debug : Messages
 module Warning : Messages
 module Info : Messages
+module Notice : Messages
 
 (** Ex : To use the Message framework, you should declare three functions
  * at the begin of each module as:
@@ -88,6 +89,8 @@ module Logging :
     sig
       val it : Info.t
       val info : ('a, unit, string, unit) format4 -> 'a
+      val nt : Notice.t
+      val notice : ('a, unit, string, unit) format4 -> 'a
       val wt : Warning.t
       val warning : ('a, unit, string, unit) format4 -> 'a
       val dt : Debug.t

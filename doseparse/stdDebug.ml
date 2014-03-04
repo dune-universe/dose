@@ -20,9 +20,15 @@ include Util.Logging(struct let label = __FILE__ end) ;;
 let enable_debug = function
   |0 -> () (* only warning messages : default *)
   |1 -> Util.Info.all_enabled ()
+  |2 -> 
+      begin
+        Util.Info.all_enabled ();
+        Util.Notice.all_enabled ()
+      end
   |_ ->
       begin
         Util.Info.all_enabled () ;
+        Util.Notice.all_enabled ();
         Util.Debug.all_enabled ()
       end
 ;;
@@ -30,6 +36,7 @@ let enable_debug = function
 let all_quiet t =
   if t then begin
     Util.Info.all_disabled ();
+    Util.Notice.all_disabled ();
     Util.Warning.all_disabled ();
     Util.Debug.all_disabled ();
     List.iter Util.Progress.disable (Util.Progress.available ())
