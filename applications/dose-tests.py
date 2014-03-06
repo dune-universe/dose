@@ -10,6 +10,7 @@ from itertools import groupby, ifilter
 import yaml, urllib
 import filecmp
 import cStringIO
+from sets import Set
 
 def convert(d) :
     def aux(e) :
@@ -121,14 +122,28 @@ class DoseTests(unittest.TestCase):
 
 def suite(f,runtest,rungroup):
     suite = unittest.TestSuite()
+    groups = Set()
+    tests = Set()
+    groupFound=False
+    testsFound=False
     for stanza in parse822(f):
         s = dict(stanza)
+        groups.add(s['Group'])
         if (len(runtest) == 0 and len(rungroup) == 0) :
             suite.addTest(DoseTests(s))
         elif s['Name'] in runtest :
+            testFound=True
             suite.addTest(DoseTests(s))
         elif len(rungroup) > 0 and s['Group'] in rungroup :
+            groupFound=True
             suite.addTest(DoseTests(s))
+    if len(runtest) != 0 and testFound == False :
+        print "Test(s) [%s] Not found" % (','.join(str(p) for p in runtest)) 
+        print "Tests available [%s]" % (','.join(str(p) for p in tests))
+    if len(rungroup) != 0 and groupFound == False :
+        print "Group(s) [%s] Not found" % (','.join(str(p) for p in rungroup))
+        print "Groups available [%s]" % (','.join(str(p) for p in groups))
+
     return suite
 
 def main():
