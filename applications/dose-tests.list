@@ -123,7 +123,7 @@ Name: deb-coinstall-bug-16979
 Group: distcheck
 Expected: tests/applications/dose-tests/deb-coinstall-bug-16979
 Input: --bg=tests/DebianPackages/sid.packages.bz2 tests/deb/misc/deb-install-16959.edsp
-Cmd: ./deb-coinstall.native -v --failures --explain --deb-native-arch=amd64 
+Cmd: ./deb-coinstall.native --failures --explain --deb-native-arch=amd64 
 Type: deb-coinstall
 Printer: text
 

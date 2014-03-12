@@ -360,10 +360,20 @@ let criteria_parser s =
     |s -> fatal "Criteria parsing error : %s" s
   ) (String.nsplit s ",")
 
+(* add a version constraint to ensure name is upgraded *)
+let upgrade_constr universe name = 
+  match Cudf.get_installed universe name with
+  | [] -> name,None
+  |[p] -> name,Some(`Geq,p.Cudf.version)
+  | pl ->
+      let p = List.hd(List.sort ~cmp:Cudf.(>%) pl) 
+      in (name,Some(`Geq,p.Cudf.version))
+
 (** check if a cudf request is satisfiable. we do not care about
  * universe consistency . We try to install a dummy package *)
 let check_request ?cmd ?callback ?criteria ?(explain=false) (pre,universe,request) =
   let intSolver ?(explain=false) universe request =
+
     let deps = 
       let k =
         Cudf.fold_packages (fun acc pkg ->
@@ -376,20 +386,10 @@ let check_request ?cmd ?callback ?criteria ?(explain=false) (pre,universe,reques
         ) [] universe
       in
       let il = request.Cudf.install in
-      let ul = 
-        List.map (function
-          |(name,None) ->
-            begin match Cudf.get_installed universe name with
-            |[] -> ((name,None))
-            |[p] -> (name,Some(`Geq,p.Cudf.version))
-            |pl ->
-                let p = List.hd(List.sort ~cmp:Cudf.(>%) pl) in
-                (name,Some(`Geq,p.Cudf.version))
-            end
-          |c -> c
-        ) request.Cudf.upgrade  
-      in
-      let l = il @ ul in
+      (* we preserve the user defined constraints, while adding the upgrade constraint *)
+      let ulc = List.filter (function (_,Some _) -> true | _ -> false) request.Cudf.upgrade in
+      let ulnc = List.map (fun (name,_) -> upgrade_constr universe name) request.Cudf.upgrade in
+      let l = il @ ulc @ ulnc in
       debug "request consistency (keep %d) (install %d) (upgrade %d) (remove %d) (# %d)"
       (List.length k) (List.length request.Cudf.install) 
       (List.length request.Cudf.upgrade)
