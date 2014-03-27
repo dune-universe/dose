@@ -460,17 +460,26 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
             bind (options.native::options.foreign) (fun arch ->
               let l =
                 bind originalconflicts (fun ((n,a),c) ->
-                  if realpackage n && notselfconflict n then [((n,a),c)] 
-                  else if (* not a real package && *) notselfconflict n then 
-                    (* if it is not a real package I ignore the constraint *)
-                    [((n,a),None)]
-                  else
-                    (* a virtual package and a self conflict *)
-                    try
-                      List.filter_map (fun pn ->
-                        if pn <> pkg.name then Some((pn,a),None) else None
-                      ) (SSet.elements !(Util.StringHashtbl.find tables.virtual_table n))
-                    with Not_found -> []
+		  match realpackage n, notselfconflict n with
+		    true,true -> [((n,a),c)]     (* real conflict *)
+		  | true, false -> []            (* self conflict on real package, drop it *)
+		  | false,true -> 
+		      begin
+			match c with 
+			  None -> [((n,a),None)] (* virtual conflict *)
+			| _ -> []                (* real conflict on non-existent package, drop it *)
+		      end
+		  | false,false ->               (* a virtual package and a self conflict *)
+                    begin
+		      try
+			List.filter_map 
+			  (fun pn ->
+                            if pn <> pkg.name 
+			    then Some((pn,a),None) 
+			    else None
+			  ) (SSet.elements !(Util.StringHashtbl.find tables.virtual_table n))
+                      with Not_found -> []
+		    end
                 )
               in
               add_arch_l options.native arch (loadl tables l)
