@@ -350,12 +350,14 @@ let main () =
 
   let diff = CudfDiff.diff universe soluniv in
   let empty = ref true in
+  let cache = CudfAdd.Cudf_hashtbl.create 1023 in
   Hashtbl.iter (fun pkgname s ->
     let inst = s.CudfDiff.installed in
     let rem = s.CudfDiff.removed in
     match CudfAdd.Cudf_set.is_empty inst, CudfAdd.Cudf_set.is_empty rem with
     |false,_ -> begin
       empty := false;
+      List.iter (fun pkg -> CudfAdd.Cudf_hashtbl.add cache pkg ()) (CudfAdd.Cudf_set.elements inst);
       Format.printf "Install: %a@." pp_pkg (inst,univ)
     end
     |true,false -> begin
@@ -373,7 +375,11 @@ let main () =
       if (CudfAdd.Cudf_set.is_empty s.CudfDiff.installed) then begin
         List.iter (fun pkg -> 
           empty := false;
-          Format.printf "Install: %a@." pp_pkg ((CudfAdd.Cudf_set.singleton pkg),univ)
+          if CudfAdd.Cudf_hashtbl.mem cache pkg then () 
+          else begin
+            CudfAdd.Cudf_hashtbl.add cache pkg ();
+            Format.printf "Install: %a@." pp_pkg ((CudfAdd.Cudf_set.singleton pkg),univ);
+          end
         ) (CudfAdd.who_provides soluniv (n,c))
       end
     with Not_found -> ()
