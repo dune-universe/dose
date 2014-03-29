@@ -22,10 +22,12 @@ include Util.Logging(struct let label = __FILE__ end) ;;
 module SMap = Map.Make (String)
 
 type tables = {
-  virtual_table : SSet.t ref Util.StringHashtbl.t;   (** all names of virtual packages *)
-  unit_table : unit Util.StringHashtbl.t ;     (** all names of real packages    *)
-  versions_table : int Util.StringHashtbl.t;   (** version -> int table          *)
-  versioned_table : unit Util.StringHashtbl.t; (** all (versions,name) tuples    *)
+  virtual_table : SSet.t ref Util.StringHashtbl.t; (** all names of virtual packages *)
+  unit_table : unit Util.StringHashtbl.t ;         (** all names of real packages    *)
+  versions_table : int Util.StringHashtbl.t;       (** version -> int table          *)
+  versioned_table : unit Util.StringHashtbl.t;     (** all (versions,name) tuples. 
+                                                       all versions mentioned of depends, 
+                                                       pre_depends, conflict and breaks    *)
   reverse_table : (string SMap.t) ref Util.IntHashtbl.t
 }
 
@@ -48,7 +50,7 @@ type options = {
   extras_opt : extramap ;
   native : string;        (* the native architecture *)
   foreign : string list ; (* list of foreign architectures *)
-  host : string;        (* the host architecture - cross compile *)
+  host : string;          (* the host architecture - cross compile *)
   ignore_essential : bool;
 }
 
@@ -225,7 +227,7 @@ let get_real_version tables (name,cudfversion) =
     (* XXX this is a hack. I should record the name with the architecture *)
     let n = CudfAdd.decode name in
     try let (n,a) = ExtString.String.split n ":" in if a <> "any" then a else n
-    with Invalid_string _ -> n
+    with Invalid_string -> n
   in
   try
     let m = !(Util.IntHashtbl.find tables.reverse_table cudfversion) in
@@ -298,13 +300,14 @@ let loadlp ?(enc=false) tables l =
 (* ========================================= *)
 
 let preamble = 
-  (* number is a mandatory property -- no default *)
-  (* type a mandatory property -- no default *)
   let l = [
+    (* number,type,architecture are mandatory properties -- no default *)
+    ("number",(`String None));
+    ("type",(`String None));
+    ("architecture",(`String None));
+
     ("replaces",(`Vpkglist (Some [])));
     ("recommends",(`Vpkgformula (Some [])));
-    ("number",(`String None));
-    ("architecture",(`String None));
     ("priority",(`String (Some "")));
     ("source",(`String (Some ""))) ;
     ("sourcenumber",(`String (Some "")));
@@ -312,7 +315,6 @@ let preamble =
     ("essential",(`Bool (Some false))) ;
     ("buildessential",(`Bool (Some false))) ;
     ("filename",(`String (Some "")));
-    ("type",(`String None));
     ("installedsize",(`Int (Some 0)));
     ("multiarch",(`String (Some "")));
     ]
@@ -339,10 +341,10 @@ let add_extra_default extras tables pkg =
   let replaces = ("replaces", `Vpkglist (loadl tables ~enc:true pkg.replaces)) in
   let extras = 
     ("Type",("type",`String None))::
-      ("Filename",("filename",`String None))::
-      ("Multi-Arch",("multiarch",`String None))::
-      ("Installed-Size",("installedsize",`Int (Some 0)))::
-        extras 
+    ("Filename",("filename",`String None))::
+    ("Multi-Arch",("multiarch",`String None))::
+    ("Installed-Size",("installedsize",`Int (Some 0)))::
+    extras 
   in
   let l =
     List.filter_map (fun (debprop, (cudfprop,v)) ->
