@@ -143,9 +143,9 @@ module SyntacticDependencyGraph = struct
 
         let edge_attributes e =
           match G.E.label e with
-          |PkgE.DirDepends -> [`Style `Solid]
-          |PkgE.OrDepends -> [`Style `Dashed]
-          |PkgE.Conflict -> [`Color 0xFF0000; `Style `Solid; `Label "#"]
+          |PkgE.DirDepends -> [`Style [`Solid]]
+          |PkgE.OrDepends -> [`Style [`Dashed]]
+          |PkgE.Conflict -> [`Color 0xFF0000; `Style [`Solid]; `Label "#"]
       end
     include Graph.Graphviz.Dot(Display)
     let print fmt g = fprint_graph fmt g

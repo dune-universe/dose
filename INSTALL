@@ -17,7 +17,7 @@ additional libraries (enable compilation with --with-<library>) :
  - libbenchmark-ocaml-dev (for --with-benchmark)
 
 To use rpm support, dose3 needs librpm > 4.6
-To use ocamlgraph support, dose3 needs libocamlgraph-ocaml-dev >= 1.8.3
+To use ocamlgraph support, dose3 needs libocamlgraph-ocaml-dev >= 1.8.4
 
 To compile from git :
 aclocal -I m4
