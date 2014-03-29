@@ -25,7 +25,7 @@ Printer: 822
 
 Name: apt_cudf_multiarch_same_versioned_conflict
 Group: apt-cudf
-Expected: tests/applications/dose-tests/multiarch-same-provides-multi
+Expected: tests/applications/dose-tests/multiarch-same-versioned-conflict
 Input: tests/deb/edsp/multiarch-same-versioned-conflict.edsp
 Cmd: ./apt-cudf.native -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: 822
