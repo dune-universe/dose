@@ -62,6 +62,23 @@ let default_options = {
   ignore_essential = false
 }
 
+(* either the name correspond to a real package name or the name n appears
+ * in a versioned constraint (depends, pre_depends, conflict or break) *)
+let is_real_or_metioned tables n =
+  (Util.StringHashtbl.mem tables.unit_table n) || 
+  (Util.StringHashtbl.mem tables.versioned_table n)
+;;
+
+(* the name correspond to a virtual package and it appears 
+ * in a versioned constraint (depends, pre_depends, conflict or break) 
+ * This means that the package name could also be a real name *)
+let is_virtual_and_mentioned tables n =
+  (Util.StringHashtbl.mem tables.virtual_table n) &&
+  (Util.StringHashtbl.mem tables.versioned_table n)
+
+(* the name correspond to a real package *)
+let is_real tables n = (Util.StringHashtbl.mem tables.unit_table n)
+
 let add_name_arch n a = CudfAdd.encode (Printf.sprintf "%s:%s" a n)
 
 (* add arch info to a vpkg 
@@ -253,8 +270,7 @@ let loadl ?(enc=false) tables l =
       in
       match CudfAdd.cudfop sel with
       |None ->
-          if (Util.StringHashtbl.mem tables.virtual_table name) &&
-          (Util.StringHashtbl.mem tables.versioned_table name) then
+          if is_virtual_and_mentioned tables name then
             [(encname, None);("--virtual-"^encname, None)]
           else
             [(encname, None)]
@@ -262,16 +278,17 @@ let loadl ?(enc=false) tables l =
           (* debian policy 7.5 . If a relationship field has 
            * a version number attached, only real packages will 
            * be considered to see whether the relationship is satisfied *)
-          if (Util.StringHashtbl.mem tables.virtual_table name) && 
-             not (Util.StringHashtbl.mem tables.versioned_table name) then []
-          else (
-            debug "Conflict %s < %s %s" encname name v;
+          if is_real tables name then begin
+            (* debug "Conflict %s < %s %s" encname name v; *)
             [(encname,Some(op,get_cudf_version tables (name,v)))]
-          )
+          end else begin
+            (* debug "Dropping Conflict %s < %s %s" encname name v; *)
+            []
+          end
     ) l
   )
 
-let loadll ?(enc=false) tables ll = List.map (loadl ~enc tables) ll
+let loadll ?(enc=false) tables ll = List.filter_map (fun l -> match loadl ~enc tables l with [] -> None |l -> Some l) ll
 
 (* we add a self conflict here, because in debian each package is in conflict
    with all other versions of the same package *)
@@ -283,16 +300,21 @@ let loadlp ?(enc=false) tables l =
   List.map (fun ((name,_),sel) ->
     let encname = if enc then CudfAdd.encode name else name in
     match CudfAdd.cudfop sel with
-    |None  ->
-        if (Util.StringHashtbl.mem tables.unit_table name) || 
-        (Util.StringHashtbl.mem tables.versioned_table name)
-        then ("--virtual-"^encname,None)
-        else (encname, None)
+    |None ->
+        if is_real tables name then (encname, None)
+        else if is_virtual_and_mentioned tables name then
+          ("--virtual-"^encname,None)
+        else
+          (* this provide will be unused. left here for documentation *)
+          ("--unused-"^encname, None)
     |Some(`Eq,v) ->
-        if (Util.StringHashtbl.mem tables.unit_table name) || 
-        (Util.StringHashtbl.mem tables.versioned_table name)
-        then ("--virtual-"^encname,Some(`Eq,get_cudf_version tables (name,v)))
-        else (encname,Some(`Eq,get_cudf_version tables (name,v)))
+        if is_real tables name then
+          (encname,Some(`Eq,get_cudf_version tables (name,v)))
+        else if is_virtual_and_mentioned tables name then
+          ("--virtual-"^encname,Some(`Eq,get_cudf_version tables (name,v)))
+        else
+          (* this provide will be unused. left here for documentation *)
+          ("--unused-"^encname,Some(`Eq,get_cudf_version tables (name,v)))
     |_ -> fatal "This should never happen : a provide can be either = or unversioned"
   ) l
 
@@ -448,8 +470,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
             sc :: masc 
       in
       let multiarchconflicts =
-        let notselfconflict = (<>) pkg.name in
-        let realpackage = Util.StringHashtbl.mem tables.unit_table in
+        let selfconflict = (==) pkg.name in
         match pkg.multiarch with
         |(`None|`Foreign|`Allowed) -> 
             bind (options.native::options.foreign) (fun arch ->
@@ -460,16 +481,20 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
             bind (options.native::options.foreign) (fun arch ->
               let l =
                 bind originalconflicts (fun ((n,a),c) ->
-                  if realpackage n && notselfconflict n then [((n,a),c)] 
-                  else if (* not a real package && *) notselfconflict n then 
-                    (* if it is not a real package I ignore the constraint *)
-                    [((n,a),None)]
-                  else
-                    (* a virtual package and a self conflict *)
+                  match (is_real tables n),(selfconflict n) with
+                  |true,true (* a real package and a self conflict *)
+                  |true,false -> (* a real package and a not self conflict *)
+                      [((n,a),c)]
+                  |false,false -> (* a virtual package and not a self conflict *)
+                      (* and the constraint is different from None, I ignore the constraint *)
+                      if c == None then [((n,a),None)] else []
+                  |false,true -> (* a virtual package and a self conflict *)
                     try
-                      List.filter_map (fun pn ->
-                        if pn <> pkg.name then Some((pn,a),None) else None
-                      ) (SSet.elements !(Util.StringHashtbl.find tables.virtual_table n))
+                      if c == None then
+                        List.filter_map (fun pn ->
+                          if pn <> pkg.name then Some((pn,a),None) else None
+                        ) (SSet.elements !(Util.StringHashtbl.find tables.virtual_table n))
+                      else []
                     with Not_found -> []
                 )
               in
