@@ -10,7 +10,7 @@ OBFLAGS := -j 10 -classic-display
 #OBFLAGS := $(OBFLAGS) -tag debug -tag profile
 #OBFLAGS := $(OBFLAGS) -classic-display
 
-all: $(CAMLP4CMXS) $(BYTELIBS) $(ALIBS) $(OPTLIBS) $(CMXSLIBS) man
+all: $(CAMLP4CMXS) cleandoselib $(BYTELIBS) $(ALIBS) $(OPTLIBS) $(CMXSLIBS) man
 	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
 
 fast: $(CAMLP4CMXS) $(OPTLIBS)
@@ -20,6 +20,9 @@ apps:
 	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
 
 DOSELIBS = _build/doselibs
+
+cleandoselib:
+	rm -Rf $(DOSELIBS)
 
 camlp4cmxs:
 	mkdir -p _build
