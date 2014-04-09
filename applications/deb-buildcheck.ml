@@ -39,10 +39,12 @@ module Options = struct
   let dump = StdOpt.str_option ()
   let maforeign = StdOpt.store_true ()
   let noindep = StdOpt.store_true ()
+  let includextra = StdOpt.store_true ()
 
   open OptParser
   add options ~long_name:"defaultedMAforeign" ~help:"Convert Arch:all packages to Multi-Arch: foreign" maforeign;
   add options ~long_name:"DropBuildIndep" ~help:"Drop Build-Indep dependencies" noindep;
+  add options ~long_name:"IncludeExtraSource" ~help:"Include packages with Extra-Source-Only:yes (dropped by default)" includextra;
   add options ~long_name:"dump" ~help:"dump the cudf file" dump;
 
 end
@@ -63,6 +65,13 @@ let main () =
   let hostarch = options.Debian.Debcudf.host in
   let noindep = OptParse.Opt.get Options.noindep in
 
+  let filter_external_sources par =
+    if (OptParse.Opt.get Options.includextra) then true
+    else
+      try not(Debian.Packages.parse_bool (Debian.Packages.assoc "extra-source-only" par))
+      with Not_found -> true
+  in
+
   let pkglist, srclist =
     match posargs with
     |[] | [_] -> fatal 
@@ -71,7 +80,7 @@ let main () =
     |l -> 
         begin match List.rev l with
         |h::t ->
-          let srclist = Boilerplate.deb_load_source ~noindep buildarch hostarch h in
+          let srclist = Boilerplate.deb_load_source ~filter:filter_external_sources ~noindep buildarch hostarch h in
           let pkglist = Deb.input_raw t in
           (pkglist,srclist)
         |_ -> fatal "An impossible situation occurred ?!#"

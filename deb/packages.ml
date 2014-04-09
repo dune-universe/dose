@@ -25,6 +25,7 @@ type package = {
   multiarch : Format822.multiarch ;
   essential : bool;
   build_essential : bool;
+  extra_source_only : bool;
   priority : string;
   source : (Format822.name * Format822.version option) ;
   depends : Format822.vpkgformula ;
@@ -45,6 +46,7 @@ let default_package = {
   architecture = "";
   multiarch = `None;
   essential = false;
+  extra_source_only = false;
   build_essential = false;
   priority = "";
   depends = [];
@@ -153,6 +155,7 @@ let parse_package_stanza filter archs extras par =
       source = parse_s ~opt:("",None) parse_source "Source" par;
 
       essential = parse_s ~opt:false parse_bool "Essential" par;
+      extra_source_only = parse_s ~opt:false parse_bool "Extra-Source-Only" par;
       build_essential = parse_s ~opt:false parse_bool "Build-Essential" par;
       priority = parse_s ~opt:"" parse_string "Priority" par;
 
