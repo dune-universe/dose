@@ -9,7 +9,7 @@
 (*  exception to the GNU Lesser General Public License applies to this                *)
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
-
+module Pcre = Re_pcre
 open Common
 (*
  version ::= major('.'minor('.'micro('.'qualifier)?)?)?

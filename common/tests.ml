@@ -10,6 +10,8 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
+module Pcre = Re_pcre
+
 open OUnit
 open Common
 
@@ -113,10 +115,11 @@ let test_lookup_packages =
 
 let (test_encode, test_decode) =
   (* Some useful very long strings for testing encoding and decoding. *)
-  let a_lot_of =  (* a huge number *)
+(*  let a_lot_of =  (* a huge number *)
     (Pcre.config_match_limit + 111)
   in
-  let a_lot_of_a           = String.make a_lot_of 'a'
+  *)
+  let a_lot_of_a           = String.make 10000 'a'
   (* This test takes too much time... 
   and a_lot_of_pipes       = String.make a_lot_of '|' in
   let a_lot_of_hexed_pipes = ExtLib.String.replace_chars (fun _ -> "%7c") a_lot_of_pipes *)

@@ -76,9 +76,9 @@ if test "$OCAML_PKG_extlib" = "no"; then
  AC_MSG_ERROR([Please install OCaml findlib module 'extlib'.])
 fi
 
-AC_CHECK_OCAML_PKG([pcre])
-if test "$OCAML_PKG_pcre" = "no"; then
- AC_MSG_ERROR([Please install OCaml findlib module 'pcre'.])
+AC_CHECK_OCAML_PKG([re.pcre])
+if test "$OCAML_PKG_re.pcre" = "no"; then
+ AC_MSG_ERROR([Please install OCaml findlib module 're.pcre'.])
 fi
 
 AC_ARG_WITH(parmap,
@@ -293,7 +293,7 @@ AC_SUBST(CPPFLAGS)
 AC_SUBST(LDFLAGS)
 
 AC_ARG_WITH(experimental,
-        [ --with-xperimental ],
+        [ --with-experimental ],
         BUILD_EXP=yes,
         BUILD_EXP=no)
 if test "$BUILD_EXP" = "yes" ; then

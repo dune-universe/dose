@@ -12,6 +12,8 @@
 (*  library, see the COPYING file for more information.                   *)
 (**************************************************************************)
 
+module Pcre = Re_pcre
+
 open ExtLib
 open Common
 

@@ -12,6 +12,8 @@
 (*  library, see the COPYING file for more information.                   *)
 (**************************************************************************)
 
+module Pcre = Re_pcre
+
 open ExtLib
 include Util.Logging(struct let label = __FILE__ end) ;;
 

@@ -10,7 +10,7 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-
+module Pcre = Re_pcre
 (* Remember the original hashtable module from Ocaml standard library,
     whose name will be overriden by opening Extlib. *)
 module OCAMLHashtbl = Hashtbl
