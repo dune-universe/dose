@@ -151,8 +151,8 @@ let init_versioned_table table pkg =
 (* collect all versions mentioned anywhere in the universe, including source fields *)
 let init_versions_table table pkg =
   let conj_iter l =
-    List.iter (fun ((name,_),sel) ->
-      match CudfAdd.cudfop sel with
+    List.iter (fun ((name,_),constr) ->
+      match CudfAdd.cudfop constr with
       |None -> ()
       |Some(_,version) -> add_v table (version,name) ()
     ) l
@@ -246,12 +246,12 @@ let get_real_version tables (name,cudfversion) =
 
 let loadl ?(enc=false) tables l =
   List.flatten (
-    List.map (fun ((name,aop),sel) ->
+    List.map (fun ((name,aop),constr) ->
       let encname = 
         let n = match aop with Some a -> name^":"^a | None -> name in
         if enc then CudfAdd.encode n else n
       in
-      match CudfAdd.cudfop sel with
+      match CudfAdd.cudfop constr with
       |None ->
           if (Util.StringHashtbl.mem tables.virtual_table name) &&
           (Util.StringHashtbl.mem tables.versioned_table name) then
@@ -280,9 +280,9 @@ let loadlc ?(enc=false) tables name l =
   sc::(loadl ~enc tables l)
 
 let loadlp ?(enc=false) tables l =
-  List.map (fun ((name,_),sel) ->
+  List.map (fun ((name,_),constr) ->
     let encname = if enc then CudfAdd.encode name else name in
-    match CudfAdd.cudfop sel with
+    match CudfAdd.cudfop constr with
     |None  ->
         if (Util.StringHashtbl.mem tables.unit_table name) || 
         (Util.StringHashtbl.mem tables.versioned_table name)
