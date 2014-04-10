@@ -119,6 +119,14 @@ Cmd: ./apt-cudf.native -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: 822
 Printer: 822
 
+Name: deb-coinstall-bug-16979
+Group: distcheck
+Expected: tests/applications/dose-tests/deb-coinstall-bug-16979
+Input: --bg=tests/DebianPackages/sid.packages.bz2 tests/deb/misc/deb-install-16959.edsp
+Cmd: ./deb-coinstall.native -v --failures --explain --deb-native-arch=amd64 
+Type: deb-coinstall
+Printer: text
+
 Name: failure_distcheck
 Group: distcheck
 Expected: tests/applications/dose-tests/distcheck_test_failure
