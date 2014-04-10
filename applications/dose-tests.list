@@ -23,6 +23,14 @@ Cmd: ./apt-cudf.native --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: 822
 Printer: 822
 
+Name: apt_cudf_multiarch_bug_16959
+Group: apt-cudf
+Expected: tests/applications/dose-tests/multiarch-bug-16959
+Input: tests/deb/edsp/multiarch-bug-16959.edsp
+Cmd: ./apt-cudf.native -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Type: 822
+Printer: 822
+
 Name: apt_cudf_multiarch_same_versioned_conflict
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-same-versioned-conflict
@@ -63,7 +71,7 @@ Cmd: ./apt-cudf.native -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: 822
 Printer: 822
 
-Name: apt_cudf_multiarch_same_conflictsi_virtual
+Name: apt_cudf_multiarch_same_conflicts_virtual
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-same-conflicts-virtual
 Input: tests/deb/edsp/multiarch-same-conflicts-virtual.edsp
@@ -110,6 +118,14 @@ Input: tests/deb/edsp/multiarch-allowed.edsp
 Cmd: ./apt-cudf.native -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: 822
 Printer: 822
+
+Name: deb-coinstall-bug-16979
+Group: distcheck
+Expected: tests/applications/dose-tests/deb-coinstall-bug-16979
+Input: --bg=tests/DebianPackages/sid.packages.bz2 tests/deb/misc/deb-install-16959.edsp
+Cmd: ./deb-coinstall.native -v --failures --explain --deb-native-arch=amd64 
+Type: deb-coinstall
+Printer: text
 
 Name: failure_distcheck
 Group: distcheck
