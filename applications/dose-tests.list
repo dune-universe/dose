@@ -23,6 +23,14 @@ Cmd: ./apt-cudf.native --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: 822
 Printer: 822
 
+Name: apt_cudf_multiarch_bug_16959
+Group: apt-cudf
+Expected: tests/applications/dose-tests/multiarch-bug-16959
+Input: tests/deb/edsp/multiarch-bug-16959.edsp
+Cmd: ./apt-cudf.native -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Type: 822
+Printer: 822
+
 Name: apt_cudf_multiarch_same_versioned_conflict
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-same-versioned-conflict
