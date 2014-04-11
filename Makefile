@@ -206,6 +206,6 @@ man:
 
 upload: doc
 	(cd doc && $(MAKE) upload)
-	rsync -avz dose3.docdir/ scm.gforge.inria.fr:/home/groups/dose/htdocs/doc/api/
+	rsync -avz -O dose3.docdir/ scm.gforge.inria.fr:/home/groups/dose/htdocs/doc/api/
 
 .PHONY: all opt clean top-level headers test tags install uninstall dist doc man
