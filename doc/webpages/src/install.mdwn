@@ -8,7 +8,7 @@ Dose3 needs ocaml >= 3.11.2 . On debian, dose3 **does not compile** on debian le
 Required libraries ( DEBIAN / RPM ) :
 
 - libextlib-ocaml-dev / ocaml-extlib-devel
-- libpcre-ocaml-dev / ??
+- libre-ocaml-dev / ??
 - camlp4
  
 Additional libraries (enable compilation with --with-<library>) :
@@ -25,7 +25,7 @@ Additional libraries (enable compilation with --with-<library>) :
 - libbenchmark-ocaml-dev (for --with-benchmark)
  
 To use rpm support, dose3 needs librpm > 4.6
-To use ocamlgraph support, dose3 needs libocamlgraph-ocaml-dev >= 1.5.1
+To use ocamlgraph support, dose3 needs libocamlgraph-ocaml-dev >= 1.8.4
 
 Compile
 -------
@@ -44,13 +44,10 @@ the configure script accepts many optional arguments to enable different feature
 * --with-xml
 * --with-ocamlgraph
 * --with-parmap
-* --with-sqlite
-* --with-postgresql
 * --with-zip
 * --with-bz2
 * --with-oUnit
 * --with-curl
-* --with-experimental (not working at the moment?)
  
 [[libcudf|cudf]] is included in the source tree of dose3 available by git but
 not in the dose3 release tarball. By default dose3 uses the system wide version
