@@ -218,7 +218,7 @@ let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") buildarch h
      * and crossbuild-essential-$hostarch. When compiling natively, implicitly
      * depend on build-essential *)
     let build_essential = if buildarch<>hostarch then
-      [[(("build-essential", Some buildarch), None)];[(("crossbuild-essential-"^hostarch, None), None)]]
+      [[(("build-essential", Some buildarch), None)];[(("crossbuild-essential-"^hostarch, Some buildarch), None)]]
     else
       [[(("build-essential", Some buildarch), None)]]
     in
