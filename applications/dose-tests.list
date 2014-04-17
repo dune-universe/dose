@@ -79,6 +79,14 @@ Cmd: ./apt-cudf.native -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: 822
 Printer: 822
 
+Name: apt_cudf_multiarch_same_conflicts_virtual_malformed
+Group: apt-cudf
+Expected: tests/applications/dose-tests/multiarch-same-conflicts-virtual-malformed
+Input: tests/deb/edsp/multiarch-same-conflicts-virtual-malformed.edsp
+Cmd: ./apt-cudf.native -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Type: 822
+Printer: 822
+
 Name: apt_cudf_multiarch_same_no_deps
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-same-no-deps
