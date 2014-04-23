@@ -531,8 +531,8 @@ let test_mapping =
 
 (* Useful test functions *)
 
-let returns_result function_to_test expected_result =
-  (fun args () -> assert_equal (function_to_test args) expected_result)
+let returns_result ?(printer=(fun _ -> "(FIXME)")) function_to_test expected_result =
+  (fun args () -> assert_equal ~printer (function_to_test args) expected_result)
 and raises_failure function_to_test failure_text =
   (fun args () -> assert_raises (Failure failure_text) (fun () -> function_to_test args) )
 
@@ -797,7 +797,8 @@ let test_sources2packages =
     let src = List.find (fun s -> s.Packages.name = src) sources in
     src.Packages.depends
   in
-  let returns = returns_result function_to_test in
+  let printer = Printer.string_of_vpkgformula in
+  let returns = returns_result ~printer function_to_test in
   [
     (
       "any/native", "src:source1", returns [
