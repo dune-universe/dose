@@ -792,7 +792,8 @@ let test_sources2packages =
   let data = IO.input_string test_sources_input in
   let packagelist = Sources.parse_sources_in "" data in
   let hostarch = "amd64" in
-  let sources = Sources.sources2packages ~profiles:true hostarch packagelist in
+  let buildarch = "amd64" in
+  let sources = Sources.sources2packages ~profiles:true buildarch hostarch packagelist in
   let function_to_test src =
     let src = List.find (fun s -> s.Packages.name = src) sources in
     src.Packages.depends
@@ -802,7 +803,7 @@ let test_sources2packages =
   [
     (
       "any/native", "src:source1", returns [
-        [(("build-essential", Some "native"), None)];
+        [(("build-essential", Some hostarch), None)];
         [(("bin1", None), None)];
         [(("bin2", Some "any"), None)];
         [(("bin3", Some "native"), None)]
@@ -810,14 +811,14 @@ let test_sources2packages =
     );
     (
       "default", "src:source2", returns [
-        [(("build-essential", Some "native"), None)];
+        [(("build-essential", Some hostarch), None)];
         [(("bin1", None), None)];
         [(("bin2", None), None)]
       ]
     );
     (
       "stage1", "src-stage1:source2", returns [
-        [(("build-essential", Some "native"), None)];
+        [(("build-essential", Some hostarch), None)];
         [
           (("bin2", None), None);
           (("bin3", None), None)
@@ -826,7 +827,7 @@ let test_sources2packages =
     );
     (
       "indep", "src:source3", returns [
-        [(("build-essential", Some "native"), None)];
+        [(("build-essential", Some hostarch), None)];
         [(("bin3", Some "native"), None)];
         [(("bin1",None), None)];
         [(("bin2",None), None)]
