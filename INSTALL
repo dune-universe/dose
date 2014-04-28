@@ -33,8 +33,6 @@ OR
 
 to compile the core dose library.
 
-==== Compile ====
-
 To compile from git :
 aclocal -I m4
 autoconf
@@ -147,7 +145,11 @@ make
 make dist
 
 How to run the tests
-----------------
+--------------------
+The test script of the applications needs:
+python
+python-yaml
+
 ./configure --without-libcudf --with-xml --with-curl --with-ocamlgraph \
   --with-zip --with-oUnit --with-bz2 --with-rpm4
 make
