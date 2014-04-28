@@ -463,34 +463,33 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
             bind (options.native::options.foreign) (fun arch ->
               let l =
                 bind originalconflicts (fun ((n,a),c) ->
-		  debug "M-A-Same: examining pkg %s, conflicting with package %s (self confl = %b)" pkg.name n (selfconflict ((n,a),c));
-		  match realpackage n, selfconflict ((n,a),c) with
-		    true,false  -> [((n,a),c)]     (* real conflict *)
-		  | true, true  -> []            (* self conflict on real package, drop it *)
-		  | false,false -> 
-		      begin
-			match c with 
-			  None -> [((n,a),None)] (* virtual conflict *)
-			| _ -> []                (* real conflict on non-existent package, drop it *)
-		      end
-		  | false, true ->               (* a virtual package and a self conflict *)
-                    begin
-		      debug "M-A-Same: pkg %s has a self-conflict via virtual package: %s" pkg.name n;
-		      try
-			List.filter_map 
-			  (fun pn ->
-                            if pn <> pkg.name 
-			    then (debug "M-A-Same: adding conflict on real package %s for %s" pn pkg.name; Some((pn,a),None) )
-			    else None
-			  ) (SSet.elements !(Util.StringHashtbl.find tables.virtual_table n))
-                      with Not_found -> []
-		    end
+                  debug "M-A-Same: examining pkg %s, conflicting with package %s (self confl = %b)" pkg.name n (selfconflict ((n,a),c));
+                  match realpackage n, selfconflict ((n,a),c) with
+                  |true,false  -> [((n,a),c)]  (* real conflict *)
+                  |true, true  -> []           (* self conflict on real package, drop it *)
+                  |false,false ->
+                      begin match c with 
+                      |None -> [((n,a),None)] (* virtual conflict *)
+                      |_ -> []                (* real conflict on non-existent package, drop it *)
+                      end
+                  |false, true ->              (* a virtual package and a self conflict *)
+                      begin
+                        debug "M-A-Same: pkg %s has a self-conflict via virtual package: %s" pkg.name n;
+                        try
+                          List.filter_map (fun pn ->
+                            if pn <> pkg.name then begin
+                              debug "M-A-Same: adding conflict on real package %s for %s" pn pkg.name; 
+                              Some((pn,a),None)
+                            end else None
+                          ) (SSet.elements !(Util.StringHashtbl.find tables.virtual_table n))
+                        with Not_found -> []
+                      end
                 )
               in
-	      debug "M-A-Same : %s produces (Debian) conflicts: %s" pkg.name (Printer.string_of_vpkglist l);
+              debug "M-A-Same : %s produces (Debian) conflicts: %s" pkg.name (Printer.string_of_vpkglist l);
               let l' = add_arch_l options.native arch (loadl tables l) in
-	      debug "M-A-Same : %s produces (CUDF) conflicts: %s" pkg.name (Cudf_types_pp.string_of_vpkglist l');
-	      l'
+              debug "M-A-Same : %s produces (CUDF) conflicts: %s" pkg.name (Cudf_types_pp.string_of_vpkglist l');
+              l'
             )
       in
       multiarchconflicts @ multiarchconstraints
