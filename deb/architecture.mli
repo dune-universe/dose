@@ -26,3 +26,10 @@
 *)
 val src_matches_arch: string -> string -> bool
 
+(** fill the lookup table mapping debian architectures to debian triplets
+ *  this function is called by src_matches_arch without supplying anything
+ *  for the optional ttfile and ctfile arguments. If they are not None,
+ *  then they can point to a file like /usr/share/dpkg/triplettable or
+ *  /usr/share/dpkg/cputable respectively.
+ *)
+val read_triplettable: ?ttfile:(string option) -> ?ctfile:(string option) -> unit -> unit

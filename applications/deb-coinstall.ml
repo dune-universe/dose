@@ -41,14 +41,19 @@ module Options = struct
   include Boilerplate.DistribOptions;;
   (* remove other not used --deb options *)
   let default = List.remove Boilerplate.DistribOptions.default_options "deb-host-arch" in
+  let default = ["deb-triplettable";"deb-cputable"]@default in
   Boilerplate.DistribOptions.add_options ~default options ;;
   
   let sources = StdOpt.str_option ()
   let dump = StdOpt.str_option ()
+  let triplettable = StdOpt.str_option ()
+  let cputable = StdOpt.str_option ()
 
   open OptParser
   add options ~long_name:"src" ~help:"Associate Sources file" sources;
   add options ~long_name:"dump" ~help:"dump the cudf file" dump;
+  add options ~long_name:"deb-triplettable" ~help:"Path to an architecture triplet table like /usr/share/dpkg/triplettable" triplettable;
+  add options ~long_name:"deb-cputable" ~help:"Path to a cpu table like /usr/share/dpkg/cputable" cputable;
 
 end
 
@@ -67,6 +72,18 @@ let main () =
   let options = Options.set_deb_options () in
 
   let (fg,bg) = Options.parse_cmdline (`Deb,false) posargs in
+
+  if (((OptParse.Opt.is_set Options.triplettable)
+       || OptParse.Opt.is_set Options.cputable)
+      && (OptParse.Opt.is_set Options.sources)) then begin
+    let ttfile = if OptParse.Opt.is_set Options.triplettable then
+        Some (OptParse.Opt.get Options.triplettable)
+      else None in
+    let ctfile = if OptParse.Opt.is_set Options.cputable then
+        Some (OptParse.Opt.get Options.cputable)
+      else None in
+    Architecture.read_triplettable ~ttfile ~ctfile ()
+  end;
 
   let cudftodeb_table = Hashtbl.create 30000 in
   let cudftosrc_table = Hashtbl.create 30000 in
