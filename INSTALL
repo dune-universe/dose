@@ -1,3 +1,6 @@
+
+==== Dependencies ====
+
 Dose3 needs ocaml >= 3.11.2
 On debian, dose3 **does not compile** on debian lenny.
 
@@ -17,7 +20,18 @@ additional libraries (enable compilation with --with-<library>) :
  - libbenchmark-ocaml-dev (for --with-benchmark)
 
 To use rpm support, dose3 needs librpm > 4.6
-To use ocamlgraph support, dose3 needs libocamlgraph-ocaml-dev >= 1.8.4
+To use ocamlgraph support, dose3 needs libocamlgraph-ocaml-dev >= 1.8.5
+
+opam users need the following packages to compile dose with the default
+options :
+
+- opam install extlib camlbz2 camlzip ocamlgraph extlib ounit re cudf
+
+OR 
+
+- opam install extlib re cudf
+
+to compile the core dose library.
 
 To compile from git :
 aclocal -I m4
@@ -131,7 +145,11 @@ make
 make dist
 
 How to run the tests
-----------------
+--------------------
+The test script of the applications needs:
+python
+python-yaml
+
 ./configure --without-libcudf --with-xml --with-curl --with-ocamlgraph \
   --with-zip --with-oUnit --with-bz2 --with-rpm4
 make

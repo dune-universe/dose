@@ -50,7 +50,8 @@ as --rcone=I<pkgspec>.I<>
 =item B<--depth >I<n> 
 
 In combination with the B<-e>, B<-c> or B<-r> options, this
-specifies the maximum depth for the transitive closure. 
+specifies the maximum depth for the transitive closure.
+ 
 =item B<-T >I<format> 
 
 Specifies the output format to use. Possible values are B<dot> for a graph
