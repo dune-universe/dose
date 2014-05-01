@@ -50,6 +50,8 @@ type result =
 
 type diagnosis = { result : result ; request : request }
 
+type pp = (Cudf.package -> string * string * (string * string) list)
+
 module ResultHash = OcamlHash.Make (
   struct
     type t = reason
