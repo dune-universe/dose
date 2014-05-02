@@ -96,14 +96,23 @@ let execsolver exec_pat criteria cudf =
 
   notice "%s" cmd;
 
+  (* Tell OCaml we want to capture SIGCHLD                       *)
+  (* In case the external solver fails before reading its input, *)
+  (* this will raise a Unix.EINTR error which is captured below  *)
+  Sys.set_signal Sys.sigchld (Sys.Signal_handle (fun _ -> ()));
+
   let env = Unix.environment () in
   let (cin,cout,cerr) = Unix.open_process_full cmd env in
 
   Util.Timer.start timer3;
-  let solver_in_fd = Unix.openfile solver_in [Unix.O_WRONLY;Unix.O_SYNC] 0 in
-  let oc = Unix.out_channel_of_descr solver_in_fd in
-  Cudf_printer.pp_cudf oc cudf;
-  close_out oc ;
+  begin
+    try
+      let solver_in_fd = Unix.openfile solver_in [Unix.O_WRONLY;Unix.O_SYNC] 0 in
+      let oc = Unix.out_channel_of_descr solver_in_fd in
+      Cudf_printer.pp_cudf oc cudf;
+      close_out oc
+    with Unix.Unix_error (Unix.EINTR,_,_) ->  info "Interrupted by EINTR while executing command '%s'" cmd
+  end;
   Util.Timer.stop timer3 ();
 
   Util.Timer.start timer4;
