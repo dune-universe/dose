@@ -147,4 +147,9 @@ let pp_source oc pkg =
     Printf.fprintf oc "Build-Depends-Indeps: %a\n" pp_builddepformula pkg.build_depends_indep;
   if List.length pkg.build_conflicts_indep > 0 then
     Printf.fprintf oc "Build-Conflicts-Indeps: %a\n" pp_builddeplist pkg.build_conflicts_indep;
+
+  if List.length pkg.build_depends_arch > 0 then
+    Printf.fprintf oc "Build-Depends-Arch: %a\n" pp_builddepformula pkg.build_depends_arch;
+  if List.length pkg.build_conflicts_arch > 0 then
+    Printf.fprintf oc "Build-Conflicts-Arch: %a\n" pp_builddeplist pkg.build_conflicts_arch;
 ;;

@@ -24,8 +24,10 @@ type source = {
   binaries : string list ;
   build_depends : Format822.builddepsformula;
   build_depends_indep : Format822.builddepsformula;
+  build_depends_arch : Format822.builddepsformula;
   build_conflicts : Format822.builddepslist;
   build_conflicts_indep : Format822.builddepslist;
+  build_conflicts_arch : Format822.builddepslist;
 }
 
 let default_source = {
@@ -35,8 +37,10 @@ let default_source = {
   binaries = [];
   build_depends = [];
   build_depends_indep = [];
+  build_depends_arch = [];
   build_conflicts = [];
   build_conflicts_indep = [];
+  build_conflicts_arch = [];
 }
 
 let parse_s = Packages.parse_s
@@ -75,10 +79,14 @@ let parse_package_stanza filter archs par =
       parse_s ~opt:[] ~multi:true parse_builddepsformula "Build-Depends" par; 
     build_depends_indep =
       parse_s ~opt:[] ~multi:true parse_builddepsformula "Build-Depends-Indep" par;
+    build_depends_arch =
+      parse_s ~opt:[] ~multi:true parse_builddepsformula "Build-Depends-Arch" par;
     build_conflicts = 
       parse_s ~opt:[] ~multi:true parse_builddepslist "Build-Conflicts" par;
     build_conflicts_indep = 
-      parse_s ~opt:[] ~multi:true parse_builddepslist "Build-Conflicts-Indep" par 
+      parse_s ~opt:[] ~multi:true parse_builddepslist "Build-Conflicts-Indep" par;
+    build_conflicts_arch =
+      parse_s ~opt:[] ~multi:true parse_builddepslist "Build-Conflicts-Arch" par
     }
   in
   try
@@ -183,8 +191,8 @@ let sources2packages ?(profiles=[]) ?(noindep=false) ?(src="src") buildarch host
       Packages.name = src ^ sep ^ srcpkg.name ;
       source = (srcpkg.name, Some srcpkg.version);
       version = srcpkg.version;
-      depends = build_essential @ (depends (depends_indep @ srcpkg.build_depends));
-      conflicts = conflicts (conflicts_indep @ srcpkg.build_conflicts);
+      depends = build_essential @ (depends (depends_indep @ srcpkg.build_depends @ srcpkg.build_depends_arch));
+      conflicts = conflicts (conflicts_indep @ srcpkg.build_conflicts @ srcpkg.build_conflicts_arch);
       architecture = String.concat "," srcpkg.architecture;
       extras = extras_profiles @ [("Type",src)]
     }
