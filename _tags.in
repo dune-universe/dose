@@ -64,6 +64,7 @@ true: -traverse
 <experimental/strongpreds.*>: @USE_RPM@, use_algo, use_boilerplate
 <experimental/cudftodeb.*>: use_boilerplateNoRpm
 <experimental/cudf-solver.*>: use_algo, use_boilerplateNoRpm
+<experimental/test-solver.*>: use_algo, use_boilerplateNoRpm
 <experimental/treinen-test.*>: use_algo, use_boilerplateNoRpm
 <experimental/partition.*>: use_algo, package(buddy), use_boilerplateNoRpm
 <experimental/cnftocudf.*>: use_boilerplateNoRpm
