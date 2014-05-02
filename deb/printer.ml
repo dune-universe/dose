@@ -68,6 +68,8 @@ let pp_package oc pkg =
     Printf.fprintf oc "Provides: %a\n" pp_vpkglist pkg.provides;
   if List.length pkg.depends > 0 then
     Printf.fprintf oc "Depends: %a\n" pp_vpkgformula pkg.depends;
+  if List.length pkg.pre_depends > 0 then
+    Printf.fprintf oc "Pre-Depends: %a\n" pp_vpkgformula pkg.pre_depends;
   if List.length pkg.conflicts > 0 then
     Printf.fprintf oc "Conflicts: %a\n" pp_vpkglist pkg.conflicts;
   if List.length pkg.breaks > 0 then
