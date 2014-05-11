@@ -44,7 +44,7 @@ IFDEF HASPARMAP THEN
 END
 
   add options ~long_name:"checkonly"
-    ~help:"Check only these package ex. sn1 (=sv1),sn2 (=sv2)" checkonly;
+    ~help:"Check only these packages ex. sn1 (=sv1),sn2 (=sv2)" checkonly;
   add options ~long_name:"broken" ~short_name:'b' 
     ~help:"Print the list of broken packages" brokenlist;
   add options ~long_name:"downgrade" ~short_name:'d' 

@@ -231,7 +231,7 @@ let cudf_parse_input urilist =
   |[[p]] -> cudf_load_list (unpack p)
   |l ->
     if List.length (List.flatten l) > 1 then
-      warning "more then one cudf speficied on the command line";
+      warning "more then one cudf specified on the command line";
     let p = List.hd (List.flatten l) in 
     cudf_load_list (unpack p)
 ;;
@@ -242,7 +242,7 @@ let edsp_parse_input options urilist =
   |[[p]] -> edsp_load_list options (unpack p)
   |l ->
     if List.length (List.flatten l) > 1 then
-      warning "more then one cudf speficied on the command line";
+      warning "more then one cudf specified on the command line";
     let p = List.hd (List.flatten l) in 
     edsp_load_list options (unpack p)
 ;;

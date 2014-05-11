@@ -31,7 +31,7 @@ module Options = struct
   open OptParser
   add options ~long_name:"dot" ~help:"Print the strong dependency graph in dot format" dot;
   add options ~long_name:"detrans" ~help:"Print the transitive reduction of the strong dependency graph" detrans;
-  add options ~long_name:"checkonly" ~help:"Check only these package" checkonly;
+  add options ~long_name:"checkonly" ~help:"Check only these packages" checkonly;
   add options ~long_name:"conj-only" ~help:"Use the conjunctive graph only" conj_only;
 
 end

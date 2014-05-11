@@ -176,7 +176,7 @@ module InputOptions = struct
 
       if List.mem "checkonly" default then
         add options ~group ~long_name:"checkonly" 
-        ~help:"Check only these package" checkonly;
+        ~help:"Check only these packages" checkonly;
 
       if List.mem "trim" default then
         add options ~group ~long_name:"trim" 

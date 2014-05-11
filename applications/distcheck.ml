@@ -85,7 +85,7 @@ let main () =
 
   if OptParse.Opt.is_set Options.checkonly && 
     OptParse.Opt.is_set Options.coinst then
-      fatal "--checkonly and --coinst cannot be speficied together";
+      fatal "--checkonly and --coinst cannot be specified together";
 
   let checklist = 
     if OptParse.Opt.is_set Options.checkonly then begin
