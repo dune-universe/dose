@@ -1,3 +1,16 @@
+dose3 (3.2) UNRELEASED; urgency=low
+
+  * Support for debian multi-arch format
+  * Add deb-coinstall to che the coninstallation of multiple debian packages
+  * Numerous bug fixes to buildcheck
+  * Drop PCRE in favour of Ocaml Re library
+  * New framework to run unit-tests
+  * Support for EDSP 0.5
+  * bump dependency to cudf 0.7
+  * bump depepdency to ocamlgraph 1.8.5
+
+ -- Pietro Abate <pietro.abate@pps.jussieu.fr>  Wed, 14 May 2014 13:13:06 +0200
+
 dose3 (3.1.4) UNRELEASED; urgency=low
   
   * Add new option to deb-buildcheck (--defaultedMAforeign)
