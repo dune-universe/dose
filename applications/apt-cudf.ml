@@ -221,6 +221,7 @@ let parse_solver_spec filename =
 let main () =
   let timer1 = Util.Timer.create "parsing" in
   let timer2 = Util.Timer.create "conversion" in
+  let timer3 = Util.Timer.create "solution" in
   let args = OptParse.OptParser.parse_argv Options.options in
   Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
   Boilerplate.enable_bars (OptParse.Opt.get Options.progress) [] ;
@@ -361,6 +362,7 @@ let main () =
     close_out oc
   end;
 
+  Util.Timer.start timer3;
   let diff = CudfDiff.diff universe soluniv in
   let empty = ref true in
   let cache = CudfAdd.Cudf_hashtbl.create 1023 in
@@ -397,6 +399,7 @@ let main () =
       end
     with Not_found -> ()
   ) cudf_request.Cudf.install;
+  Util.Timer.stop timer3 ();
 
   if OptParse.Opt.get Options.explain then begin
     let (i,u,d,r) = CudfDiff.summary universe diff in

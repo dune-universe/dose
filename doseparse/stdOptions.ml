@@ -309,5 +309,3 @@ module DistribOptions = struct
     let eclipse_group = add_group options "Eclipse Specific Options" in
 *)
 end
-
-

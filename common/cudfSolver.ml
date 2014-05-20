@@ -77,14 +77,15 @@ let check_exit_status cmd = function
   |Unix.WSTOPPED i  -> fatal "command '%s' stopped by signal %d" cmd i
 ;;
 
+let timer3 = Util.Timer.create "cudfio" ;;
+let timer4 = Util.Timer.create "solver" ;;
+
 (** [execsolver] execute an external cudf solver.
     exec_pat : execution string
     cudf : a cudf document (preamble, universe, request)
     criteria : optimization criteria
 *)
 let execsolver exec_pat criteria cudf = 
-  let timer3 = Util.Timer.create "cudfio" in
-  let timer4 = Util.Timer.create "solver" in
   let (_,universe,_) = cudf in
 
   let tmpdir = mktmpdir "tmp.apt-cudf.XXXXXXXXXX" in
