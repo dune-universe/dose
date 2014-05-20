@@ -15,6 +15,45 @@
 open ExtLib
 open Common
 
+include Util.Logging(struct let label = __FILE__ end) ;;
+
+let get_architectures native_edsp foreign_edsp native_opt foreign_opt =
+  let cmd = "apt-config dump" in
+  let arch = ref None in
+  let archs = ref [] in
+  let aux () =
+    let out = Std.input_list (Unix.open_process_in cmd) in
+    List.iter (fun s ->
+      let key, value =  ExtString.String.split s " " in
+      if key = "APT::Architecture" then
+        arch := Some(ExtString.String.slice ~first: 1 ~last:(-2) value)
+      else if key = "APT::Architectures::" || key = "APT::Architectures" then
+        let s = ExtString.String.slice ~first:1 ~last:(-2) value in
+        if s <> "" then
+          archs := (ExtString.String.slice ~first:1 ~last:(-2) value)::!archs
+    ) out;
+    debug "Atomatically set native as %s and foreign archs as %s" (Option.get !arch) (String.concat "," !archs);
+  in
+  let (na,fa) =
+    match (native_edsp,foreign_edsp),(native_opt,foreign_opt) with
+    |(None,[]),(None,None)    -> aux () ; (!arch,List.filter ((<>) (Option.get !arch)) !archs) (* EDSP 0.4 + no options *)
+    |(_,l),(Some a,None)      -> (Some a,l)  (* EDSP 0.5 + overrride options *)
+    |(Some a,_),(None,Some l) -> (Some a,l)  (* EDSP 0.5 + overrride options *)
+    |(_,_),(Some a,Some l)    -> (Some a,l)  (* EDSP 0.5 / 0.4 + overrride options *)
+    |(Some a,l),(None,None)   -> (Some a,l)  (* EDSP 0.5 + no options *)
+    |(None,[]),(None,_)       -> fatal "Native arch is missing while Foregin archs are specified"
+    |_,_ -> fatal "Unable to compute native and foreign arch information"
+  in
+  begin match (na,fa) with
+  |(Some a, l) when (native_edsp,foreign_edsp) = (None,[]) || (native_edsp,foreign_edsp) = (Some a, l) ->
+      notice "Setting Native Architecture to %s and Foreign Architectures to %s" a (String.concat "," l)
+  |(Some a, l) ->
+      info "Overriding EDSP. Setting Native Architecture to %s and Foreign Architectures to %s" a (String.concat "," l)
+  |_ -> fatal "Error Setting Native Architecture"
+  end;
+  (na,fa)
+;;
+
 let pp_versions_table fmt (from_cudf, pkglist) =
   List.iter (fun pkg ->
     let (p,v) = from_cudf (pkg.Cudf.package,pkg.Cudf.version) in

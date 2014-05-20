@@ -315,8 +315,8 @@ let main () =
   let dump = OptParse.Opt.get Options.dump in
 
   let archs =
-    if options.Debian.Debcudf.native <> "" then
-      options.Debian.Debcudf.native :: options.Debian.Debcudf.foreign
+    if not(Option.is_none options.Debian.Debcudf.native) then
+      (Option.get options.Debian.Debcudf.native) :: options.Debian.Debcudf.foreign
     else []
   in
   let packagelist = Debian.Packages.input_raw ~archs args in

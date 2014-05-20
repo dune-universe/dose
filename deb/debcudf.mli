@@ -18,9 +18,9 @@ type tables
 type extramap = (string * (string * Cudf_types.typedecl1)) list
 type options = {
   extras_opt : extramap ;
-  native : string ;
-  foreign : string list ;
-  host : string ;
+  native : string option; (** the native architecture *)
+  foreign : string list ; (** list of foreign architectures *)
+  host : string option;   (** the host architecture - cross compile *)
   ignore_essential : bool ;
 }
 

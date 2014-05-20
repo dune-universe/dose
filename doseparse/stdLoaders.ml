@@ -71,19 +71,18 @@ let csw_load_list dll =
   (preamble,cll,request,from_cudf,to_cudf)
  
 let edsp_load_list options file =
-  (*
-  let archs = 
-    if options.Debian.Debcudf.native <> "" then
-      options.Debian.Debcudf.native :: options.Debian.Debcudf.foreign 
-    else []
-  in
-  *)
   let (request,pkglist) = Debian.Edsp.input_raw file in
-  let archs = request.Debian.Edsp.architecture::request.Debian.Edsp.architectures in
+  let (native_arch,foreign_archs) =
+    StdUtils.get_architectures
+      request.Debian.Edsp.architecture
+      request.Debian.Edsp.architectures
+      options.Debian.Debcudf.native
+      (match options.Debian.Debcudf.foreign with [] -> None | l -> Some l)
+  in
   let options = { 
     options with 
-    Debian.Debcudf.native = request.Debian.Edsp.architecture;
-    Debian.Debcudf.foreign = request.Debian.Edsp.architectures
+    Debian.Debcudf.native = native_arch;
+    Debian.Debcudf.foreign = foreign_archs
   } in
   let tables = Debian.Debcudf.init_tables pkglist in
   let preamble =
@@ -195,8 +194,8 @@ let unpack (_,(_,_,_,_,file),_) = file
 
 let deb_parse_input options ?(status=[]) urilist =
   let archs = 
-    if options.Debian.Debcudf.native <> "" then
-      options.Debian.Debcudf.native :: options.Debian.Debcudf.foreign 
+    if not(Option.is_none options.Debian.Debcudf.native) then
+      (Option.get options.Debian.Debcudf.native) :: options.Debian.Debcudf.foreign 
     else []
   in
   let dll = 

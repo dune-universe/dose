@@ -10,7 +10,7 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-(** Representation of a apt-get <-> solvers protocol edsp 0.3 *)
+(** Representation of a apt-get <-> solvers protocol edsp > 0.4 *)
 
 module Pcre = Re_pcre
 open ExtLib
@@ -22,7 +22,7 @@ type request = {
   request : string;
   install : Format822.vpkg list;
   remove : Format822.vpkg list;
-  architecture : Format822.architecture;
+  architecture : Format822.architecture option;
   architectures : Format822.architectures;
   autoremove : bool;
   upgrade : bool;
@@ -36,7 +36,7 @@ let default_request = {
   request = "";
   install = [];
   remove = [];
-  architecture = "";
+  architecture = None;
   architectures = [];
   autoremove = false;
   upgrade = false;
@@ -50,9 +50,9 @@ let default_request = {
 let from_apt_request arch request = function
   |Apt.Install vpkgreqlist ->
       List.fold_left (fun acc -> function
-        |(Some Format822.I, ((n,None),c), _) -> {acc with install = ((n,Some arch),c) :: acc.install}
-        |(Some Format822.R, ((n,None),c), _) -> {acc with remove =  ((n,Some arch),c) :: acc.remove}
-        |(None, ((n,None),c), _) -> {acc with install = ((n,Some arch),c) :: acc.install}
+        |(Some Format822.I, ((n,None),c), _) -> {acc with install = ((n,arch),c) :: acc.install}
+        |(Some Format822.R, ((n,None),c), _) -> {acc with remove =  ((n,arch),c) :: acc.remove}
+        |(None, ((n,None),c), _) -> {acc with install = ((n,arch),c) :: acc.install}
 
         |(Some Format822.I, vpkg, _) -> {acc with install = vpkg :: acc.install}
         |(Some Format822.R, vpkg, _) -> {acc with remove = vpkg :: acc.remove}
@@ -60,9 +60,9 @@ let from_apt_request arch request = function
       ) request vpkgreqlist
   |Apt.Remove vpkgreqlist ->
       List.fold_left (fun acc -> function
-        |(Some Format822.I, ((n,None),c), _) -> {acc with install = ((n,Some arch),c) :: acc.install}
-        |(Some Format822.R, ((n,None),c), _) -> {acc with remove = ((n,Some arch),c) :: acc.remove}
-        |(None, ((n,None),c), _) -> {acc with remove = ((n,Some arch),c) :: acc.remove}
+        |(Some Format822.I, ((n,None),c), _) -> {acc with install = ((n,arch),c) :: acc.install}
+        |(Some Format822.R, ((n,None),c), _) -> {acc with remove = ((n,arch),c) :: acc.remove}
+        |(None, ((n,None),c), _) -> {acc with remove = ((n,arch),c) :: acc.remove}
 
         |(Some Format822.I, vpkg, _) -> {acc with install = vpkg :: acc.install}
         |(Some Format822.R, vpkg, _) -> {acc with remove = vpkg :: acc.remove}
@@ -74,6 +74,7 @@ let from_apt_request arch request = function
 
 let parse_s = Packages.parse_s
 let parse_string (_,s) = s
+let parse_string_opt = function (_,"") -> None | (_,s) -> Some s
 let parse_string_list (_,s) = String.nsplit s " "
 let parse_int_s (_,s) = string_of_int(int_of_string s)
 let parse_req (loc,s) = 
@@ -83,8 +84,7 @@ let parse_req (loc,s) =
 
 let parse_edsp_version (_,s) =
   match String.nsplit s " " with
-  |["EDSP";"0.5"] -> s
-  |["EDSP";"0.4"] -> raise Not_found
+  |["EDSP";s] when (float_of_string s) >= 0.4 -> s
   |_ -> raise Not_found
 
 (*
@@ -115,13 +115,13 @@ let get_architectures native_opt foreign =
 
 let parse_request_stanza par =
   (* request must be parse before any other fields *)
-  let request = parse_s ~err:"(Invalid Request/Compatibility version)" parse_edsp_version "Request" par in
+  let request = parse_s ~err:"(Invalid EDSP version)" parse_edsp_version "Request" par in
   {
     request = request; 
     install = parse_s ~opt:[] parse_req "Install" par;
     remove = parse_s ~opt:[] parse_req "Remove" par;
     upgrade = parse_s ~opt:false Packages.parse_bool "Upgrade" par;
-    architecture = parse_s ~err:"(MISSING ARCH)" Packages.parse_string "Architecture" par;
+    architecture = parse_s ~opt:None parse_string_opt "Architecture" par;
     architectures = parse_s ~opt:[] parse_string_list "Architectures" par;
     distupgrade = parse_s ~opt:false Packages.parse_bool "Dist-Upgrade" par;
     autoremove = parse_s ~opt:false Packages.parse_bool "Autoremove" par;
@@ -175,7 +175,10 @@ let rec packages_parser ?(request=false) (req,acc) p =
     let candidate () = match_field "apt-candidate" par in
     ((inst ()) || (candidate ()))
   in
-  let archs = req.architecture::req.architectures in
+  let archs =
+    if Option.is_none req.architecture then []
+    else (Option.get req.architecture)::req.architectures 
+  in
   match Format822_parser.stanza_822 Format822_lexer.token_822 p.Format822.lexbuf with
   |None -> (req,acc) (* end of file *)
   |Some stanza when request = true -> 
@@ -247,7 +250,7 @@ let tocudf tables ?(options=Debcudf.default_options) ?(inst=false) pkg =
       { pkg with Packages.extras = ("status",s)::pkg.Packages.extras }
     else pkg
   in
-  Debcudf.tocudf tables ~options (* ~inst:(is_installed pkg) *) pkg
+  Debcudf.tocudf tables ~options pkg
 ;;
 
 (* Only one version of a package can be installed at a given time.

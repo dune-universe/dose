@@ -65,11 +65,6 @@ let main () =
   Util.Debug.disable "Depsolver_int";
   Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
 
-  let options = Options.set_deb_options () in
-  let buildarch = options.Debian.Debcudf.native in
-  let hostarch = options.Debian.Debcudf.host in
-  let noindep = OptParse.Opt.get Options.noindep in
-
   let fmt = Format.std_formatter in
   if OptParse.Opt.is_set Options.deb_native_arch then
     Format.fprintf fmt "native-architecture: %s@." (OptParse.Opt.get Options.deb_native_arch)
@@ -81,6 +76,14 @@ let main () =
 
   if OptParse.Opt.is_set Options.deb_host_arch then
     Format.fprintf fmt "host-architecture: %s@." (OptParse.Opt.get Options.deb_host_arch);
+
+  (* we set the Debian.Debcudf options wrt the user provided options *)
+  let options = Options.set_deb_options () in
+  (* buildarch and native arch must be set to some architecture at this point *)
+  let buildarch = Option.get options.Debian.Debcudf.native in
+  (* hostarch and noindep can be None *)
+  let hostarch = match options.Debian.Debcudf.host with None -> "" | Some s -> s in
+  let noindep = OptParse.Opt.get Options.noindep in
 
   let filter_external_sources par =
     if (OptParse.Opt.get Options.includextra) then true

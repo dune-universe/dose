@@ -21,7 +21,7 @@ include Util.Logging(struct let label = "apt-cudf backend" end) ;;
 
 module Options = struct
   open OptParse
-  let description = "apt-get backend (EDSP v. 0.5)"
+  let description = "apt-get backend (EDSP > 0.4)"
   let options = OptParser.make ~description
   include Boilerplate.MakeOptions(struct let options = options end)
 
@@ -32,6 +32,8 @@ module Options = struct
   let criteria = StdOpt.str_option ()
   let explain = StdOpt.store_true ()
   let conffile = StdOpt.str_option ~default:"/etc/apt-cudf.conf" ()
+  let native_arch = StdOpt.str_option ()
+  let foreign_archs = Boilerplate.str_list_option ()
 
   open OptParser
   add options ~long_name:"conf" ~help:"configuration file (default:/etc/apt-cudf.conf)" conffile;
@@ -41,6 +43,8 @@ module Options = struct
   add options ~short_name:'c' ~long_name:"criteria" ~help:"optimization criteria" criteria;
   add options ~short_name:'e' ~long_name:"explain" ~help:"print installation summary" explain;
   add options ~long_name:"human" ~help:"print human readable installation errors" human;
+  add options ~long_name:"native-arch" ~help:"Native architecture" native_arch;
+  add options ~long_name:"foreign-archs" ~help:"Foreign architectures" foreign_archs;
 
 end
 
@@ -244,12 +248,21 @@ let main () =
   
   Util.Timer.start timer1;
   let (request,pkglist) = Edsp.input_raw_ch ch in
+
+  let (native_arch,foreign_archs) = 
+    Boilerplate.get_architectures
+      request.Edsp.architecture
+      request.Edsp.architectures
+      (OptParse.Opt.opt Options.native_arch) 
+      (OptParse.Opt.opt Options.foreign_archs)
+  in
+
   let request =
     match apt_get_cmdline with
     |"" -> request
     |_ -> begin
       let apt_req = Apt.parse_request_apt apt_get_cmdline in
-      Edsp.from_apt_request request.Edsp.architecture {request with Edsp.install = []; remove = []} apt_req
+      Edsp.from_apt_request native_arch {request with Edsp.install = []; remove = []} apt_req
     end
   in
 
@@ -267,8 +280,8 @@ let main () =
   let univ = Hashtbl.create (2*(List.length pkglist)-1) in
   let options = {
     Debcudf.default_options with 
-    Debcudf.native = request.Edsp.architecture;
-    Debcudf.foreign = request.Edsp.architectures }
+    Debcudf.native = native_arch;
+    Debcudf.foreign = foreign_archs }
   in 
   let cudfpkglist = 
     List.filter_map (fun pkg ->

@@ -89,7 +89,7 @@ let main () =
   let cudftosrc_table = Hashtbl.create 30000 in
 
   let deb_load_list options ?(status=[]) sources urilist =
-    let native = options.Debian.Debcudf.native in
+    let native = Option.get options.Debian.Debcudf.native in
     let archs =
       if native <> "" then
         native :: options.Debian.Debcudf.foreign
