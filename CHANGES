@@ -1,11 +1,11 @@
-dose3 (3.2) UNRELEASED; urgency=low
+dose3 (3.2.1) UNRELEASED; urgency=low
 
   * Support for debian multi-arch format
   * Add deb-coinstall to check the coinstallation of multiple debian packages
   * Numerous bug fixes to buildcheck
   * Drop PCRE in favour of Ocaml Re library
   * New framework to run unit-tests
-  * Support for EDSP 0.5
+  * Support for EDSP 0.5 (backward compatibility with EDSP 0.4)
   * bump dependency to cudf 0.7
   * bump dependency to ocamlgraph 1.8.5
 
