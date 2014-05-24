@@ -38,7 +38,7 @@ module Options = struct
   open OptParser
   add options ~long_name:"conf" ~help:"configuration file (default:/etc/apt-cudf.conf)" conffile;
   add options ~long_name:"dump" ~help:"dump the cudf universe and solution" dump;
-  add options ~long_name:"noop" ~help:"Do nothing, implies --dump" noop;
+  add options ~long_name:"noop" ~help:"Do nothing" noop;
   add options ~short_name:'s' ~long_name:"solver" ~help:"external solver" solver;
   add options ~short_name:'c' ~long_name:"criteria" ~help:"optimization criteria" criteria;
   add options ~short_name:'e' ~long_name:"explain" ~help:"print installation summary" explain;
@@ -233,14 +233,6 @@ let main () =
   debug "CUDFSOLVERS=%s" solver_dir;
   (* debug "TMPDIR=%s" waiting for ocaml 4.0 *)
 
-  let solver = 
-    if OptParse.Opt.is_set Options.solver then
-      OptParse.Opt.get Options.solver
-    else 
-      Filename.basename(Sys.argv.(0))
-  in
-  let exec_pat = fst (parse_solver_spec (Filename.concat solver_dir solver)) in
-
   let ch = 
     match args with 
     |[] -> (IO.input_channel stdin)
@@ -278,12 +270,12 @@ let main () =
     CudfAdd.add_properties Debcudf.preamble l
   in
 
-  let univ = Hashtbl.create (2*(List.length pkglist)-1) in
   let options = {
     Debcudf.default_options with 
     Debcudf.native = native_arch;
     Debcudf.foreign = foreign_archs }
   in 
+  let univ = Hashtbl.create (2*(List.length pkglist)-1) in
   let cudfpkglist = 
     List.filter_map (fun pkg ->
       let p = Edsp.tocudf tables ~options pkg in
@@ -297,28 +289,46 @@ let main () =
       end
     ) pkglist 
   in
-
-  let cudfdump = Filename.temp_file "apt-cudf-universe" ".cudf" in
-  if OptParse.Opt.get Options.dump || OptParse.Opt.get Options.noop then begin
-    Printf.printf "Apt-cudf: dump cudf universe in %s\n" cudfdump;
-    let oc = open_out cudfdump in
-    Cudf_printer.pp_preamble oc default_preamble;
-    Printf.fprintf oc "\n";
-    Cudf_printer.pp_packages oc cudfpkglist;
-    close_out oc
-  end;
-
   let universe = 
     try Cudf.load_universe cudfpkglist
     with Cudf.Constraint_violation s ->
       fatal "(CUDF) Malformed universe %s" s
   in
+
+(*
+  let universe = 
+    let initialsize = (2 * (List.length pkglist) - 1 ) in
+    let univcache = Cudf.empty_universe ~size:initialsize () in
+    List.iter (fun pkg ->
+      let p = Edsp.tocudf tables ~options pkg in
+      Hashtbl.add univ (p.Cudf.package,p.Cudf.version) pkg;
+      try Cudf.add_package univcache p
+      with Cudf.Constraint_violation s ->
+(*        warning "Possibly duplicated package (same version, name and architecture) : (%s,%s,%s)"
+          pkg.Packages.name pkg.Packages.version pkg.Packages.architecture;
+          *)
+        fatal "(CUDF) Malformed universe %s" s
+    ) pkglist ;
+    univcache
+  in
+  *)
+
+  let cudfdump = Filename.temp_file "apt-cudf-universe" ".cudf" in
+  if OptParse.Opt.get Options.dump then begin
+    info "Dump cudf universe in %s\n" cudfdump;
+    let oc = open_out cudfdump in
+    Cudf_printer.pp_preamble oc default_preamble;
+    Printf.fprintf oc "\n";
+    Cudf_printer.pp_universe oc universe;
+    close_out oc
+  end;
+
   let cudf_request = Edsp.requesttocudf tables universe request in
   let cudf = (default_preamble,universe,cudf_request) in
   Util.Timer.stop timer2 ();
 
-  if OptParse.Opt.get Options.dump || OptParse.Opt.get Options.noop then begin
-    Printf.printf "Apt-cudf: append cudf request to %s\n" cudfdump;
+  if OptParse.Opt.get Options.dump then begin
+    info "Append cudf request to %s\n" cudfdump;
     let oc = open_out_gen 
       [Open_wronly; Open_append; Open_creat; Open_text]
       0o666 cudfdump 
@@ -328,8 +338,18 @@ let main () =
     close_out oc
   end;
 
-  (* do nothing, we exit here after dumping the universe *)
-  if OptParse.Opt.get Options.noop then exit(0);
+  (* do nothing. *)
+  if OptParse.Opt.get Options.noop then begin
+    info "Noop & Exit."; exit(0)
+  end;
+
+  let solver = 
+    if OptParse.Opt.is_set Options.solver then
+      OptParse.Opt.get Options.solver
+    else 
+      Filename.basename(Sys.argv.(0))
+  in
+  let exec_pat = fst (parse_solver_spec (Filename.concat solver_dir solver)) in
 
   let cmdline_criteria = OptParse.Opt.opt Options.criteria in
   let conffile = OptParse.Opt.get Options.conffile in
@@ -354,7 +374,7 @@ let main () =
 
   if OptParse.Opt.get Options.dump then begin
     let cudfsol = Filename.temp_file "apt-cudf-solution" ".cudf" in
-    Printf.printf "Apt-cudf: dump cudf solution in %s\n" cudfsol;
+    info "Dump cudf solution in %s\n" cudfsol;
     let oc = open_out cudfsol in
     Cudf_printer.pp_preamble oc default_preamble;
     Printf.fprintf oc "\n";

@@ -8,10 +8,6 @@
   in the same style as what dose-distcheck does, if possible (beware
   of apt string mangling)
 
-- use ocaml-magic to identify compressed file types
-
-- remove all references to Str and move to Pcre
-
 - fix common/EdosSolver documentation. For some reason only part of it is
   actually generated
   Thu Jun 17 2010 Pietro Abate <pietro.abate@pps.jussieu.fr>
@@ -25,6 +21,13 @@
   Thu Jun 17 2010 Pietro Abate <pietro.abate@pps.jussieu.fr>
 
 -------------------
+
+- use ocaml-magic to identify compressed file types
+DONE! not using ocaml magic, but reading directly the file header.
+thanks josh !
+
+- remove all references to Str and move to Pcre
+DONE ! removed Pcre in favour of libre
 
 - make all error codes gt 63 reserved for distcheck
 ** DONE !

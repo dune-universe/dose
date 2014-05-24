@@ -7,7 +7,7 @@ DIST_DIR = $(NAME)-$(VERSION)
 DIST_TARBALL = $(DIST_DIR).tar.gz
 
 OBFLAGS := -j 10 -classic-display
-#OBFLAGS := $(OBFLAGS) -tag debug -tag profile
+#OBFLAGS := $(OBFLAGS) -tag profile -tag debug
 #OBFLAGS := $(OBFLAGS) -classic-display
 
 all: $(CAMLP4CMXS) cleandoselib $(BYTELIBS) $(ALIBS) $(OPTLIBS) $(CMXSLIBS) man
