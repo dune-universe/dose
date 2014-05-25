@@ -87,7 +87,7 @@ let pp_pkg fmt (s,univ) =
   try
     let p = CudfAdd.Cudf_set.choose s in
     let pkg = Hashtbl.find univ (p.Cudf.package,p.Cudf.version) in
-    let apt_id = Debian.Packages.assoc "apt-id" pkg.Packages.extras in
+    let apt_id = Debian.Packages.assoc "APT-ID" pkg.Packages.extras in
     Format.fprintf fmt "%s\n" apt_id;
     Format.fprintf fmt "Package: %s\n" pkg.Packages.name;
     Format.fprintf fmt "Version: %s\n" pkg.Packages.version;

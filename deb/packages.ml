@@ -86,7 +86,7 @@ let parse_binarylist = lexbuf_wrapper Packages_parser.vpkglist_top
 
 (* assume n is lowercase *)
 let rec assoc (n : string) = function
-  |(k,v)::_ when (String.lowercase k) = n -> v
+  |(k,v)::_ when (*String.lowercase k*) k = n -> v
   |(k,_)::t -> assoc n t
   |[] -> raise Not_found
 ;;
@@ -98,7 +98,7 @@ exception IgnorePackage of string
  * opt = None && err = Some s -> ParseError s :
  * opt = Some s -> return s *)
 let parse_s ?opt ?err ?(multi=false) f field par =
-  let field = String.lowercase field in
+  (* let field = String.lowercase field in *)
   try let (_loc,s) = (assoc field par) in f (_loc,s) 
   with Not_found ->
     if Option.is_none opt then
@@ -199,7 +199,7 @@ let parse_package_stanza filter archs extras par =
 
 let status_filter par =
   try
-    let (_,s) = (assoc "status" par) in
+    let (_,s) = (assoc "Status" par) in
     match String.nsplit s " " with
     |[_;_;"installed"] -> true
     |_ -> false
@@ -207,7 +207,7 @@ let status_filter par =
 
 let arch_filter archlist par =
   try
-    let (_,s) = (assoc "architecture" par) in
+    let (_,s) = (assoc "Architecture" par) in
     List.mem s archlist
   with Not_found -> false
 
@@ -272,13 +272,13 @@ let merge status packages =
 ;;
 
 let is_installed pkg =
-  try match String.nsplit (assoc "status" pkg.extras) " " with
+  try match String.nsplit (assoc "Status" pkg.extras) " " with
     |[_;_;"installed"] -> true
     | _ -> false
   with Not_found -> false
 
 let is_on_hold pkg =
-  try match String.nsplit (assoc "status" pkg.extras) " " with
+  try match String.nsplit (assoc "Status" pkg.extras) " " with
     |["hold";_;_] -> true
     | _ -> false
   with Not_found -> false

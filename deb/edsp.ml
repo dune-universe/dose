@@ -171,8 +171,8 @@ let rec packages_parser ?(request=false) (req,acc) p =
         end
       with Not_found -> false
     in
-    let inst () = match_field "installed" par in 
-    let candidate () = match_field "apt-candidate" par in
+    let inst () = match_field "Installed" par in 
+    let candidate () = match_field "APT-Candidate" par in
     ((inst ()) || (candidate ()))
   in
   let archs =
@@ -228,14 +228,14 @@ let extras_tocudf =
 let is_installed pkg =
   try
     let _loc = Format822.dummy_loc in
-    let v = Packages.assoc "installed" pkg.Packages.extras in
+    let v = Packages.assoc "Installed" pkg.Packages.extras in
     Packages.parse_bool (_loc,v)
   with Not_found -> false
 
 let is_on_hold pkg =
   try
     let _loc = Format822.dummy_loc in
-    let v = Packages.assoc "hold" pkg.Packages.extras in
+    let v = Packages.assoc "Hold" pkg.Packages.extras in
     (Packages.parse_bool (_loc,v))
   with Not_found -> false
 
@@ -247,7 +247,7 @@ let tocudf tables ?(options=Debcudf.default_options) ?(inst=false) pkg =
         if is_on_hold pkg then "hold ok installed" 
         else "install ok installed"
       in
-      { pkg with Packages.extras = ("status",s)::pkg.Packages.extras }
+      { pkg with Packages.extras = ("Status",s)::pkg.Packages.extras }
     else pkg
   in
   Debcudf.tocudf tables ~options pkg
