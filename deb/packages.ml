@@ -86,10 +86,9 @@ let parse_binarylist = lexbuf_wrapper Packages_parser.vpkglist_top
 
 (* assume n is lowercase *)
 let rec assoc (n : string) = function
-  |(k,v)::_ when (*String.lowercase k*) k = n -> v
+  |(k,v)::_ when k = n -> v
   |(k,_)::t -> assoc n t
   |[] -> raise Not_found
-;;
 
 exception ParseError of string * string
 exception IgnorePackage of string
@@ -98,12 +97,12 @@ exception IgnorePackage of string
  * opt = None && err = Some s -> ParseError s :
  * opt = Some s -> return s *)
 let parse_s ?opt ?err ?(multi=false) f field par =
-  (* let field = String.lowercase field in *)
   try let (_loc,s) = (assoc field par) in f (_loc,s) 
   with Not_found ->
     if Option.is_none opt then
       if Option.is_none err then raise Not_found
       else begin
+        (*
         let (_,((startpos,endpos),_)) = List.hd par in
         let s = 
           Printf.sprintf "%s : %s--%s" 
@@ -111,6 +110,8 @@ let parse_s ?opt ?err ?(multi=false) f field par =
           (Format822.pp_lpos startpos) 
           (Format822.pp_lpos endpos)
         in
+        *)
+        let s = "" in
         raise (ParseError (field,(Option.get err)^" (no default declared) " ^ s))
       end
     else Option.get opt
@@ -217,9 +218,9 @@ let rec packages_parser fname stanza_parser acc p =
   match Format822_parser.stanza_822 Format822_lexer.token_822 p.Format822.lexbuf with
   |None -> acc
   |Some stanza -> begin
-      match stanza_parser (filename::stanza) with
-      |None -> packages_parser fname stanza_parser acc p
-      |Some st -> packages_parser fname stanza_parser (st::acc) p
+    match stanza_parser (filename::stanza) with
+    |None -> packages_parser fname stanza_parser acc p
+    |Some st -> packages_parser fname stanza_parser (st::acc) p
   end
 
 let parse_packages_in ?filter ?(archs=[]) ?(extras=[]) fname ic =
@@ -271,15 +272,20 @@ let merge status packages =
     packages
 ;;
 
-let is_installed pkg =
-  try match String.nsplit (assoc "Status" pkg.extras) " " with
+let installed_re = Re_pcre.regexp "[a-z]+[ \t]+[a-z]+[ \t]+installed"
+let is_installed pkg = 
+  try Re_pcre.pmatch ~rex:installed_re (assoc "Status" pkg.extras)
+  with Not_found -> false
+  (*
+  try match String.nsplit (assoc_string "Status" pkg.extras) " " with
     |[_;_;"installed"] -> true
     | _ -> false
   with Not_found -> false
+  *)
 
 let is_on_hold pkg =
-  try match String.nsplit (assoc "Status" pkg.extras) " " with
-    |["hold";_;_] -> true
+  try match String.split (assoc "Status" pkg.extras) " " with
+    |"hold",_ -> true
     | _ -> false
   with Not_found -> false
 

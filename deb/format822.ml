@@ -16,6 +16,9 @@ open Common
 include Util.Logging(struct let label = __FILE__ end) ;;
 
 type loc = Lexing.position * Lexing.position
+type stanza = (string * (loc * string)) list
+type doc = stanza list
+
 let dummy_loc: loc = Lexing.dummy_pos, Lexing.dummy_pos
 let extend_loc (r1_start, _r1_end) (_r2_start, r2_end) = (r1_start, r2_end)
 let loc_of_lexbuf b = (b.Lexing.lex_start_p, b.Lexing.lex_curr_p)

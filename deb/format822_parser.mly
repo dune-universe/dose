@@ -16,9 +16,16 @@
 
 open ExtLib
 
-(* XXX instead of ^ and triggering a reallocation everytime, I could use
- * String.concat to allocate the string of the right size once for all *)
-let join (r1, v) (r2, cont) = (Format822.extend_loc r1 r2, v ^ cont)
+let extend_loc (r1_start, _) (_, r2_end) = (r1_start, r2_end)
+
+let join (loc, v) l =
+  let rec aux (startloc,acc) = function
+    |[] -> (startloc,acc)
+    |[(endloc,v)] -> (extend_loc startloc endloc, List.rev (v::acc))
+    |(_,v)::tl -> aux (startloc,v::acc) tl
+  in
+  let r,vl = aux (loc, [v]) l in
+  (r,String.concat "" vl)
 
 %}
 
@@ -26,9 +33,9 @@ let join (r1, v) (r2, cont) = (Format822.extend_loc r1 r2, v ^ cont)
 %token <Format822.loc * string> CONT
 %token BLANKLINE EOF
 %token PGPHEAD
-%type <(string * (Format822.loc * string)) list list> doc_822
-%type <(string * (Format822.loc * string)) list option> stanza_822
-%type <(string * (Format822.loc * string)) list option> doc_822_sign
+%type <Format822.doc> doc_822
+%type <Format822.stanza option> stanza_822
+%type <Format822.stanza option> doc_822_sign
 %start doc_822 doc_822_sign stanza_822
 
 
@@ -57,7 +64,7 @@ blanklines:
 ;
 
 stanzas:
-  | stanza EOF          { [ $1 ] }
+  | stanza EOF                { [ $1 ] }
   | stanza blanklines stanzas { $1 :: $3 }
 ;
 
@@ -72,12 +79,12 @@ fields:
 
 field:
   | FIELD BLANKLINE           { $1 }
-  | FIELD BLANKLINE linecont  { let k, v = $1 in k, (join v $3) }
+  | FIELD BLANKLINE linecont  { let k, v = $1 in (k, (join v $3)) }
 ;
 
 linecont:
-  | CONT BLANKLINE            { $1 }
-  | CONT BLANKLINE linecont   { join $1 $3 }
+  | CONT BLANKLINE            { [ $1 ]}
+  | CONT BLANKLINE linecont   { $1 :: $3 }
 ;
 
 %%
@@ -93,4 +100,3 @@ let error_wrapper f =
 
 let doc_822 = error_wrapper doc_822
 let stanza_822 = error_wrapper stanza_822
-
