@@ -354,14 +354,14 @@ let init_solver_cache ?(buffer=false) ?(pbopool=[]) varpool =
     end
   in
 
-  let conflicts = Hashtbl.create (varsize / 10) in
+  let conflicts = Util.IntPairHashtbl.create (varsize / 10) in
   let add_conflict constraints vpkg (i,j) =
     if i <> j then begin
       let pair = (min i j,max i j) in
       (* we get rid of simmetric conflicts *)
-      if not(Hashtbl.mem conflicts pair) then begin
+      if not(Util.IntPairHashtbl.mem conflicts pair) then begin
         incr num_conflicts;
-        Hashtbl.add conflicts pair ();
+        Util.IntPairHashtbl.add conflicts pair ();
         let p = S.lit_of_var i false in
         let q = S.lit_of_var j false in
         S.add_rule constraints [|p;q|] [Diagnostic_int.Conflict(i,j,vpkg)];
@@ -399,7 +399,7 @@ let init_solver_cache ?(buffer=false) ?(pbopool=[]) varpool =
     exec_conflicts constraints id cl
   ) varpool;
     
-  Hashtbl.clear conflicts;
+  Util.IntPairHashtbl.clear conflicts;
 
   debug "n. disjunctions %d" !num_disjunctions;
   debug "n. dependencies %d" !num_dependencies;

@@ -121,8 +121,8 @@ let add table k v =
     Util.StringHashtbl.add table k v
 
 let add_v table k v =
-  if not(Hashtbl.mem table k) then
-    Hashtbl.add table k v
+  if not(Util.StringPairHashtbl.mem table k) then
+    Util.StringPairHashtbl.add table k v
 
 let add_s h k v =
   try let s = Util.StringHashtbl.find h k in s := SSet.add v !s
@@ -176,7 +176,7 @@ let init_versions_table table pkg =
 let init_tables ?(step=1) ?(versionlist=[]) pkglist =
   let n = List.length pkglist in
   let tables = create n in 
-  let temp_versions_table = Hashtbl.create (10 * n) in
+  let temp_versions_table = Util.StringPairHashtbl.create (10 * n) in
   let ivrt = init_virtual_table tables.virtual_table in
   (* XXX init_versions_table and init_versioned_table can be done at the same time !!! *)
   let ivt = init_versions_table temp_versions_table in
@@ -185,7 +185,7 @@ let init_tables ?(step=1) ?(versionlist=[]) pkglist =
 
   List.iter (fun v -> add_v temp_versions_table (v,"") ()) versionlist; 
   List.iter (fun pkg -> ivt pkg ; ivrt pkg ; ivdt pkg ; iut pkg) pkglist ;
-  let l = Hashtbl.fold (fun v _ acc -> v::acc) temp_versions_table [] in
+  let l = Util.StringPairHashtbl.fold (fun v _ acc -> v::acc) temp_versions_table [] in
   let add_reverse i (n,v) =
     debug "Add Reverse (%s,%s) %i" n v i;
     try 
@@ -385,6 +385,7 @@ let add_extra extras tables pkg =
 
 let tocudf tables ?(options=default_options) ?(inst=false) pkg =
   let bind m f = List.flatten (List.map f m) in
+  let encpkgname = CudfAdd.encode pkg.name in
   if not(Option.is_none options.native) then begin
     let native_arch = Option.get options.native in
     let pkgarch =
@@ -398,12 +399,12 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
     let _name = 
       (* if the package is a source package the name does not need an
        * architecture annotation. Nobody depends on it *)
-      if Sources.is_source pkg then (CudfAdd.encode pkg.name) 
+      if Sources.is_source pkg then encpkgname
       else add_arch native_arch pkgarch pkg.name 
     in
     let _version = get_cudf_version tables (pkg.name,pkg.version)  in
     let _provides = 
-      let archlessprovide = (CudfAdd.encode pkg.name,None) in
+      let archlessprovide = (encpkgname,None) in
       let multiarchprovides = 
         match pkg.multiarch with
         |(`None|`Same) ->
@@ -440,7 +441,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
         match pkg.multiarch with
         |(`None|`Foreign|`Allowed) -> 
             (* conflict with all other packages with differents archs *)
-            let mac = (CudfAdd.encode pkg.name,None) in
+            let mac = (encpkgname,None) in
             [sc; mac] 
         |`Same -> 
             (* conflict with packages of same name but different arch and version*)
@@ -468,7 +469,9 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
             bind (native_arch::options.foreign) (fun arch ->
               let l =
                 bind originalconflicts (fun ((n,a),c) ->
+                  (*
                   debug "M-A-Same: examining pkg %s, conflicting with package %s (self confl = %b)" pkg.name n (selfconflict ((n,a),c));
+                  *)
                   match realpackage n, selfconflict ((n,a),c) with
                   |true,false  -> [((n,a),c)]  (* real conflict *)
                   |true, true  -> []           (* self conflict on real package, drop it *)
@@ -477,7 +480,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
                       |None -> [((n,a),None)] (* virtual conflict *)
                       |_ -> []                (* real conflict on non-existent package, drop it *)
                       end
-                  |false, true ->              (* a virtual package and a self conflict *)
+                  |false, true ->             (* a virtual package and a self conflict *)
                       begin
                         debug "M-A-Same: pkg %s has a self-conflict via virtual package: %s" pkg.name n;
                         try
@@ -491,9 +494,13 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
                       end
                 )
               in
+              (*
               debug "M-A-Same : %s produces (Debian) conflicts: %s" pkg.name (Printer.string_of_vpkglist l);
+              *)
               let l' = add_arch_l native_arch arch (loadl tables l) in
+              (*
               debug "M-A-Same : %s produces (CUDF) conflicts: %s" pkg.name (Cudf_types_pp.string_of_vpkglist l');
+              *)
               l'
             )
       in
@@ -542,7 +549,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
       (loadll ~enc:true tables (pkg.pre_depends @ pkg.depends))
     in
     { Cudf.default_package with
-      Cudf.package = CudfAdd.encode pkg.name ;
+      Cudf.package = encpkgname ;
       Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;
       Cudf.keep = if options.ignore_essential then `Keep_none else set_keep pkg;
       Cudf.depends = _depends;
