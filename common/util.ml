@@ -95,7 +95,7 @@ module MakeMessages(X : sig val label : string end) = struct
     end
 
   let eprintf ?(raw=false) t fmt =
-    Printf.kprintf (
+    Printf.ksprintf (
       if t.enabled then begin
         (fun s -> 
           if raw then
@@ -291,10 +291,26 @@ module StringHashtbl = Hashtbl.Make (
   end
 )
 
+module StringPairHashtbl = Hashtbl.Make (
+  struct
+    type t = string * string
+    let equal (a : string * string) (b : string * string) = (a = b)
+    let hash s = Hashtbl.hash s
+  end
+)
+
 module IntHashtbl = Hashtbl.Make (
   struct
     type t = int
     let equal (a : int) (b : int) = (a = b)
+    let hash i = Hashtbl.hash i
+  end
+)
+
+module IntPairHashtbl = Hashtbl.Make (
+  struct
+    type t = int * int
+    let equal (a : int * int) (b : int * int) = (a = b)
     let hash i = Hashtbl.hash i
   end
 )

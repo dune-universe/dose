@@ -153,7 +153,9 @@ module Timer : sig
 end
 
 module IntHashtbl : Hashtbl.S with type key = int
+module IntPairHashtbl : Hashtbl.S with type key = int * int
 module StringHashtbl : Hashtbl.S with type key = string
+module StringPairHashtbl : Hashtbl.S with type key = string * string
 
 val range : int -> int -> int list
 
