@@ -15,6 +15,7 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Common
 module Pcre = Re_pcre
 
 let is_digit = function
@@ -22,11 +23,10 @@ let is_digit = function
   | _ -> false
 ;;
 
-(* [skip_while_from i f w] yields the index of the leftmost character
- * in the string [s], starting from [i], that does not satisfy the
- * predicate [f], or [length w] if no such index exists.  *)
-let skip_while_from i f w =
-  let m = String.length w in
+(* [skip_while_from i f w m] yields the index of the leftmost character
+ * in the string [s], starting from [i], end ending at  [m], that does 
+ * not satisfy the predicate [f], or [length w] if no such index exists.  *)
+let skip_while_from i f w m =
   let rec loop i =
     if i = m then i
     else if f w.[i] then loop (i + 1) else i
@@ -77,7 +77,7 @@ let compare_chars c1 c2 = match c1 with
 (* return the first index of x, starting from xi, of a nun-null
  * character in x.  or (length x) in case x contains only 0's starting
  * from xi on.  *)
-let skip_zeros x xi = skip_while_from xi (fun c -> c = '0') x;;
+let skip_zeros x xi xl = skip_while_from xi (fun c -> c = '0') x xl;;
 
 (* compare versions chunks, that is parts of version strings that are
  * epoch, upstream version, or revisision. Alternates string comparison
@@ -99,10 +99,10 @@ let compare_chunks x y =
 	 * part is larger. If y continues non-numerically then y is
 	 * larger anyway, so we only have to skip 0's in the y part
 	 * and check whether this exhausts the y part.  *)
-	let ys = skip_zeros y yi in
+	let ys = skip_zeros y yi yl in
 	if ys = yl then 0 else if y.[ys]='~' then 1 else -1
       | false,true -> (* symmetric to the preceding case *)
-	let xs = skip_zeros x xi in
+	let xs = skip_zeros x xi xl in
 	if xs = xl then 0 else if x.[xs]='~' then -1 else 1
       | false,false -> (* which of x and y continues numerically? *)
 	match (is_digit x.[xi], is_digit y.[yi]) with 
@@ -110,7 +110,7 @@ let compare_chunks x y =
 	    (* both continue numerically. Skip leading zeros in the
 	     * remaining parts, and then continue by
 	     * comparing numerically. *)
-	    compare_numerical (skip_zeros x xi) (skip_zeros y yi)
+	    compare_numerical (skip_zeros x xi xl) (skip_zeros y yi yl)
 	  | true,false -> (* '~' is smaller than any numeric part *)
 	    if y.[yi]='~' then 1 else -1
 	  | false,true -> (* '~' is smaller than any numeric part *)
@@ -123,8 +123,8 @@ let compare_chunks x y =
     (* leading zeros have been stripped *) 
     assert (yi = yl || (yi < yl && y.[yi] <> '0'));
     (* leading zeros have been stripped *) 
-    let xn = skip_while_from xi is_digit x (* length of numerical part *)
-    and yn = skip_while_from yi is_digit y (* length of numerical part *)
+    let xn = skip_while_from xi is_digit x xl (* length of numerical part *)
+    and yn = skip_while_from yi is_digit y yl (* length of numerical part *)
     in 
     let comp = compare (xn-xi) (yn-yi)
     in if comp = 0
