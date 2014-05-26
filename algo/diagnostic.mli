@@ -43,6 +43,7 @@ type result =
   |Failure of (unit -> reason list)
   (** If unsuccessful returns a function containing the list of reason *)
 
+(** The aggregated result from the solver *)
 type diagnosis = { result : result; request : request; }
 
 module ResultHash : Hashtbl.S with type key = reason
@@ -56,16 +57,25 @@ type summary = {
 }
 val default_result : int -> summary
 
+(** [collect summary result]. Callback function to collect result 
+    information in the [summary] data structure. Can be used to build
+    a custom callback function for [Depsolver.listcheck] or [Depsolver.univcheck] *)
 val collect : summary -> diagnosis -> unit
 
+(* Function signature for cudf package printer. The output represents
+   a triple (name, version, (field name, value) list *)
 type pp = (Cudf.package -> string * string * (string * string) list)
 
-val pp_summary :
-  ?pp:(Cudf.package -> Cudf_types.pkgname * string * (string * string) list) ->
-  ?explain:bool -> unit -> Format.formatter -> summary -> unit
+(** [default_pp] default package printer. Extracts string values from a 
+    cudf package : Name, Version, Fields. Where Fields is a list of 
+    field name , value pairs . If the version of the package is
+    a negative number, the version version if printed as "nan". *)
+val default_pp : pp
 
+(** Default package pretty printer. *)
 val pp_package : ?source:bool -> pp -> Format.formatter -> Cudf.package -> unit
 
+(** Cudf Vpkglist printer. *)
 val pp_vpkglist : pp -> Format.formatter -> Cudf_types.vpkglist -> unit
 
 val pp_dependency :
@@ -74,6 +84,8 @@ val pp_dependency :
   Format.formatter ->
   Cudf.package * Cudf_types.vpkglist -> unit
 
+(** Print the list of dependencies of a package . The label specifies the
+    type of dependency ("depends" by default) *)
 val pp_dependencies : pp ->
   Format.formatter -> (Cudf.package * Cudf_types.vpkglist) list list -> unit
 
@@ -83,9 +95,19 @@ val pp_list :
 val print_error : pp ->
   Cudf.package -> Format.formatter -> reason list -> unit
 
+(** If the installablity query is successfull, [get_installationset] return 
+    the associated installation set . If minimal is true (false by default),
+    the installation set is restricted to the dependency cone of the packages
+    specified in the installablity query. @Raise [Not_found] if the result is
+    a failure. *)
 val get_installationset : ?minimal:bool -> diagnosis -> Cudf.package list
+
+(** True is the result of an installablity query is successfull. False otherwise *)
 val is_solution : diagnosis -> bool
-val default_pp : Cudf.package -> Cudf_types.pkgname * string * 'a list
+
+val pp_summary :
+  ?pp:(Cudf.package -> Cudf_types.pkgname * string * (string * string) list) ->
+  ?explain:bool -> unit -> Format.formatter -> summary -> unit
 
 val print_error_human :
   ?prefix:string -> pp ->
