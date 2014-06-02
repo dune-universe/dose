@@ -81,7 +81,10 @@ Only show packages that do not fail the installability check.
 
 =item B<-e --explain> 
 
-Explain the results in more detail. 
+Give explanations. If used together with --failures then the explanation
+consists of dependency chains leading to a conflict or a dependency on a
+missing package. If used together with --successes then the explanation
+consists of an installation set.
 
 =item B<-v>
 
