@@ -85,19 +85,18 @@ let loadl to_cudf l =
 
 let parse_request to_cudf l =
   let open Debian in
+  let pkgs_of s = (* convert request into list of packages *) 
+    let rs = String.strip (snd (String.split s " ")) in
+    let  f = Packages.lexbuf_wrapper Packages_parser.vpkglist_top in
+    loadl to_cudf (f (Format822.dummy_loc,rs)) 
+  in              
   let parse acc s =
     if String.starts_with s "install: " then
-      let rs = String.strip (snd (String.split s " ")) in
-      let f = Packages.lexbuf_wrapper Packages_parser.vpkglist_top in
-      { acc with Cudf.install = loadl to_cudf (f (Format822.dummy_loc,rs)) }
+      { acc with Cudf.install = pkgs_of s}
     else if String.starts_with s "remove: " then
-      let rs = String.strip (snd (String.split s " ")) in
-      let f = Packages.lexbuf_wrapper Packages_parser.vpkglist_top in
-      { acc with Cudf.remove = loadl to_cudf (f (Format822.dummy_loc,rs)) } 
+      { acc with Cudf.remove = pkgs_of s}
     else if String.starts_with s "upgrade: " then
-      let rs = String.strip (snd (String.split s " ")) in
-      let f = Packages.lexbuf_wrapper Packages_parser.vpkglist_top in
-      { acc with Cudf.upgrade = loadl to_cudf (f (Format822.dummy_loc,rs)) }
+      { acc with Cudf.upgrade = pkgs_of s}
     else acc
   in
   List.fold_left parse Cudf.default_request l
