@@ -32,7 +32,7 @@ let get_architectures native_edsp foreign_edsp native_opt foreign_opt =
         if s <> "" then
           archs := (ExtString.String.slice ~first:1 ~last:(-2) value)::!archs
     ) out;
-    debug "Atomatically set native as %s and foreign archs as %s" (Option.get !arch) (String.concat "," !archs);
+    debug "Automatically set native as %s and foreign archs as %s" (Option.get !arch) (String.concat "," !archs);
   in
   let (na,fa) =
     match (native_edsp,foreign_edsp),(native_opt,foreign_opt) with

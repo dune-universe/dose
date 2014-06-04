@@ -103,7 +103,7 @@ let get_architectures native_opt foreign =
         if s <> "" then
           archs := (ExtString.String.slice ~first:1 ~last:(-2) value)::!archs
     ) out;
-    debug "Atomatically set native as %s and foreign archs as %s" !arch (String.concat "," !archs);
+    debug "Automatically set native as %s and foreign archs as %s" !arch (String.concat "," !archs);
   in
   match native_opt, foreign with 
   |None,None     -> aux () ; (!arch,List.filter ((<>) !arch) !archs)
