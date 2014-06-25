@@ -37,7 +37,10 @@ module Options = struct
 
   let coinst = Boilerplate.vpkglist_option ()
   open OptParser
-  add options ~long_name:"coinst" ~help:"Check if these packages are coinstallable" coinst;
+  add options ~long_name:"coinst" ~help:"Check if these packages are coinstallable" coinst;;
+
+  let realversionfield = StdOpt.str_option ~default:"version" ();;
+  add options ~long_name:"real-version-field" ~help:"Specify field where the original version of a package is stored in the CUDF file" realversionfield;;
 
 end
 
