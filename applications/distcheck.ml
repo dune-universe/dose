@@ -21,6 +21,7 @@ open Algo
 
 module Options = struct
   open OptParse
+  open OptParser
   let description = "Compute the list broken packages in a repository"
   let options = OptParser.make ~description
   include Boilerplate.MakeOptions(struct let options = options end)
@@ -35,8 +36,7 @@ module Options = struct
   let default = List.remove Boilerplate.DistribOptions.default_options "deb-host-arch" in
   Boilerplate.DistribOptions.add_options ~default options ;;
 
-  let coinst = Boilerplate.vpkglist_option ()
-  open OptParser
+  let coinst = Boilerplate.vpkglist_option ();;
   add options ~long_name:"coinst" ~help:"Check if these packages are coinstallable" coinst;;
 
   let realversionfield = StdOpt.str_option ~default:"version" ();;
