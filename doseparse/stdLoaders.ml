@@ -70,6 +70,20 @@ let csw_load_list dll =
   let request = Cudf.default_request in
   (preamble,cll,request,from_cudf,to_cudf)
  
+let cudfv_load_list dll =
+  let pkglist = List.flatten dll in
+  let tables = Cudfv.Cudfvcudf.init_tables pkglist in
+  let from_cudf (p,i) = (p, Cudfv.Cudfvcudf.get_real_version tables (p,i)) in
+  let to_cudf (p,v) = (p, Cudfv.Cudfvcudf.get_cudf_version tables (p,v)) in
+  let cll = 
+    List.map (fun l ->
+      List.map (Cudfv.Cudfvcudf.tocudf tables) l
+    ) dll
+  in
+  let preamble = Cudfv.Cudfvcudf.preamble in
+  let request = Cudf.default_request in
+  (preamble,cll,request,from_cudf,to_cudf)
+ 
 let edsp_load_list options file =
   let (request,pkglist) = Debian.Edsp.input_raw file in
   let (native_arch,foreign_archs) =
@@ -224,6 +238,16 @@ let csw_parse_input urilist =
   in
   csw_load_list dll
 
+let cudfv_parse_input urilist =
+  let dll = 
+    List.map (fun l ->
+      let filelist = List.map unpack l in
+      Csw.Packages.input_raw filelist
+    ) urilist
+  in
+  cudfv_load_list dll
+
+
 let cudf_parse_input urilist =
   match urilist with
   |[[p]] when (unpack p) = "-" -> fatal "no stdin for cudf yet"
@@ -266,6 +290,8 @@ let parse_input ?(options=None) urilist =
   |`Eclipse, Some (StdOptions.Eclipse opt) -> eclipse_parse_input opt filelist
 
   |`Csw, None -> csw_parse_input filelist
+
+  |`Cudfv, None -> cudfv_parse_input filelist
 
   |`Hdlist, None -> 
 IFDEF HASRPM THEN
