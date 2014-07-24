@@ -1,0 +1,5 @@
+let init_tables = failwith "not implemented 4"
+let get_real_version = failwith "not implemented 3"
+let get_cudf_version = failwith "not implemented 2"
+let tocudf = failwith "not implemented 1"
+let preamble = failwith "not implemented preamble"
