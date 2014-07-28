@@ -75,6 +75,17 @@ must also be set.
 
 =back
 
+=head2 OPTIONS FOR FILTERING THE INPUT
+
+=over 8
+
+=item B<--latest>
+
+Only the latest version of each package is kept,
+older versions of packages are ignored.
+
+=back
+
 =head2 OPTIONS CONTROLLING OUTPUT
 
 =over 8
