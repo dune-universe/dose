@@ -83,7 +83,7 @@ must also be set.
 
 Only show broken packages that fail the installability check. 
 
-=item B<-v --successes> 
+=item B<-s --successes> 
 
 Only show packages that do not fail the installability check. 
 
