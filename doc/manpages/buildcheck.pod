@@ -52,6 +52,8 @@ by specifying the I<host> architecture.
 
 =head1 OPTIONS
 
+=head2 OPTIONS FOR SPECIFYING ARCHITECTURES
+
 =over 8
 
 =item B<--deb-native-arch=>I<name>
@@ -71,6 +73,12 @@ is used as an implicit foreign architecture.
 Specify the host architecture. If this option is given, B<--deb-native-arch>
 must also be set.
 
+=back
+
+=head2 OPTIONS CONTROLLING OUTPUT
+
+=over 8
+
 =item B<-f --failures> 
 
 Only show broken packages that fail the installability check. 
@@ -85,6 +93,12 @@ Give explanations. If used together with --failures then the explanation
 consists of dependency chains leading to a conflict or a dependency on a
 missing package. If used together with --successes then the explanation
 consists of an installation set.
+
+=back
+
+=head2 MISC OPTIONS
+
+=over 8
 
 =item B<-v>
 
