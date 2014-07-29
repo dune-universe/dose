@@ -266,7 +266,6 @@ module Timer = struct
   let available () = Hashtbl.fold (fun k _ acc -> k::acc) timers []
 
   let start c =
-    assert(not c.is_in);
     c.is_in <- true;
     c.last <- !gettimeofday()
 
