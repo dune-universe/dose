@@ -70,20 +70,6 @@ let csw_load_list dll =
   let request = Cudf.default_request in
   (preamble,cll,request,from_cudf,to_cudf)
  
-let cudfv_load_list dll =
-  let pkglist = List.flatten dll in
-  let tables = Cudfv.Cudfvcudf.init_tables pkglist in
-  let from_cudf (p,i) = (p, Cudfv.Cudfvcudf.get_real_version tables (p,i)) in
-  let to_cudf (p,v) = (p, Cudfv.Cudfvcudf.get_cudf_version tables (p,v)) in
-  let cll = 
-    List.map (fun l ->
-      List.map (Cudfv.Cudfvcudf.tocudf tables) l
-    ) dll
-  in
-  let preamble = Cudfv.Cudfvcudf.preamble in
-  let request = Cudf.default_request in
-  (preamble,cll,request,from_cudf,to_cudf)
- 
 let edsp_load_list options file =
   let (request,pkglist) = Debian.Edsp.input_raw file in
   let (native_arch,foreign_archs) =
@@ -187,6 +173,24 @@ let load_cudf doc =
   l
 ;;
 
+let cudfv_load_list options file =
+  let preamble, pkglist ,request =
+    match parse_cudf file with
+    |None, pkglist, None -> Cudf.default_preamble, pkglist, Cudf.default_request
+    |None , pkglist, Some req -> Cudf.default_preamble, pkglist, req
+    |Some p , pkglist, None -> p, pkglist, Cudf.default_request
+    |Some p , pkglist, Some req -> p, pkglist, req
+  in
+  if options.Cudfv.Cudfvcudf.cudfv then
+  let from_cudf (p,i) = (p,string_of_int i) in
+  let to_cudf (p,v) = (p,int_of_string v) in
+  (preamble,[pkglist;[]],request,from_cudf,to_cudf)
+  else
+  let tables = Cudfv.Cudfvcudf.init_tables options pkglist file in
+  let from_cudf (p,i) = (p, Cudfv.Cudfvcudf.get_real_version tables (p,i)) in
+  let to_cudf (p,v) = (p, Cudfv.Cudfvcudf.get_cudf_version tables (p,v)) in 
+  (preamble,[pkglist;[]],request,from_cudf,to_cudf)
+
 let cudf_load_list file =
   let preamble, pkglist ,request =
     match parse_cudf file with
@@ -238,14 +242,15 @@ let csw_parse_input urilist =
   in
   csw_load_list dll
 
-let cudfv_parse_input urilist =
-  let dll = 
-    List.map (fun l ->
-      let filelist = List.map unpack l in
-      Csw.Packages.input_raw filelist
-    ) urilist
-  in
-  cudfv_load_list dll
+let cudfv_parse_input options urilist =
+  match urilist with
+  |[[p]] when (unpack p) = "-" -> fatal "no stdin for cudf yet"
+  |[[p]] -> cudf_load_list (unpack p)
+  |l ->
+    if List.length (List.flatten l) > 1 then
+      warning "more then one cudf specified on the command line";
+    let p = List.hd (List.flatten l) in 
+    cudfv_load_list options (unpack p)
 
 
 let cudf_parse_input urilist =
@@ -279,6 +284,8 @@ let parse_input ?(options=None) urilist =
   match Input.guess_format urilist, options with
   |`Cudf, None -> cudf_parse_input filelist
 
+  |`Cudfv, None -> cudfv_parse_input Cudfv.Cudfvcudf.default_options filelist
+
   |`Deb, None -> deb_parse_input Debian.Debcudf.default_options filelist
   |`Eclipse, None -> eclipse_parse_input Debian.Debcudf.default_options filelist
 
@@ -291,7 +298,7 @@ let parse_input ?(options=None) urilist =
 
   |`Csw, None -> csw_parse_input filelist
 
-  |`Cudfv, None -> cudfv_parse_input filelist
+  |`Cudfv, Some (StdOptions.Cudfv opt) -> cudfv_parse_input opt filelist
 
   |`Hdlist, None -> 
 IFDEF HASRPM THEN

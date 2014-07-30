@@ -206,6 +206,7 @@ type options =
   |Deb of Debian.Debcudf.options
   |Eclipse of Debian.Debcudf.options
   |Edsp of Debian.Debcudf.options
+  |Cudfv of Cudfv.Cudfvcudf.options
   |Csw
   |Rpm
   |Cudf
@@ -218,13 +219,17 @@ module DistribOptions = struct
   let deb_host_arch = StdOpt.str_option ()
   let deb_ignore_essential = StdOpt.store_true ()
   let inputtype = StdOpt.str_option ()
+  let real_version_field = StdOpt.str_option () 
+  let cudf_versions = StdOpt.store_true ()
 
   let default_options = [
     "deb-native-arch";
     "deb-host-arch";
     "deb-foreign-archs";
     "deb-ignore-essential";
-    "inputtype"
+    "inputtype";
+    "real-version-field";
+    "cudf-versions"
   ]
 
   let set_deb_options () =
@@ -262,6 +267,19 @@ module DistribOptions = struct
     }
   ;;
 
+  let set_cudfv_options () =
+    let rvf =
+      if Opt.is_set real_version_field then
+	Some (Opt.get real_version_field)
+      else
+	None
+    in 
+    {
+      Cudfv.Cudfvcudf.default_options with
+      Cudfv.Cudfvcudf.rvf = rvf;
+      cudfv = Opt.get cudf_versions
+    }
+
   let set_default_options = function
     |`Deb -> Some (
       Deb { 
@@ -274,12 +292,14 @@ module DistribOptions = struct
         Debian.Debcudf.ignore_essential = true
       })
     |`Eclipse -> Some (Eclipse Debian.Debcudf.default_options)
+    |`Cudfv -> Some (Cudfv Cudfv.Cudfvcudf.default_options)
     |_ -> None
 
   let set_options = function
     |`Deb -> Some (Deb (set_deb_options ()))
     |`Edsp -> Some (Edsp (set_deb_options ()))
     |`Eclipse -> Some (Eclipse Debian.Debcudf.default_options)
+    |`Cudfv -> Some (Cudfv (set_cudfv_options ()))
     |_ -> None
   ;;
 
@@ -302,6 +322,14 @@ module DistribOptions = struct
       if List.mem "deb-ignore-essential" default then
         add options ~group ~long_name:"deb-ignore-essential" 
         ~help:"Ignore Essential Packages" deb_ignore_essential;
+
+      let cudf_group = add_group options "Cudf Specific Options" in
+      if List.mem "real-version-field" default then
+	add options ~group:cudf_group ~long_name:"real-version-field"
+	~help:"Specify field where the original version of a package is stored in the CUDF file" real_version_field;
+      if List.mem "cudf-versions" default then
+	add options ~group:cudf_group ~long_name:"cudf-versions"
+	~help:"Print the Cudf Integer versions" cudf_versions;
 
     end
 
