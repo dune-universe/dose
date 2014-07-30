@@ -16,12 +16,12 @@ let create n = {
 }
 
 type options = {
-  rvf : string option;
+  rvf : string;
   cudfv: bool;
 }
 
 let default_options = {
-  rvf = None;
+  rvf = "number";
   cudfv = false;
 }
 
@@ -64,9 +64,8 @@ let init_tables options pkglist filename  =
   let size = List.length pkglist in
   let tables = create size in
   parse_v2v tables filename;
-  match options.rvf with
-  | Some field -> List.map (add_pkg tables field) pkglist; tables
-  | None -> tables 
+  List.map (add_pkg tables options.rvf) pkglist; 
+  tables
 
 let get_real_version tables (name,cudf_version)  =
   try Hashtbl.find tables.reverse_table (name,cudf_version)

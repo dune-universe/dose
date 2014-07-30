@@ -219,7 +219,7 @@ module DistribOptions = struct
   let deb_host_arch = StdOpt.str_option ()
   let deb_ignore_essential = StdOpt.store_true ()
   let inputtype = StdOpt.str_option ()
-  let real_version_field = StdOpt.str_option () 
+  let real_version_field = StdOpt.str_option ~default:"number" () 
   let cudf_versions = StdOpt.store_true ()
 
   let default_options = [
@@ -267,16 +267,10 @@ module DistribOptions = struct
     }
   ;;
 
-  let set_cudfv_options () =
-    let rvf =
-      if Opt.is_set real_version_field then
-	Some (Opt.get real_version_field)
-      else
-	None
-    in 
+  let set_cudfv_options () = 
     {
       Cudfv.Cudfvcudf.default_options with
-      Cudfv.Cudfvcudf.rvf = rvf;
+      Cudfv.Cudfvcudf.rvf = Opt.get real_version_field;
       cudfv = Opt.get cudf_versions
     }
 
@@ -323,10 +317,10 @@ module DistribOptions = struct
         add options ~group ~long_name:"deb-ignore-essential" 
         ~help:"Ignore Essential Packages" deb_ignore_essential;
 
-      let cudf_group = add_group options "Cudf Specific Options" in
+      let cudf_group = add_group options "Cudfv Specific Options" in
       if List.mem "real-version-field" default then
 	add options ~group:cudf_group ~long_name:"real-version-field"
-	~help:"Specify field where the original version of a package is stored in the CUDF file" real_version_field;
+	~help:"Specify field where the original version of a package is stored in the CUDF file. Default is \"number\"" real_version_field;
       if List.mem "cudf-versions" default then
 	add options ~group:cudf_group ~long_name:"cudf-versions"
 	~help:"Print the Cudf Integer versions" cudf_versions;
