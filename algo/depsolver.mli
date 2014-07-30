@@ -135,3 +135,12 @@ type solver_result =
 *)
 val check_request : ?cmd : string -> ?callback:(int array * Diagnostic.diagnosis -> unit) -> 
   ?criteria:string -> ?explain : bool -> Cudf.cudf -> solver_result
+
+(** Same as [check_request], but allows to specify any function to call the
+    external solver. It should raise [Depsolver.Unsat] on failure *)
+val check_request_using:
+  ?call_solver:(Cudf.cudf -> Cudf.preamble option * Cudf.universe) ->
+  ?callback:(int array * Diagnostic.diagnosis -> unit) ->
+  ?criteria:string ->
+  ?explain : bool ->
+  Cudf.cudf -> solver_result
