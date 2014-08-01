@@ -14,9 +14,10 @@ open ExtLib
 open Debian
 open Common
 open Algo
+open DoseparseNoRpm
+
 module Src = Debian.Sources
 module Deb = Debian.Packages
-module Boilerplate = BoilerplateNoRpm
 
 module Options = struct
   open OptParse
@@ -25,17 +26,17 @@ module Options = struct
      You must provide a (list of) Debian Packages file(s) and \
      a Debian Sources file in this order"
   let options = OptParser.make ~description
-  include Boilerplate.MakeOptions(struct let options = options end)
+  include StdOptions.MakeOptions(struct let options = options end)
 
-  include Boilerplate.DistcheckOptions
-  Boilerplate.DistcheckOptions.add_options options ;;
+  include StdOptions.DistcheckOptions
+  StdOptions.DistcheckOptions.add_options options ;;
 
-  include Boilerplate.InputOptions
-  Boilerplate.InputOptions.add_options options ;;
+  include StdOptions.InputOptions
+  StdOptions.InputOptions.add_options options ;;
 
-  include Boilerplate.DistribOptions;;
-  let default = ["deb-triplettable";"deb-cputable"]@Boilerplate.DistribOptions.default_options in
-  Boilerplate.DistribOptions.add_options ~default options ;;
+  include StdOptions.DistribOptions;;
+  let default = ["deb-triplettable";"deb-cputable"]@StdOptions.DistribOptions.default_options in
+  StdOptions.DistribOptions.add_options ~default options ;;
 
   let dump = StdOpt.str_option ()
   let maforeign = StdOpt.store_true ()
@@ -60,10 +61,10 @@ let timer = Util.Timer.create "Solver"
 
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
-  Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
+  StdDebug.enable_debug (OptParse.Opt.get Options.verbose);
+  StdDebug.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
   Util.Debug.disable "Depsolver_int";
-  Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
+  StdDebug.all_quiet (OptParse.Opt.get Options.quiet);
 
   let fmt = Format.std_formatter in
   if OptParse.Opt.is_set Options.deb_native_arch then
@@ -111,7 +112,7 @@ let main () =
     |l -> 
         begin match List.rev l with
         |h::t ->
-          let srclist = Boilerplate.deb_load_source ~filter:filter_external_sources ~noindep buildarch hostarch h in
+          let srclist = StdLoaders.deb_load_source ~filter:filter_external_sources ~noindep buildarch hostarch h in
           let pkglist = Deb.input_raw t in
           (pkglist,srclist)
         |_ -> fatal "An impossible situation occurred ?!#"
@@ -198,10 +199,10 @@ let main () =
     Cudf_printer.pp_universe oc universe
   end;
 
-  Boilerplate.exit(nbp)
+  StdUtils.exit(nbp)
 ;;
 
-Boilerplate.if_application
+StdUtils.if_application
   ~alternatives:[
     "deb-buildcheck"; "debbuildcheck";"dose-builddebcheck";
     "deb-crossbuildcheck";"debcrossbuildcheck";

@@ -12,6 +12,7 @@
 
 (** compare epoch:version-release strings *)
 (* external rpmEVRcmp : string -> string -> int = "rpm_EVRcmp" *)
+module Str = Re_str
 
 (** compare only version strings *)
 external rpmvercmp : string -> string -> int = "rpm_vercmp"

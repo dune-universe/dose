@@ -77,7 +77,7 @@ installcudf:
 uninstallcudf:
 endif
 
-BYTELIBS += common/common.cma deb/debian.cma rpm/rpm.cma opencsw/csw.cma eclipse/eclipse.cma algo/algo.cma doseparse/boilerplateNoRpm.cma doseparse/boilerplate.cma
+BYTELIBS += common/common.cma deb/debian.cma rpm/rpm.cma opencsw/csw.cma eclipse/eclipse.cma algo/algo.cma doseparseNoRpm/doseparseNoRpm.cma doseparse/doseparse.cma
 
 ifeq ("@OCAMLBEST@","opt")
   OPTLIBS += $(BYTELIBS:%.cma=%.cmxa) 

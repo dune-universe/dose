@@ -18,25 +18,26 @@
 open ExtLib
 open Common
 open Algo
+open Doseparse
 
 module Options = struct
   open OptParse
   open OptParser
   let description = "Compute the list broken packages in a repository"
   let options = OptParser.make ~description
-  include Boilerplate.MakeOptions(struct let options = options end)
+  include StdOptions.MakeOptions(struct let options = options end)
 
-  include Boilerplate.DistcheckOptions
-  Boilerplate.DistcheckOptions.add_options options ;;
+  include StdOptions.DistcheckOptions
+  StdOptions.DistcheckOptions.add_options options ;;
 
-  include Boilerplate.InputOptions
-  Boilerplate.InputOptions.add_options options ;;
+  include StdOptions.InputOptions
+  StdOptions.InputOptions.add_options options ;;
 
-  include Boilerplate.DistribOptions;;
-  let default = List.remove Boilerplate.DistribOptions.default_options "deb-host-arch" in
-  Boilerplate.DistribOptions.add_options ~default options ;;
+  include StdOptions.DistribOptions;;
+  let default = List.remove StdOptions.DistribOptions.default_options "deb-host-arch" in
+  StdOptions.DistribOptions.add_options ~default options ;;
 
-  let coinst = Boilerplate.vpkglist_option ();;
+  let coinst = StdDebian.vpkglist_option ();;
   add options ~long_name:"coinst" ~help:"Check if these packages are coinstallable" coinst;;
 
   let realversionfield = StdOpt.str_option ~default:"version" ();;
@@ -65,16 +66,16 @@ let main () =
   let inputlist = posargs@(OptParse.Opt.get Options.foreground) in
   let (input_type,implicit) = guess_format Options.inputtype inputlist in
 
-  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
-  Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
-  Boilerplate.enable_bars (OptParse.Opt.get Options.progress)
+  StdDebug.enable_debug (OptParse.Opt.get Options.verbose);
+  StdDebug.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
+  StdDebug.enable_bars (OptParse.Opt.get Options.progress)
     ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
-  Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
+  StdDebug.all_quiet (OptParse.Opt.get Options.quiet);
 
   let options = Options.set_options input_type in
   let (fg,bg) = Options.parse_cmdline (input_type,implicit) posargs in
 
-  let (preamble,pkgll,_,from_cudf,to_cudf) = Boilerplate.load_list ~options [fg;bg] in
+  let (preamble,pkgll,_,from_cudf,to_cudf) = StdLoaders.load_list ~options [fg;bg] in
   let (fg_pkglist, bg_pkglist) = match pkgll with [fg;bg] -> (fg,bg) | _ -> assert false in
   let fg_pkglist = 
     if OptParse.Opt.get Options.latest then CudfAdd.latest fg_pkglist
@@ -150,7 +151,7 @@ let main () =
     Format.fprintf fmt "total-packages: %d@." universe_size;
     Format.fprintf fmt "total-tuples: %d@." number_checks;
     Format.fprintf fmt "broken-tuples: %d@." nbt;
-    Boilerplate.exit(nbt)
+    StdUtils.exit(nbt)
   end else begin 
     let global_constraints = not(OptParse.Opt.get Options.deb_ignore_essential) in
     let nbp =
@@ -187,11 +188,11 @@ let main () =
     Format.fprintf fmt "broken-packages: %d@." nbp;
     if summary then 
       Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
-    Boilerplate.exit(nbp)
+    StdUtils.exit(nbp)
   end
 ;;
 
-Boilerplate.if_application
+StdUtils.if_application
 ~alternatives:[
   "debcheck";"dose-debcheck"; "dose-distcheck";
   "eclipsecheck";"dose-eclipsecheck";

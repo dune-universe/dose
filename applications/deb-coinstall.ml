@@ -19,6 +19,7 @@ open ExtLib
 open Common
 open Algo
 open Debian
+open Doseparse
 
 module Options = struct
   open OptParse
@@ -28,21 +29,21 @@ module Options = struct
     "then we return the list of corresponding source packages")
 
   let options = OptParser.make ~description
-  include Boilerplate.MakeOptions(struct let options = options end)
+  include StdOptions.MakeOptions(struct let options = options end)
 
-  include Boilerplate.DistcheckOptions
-  let default = List.remove Boilerplate.DistcheckOptions.default_options "successes" in
-  Boilerplate.DistcheckOptions.add_options ~default options ;;
+  include StdOptions.DistcheckOptions
+  let default = List.remove StdOptions.DistcheckOptions.default_options "successes" in
+  StdOptions.DistcheckOptions.add_options ~default options ;;
 
-  include Boilerplate.InputOptions
-  let default = List.remove Boilerplate.InputOptions.default_options "inputtype" in
-  Boilerplate.InputOptions.add_options ~default options ;;
+  include StdOptions.InputOptions
+  let default = List.remove StdOptions.InputOptions.default_options "inputtype" in
+  StdOptions.InputOptions.add_options ~default options ;;
 
-  include Boilerplate.DistribOptions;;
+  include StdOptions.DistribOptions;;
   (* remove other not used --deb options *)
-  let default = List.remove Boilerplate.DistribOptions.default_options "deb-host-arch" in
+  let default = List.remove StdOptions.DistribOptions.default_options "deb-host-arch" in
   let default = ["deb-triplettable";"deb-cputable"]@default in
-  Boilerplate.DistribOptions.add_options ~default options ;;
+  StdOptions.DistribOptions.add_options ~default options ;;
   
   let sources = StdOpt.str_option ()
   let dump = StdOpt.str_option ()
@@ -63,11 +64,11 @@ let timer = Util.Timer.create "Solver"
 
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
-  Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
-  Boilerplate.enable_bars (OptParse.Opt.get Options.progress)
+  StdDebug.enable_debug (OptParse.Opt.get Options.verbose);
+  StdDebug.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
+  StdDebug.enable_bars (OptParse.Opt.get Options.progress)
     ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
-  Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
+  StdDebug.all_quiet (OptParse.Opt.get Options.quiet);
 
   let options = Options.set_deb_options () in
 
@@ -251,9 +252,9 @@ let main () =
     Format.fprintf fmt "total-packages: %d@." universe_size;
   (*  Format.fprintf fmt "broken-packages: %d@." nbp; *)
   end;
-  Boilerplate.exit(exitcode)
+  StdUtils.exit(exitcode)
 ;;
 
-Boilerplate.if_application
+StdUtils.if_application
 ~alternatives:["dose-debcoinstall";"deb-coinstall"] __FILE__ main ;;
 

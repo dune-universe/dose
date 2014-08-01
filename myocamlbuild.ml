@@ -2,16 +2,21 @@
 open Ocamlbuild_plugin;;
 
 Options.use_ocamlfind := true ;;
+(*
+Ocamlbuild_pack.Flags.mark_tag_used "use_" ;;
+Ocamlbuild_pack.Flags.mark_tag_used "pkg_" ;;
+Ocamlbuild_pack.Flags.mark_tag_used "link_" ;;
+*)
 
 let modules_dirs = [
   "common";"deb";"eclipse"; "opencsw"; "rpm";"db";"algo";
-  "doseparse"; "applications";"experimental"; "libcudf";
+  "doseparse"; "doseparseNoRpm"; "applications";"experimental"; "libcudf";
   "experimental/dudftocudf";
 ];;
 
 let libraries = [
   "cudf"; "common";"debian";"eclipse"; "csw"; "rpm";"db";"algo";
-  "boilerplate"; "boilerplateNoRpm";
+  "doseparse"; "doseparseNoRpm";
 ];;
 
 let doselibs = "doselibs" ;;

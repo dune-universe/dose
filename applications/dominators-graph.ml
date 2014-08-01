@@ -14,15 +14,16 @@
 open ExtLib
 open Common
 open Algo
+open Doseparse
 
 module Options = struct
   open OptParse
   let description = "Compute the dominator graph"
   let options = OptParser.make ~description
-  include Boilerplate.MakeOptions(struct let options = options end)
+  include StdOptions.MakeOptions(struct let options = options end)
 
-  include Boilerplate.DistribOptions;;
-  Boilerplate.DistribOptions.add_options options ;;
+  include StdOptions.DistribOptions;;
+  StdOptions.DistribOptions.add_options options ;;
 
   let naive = StdOpt.store_true ()
   let outfile = StdOpt.str_option ()
@@ -62,16 +63,16 @@ let clean_graph n g =
 
 let default_options = function
   |`Deb -> Some (
-    Boilerplate.Deb {
+    StdOptions.Deb {
       Debian.Debcudf.default_options with
       Debian.Debcudf.ignore_essential = true
     })
   |`Edsp -> Some (
-    Boilerplate.Edsp {
+    StdOptions.Edsp {
       Debian.Debcudf.default_options with
       Debian.Debcudf.ignore_essential = true
     })
-  |`Eclipse -> Some (Boilerplate.Eclipse Debian.Debcudf.default_options)
+  |`Eclipse -> Some (StdOptions.Eclipse Debian.Debcudf.default_options)
   |_ -> None
 ;;
 
@@ -88,15 +89,15 @@ let main () =
     "Algo.dominators"; "Defaultgraph.GraphOper.transitive_reduction"
   ]
   in
-  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose); 
+  StdDebug.enable_debug (OptParse.Opt.get Options.verbose); 
   Util.Debug.disable "Depsolver_int";
   Util.Debug.disable "Strongdeps_int";
-  Boilerplate.enable_timers (OptParse.Opt.get Options.timers) timers;
-  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) bars; 
-  Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
+  StdDebug.enable_timers (OptParse.Opt.get Options.timers) timers;
+  StdDebug.enable_bars (OptParse.Opt.get Options.progress) bars; 
+  StdDebug.all_quiet (OptParse.Opt.get Options.quiet);
   (* let options = default_options (Input.guess_format [posargs]) in *)
   let options = Options.set_options (Input.guess_format [posargs]) in
-  let (_,universe,_,_,_) = Boilerplate.load_universe ~options posargs in
+  let (_,universe,_,_,_) = StdLoaders.load_universe ~options posargs in
 
   let dom_graph =
     if OptParse.Opt.get Options.naive then

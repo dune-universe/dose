@@ -15,7 +15,7 @@
 open ExtLib
 open Common
 open Debian
-module Boilerplate = BoilerplateNoRpm
+open DoseparseNoRpm
 
 include Util.Logging(struct let label = "apt-cudf backend" end) ;;
 
@@ -23,7 +23,7 @@ module Options = struct
   open OptParse
   let description = "apt-get backend (EDSP > 0.4)"
   let options = OptParser.make ~description
-  include Boilerplate.MakeOptions(struct let options = options end)
+  include StdOptions.MakeOptions(struct let options = options end)
 
   let dump = StdOpt.store_true ()
   let noop = StdOpt.store_true ()
@@ -33,7 +33,7 @@ module Options = struct
   let explain = StdOpt.store_true ()
   let conffile = StdOpt.str_option ~default:"/etc/apt-cudf.conf" ()
   let native_arch = StdOpt.str_option ()
-  let foreign_archs = Boilerplate.str_list_option ()
+  let foreign_archs = StdOptions.str_list_option ()
 
   open OptParser
   add options ~long_name:"conf" ~help:"configuration file (default:/etc/apt-cudf.conf)" conffile;
@@ -223,11 +223,11 @@ let main () =
   let timer2 = Util.Timer.create "conversion" in
   let timer3 = Util.Timer.create "solution" in
   let args = OptParse.OptParser.parse_argv Options.options in
-  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
-  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) [] ;
-  Boilerplate.enable_timers (OptParse.Opt.get Options.timers)
+  StdDebug.enable_debug (OptParse.Opt.get Options.verbose);
+  StdDebug.enable_bars (OptParse.Opt.get Options.progress) [] ;
+  StdDebug.enable_timers (OptParse.Opt.get Options.timers)
   ["parsing";"cudfio";"conversion";"solver";"solution"];
-  Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
+  StdDebug.all_quiet (OptParse.Opt.get Options.quiet);
   if apt_get_cmdline <> "" then
     debug "APT_GET_CUDF_CMDLINE=%s" apt_get_cmdline;
   debug "CUDFSOLVERS=%s" solver_dir;
@@ -243,7 +243,7 @@ let main () =
   let (request,pkglist) = Edsp.input_raw_ch ch in
 
   let (native_arch,foreign_archs) = 
-    Boilerplate.get_architectures
+    StdUtils.get_architectures
       request.Edsp.architecture
       request.Edsp.architectures
       (OptParse.Opt.opt Options.native_arch) 

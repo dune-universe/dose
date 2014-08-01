@@ -94,18 +94,18 @@ opencsw/csw.%:
 	  fi ; \
 	done
 
-doseparse/boilerplate.%:
-	$(OCAMLBUILD) $(OBFLAGS) doseparse/boilerplate.$*
-	@for i in _build/doseparse/boilerplate.*; do \
+doseparse/doseparse.%:
+	$(OCAMLBUILD) $(OBFLAGS) doseparse/doseparse.$*
+	@for i in _build/doseparse/doseparse.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
 	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx $(DOSELIBS)/*.ml ; \
 	  fi ; \
 	done
 
-doseparse/boilerplateNoRpm.%:
-	$(OCAMLBUILD) $(OBFLAGS) doseparse/boilerplateNoRpm.$*
-	@for i in _build/doseparse/boilerplateNoRpm.*; do \
+doseparseNoRpm/doseparseNoRpm.%:
+	$(OCAMLBUILD) $(OBFLAGS) doseparseNoRpm/doseparseNoRpm.$*
+	@for i in _build/doseparseNoRpm/doseparseNoRpm.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
 	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \

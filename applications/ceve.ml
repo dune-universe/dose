@@ -14,6 +14,7 @@
 open ExtLib
 open Common
 open Algo
+open Doseparse
 
 include Util.Logging(struct let label = __FILE__ end) ;;
 
@@ -26,7 +27,7 @@ module Options = struct
   open OptParse
   let description = "Ceve - integrated metadata parser and transformer"
   let options = OptParser.make ~description
-  include Boilerplate.MakeOptions(struct let options = options end)
+  include StdOptions.MakeOptions(struct let options = options end)
 
   exception Format
   let otypes = ["cnf";"dimacs";"cudf";"dot";"gml";"grml";"table"] 
@@ -41,14 +42,14 @@ module Options = struct
     let error _ s = Printf.sprintf "%s format not supported" s in
     Opt.value_option metavar default corce error
 
-  let src = Boilerplate.vpkglist_option ()
-  let dst = Boilerplate.vpkg_option ()
-  let cone = Boilerplate.vpkglist_option ()
-  let reverse_cone = Boilerplate.vpkglist_option ()
+  let src = StdOptions.vpkglist_option ()
+  let dst = StdOptions.vpkg_option ()
+  let cone = StdOptions.vpkglist_option ()
+  let reverse_cone = StdOptions.vpkglist_option ()
   let cone_maxdepth = StdOpt.int_option ()
   let out_type = out_option ~default:"cnf" ()
   let grp_type = grp_option ~default:"syn" ()
-  let request = Boilerplate.incr_str_list ()
+  let request = StdOptions.incr_str_list ()
 
   open OptParser
   add options ~short_name:'c' ~long_name:"cone" ~help:"dependency cone" cone;
@@ -58,11 +59,11 @@ module Options = struct
   add options ~short_name:'T' ~help:"Output type format. Default cnf" out_type;
   add options                 ~long_name:"request" ~help:"Installation Request (can be repeated)" request;
 
-  include Boilerplate.InputOptions
-  Boilerplate.InputOptions.add_options ~default:["outfile";"latest";"trim"] options ;;
+  include StdOptions.InputOptions
+  StdOptions.InputOptions.add_options ~default:["outfile";"latest";"trim"] options ;;
 
-  include Boilerplate.DistribOptions;;
-  Boilerplate.DistribOptions.add_options options ;;
+  include StdOptions.DistribOptions;;
+  StdOptions.DistribOptions.add_options options ;;
 
 end;;
 
@@ -126,13 +127,13 @@ let main () =
   in
   let options = Options.set_options input_type in
 
-  Boilerplate.enable_debug(OptParse.Opt.get Options.verbose);
-  Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
+  StdDebug.enable_debug(OptParse.Opt.get Options.verbose);
+  StdDebug.all_quiet (OptParse.Opt.get Options.quiet);
 
   let global_constraints = not(OptParse.Opt.get Options.deb_ignore_essential) in
 
   let (fg,bg) = Options.parse_cmdline (input_type,implicit) posargs in
-  let (preamble,pkgll,request,from_cudf,to_cudf) = Boilerplate.load_list ~options [fg;bg] in
+  let (preamble,pkgll,request,from_cudf,to_cudf) = StdLoaders.load_list ~options [fg;bg] in
   let request = 
     let l = OptParse.Opt.get Options.request in
     if l <> [] then parse_request to_cudf l else request 
@@ -273,4 +274,4 @@ END
   in output [plist]
 ;;
 
-Boilerplate.if_application ~alternatives:["dose-ceve";"ceve"] __FILE__ (fun () -> main (); 0) ;;
+StdUtils.if_application ~alternatives:["dose-ceve";"ceve"] __FILE__ (fun () -> main (); 0) ;;

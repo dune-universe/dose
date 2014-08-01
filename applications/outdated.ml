@@ -17,7 +17,7 @@
 open ExtLib
 open Common
 open Algo
-module Boilerplate=BoilerplateNoRpm
+open DoseparseNoRpm
 
 include Util.Logging(struct let label = __FILE__ end) ;;
 
@@ -26,16 +26,16 @@ module Options = struct
   let description =
     "Report packages that aren't installable in any futures of a repository"
   let options = OptParser.make ~description
-  include Boilerplate.MakeOptions(struct let options = options end)
+  include StdOptions.MakeOptions(struct let options = options end)
 
-  include Boilerplate.DistcheckOptions
-  Boilerplate.DistcheckOptions.add_options options ;;
+  include StdOptions.DistcheckOptions
+  StdOptions.DistcheckOptions.add_options options ;;
 
-  include Boilerplate.InputOptions
-  Boilerplate.InputOptions.add_options ~default:["checkonly"] options ;;
+  include StdOptions.InputOptions
+  StdOptions.InputOptions.add_options ~default:["checkonly"] options ;;
 
-  include Boilerplate.DistribOptions;;
-  Boilerplate.DistribOptions.add_options options ;;
+  include StdOptions.DistribOptions;;
+  StdOptions.DistribOptions.add_options options ;;
 
   let dump = StdOpt.store_true ()
 
@@ -298,15 +298,15 @@ let main () =
   let args = OptParse.OptParser.parse_argv Options.options in
   let options = 
     match Option.get (Options.set_options `Deb) with
-    |Boilerplate.Deb o -> o
+    |StdOptions.Deb o -> o
     |_ -> fatal "impossible"
   in
 
-  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
-  Boilerplate.enable_bars (OptParse.Opt.get Options.progress)
+  StdDebug.enable_debug (OptParse.Opt.get Options.verbose);
+  StdDebug.enable_bars (OptParse.Opt.get Options.progress)
     ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
-  Boilerplate.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
-  Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
+  StdDebug.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
+  StdDebug.all_quiet (OptParse.Opt.get Options.quiet);
 
   let checklist = OptParse.Opt.opt Options.checkonly in
   let failure = OptParse.Opt.get Options.failure in
@@ -323,11 +323,11 @@ let main () =
 
   let result = outdated ~summary ~failure ~explain ~dump ~checklist ~options packagelist in
   if (result.Diagnostic.missing = 0) && (result.Diagnostic.conflict = 0)
-  then Boilerplate.exit(0) (* no broken packages *)
-  else Boilerplate.exit(1) (* at least one broken package *)
+  then StdUtils.exit(0) (* no broken packages *)
+  else StdUtils.exit(1) (* at least one broken package *)
 ;;
 
-Boilerplate.if_application
+StdUtils.if_application
 ~alternatives:["dose-outdated";"dose3-outdated";"edos-outdated";"deb-outdated"] 
 __FILE__ main ;;
 

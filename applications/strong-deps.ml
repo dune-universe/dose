@@ -13,19 +13,20 @@
 open ExtLib
 open Common
 open Algo
+open Doseparse
 
 module Options = struct
   open OptParse
   let description = "Compute the strong dependency graph"
   let options = OptParser.make ~description
-  include Boilerplate.MakeOptions(struct let options = options end)
+  include StdOptions.MakeOptions(struct let options = options end)
 
-  include Boilerplate.DistribOptions;;
-  Boilerplate.DistribOptions.add_options options ;;
+  include StdOptions.DistribOptions;;
+  StdOptions.DistribOptions.add_options options ;;
 
   let dot = StdOpt.store_true ()
   let detrans = StdOpt.store_true ()
-  let checkonly = Boilerplate.vpkglist_option ()
+  let checkonly = StdOptions.vpkglist_option ()
   let conj_only = StdOpt.store_true ()
 
   open OptParser
@@ -48,27 +49,27 @@ let rev_impactlist = Defaultgraphs.PackageGraph.succ_list
 
 let default_options = function
   |`Deb -> Some ( 
-    Boilerplate.Deb { 
+    StdOptions.Deb { 
       Debian.Debcudf.default_options with
       Debian.Debcudf.ignore_essential = true
     })
   |`Edsp -> Some ( 
-    Boilerplate.Edsp { 
+    StdOptions.Edsp { 
       Debian.Debcudf.default_options with
       Debian.Debcudf.ignore_essential = true
     })
-  |`Eclipse -> Some (Boilerplate.Eclipse Debian.Debcudf.default_options)
+  |`Eclipse -> Some (StdOptions.Eclipse Debian.Debcudf.default_options)
   |_ -> None
 ;;
 
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
   let bars = ["Strongdeps_int.main";"Strongdeps_int.conj"] in
-  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
-  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) bars;
+  StdDebug.enable_debug (OptParse.Opt.get Options.verbose);
+  StdDebug.enable_bars (OptParse.Opt.get Options.progress) bars;
   let options = Options.set_options (Input.guess_format [posargs]) in
   (* let options = default_options (Input.guess_format [posargs]) in *)
-  let (_,universe,_,_,to_cudf) = Boilerplate.load_universe ~options posargs in
+  let (_,universe,_,_,to_cudf) = StdLoaders.load_universe ~options posargs in
   if OptParse.Opt.is_set Options.checkonly then begin
     let pkglistlist =
         List.map (fun ((n,a),c) ->

@@ -15,8 +15,7 @@
 open ExtLib
 open Common
 open Algo
-
-module Boilerplate = BoilerplateNoRpm
+open DoseparseNoRpm
 
 let predbar = Util.Progress.create "challenged" ;;
 include Util.Logging(struct let label = __FILE__ end) ;;
@@ -24,9 +23,9 @@ include Util.Logging(struct let label = __FILE__ end) ;;
 module Options = struct
   open OptParse
   let options = OptParser.make ~description:"find challenged packages"
-  include Boilerplate.MakeOptions(struct let options = options end)
+  include StdOptions.MakeOptions(struct let options = options end)
 
-  let checkonly = Boilerplate.pkglist_option ()
+  let checkonly = StdOptions.pkglist_option ()
   let brokenlist = StdOpt.store_true ()
   let downgrades = StdOpt.store_true ()
   let cluster = StdOpt.store_true ()
@@ -309,9 +308,9 @@ END
 
 let main () =
   let args = OptParse.OptParser.parse_argv Options.options in
-  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
-  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) ["challenged"] ;
-  Boilerplate.enable_timers (OptParse.Opt.get Options.timers) [];
+  StdDebug.enable_debug (OptParse.Opt.get Options.verbose);
+  StdDebug.enable_bars (OptParse.Opt.get Options.progress) ["challenged"] ;
+  StdDebug.enable_timers (OptParse.Opt.get Options.timers) [];
   Util.Debug.disable "Depsolver_int";
   let clusterlist = OptParse.Opt.opt Options.checkonly in 
   let broken = OptParse.Opt.get Options.brokenlist in
@@ -330,9 +329,9 @@ let main () =
     Format.printf "---@."
   ) pred;
 
-  Boilerplate.exit(0)
+  StdUtils.exit(0)
 ;;
 
-Boilerplate.if_application 
+StdUtils.if_application 
 ~alternatives:["dose-challenged";"dose3-challenged";"edos-challenged";"deb-challenged"]
 __FILE__ main ;;

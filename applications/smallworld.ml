@@ -15,12 +15,13 @@
 
 open Common
 open Algo
+open Doseparse
 
 module Options = struct
   open OptParse
   let description = "Compute Small World statistic"
   let options = OptParser.make ~description
-  include Boilerplate.MakeOptions(struct let options = options end)
+  include StdOptions.MakeOptions(struct let options = options end)
     
   let generic = StdOpt.store_true ()
   let scatterplots = StdOpt.store_true ()
@@ -95,9 +96,9 @@ let saveplot2 h outfile =
 
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
-  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
+  StdDebug.enable_debug (OptParse.Opt.get Options.verbose);
   let universe = 
-    let (_,u,_,_,_) = Boilerplate.load_universe posargs in
+    let (_,u,_,_,_) = StdLoaders.load_universe posargs in
     if OptParse.Opt.get Options.trim then
       Depsolver.trim ~global_constraints:false u
     else u
