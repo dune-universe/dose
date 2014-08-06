@@ -203,6 +203,30 @@ Type: distcheck
 Printer: text
 Ignore: yes
 
+Name: cudfv_default_distcheck
+Group: distcheck
+Expected: tests/cudfv/distcheck_cudfv_default_opt_test
+Input: cudfv://tests/cudfv/number_field.cudf
+Cmd: ./distcheck.native --checkonly "a" -f -e
+Type: distcheck
+Printer: text
+
+Name: cudfv_cudf_versions_distcheck
+Group: distcheck
+Expected: tests/cudfv/distcheck_cudfv_cudfv_opt_test
+Input: cudfv://tests/cudfv/number_field.cudf
+Cmd: ./distcheck.native --checkonly "a" -f -e --cudf-versions
+Type: distcheck
+Printer: text
+
+Name: cudfv_real_version_field_distcheck
+Group: distcheck
+Expected: tests/cudfv/distcheck_cudfv_rvf_opt_test
+Input: cudfv://tests/cudfv/realversion_field.cudf
+Cmd: ./distcheck.native -- checkonly "a" -f -e --real-version-field "realversion"
+Type: distcheck
+Printer: text
+
 Name: failure_outdated
 Group: distcheck
 Expected: tests/applications/dose-tests/outdated_failure
