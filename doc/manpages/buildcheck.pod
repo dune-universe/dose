@@ -6,27 +6,30 @@ dose-builddebcheck - Check if a package can be built on a Debian system
 
 =over 
 
-=item B<dose-builddebcheck> [options] I<binary-repositories> I<source-repository> 
+=item B<dose-builddebcheck>  B<--deb-native-arch=>I<name> [options] I<binary-repositories> I<source-repository> 
 
 =back
 =cut
 
 =head1 DESCRIPTION
 
-dose-builddebcheck determines, for a set of debian source package control
-stanzas, called the source repository, whether a build environment for the
-packages of the source repository can be installed by using packages from the
-binary repository. For this, only package meta-information is taken into
-account: build-dependencies and build-conflicts in the source package, and
-inter-package relationsships expressed in the binary repository. The constraint
-solving algorithm is complete, that is it finds a solution whenever there
-exists one, even for multiple disjunctive dependencies and deep package
-conflicts.  This problem is computationally infeasible in theory (that is,
-NP-complete), but can be solved very efficiently for package repositories that
-actually occur in practice. Installability of binary packages is analyzed
-according to their B<Depends>, B<Conflicts>, and B<Provides> fields with their
-meaning as of Debian policy version 3.9.0. B<Pre-depends> are treated like
-B<Depends>, and B<Breaks> are treated like B<Conflicts>. 
+dose-builddebcheck determines, for a set of debian source package
+control stanzas, called the source repository, whether a build
+environment for the packages of the source repository can be installed
+on the specified native architecture by using packages from the binary
+repository. For this, only package meta-information is taken into
+account: build-dependencies and build-conflicts in the source package,
+and inter-package relationsships expressed in the binary
+repository. The constraint solving algorithm is complete, that is it
+finds a solution whenever there exists one, even for multiple
+disjunctive dependencies and deep package conflicts.  This problem is
+computationally infeasible in theory (that is, NP-complete), but can
+be solved very efficiently for package repositories that actually
+occur in practice. Installability of binary packages is analyzed
+according to their B<Depends>, B<Conflicts>, and B<Provides> fields
+with their meaning as of Debian policy version 3.9.0. B<Pre-depends>
+are treated like B<Depends>, and B<Breaks> are treated like
+B<Conflicts>.
 
 =cut
 
@@ -58,9 +61,7 @@ by specifying the I<host> architecture.
 
 =item B<--deb-native-arch=>I<name>
 
-Specify the native architecture. The default behavior is to deduce
-the native architecture from the first package stanza in the input
-that has an architecture different from all.
+Specify the native architecture. This argument is mandatory.
 
 =item B<--deb-foreign-archs=>I<name> [,I<name>] ...
 
