@@ -208,7 +208,7 @@ together with B<--failures>.
 
 Gives a more detailed summary of the findings.
 
-=item B<-o>I<file>
+=item B<-o> I<file>
 
 Send output to I<file>.
 
