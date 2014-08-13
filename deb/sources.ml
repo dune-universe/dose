@@ -112,82 +112,66 @@ let input_raw ?filter ?(archs=[]) =
 
 let sep = ":" ;;
 
-(* as per policy, if the first arch restriction contains a !
- * then we assume that all archs on the lists are bang-ed.
- * cf: http://www.debian.org/doc/debian-policy/ch-relationships.html 7.1
- * use the same rule for buildprofile lists
- *
- * given archs, profile and a dependency with an architecture and profile list,
+(* given archs, profile and a dependency with an architecture and profile list,
  * decide whether to select or drop that dependency *)
-let select hostarch profile dep =
-  let matcharch arch = Architecture.src_matches_arch arch hostarch in
-  match dep,profile with
-  (* positive arch list, negative profiles, no profile selected
-   *  -> only select if any of archs is in the arch list *)
-  |(v,(((true,_)::_) as al),(((false,_)::_))),None when
-    List.exists (fun (_,a) -> matcharch a) al -> Some v
-  (* negative arch list, negative profiles, no profile selected
-   *  -> only select if none of archs is in the arch list *)
-  |(v,(((false,_)::_) as al),(((false,_)::_))),None when
-    List.for_all (fun (_,a) -> not(matcharch a)) al -> Some v
-  (* positive arch list, positive profiles, some profile selected
-   *  -> only select if any of archs is in the arch list
-   *     and the selected profile is in the profile list *)
-  |(v,(((true,_)::_) as al),(((true,_)::_) as pl)),(Some p) when
-    (List.exists (fun (_,a) -> matcharch a) al) &&
-    (List.exists (fun (_,a) -> a = p) pl) -> Some v
-  (* positive arch list, negative profiles, some profile selected
-   *  -> only select if any of archs is in the arch list
-   *     and the selected profile is not in the profile list *)
-  |(v,(((true,_)::_) as al),(((false,_)::_) as pl)),(Some p) when
-    (List.exists (fun (_,a) -> matcharch a) al) &&
-    (List.for_all (fun (_,a) -> a <> p) pl) -> Some v
-  (* negative arch list, positive profiles, some profile selected
-   *  -> only select if none of archs is in the arch list
-   *     and the selected profile is in the profile list *)
-  |(v,(((false,_)::_) as al),(((true,_)::_) as pl)),(Some p) when
-    (List.for_all (fun (_,a) -> not(matcharch a)) al) &&
-    (List.exists (fun (_,a) -> a = p) pl) -> Some v
-  (* negative arch list, negative profiles, some profile selected
-   *  -> only select if none of archs is in the arch list
-   *     and the selected profile is not in the profile list *)
-  |(v,(((false,_)::_) as al),(((false,_)::_) as pl)),(Some p) when
-    (List.for_all (fun (_,a) -> not(matcharch a)) al) &&
-    (List.for_all (fun (_,a) -> a <> p) pl) -> Some v
-  (* negative arch list, no profiles
-   *  -> only select if none of archs is in the arch list *)
-  |(v,(((false,_)::_) as al),[]),_ when
-    List.for_all (fun (_,a) -> not(matcharch a)) al -> Some v
-  (* positive arch list, no profiles
-   *  -> only select if any of archs is in the arch list *)
-  |(v,(((true,_)::_) as al),[]),_ when
-    List.exists (fun (_,a) -> matcharch a) al -> Some v
-  (* no arch list, negative profiles, some profile selected
-   *  -> only select if the selected profile is not in the profile list *)
-  |(v,[],(((false,_)::_) as pl)),(Some p) when
-    List.for_all (fun (_,a) -> a <> p) pl -> Some v
-  (* no arch list, positive profiles, some profile selected
-   *  -> only select if the selected profile is in the profile list *)
-  |(v,[],(((true,_)::_) as pl)),(Some p) when
-    List.exists (fun (_,a) -> a = p) pl -> Some v
-  (* no arch list, false profiles, no profile selected
-   *  -> select *)
-  |(v,[],(((false,_)::_))),None -> Some v
-  (* no arch list, no profiles
-   *  -> select *)
-  |(v,[],[]),_ -> Some v
-  (* any other case
-   *  -> drop *)
-  |_ -> None
+let select hostarch profiles (v,al,pl) =
+  (* as per policy, if the first arch restriction contains a !
+   * then we assume that all archs on the lists are bang-ed.
+   * cf: http://www.debian.org/doc/debian-policy/ch-relationships.html 7.1 *)
+  let matcharch = match al with
+    | [] -> true
+    | ((true,_)::_) ->
+      List.exists (fun (_,a) -> Architecture.src_matches_arch a hostarch) al
+    | ((false,_)::_) ->
+      List.for_all (fun (_,a) -> not(Architecture.src_matches_arch a hostarch)) al
+  in
+
+  (*
+   * - for each dependency, the restriction list is processed from left to
+   *   right
+   * - if the restriction list is empty, the build dependency is kept and
+   *   processing stops
+   * - if a negated term is encountered and the specified profile is set, the
+   *   build dependency is dropped and processing of the list stops
+   * - if a positive term is encountered and the specified profile is set, then
+   *   the build dependency is kept and processing of the list stops
+   * - if no profile is set for any term in the restriction list and at least
+   *   one term in the restriction list is negated then keep the build
+   *   dependency, otherwise drop the build dependency
+   *)
+  let matchprofile = match pl with
+    | [] -> true
+    | _ -> begin
+        let rec aux l default = match l with
+          | [] -> default
+          | ((act,ps)::tl) ->
+            (* TODO: handle malformed strings with missing dot *)
+            let ns, lb = String.split ps "." in
+            match ns with
+            | "profile" -> begin
+                let found = List.mem lb profiles in
+                match act,found with
+                | true,true -> true
+                | true,false -> aux tl default
+                | false,true -> false
+                | false,false -> aux tl true
+              end
+            | _ -> aux tl default
+        in
+        aux pl false
+      end
+  in
+
+  if matcharch && matchprofile then Some v else None
 ;;
 
 (** transform a list of sources packages into dummy binary packages.
   * This function preserve the order *)
-let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") buildarch hostarch l =
-  let conflicts profile l = List.filter_map (select hostarch profile) l in
-  let depends profile ll =
+let sources2packages ?(profiles=[]) ?(noindep=false) ?(src="src") buildarch hostarch l =
+  let conflicts l = List.filter_map (select hostarch profiles) l in
+  let depends ll =
     List.filter_map (fun l ->
-      match List.filter_map (select hostarch profile) l with
+      match List.filter_map (select hostarch profiles) l with
       |[] -> None 
       |l -> Some l
     ) ll
@@ -207,11 +191,9 @@ let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") buildarch h
   in
   let add_native_ll = List.map add_native_l in
 
-  (* the package name is encodes as src-<profile>:<package name> if
-   * a profile is selected, src:<package-name> otherwise *)
-  let src2pkg ?(profile=None) srcpkg =
-    let prefix = match profile with None -> src | Some s -> src^"-"^s in
-    let extras_profile  = match profile with None -> [] | Some s -> [("profile", s)] in
+  (* the package name is encodes as src:<package-name> *)
+  let src2pkg srcpkg =
+    let extras_profiles  = match profiles with [] -> [] | _ -> [("profiles", String.join " " profiles)] in
     let depends_indep   = if noindep then [] else add_native_ll srcpkg.build_depends_indep in
     let conflicts_indep = if noindep then [] else add_native_l srcpkg.build_conflicts_indep in
     (* when crossbuilding (host != build), implicitly depend on build-essential
@@ -223,33 +205,17 @@ let sources2packages ?(profiles=false) ?(noindep=false) ?(src="src") buildarch h
       [[(("build-essential", Some buildarch), None)]]
     in
     { Packages.default_package with
-      Packages.name = prefix ^ sep ^ srcpkg.name ;
+      Packages.name = src ^ sep ^ srcpkg.name ;
       source = (srcpkg.name, Some srcpkg.version);
       version = srcpkg.version;
-      depends = build_essential @ (depends profile (depends_indep @ srcpkg.build_depends));
-      conflicts = conflicts profile (conflicts_indep @ srcpkg.build_conflicts);
+      depends = build_essential @ (depends (depends_indep @ srcpkg.build_depends));
+      conflicts = conflicts (conflicts_indep @ srcpkg.build_conflicts);
       architecture = String.concat "," srcpkg.architecture;
-      extras = extras_profile @ [("Type",src)]
+      extras = extras_profiles @ [("Type",src)]
     }
   in
 
-  (* search in Build-Depends and Build-Conflicts for buildprofiles
-     searching in Build-Depends-Indep and Build-Conflicts-Indep doesnt make sense *)
-  let getprofiles pkg =
-    let deps = pkg.build_conflicts @ (List.flatten pkg.build_depends) in
-    (* XXX certainly we could do better here ... *)
-    List.unique (List.map snd (List.fold_left (fun l (_,_,pl) -> pl @ l) [] deps))
-  in
-
-  (* right fold to not inverse the order *)
-  (* if a profile is selected we add an encoding of the package for each profile *)
-  List.fold_right (fun srcpkg al ->
-    let pkg = src2pkg srcpkg in
-    if profiles then
-      pkg :: (List.map (fun p -> src2pkg ~profile:(Some p) srcpkg) (getprofiles srcpkg)) @ al
-    else
-      pkg::al
-  ) l []
+  List.map src2pkg l
 ;;
 
 (** Check if a package is of "Type" source as encoded by the function sources2packages *)

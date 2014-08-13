@@ -733,44 +733,92 @@ let test_parsing =
 
 let select_deps =
   let function_to_test = (fun (archs,profile,dep) -> Sources.select archs profile dep) in
-  let returns = returns_result function_to_test in
-  (* testname archlist profilename     pkg    archlist           profilelist           return *)
-  [ ("00", ("amd64", None,          ("foo", [],                [])),                 returns (Some "foo"));
-    ("01", ("amd64", None,          ("foo", [],                [(true,"stage1")])),  returns None);
-    ("02", ("amd64", None,          ("foo", [],                [(false,"stage1")])), returns (Some "foo"));
-    ("03", ("amd64", None,          ("foo", [(true,"amd64")],  [])),                 returns (Some "foo"));
-    ("04", ("amd64", None,          ("foo", [(true,"amd64")],  [(true,"stage1")])),  returns None);
-    ("05", ("amd64", None,          ("foo", [(true,"amd64")],  [(false,"stage1")])), returns (Some "foo"));
-    ("06", ("amd64", None,          ("foo", [(false,"amd64")], [])),                 returns None);
-    ("07", ("amd64", None,          ("foo", [(false,"amd64")], [(true,"stage1")])),  returns None);
-    ("08", ("amd64", None,          ("foo", [(false,"amd64")], [(false,"stage1")])), returns None);
-    ("09", ("amd64", Some "stage1", ("foo", [],                [])),                 returns (Some "foo"));
-    ("10", ("amd64", Some "stage1", ("foo", [],                [(true,"stage1")])),  returns (Some "foo"));
-    ("11", ("amd64", Some "stage1", ("foo", [],                [(false,"stage1")])), returns None);
-    ("12", ("amd64", Some "stage1", ("foo", [(true,"amd64")],  [])),                 returns (Some "foo"));
-    ("13", ("amd64", Some "stage1", ("foo", [(true,"amd64")],  [(true,"stage1")])),  returns (Some "foo"));
-    ("14", ("amd64", Some "stage1", ("foo", [(true,"amd64")],  [(false,"stage1")])), returns None);
-    ("15", ("amd64", Some "stage1", ("foo", [(false,"amd64")], [])),                 returns None);
-    ("16", ("amd64", Some "stage1", ("foo", [(false,"amd64")], [(true,"stage1")])),  returns None);
-    ("17", ("amd64", Some "stage1", ("foo", [(false,"amd64")], [(false,"stage1")])), returns None);
-    ("18", ("i386",  None,          ("foo", [],                [])),                 returns (Some "foo"));
-    ("19", ("i386",  None,          ("foo", [],                [(true,"stage1")])),  returns None);
-    ("20", ("i386",  None,          ("foo", [],                [(false,"stage1")])), returns (Some "foo"));
-    ("21", ("i386",  None,          ("foo", [(true,"amd64")],  [])),                 returns None);
-    ("22", ("i386",  None,          ("foo", [(true,"amd64")],  [(true,"stage1")])),  returns None);
-    ("23", ("i386",  None,          ("foo", [(true,"amd64")],  [(false,"stage1")])), returns None);
-    ("24", ("i386",  None,          ("foo", [(false,"amd64")], [])),                 returns (Some "foo"));
-    ("25", ("i386",  None,          ("foo", [(false,"amd64")], [(true,"stage1")])),  returns None);
-    ("26", ("i386",  None,          ("foo", [(false,"amd64")], [(false,"stage1")])), returns (Some "foo"));
-    ("27", ("i386",  Some "stage1", ("foo", [],                [])),                 returns (Some "foo"));
-    ("28", ("i386",  Some "stage1", ("foo", [],                [(true,"stage1")])),  returns (Some "foo"));
-    ("29", ("i386",  Some "stage1", ("foo", [],                [(false,"stage1")])), returns None);
-    ("30", ("i386",  Some "stage1", ("foo", [(true,"amd64")],  [])),                 returns None);
-    ("31", ("i386",  Some "stage1", ("foo", [(true,"amd64")],  [(true,"stage1")])),  returns None);
-    ("32", ("i386",  Some "stage1", ("foo", [(true,"amd64")],  [(false,"stage1")])), returns None);
-    ("33", ("i386",  Some "stage1", ("foo", [(false,"amd64")], [])),                 returns (Some "foo"));
-    ("34", ("i386",  Some "stage1", ("foo", [(false,"amd64")], [(true,"stage1")])),  returns (Some "foo"));
-    ("35", ("i386",  Some "stage1", ("foo", [(false,"amd64")], [(false,"stage1")])), returns None);
+  let printer = function None -> "None" | Some s -> s in
+  let returns = returns_result ~printer function_to_test in
+  (* testname archlist profilelist pkg   archlist           profilelist           return *)
+  [ ("00", ("amd64", [],         ("foo", [],                [])),                         returns (Some "foo"));
+    ("01", ("amd64", [],         ("foo", [],                [(true,"profile.stage1")])),  returns None);
+    ("02", ("amd64", [],         ("foo", [],                [(false,"profile.stage1")])), returns (Some "foo"));
+    ("03", ("amd64", [],         ("foo", [(true,"amd64")],  [])),                         returns (Some "foo"));
+    ("04", ("amd64", [],         ("foo", [(true,"amd64")],  [(true,"profile.stage1")])),  returns None);
+    ("05", ("amd64", [],         ("foo", [(true,"amd64")],  [(false,"profile.stage1")])), returns (Some "foo"));
+    ("06", ("amd64", [],         ("foo", [(false,"amd64")], [])),                         returns None);
+    ("07", ("amd64", [],         ("foo", [(false,"amd64")], [(true,"profile.stage1")])),  returns None);
+    ("08", ("amd64", [],         ("foo", [(false,"amd64")], [(false,"profile.stage1")])), returns None);
+    ("09", ("amd64", ["stage1"], ("foo", [],                [])),                         returns (Some "foo"));
+    ("10", ("amd64", ["stage1"], ("foo", [],                [(true,"profile.stage1")])),  returns (Some "foo"));
+    ("11", ("amd64", ["stage1"], ("foo", [],                [(false,"profile.stage1")])), returns None);
+    ("12", ("amd64", ["stage1"], ("foo", [(true,"amd64")],  [])),                         returns (Some "foo"));
+    ("13", ("amd64", ["stage1"], ("foo", [(true,"amd64")],  [(true,"profile.stage1")])),  returns (Some "foo"));
+    ("14", ("amd64", ["stage1"], ("foo", [(true,"amd64")],  [(false,"profile.stage1")])), returns None);
+    ("15", ("amd64", ["stage1"], ("foo", [(false,"amd64")], [])),                         returns None);
+    ("16", ("amd64", ["stage1"], ("foo", [(false,"amd64")], [(true,"profile.stage1")])),  returns None);
+    ("17", ("amd64", ["stage1"], ("foo", [(false,"amd64")], [(false,"profile.stage1")])), returns None);
+    ("18", ("i386",  [],         ("foo", [],                [])),                         returns (Some "foo"));
+    ("19", ("i386",  [],         ("foo", [],                [(true,"profile.stage1")])),  returns None);
+    ("20", ("i386",  [],         ("foo", [],                [(false,"profile.stage1")])), returns (Some "foo"));
+    ("21", ("i386",  [],         ("foo", [(true,"amd64")],  [])),                         returns None);
+    ("22", ("i386",  [],         ("foo", [(true,"amd64")],  [(true,"profile.stage1")])),  returns None);
+    ("23", ("i386",  [],         ("foo", [(true,"amd64")],  [(false,"profile.stage1")])), returns None);
+    ("24", ("i386",  [],         ("foo", [(false,"amd64")], [])),                         returns (Some "foo"));
+    ("25", ("i386",  [],         ("foo", [(false,"amd64")], [(true,"profile.stage1")])),  returns None);
+    ("26", ("i386",  [],         ("foo", [(false,"amd64")], [(false,"profile.stage1")])), returns (Some "foo"));
+    ("27", ("i386",  ["stage1"], ("foo", [],                [])),                         returns (Some "foo"));
+    ("28", ("i386",  ["stage1"], ("foo", [],                [(true,"profile.stage1")])),  returns (Some "foo"));
+    ("29", ("i386",  ["stage1"], ("foo", [],                [(false,"profile.stage1")])), returns None);
+    ("30", ("i386",  ["stage1"], ("foo", [(true,"amd64")],  [])),                         returns None);
+    ("31", ("i386",  ["stage1"], ("foo", [(true,"amd64")],  [(true,"profile.stage1")])),  returns None);
+    ("32", ("i386",  ["stage1"], ("foo", [(true,"amd64")],  [(false,"profile.stage1")])), returns None);
+    ("33", ("i386",  ["stage1"], ("foo", [(false,"amd64")], [])),                         returns (Some "foo"));
+    ("34", ("i386",  ["stage1"], ("foo", [(false,"amd64")], [(true,"profile.stage1")])),  returns (Some "foo"));
+    ("35", ("i386",  ["stage1"], ("foo", [(false,"amd64")], [(false,"profile.stage1")])), returns None);
+  (* test architectures restrictions with more than one architecture *)
+    ("36", ("amd64", [], ("foo", [(true, "amd64");(true, "i386")], [])),   returns (Some "foo"));
+    ("37", ("amd64", [], ("foo", [(true, "i386");(true, "amd64")], [])),   returns (Some "foo"));
+    ("38", ("amd64", [], ("foo", [(false, "amd64");(false, "i386")], [])), returns None);
+    ("39", ("amd64", [], ("foo", [(false, "i386");(false, "amd64")], [])), returns None);
+  (* test restriction list with more than one restriction and more than one
+   * profile active at a time. The following is the reference table from the
+   * build profile spec:
+   *
+   *
+   *                                          | ""   | "stage1" | "nocheck" | `"stage1 nocheck"` |
+   * -----------------------------------------+------+----------+-----------+--------------------+
+   *  foo <!profile.stage1>`                  | keep | drop     | keep      | drop               |
+   *  foo <profile.stage1>`                   | drop | keep     | drop      | keep               |
+   *  foo <!profile.stage1 !profile.nocheck>` | keep | drop     | drop      | drop               |
+   *  foo <profile.stage1 profile.nocheck>`   | drop | keep     | keep      | keep               |
+   *  foo <!profile.stage1 profile.nocheck>`  | keep | drop     | keep      | drop               |
+   *  foo <profile.nocheck !profile.stage1>`  | keep | drop     | keep      | keep               |
+   * *)
+  (* first column of the table *)
+    ("40", ("amd64", [],                   ("foo", [], [(false, "profile.stage1")])),                            returns (Some "foo"));
+    ("41", ("amd64", [],                   ("foo", [], [(true, "profile.stage1")])),                             returns None);
+    ("42", ("amd64", [],                   ("foo", [], [(false, "profile.stage1");(false, "profile.nocheck")])), returns (Some "foo"));
+    ("43", ("amd64", [],                   ("foo", [], [(true, "profile.stage1");(true, "profile.nocheck")])),   returns None);
+    ("44", ("amd64", [],                   ("foo", [], [(false, "profile.stage1");(true, "profile.nocheck")])),  returns (Some "foo"));
+    ("45", ("amd64", [],                   ("foo", [], [(true, "profile.nocheck");(false, "profile.stage1")])),  returns (Some "foo"));
+  (* second column of the table *)
+    ("46", ("amd64", ["stage1"],           ("foo", [], [(false, "profile.stage1")])),                            returns None);
+    ("47", ("amd64", ["stage1"],           ("foo", [], [(true, "profile.stage1")])),                             returns (Some "foo"));
+    ("48", ("amd64", ["stage1"],           ("foo", [], [(false, "profile.stage1");(false, "profile.nocheck")])), returns None);
+    ("49", ("amd64", ["stage1"],           ("foo", [], [(true, "profile.stage1");(true, "profile.nocheck")])),   returns (Some "foo"));
+    ("50", ("amd64", ["stage1"],           ("foo", [], [(false, "profile.stage1");(true, "profile.nocheck")])),  returns None);
+    ("51", ("amd64", ["stage1"],           ("foo", [], [(true, "profile.nocheck");(false, "profile.stage1")])),  returns None);
+  (* third column of the table *)
+    ("52", ("amd64", ["nocheck"],          ("foo", [], [(false, "profile.stage1")])),                            returns (Some "foo"));
+    ("53", ("amd64", ["nocheck"],          ("foo", [], [(true, "profile.stage1")])),                             returns None);
+    ("54", ("amd64", ["nocheck"],          ("foo", [], [(false, "profile.stage1");(false, "profile.nocheck")])), returns None);
+    ("55", ("amd64", ["nocheck"],          ("foo", [], [(true, "profile.stage1");(true, "profile.nocheck")])),   returns (Some "foo"));
+    ("56", ("amd64", ["nocheck"],          ("foo", [], [(false, "profile.stage1");(true, "profile.nocheck")])),  returns (Some "foo"));
+    ("57", ("amd64", ["nocheck"],          ("foo", [], [(true, "profile.nocheck");(false, "profile.stage1")])),  returns (Some "foo"));
+  (* fourth column of the table *)
+    ("58", ("amd64", ["stage1";"nocheck"], ("foo", [], [(false, "profile.stage1")])),                            returns None);
+    ("59", ("amd64", ["stage1";"nocheck"], ("foo", [], [(true, "profile.stage1")])),                             returns (Some "foo"));
+    ("60", ("amd64", ["stage1";"nocheck"], ("foo", [], [(false, "profile.stage1");(false, "profile.nocheck")])), returns None);
+    ("61", ("amd64", ["stage1";"nocheck"], ("foo", [], [(true, "profile.stage1");(true, "profile.nocheck")])),   returns (Some "foo"));
+    ("62", ("amd64", ["stage1";"nocheck"], ("foo", [], [(false, "profile.stage1");(true, "profile.nocheck")])),  returns None);
+    ("63", ("amd64", ["stage1";"nocheck"], ("foo", [], [(true, "profile.nocheck");(false, "profile.stage1")])),  returns (Some "foo"));
   ]
 
 let test_sources_input = "
@@ -782,7 +830,7 @@ Build-Depends: bin1, bin2:any, bin3:native
 Package: source2
 Version: 0.1-1
 Architecture: any
-Build-Depends: bin1 [amd64] <!stage1>, bin2 | bin3 <stage1>, bin4 [!amd64] <!stage1>
+Build-Depends: bin1 [amd64] <!profile.stage1>, bin2 | bin3 <profile.stage1>, bin4 [!amd64] <!profile.stage1>
 
 Package: source3
 Version: 0.1-1
@@ -797,7 +845,7 @@ let test_sources2packages =
   let packagelist = Sources.parse_sources_in "" data in
   let hostarch = "amd64" in
   let buildarch = "amd64" in
-  let sources = Sources.sources2packages ~profiles:true buildarch hostarch packagelist in
+  let sources = Sources.sources2packages ~profiles:["stage1"] buildarch hostarch packagelist in
   let function_to_test src =
     let src = List.find (fun s -> s.Packages.name = src) sources in
     src.Packages.depends
@@ -814,14 +862,7 @@ let test_sources2packages =
       ]
     );
     (
-      "default", "src:source2", returns [
-        [(("build-essential", Some hostarch), None)];
-        [(("bin1", None), None)];
-        [(("bin2", None), None)]
-      ]
-    );
-    (
-      "stage1", "src-stage1:source2", returns [
+      "stage1", "src:source2", returns [
         [(("build-essential", Some hostarch), None)];
         [
           (("bin2", None), None);

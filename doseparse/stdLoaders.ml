@@ -308,7 +308,7 @@ END
 ;;
 
 (** return a list of Debian packages from a debian source file *)
-let deb_load_source ?filter ?(profiles=false) ?(noindep=false) buildarch hostarch sourcefile =
+let deb_load_source ?filter ?(profiles=[]) ?(noindep=false) buildarch hostarch sourcefile =
   let l = Debian.Sources.input_raw ?filter ~archs:[hostarch] [sourcefile] in
   Debian.Sources.sources2packages ~noindep ~profiles buildarch hostarch l
 ;;
