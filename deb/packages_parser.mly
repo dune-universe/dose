@@ -13,7 +13,7 @@ let parse_relop = function
   | _ -> assert false   (* lexer shouldn't have returned such a RELOP! *)
 
 let parse_multiarch = function
-  |("None"|"none") -> `None
+  |("None"|"none"|"no") -> `None
   |("Allowed"|"allowed") -> `Allowed
   |("Foreign"|"foreign") -> `Foreign
   |("Same"|"same") -> `Same
