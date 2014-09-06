@@ -135,13 +135,18 @@ let select hostarch profiles (v,al,pl) =
   if matcharch hostarch al && matchprofile profiles pl then Some v else None
 ;;
 
+(* given archs, profile and a dependency with an architecture and profile list,
+ * decide whether to select or drop that dependency *)
 (** transform a list of sources packages into dummy binary packages.
   * This function preserve the order *)
 let sources2packages ?(profiles=[]) ?(noindep=false) ?(src="src") buildarch hostarch l =
-  let conflicts l = List.filter_map (select hostarch profiles) l in
+  let select (v,al,pl) =
+    if matcharch hostarch al && matchprofile profiles pl then Some v else None
+  in
+  let conflicts l = List.filter_map select l in
   let depends ll =
     List.filter_map (fun l ->
-      match List.filter_map (select hostarch profiles) l with
+      match List.filter_map select l with
       |[] -> None 
       |l -> Some l
     ) ll
