@@ -92,15 +92,22 @@ let strinf_of_builddep (vpkg,archfilter,buildfilter) =
       ) l
     )
   in
+  let string_of_bpformula ll =
+    String.concat " " (
+      List.map (fun l ->
+          Printf.sprintf "<%s>" (string_of_filter l)
+        ) ll
+    )
+  in
   match archfilter,buildfilter with
   |[],[] -> string_of_vpkg vpkg
   |_,[] -> Printf.sprintf "%s [%s]" (string_of_vpkg vpkg) (string_of_filter archfilter)
-  |[],_ -> Printf.sprintf "%s <%s>" (string_of_vpkg vpkg) (string_of_filter buildfilter)
+  |[],_ -> Printf.sprintf "%s %s" (string_of_vpkg vpkg) (string_of_bpformula buildfilter)
   |_,_ ->
-      Printf.sprintf "%s [%s] <%s>"
+      Printf.sprintf "%s [%s] %s"
       (string_of_vpkg vpkg) 
       (string_of_filter archfilter)
-      (string_of_filter buildfilter)
+      (string_of_bpformula buildfilter)
 ;;
 
 let string_of_builddepformula builddepformula =

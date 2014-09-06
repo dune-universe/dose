@@ -74,7 +74,7 @@ type vpkg = (vpkgname * constr option)
 type vpkglist = vpkg list
 type vpkgformula = vpkg list list
 
-type builddep = (vpkg * (bool * architecture) list * (bool * buildprofile) list)
+type builddep = (vpkg * (bool * architecture) list * (bool * buildprofile) list list)
 type builddepslist = builddep list
 type builddepsformula = builddep list list
 

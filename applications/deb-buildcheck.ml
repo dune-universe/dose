@@ -44,6 +44,7 @@ module Options = struct
   let includextra = StdOpt.store_true ()
   let triplettable = StdOpt.str_option ()
   let cputable = StdOpt.str_option ()
+  let profiles = StdOpt.str_list_option ()
 
   open OptParser
   add options ~long_name:"defaultedMAforeign" ~help:"Convert Arch:all packages to Multi-Arch: foreign" maforeign;
@@ -52,6 +53,7 @@ module Options = struct
   add options ~long_name:"deb-triplettable" ~help:"Path to an architecture triplet table like /usr/share/dpkg/triplettable" triplettable;
   add options ~long_name:"deb-cputable" ~help:"Path to a cpu table like /usr/share/dpkg/cputable" cputable;
   add options ~long_name:"dump" ~help:"dump the cudf file" dump;
+  add options ~short_name:'P' ~long_name:"profiles" ~help:"comma separated list of activated build profiles" profiles;
 
 end
 
@@ -91,6 +93,14 @@ let main () =
   let hostarch = match options.Debian.Debcudf.host with None -> "" | Some s -> s in
   let noindep = OptParse.Opt.get Options.noindep in
 
+  let profiles =
+    if OptParse.Opt.is_set Options.profiles then
+      OptParse.Opt.get Options.profiles
+    else
+      try String.nsplit (Sys.getenv "DEB_BUILD_PROFILES") " "
+      with Not_found -> []
+  in
+
   let filter_external_sources par =
     if (OptParse.Opt.get Options.includextra) then true
     else
@@ -117,7 +127,7 @@ let main () =
     |l -> 
         begin match List.rev l with
         |h::t ->
-          let srclist = StdLoaders.deb_load_source ~filter:filter_external_sources ~noindep buildarch hostarch h in
+          let srclist = StdLoaders.deb_load_source ~profiles ~filter:filter_external_sources ~noindep buildarch hostarch h in
           let pkglist = Deb.input_raw t in
           (pkglist,srclist)
         |_ -> fatal "An impossible situation occurred ?!#"

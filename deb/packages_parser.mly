@@ -128,8 +128,8 @@ or_formula:
 buidldep:
   |vpkg                            { ($1,[],[]) }
   |vpkg LBRACKET buildarchlist RBRACKET { ($1,$3,[]) }
-  |vpkg LT buildprofilelist GT { ($1,[],$3) }
-  |vpkg LBRACKET buildarchlist RBRACKET LT buildprofilelist GT { ($1,$3,$6) }
+  |vpkg buildprofileformula { ($1,[],$2) }
+  |vpkg LBRACKET buildarchlist RBRACKET buildprofileformula { ($1,$3,$5) }
 ;
 
 builddepslist:
@@ -170,6 +170,16 @@ buildarchlist_ne:
 ;
 
 /**************************************/ 
+
+buildprofileformula:
+  | { [] }
+  | buildprofileformula_ne { $1 }
+;
+
+buildprofileformula_ne:
+  | LT buildprofilelist GT { [ $2 ] }
+  | LT buildprofilelist GT buildprofileformula_ne { $2 :: $4 }
+;
 
 buildprofile:
   | BANG IDENT             { (false,$2) }

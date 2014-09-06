@@ -112,66 +112,35 @@ let input_raw ?filter ?(archs=[]) =
 
 let sep = ":" ;;
 
-(* given archs, profile and a dependency with an architecture and profile list,
- * decide whether to select or drop that dependency *)
-let select hostarch profiles (v,al,pl) =
-  (* as per policy, if the first arch restriction contains a !
-   * then we assume that all archs on the lists are bang-ed.
-   * cf: http://www.debian.org/doc/debian-policy/ch-relationships.html 7.1 *)
-  let matcharch = match al with
-    | [] -> true
-    | ((true,_)::_) ->
-      List.exists (fun (_,a) -> Architecture.src_matches_arch a hostarch) al
-    | ((false,_)::_) ->
-      List.for_all (fun (_,a) -> not(Architecture.src_matches_arch a hostarch)) al
-  in
-
-  (*
-   * - for each dependency, the restriction list is processed from left to
-   *   right
-   * - if the restriction list is empty, the build dependency is kept and
-   *   processing stops
-   * - if a negated term is encountered and the specified profile is set, the
-   *   build dependency is dropped and processing of the list stops
-   * - if a positive term is encountered and the specified profile is set, then
-   *   the build dependency is kept and processing of the list stops
-   * - if no profile is set for any term in the restriction list and at least
-   *   one term in the restriction list is negated then keep the build
-   *   dependency, otherwise drop the build dependency
-   *)
-  let matchprofile = match pl with
-    | [] -> true
-    | _ -> begin
-        let rec aux l default = match l with
-          | [] -> default
-          | ((act,ps)::tl) ->
-            (* TODO: handle malformed strings with missing dot *)
-            let ns, lb = String.split ps "." in
-            match ns with
-            | "profile" -> begin
-                let found = List.mem lb profiles in
-                match act,found with
-                | true,true -> true
-                | true,false -> aux tl default
-                | false,true -> false
-                | false,false -> aux tl true
-              end
-            | _ -> aux tl default
-        in
-        aux pl false
-      end
-  in
-
-  if matcharch && matchprofile then Some v else None
+(* as per policy, if the first arch restriction contains a !
+ * then we assume that all archs on the lists are bang-ed.
+ * cf: http://www.debian.org/doc/debian-policy/ch-relationships.html 7.1 *)
+let matcharch hostarch = function
+  | [] -> true
+  | ((true,_)::_) as al ->
+    List.exists (fun (_,a) -> Architecture.src_matches_arch a hostarch) al
+  | ((false,_)::_) as al ->
+    List.for_all (fun (_,a) -> not(Architecture.src_matches_arch a hostarch)) al
 ;;
 
+(* the nested build profiles formula is given in disjunctive normal form *)
+let matchprofile profiles = function
+  | [] -> true
+  | ll -> List.exists (List.for_all (fun (c,p) -> c <> (List.mem p profiles))) ll
+;;
+
+(* given archs, profile and a dependency with an architecture and profile list,
+ * decide whether to select or drop that dependency *)
 (** transform a list of sources packages into dummy binary packages.
   * This function preserve the order *)
 let sources2packages ?(profiles=[]) ?(noindep=false) ?(src="src") buildarch hostarch l =
-  let conflicts l = List.filter_map (select hostarch profiles) l in
+  let select (v,al,pl) =
+    if matcharch hostarch al && matchprofile profiles pl then Some v else None
+  in
+  let conflicts l = List.filter_map select l in
   let depends ll =
     List.filter_map (fun l ->
-      match List.filter_map (select hostarch profiles) l with
+      match List.filter_map select l with
       |[] -> None 
       |l -> Some l
     ) ll
