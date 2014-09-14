@@ -106,6 +106,10 @@ consists of dependency chains leading to a conflict or a dependency on a
 missing package. If used together with --successes then the explanation
 consists of an installation set.
 
+=item B<-o> I<file>
+
+Send output to I<file>.
+
 =back
 
 =head2 MISC OPTIONS

@@ -65,8 +65,13 @@ let main () =
   StdDebug.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
   Util.Debug.disable "Depsolver_int";
   StdDebug.all_quiet (OptParse.Opt.get Options.quiet);
-
-  let fmt = Format.std_formatter in
+  let fmt =
+    if OptParse.Opt.is_set Options.outfile then
+      let oc = open_out (OptParse.Opt.get Options.outfile) in
+      Format.formatter_of_out_channel oc
+    else
+      Format.std_formatter
+  in
   if OptParse.Opt.is_set Options.deb_native_arch then
     Format.fprintf fmt "native-architecture: %s@." (OptParse.Opt.get Options.deb_native_arch)
   else
