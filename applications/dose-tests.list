@@ -194,6 +194,14 @@ Cmd: ./distcheck.native --deb-ignore-essential -f -e
 Type: distcheck
 Printer: text
 
+Name: missing_missing_distcheck
+Group: distcheck
+Expected: tests/applications/dose-tests/missing_missing
+Input: cudf://tests/cudf/missing_missing.cudf
+Cmd: ./distcheck.native -e -f --checkonly p
+Type: distcheck
+Printer: text
+
 Name: failure_outdated
 Group: distcheck
 Expected: tests/applications/dose-tests/outdated_failure
