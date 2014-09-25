@@ -14,8 +14,7 @@
 
 open ExtLib
 open Common
-
-module Boilerplate = BoilerplateNoRpm
+open DoseparseNoRpm
 
 let help = "
 Input specification : 
@@ -70,7 +69,7 @@ version: 1
 module Options = struct
   open OptParse
   let options = OptParser.make ~description:("create a cudf document from a cnf formula" ^ help)
-  include Boilerplate.MakeOptions(struct let options = options end)
+  include StdOptions.MakeOptions(struct let options = options end)
   open OptParser
 end
 
@@ -209,9 +208,9 @@ let main () =
 
   let args = OptParse.OptParser.parse_argv Options.options in
   
-  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
-  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) [] ;
-  Boilerplate.enable_timers (OptParse.Opt.get Options.timers) [];
+  StdDebug.enable_debug (OptParse.Opt.get Options.verbose);
+  StdDebug.enable_bars (OptParse.Opt.get Options.progress) [] ;
+  StdDebug.enable_timers (OptParse.Opt.get Options.timers) [];
 
   let ic =
     if List.length args > 0 then 
@@ -227,5 +226,5 @@ let main () =
 
 ;;
 
-Boilerplate.if_application __FILE__ main ;;
+main ();;
 
