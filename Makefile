@@ -1,34 +1,47 @@
 #this is a forward reference to the target all below
 all: all
 
+SHELL=/bin/bash
 include Makefile.config
 
 DIST_DIR = $(NAME)-$(VERSION)
 DIST_TARBALL = $(DIST_DIR).tar.gz
 
-OBFLAGS := -j 10 -classic-display
+OBFLAGS := -j 10 -no-links
+APPFLAGS := -j 10
 #OBFLAGS := $(OBFLAGS) -tag profile -tag debug
 #OBFLAGS := $(OBFLAGS) -classic-display
 
-all: $(CAMLP4CMXS) cleandoselib $(BYTELIBS) $(ALIBS) $(OPTLIBS) $(CMXSLIBS) man
-	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
+all: itarget $(CAMLP4CMXS) $(BYTELIBS) $(OPTLIBS) $(CMXSLIBS) $(ALIBS) man
+	$(OCAMLBUILD) $(APPFLAGS) applications/apps.otarget
 
-fast: $(CAMLP4CMXS) $(OPTLIBS)
-	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
-
-apps:
-	$(OCAMLBUILD) $(OBFLAGS) $(TARGETS)
-
-DOSELIBS = _build/doselibs
+apps: itarget $(CAMLP4CMXS) $(BYTELIBS) $(OPTLIBS) 
+	echo $(BYTELIBS)
+	echo $(OPTLIBS)
+	$(OCAMLBUILD) $(APPFLAGS) applications/apps.otarget
 
 cleandoselib:
 	rm -Rf $(DOSELIBS)
 
-camlp4cmxs:
+itarget:
+	rm -f applications/apps.itarget
+	@for i in $(TARGETS); do echo $$i >> applications/apps.itarget; done
+	$(shell \
+		for lib in $(LIBNAMES); do \
+			libname=`basename "$$lib"` ;\
+			dirname=`dirname "$$lib"` ;\
+			rm -f $$dirname/$$libname.itarget ;\
+			for ext in $(SUFFIX); do \
+				echo "$$libname.$$ext" >> $$dirname/$$libname.itarget; \
+			done;\
+		done)
+#	@touch applications/.itarget
+
+_build/Camlp4MacroParser.cmxs:
 	mkdir -p _build
 	ocamlopt -shared $(shell ocamlc -where)/camlp4/Camlp4Parsers/Camlp4MacroParser.cmx -o _build/Camlp4MacroParser.cmxs
 
-cudf/cudf.%:
+$(DOSELIBS)/cudf.%:
 	$(OCAMLBUILD) $(OBFLAGS) cudf/cudf.$*
 	@mkdir -p $(DOSELIBS)
 	@cp _build/cudf/*.cmi $(DOSELIBS)
@@ -39,8 +52,8 @@ cudf/cudf.%:
 	  fi ; \
 	done
 
-common/common.%:
-	$(OCAMLBUILD) $(OBFLAGS) common/common.$*
+$(DOSELIBS)/common.%: common/*.ml
+	$(OCAMLBUILD) $(OBFLAGS) common/common.otarget
 	@mkdir -p $(DOSELIBS)
 	@for i in _build/common/common.*; do \
 	  if [ -e $$i ]; then \
@@ -49,8 +62,8 @@ common/common.%:
 	  fi ; \
 	done
 
-algo/algo.%:
-	$(OCAMLBUILD) $(OBFLAGS) algo/algo.$*
+$(DOSELIBS)/algo.%: algo/*.ml $(DOSELIBS)/common.%
+	$(OCAMLBUILD) $(OBFLAGS) algo/algo.otarget
 	@for i in _build/algo/algo.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
@@ -58,8 +71,8 @@ algo/algo.%:
 	  fi ; \
 	done
 
-deb/debian.%:
-	$(OCAMLBUILD) $(OBFLAGS) deb/debian.$*
+$(DOSELIBS)/debian.%: deb/*.ml $(DOSELIBS)/algo.%
+	$(OCAMLBUILD) $(OBFLAGS) deb/debian.otarget
 	@for i in _build/deb/debian.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
@@ -67,8 +80,8 @@ deb/debian.%:
 	  fi ; \
 	done
 
-rpm/rpm.%:
-	$(OCAMLBUILD) $(OBFLAGS) rpm/rpm.$*
+$(DOSELIBS)/rpm.%: rpm/*.ml $(DOSELIBS)/algo.%
+	$(OCAMLBUILD) $(OBFLAGS) rpm/rpm.otarget
 	@for i in _build/rpm/rpm.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
@@ -76,8 +89,8 @@ rpm/rpm.%:
 	  fi ; \
 	done
 
-eclipse/eclipse.%:
-	$(OCAMLBUILD) $(OBFLAGS) eclipse/eclipse.$*
+$(DOSELIBS)/eclipse.%: eclipse/*.ml $(DOSELIBS)/debian.%
+	$(OCAMLBUILD) $(OBFLAGS) eclipse/eclipse.otarget
 	@for i in _build/eclipse/eclipse.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
@@ -85,8 +98,8 @@ eclipse/eclipse.%:
 	  fi ; \
 	done
 
-opencsw/csw.%:
-	$(OCAMLBUILD) $(OBFLAGS) opencsw/csw.$*
+$(DOSELIBS)/csw.%: opencsw/*.ml $(DOSELIBS)/debian.%
+	$(OCAMLBUILD) $(OBFLAGS) opencsw/csw.otarget
 	@for i in _build/opencsw/csw.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
@@ -94,17 +107,19 @@ opencsw/csw.%:
 	  fi ; \
 	done
 
-doseparse/doseparse.%:
-	$(OCAMLBUILD) $(OBFLAGS) doseparse/doseparse.$*
+$(DOSELIBS)/doseparse.%: $(DOSELIBS)/debian.% $(DOSELIBS)/eclipse.%
+	$(OCAMLBUILD) $(OBFLAGS) doseparse/doseparse.otarget
 	@for i in _build/doseparse/doseparse.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
 	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx $(DOSELIBS)/*.ml ; \
 	  fi ; \
 	done
+# $(DOSELIBS)/debian.% $(DOSELIBS)/rpm.% $(DOSELIBS)/eclipse.% $(DOSELIBS)/cws.%
+# $(DOSELIBS)/debian.% $(DOSELIBS)/eclipse.% $(DOSELIBS)/cws.%
 
-doseparseNoRpm/doseparseNoRpm.%:
-	$(OCAMLBUILD) $(OBFLAGS) doseparseNoRpm/doseparseNoRpm.$*
+$(DOSELIBS)/doseparseNoRpm.%: $(DOSELIBS)/debian.% $(DOSELIBS)/rpm.% $(DOSELIBS)/eclipse.%
+	$(OCAMLBUILD) $(OBFLAGS) doseparseNoRpm/doseparseNoRpm.otarget
 	@for i in _build/doseparseNoRpm/doseparseNoRpm.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
@@ -114,7 +129,7 @@ doseparseNoRpm/doseparseNoRpm.%:
 
 clean:
 	$(OCAMLBUILD) -clean
-	@echo ""
+	rm -f applications/apps.itarget applications/.itarget
 	cd doc && $(MAKE) clean
 
 distclean: clean
@@ -123,10 +138,6 @@ distclean: clean
 	rm -f common/versionInfo.ml
 	rm -f db/db.mlpack
 	rm -f _tags META
-
-$(DOSELIBS)/%:
-	$(OCAMLBUILD) $(OBFLAGS) $*
-	@touch $@
 
 testapps: apps 
 	@applications/dose-tests.py applications/dose-tests.list
@@ -208,4 +219,6 @@ upload: doc
 	(cd doc && $(MAKE) upload)
 	rsync -avz -O dose3.docdir/ scm.gforge.inria.fr:/home/groups/dose/htdocs/doc/api/
 
-.PHONY: all opt clean top-level headers test tags install uninstall dist doc man
+.PHONY: \
+	common algo debian eclipse rpm cws doseparseNoRpm doseparse \
+	all fast opt clean top-level headers test tags install uninstall dist doc man

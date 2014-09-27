@@ -8,6 +8,8 @@ LDFLAGS=@LDFLAGS@
 #OCAMLFIND_COMMANDS="ocamlc=@OCAMLC@ ocamlopt=@OCAMLOPT@ ocamldep=@OCAMLDEP@"
 OCAMLFIND=@OCAMLFIND@
 
+DOSELIBS = _build/doselibs
+
 DESTDIR =
 ifeq ($(DESTDIR),)
 exec_prefix=@prefix@
@@ -29,7 +31,7 @@ ifeq ("@OCAML_OS_TYPE@","freebsd")
 endif
 
 ifeq ("@CAMLP4OOPT@","camlp4o.opt")
-  CAMLP4CMXS=camlp4cmxs
+  CAMLP4CMXS=_build/Camlp4MacroParser.cmxs
 else
   CAMLP4CMXS=
 endif
@@ -45,27 +47,19 @@ else
 endif
 
 TARGETS= \
-   applications/distcheck.$(OCAMLBEST) \
-   applications/deb-buildcheck.$(OCAMLBEST) \
-   applications/ceve.$(OCAMLBEST) \
-   applications/apt-cudf.$(OCAMLBEST) \
-   applications/outdated.$(OCAMLBEST) \
-   applications/challenged.$(OCAMLBEST) \
-   applications/deb-coinstall.$(OCAMLBEST) \
+   distcheck.$(OCAMLBEST) \
+   deb-buildcheck.$(OCAMLBEST) \
+   ceve.$(OCAMLBEST) \
+   apt-cudf.$(OCAMLBEST) \
+   outdated.$(OCAMLBEST) \
+   challenged.$(OCAMLBEST) \
+   deb-coinstall.$(OCAMLBEST) \
 
 BYTELIBS=
 OPTLIBS=
 CMXSLIBS=
-CMXSLIBS=
 ALIBS=
-
-ifeq ("@HAS_LIBCUDF@","no")
-  BYTELIBS += cudf/cudf.cma
-  ifeq ("@OCAMLBEST@","opt")
-    OPTLIBS += cudf/cudf.cmxa cudf/cudf.a
-    CMXSLIBS += cudf/cudf.cmxs
-  endif
-endif
+SUFFIX=cma
 
 ifeq ("@HAS_LIBCUDF@","no")
 installcudf:
@@ -77,28 +71,31 @@ installcudf:
 uninstallcudf:
 endif
 
-BYTELIBS += common/common.cma deb/debian.cma rpm/rpm.cma opencsw/csw.cma eclipse/eclipse.cma algo/algo.cma doseparseNoRpm/doseparseNoRpm.cma doseparse/doseparse.cma
+LIBNAMES  = common/common \
+						algo/algo \
+						deb/debian \
+						opencsw/csw \
+						eclipse/eclipse \
+						doseparseNoRpm/doseparseNoRpm \
+						doseparse/doseparse
 
-ifeq ("@OCAMLBEST@","opt")
-  OPTLIBS += $(BYTELIBS:%.cma=%.cmxa) 
-  CMXSLIBS += $(BYTELIBS:%.cma=%.cmxs)
-  ALIBS = $(BYTELIBS:%.cma=%.a)
+ifeq ("@HAS_LIBCUDF@","no")
+  LIBNAMES += cudf/cudf
 endif
 
 #rpm support
 ifeq ("@HAS_RPM@","yes")
-  BYTELIBS += rpm/rpm.cma
-  ifeq ("@OCAMLBEST@","opt")
-    OPTLIBS += rpm/rpm.cmxa rpm/rpm.a
-    CMXSLIBS += rpm/rpm.cmxs
-  endif
+  LIBNAMES += rpm/rpm
 endif
 
-#database support
-ifeq ("@HAS_DB@","yes") 
-  EXPERIMENTAL += experimental/db-cudf.$(OCAMLBEST)
-  BYTELIBS += db/db.cma
-#  TEST_DB=db
+BYTELIBNAMES=$(notdir $(LIBNAMES))
+BYTELIBS=$(BYTELIBNAMES:%=$(DOSELIBS)/%.cma)
+
+ifeq ("@OCAMLBEST@","opt")
+	SUFFIX += cmxa cmxs a
+  OPTLIBS += $(BYTELIBS:%.cma=%.cmxa) 
+  CMXSLIBS += $(BYTELIBS:%.cma=%.cmxs)
+  ALIBS = $(BYTELIBS:%.cma=%.a)
 endif
 
 ifeq ("@HAS_XML@","yes")
@@ -110,16 +107,16 @@ endif
 #ocamlgraph support
 ifeq ("@HAS_OCAMLGRAPH@","yes")
   TARGETS += \
-	     applications/strong-deps.$(OCAMLBEST) \
-	     applications/dominators-graph.$(OCAMLBEST)
+	     strong-deps.$(OCAMLBEST) \
+	     dominators-graph.$(OCAMLBEST)
   
-  EXPERIMENTAL += applications/strong-conflicts.$(OCAMLBEST)
+  EXPERIMENTAL += strong-conflicts.$(OCAMLBEST)
 endif
 
 #ocamlgraph support
 ifeq ("@HAS_OCAMLGRAPH@","yes")
   TARGETS += \
-	     applications/smallworld.$(OCAMLBEST)
+	     smallworld.$(OCAMLBEST)
 endif
 
 #ounit support
