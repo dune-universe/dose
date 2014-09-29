@@ -1,14 +1,15 @@
 #this is a forward reference to the target all below
 all: all
 
-SHELL=/bin/bash
+#SHELL=/bin/bash
 include Makefile.config
 
 DIST_DIR = $(NAME)-$(VERSION)
 DIST_TARBALL = $(DIST_DIR).tar.gz
 
-OBFLAGS := -j 10 -no-links
-APPFLAGS := -j 10
+VERBOSE := -classic-display
+OBFLAGS := $(VERBOSE) -j 10 -no-links
+APPFLAGS := $(VERBOSE) -j 10
 #OBFLAGS := $(OBFLAGS) -tag profile -tag debug
 #OBFLAGS := $(OBFLAGS) -classic-display
 
@@ -144,8 +145,8 @@ testapps: apps
 
 testlib: 
 	@for i in $(TESTS); do\
-		echo "\n#######START TESTING $$i" ;\
-		$(OCAMLBUILD) $(OBFLAGS) $$i/tests.$(OCAMLBEST) ;\
+		echo "#######START TESTING $$i" ;\
+		$(OCAMLBUILD) $(APPFLAGS) $$i/tests.$(OCAMLBEST) ;\
 		./tests.$(OCAMLBEST) ;\
 	done
 

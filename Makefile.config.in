@@ -121,5 +121,5 @@ endif
 
 #ounit support
 ifeq ("@HAS_OUNIT@","yes")
-  TESTS= common deb algo $(TEST_DB) $(TEST_RPM)
+  TESTS= common deb algo $(TEST_RPM)
 endif

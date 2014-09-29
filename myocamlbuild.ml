@@ -27,6 +27,7 @@ List.iter (fun d -> Pathname.define_context d [doselibs]) modules_dirs ;;
 let _ = dispatch begin function
    | After_rules ->
        List.iter (fun lib ->
+         (* ocaml_lib ~dir:"doselibs" lib *)
          flag ["ocaml"; "link"; "use_"^lib; "program"; "native"] & 
          S[A("doselibs/"^lib^".cmxa")];
          

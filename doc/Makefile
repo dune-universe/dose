@@ -1,5 +1,5 @@
 SUBDIRS = manpages debcheck.primer apt-external-solvers.primer
-SHELL=/bin/bash
+#SHELL=/bin/bash
 
 all:
 	@for subdir in $(SUBDIRS); do \
