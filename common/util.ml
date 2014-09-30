@@ -321,7 +321,7 @@ let range i j =
  in aux [] j
 ;;
 
-let string_of_list string_of_item sep l =
+let string_of_list ?(delim=("[","]")) ?(sep=",") string_of_item l =
   let buf = Buffer.create 1023 in
   let rec aux = function
     | [] -> assert false
@@ -330,11 +330,14 @@ let string_of_list string_of_item sep l =
     | item :: tl -> (* at least one item in tl *)
         Buffer.add_string buf (string_of_item item);
         Buffer.add_string buf sep;
-        aux tl in
-  let _ =
-    match l with
-      | [] -> ()
-      | [sole] -> Buffer.add_string buf (string_of_item sole)
-      | _ -> aux l in
+        aux tl 
+  in
+  Buffer.add_string buf (fst delim);
+  begin match l with
+    | [] -> ()
+    | [sole] -> Buffer.add_string buf (string_of_item sole)
+    | _ -> aux l 
+  end;
+  Buffer.add_string buf (snd delim);
   Buffer.contents buf
 ;;

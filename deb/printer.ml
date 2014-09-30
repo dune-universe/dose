@@ -35,7 +35,7 @@ let string_of_vpkg = function
 let pp_vpkg oc vpkg = Printf.fprintf oc "%s" (string_of_vpkg vpkg)
 
 let string_of_vpkglist vpkglist =
-  Util.string_of_list string_of_vpkg " , " vpkglist
+  Util.string_of_list ~sep:"," string_of_vpkg vpkglist
 ;;
 
 let pp_vpkglist oc vpkglist = 
@@ -43,8 +43,8 @@ let pp_vpkglist oc vpkglist =
 ;;
 
 let string_of_vpkgformula vpkgformula =
-  let string_of_OR = Util.string_of_list string_of_vpkg " | " in
-  let string_of_AND = Util.string_of_list string_of_OR ", " in
+  let string_of_OR = Util.string_of_list ~sep:" |" string_of_vpkg in
+  let string_of_AND = Util.string_of_list ~sep:"," string_of_OR in
   string_of_AND vpkgformula
 ;;
 
@@ -104,8 +104,8 @@ let strinf_of_builddep (vpkg,archfilter,buildfilter) =
 ;;
 
 let string_of_builddepformula builddepformula =
-  let string_of_OR = Util.string_of_list strinf_of_builddep " | " in
-  let string_of_AND = Util.string_of_list string_of_OR ", " in
+  let string_of_OR = Util.string_of_list ~sep:" |" strinf_of_builddep in
+  let string_of_AND = Util.string_of_list ~sep:"," string_of_OR in
   string_of_AND builddepformula
 ;;
 
@@ -114,7 +114,7 @@ let pp_builddepformula oc builddepformula =
 ;;
 
 let string_of_builddeplist builddeplist =
-  Util.string_of_list strinf_of_builddep ", " builddeplist
+  Util.string_of_list ~sep:"," strinf_of_builddep builddeplist
 ;;
 
 let pp_builddeplist oc builddeplist =
