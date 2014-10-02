@@ -201,6 +201,7 @@ Input: cudf://tests/cudf/missing_missing.cudf
 Cmd: ./distcheck.native -e -f --checkonly p
 Type: distcheck
 Printer: text
+Ignore: yes
 
 Name: failure_outdated
 Group: distcheck
@@ -209,6 +210,7 @@ Input: tests/DebianPackages/sid.packages.bz2
 Cmd: ./outdated.native -f -e
 Type: distcheck
 Printer: text
+Ignore: yes
 
 Name: ceve_cnf
 Group: ceve
@@ -249,3 +251,4 @@ Input: tests/DebianPackages/Sid-amd64-Packages-050812.bz2 tests/DebianPackages/S
 Cmd: ./deb-buildcheck.native --failures --successes --latest --deb-native-arch=amd64 --deb-foreign-archs=armel --deb-host-arch=armel
 Type: buildcheck
 Printer: text
+Ignore: yes

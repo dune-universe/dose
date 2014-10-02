@@ -128,6 +128,8 @@ def suite(f,runtest,rungroup):
     testsFound=False
     for stanza in parse822(f):
         s = dict(stanza)
+        if 'Ignore' in s and s['Ignore'] == 'yes' :
+            continue
         groups.add(s['Group'])
         if (len(runtest) == 0 and len(rungroup) == 0) :
             suite.addTest(DoseTests(s))
