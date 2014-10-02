@@ -320,7 +320,7 @@ let range i j =
  in aux [] j
 ;;
 
-let string_of_list ?(delim=("[","]")) ?(sep=",") string_of_item l =
+let string_of_list ?(delim=("","")) ?(sep=",") string_of_item l =
   let buf = Buffer.create 1023 in
   let rec aux = function
     | [] -> assert false
