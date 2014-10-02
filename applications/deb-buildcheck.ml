@@ -44,7 +44,7 @@ module Options = struct
   let includextra = StdOpt.store_true ()
   let triplettable = StdOpt.str_option ()
   let cputable = StdOpt.str_option ()
-  let profiles = StdOpt.str_list_option ()
+  let profiles = StdOptions.str_list_option ()
 
   open OptParser
   add options ~long_name:"defaultedMAforeign" ~help:"Convert Arch:all packages to Multi-Arch: foreign" maforeign;
