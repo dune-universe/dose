@@ -126,21 +126,22 @@ let matcharch hostarch = function
 (* the nested build profiles formula is given in disjunctive normal form *)
 let matchprofile profiles = function
   | [] -> true
-  | ll -> List.exists (List.for_all (fun (c,p) -> c <> (List.mem p profiles))) ll
+  | ll -> List.exists (List.for_all (fun (c,p) -> c = (List.mem p profiles))) ll
 ;;
 
 (* given archs, profile and a dependency with an architecture and profile list,
  * decide whether to select or drop that dependency *)
+let select hostarch profiles (v,al,pl) =
+  if matcharch hostarch al && matchprofile profiles pl then Some v else None
+;;
+
 (** transform a list of sources packages into dummy binary packages.
   * This function preserve the order *)
 let sources2packages ?(profiles=[]) ?(noindep=false) ?(src="src") buildarch hostarch l =
-  let select (v,al,pl) =
-    if matcharch hostarch al && matchprofile profiles pl then Some v else None
-  in
-  let conflicts l = List.filter_map select l in
+  let conflicts l = List.filter_map (select hostarch profiles) l in
   let depends ll =
     List.filter_map (fun l ->
-      match List.filter_map select l with
+      match List.filter_map (select hostarch profiles) l with
       |[] -> None 
       |l -> Some l
     ) ll
