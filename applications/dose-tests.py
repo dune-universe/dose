@@ -128,7 +128,7 @@ def suite(f,runtest,rungroup):
     testsFound=False
     for stanza in parse822(f):
         s = dict(stanza)
-        if 'Ignore' in s and s['Ignore'] == 'yes' :
+        if s['Name'] not in runtest and 'Ignore' in s and s['Ignore'] == 'yes' :
             continue
         groups.add(s['Group'])
         if (len(runtest) == 0 and len(rungroup) == 0) :
@@ -152,7 +152,7 @@ def main():
     global verbose
     parser = argparse.ArgumentParser(description='Unit test for Dose applications')
     parser.add_argument('-v', '--verbose', type=int, nargs=1, default=2) 
-    parser.add_argument('--runtest', nargs='+', default=[]) 
+    parser.add_argument('--runtest', nargs=1, default=[]) 
     parser.add_argument('--rungroup', nargs=1, default=[]) 
     parser.add_argument('inputfile', type=str, nargs=1, help="test file")
     args = parser.parse_args()

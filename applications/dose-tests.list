@@ -210,7 +210,6 @@ Input: tests/DebianPackages/sid.packages.bz2
 Cmd: ./outdated.native -f -e
 Type: distcheck
 Printer: text
-Ignore: yes
 
 Name: ceve_cnf
 Group: ceve
