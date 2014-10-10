@@ -58,7 +58,8 @@ let pp_package oc pkg =
   Printf.fprintf oc "Version: %s\n" pkg.version ;
   Printf.fprintf oc "Architecture: %s\n" pkg.architecture ;
   Printf.fprintf oc "Multi-Arch: %a\n" pp_multiarch pkg.multiarch;
-  Printf.fprintf oc "Essential: %b\n" pkg.essential ;
+  if pkg.essential then
+    Printf.fprintf oc "Essential: yes\n";
   if pkg.priority <> "" then
     Printf.fprintf oc "Priority: %s\n" pkg.priority ;
   if pkg.source <> ("",None) then
