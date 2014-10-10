@@ -99,7 +99,7 @@ let main () =
   StdDebug.all_quiet (OptParse.Opt.get Options.quiet);
   (* let options = default_options (Input.guess_format [posargs]) in *)
   let options = Options.set_options (Input.guess_format [posargs]) in
-  let (_,universe,_,_,_) = StdLoaders.load_universe ~options posargs in
+  let (_,universe,_,_,_,_) = StdLoaders.load_universe ~options posargs in
 
   let dom_graph =
     if OptParse.Opt.get Options.naive then
