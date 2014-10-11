@@ -407,7 +407,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
       let archlessprovide = (encpkgname,None) in
       let multiarchprovides = 
         match pkg.multiarch with
-        |(`None|`Same) ->
+        |(`No|`Same) ->
            (* pkgarch provides *)
              (add_arch_l native_arch pkgarch (loadlp tables pkg.provides))
         |`Foreign ->
@@ -439,7 +439,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
       let sc = (add_arch native_arch pkgarch pkg.name,None) in
       let multiarchconstraints = 
         match pkg.multiarch with
-        |(`None|`Foreign|`Allowed) -> 
+        |(`No|`Foreign|`Allowed) -> 
             (* conflict with all other packages with differents archs *)
             let mac = (encpkgname,None) in
             [sc; mac] 
@@ -460,7 +460,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
 	in
         let realpackage = Util.StringHashtbl.mem tables.unit_table in
         match pkg.multiarch with
-        |(`None|`Foreign|`Allowed) -> 
+        |(`No|`Foreign|`Allowed) -> 
             bind (native_arch::options.foreign) (fun arch ->
                 add_arch_l native_arch arch (loadl tables originalconflicts)
               )

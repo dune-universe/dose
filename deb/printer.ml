@@ -19,7 +19,7 @@ let pp_source oc = function
 ;;
 
 let pp_multiarch oc = function
-  |`None -> Printf.fprintf oc "none"
+  |`No -> Printf.fprintf oc "no"
   |`Same -> Printf.fprintf oc "same"
   |`Foreign -> Printf.fprintf oc "foreign"
   |`Allowed -> Printf.fprintf oc "allowed"
