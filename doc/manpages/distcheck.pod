@@ -92,6 +92,12 @@ files.
 
 =cut
 
+=head2 Cv
+
+Internal use only. Undocumented.
+
+=cut
+
 =head1 OPTIONS
 
 =head2 OPTIONS CONTROLLING FOREGROUND AND BACKGROUND

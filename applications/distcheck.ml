@@ -40,10 +40,8 @@ module Options = struct
   let coinst = StdDebian.vpkglist_option ();;
   add options ~long_name:"coinst" ~help:"Check if these packages are coinstallable" coinst;;
 
-  (*
-    let realversionfield = StdOpt.str_option ~default:"version" ();;
-  add options ~long_name:"real-version-field" ~help:"Specify field where the original version of a package is stored in the CUDF file" realversionfield;;
-  *)
+  let group = add_group options "Cv Specific Options" in
+  add options ~group ~long_name:"cv-int" ~help:"" int_versions;
 
 end
 

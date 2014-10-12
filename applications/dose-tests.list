@@ -215,15 +215,7 @@ Name: cv_cudf_versions_distcheck
 Group: distcheck
 Expected: tests/applications/dose-tests/distcheck_cv_cv_opt_test
 Input: cv://tests/cv/number_field.cudf
-Cmd: ./distcheck.native --checkonly a -f -e --cudf-versions
-Type: distcheck
-Printer: text
-
-Name: cv_real_version_field_distcheck
-Group: distcheck
-Expected: tests/applications/dose-tests/distcheck_cv_rvf_opt_test
-Input: cv://tests/cv/realversion_field.cudf
-Cmd: ./distcheck.native --checkonly a -f -e --real-version-field realversion
+Cmd: ./distcheck.native --checkonly a -f -e --cv-int
 Type: distcheck
 Printer: text
 
