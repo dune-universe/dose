@@ -269,7 +269,6 @@ module DistribOptions = struct
 
   let set_cudfv_options () = 
     {
-      Cudfv.Cudfvcudf.default_options with
       Cudfv.Cudfvcudf.rvf = Opt.get real_version_field;
       cudfv = Opt.get cudf_versions
     }

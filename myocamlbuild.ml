@@ -15,8 +15,8 @@ let modules_dirs = [
 ];;
 
 let libraries = [
-  "cudf"; "common";"debian";"eclipse"; "csw"; "rpm";"db";"algo";
-  "doseparse"; "doseparseNoRpm"; "cudfv"
+  "cudf"; "common";"debian";"eclipse"; "csw"; "rpm";"db";"algo";"cudfv";
+  "doseparse"; "doseparseNoRpm";
 ];;
 
 let doselibs = "doselibs" ;;

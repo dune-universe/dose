@@ -64,7 +64,7 @@ let init_tables options pkglist filename  =
   let size = List.length pkglist in
   let tables = create size in
   parse_v2v tables filename;
-  List.map (add_pkg tables options.rvf) pkglist; 
+  List.iter (add_pkg tables options.rvf) pkglist; 
   tables
 
 let get_real_version tables (name,cudf_version)  =
