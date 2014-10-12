@@ -206,7 +206,7 @@ type options =
   |Deb of Debian.Debcudf.options
   |Eclipse of Debian.Debcudf.options
   |Edsp of Debian.Debcudf.options
-  |Cudfv of Cudfv.Cudfvcudf.options
+  |Cv of Cv.Cvcudf.options
   |Csw
   |Rpm
   |Cudf
@@ -267,10 +267,10 @@ module DistribOptions = struct
     }
   ;;
 
-  let set_cudfv_options () = 
+  let set_cv_options () = 
     {
-      Cudfv.Cudfvcudf.rvf = Opt.get real_version_field;
-      cudfv = Opt.get cudf_versions
+      Cv.Cvcudf.rvf = Opt.get real_version_field;
+      cv = Opt.get cudf_versions
     }
 
   let set_default_options = function
@@ -285,14 +285,14 @@ module DistribOptions = struct
         Debian.Debcudf.ignore_essential = true
       })
     |`Eclipse -> Some (Eclipse Debian.Debcudf.default_options)
-    |`Cudfv -> Some (Cudfv Cudfv.Cudfvcudf.default_options)
+    |`Cv -> Some (Cv Cv.Cvcudf.default_options)
     |_ -> None
 
   let set_options = function
     |`Deb -> Some (Deb (set_deb_options ()))
     |`Edsp -> Some (Edsp (set_deb_options ()))
     |`Eclipse -> Some (Eclipse Debian.Debcudf.default_options)
-    |`Cudfv -> Some (Cudfv (set_cudfv_options ()))
+    |`Cv -> Some (Cv (set_cv_options ()))
     |_ -> None
   ;;
 
@@ -316,7 +316,7 @@ module DistribOptions = struct
         add options ~group ~long_name:"deb-ignore-essential" 
         ~help:"Ignore Essential Packages" deb_ignore_essential;
 
-      let cudf_group = add_group options "Cudfv Specific Options" in
+      let cudf_group = add_group options "Cv Specific Options" in
       if List.mem "real-version-field" default then
 	add options ~group:cudf_group ~long_name:"real-version-field"
 	~help:"Specify field where the original version of a package is stored in the CUDF file. Default is \"number\"" real_version_field;

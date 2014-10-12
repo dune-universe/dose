@@ -108,9 +108,9 @@ $(DOSELIBS)/csw.%: opencsw/*.ml $(DOSELIBS)/debian.%
 	  fi ; \
 	done
 
-$(DOSELIBS)/cudfv.%:
-	$(OCAMLBUILD) $(OBFLAGS) cudfv/cudfv.otarget
-	@for i in _build/cudfv/cudfv.*; do \
+$(DOSELIBS)/cv.%:
+	$(OCAMLBUILD) $(OBFLAGS) cv/cv.otarget
+	@for i in _build/cv/cv.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
 	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \

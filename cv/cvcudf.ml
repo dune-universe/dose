@@ -17,12 +17,12 @@ let create n = {
 
 type options = {
   rvf : string;
-  cudfv: bool;
+  cv: bool;
 }
 
 let default_options = {
   rvf = "number";
-  cudfv = false;
+  cv = false;
 }
 
 let add table k v = 

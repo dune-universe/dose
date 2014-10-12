@@ -76,7 +76,7 @@ LIBNAMES  = common/common \
 						deb/debian \
 						opencsw/csw \
 						eclipse/eclipse \
-						cudfv/cudfv \
+						cv/cv \
 						doseparseNoRpm/doseparseNoRpm \
 						doseparse/doseparse
 
