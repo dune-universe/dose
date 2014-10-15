@@ -15,15 +15,8 @@ let create n = {
   version_table = Hashtbl.create (10 * n);
 }
 
-type options = {
-  rvf : string;
-  cv: bool;
-}
-
-let default_options = {
-  rvf = "number";
-  cv = false;
-}
+type options = { cv: bool; }
+let default_options = { cv = false; }
 
 let add table k v = 
   if not (Hashtbl.mem table k) then
@@ -64,7 +57,7 @@ let init_tables options pkglist filename  =
   let size = List.length pkglist in
   let tables = create size in
   parse_v2v tables filename;
-  List.iter (add_pkg tables options.rvf) pkglist; 
+  List.iter (add_pkg tables "number") pkglist; 
   tables
 
 let get_real_version tables (name,cudf_version)  =

@@ -265,7 +265,7 @@ module DistribOptions = struct
     }
   ;;
 
-  let set_cv_options () = { Cv.Cvcudf.default_options with cv = Opt.get int_versions }
+  let set_cv_options () = { Cv.Cvcudf.cv = Opt.get int_versions }
 
   let set_default_options = function
     |`Deb -> Some (

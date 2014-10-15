@@ -182,14 +182,14 @@ let cv_load_list options file =
     |Some p , pkglist, Some req -> p, pkglist, req
   in
   if options.Cv.Cvcudf.cv then
-  let from_cudf (p,i) = (p,string_of_int i) in
-  let to_cudf (p,v) = (p,int_of_string v) in
-  (preamble,[pkglist;[]],request,from_cudf,to_cudf)
+    let from_cudf (p,i) = (p,string_of_int i) in
+    let to_cudf (p,v) = (p,int_of_string v) in
+    (preamble,[pkglist;[]],request,from_cudf,to_cudf)
   else
-  let tables = Cv.Cvcudf.init_tables options pkglist file in
-  let from_cudf (p,i) = (p, Cv.Cvcudf.get_real_version tables (p,i)) in
-  let to_cudf (p,v) = (p, Cv.Cvcudf.get_cudf_version tables (p,v)) in 
-  (preamble,[pkglist;[]],request,from_cudf,to_cudf)
+    let tables = Cv.Cvcudf.init_tables options pkglist file in
+    let from_cudf (p,i) = (p, Cv.Cvcudf.get_real_version tables (p,i)) in
+    let to_cudf (p,v) = (p, Cv.Cvcudf.get_cudf_version tables (p,v)) in 
+    (preamble,[pkglist;[]],request,from_cudf,to_cudf)
 
 let cudf_load_list file =
   let preamble, pkglist ,request =
@@ -251,7 +251,7 @@ let cv_parse_input options urilist =
       warning "more then one cudf specified on the command line";
     let p = List.hd (List.flatten l) in 
     cv_load_list options (unpack p)
-
+;;
 
 let cudf_parse_input urilist =
   match urilist with
