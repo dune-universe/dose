@@ -8,7 +8,7 @@ DIST_DIR = $(NAME)-$(VERSION)
 DIST_TARBALL = $(DIST_DIR).tar.gz
 
 VERBOSE := -classic-display
-OBFLAGS := $(VERBOSE) -j 10 -no-links
+OBFLAGS := $(VERBOSE) -j 10 -no-links -cflags -warn-error,FPSXY
 APPFLAGS := $(VERBOSE) -j 10
 #OBFLAGS := $(OBFLAGS) -tag profile -tag debug
 #OBFLAGS := $(OBFLAGS) -classic-display
@@ -17,6 +17,7 @@ all: itarget $(CAMLP4CMXS) $(BYTELIBS) $(OPTLIBS) $(CMXSLIBS) $(ALIBS) man
 	$(OCAMLBUILD) $(APPFLAGS) applications/apps.otarget
 
 apps: itarget $(CAMLP4CMXS) $(BYTELIBS) $(OPTLIBS) 
+	echo $(LIBNAMES)
 	echo $(BYTELIBS)
 	echo $(OPTLIBS)
 	$(OCAMLBUILD) $(APPFLAGS) applications/apps.otarget

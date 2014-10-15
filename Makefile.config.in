@@ -1,11 +1,10 @@
 VERSION=@PACKAGE_VERSION@
 NAME=@PACKAGE_NAME@
 
-CFLAGS=@CFLAGS@ -fPIC -Wall -pedantic -Werror -Wno-long-long
+CFLAGS=@CFLAGS@ -fPIC -Wall -pedantic -Werror -Wno-long-long -warn-error FPSXY
 CPPFLAGS=@CPPFLAGS@
 LDFLAGS=@LDFLAGS@
 
-#OCAMLFIND_COMMANDS="ocamlc=@OCAMLC@ ocamlopt=@OCAMLOPT@ ocamldep=@OCAMLDEP@"
 OCAMLFIND=@OCAMLFIND@
 
 DOSELIBS = _build/doselibs
@@ -38,7 +37,7 @@ endif
 
 ifeq ("@OCAMLBEST@","opt")
   OCAMLBEST=native
-  OCAMLBUILD=@OCAMLBUILD@ #-ocamlc @OCAMLC@ -ocamlopt @OCAMLOPT@ -ocamldep @OCAMLDEP@
+  OCAMLBUILD=@OCAMLBUILD@
   INSTALLOPTS=-s
 else
   OCAMLBEST=byte
@@ -62,16 +61,10 @@ ALIBS=
 SUFFIX=cma
 
 ifeq ("@HAS_LIBCUDF@","no")
-installcudf:
-	$(MAKE) -C cudf all @OCAMLBEST@ install
-uninstallcudf:
-	$(MAKE) -C cudf uninstall
-else
-installcudf:
-uninstallcudf:
+  LIBNAMES += cudf/cudf
 endif
 
-LIBNAMES  = common/common \
+LIBNAMES += common/common \
 						algo/algo \
 						deb/debian \
 						opencsw/csw \
@@ -79,10 +72,6 @@ LIBNAMES  = common/common \
 						cv/cv \
 						doseparseNoRpm/doseparseNoRpm \
 						doseparse/doseparse
-
-ifeq ("@HAS_LIBCUDF@","no")
-  LIBNAMES += cudf/cudf
-endif
 
 #rpm support
 ifeq ("@HAS_RPM@","yes")
