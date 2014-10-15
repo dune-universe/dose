@@ -126,10 +126,8 @@ $(DOSELIBS)/doseparse.%: $(DOSELIBS)/debian.% $(DOSELIBS)/eclipse.%
 	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx $(DOSELIBS)/*.ml ; \
 	  fi ; \
 	done
-# $(DOSELIBS)/debian.% $(DOSELIBS)/rpm.% $(DOSELIBS)/eclipse.% $(DOSELIBS)/cws.%
-# $(DOSELIBS)/debian.% $(DOSELIBS)/eclipse.% $(DOSELIBS)/cws.%
 
-$(DOSELIBS)/doseparseNoRpm.%: $(DOSELIBS)/debian.% $(DOSELIBS)/rpm.% $(DOSELIBS)/eclipse.%
+$(DOSELIBS)/doseparseNoRpm.%: $(DOSELIBS)/debian.% $(DOSELIBS)/eclipse.%
 	$(OCAMLBUILD) $(OBFLAGS) doseparseNoRpm/doseparseNoRpm.otarget
 	@for i in _build/doseparseNoRpm/doseparseNoRpm.*; do \
 	  if [ -e $$i ]; then \

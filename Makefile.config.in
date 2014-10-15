@@ -69,14 +69,15 @@ LIBNAMES += common/common \
 						deb/debian \
 						opencsw/csw \
 						eclipse/eclipse \
-						cv/cv \
-						doseparseNoRpm/doseparseNoRpm \
-						doseparse/doseparse
+						cv/cv
 
 #rpm support
 ifeq ("@HAS_RPM@","yes")
   LIBNAMES += rpm/rpm
 endif
+
+LIBNAMES += doseparseNoRpm/doseparseNoRpm \
+						doseparse/doseparse
 
 BYTELIBNAMES=$(notdir $(LIBNAMES))
 BYTELIBS=$(BYTELIBNAMES:%=$(DOSELIBS)/%.cma)
