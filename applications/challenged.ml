@@ -328,8 +328,7 @@ let main () =
     Format.printf "breaks: %d@." broken;
     Format.printf "---@."
   ) pred;
-
-  StdUtils.exit(0)
+  0
 ;;
 
 StdUtils.if_application 

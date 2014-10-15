@@ -83,7 +83,7 @@ def diff_822(expectedfile,resultfile):
 def diff_text(expectedfile,resultfile):
     return diff_aux(expectedfile,resultfile,parsetext)
     
-def test_application(self,expected_file,cmd,diff):
+def test_application(self,expected_file,cmd,diff,exitcode):
     uid = uuid.uuid1()
     if not os.path.exists("tmp"):
         os.makedirs("tmp")
@@ -92,10 +92,17 @@ def test_application(self,expected_file,cmd,diff):
     output = open(output_file,'w')
     p = Popen(cmd, stdout=output)
     p.communicate()
+    rc = p.returncode if exitcode is not None else None
+    if rc == exitcode :
+        ec = True
+    else :
+        print "ExitCode = %d" % rc
+        ec = False
     d = diff(expected_file,output_file)
     output.close()
     os.remove(output_file)
     self.assertTrue(d)
+    self.assertTrue(ec)
 
 class DoseTests(unittest.TestCase):
     def __init__(self, test):
@@ -104,6 +111,7 @@ class DoseTests(unittest.TestCase):
         self.comment = test['Comment'] if 'Comment' in test else None
         self.expected = test['Expected'] 
         self.cmd = test['Cmd'].split(' ') + test['Input'].split(' ')
+        self.exitcode = int(test['ExitCode']) if 'ExitCode' in test else None
         if test['Type'] == '822' :
             self.difftype = diff_822
         elif test['Type']  == 'yaml' :
@@ -114,11 +122,15 @@ class DoseTests(unittest.TestCase):
             self.difftype = diff_text
     def shortDescription(self):
         if self.comment :
-            return "Description = " + self.comment + "\n" + ("Cmd = ") + " ".join(self.cmd) + "\nExpected file = %s" % self.expected + "\n"
+            return "Description : " + self.comment + "\n" + ("Cmd : ") + " ".join(self.cmd) + "\nExpected file : %s" % self.expected + "\n"
         else :
-            return "Test = %s" % self.name + "\n" + ("Cmd = ") + " ".join(self.cmd) + "\nExpected file = %s" % self.expected + "\n"
+            s =     "Test : %s" % self.name
+            s = s + "\n" + ("Cmd : ") + " ".join(self.cmd)
+            s = s + "\nExpected file : %s" % self.expected
+            s = s + "\nExpected exitcode : %d" % self.exitcode if self.exitcode is not None else s
+            return s + "\n"
     def runTest(self):
-        test_application(self,self.expected,self.cmd,self.difftype)
+        test_application(self,self.expected,self.cmd,self.difftype, self.exitcode)
 
 def suite(f,runtest,rungroup):
     suite = unittest.TestSuite()

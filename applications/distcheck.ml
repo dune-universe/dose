@@ -151,7 +151,7 @@ let main () =
     Format.fprintf fmt "total-packages: %d@." universe_size;
     Format.fprintf fmt "total-tuples: %d@." number_checks;
     Format.fprintf fmt "broken-tuples: %d@." nbt;
-    StdUtils.exit(nbt)
+    nbt
   end else begin 
     let global_constraints = not(OptParse.Opt.get Options.deb_ignore_essential) in
     let nbp =
@@ -181,14 +181,10 @@ let main () =
     end;
 
     Format.fprintf fmt "total-packages: %d@." universe_size;
-    (*
-    Format.fprintf fmt "broken-percent: %0.2f%%@." 
-     ( (float_of_int nbp) /.  (float_of_int universe_size) *. 100. ) ;
-    *)
     Format.fprintf fmt "broken-packages: %d@." nbp;
     if summary then 
       Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
-    StdUtils.exit(nbp)
+    nbp
   end
 ;;
 

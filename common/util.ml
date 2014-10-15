@@ -91,7 +91,7 @@ module MakeMessages(X : sig val label : string end) = struct
       t
     else begin
       Printf.eprintf "The label (%s) %s already exists\n" X.label label;
-      exit (64);
+      Pervasives.exit (64);
     end
 
   let eprintf ?(raw=false) t fmt =
@@ -149,7 +149,10 @@ module Logging(X : sig val label : string end) = struct
 
   let fatal fmt = 
     let l = Printf.sprintf "Fatal error in module %s: " X.label in
-    Printf.kprintf (fun s -> Printf.eprintf "%s\n %s\n%!" l s; exit (64)) fmt
+    Printf.kprintf (fun s ->
+      Printf.eprintf "%s\n %s\n%!" l s; 
+      Pervasives.exit (64)
+    ) fmt
 end
 
 include Logging(struct let label = __FILE__ end) ;;

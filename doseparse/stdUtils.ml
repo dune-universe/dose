@@ -60,8 +60,17 @@ let pp_versions_table fmt (from_cudf, pkglist) =
     Format.fprintf fmt "%s=%d=%s@." p pkg.Cudf.version v
   ) pkglist
 
-(* if at least one broken package then we set the exit code = 1 .
-   we catch all other exceptions and we exit with code > 63 *)
+(* exit code policy : 
+Exit codes 0-63 indicate a normal termination of the program, codes
+64-127 indicate abnormal termination of the program (such as parse
+errors, I/O errors).
+
+In case of normal program termination:
+- exit code 0 indicates that all foreground packages are found
+  installable;
+- exit code 1 indicates that at least one foreground package is found
+  uninstallable.
+*)
 let if_application ?(alternatives=[]) filename main =
   let open Filename in
   let normalize f = 
@@ -71,18 +80,17 @@ let if_application ?(alternatives=[]) filename main =
   let names = List.map normalize (filename::alternatives) in
   let invoked_as = normalize Sys.argv.(0) in
   if List.exists ((=) invoked_as) names then 
-    try if main () > 0 then Pervasives.exit(1)
-    with
-    |Unix.Unix_error(err, _, arg) -> Printf.eprintf "%s %s" (Unix.error_message err) arg
-    |exn -> begin
-        Printexc.print_backtrace stderr; 
-        Printf.eprintf "The applications raised this exception : ";
-        Printf.eprintf "%s\n" (Printexc.to_string exn)
-    end
+    try (if main () = 0 then exit(0) else exit(1)) with
+      |Unix.Unix_error(err, _, arg) -> begin
+          Printf.eprintf "%s %s" (Unix.error_message err) arg;
+          Pervasives.exit(64) end
+      |exn -> begin
+          Printexc.print_backtrace stderr; 
+          Printf.eprintf "The applications raised this exception : ";
+          Printf.eprintf "%s\n" (Printexc.to_string exn);
+          Pervasives.exit(64) end
   else begin
     Printf.eprintf "you are using %s as a module and not as an executable\n" Sys.argv.(0);
     Printf.eprintf "%s can be run as an exactable if named : %s\n" Sys.argv.(0) 
     (ExtString.String.join " , " names)
   end
-
-let exit n = n

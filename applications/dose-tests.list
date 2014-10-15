@@ -134,6 +134,7 @@ Input: --bg=tests/DebianPackages/sid.packages.bz2 tests/deb/misc/deb-install-169
 Cmd: ./deb-coinstall.native --failures --explain --deb-native-arch=amd64 
 Type: deb-coinstall
 Printer: text
+ExitCode: 0
 
 Name: failure_distcheck
 Group: distcheck
@@ -142,6 +143,7 @@ Input: deb://tests/DebianPackages/sid.packages.bz2
 Cmd: ./distcheck.native -f -e
 Type: distcheck
 Printer: text
+ExitCode: 1
 
 Name: success_distcheck
 Group: distcheck
@@ -150,6 +152,7 @@ Input: deb://tests/DebianPackages/lenny.packages.bz2
 Cmd: ./distcheck.native -s 
 Type: distcheck
 Printer: text
+ExitCode: 0
 
 Name: checkonly_minimal_distcheck
 Group: distcheck
@@ -159,6 +162,7 @@ Input: deb://tests/DebianPackages/sid.packages.bz2
 Cmd: ./distcheck.native -m --checkonly 3dchess -s -e
 Type: distcheck
 Printer: text
+ExitCode: 0
 
 Name: checkonly_distcheck
 Group: distcheck
@@ -168,6 +172,7 @@ Input: deb://tests/DebianPackages/sid.packages.bz2
 Cmd: ./distcheck.native --checkonly 3dchess -s -e
 Type: distcheck
 Printer: text
+ExitCode: 0
 
 Name: checkonly_ignore_essential_distcheck.
 Group: distcheck
@@ -177,6 +182,7 @@ Input: deb://tests/DebianPackages/sid.packages.bz2
 Cmd: ./distcheck.native --deb-ignore-essential --checkonly 3dchess -s -e
 Type: distcheck
 Printer: text
+ExitCode: 0
 
 Name: checkonly_multiarch_distcheck
 Group: distcheck
@@ -185,6 +191,7 @@ Input: deb://tests/DebianPackages/sid.packages.bz2
 Cmd: ./distcheck.native --checkonly 3dchess:amd64 -s -e --deb-native-arch amd64
 Type: distcheck
 Printer: text
+ExitCode: 0
 
 Name: ignore_essential_distcheck
 Group: distcheck
@@ -193,6 +200,7 @@ Input: deb://tests/DebianPackages/sid.packages.bz2
 Cmd: ./distcheck.native --deb-ignore-essential -f -e
 Type: distcheck
 Printer: text
+ExitCode: 1
 
 Name: missing_missing_distcheck
 Group: distcheck
@@ -218,6 +226,24 @@ Input: cv://tests/cv/number_field.cudf
 Cmd: ./distcheck.native --checkonly a -f -e --cv-int
 Type: distcheck
 Printer: text
+
+Name: exitcode_distcheck_64_notexistent
+Group: distcheck
+Expected: /dev/null
+Input:  cudf://notexistent
+Cmd: ./distcheck.native --checkonly a -f -e
+Type: distcheck
+Printer: text
+ExitCode: 64
+
+Name: exitcode_distcheck_64_parse_error
+Group: distcheck
+Expected: /dev/null
+Input:  cudf://tests/DebianPackages/sid.packages.bz2
+Cmd: ./distcheck.native --checkonly a -f -e
+Type: distcheck
+Printer: text
+ExitCode: 64
 
 Name: failure_outdated
 Group: distcheck
@@ -258,6 +284,7 @@ Input: tests/DebianPackages/Sid-amd64-Packages-050812.bz2 tests/DebianPackages/S
 Cmd: ./deb-buildcheck.native --failures --explain --latest --deb-native-arch=amd64
 Type: buildcheck
 Printer: text
+ExitCode: 1
 
 Name: deb_buildcheck_cross
 Group: buildcheck
@@ -267,6 +294,7 @@ Cmd: ./deb-buildcheck.native --failures --successes --latest --deb-native-arch=a
 Type: buildcheck
 Printer: text
 Ignore: yes
+ExitCode: 1
 
 Name: deb_buildcheck_profiles
 Group: buildcheck
@@ -275,3 +303,32 @@ Input: tests/DebianPackages/deb_buildcheck_profiles_packages tests/DebianPackage
 Cmd: ./deb-buildcheck.native --failures --successes --deb-native-arch=amd64 --profiles=stage1,nocheck
 Type: buildcheck
 Printer: text
+ExitCode: 0
+
+Name: exitcode_deb_buildcheck_64_notexistent
+Group: buildcheck
+Expected: /dev/null
+Input: notexistent
+Cmd: ./deb-buildcheck.native
+Type: buildcheck
+Printer: text
+ExitCode: 64
+
+Name: exitcode_deb_buildcheck_64_missing
+Group: buildcheck
+Expected: /dev/null
+Input: tests/DebianPackages/deb_buildcheck_profiles_packages
+Cmd: ./deb-buildcheck.native --deb-native-arch=amd64
+Type: buildcheck
+Printer: text
+ExitCode: 64
+
+Name: exitcode_deb_buildcheck_64_parse_error
+Group: buildcheck
+Expected: /dev/null
+Input: tests/DebianPackages/deb_buildcheck_profiles_packages tests/cudf/legacy.cudf
+Cmd: ./deb-buildcheck.native --deb-native-arch=amd64
+Type: buildcheck
+Printer: text
+ExitCode: 64
+

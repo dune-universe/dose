@@ -252,7 +252,7 @@ let main () =
     Format.fprintf fmt "total-packages: %d@." universe_size;
   (*  Format.fprintf fmt "broken-packages: %d@." nbp; *)
   end;
-  StdUtils.exit(exitcode)
+  exitcode
 ;;
 
 StdUtils.if_application

@@ -323,8 +323,8 @@ let main () =
 
   let result = outdated ~summary ~failure ~explain ~dump ~checklist ~options packagelist in
   if (result.Diagnostic.missing = 0) && (result.Diagnostic.conflict = 0)
-  then StdUtils.exit(0) (* no broken packages *)
-  else StdUtils.exit(1) (* at least one broken package *)
+  then 0 (* no broken packages *)
+  else 1 (* at least one broken package *)
 ;;
 
 StdUtils.if_application
