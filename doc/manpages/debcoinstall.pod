@@ -109,8 +109,15 @@ Display this list of options.
 
 =head1 EXIT CODES
 
-If a valid coinstallation set exists, the program returns a zero exit status.
-If no coinstallation set exists, the exit code is one.
+Exit codes 0-63 indicate a normal termination of the program, codes 64-127
+indicate abnormal termination of the program (such as parse errors, I/O
+errors).
+
+In case of normal program termination:
+
+- exit code 0 indicates that a valid coinstallation set exists
+
+- exit code 1 indicates that at no coinstallation set exists
 
 =cut
 

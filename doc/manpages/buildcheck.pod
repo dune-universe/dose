@@ -128,6 +128,18 @@ Display this list of options.
 =back
 =cut
 
+=head1 EXIT CODES
+
+Exit codes 0-63 indicate a normal termination of the program, codes 64-127
+indicate abnormal termination of the program (such as parse errors, I/O
+errors).
+
+In case of normal program termination:
+
+- exit code 0 indicates that all foreground packages are found installable;
+
+- exit code 1 indicates that at least one foreground package is found uninstallable.
+
 =head1 EXAMPLE
 
 Compute the list of source packages in Sources for which

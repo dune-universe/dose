@@ -75,6 +75,12 @@ Display this list of options.
 =back
 =cut
 
+=head1 EXIT CODES
+
+Exit codes 0-63 indicate a normal termination of the program, codes 64-127
+indicate abnormal termination of the program (such as parse errors, I/O
+errors).
+
 =head1 EXAMPLE
 
  dose3-outdated -f -v /var/lib/apt/lists/ftp.fr.debian.org_debian_dists_sid_main_binary-amd64_Packages
