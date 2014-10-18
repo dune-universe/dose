@@ -154,8 +154,8 @@ testapps: apps
 testlib: 
 	@for i in $(TESTS); do\
 		echo "#######START TESTING $$i" ;\
-		$(OCAMLBUILD) $(APPFLAGS) $$i/tests.$(OCAMLBEST) ;\
-		./tests.$(OCAMLBEST) ;\
+		$(OCAMLBUILD) $(APPFLAGS) $$i/tests.$(OCAMLEXT) ;\
+		./tests.$(OCAMLEXT) ;\
 	done
 
 test: testapps testlib
@@ -181,8 +181,8 @@ install: META installcudf
 	# install applications
 	cd _build/applications ; \
 	install -d $(BINDIR) ; \
-	for f in $$(ls *.$(OCAMLBEST)) ; do \
-	  install $(INSTALLOPTS) $$f $(BINDIR)/$${f%.$(OCAMLBEST)} ; \
+	for f in $$(ls *.$(OCAMLEXT)) ; do \
+	  install $(INSTALLOPTS) $$f $(BINDIR)/$${f%.$(OCAMLEXT)} ; \
 	done
 	ln -s $(BINDIR)/distcheck $(BINDIR)/debcheck
 	ln -s $(BINDIR)/distcheck $(BINDIR)/rpmcheck
@@ -191,8 +191,8 @@ install: META installcudf
 uninstall: uninstallcudf
 	$(OCAMLFIND) remove -destdir $(LIBDIR) $(NAME)
 
-	for f in $$(ls *.$(OCAMLBEST)) ; do \
-	  rm -f $(BINDIR)/$${f%.$(OCAMLBEST)} ; \
+	for f in $$(ls *.$(OCAMLEXT)) ; do \
+	  rm -f $(BINDIR)/$${f%.$(OCAMLEXT)} ; \
 	done
 	rm -f $(BINDIR)/debcheck $(BINDIR)/rpmcheck $(BINDIR)/eclipsecheck
 

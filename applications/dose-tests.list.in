@@ -11,7 +11,7 @@ Name: apt_cudf
 Group: apt-cudf-long
 Expected: tests/applications/dose-tests/apt-cudf-install-i386
 Input: tests/deb/edsp/install-sarge-etch.edsp
-Cmd: ./apt-cudf.native --conf doc/apt-cudf/apt-cudf.conf -e --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ --conf doc/apt-cudf/apt-cudf.conf -e --solver=aspcud
 Type: 822
 Printer: 822
 
@@ -19,7 +19,7 @@ Name: apt_cudf_textlive
 Group: apt-cudf-long
 Expected: tests/applications/dose-tests/apt-cudf-install-textlive
 Input: tests/deb/edsp/textlive.edsp
-Cmd: ./apt-cudf.native --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: 822
 Printer: 822
 
@@ -27,7 +27,7 @@ Name: apt_cudf_multiarch_bug_16959
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-bug-16959
 Input: tests/deb/edsp/multiarch-bug-16959.edsp
-Cmd: ./apt-cudf.native -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: 822
 Printer: 822
 
@@ -35,7 +35,7 @@ Name: apt_cudf_multiarch_same_versioned_conflict
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-same-versioned-conflict
 Input: tests/deb/edsp/multiarch-same-versioned-conflict.edsp
-Cmd: ./apt-cudf.native -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: 822
 Printer: 822
 
@@ -43,7 +43,7 @@ Name: apt_cudf_multiarch_same_provides_multi
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-same-provides-multi
 Input: tests/deb/edsp/multiarch-same-provides-multi.edsp
-Cmd: ./apt-cudf.native -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: 822
 Printer: 822
 
@@ -51,7 +51,7 @@ Name: apt_cudf_multiarch_same_provides
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-same-provides
 Input: tests/deb/edsp/multiarch-same-provides.edsp
-Cmd: ./apt-cudf.native -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: 822
 Printer: 822
 
@@ -59,7 +59,7 @@ Name: apt_cudf_multiarch_same_half
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-same-half
 Input: tests/deb/edsp/multiarch-same-half.edsp
-Cmd: ./apt-cudf.native -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: 822
 Printer: 822
 
@@ -67,7 +67,7 @@ Name: apt_cudf_multiarch_same_conflicts
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-same-conflicts
 Input: tests/deb/edsp/multiarch-same-conflicts.edsp
-Cmd: ./apt-cudf.native -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: 822
 Printer: 822
 
@@ -75,7 +75,7 @@ Name: apt_cudf_multiarch_same_conflicts_virtual
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-same-conflicts-virtual
 Input: tests/deb/edsp/multiarch-same-conflicts-virtual.edsp
-Cmd: ./apt-cudf.native -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: 822
 Printer: 822
 
@@ -83,7 +83,7 @@ Name: apt_cudf_multiarch_same_conflicts_virtual_malformed
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-same-conflicts-virtual-malformed
 Input: tests/deb/edsp/multiarch-same-conflicts-virtual-malformed.edsp
-Cmd: ./apt-cudf.native -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: 822
 Printer: 822
 
@@ -91,7 +91,7 @@ Name: apt_cudf_multiarch_same_no_deps
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-same-no-deps
 Input: tests/deb/edsp/multiarch-same-no-deps.edsp
-Cmd: ./apt-cudf.native -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: 822
 Printer: 822
 
@@ -99,7 +99,7 @@ Name: apt_cudf_multiarch_none
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-none
 Input: tests/deb/edsp/multiarch-none.edsp
-Cmd: ./apt-cudf.native -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: 822
 Printer: 822
 
@@ -107,7 +107,7 @@ Name: apt_cudf_multiarch_foreign
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-foreign
 Input: tests/deb/edsp/multiarch-foreign.edsp
-Cmd: ./apt-cudf.native -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: 822
 Printer: 822
 
@@ -115,7 +115,7 @@ Name: apt_cudf_multiarch_foreign
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-foreign-depends
 Input: tests/deb/edsp/multiarch-foreign-depends.edsp
-Cmd: ./apt-cudf.native -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: 822
 Printer: 822
 
@@ -123,7 +123,7 @@ Name: apt_cudf_multiarch_allowed
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-allowed
 Input: tests/deb/edsp/multiarch-allowed.edsp
-Cmd: ./apt-cudf.native -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: 822
 Printer: 822
 
@@ -131,7 +131,7 @@ Name: deb-coinstall-bug-16979
 Group: distcheck
 Expected: tests/applications/dose-tests/deb-coinstall-bug-16979
 Input: --bg=tests/DebianPackages/sid.packages.bz2 tests/deb/misc/deb-install-16959.edsp
-Cmd: ./deb-coinstall.native --failures --explain --deb-native-arch=amd64 
+Cmd: ./deb-coinstall.@OCAMLEXT@ --failures --explain --deb-native-arch=amd64 
 Type: deb-coinstall
 Printer: text
 ExitCode: 0
@@ -140,7 +140,7 @@ Name: failure_distcheck
 Group: distcheck
 Expected: tests/applications/dose-tests/distcheck_test_failure
 Input: deb://tests/DebianPackages/sid.packages.bz2
-Cmd: ./distcheck.native -f -e
+Cmd: ./distcheck.@OCAMLEXT@ -f -e
 Type: distcheck
 Printer: text
 ExitCode: 1
@@ -149,7 +149,7 @@ Name: success_distcheck
 Group: distcheck
 Expected: tests/applications/dose-tests/distcheck_test_success
 Input: deb://tests/DebianPackages/lenny.packages.bz2
-Cmd: ./distcheck.native -s 
+Cmd: ./distcheck.@OCAMLEXT@ -s 
 Type: distcheck
 Printer: text
 ExitCode: 0
@@ -159,7 +159,7 @@ Group: distcheck
 Comment: We consider essential packages but we print only the code of 3dchess
 Expected: tests/applications/dose-tests/distcheck_test_minimal_checkonly
 Input: deb://tests/DebianPackages/sid.packages.bz2
-Cmd: ./distcheck.native -m --checkonly 3dchess -s -e
+Cmd: ./distcheck.@OCAMLEXT@ -m --checkonly 3dchess -s -e
 Type: distcheck
 Printer: text
 ExitCode: 0
@@ -169,7 +169,7 @@ Group: distcheck
 Comment: We consider essential packages and we print everything
 Expected: tests/applications/dose-tests/distcheck_test_checkonly
 Input: deb://tests/DebianPackages/sid.packages.bz2
-Cmd: ./distcheck.native --checkonly 3dchess -s -e
+Cmd: ./distcheck.@OCAMLEXT@ --checkonly 3dchess -s -e
 Type: distcheck
 Printer: text
 ExitCode: 0
@@ -179,7 +179,7 @@ Group: distcheck
 Comment: We **do not** consider essential packages. 
 Expected: tests/applications/dose-tests/distcheck_test_ignore_essential_checkonly
 Input: deb://tests/DebianPackages/sid.packages.bz2
-Cmd: ./distcheck.native --deb-ignore-essential --checkonly 3dchess -s -e
+Cmd: ./distcheck.@OCAMLEXT@ --deb-ignore-essential --checkonly 3dchess -s -e
 Type: distcheck
 Printer: text
 ExitCode: 0
@@ -188,7 +188,7 @@ Name: checkonly_multiarch_distcheck
 Group: distcheck
 Expected: tests/applications/dose-tests/distcheck_test_checkonly_multiarch
 Input: deb://tests/DebianPackages/sid.packages.bz2
-Cmd: ./distcheck.native --checkonly 3dchess:amd64 -s -e --deb-native-arch amd64
+Cmd: ./distcheck.@OCAMLEXT@ --checkonly 3dchess:amd64 -s -e --deb-native-arch amd64
 Type: distcheck
 Printer: text
 ExitCode: 0
@@ -197,7 +197,7 @@ Name: ignore_essential_distcheck
 Group: distcheck
 Expected: tests/applications/dose-tests/distcheck_test_ignore_essential
 Input: deb://tests/DebianPackages/sid.packages.bz2
-Cmd: ./distcheck.native --deb-ignore-essential -f -e
+Cmd: ./distcheck.@OCAMLEXT@ --deb-ignore-essential -f -e
 Type: distcheck
 Printer: text
 ExitCode: 1
@@ -206,7 +206,7 @@ Name: missing_missing_distcheck
 Group: distcheck
 Expected: tests/applications/dose-tests/missing_missing
 Input: cudf://tests/cudf/missing_missing.cudf
-Cmd: ./distcheck.native -e -f --checkonly p
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly p
 Type: distcheck
 Printer: text
 Ignore: yes
@@ -215,7 +215,7 @@ Name: cv_default_distcheck
 Group: distcheck
 Expected: tests/applications/dose-tests/distcheck_cv_default_opt_test
 Input: cv://tests/cv/number_field.cudf
-Cmd: ./distcheck.native --checkonly a -f -e
+Cmd: ./distcheck.@OCAMLEXT@ --checkonly a -f -e
 Type: distcheck
 Printer: text
 
@@ -223,7 +223,7 @@ Name: cv_cudf_versions_distcheck
 Group: distcheck
 Expected: tests/applications/dose-tests/distcheck_cv_cv_opt_test
 Input: cv://tests/cv/number_field.cudf
-Cmd: ./distcheck.native --checkonly a -f -e --cv-int
+Cmd: ./distcheck.@OCAMLEXT@ --checkonly a -f -e --cv-int
 Type: distcheck
 Printer: text
 
@@ -231,7 +231,7 @@ Name: exitcode_distcheck_64_notexistent
 Group: distcheck
 Expected: /dev/null
 Input:  cudf://notexistent
-Cmd: ./distcheck.native --checkonly a -f -e
+Cmd: ./distcheck.@OCAMLEXT@ --checkonly a -f -e
 Type: distcheck
 Printer: text
 ExitCode: 64
@@ -240,7 +240,7 @@ Name: exitcode_distcheck_64_parse_error
 Group: distcheck
 Expected: /dev/null
 Input:  cudf://tests/DebianPackages/sid.packages.bz2
-Cmd: ./distcheck.native --checkonly a -f -e
+Cmd: ./distcheck.@OCAMLEXT@ --checkonly a -f -e
 Type: distcheck
 Printer: text
 ExitCode: 64
@@ -249,7 +249,7 @@ Name: failure_outdated
 Group: distcheck
 Expected: tests/applications/dose-tests/outdated_failure
 Input: tests/DebianPackages/sid.packages.bz2
-Cmd: ./outdated.native -f -e
+Cmd: ./outdated.@OCAMLEXT@ -f -e
 Type: distcheck
 Printer: text
 
@@ -257,7 +257,7 @@ Name: ceve_cnf
 Group: ceve
 Expected: tests/applications/dose-tests/ceve_cnf
 Input: deb://tests/DebianPackages/sid.packages.bz2
-Cmd: ./ceve.native -T cnf 
+Cmd: ./ceve.@OCAMLEXT@ -T cnf 
 Type: text
 Printer: text
 
@@ -265,7 +265,7 @@ Name: ceve_cone_dot
 Group: ceve
 Expected: tests/applications/dose-tests/ceve_cone_dot
 Input: deb://tests/DebianPackages/sid.packages.bz2
-Cmd: ./ceve.native -T dot -c 3dchess
+Cmd: ./ceve.@OCAMLEXT@ -T dot -c 3dchess
 Type: text
 Printer: text
 
@@ -273,7 +273,7 @@ Name: ceve_cone_multiarch_dot
 Group: ceve
 Expected: tests/applications/dose-tests/ceve_cone_multiarch_dot
 Input: tests/DebianPackages/sid.packages.bz2
-Cmd: ./ceve.native -T dot -c 3dchess:amd64 --deb-native-arch amd64 -t deb
+Cmd: ./ceve.@OCAMLEXT@ -T dot -c 3dchess:amd64 --deb-native-arch amd64 -t deb
 Type: text
 Printer: text
 
@@ -281,7 +281,7 @@ Name: deb_buildcheck
 Group: buildcheck
 Expected: tests/applications/dose-tests/deb-buildcheck-output
 Input: tests/DebianPackages/Sid-amd64-Packages-050812.bz2 tests/DebianPackages/Sid-Sources-050812.bz2
-Cmd: ./deb-buildcheck.native --failures --explain --latest --deb-native-arch=amd64
+Cmd: ./deb-buildcheck.@OCAMLEXT@ --failures --explain --latest --deb-native-arch=amd64
 Type: buildcheck
 Printer: text
 ExitCode: 1
@@ -290,7 +290,7 @@ Name: deb_buildcheck_cross
 Group: buildcheck
 Expected: tests/applications/dose-tests/apt-get-build-dep-armel-results
 Input: tests/DebianPackages/Sid-amd64-Packages-050812.bz2 tests/DebianPackages/Sid-armel-Packages-050812.bz2 tests/DebianPackages/Sid-Sources-050812.bz2
-Cmd: ./deb-buildcheck.native --failures --successes --latest --deb-native-arch=amd64 --deb-foreign-archs=armel --deb-host-arch=armel
+Cmd: ./deb-buildcheck.@OCAMLEXT@ --failures --successes --latest --deb-native-arch=amd64 --deb-foreign-archs=armel --deb-host-arch=armel
 Type: buildcheck
 Printer: text
 Ignore: yes
@@ -300,7 +300,7 @@ Name: deb_buildcheck_profiles
 Group: buildcheck
 Expected: tests/applications/dose-tests/deb_buildcheck_profiles_results
 Input: tests/DebianPackages/deb_buildcheck_profiles_packages tests/DebianPackages/deb_buildcheck_profiles_sources
-Cmd: ./deb-buildcheck.native --failures --successes --deb-native-arch=amd64 --profiles=stage1,nocheck
+Cmd: ./deb-buildcheck.@OCAMLEXT@ --failures --successes --deb-native-arch=amd64 --profiles=stage1,nocheck
 Type: buildcheck
 Printer: text
 ExitCode: 0
@@ -309,7 +309,7 @@ Name: exitcode_deb_buildcheck_64_notexistent
 Group: buildcheck
 Expected: /dev/null
 Input: notexistent
-Cmd: ./deb-buildcheck.native
+Cmd: ./deb-buildcheck.@OCAMLEXT@
 Type: buildcheck
 Printer: text
 ExitCode: 64
@@ -318,7 +318,7 @@ Name: exitcode_deb_buildcheck_64_missing
 Group: buildcheck
 Expected: /dev/null
 Input: tests/DebianPackages/deb_buildcheck_profiles_packages
-Cmd: ./deb-buildcheck.native --deb-native-arch=amd64
+Cmd: ./deb-buildcheck.@OCAMLEXT@ --deb-native-arch=amd64
 Type: buildcheck
 Printer: text
 ExitCode: 64
@@ -327,7 +327,7 @@ Name: exitcode_deb_buildcheck_64_parse_error
 Group: buildcheck
 Expected: /dev/null
 Input: tests/DebianPackages/deb_buildcheck_profiles_packages tests/cudf/legacy.cudf
-Cmd: ./deb-buildcheck.native --deb-native-arch=amd64
+Cmd: ./deb-buildcheck.@OCAMLEXT@ --deb-native-arch=amd64
 Type: buildcheck
 Printer: text
 ExitCode: 64

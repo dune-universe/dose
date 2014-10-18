@@ -29,7 +29,7 @@ ifeq ("@OCAML_OS_TYPE@","freebsd")
   LDFLAGS += -fstack-protector
 endif
 
-ifeq ("@OCAMLBEST@","opt")
+ifeq ("@OCAMLEXT@","native")
 	ifeq ("@CAMLP4OOPT@","camlp4o.opt")
 		CAMLP4CMXS=_build/Camlp4MacroParser.cmxs
 	else
@@ -37,13 +37,15 @@ ifeq ("@OCAMLBEST@","opt")
 	endif
 endif
 
-ifeq ("@OCAMLBEST@","opt")
+ifeq ("@OCAMLEXT@","native")
   OCAMLBUILD=@OCAMLBUILD@
   INSTALLOPTS=-s
 else
   OCAMLBUILD=@OCAMLBUILD@ -byte-plugin
   INSTALLOPTS=
 endif
+
+OCAMLEXT=@OCAMLEXT@
 
 TARGETS= \
    distcheck.@OCAMLEXT@ \
@@ -82,7 +84,7 @@ LIBNAMES += doseparseNoRpm/doseparseNoRpm \
 BYTELIBNAMES=$(notdir $(LIBNAMES))
 BYTELIBS=$(BYTELIBNAMES:%=$(DOSELIBS)/%.cma)
 
-ifeq ("@OCAMLBEST@","opt")
+ifeq ("@OCAMLEXT@","native")
 	SUFFIX += cmxa cmxs a
   OPTLIBS += $(BYTELIBS:%.cma=%.cmxa) 
   CMXSLIBS += $(BYTELIBS:%.cma=%.cmxs)
