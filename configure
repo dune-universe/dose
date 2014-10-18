@@ -2070,6 +2070,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
+
   # checking for ocamlc
   if test -n "$ac_tool_prefix"; then
   # Extract the first word of "${ac_tool_prefix}ocamlc", so it can be a program name with args.
@@ -4034,7 +4035,7 @@ if test "$CAMLP4" = "no"; then
  as_fn_error $? "You must install the Camlp4 pre-processor" "$LINENO" 5
 fi
 
-if test "$CAMLP4OOPT" = "no" || test "$OCAMLNATDYNLINK" = "no" ; then
+if test "$OCAMLBEST" = "byte" || test "$CAMLP4OOPT" = "no" || test "$OCAMLNATDYNLINK" = "no" ; then
  CAMLP4OMACRO="$CAMLP4O Camlp4MacroParser.cmo"
 else
  CAMLP4OMACRO="$CAMLP4OOPT -I_build Camlp4MacroParser.cmxs"

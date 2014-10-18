@@ -1,4 +1,5 @@
 AC_INIT(dose3, 3.2.2, pietro.abate@pps.univ-paris-diderot.fr)
+AC_CONFIG_MACRO_DIR([m4])
 
 AC_PROG_OCAML
 if test "$OCAMLC" = "no"; then
@@ -10,7 +11,7 @@ if test "$CAMLP4" = "no"; then
  AC_MSG_ERROR([You must install the Camlp4 pre-processor])
 fi
 
-if test "$CAMLP4OOPT" = "no" || test "$OCAMLNATDYNLINK" = "no" ; then
+if test "$OCAMLBEST" = "byte" || test "$CAMLP4OOPT" = "no" || test "$OCAMLNATDYNLINK" = "no" ; then
  CAMLP4OMACRO="$CAMLP4O Camlp4MacroParser.cmo"
 else
  CAMLP4OMACRO="$CAMLP4OOPT -I_build Camlp4MacroParser.cmxs"

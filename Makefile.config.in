@@ -29,10 +29,12 @@ ifeq ("@OCAML_OS_TYPE@","freebsd")
   LDFLAGS += -fstack-protector
 endif
 
-ifeq ("@CAMLP4OOPT@","camlp4o.opt")
-  CAMLP4CMXS=_build/Camlp4MacroParser.cmxs
-else
-  CAMLP4CMXS=
+ifeq ("@OCAMLBEST@","opt")
+	ifeq ("@CAMLP4OOPT@","camlp4o.opt")
+		CAMLP4CMXS=_build/Camlp4MacroParser.cmxs
+	else
+		CAMLP4CMXS=
+	endif
 endif
 
 ifeq ("@OCAMLBEST@","opt")
