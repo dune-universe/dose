@@ -30,8 +30,11 @@ AC_ARG_WITH(bytecodeonly,
         OCAMLBEST=byte,
         OCAMLBEST="$OCAMLBEST")
 if test "$OCAMLBEST" = "byte" ; then
+  OCAMLEXT=byte
   OCAMLOPT=
   AC_SUBST(OCAMLOPT)
+else
+  OCAMLEXT=native
 fi
 
 #defaults
@@ -293,6 +296,8 @@ AC_SUBST(CFLAGS)
 AC_SUBST(CPPFLAGS)
 AC_SUBST(LDFLAGS)
 
+AC_SUBST(OCAMLEXT)
+
 AC_ARG_WITH(experimental,
         [ --with-experimental ],
         BUILD_EXP=yes,
@@ -310,6 +315,7 @@ AC_CONFIG_FILES([
   dose3.odocl
   algo/algo.mlpack
   common/versionInfo.ml
+  applications/dose-tests.list
 ])
 AC_OUTPUT
 

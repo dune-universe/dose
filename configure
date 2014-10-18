@@ -623,6 +623,7 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+OCAMLEXT
 PKG_XML
 PKG_CURL
 CONFIG_OCAMLGRAPH
@@ -4153,8 +4154,11 @@ else
 fi
 
 if test "$OCAMLBEST" = "byte" ; then
+  OCAMLEXT=byte
   OCAMLOPT=
 
+else
+  OCAMLEXT=native
 fi
 
 #defaults
@@ -5966,6 +5970,8 @@ LDFLAGS="-fstack-protector"
 
 
 
+
+
 # Check whether --with-experimental was given.
 if test "${with_experimental+set}" = set; then :
   withval=$with_experimental; BUILD_EXP=yes
@@ -5978,7 +5984,7 @@ if test "$BUILD_EXP" = "yes" ; then
 
 fi
 
-ac_config_files="$ac_config_files Makefile.config _tags META dose3.odocl algo/algo.mlpack common/versionInfo.ml"
+ac_config_files="$ac_config_files Makefile.config _tags META dose3.odocl algo/algo.mlpack common/versionInfo.ml applications/dose-tests.list"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6692,6 +6698,7 @@ do
     "dose3.odocl") CONFIG_FILES="$CONFIG_FILES dose3.odocl" ;;
     "algo/algo.mlpack") CONFIG_FILES="$CONFIG_FILES algo/algo.mlpack" ;;
     "common/versionInfo.ml") CONFIG_FILES="$CONFIG_FILES common/versionInfo.ml" ;;
+    "applications/dose-tests.list") CONFIG_FILES="$CONFIG_FILES applications/dose-tests.list" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

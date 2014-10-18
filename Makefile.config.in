@@ -38,23 +38,21 @@ ifeq ("@OCAMLBEST@","opt")
 endif
 
 ifeq ("@OCAMLBEST@","opt")
-  OCAMLBEST=native
   OCAMLBUILD=@OCAMLBUILD@
   INSTALLOPTS=-s
 else
-  OCAMLBEST=byte
   OCAMLBUILD=@OCAMLBUILD@ -byte-plugin
   INSTALLOPTS=
 endif
 
 TARGETS= \
-   distcheck.$(OCAMLBEST) \
-   deb-buildcheck.$(OCAMLBEST) \
-   ceve.$(OCAMLBEST) \
-   apt-cudf.$(OCAMLBEST) \
-   outdated.$(OCAMLBEST) \
-   challenged.$(OCAMLBEST) \
-   deb-coinstall.$(OCAMLBEST) \
+   distcheck.@OCAMLEXT@ \
+	 deb-buildcheck.@OCAMLEXT@ \
+   ceve.@OCAMLEXT@ \
+   apt-cudf.@OCAMLEXT@ \
+	 outdated.@OCAMLEXT@ \
+	 challenged.@OCAMLEXT@ \
+   deb-coinstall.@OCAMLEXT@
 
 BYTELIBS=
 OPTLIBS=
@@ -93,23 +91,23 @@ endif
 
 ifeq ("@HAS_XML@","yes")
 ifeq ("@HAS_CURL@","yes")
-  EXPERIMENTAL += experimental/dudftocudf/deb-dudftocudf.$(OCAMLBEST)
+  EXPERIMENTAL += experimental/dudftocudf/deb-dudftocudf.@OCAMLEXT@
 endif
 endif
 
 #ocamlgraph support
 ifeq ("@HAS_OCAMLGRAPH@","yes")
   TARGETS += \
-	     strong-deps.$(OCAMLBEST) \
-	     dominators-graph.$(OCAMLBEST)
+	     strong-deps.@OCAMLEXT@ \
+	     dominators-graph.@OCAMLEXT@
   
-  EXPERIMENTAL += strong-conflicts.$(OCAMLBEST)
+  EXPERIMENTAL += strong-conflicts.@OCAMLEXT@
 endif
 
 #ocamlgraph support
 ifeq ("@HAS_OCAMLGRAPH@","yes")
   TARGETS += \
-	     smallworld.$(OCAMLBEST)
+	     smallworld.@OCAMLEXT@
 endif
 
 #ounit support
