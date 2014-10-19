@@ -150,8 +150,7 @@ The test script of the applications needs:
 python
 python-yaml
 
-./configure --without-libcudf --with-xml --with-curl --with-ocamlgraph \
-  --with-zip --with-oUnit --with-bz2 --with-rpm4
+./configure --without-libcudf --with-ocamlgraph --with-zip --with-oUnit --with-bz2 --with-rpm4
 make
 make test
 make testlib

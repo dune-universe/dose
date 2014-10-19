@@ -11,14 +11,6 @@ if test "$CAMLP4" = "no"; then
  AC_MSG_ERROR([You must install the Camlp4 pre-processor])
 fi
 
-if test "$OCAMLBEST" = "byte" || test "$CAMLP4OOPT" = "no" || test "$OCAMLNATDYNLINK" = "no" ; then
- CAMLP4OMACRO="$CAMLP4O Camlp4MacroParser.cmo"
-else
- CAMLP4OMACRO="$CAMLP4OOPT -I_build Camlp4MacroParser.cmxs"
-fi
-AC_SUBST(CAMLP4O)
-AC_SUBST(CAMLP4OMACRO)
-
 AC_PROG_FINDLIB
 AC_SUBST(OCAMLFIND)
 if test "$OCAMLFIND" = "no"; then
@@ -36,6 +28,15 @@ if test "$OCAMLBEST" = "byte" ; then
 else
   OCAMLEXT=native
 fi
+
+if test "$OCAMLBEST" = "byte" || test "$CAMLP4OOPT" = "no" || test "$OCAMLNATDYNLINK" = "no" ; then
+ CAMLP4OMACRO="$CAMLP4O Camlp4MacroParser.cmo"
+else
+ CAMLP4OMACRO="$CAMLP4OOPT -I_build Camlp4MacroParser.cmxs"
+fi
+AC_SUBST(CAMLP4O)
+AC_SUBST(CAMLP4OMACRO)
+
 
 #defaults
 USE_RPM=use_

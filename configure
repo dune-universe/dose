@@ -678,8 +678,8 @@ OCAML_PKG_re_pcre
 OCAML_PKG_extlib
 OCAML_PKG_cudf
 HAS_LIBCUDF
-OCAMLFIND
 CAMLP4OMACRO
+OCAMLFIND
 CAMLP4RF
 CAMLP4R
 CAMLP4PROF
@@ -4036,14 +4036,6 @@ if test "$CAMLP4" = "no"; then
  as_fn_error $? "You must install the Camlp4 pre-processor" "$LINENO" 5
 fi
 
-if test "$OCAMLBEST" = "byte" || test "$CAMLP4OOPT" = "no" || test "$OCAMLNATDYNLINK" = "no" ; then
- CAMLP4OMACRO="$CAMLP4O Camlp4MacroParser.cmo"
-else
- CAMLP4OMACRO="$CAMLP4OOPT -I_build Camlp4MacroParser.cmxs"
-fi
-
-
-
 
   # checking for ocamlfind
   if test -n "$ac_tool_prefix"; then
@@ -4160,6 +4152,15 @@ if test "$OCAMLBEST" = "byte" ; then
 else
   OCAMLEXT=native
 fi
+
+if test "$OCAMLBEST" = "byte" || test "$CAMLP4OOPT" = "no" || test "$OCAMLNATDYNLINK" = "no" ; then
+ CAMLP4OMACRO="$CAMLP4O Camlp4MacroParser.cmo"
+else
+ CAMLP4OMACRO="$CAMLP4OOPT -I_build Camlp4MacroParser.cmxs"
+fi
+
+
+
 
 #defaults
 USE_RPM=use_
