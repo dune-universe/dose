@@ -65,7 +65,7 @@ let _ = dispatch begin function
        dep ["link"; "ocaml"; "link_rpm5"] ["rpm/librpm5_stubs.a"];
 
        (* add rpm libraries *)
-       flag ["ocaml"; "use_rpm"; "link"; "native"] & S[
+       flag ["ocaml"; "use_rpm"; "link"] & S[
          A"-cclib"; A"-lrpm";
          A"-cclib"; A"-lrpmio";
          A"-ccopt"; A"-Lrpm";
@@ -77,11 +77,13 @@ let _ = dispatch begin function
        flag ["link"; "ocaml"; "link_rpm5"] & S[A"rpm/librpm5_stubs.a"];
 
        flag ["ocaml"; "use_rpm5"; "link"; "library"; "byte"] & S[
-         A"-dllib"; A"-lrpm5_stubs";
+         (* A"-dllib"; A"-lrpm5_stubs"; *)
+         A"-custom"; A"rpm/librpm5_stubs.a"
        ];
 
        flag ["ocaml"; "use_rpm4"; "link"; "library"; "byte"] & S[
-         A"-dllib"; A"-lrpm4_stubs";
+         (* A"-dllib"; A"-lrpm4_stubs"; *)
+         A"-custom"; A"rpm/librpm4_stubs.a"
        ];
 
        flag ["ocaml"; "use_rpm5"; "link"; "library"; "native"] & S[
