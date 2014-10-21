@@ -22,7 +22,10 @@ applications/Ceve
 applications/Apt-cudf
 applications/Outdated
 applications/Challenged
-doseparse/BoilerplateNoRpm
-doseparse/Boilerplate
+doseparse/StdDebian
+doseparse/StdDebug
+doseparse/StdLoaders
+doseparse/StdOptions
+doseparse//StdUtils
 @DOC_OCAMLGRAPH@
 @DOC_RPM@

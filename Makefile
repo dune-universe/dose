@@ -216,8 +216,8 @@ changelog:
 credits:
 	@git log --pretty=format:'%aN        %aE' | LC_ALL=C sort -u | awk -F'\t' '{printf("\t%s <%s>\n",$$1,$$2)}';
 
-doc: fast
-	$(OCAMLBUILD) $(OBFLAGS) dose3.docdir/index.html dose3.docdir/index.dot
+doc: all
+	$(OCAMLBUILD) dose3.docdir/index.html dose3.docdir/index.dot
 	dot -Grotate=0 -Tsvg -o dose3.docdir/index.svg dose3.docdir/index.dot
 	(cd doc && $(MAKE) all)
 
@@ -230,4 +230,4 @@ upload: doc
 
 .PHONY: \
 	common algo debian eclipse rpm cws doseparseNoRpm doseparse \
-	all fast opt clean top-level headers test tags install uninstall dist doc man
+	all clean top-level headers test tags install uninstall dist doc man
