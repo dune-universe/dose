@@ -14,7 +14,7 @@ apt-cudf - CUDF solver integration for APT
 
 apt-cudf translates back and forth among a CUDF-based dependency solver and the
 protocol used by APT to talk with external dependency solvers. apt-cudf
-therefore allows to use any CUDF solver as an external solver for APT.
+therefore allows one to use any CUDF solver as an external solver for APT.
 
 apt-cudf relies on its C<argv[0]> name to find the CUDF solver to invoke.  In
 common setups, you should have a CUDF solver specification file under

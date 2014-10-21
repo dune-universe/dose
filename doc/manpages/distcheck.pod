@@ -194,7 +194,7 @@ List all packages that are found not to be installable.
 
 List all packages that are found to be installable. May be used together
 with B<--failures>, in this case the value of the status field in the output
-allows to distinguish installable from non-installable packages.
+allows one to distinguish installable from non-installable packages.
 
 =item B<-e>, B<--explain> 
 

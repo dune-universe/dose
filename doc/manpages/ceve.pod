@@ -83,7 +83,7 @@ with the option B<-T >I<dot|gml|grml>. Possible values are:
 =item .
 
 B<syn> for the syntactic graph where disjunctions nodes and conflicts are
-explicitely added to the graph. 
+explicitly added to the graph. 
 
 =item .
 

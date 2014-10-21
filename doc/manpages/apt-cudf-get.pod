@@ -13,7 +13,7 @@ apt-cudf-get - wrapper for calling apt-get with external solvers
 
 =head1 DESCRIPTION
 
-B<apt-cudf-get> is a wrapper that allows to invoke B<apt-get> with
+B<apt-cudf-get> is a wrapper that allows one to invoke B<apt-get> with
 external solvers while ignoring apt's pinning.
 
 All options are passed on to apt-get.
@@ -48,7 +48,7 @@ Pietro Abate and Roberto Di Cosmo
 
 =head1 BUGS
 
-Not all types of arguements to apt are correctly treated by this wrapper,
+Not all types of arguments to apt are correctly treated by this wrapper,
 in particular not the +I<pkg> and -I<pkg> shorthands for installation and removal requests.
 
 =head1 SEE ALSO
