@@ -84,6 +84,16 @@ LIBNAMES += doseparseNoRpm/doseparseNoRpm \
 BYTELIBNAMES=$(notdir $(LIBNAMES))
 BYTELIBS=$(BYTELIBNAMES:%=$(DOSELIBS)/%.cma)
 
+ifeq ("@HAS_LIBCUDF@","no")
+installcudf:
+	$(MAKE) -C cudf all @OCAMLBEST@ install
+uninstallcudf:
+	$(MAKE) -C cudf uninstall
+else
+installcudf:
+uninstallcudf:
+endif
+
 ifeq ("@OCAMLEXT@","native")
 	SUFFIX += cmxa cmxs a
   OPTLIBS += $(BYTELIBS:%.cma=%.cmxa) 
