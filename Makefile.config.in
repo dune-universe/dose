@@ -95,7 +95,7 @@ uninstallcudf:
 endif
 
 ifeq ("@OCAMLEXT@","native")
-	SUFFIX += cmxa cmxs a
+  SUFFIX += cmxa cmxs a
   OPTLIBS += $(BYTELIBS:%.cma=%.cmxa) 
   CMXSLIBS += $(BYTELIBS:%.cma=%.cmxs)
   ALIBS = $(BYTELIBS:%.cma=%.a)

@@ -138,7 +138,7 @@ $(DOSELIBS)/doseparseNoRpm.%: $(DOSELIBS)/debian.% $(DOSELIBS)/eclipse.%
 
 clean:
 	$(OCAMLBUILD) -clean
-	rm -f applications/apps.itarget applications/.itarget
+	rm -f applications/apps.itarget
 	cd doc && $(MAKE) clean
 
 distclean: clean
