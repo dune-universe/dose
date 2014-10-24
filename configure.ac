@@ -147,6 +147,7 @@ if test "$HAS_OCAMLGRAPH" = "yes" ; then
   MLPACK_OCAMLGRAPH="Defaultgraphs Statistics Dominators Strongdeps Strongdeps_int Strongconflicts Strongconflicts_int"
   DOC_OCAMLGRAPH="algo/Strongdeps algo/Strongconflicts algo/Strongdeps_int algo/Strongconflicts_int algo/Defaultgraphs algo/Statistics"
   CONFIG_OCAMLGRAPH="-DHASOCAMLGRAPH"
+  OCAMLGRAPH=ocamlgraph
 fi
 
 AC_ARG_WITH(curl,
@@ -286,6 +287,7 @@ AC_SUBST(MLPACK_OCAMLGRAPH)
 AC_SUBST(DOC_OCAMLGRAPH)
 AC_SUBST(PKG_OCAMLGRAPH)
 AC_SUBST(CONFIG_OCAMLGRAPH)
+AC_SUBST(OCAMLGRAPH)
 
 AC_SUBST(PKG_CURL)
 

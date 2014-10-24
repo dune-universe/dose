@@ -626,6 +626,7 @@ LIBOBJS
 OCAMLEXT
 PKG_XML
 PKG_CURL
+OCAMLGRAPH
 CONFIG_OCAMLGRAPH
 PKG_OCAMLGRAPH
 DOC_OCAMLGRAPH
@@ -4454,6 +4455,7 @@ $as_echo "not found" >&6; }
   MLPACK_OCAMLGRAPH="Defaultgraphs Statistics Dominators Strongdeps Strongdeps_int Strongconflicts Strongconflicts_int"
   DOC_OCAMLGRAPH="algo/Strongdeps algo/Strongconflicts algo/Strongdeps_int algo/Strongconflicts_int algo/Defaultgraphs algo/Statistics"
   CONFIG_OCAMLGRAPH="-DHASOCAMLGRAPH"
+  OCAMLGRAPH=ocamlgraph
 fi
 
 
@@ -5929,6 +5931,7 @@ fi
 #                #define _GNU_SOURCE 1
 #                #include <sched.h>
 #                ]])
+
 
 
 

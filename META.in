@@ -1,8 +1,8 @@
 description = "Dose3 libraries"
 version = "@PACKAGE_VERSION@"
-archive(byte) = "common.cma algo.cma debian.cma eclipse.cma csw.cma"
-archive(native) = "common.cmxa algo.cmxa debian.cmxa eclipse.cmxa csw.cmxa"
-requires = "extlib, re.pcre, cudf, ocamlgraph, unix, @ZIP@, @BZ2@"
+archive(byte) = "common.cma algo.cma debian.cma eclipse.cma csw.cma cv.cma"
+archive(native) = "common.cmxa algo.cmxa debian.cmxa eclipse.cmxa csw.cmxa cv.cmxa"
+requires = "extlib, re.pcre, cudf, @OCAMLGRAPH@, unix, @ZIP@, @BZ2@"
 
 package "common" (
 version = "@PACKAGE_VERSION@"
@@ -15,7 +15,7 @@ package "algo" (
 version = "@PACKAGE_VERSION@"
 archive(byte) = "algo.cma"
 archive(native) = "algo.cmxa"
-requires = "ocamlgraph, dose3.common"
+requires = "@OCAMLGRAPH@, dose3.common"
 )
 
 package "debian" (
@@ -46,14 +46,21 @@ archive(native) = "rpm.cmxa"
 requires = "dose3.common"
 )
 
-package "boilerplate" (
-version = "@PACKAGE_VERSION@"
-archive(byte) = "rpm.cma boilerplate.cma"
-archive(native) = "rpm.cmxa boilerplate.cmxa"
+package "cv" (
+version = "unreleased"
+archive(byte) = "cv.cma"
+archive(native) = "cv.cmxa"
+requires = "dose3.common"
 )
 
-package "boilerplateNoRpm" (
+package "doseparse" (
 version = "@PACKAGE_VERSION@"
-archive(byte) = "boilerplateNoRpm.cma"
-archive(native) = "boilerplateNoRpm.cmxa"
+archive(byte) = "rpm.cma doseparse.cma"
+archive(native) = "rpm.cmxa doseparse.cmxa"
+)
+
+package "doseparseNoRpm" (
+version = "@PACKAGE_VERSION@"
+archive(byte) = "doseparseNoRpm.cma"
+archive(native) = "doseparseNoRpm.cmxa"
 )
