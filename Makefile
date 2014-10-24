@@ -7,7 +7,7 @@ include Makefile.config
 DIST_DIR = $(NAME)-$(VERSION)
 DIST_TARBALL = $(DIST_DIR).tar.gz
 
-VERBOSE := -classic-display
+#VERBOSE := -classic-display
 OBFLAGS := $(VERBOSE) -j 10 -no-links -cflags -warn-error,FPSXY
 APPFLAGS := $(VERBOSE) -j 10
 #OBFLAGS := $(OBFLAGS) -tag profile -tag debug
@@ -17,18 +17,15 @@ all: itarget $(CAMLP4CMXS) $(BYTELIBS) $(OPTLIBS) $(CMXSLIBS) $(ALIBS) man
 	$(OCAMLBUILD) $(APPFLAGS) applications/apps.otarget
 
 apps: itarget $(CAMLP4CMXS) $(BYTELIBS) $(OPTLIBS) 
-	echo $(LIBNAMES)
-	echo $(BYTELIBS)
-	echo $(OPTLIBS)
 	$(OCAMLBUILD) $(APPFLAGS) applications/apps.otarget
 
 cleandoselib:
 	rm -Rf $(DOSELIBS)
 
 itarget:
-	rm -f applications/apps.itarget
+	@rm -f applications/apps.itarget
 	@for i in $(TARGETS); do echo $$i >> applications/apps.itarget; done
-	$(shell \
+	@$(shell \
 		for lib in $(LIBNAMES); do \
 			libname=`basename "$$lib"` ;\
 			dirname=`dirname "$$lib"` ;\
@@ -37,10 +34,9 @@ itarget:
 				echo "$$libname.$$ext" >> $$dirname/$$libname.itarget; \
 			done;\
 		done)
-#	@touch applications/.itarget
 
 _build/Camlp4MacroParser.cmxs:
-	mkdir -p _build
+	@mkdir -p _build
 	ocamlopt -shared $(shell ocamlc -where)/camlp4/Camlp4Parsers/Camlp4MacroParser.cmx -o _build/Camlp4MacroParser.cmxs
 
 $(DOSELIBS)/cudf.%:
@@ -168,46 +164,47 @@ INSTALL_STUFF_ += $(wildcard _build/doselibs/*.cma _build/doselibs/*.cmi)
 INSTALL_STUFF_ += $(wildcard _build/doselibs/*.cmxa _build/doselibs/*.cmxs)
 INSTALL_STUFF_ += $(wildcard _build/doselibs/*.a)
 INSTALL_STUFF_ += $(wildcard _build/*/*.mli)
-INSTALL_STUFF_ += $(wildcard _build/rpm/*.so _build/rpm/*.a)
+INSTALL_STUFF_ += $(wildcard _build/rpm/*.so)
 
 exclude_cudf = $(wildcard _build/doselibs/*cudf* _build/cudf/*)
 INSTALL_STUFF = $(filter-out $(exclude_cudf), $(INSTALL_STUFF_))
 
 install: META installcudf
-	test -d $(LIBDIR) || mkdir -p $(LIBDIR)
-	test -d $(LIBDIR)/stublibs || mkdir -p $(LIBDIR)/stublibs
-	$(INSTALL) -patch-version $(VERSION) $(NAME) $(INSTALL_STUFF)
-
-	# install applications
-	cd _build/applications ; \
+	@test -d $(LIBDIR) || mkdir -p $(LIBDIR)
+	@test -d $(LIBDIR)/stublibs || mkdir -p $(LIBDIR)/stublibs
+	@$(INSTALL) -patch-version $(VERSION) $(NAME) $(INSTALL_STUFF)
+	@cd _build/applications ; \
 	install -d $(BINDIR) ; \
 	for f in $$(ls *.$(OCAMLEXT)) ; do \
 	  install $(INSTALLOPTS) $$f $(BINDIR)/$${f%.$(OCAMLEXT)} ; \
 	done
-	ln -s $(BINDIR)/distcheck $(BINDIR)/debcheck
-	ln -s $(BINDIR)/distcheck $(BINDIR)/rpmcheck
-	ln -s $(BINDIR)/distcheck $(BINDIR)/eclipsecheck
+	@ln -s $(BINDIR)/distcheck $(BINDIR)/debcheck
+	@ln -s $(BINDIR)/distcheck $(BINDIR)/rpmcheck
+	@ln -s $(BINDIR)/distcheck $(BINDIR)/eclipsecheck
+	@echo "Install dose librairies to $(LIBDIR)"
+	@echo "Install dose binaries to $(BINDIR)"
 
 uninstall: uninstallcudf
-	$(OCAMLFIND) remove -destdir $(LIBDIR) $(NAME)
-
-	for f in $$(ls *.$(OCAMLEXT)) ; do \
+	@$(OCAMLFIND) remove -destdir $(LIBDIR) $(NAME)
+	@for f in $$(ls *.$(OCAMLEXT)) ; do \
 	  rm -f $(BINDIR)/$${f%.$(OCAMLEXT)} ; \
 	done
-	rm -f $(BINDIR)/debcheck $(BINDIR)/rpmcheck $(BINDIR)/eclipsecheck
+	@rm -f $(BINDIR)/debcheck $(BINDIR)/rpmcheck $(BINDIR)/eclipsecheck
+	@echo "Uninstall dose librairies from $(LIBDIR)"
+	@echo "Uninstall dose binaries from $(BINDIR)"
 
 dist: ./$(DIST_TARBALL)
 ./$(DIST_TARBALL):
-	if [ -d ./$(DIST_DIR)/ ] ; then rm -rf ./$(DIST_DIR)/ ; fi
-	if [ -d ./$(DIST_TARBALL) ] ; then rm -f ./$(DIST_TARBALL) ; fi
-	if [ -d .svn ]; then \
+	@if [ -d ./$(DIST_DIR)/ ] ; then rm -rf ./$(DIST_DIR)/ ; fi
+	@if [ -d ./$(DIST_TARBALL) ] ; then rm -f ./$(DIST_TARBALL) ; fi
+	@if [ -d .svn ]; then \
 	  svn export . ./$(DIST_DIR) ; \
 	else \
 	  mkdir ./$(DIST_DIR)/ ; git archive --format=tar HEAD | tar -x -C ./$(DIST_DIR)/ ; \
 	fi
-	for f in $(DIST_EXCLUDE) ; do rm -rf ./$(DIST_DIR)/$$f; done
-	tar cvzf ./$(DIST_TARBALL) ./$(DIST_DIR)
-	rm -rf ./$(DIST_DIR)
+	@for f in $(DIST_EXCLUDE) ; do rm -rf ./$(DIST_DIR)/$$f; done
+	@tar czf ./$(DIST_TARBALL) ./$(DIST_DIR)
+	@rm -rf ./$(DIST_DIR)
 	@echo "Distribution tarball: ./$(DIST_TARBALL)"
 
 changelog:
