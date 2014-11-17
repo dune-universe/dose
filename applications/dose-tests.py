@@ -7,7 +7,13 @@ import uuid
 import os,sys,time
 import argparse
 from itertools import groupby, ifilter
-import yaml, urllib
+from yaml import load
+try:
+    from yaml import CLoader as Loader
+except ImportError:
+    from yaml import Loader
+    warning('YAML C-library not available, falling back to python')
+
 import filecmp
 import cStringIO
 from sets import Set
