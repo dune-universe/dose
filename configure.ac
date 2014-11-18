@@ -1,4 +1,4 @@
-AC_INIT(dose3, 3.3-beta2, pietro.abate@pps.univ-paris-diderot.fr)
+AC_INIT(dose3, 3.3, pietro.abate@pps.univ-paris-diderot.fr)
 AC_CONFIG_MACRO_DIR([m4])
 
 AC_PROG_OCAML
