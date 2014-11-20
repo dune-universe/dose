@@ -75,7 +75,7 @@ let debvpkg to_cudf ((n,a),c) =
   let name =
     CudfAdd.encode (
       if Option.is_none a then n
-      else ((Option.get a)^":"^n)
+      else (n^":"^(Option.get a))
     )
   in
   let constr =
