@@ -97,12 +97,5 @@ let parse_uri s =
 
 let guess_format urilist =
   match List.flatten urilist with
-  |uri::l ->
-      let (p_default,_,_) = parse_uri uri in
-      if List.for_all (fun u -> 
-        let (p_list,_,_) = parse_uri u in
-        p_default = p_list
-      ) l then p_default
-      else
-        fatal "The input list contains different format prefixes"
+  |uri::_ -> let (p,_,_) = parse_uri uri in p
   |_ -> fatal "Impossible to guess input format"

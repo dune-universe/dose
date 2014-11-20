@@ -207,8 +207,14 @@ let cudf_load_universe file =
   let (pr,l,r,f,t) = cudf_load_list file in
   (pr,Cudf.load_universe (List.hd l), r, f, t)
 
-(** return the name of the file *)
-let unpack (_,(_,_,_,_,file),_) = file
+let unpack_l expected l = List.fold_left (fun acc (t,(_,_,_,_,f),_) ->
+    if t = expected then f::acc
+    else fatal "cannot handle input %s" (Url.scheme_to_string t)
+  ) [] l
+
+let unpack expected = function
+  | (t,(_,_,_,_,f),_) when t = expected -> f
+  | _ -> "cannot handle input"
 
 let deb_parse_input options ?(status=[]) urilist =
   let archs = 
@@ -218,8 +224,39 @@ let deb_parse_input options ?(status=[]) urilist =
   in
   let dll = 
     List.map (fun l ->
-      let filelist = List.map unpack l in
-      Debian.Packages.input_raw ~archs filelist
+      (* partition the file list in binary and source package lists *)
+      let pl, sl = List.fold_left (fun (acc1,acc2) (t,(_,_,_,_,f),_) ->
+          match t with
+          | `Deb -> (f::acc1,acc2)
+          | `DebSrc -> (acc1,f::acc2)
+          | _ -> fatal "cannot handle input"
+        ) ([],[]) l
+      in
+      (* parse binary packages (if any) *)
+      let pl = match pl with
+        | [] -> []
+        | _ -> begin
+            Debian.Packages.input_raw ~archs pl
+          end
+      in
+      (* parse source packages (if any) *)
+      let sl = match sl with
+       | [] -> []
+       | _ -> begin
+           let l = Debian.Sources.input_raw ~archs sl in
+           let buildarch = Option.get options.Debian.Debcudf.native in
+           let hostarch = Option.get options.Debian.Debcudf.host in
+           (* FIXME: allow to pass noindep and profiles to sources2packages *)
+           let noindep = false in
+           let profiles = [] in
+           Debian.Sources.sources2packages ~noindep ~profiles buildarch hostarch l
+         end
+      in
+      (* concatenate results if necessary *)
+      match pl,sl with
+       | [], l -> l
+       | l, [] -> l
+       | l1, l2 -> l1 @ l2
     ) urilist
   in
   deb_load_list options ~status dll
@@ -227,8 +264,8 @@ let deb_parse_input options ?(status=[]) urilist =
 let eclipse_parse_input options urilist =
   let dll = 
     List.map (fun l ->
-      let filelist = List.map unpack l in
-      Eclipse.Packages.input_raw filelist
+        let filelist = unpack_l `Eclipse l in
+        Eclipse.Packages.input_raw filelist
     ) urilist
   in
   eclipse_load_list options dll
@@ -236,43 +273,43 @@ let eclipse_parse_input options urilist =
 let csw_parse_input urilist =
   let dll = 
     List.map (fun l ->
-      let filelist = List.map unpack l in
-      Csw.Packages.input_raw filelist
+        let filelist = unpack_l `Csw l in
+        Csw.Packages.input_raw filelist
     ) urilist
   in
   csw_load_list dll
 
 let cv_parse_input options urilist =
   match urilist with
-  |[[p]] when (unpack p) = "-" -> fatal "no stdin for cudf yet"
-  |[[p]] -> cudf_load_list (unpack p)
+  |[[p]] when (unpack `Cv p) = "-" -> fatal "no stdin for cudf yet"
+  |[[p]] -> cudf_load_list (unpack `Cv p)
   |l ->
     if List.length (List.flatten l) > 1 then
       warning "more than one cudf specified on the command line";
     let p = List.hd (List.flatten l) in 
-    cv_load_list options (unpack p)
+    cv_load_list options (unpack `Cv p)
 ;;
 
 let cudf_parse_input urilist =
   match urilist with
-  |[[p]] when (unpack p) = "-" -> fatal "no stdin for cudf yet"
-  |[[p]] -> cudf_load_list (unpack p)
+  |[[p]] when (unpack `Cudf p) = "-" -> fatal "no stdin for cudf yet"
+  |[[p]] -> cudf_load_list (unpack `Cudf p)
   |l ->
     if List.length (List.flatten l) > 1 then
       warning "more than one cudf specified on the command line";
     let p = List.hd (List.flatten l) in 
-    cudf_load_list (unpack p)
+    cudf_load_list (unpack `Cudf p)
 ;;
 
 let edsp_parse_input options urilist =
   match urilist with
-  |[[p]] when (unpack p) = "-" -> fatal "no stdin for edsp yet"
-  |[[p]] -> edsp_load_list options (unpack p)
+  |[[p]] when (unpack `Edsp p) = "-" -> fatal "no stdin for edsp yet"
+  |[[p]] -> edsp_load_list options (unpack `Edsp p)
   |l ->
     if List.length (List.flatten l) > 1 then
       warning "more than one cudf specified on the command line";
     let p = List.hd (List.flatten l) in 
-    edsp_load_list options (unpack p)
+    edsp_load_list options (unpack `Edsp p)
 ;;
 
 (* Check that all uris are of type that is an instance of scheme *)
@@ -286,10 +323,12 @@ let parse_input ?(options=None) urilist =
 
   |`Cv, None -> cv_parse_input Cv.Cvcudf.default_options filelist
 
-  |`Deb, None -> deb_parse_input Debian.Debcudf.default_options filelist
+  |`Deb, None
+  |`DebSrc, None -> deb_parse_input Debian.Debcudf.default_options filelist
   |`Eclipse, None -> eclipse_parse_input Debian.Debcudf.default_options filelist
 
-  |`Deb, Some (StdOptions.Deb opt) -> deb_parse_input opt filelist
+  |`Deb, Some (StdOptions.Deb opt)
+  |`DebSrc, Some (StdOptions.Deb opt) -> deb_parse_input opt filelist
   
 (*  |`Edsp, Some (StdOptions.Edsp opt) -> edsp_parse_input opt filelist *)
   |`Edsp, _ -> edsp_parse_input Debian.Debcudf.default_options filelist
@@ -304,7 +343,7 @@ let parse_input ?(options=None) urilist =
 IFDEF HASRPM THEN
       let dll = 
         List.map (fun l ->
-          let filelist = List.map unpack l in
+          let filelist = unpack_l `Hdlist l in
           Rpm.Packages.Hdlists.input_raw filelist
         ) filelist 
       in
@@ -317,7 +356,7 @@ END
 IFDEF HASRPM THEN
       let dll = 
         List.map (fun l ->
-          let filelist = List.map unpack l in
+          let filelist = unpack_l `Synthesis l in
           Rpm.Packages.Synthesis.input_raw filelist
         ) filelist
       in

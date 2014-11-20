@@ -10,7 +10,7 @@
 (*  library, see the COPYING file for more information.                     *)
 (****************************************************************************)
 
-type debtypes = [ `Edsp | `Deb ]
+type debtypes = [ `Edsp | `Deb | `DebSrc ]
 type rpmtypes = [ `Synthesis | `Hdlist ]
 type osgitypes = [ `Eclipse ]
 type othertypes = [ `Csw | `Cv ]

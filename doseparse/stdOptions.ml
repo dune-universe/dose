@@ -283,7 +283,7 @@ module DistribOptions = struct
     |_ -> None
 
   let set_options = function
-    |`Deb -> Some (Deb (set_deb_options ()))
+    |`Deb |`DebSrc -> Some (Deb (set_deb_options ()))
     |`Edsp -> Some (Edsp (set_deb_options ()))
     |`Eclipse -> Some (Eclipse Debian.Debcudf.default_options)
     |`Cv -> Some (Cv (set_cv_options ()))
