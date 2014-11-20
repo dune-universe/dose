@@ -9,9 +9,9 @@ import argparse
 from itertools import groupby, ifilter
 from yaml import load
 try:
-    from yaml import CLoader as Loader
+    from yaml import CBaseLoader as yamlLoader
 except ImportError:
-    from yaml import Loader
+    from yaml import BaseLoader as yamlLoader
     warning('YAML C-library not available, falling back to python')
 
 import filecmp
@@ -54,7 +54,7 @@ def parse822(f) :
 
 def parseyaml(f) :
     print "yaml %s" % f
-    data = yaml.load(open(f))
+    data = yaml.load(open(f), Loader=yamlLoader)
     report = data.get('report', [])
     l = convert(report)
     return l
