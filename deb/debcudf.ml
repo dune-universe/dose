@@ -62,7 +62,7 @@ let default_options = {
   ignore_essential = false
 }
 
-let add_name_arch n a = CudfAdd.encode (Printf.sprintf "%s:%s" a n)
+let add_name_arch n a = CudfAdd.encode (Printf.sprintf "%s:%s" n a)
 
 (* add arch info to a vpkg 
  - if it's a :any dependency then just encode the name without arch information :
@@ -226,7 +226,9 @@ let get_real_version tables (name,cudfversion) =
   let package = 
     (* XXX this is a hack. I should record the name with the architecture *)
     let n = CudfAdd.decode name in
-    try let (n,a) = ExtString.String.split n ":" in if a <> "any" then a else n
+    try
+      let (n,a) = ExtString.String.split n ":" in
+      if n = "src" then a else n
     with Invalid_string -> n
   in
   try
