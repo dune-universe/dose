@@ -22,40 +22,47 @@ open Common
 include Util.Logging(struct let label = __FILE__ end) ;;
 
 (* first column of /usr/share/dpkg/cputable *)
-let cpulist = ref [ "i386"; "ia64"; "alpha"; "amd64"; "armeb"; "arm"; "arm64"; "avr32";
-                    "hppa"; "m32r"; "m68k"; "mips"; "mipsel"; "mips64"; "mips64el", "or1k"; "powerpc"; "powerpcel";
-                    "ppc64"; "ppc64el"; "s390"; "s390x"; "sh3"; "sh3eb"; "sh4"; "sh4eb"; "sparc";
-                    "sparc64" ]
+(* the line numbers correspond to the line numbers in /usr/share/dpkg/cputable
+ * to be quickly able to find changes *)
+let cpulist = ref [
+(* lines 17..23 *)  "i386"; "ia64"; "alpha"; "amd64"; "armeb"; "arm"; "arm64";
+(* lines 24..29 *)  "avr32"; "hppa"; "m32r"; "m68k"; "mips"; "mipsel";
+(* lines 30..34 *)  "mips64"; "mips64el"; "or1k"; "powerpc"; "powerpcel";
+(* lines 35..41 *)  "ppc64"; "ppc64el"; "s390"; "s390x"; "sh3"; "sh3eb"; "sh4";
+(* lines 42..44 *)  "sh4eb"; "sparc"; "sparc64" ]
 
-(* from /usr/share/dpkg/triplettable 
+(* from /usr/share/dpkg/triplettable
  *
- *   debian triplet (abi,os,cpu)  debian arch *)
+ * the line numbers correspond to the line numbers in
+ * /usr/share/dpkg/triplettable to be quickly able to find changes
+ *
+ *   debian triplet (abi,os,cpu)      debian arch *)
 let triplettable = [
-  (("uclibceabi","linux","arm"),     "uclibc-linux-armel");
+  (("uclibceabi","linux","arm"),     "uclibc-linux-armel"); (* line 6  *)
   (("uclibc","linux","<cpu>"),       "uclibc-linux-<cpu>");
   (("musleabihf","linux","arm"),     "musl-linux-armhf");
   (("musl","linux","<cpu>"),         "musl-linux-<cpu>");
-  (("gnueabihf","linux","arm"),      "armhf");
+  (("gnueabihf","linux","arm"),      "armhf");              (* line 10 *)
   (("gnueabi","linux","arm"),        "armel");
   (("gnuabin32","linux","mips64el"), "mipsn32el");
   (("gnuabin32","linux","mips64"),   "mipsn32");
   (("gnuabi64","linux","mips64el"),  "mips64el");
-  (("gnuabi64","linux","mips64"),    "mips64");
+  (("gnuabi64","linux","mips64"),    "mips64");             (* line 15 *)
   (("gnuspe","linux","powerpc"),     "powerpcspe");
   (("gnux32","linux","amd64"),       "x32");
   (("gnu","linux","<cpu>"),          "<cpu>");
   (("gnu","kfreebsd","<cpu>"),       "kfreebsd-<cpu>");
-  (("gnu","knetbsd","<cpu>"),        "knetbsd-<cpu>");
+  (("gnu","knetbsd","<cpu>"),        "knetbsd-<cpu>");      (* line 20 *)
   (("gnu","kopensolaris","<cpu>"),   "kopensolaris-<cpu>");
   (("gnu","hurd","<cpu>"),           "hurd-<cpu>");
   (("bsd","dragonflybsd","<cpu>"),   "dragonflybsd-<cpu>");
   (("bsd","freebsd","<cpu>"),        "freebsd-<cpu>");
-  (("bsd","openbsd","<cpu>"),        "openbsd-<cpu>");
+  (("bsd","openbsd","<cpu>"),        "openbsd-<cpu>");      (* line 25 *)
   (("bsd","netbsd","<cpu>"),         "netbsd-<cpu>");
   (("bsd","darwin","<cpu>"),         "darwin-<cpu>");
   (("sysv","solaris","<cpu>"),       "solaris-<cpu>");
   (("uclibceabi","uclinux","arm"),   "uclinux-armel");
-  (("uclibc","uclinux","<cpu>"),     "uclinux-<cpu>");
+  (("uclibc","uclinux","<cpu>"),     "uclinux-<cpu>");      (* line 30 *)
   (("tos","mint","m68k"),            "mint-m68k");
   (("gnu","linux","<cpu>"),          "linux-<cpu>") (* this entry is not from /usr/share/dpkg/triplettable *)
   (* the "linux-" prefix is commented in scripts/Dpkg/Arch.pm with "XXX: Might disappear in the future, not sure yet." *)
