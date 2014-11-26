@@ -121,7 +121,17 @@ let read_triplettable ?(ttfile=None) ?(ctfile=None) () =
               let debtriplet = String.sub line 0 spaceli in
               let debarch = String.sub line (spaceri+1) ((String.length line)-spaceri-1) in
               match String.nsplit debtriplet "-" with
-              | [abi;os;cpu] -> Hashtbl.replace debarch_to_debtriplet debarch (abi,os,cpu)
+              | [abi;os;cpu] -> begin
+                  if cpu = "<cpu>" then begin
+                    List.iter (fun c ->
+                        let dt = (abi,os,c) in
+                        let _,da = String.replace ~str:debarch ~sub:"<cpu>" ~by:c in
+                        Hashtbl.replace debarch_to_debtriplet da dt
+                      ) !cpulist
+                  end else begin
+                    Hashtbl.replace debarch_to_debtriplet debarch (abi,os,cpu)
+                  end
+              end
               | _ -> fatal "Cannot parse debtriplet: %s" debtriplet
             end
           in
