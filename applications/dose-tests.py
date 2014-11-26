@@ -18,6 +18,9 @@ import filecmp
 import cStringIO
 from sets import Set
 
+class Ignore(Exception):
+    pass
+
 def convert(d) :
     def aux(e) :
         if isinstance(e, dict) :
@@ -28,10 +31,36 @@ def convert(d) :
             return e
     return sorted([aux(e) for e in d])
 
-def parse822(f) :
+def parse822(f,filter) :
+    records = []
+    for empty, record in groupby(ifilter(lambda s: not s.startswith('#'),open(f)), key=str.isspace):
+        if not empty:
+            l = map(lambda s : tuple(s.split(': ')), record)
+            l = map(lambda (k,v) : (k,v.rstrip()), l)
+            if (len(l) > 0):
+                try :
+                    pairs = ((k, filter((k,v.strip()))) for k,v in l)
+                    records.append((pairs))
+                except Ignore :
+                    continue
+
+    l = sorted([sorted(e) for e in records])
+    return [frozenset(e) for e in l]
+
+def parseedsp(f):
+    fields = ['Package','Architecture']
+
+    def filter(k,s,fields) :
+        if k in fields :
+            return s
+
+    return parse822(f,filter)
+
+def parsedistcheck(f) :
     cnf_fields = ['conflict','depends','provides','recommends']
 
     def cnf(k,s) :
+        if k == "preamble" : raise Ignore
         if k in cnf_fields :
             l = s.split(',')
             ll = map(lambda s : s.split('|'), l)
@@ -39,18 +68,7 @@ def parse822(f) :
         else :
             return s
 
-    records = []
-    for empty, record in groupby(ifilter(lambda s: not s.startswith('#'),open(f)), key=str.isspace):
-        if not empty:
-            l = map(lambda s : tuple(s.split(': ')), record)
-            l = map(lambda (k,v) : (k,v.rstrip()), l)
-            # we ignore the preamble here ...
-            if ('preamble' not in l[0]) and (len(l) > 0):
-                pairs = ((k, cnf(k,v.strip())) for k,v in l)
-                records.append((pairs))
-
-    l = sorted([sorted(e) for e in records])
-    return [frozenset(e) for e in l]
+    return parse822(f,filter)
 
 def parseyaml(f) :
     print "yaml %s" % f
@@ -81,13 +99,16 @@ def diff_aux(expectedfile,resultfile,parser):
             return False
 
 def diff_yaml(expectedfile,resultfile):
-    return diff_aux(expectedfile,resultfile, parseyaml)
+    return diff_aux(expectedfile,resultfile,parseyaml)
 
 def diff_822(expectedfile,resultfile):
-    return diff_aux(expectedfile,resultfile,parse822)
+    return diff_aux(expectedfile,resultfile,parsedistcheck)
 
 def diff_text(expectedfile,resultfile):
     return diff_aux(expectedfile,resultfile,parsetext)
+
+def diff_edsp(expectedfile,resultfile):
+    return diff_aux(expectedfile,resultfile,parseedsp)
     
 def test_application(self,expected_file,cmd,diff,exitcode):
     uid = uuid.uuid1()
@@ -124,6 +145,8 @@ class DoseTests(unittest.TestCase):
             self.difftype = diff_yaml
         elif test['Type']  == 'text' :
             self.difftype = diff_text
+        elif test['Type']  == 'edsp' :
+            self.difftype = diff_text
         else :
             self.difftype = diff_text
     def shortDescription(self):
@@ -144,7 +167,7 @@ def suite(f,runtest,rungroup):
     tests = Set()
     groupFound=False
     testsFound=False
-    for stanza in parse822(f):
+    for stanza in parse822(f,lambda s: s[1]):
         s = dict(stanza)
         if s['Name'] not in runtest and 'Ignore' in s and s['Ignore'] == 'yes' :
             continue
@@ -166,18 +189,35 @@ def suite(f,runtest,rungroup):
 
     return suite
 
+def fixtest(expected_file,cmd):
+    output = open(expected_file,'w')
+    p = Popen(cmd, stdout=output)
+    p.communicate()
+    output.close()
+
 def main():
     global verbose
     parser = argparse.ArgumentParser(description='Unit test for Dose applications')
     parser.add_argument('-v', '--verbose', type=int, nargs=1, default=2) 
     parser.add_argument('--runtest', nargs=1, default=[]) 
     parser.add_argument('--rungroup', nargs=1, default=[]) 
+    parser.add_argument('--fixtest', nargs=1, default=[]) 
     parser.add_argument('inputfile', type=str, nargs=1, help="test file")
     args = parser.parse_args()
 
     verbose = args.verbose
 
-    unittest.TextTestRunner(verbosity=args.verbose).run(suite(args.inputfile[0],args.runtest,args.rungroup))
+    if len(args.fixtest) > 0 :
+        f = args.inputfile[0]
+        for stanza in parse822(f,lambda s: s[1]):
+            s = dict(stanza)
+            if args.fixtest[0] in s['Name'] :
+                cmd = s['Cmd'].split(' ') + s['Input'].split(' ')
+                expected = s['Expected']
+                print "Overwrite expected file: %s", expected
+                fixtest(expected,cmd)
+    else :
+        unittest.TextTestRunner(verbosity=args.verbose).run(suite(args.inputfile[0],args.runtest,args.rungroup))
 
 if __name__ == '__main__':
     main()
