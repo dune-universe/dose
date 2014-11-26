@@ -43,12 +43,12 @@ let triplettable = [
   (("gnuabi64","linux","mips64"),    "mips64");
   (("gnuspe","linux","powerpc"),     "powerpcspe");
   (("gnux32","linux","amd64"),       "x32");
-  (("gnulp","linux","i386"),         "lpia");
   (("gnu","linux","<cpu>"),          "<cpu>");
   (("gnu","kfreebsd","<cpu>"),       "kfreebsd-<cpu>");
   (("gnu","knetbsd","<cpu>"),        "knetbsd-<cpu>");
   (("gnu","kopensolaris","<cpu>"),   "kopensolaris-<cpu>");
   (("gnu","hurd","<cpu>"),           "hurd-<cpu>");
+  (("bsd","dragonflybsd","<cpu>"),   "dragonflybsd-<cpu>");
   (("bsd","freebsd","<cpu>"),        "freebsd-<cpu>");
   (("bsd","openbsd","<cpu>"),        "openbsd-<cpu>");
   (("bsd","netbsd","<cpu>"),         "netbsd-<cpu>");
