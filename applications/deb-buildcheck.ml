@@ -107,7 +107,7 @@ let main () =
         Some (OptParse.Opt.get Options.triplettable)
       else None in
     let ctfile = if OptParse.Opt.is_set Options.cputable then
-        Some (OptParse.Opt.get Options.triplettable)
+        Some (OptParse.Opt.get Options.cputable)
       else None in
     Architecture.read_triplettable ~ttfile ~ctfile ()
   end;
