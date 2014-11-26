@@ -37,7 +37,7 @@ let cpulist = ref [
  * /usr/share/dpkg/triplettable to be quickly able to find changes
  *
  *   debian triplet (abi,os,cpu)      debian arch *)
-let triplettable = [
+let triplettable = ref [
   (("uclibceabi","linux","arm"),     "uclibc-linux-armel"); (* line 6  *)
   (("uclibc","linux","<cpu>"),       "uclibc-linux-<cpu>");
   (("musleabihf","linux","arm"),     "musl-linux-armhf");
@@ -68,14 +68,27 @@ let triplettable = [
   (* the "linux-" prefix is commented in scripts/Dpkg/Arch.pm with "XXX: Might disappear in the future, not sure yet." *)
 ]
 
-let debarch_to_debtriplet = Hashtbl.create ((List.length triplettable)*(List.length !cpulist))
+let debarch_to_debtriplet = Hashtbl.create ((List.length !triplettable)*(List.length !cpulist))
 let triplettable_done = ref false
+
+let mangle_cpu_placeholder ((abi,os,cpu),debarch) =
+  if cpu = "<cpu>" then begin
+    List.iter (fun c ->
+        let dt = (abi,os,c) in
+        let _,da = String.replace ~str:debarch ~sub:"<cpu>" ~by:c in
+        Hashtbl.replace debarch_to_debtriplet da dt
+      ) !cpulist
+  end else begin
+    Hashtbl.replace debarch_to_debtriplet debarch (abi,os,cpu)
+  end
+;;
 
 let read_triplettable ?(ttfile=None) ?(ctfile=None) () =
   if !triplettable_done && ttfile = None && ctfile = None then () else begin
-    (* add additional cpus *)
+    (* if cputable file was given, overwrite built-in table *)
     begin match ctfile with
       | Some fn -> begin
+          cpulist := [];
           let ic = open_in fn in
           (* to stay most compatible with dpkg, it would be best to use its
            * regex from from scripts/Dpkg/Arch.pm to parse this file.
@@ -93,21 +106,12 @@ let read_triplettable ?(ttfile=None) ?(ctfile=None) () =
           close_in ic;
         end
       | None -> () end;
-    (* fill from hardcoded values *)
-    List.iter (fun ((abi,os,cpu),debarch) ->
-        if cpu = "<cpu>" then begin
-          List.iter (fun c ->
-              let dt = (abi,os,c) in
-              let _,da = String.replace ~str:debarch ~sub:"<cpu>" ~by:c in
-              Hashtbl.replace debarch_to_debtriplet da dt
-            ) !cpulist
-        end else begin
-          Hashtbl.replace debarch_to_debtriplet debarch (abi,os,cpu)
-        end
-      ) triplettable;
-    (* fill from supplied file *)
+    (* if triplettable was given, overwrite built-in table, otherwise parse
+     * built-in table *)
     begin match ttfile with
       | Some fn -> begin
+          (* this is an implicit assumption of dpkg *)
+          mangle_cpu_placeholder (("gnu","linux","<cpu>"), "linux-<cpu>");
           let ic = open_in fn in
           (* to stay most compatible with dpkg, it would be best to use its
            * regex from from scripts/Dpkg/Arch.pm to parse this file.
@@ -121,24 +125,17 @@ let read_triplettable ?(ttfile=None) ?(ctfile=None) () =
               let debtriplet = String.sub line 0 spaceli in
               let debarch = String.sub line (spaceri+1) ((String.length line)-spaceri-1) in
               match String.nsplit debtriplet "-" with
-              | [abi;os;cpu] -> begin
-                  if cpu = "<cpu>" then begin
-                    List.iter (fun c ->
-                        let dt = (abi,os,c) in
-                        let _,da = String.replace ~str:debarch ~sub:"<cpu>" ~by:c in
-                        Hashtbl.replace debarch_to_debtriplet da dt
-                      ) !cpulist
-                  end else begin
-                    Hashtbl.replace debarch_to_debtriplet debarch (abi,os,cpu)
-                  end
-              end
+              | [abi;os;cpu] -> mangle_cpu_placeholder ((abi,os,cpu),debarch)
               | _ -> fatal "Cannot parse debtriplet: %s" debtriplet
             end
           in
           List.iter aux (Std.input_list ic);
           close_in ic;
         end
-      | None -> () end;
+      | None -> begin
+          List.iter mangle_cpu_placeholder !triplettable;
+        end
+    end;
     triplettable_done := true;
   end
 ;;
