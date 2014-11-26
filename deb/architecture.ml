@@ -23,7 +23,7 @@ include Util.Logging(struct let label = __FILE__ end) ;;
 
 (* first column of /usr/share/dpkg/cputable *)
 let cpulist = ref [ "i386"; "ia64"; "alpha"; "amd64"; "armeb"; "arm"; "arm64"; "avr32";
-                    "hppa"; "m32r"; "m68k"; "mips"; "mipsel"; "mips64"; "mips64el or1k"; "powerpc";
+                    "hppa"; "m32r"; "m68k"; "mips"; "mipsel"; "mips64"; "mips64el"; "or1k"; "powerpc";
                     "ppc64"; "ppc64el"; "s390"; "s390x"; "sh3"; "sh3eb"; "sh4"; "sh4eb"; "sparc";
                     "sparc64" ]
 
