@@ -149,10 +149,9 @@ let main () =
     in
     if OptParse.Opt.get Options.trim then Depsolver.trim ~global_constraints u else u
   in
-  let get_cudfpkglist ((n,a),c) = 
+  let get_cudfpkglist ((n,a),c) =
     let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
-    try Cudf.lookup_packages ~filter universe name
-    with ExtList.List.Empty_list -> fatal "package %s not found" n
+    CudfAdd.who_provides universe (name,filter)
   in
   let get_cudfpkg ((n,a),c) = List.hd (get_cudfpkglist ((n,a),c)) in
 
