@@ -63,24 +63,23 @@ let default_options = {
 }
 
 let add_name_arch n a = CudfAdd.encode (Printf.sprintf "%s:%s" n a)
-
-(* add arch info to a vpkg 
- - if it's a :any dependency then just encode the name without arch information :
-   means that this dependency/conflict can be satified by any packages
- - if it is a package:arch dependency, then encode it as such
- - if the package is architecture all, then all dependencies are interpreted as
-   dependencies on native architecture packages.
- - otherwise all dependencies are satisfied by packages of the same architecture
-   of the package we are considering *)
-(* XXX we should use one regexp and check there results instead of three
- * different String.* functions *)
-let add_arch native_arch package_arch name = 
-    if package_arch = "all" then 
-      add_name_arch name native_arch
-    else
-      add_name_arch name package_arch
+let add_arch native_arch name = function
+  |"all" -> add_name_arch name native_arch
+  |package_arch -> add_name_arch name package_arch
 ;;
 
+(** add arch info to a vpkg 
+ - if it's a :any dependency then just encode the name without arch information :
+   means that this dependency/conflict can be satified by any packages
+ - if it is a :native dependency then add the native architecture
+ - if it is a package:arch dependency, then encode it as such
+ - if the package dependency does not have any annotations :
+   + if the package is architecture all, then all dependencies are interpreted as
+     dependencies on native architecture packages.
+   + otherwise all dependencies are satisfied by packages of the same architecture
+     of the package we are considering 
+Pcre.regexp "^(.* )(:(any|native|.* )){1}$" ;;
+*)
 let add_arch_deps native_arch package_arch name = 
   try 
     match String.split name ":" with
@@ -88,24 +87,14 @@ let add_arch_deps native_arch package_arch name =
     |n,"native" -> add_name_arch n native_arch
     |n,a -> add_name_arch n a
   with ExtString.Invalid_string ->
-    add_arch native_arch package_arch name
+    add_arch native_arch name package_arch
 ;;
-(*
-  function
-  |name when String.ends_with name ":any" -> (CudfAdd.encode name)
-  |name when String.ends_with name ":native" -> add_name_arch (String.slice ~last:(-7) name) native_arch
-  |name when String.contains name ':' -> 
-      let name, arch = String.split name ":" in
-      add_name_arch name arch
-  |name when package_arch = "all" -> add_name_arch name native_arch
-  |name -> add_name_arch name package_arch
-*)
 
 let add_arch_l ?(deps=false) native_arch package_arch l = 
   if deps then
     List.map (fun (n,c) -> ((add_arch_deps native_arch package_arch n),c)) l
   else
-    List.map (fun (n,c) -> ((add_arch native_arch package_arch n),c)) l
+    List.map (fun (n,c) -> ((add_arch native_arch n package_arch),c)) l
 ;;
 
 let clear tables =
@@ -402,7 +391,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
       (* if the package is a source package the name does not need an
        * architecture annotation. Nobody depends on it *)
       if Sources.is_source pkg then encpkgname
-      else add_arch native_arch pkgarch pkg.name 
+      else add_arch native_arch pkg.name pkgarch
     in
     let _version = get_cudf_version tables (pkg.name,pkg.version)  in
     let _provides = 
@@ -419,7 +408,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
                 |arch when arch = pkgarch ->
                     (add_arch_l native_arch arch (loadlp tables pkg.provides))
                 |arch ->
-                    (add_arch native_arch arch pkg.name,Some(`Eq,_version)) ::
+                    (add_arch native_arch pkg.name arch,Some(`Eq,_version)) ::
                       (add_arch_l native_arch arch (loadlp tables pkg.provides))
               )
         |`Allowed ->
@@ -430,7 +419,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
            let l = 
              bind (loadlp tables pkg.provides) (fun (name, c) ->
                [(CudfAdd.encode (name^":any"), c);
-               ((add_arch native_arch pkgarch name),c)]
+               ((add_arch native_arch name pkgarch),c)]
              )
            in any::l
       in archlessprovide :: multiarchprovides
@@ -438,7 +427,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
     let _conflicts = 
       let originalconflicts = pkg.breaks @ pkg.conflicts in
       (* self conflict *)
-      let sc = (add_arch native_arch pkgarch pkg.name,None) in
+      let sc = (add_arch native_arch pkg.name pkgarch,None) in
       let multiarchconstraints = 
         match pkg.multiarch with
         |(`No|`Foreign|`Allowed) -> 
@@ -450,7 +439,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
             let masc =
               List.filter_map (function
                 |arch when arch = pkgarch -> None
-                |arch -> Some(add_arch native_arch arch pkg.name,Some(`Neq,_version))
+                |arch -> Some(add_arch native_arch pkg.name arch,Some(`Neq,_version))
               ) (native_arch::options.foreign)
             in
             sc :: masc 
