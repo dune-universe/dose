@@ -202,15 +202,6 @@ Type: distcheck
 Printer: text
 ExitCode: 1
 
-Name: missing_missing_distcheck
-Group: distcheck
-Expected: tests/applications/dose-tests/missing_missing
-Input: cudf://tests/cudf/missing_missing.cudf
-Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly p
-Type: distcheck
-Printer: text
-Ignore: yes
-
 Name: cv_default_distcheck
 Group: distcheck
 Expected: tests/applications/dose-tests/distcheck_cv_default_opt_test
@@ -332,3 +323,106 @@ Type: buildcheck
 Printer: text
 ExitCode: 64
 
+Name: chain-back-cross-conflict
+Group: explanationgraph
+Expected: tests/applications/dose-tests/multiarch-same-half
+Input: cudf://tests/cudf/explanationgraph/chain-back-cross-conflict.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly chain-back-cross-conflict
+Type: distcheck
+Printer: text
+
+Name: multi-version-confluent-disjunctive
+Group: explanationgraph
+Expected: tests/applications/dose-tests/multiarch-same-half
+Input: cudf://tests/cudf/explanationgraph/multi-version-confluent-disjunctive.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly multi-version-confluent-disjunctive
+Type: distcheck
+Printer: text
+
+Name: multi-version-confluent
+Group: explanationgraph
+Expected: tests/applications/dose-tests/multiarch-same-half
+Input: cudf://tests/cudf/explanationgraph/multi-version-confluent.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly multi-version-confluent
+Type: distcheck
+Printer: text
+
+Name: mix-conflict-missing
+Group: explanationgraph
+Expected: tests/applications/dose-tests/multiarch-same-half
+Input: cudf://tests/cudf/explanationgraph/mix-conflict-missing.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly mix-conflict-missing
+Type: distcheck
+Printer: text
+
+Name: cross-conflict
+Group: explanationgraph
+Expected: tests/applications/dose-tests/multiarch-same-half
+Input: cudf://tests/cudf/explanationgraph/cross-conflict.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly cross-conflict
+Type: distcheck
+Printer: text
+
+Name: back-conflict
+Group: explanationgraph
+Expected: tests/applications/dose-tests/multiarch-same-half
+Input: cudf://tests/cudf/explanationgraph/back-conflict.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly back-conflict
+Type: distcheck
+Printer: text
+
+Name: chain-conflict
+Group: explanationgraph
+Expected: tests/applications/dose-tests/multiarch-same-half
+Input: cudf://tests/cudf/explanationgraph/chain-conflict.cudf 
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly chain-conflict
+Type: distcheck
+Printer: text
+
+Name: conflict-missing
+Group: explanationgraph
+Expected: tests/applications/dose-tests/multiarch-same-half
+Input: cudf://tests/cudf/explanationgraph/conflict-missing.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly conflict-missing.cudf
+Type: distcheck
+Printer: text
+
+Name: confluent-missing.cudf
+Group: explanationgraph
+Expected: tests/applications/dose-tests/multiarch-same-half
+Input: cudf://tests/cudf/explanationgraph/confluent-missing.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly confluent-missing
+Type: distcheck
+Printer: text
+
+Name: incomplete-disjunctive-missing
+Group: incomplete
+Expected: tests/applications/dose-tests/multiarch-same-half
+Input: cudf://tests/cudf/incomplete/incomplete-disjunctive-missing.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly incomplete-disjunctive-missing
+Type: distcheck
+Printer: text
+
+Name: incomplete-disjunctive-missing-conflict
+Group: incomplete
+Expected: tests/applications/dose-tests/multiarch-same-half
+Input: cudf://tests/cudf/incomplete/incomplete-disjunctive-missing-conflict.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly incomplete-disjunctive-missing-conflict
+Type: distcheck
+Printer: text
+
+Name: incomplete-conjunctive-missing
+Group: incomplete
+Expected: tests/applications/dose-tests/multiarch-same-half
+Input: cudf://tests/cudf/incomplete/incomplete-conjunctive-missing.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly incomplete-conjunctive-missing
+Type: distcheck
+Printer: text
+
+Name: incomplete-conjunctive-conflicts
+Group: incomplete
+Expected: tests/applications/dose-tests/multiarch-same-half
+Input: cudf://tests/cudf/incomplete/incomplete-conjunctive-conflicts.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly incomplete-conjunctive-conflicts
+Type: distcheck
+Printer: text

@@ -127,4 +127,12 @@ val printf :
   ?pp:pp ->
   ?failure:bool -> ?success:bool -> ?explain:bool -> diagnosis -> unit
 
+val printf_dot :
+  ?pp:pp ->
+  ?failure:bool ->
+  ?success:bool ->
+  ?explain:bool -> ?minimal:bool -> Format.formatter -> diagnosis -> unit
+
+
+
 

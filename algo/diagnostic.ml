@@ -185,6 +185,105 @@ let pp_dependencies pp fmt pathlist =
   aux fmt pathlist
 ;;
 
+(* IF HASOCAMLGRAPH THEN *)
+(** Build a SyntacticDependencyGraph from the solver output. *)
+let build_explanation_graph root l =
+  let open Defaultgraphs.SyntacticDependencyGraph in
+  let module UG = Graph.Imperative.Graph.Concrete(G.V) in
+  let add_node p =
+    G.V.create (PkgV.Pkg {
+      value = p;
+      root = (CudfAdd.equal p root)
+        }
+      )
+  in
+  let gr = G.create () in
+  let ugr = UG.create () in
+  let c = ref 0 in
+  let conflicts = ref [] in
+  let missing = ref [] in
+  (* remove duplicate dependencies/reasons. XXX with long
+     list of packages Hashtbl.hash could give wrong results *)
+  let dup_reasons_table = Hashtbl.create 10 in
+  let dup_or_table = Hashtbl.create 10 in
+  List.iter (function
+    |e when Hashtbl.mem dup_reasons_table e -> ()
+    |e -> begin
+      Hashtbl.add dup_reasons_table e ();
+      match e with
+      |Dependency(pkg,vpkgs,[p]) ->
+          let vpid = add_node pkg in
+          let vp = add_node p in
+          add_edge gr vpid (PkgE.DirDepends vpkgs) vp
+      |Dependency(pkg,vpkgs,l) ->
+          let vpid = add_node pkg in
+          let vor =
+            try Hashtbl.find dup_or_table (pkg.Cudf.package,vpkgs)
+            with Not_found -> begin
+              let vor = G.V.create (PkgV.Or !c) in incr c;
+              Hashtbl.add dup_or_table (pkg.Cudf.package,vpkgs) vor;
+              vor
+            end
+          in
+          add_edge gr vpid (PkgE.OrDepends vpkgs) vor;
+          List.iter (fun p ->
+            let vp = add_node p in
+            add_edge gr vor (PkgE.OrDepends vpkgs) vp
+          ) l;
+          let s =
+            List.fold_left (fun acc p ->
+              CudfAdd.StringSet.add p.Cudf.package acc
+            ) CudfAdd.StringSet.empty l
+          in
+          let missingvpkgs =
+            List.fold_left (fun acc (n,c) ->
+              if not(CudfAdd.StringSet.mem n s) then ((n,c)::acc) else acc
+            ) [] vpkgs
+          in
+          (* we add this node if a package depends disjuctively on one
+             or more packages that exists in the repository, but are not
+             installable, and one that do not exists in the repository. For
+             the latter we add a missing node to the graph. *)
+          if List.length missingvpkgs > 0 then begin
+            let vp = G.V.create (PkgV.Missing missingvpkgs) in incr c;
+            missing := (vp,missingvpkgs) :: !missing;
+            add_edge gr vor (PkgE.MissingDepends missingvpkgs) vp
+          end
+      |Missing(pkg,vpkgs) ->
+          let vpid = add_node pkg in
+          let vp = G.V.create (PkgV.Missing vpkgs) in
+          missing := (vp,vpkgs) :: !missing;
+          add_edge gr vpid (PkgE.MissingDepends vpkgs) vp
+      |Conflict(pkg_i,pkg_j,vpkg) ->
+          let vpid = add_node pkg_i in
+          let vp = add_node pkg_j in
+          UG.add_edge ugr vpid vp;
+          incr c;
+          conflicts := (vpid,vp,vpkg) :: !conflicts;
+          add_edge gr vpid PkgE.Conflict vp
+      end
+  ) l;
+  ignore(all_paths gr (add_node root));
+  (gr,!conflicts,!missing)
+;;
+
+(** condense nodes in the graph that have the same package name
+    but different versions using the following transformation rules:
+    - Or -> (a, v 1,2) -> Node 
+
+let condense gr =
+  let module Bfs = Traverse.Bfs(G) in
+  let visit = function 
+    G.V.label v
+    |PkgV.Missing vpkgs ->
+
+  in
+  Bfs.iter visit g;
+
+*)
+
+(* END *)
+
 let print_error pp root fmt l =
   let (deps,res) = List.partition (function Dependency _ -> true |_ -> false) l in
   let pp_reason fmt = function
@@ -217,7 +316,7 @@ let print_error pp root fmt l =
      * dependency chain to a failure witness *)
     |_ -> assert false 
   in
-  pp_list pp_reason fmt res;
+  pp_list pp_reason fmt res
 ;;
 
 (* XXX unplug your imperative brain and rewrite this as a tail recoursive
@@ -367,6 +466,51 @@ let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
   |_ -> ()
 ;;
 
+let printf_dot ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) ?(minimal=false) fmt d = 
+  match d with
+  |{result = Success f; request = req } when success ->
+       Format.fprintf fmt "@[<v 1>-@,";
+       begin match req with
+       |Package r -> 
+           Format.fprintf fmt "@[<v>%a@]@," (pp_package ~source:true pp) r
+       |PackageList rl -> 
+           Format.fprintf fmt "coinst: %s@," 
+           (String.concat " , " (List.map CudfAdd.string_of_package rl));
+       end;
+       Format.fprintf fmt "status: ok@,";
+       if explain then begin
+         let is = get_installationset ~minimal d in
+         if is <> [] then begin
+           Format.fprintf fmt "@[<v 1>installationset:@," ;
+           Format.fprintf fmt "@[<v>%a@]" (pp_list (pp_package pp)) is;
+           Format.fprintf fmt "@]"
+         end
+       end;
+       Format.fprintf fmt "@]@,"
+  |{result = Failure f; request = Package r } when failure -> 
+      let fmt =
+        let n = (r.Cudf.package)^(string_of_int (r.Cudf.version)) in
+        let oc = open_out (CudfAdd.decode ("/tmp/"^n^".dot")) in
+        Format.formatter_of_out_channel oc
+      in
+      let (gr,_,_) = build_explanation_graph r (f ()) in
+      Defaultgraphs.SyntacticDependencyGraph.DotPrinter.print fmt gr
+
+  |{result = Failure f; request = PackageList rl } when failure -> 
+       Format.fprintf fmt "@[<v 1>-@,";
+       Format.fprintf fmt "coinst: %s@," (String.concat " , " (List.map CudfAdd.string_of_package rl));
+       Format.fprintf fmt "status: broken@,";
+       Format.fprintf fmt "@]@,";
+       if explain then begin
+         Format.fprintf fmt "@[<v 1>reasons:@,";
+         List.iter (fun r -> 
+           Format.fprintf fmt "@[<v>%a@]@," (print_error pp r) (f ());
+         ) rl;
+        Format.fprintf fmt "@]@,"
+       end;
+  |_ -> ()
+;;
+
 let printf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) d =
   fprintf ~pp ~failure ~success ~explain Format.std_formatter d
 
@@ -440,3 +584,4 @@ let pp_summary ?(pp=default_pp) ?(explain=false) () fmt result =
   pp_list (pp_summary_row explain pp) fmt l;
   Format.fprintf fmt "@]"
 ;;
+

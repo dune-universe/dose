@@ -74,21 +74,32 @@ end
     - [DirDepends] : direct dependecy 
     - [Conflict] : conflict
     *) 
-module SyntacticDependencyGraph = struct
+module SyntacticDependencyGraph = struct 
+  type pkg = { value : Cudf.package; root : bool}
 
   module PkgV = struct
-      type t = Pkg of Cudf.package | Or of (Cudf.package * int)
-      let compare x y = match (x,y) with
-        |Or (p1,i1), Or (p2,i2) when (i1 = i2) && (CudfAdd.equal p1 p2) -> 0
-        |Pkg p1, Pkg p2 -> CudfAdd.compare p1 p2
-        |_, _ -> Pervasives.compare x y
-      let hash = function
-        |Pkg p -> Hashtbl.hash (p.Cudf.package,p.Cudf.version)
-        |Or (p,i) -> Hashtbl.hash (p.Cudf.package,p.Cudf.version,i)
-      let equal x y = match (x,y) with
-        |Or (p1,i1), Or (p2,i2) -> (i1 = i2) && (CudfAdd.equal p1 p2)
-        |Pkg p1, Pkg p2 -> CudfAdd.equal p1 p2
-        |_ -> false
+    type t = 
+      |Pkg of pkg
+      |Set of CudfAdd.Cudf_set.t
+      |Or of int
+      |Missing of Cudf_types.vpkglist
+
+    let compare x y = match (x,y) with
+      |Or i1, Or i2 -> (i1 - i2)
+      |Pkg {value = p1}, Pkg {value = p2} -> CudfAdd.compare p1 p2
+      |Set s1, Set s2 -> CudfAdd.Cudf_set.compare s1 s2
+      |_, _ -> Pervasives.compare x y
+    let hash = function
+      |Pkg {value = p} -> Hashtbl.hash (p.Cudf.package,p.Cudf.version)
+      |Set s -> Hashtbl.hash s (* XXX Can fail ! *)
+      |Or i -> Hashtbl.hash i
+      |Missing i -> Hashtbl.hash i (* XXX *)
+    let equal x y = match (x,y) with
+      |Or i1, Or i2 -> (i1 = i2)
+      |Pkg {value = p1}, Pkg {value = p2} -> CudfAdd.equal p1 p2
+      |Set s1, Set s2 -> CudfAdd.Cudf_set.equal s1 s2
+      |Missing i, Missing j -> i = j (* XXX *)
+      |_ -> false
   end
 
   module PkgE = struct
@@ -102,56 +113,45 @@ module SyntacticDependencyGraph = struct
 
   module G = Imperative.Digraph.ConcreteBidirectionalLabeled(PkgV)(PkgE)
 
-  let string_of_vertex vertex =
-    match G.V.label vertex with
-    |PkgV.Pkg p -> Printf.sprintf "Pkg %s" (CudfAdd.string_of_package p)
-    |PkgV.Or (p, _) -> Printf.sprintf "Or %s" (CudfAdd.string_of_package p)
-
-  let string_of_edge edge =
-    let label =
-      match G.E.label edge with
-      |PkgE.DirDepends -> "Direct"
-      |PkgE.OrDepends -> "Disjunctive"
-      |PkgE.Conflict -> "Conflict"
-    in
-    let src = G.E.src edge in
-    let dst = G.E.dst edge in
-    Printf.sprintf "%s %s %s"
-      (string_of_vertex src)
-      label
-      (string_of_vertex dst)
-
   module DotPrinter = struct
     module Display = struct
-        include G
-        let vertex_name v =
-          match G.V.label v with
-          |PkgV.Pkg i -> Printf.sprintf "\"%s\"" (CudfAdd.string_of_package i)
-          |PkgV.Or (i,c) -> Printf.sprintf "\"Or%s-%d\"" (CudfAdd.string_of_package i) c
+      include G
+      let vertex_name v =
+        match G.V.label v with
+        |PkgV.Pkg {value = p; root = r}  -> Printf.sprintf "\"%s\"" (CudfAdd.string_of_package p)
+        |PkgV.Or i -> Printf.sprintf "\"Or-%d\"" i
+        |PkgV.Set _ -> ""
 
-        let graph_attributes = fun _ -> [`Rankdir `LeftToRight]
-        let get_subgraph = fun _ -> None
+      let default_edge_attributes = fun _ -> []
+      let default_vertex_attributes = fun _ -> [`Shape `Box]
 
-        let default_edge_attributes = fun _ -> []
-        let default_vertex_attributes = fun _ -> [`Shape `Box]
+      let vertex_attributes v =
+        match G.V.label v with
+        |PkgV.Or i -> [`Label "Or"; `Shape `Diamond]
+        |PkgV.Pkg {value = p; root = r} -> 
+            let al = ref [`Label (CudfAdd.string_of_package p)] in
+            if p.Cudf.installed then al := (`Color 0x00FF00)::!al;
+            if r then al := (`Shape `Record)::!al;
+            !al
+        |PkgV.Set s -> 
+            let l = CudfAdd.Cudf_set.elements s in
+            let p = CudfAdd.Cudf_set.choose s in
+            let str = 
+              Printf.sprintf "\"%s (=%s)\""
+              (CudfAdd.decode p.Cudf.package)
+              (Util.string_of_list ~delim:("[","]") CudfAdd.string_of_version l)
+            in
+            [`Label str; `Shape `Record]
+        |PkgV.Missing _ -> [ `Label "Missing"; `Color 0x00FF00; `Shape `Ellipse]
 
-        let vertex_attributes v =
-          match G.V.label v with
-          |PkgV.Or _ -> [`Label "Or" ; `Shape `Diamond]
-          |PkgV.Pkg p when p.Cudf.installed -> [ `Color 0x00FF00 ]
-          |_ -> []
-
-        let edge_attributes e =
-          match G.E.label e with
-          |PkgE.DirDepends -> [`Style `Solid]
-          |PkgE.OrDepends -> [`Style `Dashed]
-          |PkgE.Conflict -> [`Color 0xFF0000; `Style `Solid; `Label "#"]
-(*
-          |PkgE.DirDepends -> [`Style [`Solid]]
-          |PkgE.OrDepends -> [`Style [`Dashed]]
-          |PkgE.Conflict -> [`Color 0xFF0000; `Style [`Solid]; `Label "#"]
-*)
-      end
+      let edge_attributes e =
+        match !(G.E.label e) with
+        |PkgE.DirDepends _ -> [`Style `Solid]
+        |PkgE.OrDepends _ -> [`Style `Dashed]
+        |PkgE.MissingDepends vpkgs ->
+            [`Style `Solid ; `Label (CudfAdd.decode (Cudf_types_pp.string_of_vpkglist vpkgs))]
+        |PkgE.Conflict -> [`Color 0xFF0000; `Style `Solid; `Dir `None; `Label "#"]
+    end
     include Graph.Graphviz.Dot(Display)
     let print fmt g = fprint_graph fmt g
   end 
@@ -159,52 +159,62 @@ module SyntacticDependencyGraph = struct
 
   module GmlPrinter = Gml.Print (G) (
     struct
-       let node (v: G.V.label) = []
-       let edge (e: G.E.label) = []
+      let node (v: G.V.label) = []
+      let edge (e: G.E.label) = []
     end)
 
   module GraphmlPrinter = Graphml.Print (G) (
     struct
-        let vertex_properties =
-            ["package","string",None;
-             "version","string",None;
-             "architecture","string",None;
-             "type","string",None;
-             "source","string",None;
-             "sourcenumber","string",None;
-             "multiarch","string",None;
-            ]
-       
-        let edge_properties = [
-          "vpkglist","string",None;
-          "binaries","string",None;
+      let vertex_properties =
+          ["package","string",None;
+           "version","string",None;
+           "architecture","string",None;
+           "type","string",None;
+           "source","string",None;
+           "sourcenumber","string",None;
+           "multiarch","string",None;
           ]
+     
+      let edge_properties = [
+        "vpkglist","string",None;
+        "binaries","string",None;
+        ]
 
-        let map_edge e = []
-        let map_vertex = function
-          |PkgV.Pkg pkg ->
-            let name = ("package",CudfAdd.decode pkg.Cudf.package) in
-            let version = ("version",CudfAdd.string_of_version pkg) in
-       
-            let props =
-              List.filter_map (fun (key,_,_) ->
-                try let value = Cudf.lookup_package_property pkg key in
-                Some(key,value)
-                with Not_found -> None
-              ) vertex_properties
-            in
-            name :: version :: props
-          |PkgV.Or (pkg, _) -> []
+      let map_edge e = []
+      let map_vertex = function
+        |PkgV.Pkg {value = p} ->
+          let name = ("package",CudfAdd.decode p.Cudf.package) in
+          let version = ("version",CudfAdd.string_of_version p) in
+     
+          let props =
+            List.filter_map (fun (key,_,_) ->
+              try let value = Cudf.lookup_package_property p key in
+              Some(key,value)
+              with Not_found -> None
+            ) vertex_properties
+          in
+          name :: version :: props
+        |PkgV.Set _ -> [] (* XXX *)
+        |PkgV.Or _ -> []
+        |PkgV.Missing _ -> []
 
-        let edge_uid e = Hashtbl.hash e
-        let vertex_uid v = Hashtbl.hash v
+      let edge_uid e = Hashtbl.hash e
+      let vertex_uid v = Hashtbl.hash v
 
     end)
 
   let depgraphbar = Util.Progress.create "SyntacticDependencyGraph.dependency_graph"
 
   (** Build the syntactic dependency graph from the give cudf universe *)
-  let dependency_graph univ =
+  let dependency_graph ?root univ =
+    let add_node p =
+      let r = 
+        match root with
+        |None -> false
+        |Some pkg -> CudfAdd.equal p pkg
+      in
+      G.V.create (PkgV.Pkg {value = p; root = r})
+    in
     let timer = Util.Timer.create "SyntacticDependencyGraph.dependency_graph" in
     Util.Timer.start timer;
     let conflicts = CudfAdd.init_conflicts univ in
@@ -246,6 +256,76 @@ module SyntacticDependencyGraph = struct
     ;
     Util.Timer.stop timer gr
   ;;
+
+  let all_paths g v =
+    let pp v = 
+      match G.V.label v with
+      |PkgV.Or i -> "Or"
+      |PkgV.Pkg {value = p; root = r} -> 
+          (CudfAdd.string_of_package p)
+      |PkgV.Set s -> 
+          let l = CudfAdd.Cudf_set.elements s in
+          let p = CudfAdd.Cudf_set.choose s in
+          Printf.sprintf "\"%s (=%s)\""
+          (CudfAdd.decode p.Cudf.package)
+          (Util.string_of_list ~delim:("[","]") CudfAdd.string_of_version l)
+      |PkgV.Missing _ -> "Missing"
+    in
+    let h = Hashtbl.create 10 in
+    let bind m f = List.flatten (List.map f m) in
+    let rec aux acc v =
+      let guard e = match !(G.E.label e) with |PkgE.Conflict -> [] | _ -> [e] in
+      if Hashtbl.mem h v then [] else begin
+        Hashtbl.add h v ();
+        bind (guard (G.succ_e g v)) (fun e ->
+          let c = G.E.dst e in
+          Printf.printf "Succ of %s\n" (pp v);
+          Printf.printf "partial path : %s\n%!" (Util.string_of_list pp (c::acc));
+          match !(G.E.label e) with
+          |PkgE.Conflict -> [c::acc]
+          |PkgE.MissingDepends _ -> [c::acc]
+          |_ -> aux (c::acc) c
+        )
+      end
+    in
+    List.iter (fun l ->
+      Printf.printf "AAAAAAAAAAAAAAAAAAA\n%!";
+      Printf.printf "path : %s\n%!" (Util.string_of_list pp l);
+    ) (aux [v] v)
+  ;;
+
+  let pp v = 
+    match G.V.label v with
+    |PkgV.Or i -> "Or"
+    |PkgV.Pkg {value = p; root = r} -> 
+        (CudfAdd.string_of_package p)
+    |PkgV.Set s -> 
+        let l = CudfAdd.Cudf_set.elements s in
+        let p = CudfAdd.Cudf_set.choose s in
+        Printf.sprintf "\"%s (=%s)\""
+        (CudfAdd.decode p.Cudf.package)
+        (Util.string_of_list ~delim:("[","]") CudfAdd.string_of_version l)
+    |PkgV.Missing _ -> "Missing"
+
+  let all_paths g v =
+    let bind m f = List.flatten (List.map f m) in
+    let rec aux acc v =
+      bind (G.succ_e g v) (fun e ->
+        let c = G.E.dst e in
+        Printf.printf "Succ of %s\n" (pp v);
+        Printf.printf "partial path : %s\n%!" (Util.string_of_list pp (c::acc));
+        match !(G.E.label e) with
+        |PkgE.Conflict -> [acc]
+        |PkgE.MissingDepends _ -> [c::acc]
+        |_ -> aux (c::acc) c
+      )
+    in
+    let ll = (aux [v] v) in
+    List.iter (fun l ->
+      Printf.printf "path : %s\n%!" (Util.string_of_list pp l);
+    ) ll
+  ;;
+
 
 end
 

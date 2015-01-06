@@ -137,7 +137,8 @@ let main () =
         fun pkg -> pp ~decode:(fun x -> x) pkg 
       else fun pkg -> pp pkg
     in
-    Diagnostic.fprintf ~pp ~failure ~success ~explain ~minimal fmt d
+    (* Diagnostic.fprintf ~pp ~failure ~success ~explain ~minimal fmt d *)
+    Diagnostic.printf_dot ~pp ~failure ~success ~explain ~minimal fmt d 
   in
   Util.Timer.start timer;
 
