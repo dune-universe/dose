@@ -140,7 +140,6 @@ let architecture_test_cases = [
   ("any-any", "hurd-i386", true);
   ("any-any", "amd64", true);
   ("any-arm", "armhf", true);          (* arch name is not equal cpu name *)
-  ("any-i386", "lpia", true);
   ("any-amd64", "x32", true);
   ("any-powerpc", "powerpcspe", true)
 ];;
