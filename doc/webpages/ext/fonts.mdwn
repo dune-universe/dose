@@ -1,0 +1,1 @@
+[[!map pages="ext/fonts/* and ! ext/fonts/*/*"]]
