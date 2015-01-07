@@ -1,0 +1,1 @@
+[[!map pages="src/images/glass/purple/* and ! src/images/glass/purple/*/*"]]
