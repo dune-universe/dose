@@ -1,15 +1,4 @@
-<div id="menu">
-  <ul class="menu">
-    <li class="l0">[[Documentation|docs]]</li>
-    <li class="l1">[[FAQ|faq]]</li>
-    <li class="l1">[[QuickStart|quickstart]]</li>
-    <li class="l1">[[Install|install]]</li>
-    <li class="l1"><a href="http://dose.gforge.inria.fr/doc/api/">API (ocamldoc)</a></li>
-    <li class="l0"><a href="https://gforge.inria.fr/frs/?group_id=4395">Download</a></li>
-    <li class="l0">[[Contacts|contacts]]</li>
-    <li class="l1"><a href="https://gforge.inria.fr/mail/?group_id=4395">Mailing Lists</a></li>
-    <li class="l0">[[Related|related]]</li>
-    <li class="l0"><a href="https://gforge.inria.fr/projects/dose/">Gforge Project</a></li>
-  </ul>
-  <div class="foot"></div>
-</div>
+<li><a href="quickstart">QuickStart</a></li>
+<li> [[API|API]] </li>
+<li> [[Install|install]] </li>
+<li> [[Contacts|contacts]] </li>

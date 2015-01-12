@@ -1,12 +1,11 @@
-[[!meta title="dose - the dependency toolkit"]]
+[[!meta title=""]]
 
-
-Ocaml interpreter
------------------
+### Using Dose3 from the OCaml interpreter
 
 To experiment with dose from the ocaml interpreter, you can use findlib to
 load specific components.
 
+```
 $ocaml
         Objective Caml version 3.12.1
 
@@ -43,4 +42,4 @@ Findlib has been successfully loaded. Additional directives:
 /usr/local/lib/ocaml/3.12.1/dose3/rpm.cma: loaded
 /usr/local/lib/ocaml/3.12.1/dose3/boilerplate.cma: loaded
 #
-
+```

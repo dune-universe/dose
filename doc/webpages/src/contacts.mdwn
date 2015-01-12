@@ -1,17 +1,13 @@
-[[!meta title="dose - the dependency toolkit"]]
+[[!meta title="Get In Touch"]]
 
-# Authors
+### Authors
 
 - Pietro Abate : http://mancoosi.org/~abate/
 
-# Blog 
+### Mailing List
 
-
-
-# Mailing List
-
-# Social
+### Social
 
 Follow us on identi.ca : http://identi.ca/group/dose3
 
-# Mancoosi Website : http://mancoosi.org/
+### Mancoosi Website : http://mancoosi.org/
