@@ -1,11 +1,7 @@
-[[!meta title="dose - the dependency toolkit"]]
+[[!meta title="Where it is Used"]]
 
-# Related Projects
+### Debian Bootstrap
 
-## Debian Bootstrap
+### OPAM : ocaml package manager
 
-## OPAM : ocaml package manager
-
-## apt-cudf
-
-
+### Apt-Get (via apt-cudf)

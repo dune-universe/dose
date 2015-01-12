@@ -1,4 +1,5 @@
 [[!meta title="dose - the dependency toolkit"]]
+[[!pagetemplate  template="homepage.tmpl"]]
 
 Dose is a library and a collection of tools to perform la large spectrum of
 analysis on package repositories.  Dose manipulates packages repositories from
