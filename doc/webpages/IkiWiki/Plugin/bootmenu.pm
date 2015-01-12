@@ -71,28 +71,30 @@ sub isparentpath($$) {
 
 sub bootmenu ($) {
 	my $page=shift;
-	my @ret;
 
-	foreach my $path (@{$config{bootmenu}}) {
-	my @pathv = split("/",$path);
-	push @ret, {
-		page => pagetitle($pathv[-1]),
-		url => urlto(bestlink($page, $path), $page),
-		active => (isparentpath($page, $path)),
-		firstnav => 1,
-	};
-	}
-	foreach my $path (@{$config{bootmenu2}}) {
-	my @pathv = split("/",$path);
-	push @ret, {
-		page => pagetitle($pathv[-1]),
-		url => urlto(bestlink($page, $path), $page),
-		active => (isparentpath($page, $path)),
-		firstnav => 0,
-	};
-	}
+  sub item($$) {
+    my $menu = shift;
+    my $nav = shift;
+    my @ret;
+    foreach my $elempath (@{$menu}) {
+      $elempath =~ /\(([^\)]+)\)\[(.+)\]/;
+      my $path = $1;
+      my $title = $2;
+      my $url = ($path =~ /^http/) ? $path : urlto(bestlink($page, $path), $page);
+      push @ret, {
+        page => pagetitle($title),
+        url => $url,
+        active => (isparentpath($page, $path)),
+        firstnav => $nav,
+      };
+	  }
+    return @ret;
+  }
 
-	return @ret;
+  my @menu1 = item($config{bootmenu},1);
+  my @menu2 = item($config{bootmenu2},0);
+
+	return (@menu1 , @menu2);
 }
 
 sub pagetemplate (@) {
