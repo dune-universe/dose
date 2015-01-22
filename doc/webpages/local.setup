@@ -363,17 +363,18 @@ autoindex_commit: 0
 # bootmenu plugin
 # Primary menu
 bootmenu:
-- quickstart
-- API
-- tutorial
-- contacts
+- (/quickstart/)[Quickstart]
+- (API/index)[API]
+- (tutorial)[Tutorial]
+- (contacts)[Contacts]
+- (https://gforge.inria.fr/frs/?group_id=4395)[Download]
 # Secondary menu
 bootmenu2:
-- install
-- faq
-- tools
-- biblio
-- related
+- (install)[Install]
+- (faq)[FAQ]
+- (tools)[Related Projects]
+- (biblio)[Biblio]
+- (related)[Related]
 
 # camelcase plugin
 # list of words to not turn into links

@@ -69,21 +69,29 @@ sub isparentpath($$) {
 	return 0;
 }
 
+sub title_of ($) {
+  my $page = shift;
+  if (defined ($pagestate{$page}{meta}{title})) {
+    return $pagestate{$page}{meta}{title};
+  }
+  return pagetitle(IkiWiki::basename($page));
+}
+
 sub bootmenu ($) {
 	my $page=shift;
 
-  sub item($$) {
+  sub item($$$) {
     my $menu = shift;
     my $nav = shift;
+    my $page = shift;
     my @ret;
     foreach my $elempath (@{$menu}) {
       $elempath =~ /\(([^\)]+)\)\[(.+)\]/;
       my $path = $1;
       my $title = $2;
-      my $url = ($path =~ /^http/) ? $path : urlto(bestlink($page, $path), $page);
       push @ret, {
         page => pagetitle($title),
-        url => $url,
+        url => ($path =~ /^http/) ? $path : urlto(bestlink($page, $path), $page),
         active => (isparentpath($page, $path)),
         firstnav => $nav,
       };
@@ -91,8 +99,8 @@ sub bootmenu ($) {
     return @ret;
   }
 
-  my @menu1 = item($config{bootmenu},1);
-  my @menu2 = item($config{bootmenu2},0);
+  my @menu1 = item($config{bootmenu},1,$page);
+  my @menu2 = item($config{bootmenu2},0,$page);
 
 	return (@menu1 , @menu2);
 }
