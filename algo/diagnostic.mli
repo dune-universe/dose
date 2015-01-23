@@ -54,6 +54,7 @@ type summary = {
   mutable unique_missing : int;
   mutable unique_conflict : int;
   summary : Cudf.package list ref ResultHash.t;
+  statistic : ((int * int), int ref) Hashtbl.t
 }
 val default_result : int -> summary
 

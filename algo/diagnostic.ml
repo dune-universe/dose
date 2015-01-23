@@ -73,7 +73,8 @@ type summary = {
   mutable conflict : int;
   mutable unique_missing : int;
   mutable unique_conflict : int;
-  summary : (Cudf.package list ref) ResultHash.t 
+  summary : (Cudf.package list ref) ResultHash.t;
+  statistic : ((int * int),int ref) Hashtbl.t
 }
 
 let default_result n = {
@@ -82,6 +83,7 @@ let default_result n = {
   unique_missing = 0;
   unique_conflict = 0;
   summary = ResultHash.create n;
+  statistic = Hashtbl.create 17
 }
 
 (** given a list of dependencies, return a list of list containg all
@@ -169,6 +171,14 @@ let rec pp_list pp fmt = function
   |[] -> ()
 ;;
 
+let rec pp_collection pp fmt = function
+  |[h] -> Format.fprintf fmt "@[<v 1>%a@]" pp h
+  |h::t ->
+      (Format.fprintf fmt "@[<v 1>%a@]@," pp h ;
+      pp_collection pp fmt t)
+  |[] -> ()
+;;
+
 let create_pathlist root deps =
   let dl = List.map (function Dependency x -> x |_ -> assert false) deps in
   build_paths (List.unique dl) root
@@ -212,7 +222,7 @@ let print_error pp root fmt l =
           Format.fprintf fmt "@,@[<v 1>depchains:@,%a@]" (pp_dependencies pp) pl;
           Format.fprintf fmt "@]"
         end else
-          Format.fprintf fmt "@,@]"
+          Format.fprintf fmt "@]"
     (* only two failures reasons. Dependency describe the 
      * dependency chain to a failure witness *)
     |_ -> assert false 
@@ -377,16 +387,23 @@ let collect results d =
   in
   match d with 
   |{result = Failure (f) ; request = Package r } -> 
+      let conflicts = ref 0 in
+      let missing = ref 0 in
       List.iter (fun reason ->
         match reason with
         |Conflict (i,j,_) ->
             add results.summary reason r;
-            results.conflict <- results.conflict + 1
+            results.conflict <- results.conflict + 1;
+            conflicts := !conflicts + 1
         |Missing (i,vpkgs) ->
             add results.summary reason r;
-            results.missing <- results.missing + 1
+            results.missing <- results.missing + 1;
+            missing := !missing + 1
         |_ -> ()
-      ) (f ())
+      ) (f ());
+      let id = (!conflicts,!missing) in
+      begin try incr (Hashtbl.find results.statistic id)
+      with Not_found -> Hashtbl.add results.statistic id (ref 1) end
   |_  -> ()
 ;;
 
@@ -395,9 +412,9 @@ let pp_summary_row explain pp fmt = function
       Format.fprintf fmt "@[<v 1>conflict:@,";
       Format.fprintf fmt "@[<v 1>pkg1:@,%a@]@," (pp_package pp) i;
       Format.fprintf fmt "@[<v 1>pkg2:@,%a@]@," (pp_package pp) j;
-      Format.fprintf fmt "@[<v 1>broken-by: %d@]@," (List.length pl);
+      Format.fprintf fmt "@[<v 1>broken-by: %d@]" (List.length pl);
       if explain then begin
-        Format.fprintf fmt "@[<v 1>packages:@," ;
+        Format.fprintf fmt "@,@[<v 1>packages:@," ;
         pp_list (pp_package ~source:true pp) fmt pl;
         Format.fprintf fmt "@]"
       end;
@@ -405,9 +422,9 @@ let pp_summary_row explain pp fmt = function
   |(Missing (i,vpkgs) ,pl) -> 
       Format.fprintf fmt "@[<v 1>missing:@,";
       Format.fprintf fmt "@[<v 1>unsat-dependency: %a@]@," (pp_vpkglist pp) vpkgs;
-      Format.fprintf fmt "@[<v 1>broken-by: %d@]@," (List.length pl);
+      Format.fprintf fmt "@[<v 1>broken-by: %d@]" (List.length pl);
       if explain then begin
-        Format.fprintf fmt "@[<v 1>packages:@," ;
+        Format.fprintf fmt "@,@[<v 1>packages:@," ;
         pp_list (pp_package ~source:true pp) fmt pl;
         Format.fprintf fmt "@]"
       end;
@@ -434,7 +451,11 @@ let pp_summary ?(pp=default_pp) ?(explain=false) () fmt result =
   Format.fprintf fmt "conflict-packages: %d@." result.conflict;
   Format.fprintf fmt "unique-missing-packages: %d@." result.unique_missing;
   Format.fprintf fmt "unique-conflict-packages: %d@." result.unique_conflict;
+  Format.fprintf fmt "@[<v 1>conflict-missing-ratio:@,";
+  let mcl = Hashtbl.fold (fun k v acc -> (k,v)::acc) result.statistic [] in
+  pp_collection (fun fmt ((c,m),i) -> Format.fprintf fmt "%d-%d: %d" c m !i) fmt mcl; 
   Format.fprintf fmt "@]";
+  Format.fprintf fmt "@]@.";
 
   Format.fprintf fmt "@[<v 1>summary:@," ;
   pp_list (pp_summary_row explain pp) fmt l;
