@@ -7,8 +7,9 @@ import uuid
 import os,sys,time
 import argparse
 from itertools import groupby, ifilter
-from yaml import load
-try:
+import yaml
+
+try :
     from yaml import CBaseLoader as yamlLoader
 except ImportError:
     from yaml import BaseLoader as yamlLoader
@@ -72,9 +73,11 @@ def parsedistcheck(f) :
 
 def parseyaml(f) :
     print "yaml %s" % f
-    data = yaml.load(open(f), Loader=yamlLoader)
-    report = data.get('report', [])
-    l = convert(report)
+    l = []
+    if os.path.getsize(f) > 0 :
+        data = yaml.load(open(f), Loader=yamlLoader)
+        report = data.get('report', [])
+        l = convert(report)
     return l
 
 def parsetext(f) :
