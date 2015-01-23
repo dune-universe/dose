@@ -63,6 +63,9 @@ val default_result : int -> summary
     a custom callback function for [Depsolver.listcheck] or [Depsolver.univcheck] *)
 val collect : summary -> diagnosis -> unit
 
+(** print output version *)
+val pp_out_version : Format.formatter -> unit
+
 (* Function signature for cudf package printer. The output represents
    a triple (name, version, (field name, value) list *)
 type pp = (Cudf.package -> string * string * (string * string) list)
