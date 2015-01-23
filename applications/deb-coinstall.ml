@@ -195,8 +195,6 @@ let main () =
       Format.std_formatter
   in
 
-  if failure then Format.fprintf fmt "@[<v 1>report:@,";
-
   let global_constraints = not(OptParse.Opt.get Options.deb_ignore_essential) in
 
   Util.Timer.start timer;
@@ -227,31 +225,25 @@ let main () =
         List.iter (Printf.fprintf oc "%a\n" Debian.Printer.pp_source) l
       end; 0 (* exit code 0 . All packages are installable *)
     end
-    else begin
+    else begin if failure then begin
+      Diagnostic.pp_out_version fmt;
+      Format.fprintf fmt "@[<v 1>report:@,";
       Diagnostic.fprintf ~pp ~minimal ~failure ~explain fmt result;
-      1 (* at least one package is not installable *)
+      Format.fprintf fmt "@]@.";
+      let fn = List.length fg_pkglist in
+      let bn = List.length bg_pkglist in
+      let nb,nf = 
+        let cl = List.length checklist in
+        if cl != 0 then ((fn + bn) - cl,cl) else (bn,fn)
+      in
+      Format.fprintf fmt "background-packages: %d@." nb;
+      Format.fprintf fmt "foreground-packages: %d@." nf;
+      Format.fprintf fmt "total-packages: %d@." universe_size
+    end;
+    1 (* at least one package is not installable *)
     end
   in
   
-  if failure then Format.fprintf fmt "@]@.";
-  
-  let fn = List.length fg_pkglist in
-  let bn = List.length bg_pkglist in
-  
-  let nb,nf = 
-    let cl = List.length checklist in
-    if cl != 0 then ((fn + bn) - cl,cl) else (bn,fn)
-  in
-  
-  if nb > 0 && failure then begin
-    Format.fprintf fmt "background-packages: %d@." nb;
-    Format.fprintf fmt "foreground-packages: %d@." nf
-  end;
-
-  if failure then begin
-    Format.fprintf fmt "total-packages: %d@." universe_size;
-  (*  Format.fprintf fmt "broken-packages: %d@." nbp; *)
-  end;
   exitcode
 ;;
 
