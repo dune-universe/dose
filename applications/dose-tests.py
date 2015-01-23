@@ -217,7 +217,7 @@ def main():
             if args.fixtest[0] in s['Name'] :
                 cmd = s['Cmd'].split(' ') + s['Input'].split(' ')
                 expected = s['Expected']
-                print "Overwrite expected file: %s", expected
+                print "Overwriting expected file: %s" % expected
                 fixtest(expected,cmd)
     else :
         unittest.TextTestRunner(verbosity=args.verbose).run(suite(args.inputfile[0],args.runtest,args.rungroup))
