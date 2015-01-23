@@ -228,14 +228,14 @@ let challenged
   let results = 
     let map f l =
 IFDEF HASPARMAP THEN
-    let ncores = OptParse.Opt.get Options.ncores in
-    match OptParse.Opt.opt Options.chunksize with
-      None ->     
-	Parmap.parmap ~ncores f (Parmap.L l)
-    | Some chunksize ->       
-	Parmap.parmap ~ncores ~chunksize f (Parmap.L l)
+      let ncores = OptParse.Opt.get Options.ncores in
+      match OptParse.Opt.opt Options.chunksize with
+        None ->     
+        Parmap.parmap ~ncores f (Parmap.L l)
+      | Some chunksize ->       
+        Parmap.parmap ~ncores ~chunksize f (Parmap.L l)
 ELSE
-    List.map f l
+      List.map f l
 END
     in
     map (fun ((sn,sv,version),(cluster,vl,constr)) ->

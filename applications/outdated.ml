@@ -266,6 +266,7 @@ let outdated
   in
 
   let fmt = Format.std_formatter in
+  Diagnostic.pp_out_version fmt;
   Format.fprintf fmt "@[<v 1>report:@,";
 
   let results = Diagnostic.default_result universe_size in

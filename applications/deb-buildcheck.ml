@@ -170,6 +170,8 @@ let main () =
     end else sl
   in
 
+  Diagnostic.pp_out_version fmt;
+
   if OptParse.Opt.is_set Options.deb_native_arch then
     Format.fprintf fmt "native-architecture: %s@." (OptParse.Opt.get Options.deb_native_arch);
 

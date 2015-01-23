@@ -129,6 +129,8 @@ let main () =
   in
   let results = Diagnostic.default_result universe_size in
 
+  Diagnostic.pp_out_version fmt;
+
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
   let callback d =
     if summary then Diagnostic.collect results d ;
