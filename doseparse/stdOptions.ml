@@ -145,6 +145,8 @@ module InputOptions = struct
   let background = incr_str_list ()
   let foreground = incr_str_list ()
   let outfile = StdOpt.str_option ()
+  let outdir = StdOpt.str_option ()
+  let dot = StdOpt.store_true ()
 
   let default_options = [
     (* "trim"; *)
@@ -152,7 +154,8 @@ module InputOptions = struct
     "checkonly";
     "bg";
     "fg";
-    "outfile"
+    "outfile";
+    "outdir"
   ]
 
   (** give a list of positional arguments returns two list of resources,
@@ -197,7 +200,16 @@ module InputOptions = struct
                "for resolving dependencies (can be repeated)") background;
 
       if List.mem "outfile" default then
-        add options ~group ~short_name:'o' ~long_name:"outfile" ~help:"Set the output file" outfile
+        add options ~group ~short_name:'o' ~long_name:"outfile" ~help:"Set the output file" outfile;
+
+      if List.mem "outdir" default then
+        add options ~group ~short_name:'d' ~long_name:"outdir" 
+        ~help:"Set the output directory (default current directory)" outdir;
+
+      if List.mem "dot" default then
+        add options ~group ~long_name:"dot"
+        ~help:"Print the explanation graph in dot format" dot;
+
     end
   ;;
 end

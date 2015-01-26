@@ -31,7 +31,8 @@ module Options = struct
   StdOptions.DistcheckOptions.add_options options ;;
 
   include StdOptions.InputOptions
-  StdOptions.InputOptions.add_options options ;;
+  let default = "dot"::(StdOptions.InputOptions.default_options) in
+  StdOptions.InputOptions.add_options ~default options ;;
 
   include StdOptions.DistribOptions;;
   let default = List.remove StdOptions.DistribOptions.default_options "deb-host-arch" in
@@ -122,7 +123,15 @@ let main () =
   let summary = OptParse.Opt.get Options.summary in
   let fmt =
     if OptParse.Opt.is_set Options.outfile then
-      let oc = open_out (OptParse.Opt.get Options.outfile) in
+      let f =
+        let s = OptParse.Opt.get Options.outfile in
+        if OptParse.Opt.is_set Options.outdir then
+          let d = OptParse.Opt.get Options.outdir in
+          Filename.concat d s
+        else
+            s
+      in
+      let oc = open_out f in
       Format.formatter_of_out_channel oc
     else
       Format.std_formatter
@@ -134,6 +143,15 @@ let main () =
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
   let callback d =
     if summary then Diagnostic.collect results d ;
+    let _ = 
+      IFDEF HASOCAMLGRAPH THEN
+      if not(Diagnostic.is_solution d) && (OptParse.Opt.get Options.dot) then
+        let dir = OptParse.Opt.opt Options.outdir in
+        Diagnostic.print_dot ?dir d
+      ELSE
+      ()
+      ENDIF
+    in
     let pp =
       if input_type = `Cudf then 
         fun pkg -> pp ~decode:(fun x -> x) pkg 

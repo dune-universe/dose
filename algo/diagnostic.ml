@@ -277,7 +277,43 @@ let build_explanation_graph root l =
   ) l;
   (gr,!conflicts,!missing)
 ;;
+
+let print_dot ?dir = function
+  |{result = Success _ } -> fatal "Cannot build explanation graph on Success"
+  |{result = Failure f; request = Package r } ->
+      let fmt =
+        let n = (r.Cudf.package)^(string_of_int (r.Cudf.version)) in
+        let f =
+          let s = CudfAdd.decode (n^".dot") in
+          if Option.is_none dir then s
+          else Filename.concat (Option.get dir) s
+        in
+        let oc = open_out f in
+        Format.formatter_of_out_channel oc
+      in
+      let (gr,_,_) = build_explanation_graph r (f ()) in
+      Defaultgraphs.SyntacticDependencyGraph.DotPrinter.print fmt gr
+  |_ ->
+    warning "Tryin to build explanation graph for a Coinst (not implemented yet)"
+;;
 ENDIF
+
+(** condense nodes in the graph that have the same package name
+    but different versions using the following transformation rules:
+    - Or -> (a, v 1,2) -> Node 
+
+let condense gr =
+  let module Bfs = Traverse.Bfs(G) in
+  let visit = function 
+    G.V.label v
+    |PkgV.Missing vpkgs ->
+
+  in
+  Bfs.iter visit g;
+
+*)
+
+(* END *)
 
 let print_error pp root fmt l =
   let (deps,res) = List.partition (function Dependency _ -> true |_ -> false) l in

@@ -284,6 +284,43 @@ module SyntacticDependencyGraph = struct
     Util.Timer.stop timer gr
   ;;
 
+  let all_paths g v =
+    let pp v = 
+      match G.V.label v with
+      |PkgV.Or i -> "Or"
+      |PkgV.Pkg {value = p; root = r} -> 
+          (CudfAdd.string_of_package p)
+      |PkgV.Set s -> 
+          let l = CudfAdd.Cudf_set.elements s in
+          let p = CudfAdd.Cudf_set.choose s in
+          Printf.sprintf "\"%s (=%s)\""
+          (CudfAdd.decode p.Cudf.package)
+          (Util.string_of_list ~delim:("[","]") CudfAdd.string_of_version l)
+      |PkgV.Missing _ -> "Missing"
+    in
+    let h = Hashtbl.create 10 in
+    let bind m f = List.flatten (List.map f m) in
+    let rec aux acc v =
+      (* let guard e = match !(G.E.label e) with |PkgE.Conflict -> [] | _ -> [e] in *)
+      if Hashtbl.mem h v then [] else begin
+        Hashtbl.add h v ();
+        bind ( (G.succ_e g v)) (fun e ->
+          let c = G.E.dst e in
+          Printf.printf "Succ of %s\n" (pp v);
+          Printf.printf "partial path : %s\n%!" (Util.string_of_list pp (c::acc));
+          match !(G.E.label e) with
+          |PkgE.Conflict -> [c::acc]
+          |PkgE.MissingDepends _ -> [c::acc]
+          |_ -> aux (c::acc) c
+        )
+      end
+    in
+    List.iter (fun l ->
+      Printf.printf "AAAAAAAAAAAAAAAAAAA\n%!";
+      Printf.printf "path : %s\n%!" (Util.string_of_list pp l);
+    ) (aux [v] v)
+  ;;
+
   let pp v = 
     match G.V.label v with
     |PkgV.Or i -> "Or"
@@ -296,6 +333,26 @@ module SyntacticDependencyGraph = struct
         (CudfAdd.decode p.Cudf.package)
         (Util.string_of_list ~delim:("[","]") CudfAdd.string_of_version l)
     |PkgV.Missing _ -> "Missing"
+
+  let all_paths g v =
+    let bind m f = List.flatten (List.map f m) in
+    let rec aux acc v =
+      bind (G.succ_e g v) (fun e ->
+        let c = G.E.dst e in
+        Printf.printf "Succ of %s\n" (pp v);
+        Printf.printf "partial path : %s\n%!" (Util.string_of_list pp (c::acc));
+        match !(G.E.label e) with
+        |PkgE.Conflict -> [acc]
+        |PkgE.MissingDepends _ -> [c::acc]
+        |_ -> aux (c::acc) c
+      )
+    in
+    let ll = (aux [v] v) in
+    List.iter (fun l ->
+      Printf.printf "path : %s\n%!" (Util.string_of_list pp l);
+    ) ll
+  ;;
+
 
 end
 
