@@ -73,6 +73,7 @@ type summary = {
   mutable conflict : int;
   mutable unique_missing : int;
   mutable unique_conflict : int;
+  mutable unique_selfconflict : int;
   summary : (Cudf.package list ref) ResultHash.t;
   statistic : ((int * int),int ref) Hashtbl.t
 }
@@ -82,6 +83,7 @@ let default_result n = {
   conflict = 0;
   unique_missing = 0;
   unique_conflict = 0;
+  unique_selfconflict = 0;
   summary = ResultHash.create n;
   statistic = Hashtbl.create 17
 }
@@ -557,7 +559,12 @@ let pp_summary ?(pp=default_pp) ?(explain=false) () fmt result =
     ResultHash.fold (fun k v acc -> 
       let l1 = Util.list_unique !v in
       begin match k with
-        |Conflict(_,_,_) -> result.unique_conflict <- result.unique_conflict + 1;
+        |Conflict(i,j,_) ->
+            let (pi,vi,_) = pp i in
+            let (pj,vj,_) = pp j in
+            result.unique_conflict <- result.unique_conflict + 1;
+            if pi = pj then
+              result.unique_selfconflict <- result.unique_selfconflict + 1;
         |Missing(_,_) -> result.unique_missing <- result.unique_missing +1;
         |_ -> ()
       end;
@@ -571,6 +578,7 @@ let pp_summary ?(pp=default_pp) ?(explain=false) () fmt result =
   Format.fprintf fmt "conflict-packages: %d@." result.conflict;
   Format.fprintf fmt "unique-missing-packages: %d@." result.unique_missing;
   Format.fprintf fmt "unique-conflict-packages: %d@." result.unique_conflict;
+  Format.fprintf fmt "unique-self-conflicting-packages: %d@." result.unique_selfconflict;
   Format.fprintf fmt "@[<v 1>conflict-missing-ratio:@,";
   let mcl = Hashtbl.fold (fun k v acc -> (k,v)::acc) result.statistic [] in
   pp_collection (fun fmt ((c,m),i) -> Format.fprintf fmt "%d-%d: %d" c m !i) fmt mcl; 
@@ -579,6 +587,6 @@ let pp_summary ?(pp=default_pp) ?(explain=false) () fmt result =
 
   Format.fprintf fmt "@[<v 1>summary:@," ;
   pp_list (pp_summary_row explain pp) fmt l;
-  Format.fprintf fmt "@]"
+  Format.fprintf fmt "@]@."
 ;;
 

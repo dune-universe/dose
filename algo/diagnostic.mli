@@ -53,6 +53,7 @@ type summary = {
   mutable conflict : int;
   mutable unique_missing : int;
   mutable unique_conflict : int;
+  mutable unique_selfconflict : int;
   summary : Cudf.package list ref ResultHash.t;
   statistic : ((int * int), int ref) Hashtbl.t
 }
