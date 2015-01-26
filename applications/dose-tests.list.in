@@ -127,7 +127,7 @@ Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: edsp
 Printer: edsp
 
-Name: deb-coinstall-bug-16979
+Name: deb_coinstall_bug_16979
 Group: distcheck
 Expected: tests/applications/dose-tests/deb-coinstall-bug-16979
 Input: --bg=tests/DebianPackages/sid.packages.bz2 tests/deb/misc/deb-install-16959.edsp
@@ -201,15 +201,6 @@ Cmd: ./distcheck.@OCAMLEXT@ --deb-ignore-essential -f -e
 Type: distcheck
 Printer: text
 ExitCode: 1
-
-Name: missing_missing_distcheck
-Group: distcheck
-Expected: tests/applications/dose-tests/missing_missing
-Input: cudf://tests/cudf/missing_missing.cudf
-Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly p
-Type: distcheck
-Printer: text
-Ignore: yes
 
 Name: cv_default_distcheck
 Group: distcheck
@@ -332,3 +323,106 @@ Type: buildcheck
 Printer: text
 ExitCode: 64
 
+Name: chain_back_cross_conflict
+Group: explanationgraph
+Expected: tests/applications/dose-tests/chain-back-cross-conflict
+Input: cudf://tests/cudf/explanationgraph/chain-back-cross-conflict.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly chain-back-cross-conflict
+Type: distcheck
+Printer: text
+
+Name: multi_version_confluent_disjunctive
+Group: explanationgraph
+Expected: tests/applications/dose-tests/multi-version-confluent-disjunctive
+Input: cudf://tests/cudf/explanationgraph/multi-version-confluent-disjunctive.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly multi-version-confluent-disjunctive
+Type: distcheck
+Printer: text
+
+Name: multi_version_confluent
+Group: explanationgraph
+Expected: tests/applications/dose-tests/multi-version-confluent
+Input: cudf://tests/cudf/explanationgraph/multi-version-confluent.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly multi-version-confluent
+Type: distcheck
+Printer: text
+
+Name: mix_conflict_missing
+Group: explanationgraph
+Expected: tests/applications/dose-tests/mix-conflict-missing
+Input: cudf://tests/cudf/explanationgraph/mix-conflict-missing.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly mix-conflict-missing
+Type: distcheck
+Printer: text
+
+Name: cross_conflict
+Group: explanationgraph
+Expected: tests/applications/dose-tests/cross-conflict
+Input: cudf://tests/cudf/explanationgraph/cross-conflict.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly cross-conflict
+Type: distcheck
+Printer: text
+
+Name: back_conflict
+Group: explanationgraph
+Expected: tests/applications/dose-tests/back-conflict
+Input: cudf://tests/cudf/explanationgraph/back-conflict.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly back-conflict
+Type: distcheck
+Printer: text
+
+Name: chain_conflict
+Group: explanationgraph
+Expected: tests/applications/dose-tests/chain-conflict
+Input: cudf://tests/cudf/explanationgraph/chain-conflict.cudf 
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly chain-conflict
+Type: distcheck
+Printer: text
+
+Name: conflict_missing
+Group: explanationgraph
+Expected: tests/applications/dose-tests/conflict-missing
+Input: cudf://tests/cudf/explanationgraph/conflict-missing.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly conflict-missing.cudf
+Type: distcheck
+Printer: text
+
+Name: confluent_missing
+Group: explanationgraph
+Expected: tests/applications/dose-tests/confluent-missing
+Input: cudf://tests/cudf/explanationgraph/confluent-missing.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly confluent-missing
+Type: distcheck
+Printer: text
+
+Name: incomplete_disjunctive_missing
+Group: incomplete
+Expected: tests/applications/dose-tests/incomplete-disjunctive-missing
+Input: cudf://tests/cudf/incomplete/incomplete-disjunctive-missing.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly incomplete-disjunctive-missing
+Type: distcheck
+Printer: text
+
+Name: incomplete_disjunctive_missing_conflict
+Group: incomplete
+Expected: tests/applications/dose-tests/incomplete-disjunctive-missing-conflict
+Input: cudf://tests/cudf/incomplete/incomplete-disjunctive-missing-conflict.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly incomplete-disjunctive-missing-conflict
+Type: distcheck
+Printer: text
+
+Name: incomplete_conjunctive_missing
+Group: incomplete
+Expected: tests/applications/dose-tests/incomplete-conjunctive-missing
+Input: cudf://tests/cudf/incomplete/incomplete-conjunctive-missing.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly incomplete-conjunctive-missing
+Type: distcheck
+Printer: text
+
+Name: incomplete_conjunctive_conflicts
+Group: incomplete
+Expected: tests/applications/dose-tests/incomplete-conjunctive-conflicts
+Input: cudf://tests/cudf/incomplete/incomplete-conjunctive-conflicts.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly incomplete-conjunctive-conflicts
+Type: distcheck
+Printer: text

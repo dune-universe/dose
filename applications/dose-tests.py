@@ -138,6 +138,7 @@ class DoseTests(unittest.TestCase):
     def __init__(self, test):
         super(DoseTests, self).__init__()
         self.name = test['Name'] 
+        self.group = test['Group']
         self.comment = test['Comment'] if 'Comment' in test else None
         self.expected = test['Expected'] 
         self.cmd = test['Cmd'].split(' ') + test['Input'].split(' ')
@@ -157,6 +158,7 @@ class DoseTests(unittest.TestCase):
             return "Description : " + self.comment + "\n" + ("Cmd : ") + " ".join(self.cmd) + "\nExpected file : %s" % self.expected + "\n"
         else :
             s =     "Test : %s" % self.name
+            s = s + "\nGroup : %s" % self.group
             s = s + "\n" + ("Cmd : ") + " ".join(self.cmd)
             s = s + "\nExpected file : %s" % self.expected
             s = s + "\nExpected exitcode : %d" % self.exitcode if self.exitcode is not None else s
@@ -214,7 +216,7 @@ def main():
         f = args.inputfile[0]
         for stanza in parse822(f,lambda s: s[1]):
             s = dict(stanza)
-            if args.fixtest[0] in s['Name'] :
+            if args.fixtest[0] == s['Name'] :
                 cmd = s['Cmd'].split(' ') + s['Input'].split(' ')
                 expected = s['Expected']
                 print "Overwriting expected file: %s" % expected
