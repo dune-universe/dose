@@ -289,7 +289,7 @@ let print_dot ?dir = function
           else Filename.concat (Option.get dir) s
         in
         let oc = open_out f in
-        Format.formatter_of_out_channel oc
+        Format.formatter_of_out_channel oc;
       in
       let (gr,_,_) = build_explanation_graph r (f ()) in
       Defaultgraphs.SyntacticDependencyGraph.DotPrinter.print fmt gr

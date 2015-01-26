@@ -167,7 +167,9 @@ module SyntacticDependencyGraph = struct
     end
 
     include Graph.Graphviz.Dot(Display)
-    let print fmt g = fprint_graph fmt g
+    let print fmt g = 
+      fprint_graph fmt g;
+      Format.fprintf fmt "@."
   end 
   module S = Set.Make(PkgV)
 
