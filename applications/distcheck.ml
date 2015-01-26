@@ -147,7 +147,7 @@ let main () =
       IFDEF HASOCAMLGRAPH THEN
       if not(Diagnostic.is_solution d) && (OptParse.Opt.get Options.dot) then
         let dir = OptParse.Opt.opt Options.outdir in
-        Diagnostic.print_dot ?dir d
+        Diagnostic.print_dot ~addmissing:explain ?dir d
       ELSE
       ()
       ENDIF

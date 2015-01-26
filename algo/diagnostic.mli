@@ -132,4 +132,4 @@ val printf :
   ?pp:pp ->
   ?failure:bool -> ?success:bool -> ?explain:bool -> diagnosis -> unit
 
-val print_dot : ?dir:string -> diagnosis -> unit
+val print_dot : ?addmissing:bool -> ?dir:string -> diagnosis -> unit

@@ -201,7 +201,7 @@ let pp_dependencies pp fmt pathlist =
 
 IFDEF HASOCAMLGRAPH THEN
 (** Build a SyntacticDependencyGraph from the solver output. *)
-let build_explanation_graph root l =
+let build_explanation_graph ?(addmissing=false) root l =
   let open Defaultgraphs.SyntacticDependencyGraph in
   let module UG = Graph.Imperative.Graph.Concrete(G.V) in
   let add_node p =
@@ -244,24 +244,26 @@ let build_explanation_graph root l =
             let vp = add_node p in
             add_edge gr vor (PkgE.OrDepends vpkgs) vp
           ) l;
-          let s =
-            List.fold_left (fun acc p ->
-              CudfAdd.StringSet.add p.Cudf.package acc
-            ) CudfAdd.StringSet.empty l
-          in
-          let missingvpkgs =
-            List.fold_left (fun acc (n,c) ->
-              if not(CudfAdd.StringSet.mem n s) then ((n,c)::acc) else acc
-            ) [] vpkgs
-          in
-          (* we add this node if a package depends disjuctively on one
-             or more packages that exists in the repository, but are not
-             installable, and one that do not exists in the repository. For
-             the latter we add a missing node to the graph. *)
-          if List.length missingvpkgs > 0 then begin
-            let vp = G.V.create (PkgV.Missing missingvpkgs) in incr c;
-            missing := (vp,missingvpkgs) :: !missing;
-            add_edge gr vor (PkgE.MissingDepends missingvpkgs) vp
+          if addmissing then begin
+            let s =
+              List.fold_left (fun acc p ->
+                CudfAdd.StringSet.add p.Cudf.package acc
+              ) CudfAdd.StringSet.empty l
+            in
+            let missingvpkgs =
+              List.fold_left (fun acc (n,c) ->
+                if not(CudfAdd.StringSet.mem n s) then ((n,c)::acc) else acc
+              ) [] vpkgs
+            in
+            (* we add this node if a package depends disjuctively on one
+               or more packages that exists in the repository, but are not
+               installable, and one that do not exists in the repository. For
+               the latter we add a missing node to the graph. *)
+            if List.length missingvpkgs > 0 then begin
+              let vp = G.V.create (PkgV.Missing missingvpkgs) in incr c;
+              missing := (vp,missingvpkgs) :: !missing;
+              add_edge gr vor (PkgE.MissingDepends missingvpkgs) vp
+            end
           end
       |Missing(pkg,vpkgs) ->
           let vpid = add_node pkg in
@@ -280,7 +282,7 @@ let build_explanation_graph root l =
   (gr,!conflicts,!missing)
 ;;
 
-let print_dot ?dir = function
+let print_dot ?(addmissing=false) ?dir = function
   |{result = Success _ } -> fatal "Cannot build explanation graph on Success"
   |{result = Failure f; request = Package r } ->
       let fmt =
@@ -293,7 +295,7 @@ let print_dot ?dir = function
         let oc = open_out f in
         Format.formatter_of_out_channel oc;
       in
-      let (gr,_,_) = build_explanation_graph r (f ()) in
+      let (gr,_,_) = build_explanation_graph ~addmissing r (f ()) in
       Defaultgraphs.SyntacticDependencyGraph.DotPrinter.print fmt gr
   |_ ->
     warning "Tryin to build explanation graph for a Coinst (not implemented yet)"
