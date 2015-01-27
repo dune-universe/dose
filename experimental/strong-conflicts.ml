@@ -15,12 +15,13 @@
 open ExtLib
 open Common
 open Algo
+open Doseparse
 
 module Options = struct
   open OptParse
   let description = "Compute Strong Conflicts"
   let options = OptParser.make ~description
-  include Boilerplate.MakeOptions(struct let options = options end)
+  include StdOptions.MakeOptions(struct let options = options end)
 
   let log_file = StdOpt.str_option ()
   let out_file = StdOpt.str_option ()
@@ -45,9 +46,9 @@ let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
   let bars = ["Strongconflicts_int.local"; "Strongconflicts_int.seeding"] in
   let timers = ["Strongconflicts_int.main"] in
-  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
-  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) bars;
-  Boilerplate.enable_timers (OptParse.Opt.get Options.timers) timers;
+  StdDebug.enable_debug (OptParse.Opt.get Options.verbose);
+  StdDebug.enable_bars (OptParse.Opt.get Options.progress) bars;
+  StdDebug.enable_timers (OptParse.Opt.get Options.timers) timers;
 
   if OptParse.Opt.is_set Options.log_file then 
     lc := Some (open_out (OptParse.Opt.get Options.log_file));
@@ -55,7 +56,7 @@ let main () =
   if OptParse.Opt.is_set Options.out_file then
     oc := open_out (OptParse.Opt.get Options.out_file);
 
-  let (_,universe,from_cudf,to_cudf) = Boilerplate.load_universe posargs in
+  let (_,universe,from_cudf,to_cudf,_) = StdLoaders.load_universe posargs in
   let universe = Depsolver.trim universe in
   let sc = Strongconflicts.strongconflicts universe in
 
