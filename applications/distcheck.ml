@@ -96,9 +96,11 @@ let main () =
     if OptParse.Opt.is_set Options.checkonly then begin
       info "--checkonly specified, consider all packages as background packages";
       List.flatten (
-        List.map (fun ((n,a),c) ->
-          let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
-          Cudf.lookup_packages ~filter universe name
+        List.filter_map (fun ((n,a),c) ->
+          try
+            let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
+            Some(Cudf.lookup_packages ~filter universe name)
+          with Not_found -> None
         ) (OptParse.Opt.get Options.checkonly)
       )
     end else []
@@ -107,9 +109,11 @@ let main () =
   let coinstlist = 
     if OptParse.Opt.is_set Options.coinst then begin
       info "--coinst specified, consider all packages as background packages";
-      List.map (fun ((n,a),c) ->
-        let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
-        Cudf.lookup_packages ~filter universe name
+      List.filter_map (fun ((n,a),c) ->
+        try
+          let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
+          Some(Cudf.lookup_packages ~filter universe name)
+        with Not_found -> None
       ) (OptParse.Opt.get Options.coinst)
     end else []
   in
@@ -161,7 +165,7 @@ let main () =
   in
   Util.Timer.start timer;
 
-  if OptParse.Opt.is_set Options.coinst then begin
+  if (OptParse.Opt.is_set Options.coinst) && (List.length coinstlist) > 0 then begin
     let rl = Depsolver.edos_coinstall_prod universe coinstlist in
     let nbt = List.length (List.filter (fun r -> not (Diagnostic.is_solution r)) rl) in
     let number_checks = List.length rl in 
@@ -175,13 +179,13 @@ let main () =
   end else begin 
     let global_constraints = not(OptParse.Opt.get Options.deb_ignore_essential) in
     let nbp =
-      if OptParse.Opt.is_set Options.checkonly then 
+      if (OptParse.Opt.is_set Options.checkonly) && (List.length checklist) = 0 then 0
+      else if OptParse.Opt.is_set Options.checkonly then 
         Depsolver.listcheck ~global_constraints ~callback universe checklist
-      else
-        if bg_pkglist = [] then
+      else if bg_pkglist = [] then
           Depsolver.univcheck ~global_constraints ~callback universe 
-        else
-          Depsolver.listcheck ~global_constraints ~callback universe fg_pkglist
+      else
+        Depsolver.listcheck ~global_constraints ~callback universe fg_pkglist
     in
     ignore(Util.Timer.stop timer ());
     
