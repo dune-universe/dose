@@ -225,10 +225,12 @@ let build_explanation_graph ?(addmissing=false) root l =
     |e -> begin
       Hashtbl.add dup_reasons_table e ();
       match e with
-      |Dependency(pkg,vpkgs,[p]) ->
+      (* a dependency is direct only if there is only 
+         one vpkg and only one package *)
+      |Dependency(pkg,[vpkg],[p]) ->
           let vpid = add_node pkg in
           let vp = add_node p in
-          add_edge gr vpid (PkgE.DirDepends vpkgs) vp
+          add_edge gr vpid (PkgE.DirDepends [vpkg]) vp
       |Dependency(pkg,vpkgs,l) ->
           let vpid = add_node pkg in
           let vor =

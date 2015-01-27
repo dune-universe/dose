@@ -162,7 +162,12 @@ module SyntacticDependencyGraph = struct
         |PkgE.DirDepends _ -> [`Style `Solid]
         |PkgE.OrDepends _ -> [`Style `Dashed]
         |PkgE.MissingDepends vpkgs ->
-            [`Style `Solid ; `Label (CudfAdd.decode (Cudf_types_pp.string_of_vpkglist vpkgs))]
+            let style = 
+              match G.E.src e with
+              |PkgV.Or _ -> `Style `Dashed
+              |_ -> `Style `Solid
+            in
+            [style ; `Label (CudfAdd.decode (Cudf_types_pp.string_of_vpkglist vpkgs))]
         |PkgE.Conflict -> [`Color 0xFF0000; `Style `Solid; `Dir `None; `Label "#"]
     end
 
