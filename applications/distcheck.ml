@@ -95,26 +95,40 @@ let main () =
   let checklist = 
     if OptParse.Opt.is_set Options.checkonly then begin
       info "--checkonly specified, consider all packages as background packages";
-      List.flatten (
-        List.filter_map (fun ((n,a),c) ->
-          try
-            let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
-            Some(Cudf.lookup_packages ~filter universe name)
-          with Not_found -> None
-        ) (OptParse.Opt.get Options.checkonly)
-      )
+      let co = OptParse.Opt.get Options.checkonly in
+      match
+        List.flatten (
+          List.filter_map (fun ((n,a),c) ->
+            try
+              let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
+              Some(Cudf.lookup_packages ~filter universe name)
+            with Not_found -> None
+          ) co
+        )
+      with 
+      |[] ->
+        fatal "Cannot find any package corresponding to the selector %s" 
+        (Debian.Printer.string_of_vpkglist co)
+      |l -> l
     end else []
   in
 
   let coinstlist = 
     if OptParse.Opt.is_set Options.coinst then begin
       info "--coinst specified, consider all packages as background packages";
-      List.filter_map (fun ((n,a),c) ->
-        try
-          let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
-          Some(Cudf.lookup_packages ~filter universe name)
-        with Not_found -> None
-      ) (OptParse.Opt.get Options.coinst)
+      let co = OptParse.Opt.get Options.coinst in
+      match
+        List.filter_map (fun ((n,a),c) ->
+          try
+            let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
+            Some(Cudf.lookup_packages ~filter universe name)
+          with Not_found -> None
+        ) co
+      with 
+      |[] ->
+        fatal "Cannot find any package corresponding to the selector %s" 
+        (Debian.Printer.string_of_vpkglist co)
+      |l -> l
     end else []
   in
   let pp = CudfAdd.pp from_cudf in
