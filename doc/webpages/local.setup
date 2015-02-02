@@ -43,15 +43,11 @@ add_plugins:
 - html
 - bootmenu
 #- attachment
-#- autoindex
-#- bootmenu
-#- html
+- autoindex
 #- prettydate
 #- shortcut
 #- table
 #- map
-#- mdwn
-#- template
 # img mdwn meta sidebar format
 # plugins to disable
 disable_plugins:
@@ -365,16 +361,17 @@ autoindex_commit: 0
 bootmenu:
 - (/quickstart/)[Quickstart]
 - (API/index)[API]
-- (tutorial)[Tutorial]
+- (man)[Applications]
 - (contacts)[Contacts]
-- (https://gforge.inria.fr/frs/?group_id=4395)[Download]
+- (devel)[Community]
+- (download)[Download]
 # Secondary menu
 bootmenu2:
 - (install)[Install]
+- (tutorials)[Tutorials]
 - (faq)[FAQ]
-- (tools)[Related Projects]
-- (biblio)[Biblio]
-- (related)[Related]
+- (related)[Related Projects]
+- (biblio)[Papers and Documents]
 
 # camelcase plugin
 # list of words to not turn into links

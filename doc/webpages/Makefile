@@ -1,14 +1,23 @@
 all: rebuild
 
-docdir:
+upload:
+	$(MAKE) -C ../ upload
+
+makedoc:
+	$(MAKE) -C ../../ doc
+
+docdir: makedoc
 	for i in ../../dose3.docdir/*.html ; \
 		do ./extract-ocamldoc.py $$i > src/API/`basename $$i`; \
 	done
 
+manpage:
+	./extract-manpages.py ../manpages/*.html
+
 refresh:
 	ikiwiki --setup local.setup --verbose --refresh
 
-rebuild:
+rebuild: manpage
 	ikiwiki --setup local.setup --verbose --rebuild
 
 clean:

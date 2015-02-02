@@ -1,4 +1,0 @@
-<li><a href="quickstart">QuickStart</a></li>
-<li> [[API|API]] </li>
-<li> [[Install|install]] </li>
-<li> [[Contacts|contacts]] </li>

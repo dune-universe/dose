@@ -1,13 +1,27 @@
 [[!meta title="Get In Touch"]]
 
-### Authors
+### Authors And Contributors
 
-- Pietro Abate : http://mancoosi.org/~abate/
+Active Developers : 
 
-### Mailing List
+- Main Developer [[Pietro Abate|http://mancoosi.org/~abate/]]
+- [[Roberto Di Cosmo|http://www.dicosmo.org/]]
+- [[Johannes Schauer|https://blog.mister-muffin.de/]]
+- Cudf Author : [[Stefano Zacchiroli|https://upsilon.cc/~zack/]]
+- [[Ralf Treinen|http://www.pps.univ-paris-diderot.fr/~treinen/]
 
-### Social
+Past contributors :
 
-Follow us on identi.ca : http://identi.ca/group/dose3
+- Jaap Boender
+- Jakub Zwolakowski
+- Olivier Rosello
 
-### Mancoosi Website : http://mancoosi.org/
+### Want to help ?
+
+- Dose-devel : [[Archives|https://lists.gforge.inria.fr/pipermail/dose-devel/]] | [[Subscribe/Unsubscribe/Preferences|https://lists.gforge.inria.fr/mailman/listinfo/dose-devel]]
+
+- Report a bug in our [[BTS|https://gforge.inria.fr/tracker/?group_id=4395]]
+
+- Check out Continous integration [[page|https://ci.inria.fr/dose/?]
+
+- Follow us on [[identi.ca|http://identi.ca/group/dose3]]
