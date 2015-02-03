@@ -14,10 +14,13 @@ docdir: makedoc
 manpage:
 	./extract-manpages.py ../manpages/*.html
 
+primer:
+	./extract-primer.py ../debcheck.primer/debcheck-primer.html > src/tutorials/primer.mdwn
+
 refresh:
 	ikiwiki --setup local.setup --verbose --refresh
 
-rebuild: manpage
+rebuild: manpage primer
 	ikiwiki --setup local.setup --verbose --rebuild
 
 clean:

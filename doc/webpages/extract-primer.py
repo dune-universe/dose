@@ -6,12 +6,9 @@ import argparse
 def extract(html_doc):
     from bs4 import BeautifulSoup
     soup = BeautifulSoup(html_doc)
+    soup.body.find('table', class_='title').extract()
 
-    for a in soup.findAll('a'):
-        if 'href' in a :
-            l = a['href'][:-5]
-            a['href'] = "../" + l + "/" + "index.html"
-     
+    print '[[!meta title="Dose-Debcheck - Distcheck for Debian"]]\n'
     print soup.body
 
 def main():
