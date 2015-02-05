@@ -48,6 +48,7 @@ type diagnosis = { result : result; request : request; }
 
 module ResultHash : Hashtbl.S with type key = reason
 
+(** Collect aggregate information about not installable packages *)
 type summary = {
   mutable missing : int;
   mutable conflict : int;
@@ -77,20 +78,21 @@ type pp = (Cudf.package -> string * string * (string * string) list)
     a negative number, the version version if printed as "nan". *)
 val default_pp : pp
 
-(** Default package pretty printer. *)
+(** default package pretty printer. *)
 val pp_package : ?source:bool -> pp -> Format.formatter -> Cudf.package -> unit
 
-(** Cudf Vpkglist printer. *)
+(** cudf vpkglist printer. *)
 val pp_vpkglist : pp -> Format.formatter -> Cudf_types.vpkglist -> unit
 
+(** print a list of cudf dependency. The label specifies the type of 
+    dependency ("depends" by default) *)
 val pp_dependency :
   pp ->
-  ?label:string ->
+  ?label : string ->
   Format.formatter ->
   Cudf.package * Cudf_types.vpkglist -> unit
 
-(** Print the list of dependencies of a package . The label specifies the
-    type of dependency ("depends" by default) *)
+(** Print the list of dependencies of a package. *)
 val pp_dependencies : pp ->
   Format.formatter -> (Cudf.package * Cudf_types.vpkglist) list list -> unit
 
@@ -105,31 +107,47 @@ val print_error : pp ->
     the installation set is restricted to the dependency cone of the packages
     specified in the installablity query. @Raise [Not_found] if the result is
     a failure. *)
-val get_installationset : ?minimal:bool -> diagnosis -> Cudf.package list
+val get_installationset : ?minimal : bool -> diagnosis -> Cudf.package list
 
 (** True is the result of an installablity query is successfull. False otherwise *)
 val is_solution : diagnosis -> bool
 
+(** print a aggregate information of not installable packages.
+    @param [pp] : cudf package printer
+    @param [explain] : if true, print the list of all affected packages associated to
+                       and installation problem. *)
 val pp_summary :
-  ?pp:(Cudf.package -> Cudf_types.pkgname * string * (string * string) list) ->
-  ?explain:bool -> unit -> Format.formatter -> summary -> unit
+  ?pp : (Cudf.package -> Cudf_types.pkgname * string * (string * string) list) ->
+  ?explain : bool -> unit -> Format.formatter -> summary -> unit
 
 val print_error_human :
   ?prefix:string -> pp ->
   Cudf.package -> Format.formatter -> reason list -> unit
 
+(** print a human readable explanation (DEV) *)
 val fprintf_human :
-  ?pp:pp ->
-  ?prefix:string -> Format.formatter -> diagnosis -> unit
+  ?pp : pp ->
+  ?prefix : string -> Format.formatter -> diagnosis -> unit
 
+(** [printf fmt d] print the output of the solver in yaml format 
+    to the formatter [fmt].
+    @param [pp] : cudf package printer
+    @param [failure] : print the list of not installable packages
+    @param [success] : print the list of installable packages
+    @param [explain] : for installable packages, print the associated installation set
+                       for not installable packages, print the all dependencies chains *)
 val fprintf :
-  ?pp:pp ->
-  ?failure:bool ->
-  ?success:bool ->
-  ?explain:bool -> ?minimal:bool -> Format.formatter -> diagnosis -> unit
+  ?pp : pp ->
+  ?failure : bool ->
+  ?success : bool ->
+  ?explain : bool -> ?minimal:bool -> Format.formatter -> diagnosis -> unit
 
+(** like [fprintf] but print using the standard formatter *)
 val printf :
   ?pp:pp ->
-  ?failure:bool -> ?success:bool -> ?explain:bool -> diagnosis -> unit
+  ?failure : bool -> ?success : bool -> ?explain : bool -> diagnosis -> unit
 
-val print_dot : ?addmissing:bool -> ?dir:string -> diagnosis -> unit
+IFDEF HASOCAMLGRAPH THEN
+(** print the explanation graph in dot format to the standard formatter *)
+val print_dot : ?addmissing : bool -> ?dir : string -> diagnosis -> unit
+ENDIF
