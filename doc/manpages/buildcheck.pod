@@ -71,8 +71,7 @@ is used as an implicit foreign architecture.
 
 =item B<--deb-host-arch=>I<name>...
 
-Specify the host architecture. If this option is given, B<--deb-native-arch>
-must also be set.
+Specify the host architecture.
 
 =back
 
