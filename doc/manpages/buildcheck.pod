@@ -125,6 +125,15 @@ to three times in order to increase verbosity.
 
 Display this list of options. 
 
+=item B<--deb-ignore-essential>
+
+Do not consider essential packages as part of the installation problem.
+By default all essential package are considered as part of the
+installation problem for all packages, that is a package is installable
+if and only if it is co-installable with all essential packages. This
+option allows the user to test the installability with no essential
+packages installed.
+
 =back
 =cut
 
