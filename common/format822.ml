@@ -11,7 +11,6 @@
 (**************************************************************************************)
 
 open ExtLib
-open Common
 
 include Util.Logging(struct let label = __FILE__ end) ;;
 
@@ -30,7 +29,6 @@ let pp_posfname {
   pos_cnum = cnum
 } = Printf.sprintf "%s" _fname
 
-
 let pp_lpos {
   Lexing.pos_fname = _fname;
   pos_lnum = lnum;
@@ -42,7 +40,7 @@ exception Parse_error_822 of string * loc       (* <msg, file, loc> *)
 exception Syntax_error of string * loc          (* <msg, file, loc> *)
 exception Type_error of string
 
-type deb_parser = { lexbuf: Lexing.lexbuf ; fname: string }
+type f822_parser = { lexbuf: Lexing.lexbuf ; fname: string }
 
 let from_channel ic =
   let f s n = try IO.input ic s 0 n with IO.No_more_input -> 0 in
@@ -58,29 +56,6 @@ let parse_from_ch _parser ic =
     fatal "Syntax error lines %s--%s:\n%s" (pp_lpos startpos) (pp_lpos endpos) _msg
   | Parse_error_822 (_msg, (startpos, endpos)) ->
     fatal "Parse error lines %s--%s:\n%s" (pp_lpos startpos) (pp_lpos endpos) _msg
-
-type name = string
-type version = string
-type architecture = string
-type architectures = architecture list
-type buildprofile = string
-type vpkgname = (string * architecture option)
-type multiarch = [ `Foreign | `Allowed | `No | `Same ]
-type source = (name * version option)
-type relop = string
-type constr = (relop * version)
-
-type vpkg = (vpkgname * constr option)
-type vpkglist = vpkg list
-type vpkgformula = vpkg list list
-
-type builddep = (vpkg * (bool * architecture) list * (bool * buildprofile) list list)
-type builddepslist = builddep list
-type builddepsformula = builddep list list
-
-type action = I | R
-type suite = string
-type vpkgreq = (action option * vpkg * suite option)
 
 module RawInput ( Set : Set.S ) = struct
   let input_raw parse files =
@@ -115,3 +90,5 @@ module RawInput ( Set : Set.S ) = struct
     Util.Timer.stop timer (Set.elements s)
 end
 
+module Printer = struct
+end

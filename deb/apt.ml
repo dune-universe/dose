@@ -67,10 +67,10 @@ let parse_popcon s =
 *)
 
 type apt_req =
-  |Install of Format822.vpkgreq list
-  |Remove of Format822.vpkgreq list
-  |Upgrade of Format822.suite option
-  |DistUpgrade of Format822.suite option
+  |Install of Packages_types.vpkgreq list
+  |Remove of Packages_types.vpkgreq list
+  |Upgrade of Packages_types.suite option
+  |DistUpgrade of Packages_types.suite option
 
 let parse_req s = 
   let _loc = Format822.dummy_loc in

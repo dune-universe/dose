@@ -1,12 +1,10 @@
-Format822_lexer
-Format822_parser
 Packages_lexer
 Packages_parser
+Packages_types
 Packages
 Apt
 Sources
 Version
-Format822
 Debcudf
 Release
 Architecture

@@ -18,6 +18,7 @@
 (** Representation of a debian release files *) 
 
 open ExtLib
+open Common
 
 type release = {
   fname : string;

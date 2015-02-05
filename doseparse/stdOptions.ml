@@ -31,7 +31,7 @@ end
 
 let vpkg_option ?default ?(metavar = " <vpkg>") () =
   let parse_vpkg s = 
-    let _loc = Debian.Format822.dummy_loc in
+    let _loc = Format822.dummy_loc in
     Debian.Packages.parse_vpkg (_loc,s)
   in
   OptParse.Opt.value_option metavar default
@@ -41,7 +41,7 @@ let vpkg_option ?default ?(metavar = " <vpkg>") () =
 (* this is a ,-separated list of vpkgs of the form "a (<c> v)" *)
 let vpkglist_option ?default ?(metavar = " <vpkglst>") () =
   let parse_vpkglist s = 
-    let _loc = Debian.Format822.dummy_loc in
+    let _loc = Format822.dummy_loc in
     Debian.Packages.parse_vpkglist (_loc,s)
   in
   OptParse.Opt.value_option metavar default
@@ -51,7 +51,7 @@ let vpkglist_option ?default ?(metavar = " <vpkglst>") () =
 (* this is a ,-separated list of vpkgs of the form "a (= v)" *)
 let pkglist_option ?default ?(metavar = " <pkglst>") () =
   let parse_vpkglist s = 
-    let _loc = Debian.Format822.dummy_loc in
+    let _loc = Format822.dummy_loc in
     List.map (function
       |((n,a),Some("=",v)) -> (n,a,v)
       |((n,a),None) ->

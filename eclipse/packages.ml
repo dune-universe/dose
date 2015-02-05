@@ -19,13 +19,13 @@ include Util.Logging(struct let label = __FILE__ end) ;;
 
 (** strip down version of the debian package format *)
 type package = {
-  name : Debian.Format822.name ;
-  version : Debian.Format822.version;
-  depends : Debian.Format822.vpkgformula;
-  conflicts : Debian.Format822.vpkglist;
-  provides : Debian.Format822.vpkglist;
-  recommends : Debian.Format822.vpkgformula;
-  suggests : Debian.Format822.vpkglist;
+  name : Packages_types.name ;
+  version : Packages_types.version;
+  depends : Packages_types.vpkgformula;
+  conflicts : Packages_types.vpkglist;
+  provides : Packages_types.vpkglist;
+  recommends : Packages_types.vpkgformula;
+  suggests : Packages_types.vpkglist;
   extras : (string * string) list;
 }
 
@@ -65,7 +65,7 @@ let parse_package_stanza extras par =
 let parse_packages_in ?(extras=[]) fname ic =
   info "Parsing eclipse 822 file %s..." fname;
   let stanza_parser = parse_package_stanza extras in
-  Debian.Format822.parse_from_ch (
+  Format822.parse_from_ch (
     Debian.Packages.packages_parser fname stanza_parser []
   ) ic
 
@@ -81,12 +81,12 @@ end
 
 (** input_raw [file] : parse a debian Packages file from [file] *)
 let input_raw ?(extras=[]) = 
-  let module M = Debian.Format822.RawInput(Set) in
+  let module M = Format822.RawInput(Set) in
   M.input_raw (parse_packages_in ~extras)
 ;;
 
 (** input_raw_ch ch : parse a debian Packages file from channel [ch] *)
 let input_raw_ch ?(extras=[]) = 
-  let module M = Debian.Format822.RawInput(Set) in
+  let module M = Format822.RawInput(Set) in
   M.input_raw_ch (parse_packages_in ~extras)
 ;;

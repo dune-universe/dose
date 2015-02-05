@@ -24,24 +24,24 @@ include Util.Logging(struct let label = __FILE__ end) ;;
 
 (** debian package format *)
 type package = {
-  name : Format822.name ;
-  version : Format822.version;
-  architecture : Format822.architecture ;
-  multiarch : Format822.multiarch ;
+  name : Packages_types.name ;
+  version : Packages_types.version;
+  architecture : Packages_types.architecture ;
+  multiarch : Packages_types.multiarch ;
   essential : bool;
   build_essential : bool;
   extra_source_only : bool;
   priority : string;
-  source : (Format822.name * Format822.version option) ;
-  depends : Format822.vpkgformula ;
-  pre_depends : Format822.vpkgformula ;
-  recommends : Format822.vpkgformula ;
-  suggests : Format822.vpkgformula;
-  enhances : Format822.vpkgformula;
-  conflicts : Format822.vpkglist;
-  breaks : Format822.vpkglist;
-  replaces : Format822.vpkglist;
-  provides : Format822.vpkglist;
+  source : (Packages_types.name * Packages_types.version option) ;
+  depends : Packages_types.vpkgformula ;
+  pre_depends : Packages_types.vpkgformula ;
+  recommends : Packages_types.vpkgformula ;
+  suggests : Packages_types.vpkgformula;
+  enhances : Packages_types.vpkgformula;
+  conflicts : Packages_types.vpkglist;
+  breaks : Packages_types.vpkglist;
+  replaces : Packages_types.vpkglist;
+  provides : Packages_types.vpkglist;
   extras : (string * string) list;
 }
 

@@ -18,16 +18,16 @@ open Common
 include Util.Logging(struct let label = __FILE__ end) ;;
 
 type source = {
-  name : Format822.name;
-  version : Format822.version;
-  architecture : Format822.architecture list;
+  name : Packages_types.name;
+  version : Packages_types.version;
+  architecture : Packages_types.architecture list;
   binaries : string list ;
-  build_depends : Format822.builddepsformula;
-  build_depends_indep : Format822.builddepsformula;
-  build_depends_arch : Format822.builddepsformula;
-  build_conflicts : Format822.builddepslist;
-  build_conflicts_indep : Format822.builddepslist;
-  build_conflicts_arch : Format822.builddepslist;
+  build_depends : Packages_types.builddepsformula;
+  build_depends_indep : Packages_types.builddepsformula;
+  build_depends_arch : Packages_types.builddepsformula;
+  build_conflicts : Packages_types.builddepslist;
+  build_conflicts_indep : Packages_types.builddepslist;
+  build_conflicts_arch : Packages_types.builddepslist;
 }
 
 let default_source = {

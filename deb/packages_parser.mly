@@ -2,6 +2,7 @@
 %{
 
 open ExtLib
+open Common
 
 let parse_relop = function
   | "="  -> `Eq
@@ -27,23 +28,23 @@ let parse_multiarch = function
 %token PLUS MINUS COLON SLASH
 %token EOL
 
-%type <Format822.name> pkgname_top
-%type <Format822.version> version_top 
+%type <Packages_types.name> pkgname_top
+%type <Packages_types.version> version_top 
 
-%type <Format822.architecture list> archlist_top
-%type <Format822.multiarch> multiarch_top 
-%type <Format822.source> source_top 
+%type <Packages_types.architecture list> archlist_top
+%type <Packages_types.multiarch> multiarch_top 
+%type <Packages_types.source> source_top 
 
-%type <Format822.vpkgname> vpkgname_top
-%type <Format822.vpkg> vpkg_top
-%type <Format822.vpkglist> vpkglist_top
-%type <Format822.vpkgformula> vpkgformula_top
+%type <Packages_types.vpkgname> vpkgname_top
+%type <Packages_types.vpkg> vpkg_top
+%type <Packages_types.vpkglist> vpkglist_top
+%type <Packages_types.vpkgformula> vpkgformula_top
 
-%type <Format822.builddepsformula> builddepsformula_top
-%type <Format822.builddepslist> builddepslist_top
+%type <Packages_types.builddepsformula> builddepsformula_top
+%type <Packages_types.builddepslist> builddepslist_top
 
-%type <Format822.vpkgreq> request_top
-%type <Format822.vpkgreq list> requestlist_top
+%type <Packages_types.vpkgreq> request_top
+%type <Packages_types.vpkgreq list> requestlist_top
 
 %start pkgname_top version_top
 %start multiarch_top source_top
@@ -211,8 +212,8 @@ archlist_ne:
 /**************************************/ 
 
 request:
-  | PLUS req_aux        { let (vpkg,suite) = $2 in (Some Format822.I,vpkg,suite) }
-  | MINUS req_aux       { let (vpkg,suite) = $2 in (Some Format822.R,vpkg,suite) }
+  | PLUS req_aux        { let (vpkg,suite) = $2 in (Some Packages_types.I,vpkg,suite) }
+  | MINUS req_aux       { let (vpkg,suite) = $2 in (Some Packages_types.R,vpkg,suite) }
   | req_aux             { let (vpkg,suite) = $1 in (None,vpkg,suite) }
 ;
 
