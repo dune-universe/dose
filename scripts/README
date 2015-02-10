@@ -10,18 +10,22 @@ to compute and aggregate the output from various dose tools.
 - Run distcheck on a local mirror of snapshot.org (historic evolution of
   debian testing and unstable)
 
-    ./distcheck-snapshot.sh 
+    ./distcheck-snapshot.sh
 
 - Compute a csv file to aggregate data for distcheck and outdated
 
     ./distcheck-aggregate.py results.dat
 
-- Create one graph containing the aggregated results for unstable and wheezy
+- Create one graph containing the aggregated results for unstable and testing
 
-    ./distcheck-plot.py results.dat wheezy unstable
+    ./distcheck-plot.py results.dat
 
 - Create two different graphs with the aggregated data respectively for 
-  unstable and wheezy
+  unstable and testing
 
-    ./distcheck-plot.py results.dat wheezy unstable --split
+    ./distcheck-plot.py results.dat --split
 
+
+- Creates a multiplot for unstable and testing adding freeze and releases 
+  annotations
+    ./distcheck-plot.py --mp results.dat --freezes debian-freezes --releases debian-releases 
