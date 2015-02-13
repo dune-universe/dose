@@ -7,6 +7,7 @@ from matplotlib import dates
 import os.path
 from itertools import groupby
 from operator import itemgetter, attrgetter, methodcaller
+import collections
 
 # takes as a input a cvs file and a list of distributions and
 # creates a plot of the evolution of broken and outdated packages
@@ -56,7 +57,7 @@ def initdict(dists,distname) :
     return dists
 
 def parse(dataset,outdated=False):
-    dists = {}
+    dists = collections.OrderedDict()
     csv_reader = csv.reader(dataset,delimiter=' ')
     for line in sorted(csv_reader,key=lambda k: k[0]):
         distname = line[1]
@@ -109,7 +110,8 @@ def multiplot(dists,output,title,timelines,intervals) :
     fig = plt.figure()
     fig.suptitle(title)
     subplotnum = len(dists)
-    fig.set_figheight((subplotnum+1) * 2.5)
+    #fig.set_figheight((subplotnum+1) * 3)
+    fig.set_figheight(24)
 
     ax = {}
     plotsidx = []
