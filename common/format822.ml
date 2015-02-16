@@ -57,9 +57,11 @@ let parse_from_ch _parser ic =
   | Parse_error_822 (_msg, (startpos, endpos)) ->
     fatal "Parse error lines %s--%s:\n%s" (pp_lpos startpos) (pp_lpos endpos) _msg
 
+let timer = Util.Timer.create "Format822" 
+
 module RawInput ( Set : Set.S ) = struct
+
   let input_raw parse files =
-    let timer = Util.Timer.create "Debian.Format822.input_raw" in
     Util.Timer.start timer;
     if List.length files > 1 then info "Merging repositories" ;
     let s =
@@ -80,7 +82,6 @@ module RawInput ( Set : Set.S ) = struct
     Util.Timer.stop timer (Set.elements s)
 
   let input_raw_ch parse ch =
-    let timer = Util.Timer.create "Debian.Format822.input_raw_ch" in
     Util.Timer.start timer;
     let s =
       let l = parse "" ch in
@@ -88,7 +89,4 @@ module RawInput ( Set : Set.S ) = struct
     in
     info "total packages %n" (Set.cardinal s);
     Util.Timer.stop timer (Set.elements s)
-end
-
-module Printer = struct
 end

@@ -68,7 +68,7 @@ let main () =
   let (input_type,implicit) = guess_format Options.inputtype inputlist in
 
   StdDebug.enable_debug (OptParse.Opt.get Options.verbose);
-  StdDebug.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
+  StdDebug.enable_timers (OptParse.Opt.get Options.timers) ["Solver";"Load"];
   StdDebug.enable_bars (OptParse.Opt.get Options.progress)
     ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
   StdDebug.all_quiet (OptParse.Opt.get Options.quiet);

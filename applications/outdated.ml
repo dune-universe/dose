@@ -306,7 +306,7 @@ let main () =
   StdDebug.enable_debug (OptParse.Opt.get Options.verbose);
   StdDebug.enable_bars (OptParse.Opt.get Options.progress)
     ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
-  StdDebug.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
+  StdDebug.enable_timers (OptParse.Opt.get Options.timers) ["Solver";"Load"];
   StdDebug.all_quiet (OptParse.Opt.get Options.quiet);
 
   let checklist = OptParse.Opt.opt Options.checkonly in

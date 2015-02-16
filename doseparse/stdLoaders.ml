@@ -385,10 +385,11 @@ let deb_load_source ?filter ?(profiles=[]) ?(noindep=false) buildarch hostarch s
   Debian.Sources.sources2packages ~noindep ~profiles buildarch hostarch l
 ;;
 
+let timer = Util.Timer.create "Load" ;;
+
 (** parse and merge a list of files into a cudf package list *)
 let load_list ?(options=None) urilist =
   info "Parsing and normalizing..." ;
-  let timer = Util.Timer.create "Parsing and normalizing" in
   Util.Timer.start timer;
   let u = parse_input ~options urilist in
   Util.Timer.stop timer u
@@ -397,7 +398,6 @@ let load_list ?(options=None) urilist =
 (** parse and merge a list of files into a cudf universe *)
 let load_universe ?(options=None) uris =
   info "Parsing and normalizing..." ;
-  let timer = Util.Timer.create "Parsing and normalizing" in
   Util.Timer.start timer;
   let (pr,cll,r,f,t) = parse_input ~options [uris] in
   let u = (pr,Cudf.load_universe (List.flatten cll), r, f, t) in

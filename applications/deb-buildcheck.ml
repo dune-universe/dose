@@ -64,7 +64,7 @@ let timer = Util.Timer.create "Solver"
 let main () =
   let posargs = OptParse.OptParser.parse_argv Options.options in
   StdDebug.enable_debug (OptParse.Opt.get Options.verbose);
-  StdDebug.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
+  StdDebug.enable_timers (OptParse.Opt.get Options.timers) ["Solver";"Load"];
   Util.Debug.disable "Depsolver_int";
   StdDebug.all_quiet (OptParse.Opt.get Options.quiet);
 

@@ -244,9 +244,9 @@ module Timer = struct
 
   let pp_timer fmt c =
     if c.total = 0. then
-      Format.fprintf fmt "Timer %s. Total time: n/a@." c.name
+      Format.fprintf fmt "Timer %s: n/a@." c.name
     else
-      Format.fprintf fmt "Timer %s. Total time: %f.@." c.name c.total
+      Format.fprintf fmt "Timer %s: %f.@." c.name c.total
 
   let dump fmt () =
     Hashtbl.iter (fun _ c -> if c.enabled then pp_timer fmt c) timers

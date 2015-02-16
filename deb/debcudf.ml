@@ -554,7 +554,7 @@ let lltocudf = loadll
 let ltocudf = loadl
 
 let load_list ?options l =
-  let timer = Util.Timer.create "Debian.Debcudf.load_list" in
+  let timer = Util.Timer.create "Debian.ToCudf" in
   Util.Timer.start timer;
   let tables = init_tables l in
   let pkglist = List.map (tocudf tables ?options) l in
@@ -562,7 +562,7 @@ let load_list ?options l =
   Util.Timer.stop timer pkglist
 
 let load_universe ?options l =
-  let timer = Util.Timer.create "Debian.Debcudf.load_universe" in
+  let timer = Util.Timer.create "Debian.ToCudf" in
   let pkglist = load_list ?options l in
   Util.Timer.start timer;
   let univ = Cudf.load_universe pkglist in
