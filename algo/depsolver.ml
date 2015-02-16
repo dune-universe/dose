@@ -146,33 +146,6 @@ let listcheck ?(global_constraints=true) ?callback universe pkglist =
       aux ~callback:callback_int universe idlist
 ;;
 
-(* callback : Diagnostic.result -> unit *)
-let minimize ?(global_constraints=false) ?callback criteria univ pkg =
-  let cudfpool = Depsolver_int.init_pool_univ ~global_constraints univ in
-  let id = CudfAdd.vartoint univ pkg in
-  (* globalid is a fake package indentifier used to encode global
-   * constraints in the universe *)
-  let globalid = Cudf.universe_size univ in
-  let closure = Depsolver_int.dependency_closure_cache cudfpool [id; globalid] in
-  let pbopool = Depsolver_int.init_criteria ~closure criteria univ in
-  let solver = Depsolver_int.init_solver_closure ~pbopool cudfpool closure in
-  let req = 
-    if global_constraints then
-      Diagnostic_int.Sng (Some globalid,id) 
-    else
-      Diagnostic_int.Sng (None,id)
-  in
-  let callback =
-    match callback with
-    |None -> fun _ -> ()
-    |Some f -> (fun (criteria,res) ->
-        f (criteria,diagnosis solver.Depsolver_int.map univ res req)
-        )
-  in
-  let finalres = Depsolver_int.solve_pbo ~callback solver req in
-  diagnosis solver.Depsolver_int.map univ finalres req
-;;
-
 let edos_install ?(global_constraints=false) univ pkg =
   let cudfpool = Depsolver_int.init_pool_univ ~global_constraints univ in
   let id = CudfAdd.vartoint univ pkg in
@@ -348,18 +321,6 @@ type solver_result =
   |Unsat of Diagnostic.diagnosis option
   |Error of string
 
-(* XXX this should be replaced by a proper parser *)
-let criteria_parser s =
-  let open Depsolver_int in
-  List.map (function
-    |"-count(new)" -> Count(New)
-    |"-count(removed)" -> Count(Removed)
-    |"-count(changed)" -> Count(Changed)
-    |"-notuptodate(solution)" -> NotUpToDate(Solution)
-    |"-unsat_recommends(solution)" -> UnsatRecommends(Solution)
-    |s -> fatal "Criteria parsing error : %s" s
-  ) (String.nsplit s ",")
-
 (* add a version constraint to ensure name is upgraded *)
 let upgrade_constr universe name = 
   match Cudf.get_installed universe name with
@@ -405,11 +366,7 @@ let check_request_using ?call_solver ?callback ?criteria ?(explain=false) (pre,u
     (* XXX it should be possible to add a package to a cudf document ! *)
     let pkglist = Cudf.get_packages universe in
     let universe = Cudf.load_universe (dummy::pkglist) in
-    if Option.is_none criteria || explain then
-      edos_install universe dummy
-    else
-      let criteria_array = Array.of_list (criteria_parser (Option.get criteria)) in
-      minimize ?callback criteria_array universe dummy
+    edos_install universe dummy
   in
   match call_solver with
   | None ->
@@ -436,5 +393,4 @@ let check_request ?cmd ?callback ?criteria ?explain cudf =
     | None -> None
   in
   check_request_using ?call_solver ?callback ?explain cudf
-
 ;;
