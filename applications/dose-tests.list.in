@@ -383,7 +383,7 @@ Name: conflict_missing
 Group: explanationgraph
 Expected: tests/applications/dose-tests/conflict-missing
 Input: cudf://tests/cudf/explanationgraph/conflict-missing.cudf
-Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly conflict-missing.cudf
+Cmd: ./distcheck.@OCAMLEXT@ -e -f --checkonly conflict-missing
 Type: distcheck
 Printer: text
 
