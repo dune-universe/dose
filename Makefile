@@ -127,8 +127,8 @@ $(DOSELIBS)/doseparseNoRpm.%: $(DOSELIBS)/debian.% $(DOSELIBS)/eclipse.%
 	$(OCAMLBUILD) $(OBFLAGS) doseparseNoRpm/doseparseNoRpm.otarget
 	@for i in _build/doseparseNoRpm/doseparseNoRpm.*; do \
 	  if [ -e $$i ]; then \
-	  cp $$i $(DOSELIBS) ; \
-	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
+			cp $$i $(DOSELIBS) ;\
+			rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ;\
 	  fi ; \
 	done
 
@@ -144,8 +144,21 @@ distclean: clean
 	rm -f db/db.mlpack
 	rm -f _tags META
 
-testapps: apps 
-	@applications/dose-tests.py applications/dose-tests.list
+test: apps
+ifeq (libs,$(word 2,$(MAKECMDGOALS)))
+	$(MAKE) testlib
+else
+ifdef group
+	applications/dose-tests.py --rungroup $(group) applications/dose-tests.list
+else 
+ifdef unit
+	applications/dose-tests.py --runtest $(unit) applications/dose-tests.list
+else
+	$(MAKE) testlib
+	applications/dose-tests.py applications/dose-tests.list
+endif
+endif
+endif
 
 testlib: 
 	@for i in $(TESTS); do\
@@ -153,8 +166,6 @@ testlib:
 		$(OCAMLBUILD) $(APPFLAGS) $$i/tests.$(OCAMLEXT) ;\
 		./tests.$(OCAMLEXT) ;\
 	done
-
-test: testapps testlib
 
 # stuff not not put in a distribution tarball
 DIST_EXCLUDE = cudf tests $(wildcard */tests) experimental
@@ -197,11 +208,7 @@ dist: ./$(DIST_TARBALL)
 ./$(DIST_TARBALL):
 	@if [ -d ./$(DIST_DIR)/ ] ; then rm -rf ./$(DIST_DIR)/ ; fi
 	@if [ -d ./$(DIST_TARBALL) ] ; then rm -f ./$(DIST_TARBALL) ; fi
-	@if [ -d .svn ]; then \
-	  svn export . ./$(DIST_DIR) ; \
-	else \
-	  mkdir ./$(DIST_DIR)/ ; git archive --format=tar HEAD | tar -x -C ./$(DIST_DIR)/ ; \
-	fi
+	@mkdir ./$(DIST_DIR)/ ; git archive --format=tar HEAD | tar -x -C ./$(DIST_DIR)/
 	@for f in $(DIST_EXCLUDE) ; do rm -rf ./$(DIST_DIR)/$$f; done
 	@tar czf ./$(DIST_TARBALL) ./$(DIST_DIR)
 	@rm -rf ./$(DIST_DIR)
