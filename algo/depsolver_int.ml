@@ -277,16 +277,17 @@ let solve ?tested solver request =
   S.reset solver.constraints;
 
   let result solve collect var =
-    if solve solver.constraints var then
-      let get_assignent ?(all=true) () =
-        List.map (fun i -> 
-          if not(Option.is_none tested) then
-            (Option.get tested).(i) <- true;
-          solver.map#inttovar i
-        )(S.assignment_true solver.constraints)
-      in
+    (* Real call to the SAT solver *)
+    if solve solver.constraints var then begin
+      let l = S.assignment_true solver.constraints in
+      List.iter (fun i -> 
+        if not(Option.is_none tested) then (
+          (Option.get tested).(i) <- true;
+        )
+      ) l;
+      let get_assignent ?(all=true) () = List.map solver.map#inttovar l in
       Diagnostic_int.Success(get_assignent)
-    else
+    end else
       let get_reasons () = collect solver.constraints var in
       Diagnostic_int.Failure(get_reasons)
   in
@@ -307,16 +308,16 @@ let solve ?tested solver request =
 let pkgcheck global_constraints callback solver tested id =
   (* global id is a fake package id encoding the global constraints of the
    * universe. it is the last element of the id array *)
+  let globalid = (Array.length tested) - 1 in
   let req = 
     if global_constraints then begin
-      let globalid = (Array.length tested) - 1 in
       Diagnostic_int.Sng (Some globalid,id) 
     end else
       Diagnostic_int.Sng (None,id)
   in
   let res =
     Util.Progress.progress progressbar_univcheck;
-    if not(tested.(id)) then 
+    if not(tested.(id)) then
       solve ~tested solver req 
     else begin
       (* this branch is true only if the package was previously
@@ -349,7 +350,6 @@ let pkgcheck global_constraints callback solver tested id =
 let init_solver_univ ?(global_constraints=true) ?(buffer=false) univ =
   let map = new identity in
   let cudfpool = init_pool_univ global_constraints univ in
-  (* let globalid = (Array.length (strip_cudf_pool cudfpool)) - 1 in *)
   let varpool = SolverPool (strip_cudf_pool cudfpool) in
   let constraints = init_solver_cache ~buffer varpool in
   let solver = { constraints = constraints ; map = map } in

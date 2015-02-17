@@ -107,7 +107,7 @@ let univcheck ?(global_constraints=true) ?callback universe =
     let check = Depsolver_int.pkgcheck global_constraints callback solver tested in
     (* we do not test the last package that encodes the global constraints
      * on the universe as it is tested all the time with all other packages. *)
-    for i = 0 to size - 2 do if not(check i) then incr failed done;
+    for id = 0 to size - 2 do if not(check id) then incr failed done;
     Util.Timer.stop timer !failed
   in
   let map = new Depsolver_int.identity in
