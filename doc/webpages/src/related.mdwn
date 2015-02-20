@@ -26,6 +26,12 @@ and fix installability related bugs.
 
 The OWS uses distcheck to check the health of the official OPAM repository.
 
+### [[Equinox P2 Cudf Resolver|http://wiki.eclipse.org/Equinox/p2/CUDFResolver]]
+
+A frontend to p2 that allows p2 to resolve Linux dependencies. The input and
+output format is CUDF. This format has been designed by the Mancoosi European
+project to foster improvements in dependency resolution solvers.
+
 ### [[Mancoosi Project|http://mancoosi.org/]]
 
 Mancoosi was a European research project in the 7th Research Framework
