@@ -130,6 +130,7 @@ let future ?options ?(checklist=[]) repository =
       let pkg = {
         Debian.Packages.default_package with 
         Debian.Packages.name = name;
+        Debian.Packages.architecture = "all";
         version = "1";
         } 
       in
@@ -174,7 +175,7 @@ let future ?options ?(checklist=[]) repository =
       List.fold_left (fun acc1 (target,equiv) ->
         incr sync_index;
         List.fold_left (fun acc2 pkg ->
-          let p = Debian.Debcudf.tocudf tables pkg in
+          let p = Debian.Debcudf.tocudf ?options tables pkg in
           let pv = p.Cudf.version in
 
           let target = Debian.Evolution.align pkg.Debian.Packages.version target in
@@ -200,7 +201,6 @@ let future ?options ?(checklist=[]) repository =
   let universe = Cudf.load_universe (CudfAdd.Cudf_set.elements pkgset) in
 
   universe, tables
-
 ;;
  
 let outdated 
@@ -267,7 +267,7 @@ let outdated
 
   let fmt = Format.std_formatter in
   Diagnostic.pp_out_version fmt;
-  Format.fprintf fmt "@[<v 1>report:@,";
+  if failure then Format.fprintf fmt "@[<v 1>report:@,";
 
   let results = Diagnostic.default_result universe_size in
   let callback d = 
@@ -306,7 +306,7 @@ let main () =
   StdDebug.enable_debug (OptParse.Opt.get Options.verbose);
   StdDebug.enable_bars (OptParse.Opt.get Options.progress)
     ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
-  StdDebug.enable_timers (OptParse.Opt.get Options.timers) ["Solver";"Load"];
+  StdDebug.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
   StdDebug.all_quiet (OptParse.Opt.get Options.quiet);
 
   let checklist = OptParse.Opt.opt Options.checkonly in
