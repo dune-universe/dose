@@ -8,20 +8,22 @@
 #Printer: printer to display differences. Available 822, text
 
 Name: apt_cudf
-Group: apt-cudf-long
+Group: apt-cudf
 Expected: tests/applications/dose-tests/apt-cudf-install-i386
 Input: tests/deb/edsp/install-sarge-etch.edsp
 Cmd: ./apt-cudf.@OCAMLEXT@ --conf doc/apt-cudf/apt-cudf.conf -e --solver=aspcud
 Type: edsp
 Printer: edsp
+Speed: slow
 
 Name: apt_cudf_textlive
-Group: apt-cudf-long
+Group: apt-cudf
 Expected: tests/applications/dose-tests/apt-cudf-install-textlive
 Input: tests/deb/edsp/textlive.edsp
 Cmd: ./apt-cudf.@OCAMLEXT@ --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
 Type: edsp
 Printer: edsp
+Speed: slow
 
 Name: apt_cudf_multiarch_bug_16959
 Group: apt-cudf
@@ -135,6 +137,7 @@ Cmd: ./deb-coinstall.@OCAMLEXT@ --failures --explain --deb-native-arch=amd64
 Type: deb-coinstall
 Printer: text
 ExitCode: 0
+Speed: slow
 
 Name: failure_distcheck
 Group: distcheck
@@ -237,10 +240,36 @@ Printer: text
 ExitCode: 64
 
 Name: failure_outdated
-Group: distcheck
+Group: outdated
 Expected: tests/applications/dose-tests/outdated_failure
 Input: tests/DebianPackages/sid.packages.bz2
 Cmd: ./outdated.@OCAMLEXT@ -f -e
+Type: distcheck
+Printer: text
+Speed: slow
+
+Name: failure_outdated-native
+Group: outdated
+Expected: tests/applications/dose-tests/outdated_failure-native
+Input: tests/DebianPackages/sid.packages.bz2
+Cmd: ./outdated.@OCAMLEXT@ -f -e --deb-native-arch amd64
+Type: distcheck
+Printer: text
+Speed: slow
+
+Name: outdated-missing
+Group: outdated
+Expected: tests/applications/dose-tests/outdated-missing
+Input: tests/applications/outdated/outdated-missing
+Cmd: ./outdated.@OCAMLEXT@ -f -e
+Type: distcheck
+Printer: text
+
+Name: outdated-missing-native
+Group: outdated
+Expected: tests/applications/dose-tests/outdated-missing-native
+Input: tests/applications/outdated/outdated-missing
+Cmd: ./outdated.@OCAMLEXT@ -f -e --deb-native-arch arch1
 Type: distcheck
 Printer: text
 
@@ -251,6 +280,7 @@ Input: deb://tests/DebianPackages/sid.packages.bz2
 Cmd: ./ceve.@OCAMLEXT@ -T cnf 
 Type: text
 Printer: text
+Speed: slow
 
 Name: ceve_cone_dot
 Group: ceve
@@ -259,6 +289,7 @@ Input: deb://tests/DebianPackages/sid.packages.bz2
 Cmd: ./ceve.@OCAMLEXT@ -T dot -c 3dchess
 Type: text
 Printer: text
+Speed: slow
 
 Name: ceve_cone_multiarch_dot
 Group: ceve
@@ -267,6 +298,7 @@ Input: tests/DebianPackages/sid.packages.bz2
 Cmd: ./ceve.@OCAMLEXT@ -T dot -c 3dchess:amd64 --deb-native-arch amd64 -t deb
 Type: text
 Printer: text
+Speed: slow
 
 Name: deb_buildcheck
 Group: buildcheck
@@ -276,6 +308,7 @@ Cmd: ./deb-buildcheck.@OCAMLEXT@ --failures --explain --latest --deb-native-arch
 Type: buildcheck
 Printer: text
 ExitCode: 1
+Speed: slow
 
 Name: deb_buildcheck_cross
 Group: buildcheck
@@ -286,6 +319,7 @@ Type: buildcheck
 Printer: text
 Ignore: yes
 ExitCode: 1
+Speed: slow
 
 Name: deb_buildcheck_profiles
 Group: buildcheck

@@ -96,7 +96,7 @@ def diff_aux(expectedfile,resultfile,parser):
             print "The order is not the same."
             return True
         else :
-            if verbose > 2 :
+            if False :
                 diff = difflib.unified_diff(open(expectedfile).readlines(),open(resultfile).readlines())
                 sys.stdout.writelines(list(diff))
             return False
@@ -164,27 +164,34 @@ class DoseTests(unittest.TestCase):
             s = s + "\nExpected exitcode : %d" % self.exitcode if self.exitcode is not None else s
             return s + "\n"
     def runTest(self):
-        test_application(self,self.expected,self.cmd,self.difftype, self.exitcode)
+        test_application(self,self.expected,self.cmd,self.difftype,self.exitcode)
 
-def suite(f,runtest,rungroup):
+def suite(f,runtest,rungroup,slow=False):
     suite = unittest.TestSuite()
     groups = Set()
     tests = Set()
     groupFound=False
     testsFound=False
+    def addtest(s) :
+        # we run the slow tests only if 
+        if (slow and 'Speed' in s and s['Speed'] == 'slow') :
+            return
+        else :
+            #default we run the test
+            suite.addTest(DoseTests(s))
     for stanza in parse822(f,lambda s: s[1]):
         s = dict(stanza)
         if s['Name'] not in runtest and 'Ignore' in s and s['Ignore'] == 'yes' :
             continue
         groups.add(s['Group'])
         if (len(runtest) == 0 and len(rungroup) == 0) :
-            suite.addTest(DoseTests(s))
+            addtest(s)
         elif s['Name'] in runtest :
             testFound=True
-            suite.addTest(DoseTests(s))
+            addtest(s)
         elif len(rungroup) > 0 and s['Group'] in rungroup :
             groupFound=True
-            suite.addTest(DoseTests(s))
+            addtest(s)
     if len(runtest) != 0 and testFound == False :
         print "Test(s) [%s] Not found" % (','.join(str(p) for p in runtest)) 
         print "Tests available [%s]" % (','.join(str(p) for p in tests))
@@ -201,16 +208,14 @@ def fixtest(expected_file,cmd):
     output.close()
 
 def main():
-    global verbose
     parser = argparse.ArgumentParser(description='Unit test for Dose applications')
-    parser.add_argument('-v', '--verbose', type=int, nargs=1, default=2) 
+    parser.add_argument('-d', '--diff', action='store_true', default=False, help="Print diffs")
+    parser.add_argument('-s', '--slow', action='store_true', default=False, help="Run slow tests") 
     parser.add_argument('--runtest', nargs=1, default=[]) 
     parser.add_argument('--rungroup', nargs=1, default=[]) 
     parser.add_argument('--fixtest', nargs=1, default=[]) 
     parser.add_argument('inputfile', type=str, nargs=1, help="test file")
     args = parser.parse_args()
-
-    verbose = args.verbose
 
     if len(args.fixtest) > 0 :
         f = args.inputfile[0]
@@ -222,7 +227,7 @@ def main():
                 print "Overwriting expected file: %s" % expected
                 fixtest(expected,cmd)
     else :
-        unittest.TextTestRunner(verbosity=args.verbose).run(suite(args.inputfile[0],args.runtest,args.rungroup))
+        unittest.TextTestRunner(verbosity=2).run(suite(args.inputfile[0],args.runtest,args.rungroup,args.slow))
 
 if __name__ == '__main__':
     main()
