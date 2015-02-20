@@ -17,6 +17,10 @@ open Common
 
 include Util.Logging(struct let label = __FILE__ end) ;;
 
+let load_list_timer = Util.Timer.create "Load" ;;
+let deb_load_list_timer = Util.Timer.create "Load.Debian" ;;
+let deb_load_source_timer = Util.Timer.create "Load.DebianSource" ;;
+
 (** read a debian Packages file - compressed or not *)
 let read_deb ?filter ?(extras=[]) fname =
   Debian.Packages.input_raw ?filter ~extras [fname]
@@ -26,6 +30,7 @@ let read_deb ?filter ?(extras=[]) fname =
  * cll = cudf package list list
  *)
 let deb_load_list options ?(status=[]) dll =
+  Util.Timer.start deb_load_list_timer;
   let pkglist = List.flatten dll in
   let pkglist = if status = [] then pkglist else Debian.Packages.merge status pkglist in
   let tables = Debian.Debcudf.init_tables pkglist in
@@ -39,7 +44,8 @@ let deb_load_list options ?(status=[]) dll =
   in
   let preamble = Debian.Debcudf.preamble in
   let request = Cudf.default_request in
-  (preamble,cll,request,from_cudf,to_cudf)
+  let l = (preamble,cll,request,from_cudf,to_cudf) in
+  Util.Timer.stop deb_load_list_timer l
       
 let eclipse_load_list options dll =
   let extras = [] in
@@ -117,8 +123,6 @@ let deb_load_universe options l =
   let (pr,cll,r,f,t) = deb_load_list options [l] in
   (pr,Cudf.load_universe (List.flatten cll), r, f, t)
 
-(* XXX double minded ... this code is kinda similar to the code in rpmcudf 
- * refactor or not refactor ? *)
 (** transform a list of rpm control stanza into a cudf packages list *)
 let rpm_load_list dll =
 IFDEF HASRPM THEN
@@ -381,26 +385,26 @@ END
 
 (** return a list of Debian packages from a debian source file *)
 let deb_load_source ?filter ?(profiles=[]) ?(noindep=false) buildarch hostarch sourcefile =
+  Util.Timer.start deb_load_source_timer;
   let l = Debian.Sources.input_raw ?filter ~archs:[hostarch] [sourcefile] in
-  Debian.Sources.sources2packages ~noindep ~profiles buildarch hostarch l
+  let r = Debian.Sources.sources2packages ~noindep ~profiles buildarch hostarch l in
+  Util.Timer.stop deb_load_source_timer r
 ;;
-
-let timer = Util.Timer.create "Load" ;;
 
 (** parse and merge a list of files into a cudf package list *)
 let load_list ?(options=None) urilist =
   info "Parsing and normalizing..." ;
-  Util.Timer.start timer;
+  Util.Timer.start load_list_timer;
   let u = parse_input ~options urilist in
-  Util.Timer.stop timer u
+  Util.Timer.stop load_list_timer u
 ;;
 
 (** parse and merge a list of files into a cudf universe *)
 let load_universe ?(options=None) uris =
   info "Parsing and normalizing..." ;
-  Util.Timer.start timer;
+  Util.Timer.start load_list_timer;
   let (pr,cll,r,f,t) = parse_input ~options [uris] in
   let u = (pr,Cudf.load_universe (List.flatten cll), r, f, t) in
-  Util.Timer.stop timer u
+  Util.Timer.stop load_list_timer u
 ;;
 
