@@ -71,6 +71,7 @@ LIBNAMES += common/common \
 						deb/debian \
 						opencsw/csw \
 						eclipse/eclipse \
+						pef/pef \
 						cv/cv
 
 #rpm support

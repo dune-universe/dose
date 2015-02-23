@@ -96,6 +96,15 @@ $(DOSELIBS)/eclipse.%: eclipse/*.ml $(DOSELIBS)/debian.%
 	  fi ; \
 	done
 
+$(DOSELIBS)/pef.%: pef/*.ml $(DOSELIBS)/debian.%
+	$(OCAMLBUILD) $(OBFLAGS) pef/pef.otarget
+	@for i in _build/pef/pef.*; do \
+	  if [ -e $$i ]; then \
+	  cp $$i $(DOSELIBS) ; \
+	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
+	  fi ; \
+	done
+
 $(DOSELIBS)/csw.%: opencsw/*.ml $(DOSELIBS)/debian.%
 	$(OCAMLBUILD) $(OBFLAGS) opencsw/csw.otarget
 	@for i in _build/opencsw/csw.*; do \
