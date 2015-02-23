@@ -78,21 +78,10 @@ val decompose: string -> version_analysis
 val compose: version_analysis -> string 
 
 (** return a version without its epoch and without its binNMU part *)
-val  strip_epoch_binnmu: string -> string
+val  strip_epoch_binnmu: string -> version_analysis
 
-(** {2 Decomposing and recomposing version strings (deprecated interface)} *)
+(** return a version without its epoch part *)
+val  strip_epoch: string -> version_analysis
 
-(** split the debian version into its components.
-    (epoch,upstream,revision,binnmu) = split v
-    v = epoch ^ ":" ^ upstream ^ "-" ^ revision ^ binnmu.
-
-    @deprecated [decompose] should be used instead. *)
-val split : string -> (string * string * string * string)
-
-(** @deprecated [recompose] should be used instead. *)
-val concat : (string * string * string * string) -> string
-
-(** chop the epoch and binnmu component from a version.
-
-    @deprecated [strip_epoch_binnmu] should be used instead. *)
-val normalize : string -> string
+(** return the epoch component of the version. empty string if none *)
+val extract_epoch: string -> string

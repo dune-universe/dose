@@ -208,35 +208,19 @@ let compose = function
   | NonNative("",upstream,revision,"") -> upstream^"-"^revision
   | NonNative(epoch,upstream,revision,"") -> epoch^":"^upstream^"-"^revision
   | NonNative("",upstream,revision,binnmu) -> upstream^"-"^revision^"+"^binnmu
-  | NonNative(epoch,upstream,revision,binnmu) ->
-    epoch^":"^upstream^"-"^revision^"+"^binnmu
+  | NonNative(epoch,upstream,revision,binnmu) ->epoch^":"^upstream^"-"^revision^"+"^binnmu
 ;;
 
 let strip_epoch_binnmu v =
   match decompose v with
-    | Native(_,upstream,_) -> upstream
-    | NonNative(_,upstream,revision,_) -> upstream^"-"^revision
+  | Native(_,upstream,_) -> Native("",upstream,"")
+  | NonNative(_,upstream,revision,_) -> NonNative("",upstream,revision,"")
 ;;
 
-(****************************************************************************)
-(* for the deprecated interface  *)
- 
-let split s = match decompose s with
-    | Native(e,u,b) -> (e,u,"",b)
-    | NonNative(e,u,r,b) -> (e,u,r,b)
+let strip_epoch v =
+  match decompose v with
+  | Native(_,upstream,binnmu) -> Native("",upstream,binnmu)
+  | NonNative(_,upstream,revision,binnmu) -> NonNative("",upstream,revision,binnmu)
 ;;
 
-let concat = function
-  |("",u,"","") -> Printf.sprintf "%s" u (* 1.1 *)
-  |("",u,r,"") -> Printf.sprintf "%s-%s" u r (* 1.1-1 *)
-  |("",u,"",b) -> Printf.sprintf "%s+%s" u b (* 1.1+b1 *)
-  |("",u,r,b) -> Printf.sprintf "%s-%s+%s" u r b (* 1.1-1+b1 *)
-  |(e,u,"","") -> Printf.sprintf "%s:%s" e u (* 1:1.1 *)
-  |(e,u,"",b) -> Printf.sprintf "%s:%s+%s" e u b (* 1:1.1+b1 *)
-  |(e,u,r,"") -> Printf.sprintf "%s:%s-%s" e u r (* 1:1.1-1 *)
-  |(e,u,r,b) -> Printf.sprintf "%s:%s-%s+%s" e u r b (* 1:1.1-1+b1 *)
-;;
-
-let normalize = strip_epoch_binnmu
-
-
+let extract_epoch v = fst(extract_epoch v)

@@ -125,12 +125,15 @@ let all_constraints table pkgname =
 
 (* return a new target rebased accordingly to the epoch of the base version *)
 let align version target =
-  match Version.split version  with
-  |("",_,_,_) -> target
-  |(pe,_,_,_) ->
+  match Version.decompose version with
+  |Version.NonNative("",_,_,_) 
+  |Version.Native("",_,_) -> target
+  |Version.Native(pe,_,_)
+  |Version.NonNative(pe,_,_,_) ->
     let rebase v =
-      let (_,u,r,b) = Version.split v in
-      Version.concat (pe,u,r,b)
+      match Version.decompose v with
+      |Version.Native(e,u,b) -> Version.compose (Version.Native(pe,u,b))
+      |Version.NonNative(_,u,r,b) -> Version.compose (Version.NonNative(pe,u,r,b))
     in
     match target with
     |`Eq v -> `Eq (rebase v)
@@ -149,30 +152,40 @@ let migrate packagelist target =
 let extract_epochs vl =
   Util.list_unique (
     List.fold_left (fun acc v ->
-      let (e,_,_,_) = Version.split v in
-      e :: acc
+      (Version.extract_epoch v) :: acc
     ) [] vl
   )
 ;;
 
 let add_normalize vl =
   List.fold_left (fun acc v ->
-    let (e,u,r,b) = Version.split v in
-    let n1 = Version.concat ("",u,r,"") in
-    let n2 = Version.concat ("",u,r,b) in
-    n1::n2::v::acc
+    match Version.decompose v with
+    |Version.NonNative(_,u,r,b) ->
+        let n1 = Version.compose (Version.NonNative("",u,r,"")) in
+        let n2 = Version.compose (Version.NonNative("",u,r,b)) in
+        n1::n2::v::acc
+    |Version.Native(_,u,b) ->
+        let n1 = Version.compose (Version.Native("",u,"")) in
+        let n2 = Version.compose (Version.Native("",u,b)) in
+        n1::n2::v::acc
   ) [] vl
 ;;
 
 let add_epochs el vl =
   List.fold_left (fun acc1 e ->
     List.fold_left (fun acc2 v ->
-      match Version.split v with
-      |("",u,r,b) -> (Version.concat (e,u,r,b))::v::acc2
-      |_ -> v::acc2
+      match Version.decompose v with
+      |Version.Native("",u,b) ->
+          let n = Version.compose (Version.Native(e,u,b)) in
+          n::v::acc2
+      |Version.NonNative("",u,r,b) ->
+          let n = Version.compose (Version.NonNative(e,u,r,b)) in
+          n::v::acc2
+      | _ -> v::acc2
     ) acc1 vl
   ) [] el
 ;;
+
 
 let all_ver_constr constraints_table cluster =
   let (versionlist, constr) =

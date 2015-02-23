@@ -119,9 +119,7 @@ let evalsel getv target constr =
   |`In (v1,v2) -> evalsel ((getv v2) - 1) constr
 ;;
 
-let strip v = 
-  let (e,v,u,b) = Debian.Version.split v in
-  Debian.Version.concat ("",v,u,b)
+let strip v = Debian.Version.compose (Debian.Version.strip_epoch v)
 
 let version_of_target ?(strip=(fun x -> x)) getv = function
   |`Eq v -> getv (strip v)
@@ -131,8 +129,8 @@ let version_of_target ?(strip=(fun x -> x)) getv = function
 
 let lesser_or_equal getv target equivs v =
   let v_le_target =
-    match Debian.Version.split v with
-    |("",_,_,_) ->
+    match Debian.Version.decompose v with
+    |Debian.Version.Native(_,_,_) ->
         (* in this case the reference version is without epoch,
          * hence no aligmement of the target. We want to exclude
          * this version if it is less or equal then the reference
