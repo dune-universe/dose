@@ -70,7 +70,6 @@ LIBNAMES += common/common \
 						algo/algo \
 						deb/debian \
 						opencsw/csw \
-						eclipse/eclipse \
 						pef/pef \
 						cv/cv
 

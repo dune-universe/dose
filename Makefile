@@ -87,15 +87,6 @@ $(DOSELIBS)/rpm.%: rpm/*.ml $(DOSELIBS)/algo.%
 	  fi ; \
 	done
 
-$(DOSELIBS)/eclipse.%: eclipse/*.ml $(DOSELIBS)/debian.%
-	$(OCAMLBUILD) $(OBFLAGS) eclipse/eclipse.otarget
-	@for i in _build/eclipse/eclipse.*; do \
-	  if [ -e $$i ]; then \
-	  cp $$i $(DOSELIBS) ; \
-	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
-	  fi ; \
-	done
-
 $(DOSELIBS)/pef.%: pef/*.ml $(DOSELIBS)/debian.%
 	$(OCAMLBUILD) $(OBFLAGS) pef/pef.otarget
 	@for i in _build/pef/pef.*; do \
@@ -123,7 +114,7 @@ $(DOSELIBS)/cv.%:
 	  fi ; \
 	done
 
-$(DOSELIBS)/doseparse.%: $(DOSELIBS)/debian.% $(DOSELIBS)/eclipse.%
+$(DOSELIBS)/doseparse.%: $(DOSELIBS)/debian.% $(DOSELIBS)/pef.%
 	$(OCAMLBUILD) $(OBFLAGS) doseparse/doseparse.otarget
 	@for i in _build/doseparse/doseparse.*; do \
 	  if [ -e $$i ]; then \
@@ -132,7 +123,7 @@ $(DOSELIBS)/doseparse.%: $(DOSELIBS)/debian.% $(DOSELIBS)/eclipse.%
 	  fi ; \
 	done
 
-$(DOSELIBS)/doseparseNoRpm.%: $(DOSELIBS)/debian.% $(DOSELIBS)/eclipse.%
+$(DOSELIBS)/doseparseNoRpm.%: $(DOSELIBS)/debian.% $(DOSELIBS)/pef.%
 	$(OCAMLBUILD) $(OBFLAGS) doseparseNoRpm/doseparseNoRpm.otarget
 	@for i in _build/doseparseNoRpm/doseparseNoRpm.*; do \
 	  if [ -e $$i ]; then \
@@ -242,5 +233,5 @@ upload: doc
 	rsync -avz -O dose3.docdir/ scm.gforge.inria.fr:/home/groups/dose/htdocs/doc/api/
 
 .PHONY: \
-	common algo debian eclipse rpm cws doseparseNoRpm doseparse \
+	common algo debian pef rpm cws doseparseNoRpm doseparse \
 	all clean top-level headers test tags install uninstall dist doc man
