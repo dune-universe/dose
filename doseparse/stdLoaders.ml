@@ -62,6 +62,51 @@ let eclipse_load_list options dll =
   let request = Cudf.default_request in
   (preamble,cll,request,from_cudf,to_cudf)
  
+let pef_load_list options dll =
+  let extras = [] in
+  let pkglist = List.flatten dll in
+  let tables = Pef.Pefcudf.init_tables Debian.Version.compare pkglist in
+  let from_cudf (p,i) = (p, Pef.Pefcudf.get_real_version tables (p,i)) in
+  let to_cudf (p,v) = (p, Pef.Pefcudf.get_cudf_version tables (p,v)) in
+  let cll = 
+    List.map (fun l ->
+      List.map (Pef.Pefcudf.tocudf ~extras tables) l
+    ) dll
+  in
+  let preamble = Pef.Pefcudf.preamble in
+  let request = Cudf.default_request in
+  (preamble,cll,request,from_cudf,to_cudf)
+ 
+let eclipse_load_list options dll =
+  let extras = [] in
+  let pkglist = List.flatten dll in
+  let tables = Eclipse.Eclipsecudf.init_tables pkglist in
+  let from_cudf (p,i) = (p, Eclipse.Eclipsecudf.get_real_version tables (p,i)) in
+  let to_cudf (p,v) = (p, Eclipse.Eclipsecudf.get_cudf_version tables (p,v)) in
+  let cll = 
+    List.map (fun l ->
+      List.map (Eclipse.Eclipsecudf.tocudf ~extras tables) l
+    ) dll
+  in
+  let preamble = Eclipse.Eclipsecudf.preamble in
+  let request = Cudf.default_request in
+  (preamble,cll,request,from_cudf,to_cudf)
+
+let pef_load_list options dll =
+  let extras = [] in
+  let pkglist = List.flatten dll in
+  let tables = Pef.Pefcudf.init_tables Debian.Version.compare pkglist in
+  let from_cudf (p,i) = (p, Pef.Pefcudf.get_real_version tables (p,i)) in
+  let to_cudf (p,v) = (p, Pef.Pefcudf.get_cudf_version tables (p,v)) in
+  let cll =
+    List.map (fun l ->
+      List.map (Pef.Pefcudf.tocudf ~extras tables) l
+    ) dll
+  in
+  let preamble = Pef.Pefcudf.preamble in
+  let request = Cudf.default_request in
+  (preamble,cll,request,from_cudf,to_cudf)
+
 let csw_load_list dll =
   let pkglist = List.flatten dll in
   let tables = Csw.Cswcudf.init_tables pkglist in
@@ -274,6 +319,15 @@ let eclipse_parse_input options urilist =
   in
   eclipse_load_list options dll
 
+let pef_parse_input options urilist =
+  let dll = 
+    List.map (fun l ->
+        let filelist = unpack_l `Pef l in
+        Pef.Packages.input_raw filelist
+    ) urilist
+  in
+  pef_load_list options dll
+
 let csw_parse_input urilist =
   let dll = 
     List.map (fun l ->
@@ -330,6 +384,7 @@ let parse_input ?(options=None) urilist =
   |`Deb, None
   |`DebSrc, None -> deb_parse_input Debian.Debcudf.default_options filelist
   |`Eclipse, None -> eclipse_parse_input Debian.Debcudf.default_options filelist
+  |`Pef, None -> pef_parse_input Debian.Debcudf.default_options filelist
 
   |`Deb, Some (StdOptions.Deb opt)
   |`DebSrc, Some (StdOptions.Deb opt) -> deb_parse_input opt filelist
@@ -338,6 +393,7 @@ let parse_input ?(options=None) urilist =
   |`Edsp, _ -> edsp_parse_input Debian.Debcudf.default_options filelist
 
   |`Eclipse, Some (StdOptions.Eclipse opt) -> eclipse_parse_input opt filelist
+  |`Pef, Some (StdOptions.Pef opt) -> pef_parse_input opt filelist
 
   |`Csw, None -> csw_parse_input filelist
 
@@ -372,7 +428,7 @@ END
 ;;
 
 let supported_formats () =
-  let standard = ["cudf://";"deb://";"deb://-";"eclipse://"] in
+  let standard = ["cudf://";"deb://";"deb://-";"eclipse://";"pef://"] in
   let rpm = 
 IFDEF HASRPM THEN
      ["hdlist://";"synthesis://"]

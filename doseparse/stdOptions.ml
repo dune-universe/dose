@@ -217,6 +217,7 @@ end
 type options =
   |Deb of Debian.Debcudf.options
   |Eclipse of Debian.Debcudf.options
+  |Pef of Debian.Debcudf.options
   |Edsp of Debian.Debcudf.options
   |Cv of Cv.Cvcudf.options
   |Csw
@@ -291,6 +292,7 @@ module DistribOptions = struct
         Debian.Debcudf.ignore_essential = true
       })
     |`Eclipse -> Some (Eclipse Debian.Debcudf.default_options)
+    |`Pef -> Some (Pef Debian.Debcudf.default_options)
     |`Cv -> Some (Cv Cv.Cvcudf.default_options)
     |_ -> None
 
@@ -298,6 +300,7 @@ module DistribOptions = struct
     |`Deb |`DebSrc -> Some (Deb (set_deb_options ()))
     |`Edsp -> Some (Edsp (set_deb_options ()))
     |`Eclipse -> Some (Eclipse Debian.Debcudf.default_options)
+    |`Pef -> Some (Pef Debian.Debcudf.default_options)
     |`Cv -> Some (Cv (set_cv_options ()))
     |_ -> None
   ;;
