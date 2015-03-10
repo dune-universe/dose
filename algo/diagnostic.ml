@@ -88,7 +88,7 @@ let default_result n = {
   statistic = Hashtbl.create 17
 }
 
-let pp_out_version fmt = Format.fprintf fmt "output-version: 1.0@.";;
+let pp_out_version fmt = Format.fprintf fmt "output-version: 1.1@.";;
 
 (** given a list of dependencies, return a list of list containg all
  *  paths in the dependency tree starting from [root] *)
@@ -321,7 +321,8 @@ let condense gr =
 
 (* END *)
 
-let print_error pp root fmt l =
+(* only two failures reasons. Dependency describe the dependency chain to a failure witness *)
+let print_error ?(minimal=false) pp root fmt l =
   let (deps,res) = List.partition (function Dependency _ -> true |_ -> false) l in
   let pp_reason fmt = function
     |Conflict (i,j,vpkg) ->
@@ -329,7 +330,7 @@ let print_error pp root fmt l =
         Format.fprintf fmt "@[<v 1>pkg1:@,%a@," (pp_package ~source:true pp) i;
         Format.fprintf fmt "unsat-conflict: %a@]@," (pp_vpkglist pp) [vpkg];
         Format.fprintf fmt "@[<v 1>pkg2:@,%a@]" (pp_package ~source:true pp) j;
-        if deps <> [] then begin
+        if deps <> [] && not minimal then begin
           let pl1 = create_pathlist root (Dependency(i,[],[])::deps) in
           let pl2 = create_pathlist root (Dependency(j,[],[])::deps) in
           if pl1 <> [[]] then
@@ -343,14 +344,15 @@ let print_error pp root fmt l =
         Format.fprintf fmt "@[<v 1>missing:@,";
         Format.fprintf fmt "@[<v 1>pkg:@,%a@]" 
           (pp_dependency ~label:"unsat-dependency" pp) (i,vpkgs);
-        let pl = create_pathlist root (Dependency(i,vpkgs,[])::deps) in
-        if pl <> [[]] then begin
-          Format.fprintf fmt "@,@[<v 1>depchains:@,%a@]" (pp_dependencies pp) pl;
-          Format.fprintf fmt "@]"
+        if not minimal then begin
+          let pl = create_pathlist root (Dependency(i,vpkgs,[])::deps) in
+          if pl <> [[]] then begin
+            Format.fprintf fmt "@,@[<v 1>depchains:@,%a@]" (pp_dependencies pp) pl;
+            Format.fprintf fmt "@]"
+          end else
+            Format.fprintf fmt "@]"
         end else
           Format.fprintf fmt "@]"
-    (* only two failures reasons. Dependency describe the 
-     * dependency chain to a failure witness *)
     |_ -> assert false 
   in
   pp_list pp_reason fmt res
@@ -463,10 +465,15 @@ let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
       Format.fprintf fmt "@[<v 1>-@,";
       begin match req with
       |Package r -> 
-         Format.fprintf fmt "@[<v>%a@]@," (pp_package ~source:true pp) r
+          Format.fprintf fmt "@[<v>%a@]@," (pp_package ~source:true pp) r;
+          if minimal then
+            Format.fprintf fmt "success: %a@," CudfAdd.pp_package r
       |PackageList rl -> 
-         Format.fprintf fmt "coinst: %s@," 
-         (String.concat " , " (List.map CudfAdd.string_of_package rl));
+          Format.fprintf fmt "coinst: %s@," 
+          (String.concat " , " (List.map CudfAdd.string_of_package rl));
+          if minimal then
+            Format.fprintf fmt "success: %s@,"
+            (String.concat " , " (List.map CudfAdd.string_of_package rl))
       end;
       Format.fprintf fmt "status: ok@,";
       if explain then begin
@@ -481,22 +488,27 @@ let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
   |{result = Failure f; request = Package r } when failure ->
       Format.fprintf fmt "@[<v 1>-@,";
       Format.fprintf fmt "@[<v>%a@]@," (pp_package ~source:true pp) r;
+      if minimal then
+        Format.fprintf fmt "failure: %a@," CudfAdd.pp_package r;
       Format.fprintf fmt "status: broken@,";
       if explain then begin
        Format.fprintf fmt "@[<v 1>reasons:@,";
-       Format.fprintf fmt "@[<v>%a@]" (print_error pp r) (f ());
+       Format.fprintf fmt "@[<v>%a@]" (print_error ~minimal pp r) (f ());
        Format.fprintf fmt "@]"
       end;
       Format.fprintf fmt "@]@,"
   |{result = Failure f; request = PackageList rl } when failure -> 
        Format.fprintf fmt "@[<v 1>-@,";
        Format.fprintf fmt "coinst: %s@," (String.concat " , " (List.map CudfAdd.string_of_package rl));
+       if minimal then
+         Format.fprintf fmt "failure: %s@,"
+         (String.concat " , " (List.map CudfAdd.string_of_package rl));
        Format.fprintf fmt "status: broken@,";
        Format.fprintf fmt "@]@,";
        if explain then begin
          Format.fprintf fmt "@[<v 1>reasons:@,";
          List.iter (fun r -> 
-           Format.fprintf fmt "@[<v>%a@]@," (print_error pp r) (f ());
+           Format.fprintf fmt "@[<v>%a@]@," (print_error ~minimal pp r) (f ());
          ) rl;
         Format.fprintf fmt "@]@,"
        end;

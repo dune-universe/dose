@@ -221,7 +221,7 @@ let main () =
     Format.fprintf fmt "total-packages: %d@." universe_size;
     Format.fprintf fmt "broken-packages: %d@." nbp;
     if summary then 
-      Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~pp ()) results;
+      Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~explain ~pp ()) results;
     nbp
   end
 ;;

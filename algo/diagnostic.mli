@@ -99,7 +99,7 @@ val pp_dependencies : pp ->
 val pp_list :
   (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a list -> unit
 
-val print_error : pp ->
+val print_error : ?minimal : bool -> pp ->
   Cudf.package -> Format.formatter -> reason list -> unit
 
 (** If the installablity query is successfull, [get_installationset] return 
