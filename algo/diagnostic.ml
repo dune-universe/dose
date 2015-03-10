@@ -550,7 +550,7 @@ let pp_summary_row explain pp fmt = function
       Format.fprintf fmt "@[<v 1>conflict:@,";
       Format.fprintf fmt "@[<v 1>pkg1:@,%a@]@," (pp_package pp) i;
       Format.fprintf fmt "@[<v 1>pkg2:@,%a@]@," (pp_package pp) j;
-      Format.fprintf fmt "@[<v 1>broken-by: %d@]" (List.length pl);
+      Format.fprintf fmt "@[<v 1>breaks: %d@]" (List.length pl);
       if explain then begin
         Format.fprintf fmt "@,@[<v 1>packages:@," ;
         pp_list (pp_package ~source:true pp) fmt pl;
@@ -559,8 +559,10 @@ let pp_summary_row explain pp fmt = function
       Format.fprintf fmt "@]"
   |(Missing (i,vpkgs) ,pl) -> 
       Format.fprintf fmt "@[<v 1>missing:@,";
-      Format.fprintf fmt "@[<v 1>unsat-dependency: %a@]@," (pp_vpkglist pp) vpkgs;
-      Format.fprintf fmt "@[<v 1>broken-by: %d@]" (List.length pl);
+      Format.fprintf fmt "@[<v 1>pkg:@,%a@]@,"
+        (pp_dependency ~label:"unsat-dependency" pp) (i,vpkgs);
+      (* Format.fprintf fmt "@[<v 1>unsat-dependency: %a@]@," (pp_vpkglist pp) vpkgs; *)
+      Format.fprintf fmt "@[<v 1>breaks: %d@]" (List.length pl);
       if explain then begin
         Format.fprintf fmt "@,@[<v 1>packages:@," ;
         pp_list (pp_package ~source:true pp) fmt pl;
