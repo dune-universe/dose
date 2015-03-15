@@ -10,7 +10,7 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-(** Representation of a eclipse package description item. *)
+(** Representation of a PEF stanza. *)
 
 open ExtLib
 open Common
@@ -25,7 +25,6 @@ type package = {
   conflicts : Packages_types.vpkglist;
   provides : Packages_types.vpkglist;
   recommends : Packages_types.vpkgformula;
-  suggests : Packages_types.vpkglist;
   extras : (string * string) list;
 }
 
@@ -36,20 +35,19 @@ let default_package = {
   conflicts = [];
   provides = [];
   recommends = [];
-  suggests = [];
   extras = [];
 }
 
 let parse_s = Debian.Packages.parse_s
 let parse_e = Debian.Packages.parse_e
 let parse_name (_,s) = s
-let parse_version (_,s) = Version.parse_version s
+let parse_version (_,s) = s
 let parse_vpkg = Debian.Packages.parse_vpkg
 let parse_vpkgformula = Debian.Packages.parse_vpkgformula
 let parse_vpkglist = Debian.Packages.parse_vpkglist
 
 let parse_package_stanza extras par =
-  let extras = (* "status":: *) extras in
+  let extras = extras in
   Some
     {
       name = parse_s ~err:"(MISSING NAME)" parse_name "package" par;
@@ -58,12 +56,11 @@ let parse_package_stanza extras par =
       conflicts = parse_s ~opt:[] ~multi:true parse_vpkglist "conflicts" par;
       provides = parse_s ~opt:[] ~multi:true parse_vpkglist "provides" par;
       recommends = parse_s ~opt:[] ~multi:true parse_vpkgformula "recommends" par;
-      suggests = parse_s ~opt:[] ~multi:true parse_vpkglist "suggests" par;
       extras = parse_e extras par;
     }
 
 let parse_packages_in ?(extras=[]) fname ic =
-  info "Parsing eclipse 822 file %s..." fname;
+  info "Parsing PEF 822 file %s..." fname;
   let stanza_parser = parse_package_stanza extras in
   Format822.parse_from_ch (
     Debian.Packages.packages_parser fname stanza_parser []
@@ -79,13 +76,11 @@ module Set = struct
 end
 (**/**)
 
-(** input_raw [file] : parse a debian Packages file from [file] *)
 let input_raw ?(extras=[]) = 
   let module M = Format822.RawInput(Set) in
   M.input_raw (parse_packages_in ~extras)
 ;;
 
-(** input_raw_ch ch : parse a debian Packages file from channel [ch] *)
 let input_raw_ch ?(extras=[]) = 
   let module M = Format822.RawInput(Set) in
   M.input_raw_ch (parse_packages_in ~extras)

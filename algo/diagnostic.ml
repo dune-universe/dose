@@ -317,6 +317,9 @@ let condense gr =
   in
   Bfs.iter visit g;
 
+  let children = ... in
+  if all children are packages then
+    if 
 *)
 
 (* END *)

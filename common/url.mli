@@ -13,7 +13,7 @@
 type debtypes = [ `Edsp | `Deb | `DebSrc ]
 type rpmtypes = [ `Synthesis | `Hdlist ]
 type osgitypes = [ `Eclipse ]
-type othertypes = [ `Csw | `Cv ]
+type othertypes = [ `Pef | `Csw | `Cv ]
 
 type filetypes = [ `Cudf | debtypes | rpmtypes | osgitypes | othertypes ]
 

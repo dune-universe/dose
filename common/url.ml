@@ -20,7 +20,7 @@ include Util.Logging(struct let label = __FILE__ end) ;;
 type debtypes = [ `Edsp | `Deb | `DebSrc ]
 type rpmtypes = [ `Synthesis | `Hdlist ]
 type osgitypes = [ `Eclipse ]
-type othertypes = [ `Csw | `Cv ]
+type othertypes = [ `Csw | `Cv | `Pef ]
 
 type filetypes = [ `Cudf | debtypes | rpmtypes | osgitypes | othertypes ]
 
@@ -31,6 +31,7 @@ let scheme_to_string = function
   | `Deb -> "deb"
   | `DebSrc -> "debsrc"
   | `Eclipse -> "eclipse"
+  | `Pef -> "pef"
   | `Cudf -> "cudf"
   | `Synthesis -> "synthesis"
   | `Hdlist -> "hdlist"
@@ -44,13 +45,14 @@ let scheme_of_string = function
   | "debsrc" -> `DebSrc
   | "cudf" -> `Cudf
   | "eclipse" -> `Eclipse
+  | "pef" -> `Pef
   | "synthesis" -> `Synthesis
   | "hdlist" -> `Hdlist
   | s -> fatal "unknown input scheme" s
 ;;
 
 let supported_input_types =
-  [`Edsp; `Deb ; `DebSrc ; `Synthesis ; `Hdlist ; `Eclipse ; `Csw ; `Cudf ; `Cv ]
+  [`Edsp; `Deb ; `DebSrc ; `Synthesis ; `Hdlist ; `Eclipse ; `Pef ; `Csw ; `Cudf ; `Cv ]
 ;;
 
 (***********************************************************************)

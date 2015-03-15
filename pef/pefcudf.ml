@@ -1,6 +1,6 @@
 (**************************************************************************************)
-(*  Copyright (C) 2009 Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
-(*  Copyright (C) 2009 Mancoosi Project                                               *)
+(*  Copyright (C) 2015 Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
+(*  Copyright (C) 2015 Mancoosi Project                                               *)
 (*                                                                                    *)
 (*  This library is free software: you can redistribute it and/or modify              *)
 (*  it under the terms of the GNU Lesser General Public License as                    *)
@@ -10,7 +10,7 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-(** Eclipse Specific Cudf conversion routines *)
+(** PEF (package exchange format) conversion routines *)
 
 open ExtLib
 open Common
@@ -65,7 +65,6 @@ let init_versions_table table =
     conj_iter pkg.conflicts ;
     cnf_iter pkg.depends;
     cnf_iter pkg.recommends;
-    conj_iter pkg.suggests
 ;;
 
 let init_virtual_table table pkg =
@@ -93,7 +92,7 @@ let init_versioned_table table pkg =
   add_iter_cnf pkg.depends
 ;;
 
-let init_tables ?(compare=Version.compare) pkglist =
+let init_tables compare pkglist =
   let n = 2 * List.length pkglist in
   let tables = create n in 
   let temp_versions_table = Hashtbl.create n in
@@ -151,7 +150,6 @@ type extramap = (string * (string * Cudf_types.typedecl1)) list
 let preamble = 
   (* number is a mandatory property -- no default *)
   let l = [
-    ("suggests",(`Vpkglist (Some [])));
     ("recommends",(`Vpkgformula (Some [])));
     ("number",(`String None)) ]
   in
@@ -171,14 +169,13 @@ let add_extra extras tables pkg =
     ) extras
   in
   let recommends = ("recommends", `Vpkgformula (loadll tables pkg.recommends)) in
-  let suggests = ("suggests", `Vpkglist (loadl tables pkg.suggests)) in
 
   List.filter_map (function
     |(_,`Vpkglist []) -> None
     |(_,`Vpkgformula []) -> None
     |e -> Some e
   )
-  [number; recommends ; suggests] @ l
+  [number; recommends] @ l
 ;;
 
 let tocudf tables ?(extras=[]) ?(inst=false) pkg =
@@ -194,17 +191,17 @@ let tocudf tables ?(extras=[]) ?(inst=false) pkg =
 let lltocudf = loadll
 let ltocudf = loadl
 
-let load_list l =
-  let timer = Util.Timer.create "Eclipse.eclipsecudf.load_list" in
+let load_list compare l =
+  let timer = Util.Timer.create "Pef.ToCudf" in
   Util.Timer.start timer;
-  let tables = init_tables l in
+  let tables = init_tables compare l in
   let pkglist = List.map (tocudf tables) l in
   clear tables;
   Util.Timer.stop timer pkglist
 
-let load_universe l =
-  let pkglist = load_list l in
-  let timer = Util.Timer.create "Eclipse.Eclipsecudf.load_universe" in
+let load_universe compare l =
+  let pkglist = load_list compare l in
+  let timer = Util.Timer.create "Pef.ToCudf" in
   Util.Timer.start timer;
   let univ = Cudf.load_universe pkglist in
   Util.Timer.stop timer univ
