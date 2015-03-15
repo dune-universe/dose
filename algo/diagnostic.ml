@@ -533,11 +533,13 @@ let collect results d =
       List.iter (fun reason ->
         match reason with
         |Conflict (i,j,_) ->
-            add results.summary reason r;
+            if not (Cudf.( r =% i || r =% j )) then
+              add results.summary reason r;
             results.conflict <- results.conflict + 1;
             conflicts := !conflicts + 1
         |Missing (i,vpkgs) ->
-            add results.summary reason r;
+            if not (Cudf.( r =% i )) then
+              add results.summary reason r;
             results.missing <- results.missing + 1;
             missing := !missing + 1
         |_ -> ()
