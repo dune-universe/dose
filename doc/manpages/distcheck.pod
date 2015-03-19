@@ -206,9 +206,9 @@ consists of an installation set.
 =item B<-m>, B<--explain-minimal> 
 
 For all packages B<P> that are found installable, and when used in conjunction
-with B<--success>, prints a reduced instllation set containing only those
+with B<--successes>, prints a reduced installation set containing only those
 packages in the dependency cone of B<P>.  It has no effect together with
-together with B<--failures>.
+B<--failures>.
 
 =item B<--summary>
 
