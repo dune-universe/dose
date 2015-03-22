@@ -26,13 +26,23 @@ let check_fail file =
   end with End_of_file -> (close_in ic ; false)
 ;;
 
-(** see mktemp(1) for the syntax of [tmp_pattern] *)
-let mktmpdir tmp_pattern =
-  let ic =
-    Unix.open_process_in (Printf.sprintf "(mktemp --tmpdir -d %s || mktemp -d -t %s) 2>/dev/null" tmp_pattern tmp_pattern) in
-  let path = input_line ic in
-  ignore (Unix.close_process_in ic);
-  path
+let prng = lazy(Random.State.make_self_init ());;
+
+(* bits and pieces borrowed from ocaml stdlib/filename.ml *)
+let mktmpdir prefix suffix =
+  let temp_dir = try Sys.getenv "TMPDIR" with Not_found -> "/tmp" in
+  let temp_file_name temp_dir prefix suffix =
+    let rnd = (Random.State.bits (Lazy.force prng)) land 0xFFFFFF in
+    Filename.concat temp_dir (Printf.sprintf "%s%06x%s" prefix rnd suffix)
+  in
+  let rec try_name counter =
+    let name = temp_file_name temp_dir prefix suffix in
+    try
+      Unix.mkdir name 0o700;
+      name
+    with Unix.Unix_error _ as e ->
+      if counter >= 1000 then raise e else try_name (counter + 1)
+  in try_name 0
 
 (* XXX this function scares me... what if I manage to create a path = "/" *)
 let rmtmpdir path =
@@ -88,7 +98,7 @@ let timer4 = Util.Timer.create "solver" ;;
 let execsolver exec_pat criteria cudf = 
   let (_,universe,_) = cudf in
 
-  let tmpdir = mktmpdir "tmp.apt-cudf.XXXXXXXXXX" in
+  let tmpdir = mktmpdir "tmp.apt-cudf." "" in
   at_exit (fun () -> rmtmpdir tmpdir);
   let solver_in = Filename.concat tmpdir "in-cudf" in
   Unix.mkfifo solver_in 0o600;
