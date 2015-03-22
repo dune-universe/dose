@@ -44,10 +44,16 @@ let mktmpdir prefix suffix =
       if counter >= 1000 then raise e else try_name (counter + 1)
   in try_name 0
 
-(* XXX this function scares me... what if I manage to create a path = "/" *)
 let rmtmpdir path =
-  if String.exists path "apt-cudf" then (* safe guard, sort of *)
-    ignore (Unix.system (Printf.sprintf "rm -rf %s" path))
+  begin try
+    Sys.remove (Filename.concat path "in-cudf");
+    Sys.remove (Filename.concat path "out-cudf")
+  with e -> () end;
+  try
+    Unix.rmdir path
+  with e ->
+    warning "cannot delete temporary directory %s - not empty?" path;
+    raise e
 ;;
 
 let rec input_all_lines acc chan =
@@ -143,7 +149,6 @@ let execsolver exec_pat criteria cudf =
   else 
     try begin
       let cudf_parser = Cudf_parser.from_file solver_out in
-      Sys.remove solver_in; Sys.remove solver_out ;
       try Cudf_parser.load_solution cudf_parser universe with
       |Cudf_parser.Parse_error _
       |Cudf.Constraint_violation _ ->
