@@ -105,54 +105,56 @@ let execsolver exec_pat criteria cudf =
   let (_,universe,_) = cudf in
 
   let tmpdir = mktmpdir "tmp.apt-cudf." "" in
-  at_exit (fun () -> rmtmpdir tmpdir);
-  let solver_in = Filename.concat tmpdir "in-cudf" in
-  Unix.mkfifo solver_in 0o600;
-  let solver_out = Filename.concat tmpdir "out-cudf" in
-  let cmd = interpolate_solver_pat exec_pat solver_in solver_out criteria in
+  let aux () =
+    let solver_in = Filename.concat tmpdir "in-cudf" in
+    Unix.mkfifo solver_in 0o600;
+    let solver_out = Filename.concat tmpdir "out-cudf" in
+    let cmd = interpolate_solver_pat exec_pat solver_in solver_out criteria in
 
-  notice "%s" cmd;
+    notice "%s" cmd;
 
-  (* Tell OCaml we want to capture SIGCHLD                       *)
-  (* In case the external solver fails before reading its input, *)
-  (* this will raise a Unix.EINTR error which is captured below  *)
-  let eintr_handl = Sys.signal Sys.sigchld (Sys.Signal_handle (fun _ -> ())) in
+    (* Tell OCaml we want to capture SIGCHLD                       *)
+    (* In case the external solver fails before reading its input, *)
+    (* this will raise a Unix.EINTR error which is captured below  *)
+    let eintr_handl = Sys.signal Sys.sigchld (Sys.Signal_handle (fun _ -> ())) in
 
-  let env = Unix.environment () in
-  let (cin,cout,cerr) = Unix.open_process_full cmd env in
+    let env = Unix.environment () in
+    let (cin,cout,cerr) = Unix.open_process_full cmd env in
 
-  Util.Timer.start timer3;
-  begin
-    try
-      let solver_in_fd = Unix.openfile solver_in [Unix.O_WRONLY;Unix.O_SYNC] 0 in
-      let oc = Unix.out_channel_of_descr solver_in_fd in
-      Cudf_printer.pp_cudf oc cudf;
-      close_out oc
-    with Unix.Unix_error (Unix.EINTR,_,_) ->  info "Interrupted by EINTR while executing command '%s'" cmd
-  end;
-  Util.Timer.stop timer3 ();
-  (* restore previous behaviour on sigchild *)
-  Sys.set_signal Sys.sigchld eintr_handl;
+    Util.Timer.start timer3;
+    begin
+      try
+        let solver_in_fd = Unix.openfile solver_in [Unix.O_WRONLY;Unix.O_SYNC] 0 in
+        let oc = Unix.out_channel_of_descr solver_in_fd in
+        Cudf_printer.pp_cudf oc cudf;
+        close_out oc
+      with Unix.Unix_error (Unix.EINTR,_,_) ->  info "Interrupted by EINTR while executing command '%s'" cmd
+    end;
+    Util.Timer.stop timer3 ();
+    (* restore previous behaviour on sigchild *)
+    Sys.set_signal Sys.sigchld eintr_handl;
 
-  Util.Timer.start timer4;
-  let lines_cin = input_all_lines [] cin in
-  let lines = input_all_lines lines_cin cerr in
-  let exit_code = Unix.close_process_full (cin,cout,cerr) in
-  check_exit_status cmd exit_code;
-  notice "\n%s" (String.concat "\n" lines);
-  Util.Timer.stop timer4 ();
+    Util.Timer.start timer4;
+    let lines_cin = input_all_lines [] cin in
+    let lines = input_all_lines lines_cin cerr in
+    let exit_code = Unix.close_process_full (cin,cout,cerr) in
+    check_exit_status cmd exit_code;
+    notice "\n%s" (String.concat "\n" lines);
+    Util.Timer.stop timer4 ();
 
-  if not(Sys.file_exists solver_out) then
-    fatal "(CRASH) Solution file not found"
-  else if check_fail solver_out then
-    raise Unsat
-  else 
-    try begin
-      let cudf_parser = Cudf_parser.from_file solver_out in
-      try Cudf_parser.load_solution cudf_parser universe with
-      |Cudf_parser.Parse_error _
-      |Cudf.Constraint_violation _ ->
-        fatal "(CRASH) Solution file contains an invalid solution"
-   end with Cudf.Constraint_violation s ->
-     fatal "(CUDF) Malformed solution: %s" s ;
+    if not(Sys.file_exists solver_out) then
+      fatal "(CRASH) Solution file not found"
+    else if check_fail solver_out then
+      raise Unsat
+    else 
+      try begin
+        let cudf_parser = Cudf_parser.from_file solver_out in
+        try Cudf_parser.load_solution cudf_parser universe with
+        |Cudf_parser.Parse_error _
+        |Cudf.Constraint_violation _ ->
+          fatal "(CRASH) Solution file contains an invalid solution"
+      end with Cudf.Constraint_violation s ->
+        fatal "(CUDF) Malformed solution: %s" s ;
+  in
+  finally (fun () -> rmtmpdir tmpdir) aux ();
 ;;
