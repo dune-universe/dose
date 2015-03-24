@@ -148,8 +148,7 @@ let execsolver exec_pat criteria cudf =
       raise Unsat
     else 
       try begin
-        let cudf_parser = Cudf_parser.from_file solver_out in
-        try Cudf_parser.load_solution cudf_parser universe with
+        try Cudf_parser.load_solution_from_file solver_out universe with
         |Cudf_parser.Parse_error _
         |Cudf.Constraint_violation _ ->
           fatal "(CRASH) Solution file contains an invalid solution"
