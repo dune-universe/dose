@@ -293,7 +293,8 @@ let loadlp ?(enc=false) tables l =
 
 let preamble = 
   let l = [
-    (* number,type,architecture are mandatory properties -- no default *)
+    (* name,number,type,architecture are mandatory properties -- no default *)
+    ("name", (`String None));
     ("number",(`String None));
     ("type",(`String None));
     ("architecture",(`String None));
@@ -315,6 +316,7 @@ let preamble =
 
 let add_extra_default extras tables pkg =
   let check = function [] :: _ -> failwith (Printf.sprintf "Malformed dep (%s %s)" pkg.name pkg.version) |l -> l in
+  let name = ("name",`String pkg.name) in
   let number = ("number",`String pkg.version) in
   let architecture = ("architecture",`String pkg.architecture) in
   let priority = ("priority",`String pkg.priority) in
@@ -354,7 +356,7 @@ let add_extra_default extras tables pkg =
     |(_,`String "") -> None
     |e -> Some e
   )
-  [priority; architecture; number;
+  [priority; name; architecture; number;
   source; sourcenumber; sourceversion; 
   recommends; replaces;
   essential;build_essential]@ l
