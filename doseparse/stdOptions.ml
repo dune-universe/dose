@@ -101,6 +101,15 @@ module MakeOptions(O : Ot) = struct
 
 end
 
+let create_group group descr options =
+    if not (Option.is_none !group) then
+      Option.get !group
+    else
+      let g = OptParse.OptParser.add_group options descr in
+      let _ = group := Some g in
+      g
+;;
+
 module DistcheckOptions = struct
   open OptParse ;;
 
@@ -118,10 +127,13 @@ module DistcheckOptions = struct
     "summary"
   ]
 
+  let group = ref None 
+  let descr = "Distcheck Options"
+
   let add_options ?(default=default_options) options =
     let open OptParser in 
     if List.length default > 0 then begin
-      let group = add_group options "Distcheck Options" in
+      let group = create_group group descr options in
       if List.mem "explain" default then
         add options ~group ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
       if List.mem "explain-minimal" default then
@@ -131,9 +143,55 @@ module DistcheckOptions = struct
       if List.mem "success" default then
         add options ~group ~short_name:'s' ~long_name:"successes" ~help:"Only show successes" success;
       if List.mem "summary" default then
-        add options ~long_name:"summary" ~help:"Show Failures Summary" summary;
+        add options ~group ~long_name:"summary" ~help:"Show Failures Summary" summary;
     end
   ;;
+
+  let add_option ?short_name ?long_name ?help options =
+    let open OptParser in
+    let group = create_group group descr options in
+    add options ~group ?short_name ?long_name ?help 
+  ;;
+
+end
+
+module OutputOptions = struct
+  open OptParse ;;
+
+  let outfile = StdOpt.str_option ()
+  let outdir = StdOpt.str_option ()
+  let dot = StdOpt.store_true ()
+
+  let default_options = [
+    "outfile";
+    "outdir";
+    "dot"
+  ]
+
+  let group = ref None 
+  let descr = "Output Options"
+
+  let add_options ?(default=default_options) options =
+    let open OptParser in 
+    if List.length default > 0 then begin
+      let group = create_group group descr options in
+      if List.mem "outfile" default then
+        add options ~group ~short_name:'o' ~long_name:"outfile" ~help:"Set the output file" outfile;
+      if List.mem "outdir" default then
+        add options ~group ~short_name:'d' ~long_name:"outdir" 
+        ~help:"Set the output directory (default current directory)" outdir;
+      if List.mem "dot" default then
+        add options ~group ~long_name:"dot"
+        ~help:"Save the explanation graph (one for each package) in dot format" dot;
+    end
+  ;;
+
+  let add_option ?short_name ?long_name ?help options =
+    let open OptParser in
+    let group = create_group group descr options in
+    add options ~group ?short_name ?long_name ?help 
+  ;;
+
 end
 
 module InputOptions = struct
@@ -144,19 +202,19 @@ module InputOptions = struct
   let checkonly = StdDebian.vpkglist_option ()
   let background = incr_str_list ()
   let foreground = incr_str_list ()
-  let outfile = StdOpt.str_option ()
-  let outdir = StdOpt.str_option ()
-  let dot = StdOpt.store_true ()
+  let inputtype = StdOpt.str_option ()
 
   let default_options = [
     (* "trim"; *)
+    "inputtype";
     "latest";
     "checkonly";
     "bg";
     "fg";
-    "outfile";
-    "outdir"
   ]
+
+  let group = ref None
+  let descr = "Input Options"
 
   (** give a list of positional arguments returns two list of resources,
       foreground and background. Positional arguments are assumed to be 
@@ -175,43 +233,35 @@ module InputOptions = struct
   let add_options ?(default=default_options) options =
     let open OptParser in 
     if List.length default > 0 then begin
-      let group = add_group options "Input Options" in
-
+      let group = create_group group descr options in
+      if List.mem "inputtype" default then
+        add options ~group ~short_name:'t' ~help:"Set the input type format" inputtype;
       if List.mem "checkonly" default then
         add options ~group ~long_name:"checkonly" 
         ~help:"Check only these packages" checkonly;
-
       if List.mem "trim" default then
         add options ~group ~long_name:"trim" 
         ~help:"Consider only installable packages" trim;
-
       if List.mem "latest" default then
         add options ~group ~long_name:"latest" 
         ~help:"Check only the latest version of each package" latest;
-
       if List.mem "fg" default then
         add options ~group ~long_name:"fg"
         ~help:("Additional Packages lists that are checked and used "^
                "for resolving dependencies (can be repeated)") foreground;
-
       if List.mem "bg" default then
         add options ~group ~long_name:"bg"
         ~help:("Additional Packages lists that are NOT checked but used "^
                "for resolving dependencies (can be repeated)") background;
-
-      if List.mem "outfile" default then
-        add options ~group ~short_name:'o' ~long_name:"outfile" ~help:"Set the output file" outfile;
-
-      if List.mem "outdir" default then
-        add options ~group ~short_name:'d' ~long_name:"outdir" 
-        ~help:"Set the output directory (default current directory)" outdir;
-
-      if List.mem "dot" default then
-        add options ~group ~long_name:"dot"
-        ~help:"Print the explanation graph in dot format" dot;
-
     end
   ;;
+
+  let add_option ?short_name ?long_name ?help options =
+    let open OptParser in
+    let group = create_group group descr options in
+    add options ~group ?short_name ?long_name ?help 
+  ;;
+
 end
 
 type options =
@@ -231,7 +281,6 @@ module DistribOptions = struct
   let deb_foreign_archs = str_list_option ()
   let deb_host_arch = StdOpt.str_option ()
   let deb_ignore_essential = StdOpt.store_true ()
-  let inputtype = StdOpt.str_option ()
   let int_versions = StdOpt.store_true ()
 
   let default_options = [
@@ -239,9 +288,11 @@ module DistribOptions = struct
     "deb-host-arch";
     "deb-foreign-archs";
     "deb-ignore-essential";
-    "inputtype";
     "cv-int"
   ]
+
+  let group = ref None
+  let descr = "Debian Specific Options"
 
   let set_deb_options () =
     let native = Opt.opt deb_native_arch in
@@ -308,10 +359,7 @@ module DistribOptions = struct
   let add_options ?(default=default_options) options =
     let open OptParser in
     if List.length default > 0 then begin
-      if List.mem "inputtype" default then
-        add options ~short_name:'t' ~help:"Set the input type format" inputtype;
-
-      let group = add_group options "Debian Specific Options" in
+      let group = create_group group descr options in
       if List.mem "deb-native-arch" default then
         add options ~group ~long_name:"deb-native-arch"
         ~help:"Native architecture" deb_native_arch;
@@ -324,10 +372,14 @@ module DistribOptions = struct
       if List.mem "deb-ignore-essential" default then
         add options ~group ~long_name:"deb-ignore-essential" 
         ~help:"Ignore Essential Packages" deb_ignore_essential;
-
     end
 
+  let add_option ?short_name ?long_name ?help options =
+    let open OptParser in
+    let group = create_group group descr options in
+    add options ~group ?short_name ?long_name ?help 
+  ;;
+
 (*  let rpm_group = add_group options "Rpm Specific Options" in
-    let eclipse_group = add_group options "Eclipse Specific Options" in
-*)
+    let eclipse_group = add_group options "Eclipse Specific Options" in *)
 end

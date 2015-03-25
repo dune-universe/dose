@@ -27,19 +27,22 @@ module Options = struct
   let options = OptParser.make ~description
   include StdOptions.MakeOptions(struct let options = options end)
 
+  let coinst = StdDebian.vpkglist_option ();;
+
   include StdOptions.DistcheckOptions
   StdOptions.DistcheckOptions.add_options options ;;
+  StdOptions.DistcheckOptions.add_option options ~long_name:"coinst" ~help:"Check if these packages are coinstallable" coinst;;
 
   include StdOptions.InputOptions
   let default = "dot"::(StdOptions.InputOptions.default_options) in
   StdOptions.InputOptions.add_options ~default options ;;
 
+  include StdOptions.OutputOptions;;
+  StdOptions.OutputOptions.add_options options ;;
+
   include StdOptions.DistribOptions;;
   let default = List.remove StdOptions.DistribOptions.default_options "deb-host-arch" in
   StdOptions.DistribOptions.add_options ~default options ;;
-
-  let coinst = StdDebian.vpkglist_option ();;
-  add options ~long_name:"coinst" ~help:"Check if these packages are coinstallable" coinst;;
 
   let group = add_group options "Cv Specific Options" in
   add options ~group ~long_name:"cv-int" ~help:"" int_versions;

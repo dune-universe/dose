@@ -31,30 +31,31 @@ module Options = struct
   let options = OptParser.make ~description
   include StdOptions.MakeOptions(struct let options = options end)
 
-  include StdOptions.DistcheckOptions
-  let default = List.remove StdOptions.DistcheckOptions.default_options "successes" in
-  StdOptions.DistcheckOptions.add_options ~default options ;;
-
-  include StdOptions.InputOptions
-  let default = List.remove StdOptions.InputOptions.default_options "inputtype" in
-  StdOptions.InputOptions.add_options ~default options ;;
-
-  include StdOptions.DistribOptions;;
-  (* remove other not used --deb options *)
-  let default = List.remove StdOptions.DistribOptions.default_options "deb-host-arch" in
-  let default = ["deb-triplettable";"deb-cputable"]@default in
-  StdOptions.DistribOptions.add_options ~default options ;;
-  
   let sources = StdOpt.str_option ()
   let dump = StdOpt.str_option ()
   let triplettable = StdOpt.str_option ()
   let cputable = StdOpt.str_option ()
 
-  open OptParser
-  add options ~long_name:"src" ~help:"Associate Sources file" sources;
-  add options ~long_name:"dump" ~help:"dump the cudf file" dump;
-  add options ~long_name:"deb-triplettable" ~help:"Path to an architecture triplet table like /usr/share/dpkg/triplettable" triplettable;
-  add options ~long_name:"deb-cputable" ~help:"Path to a cpu table like /usr/share/dpkg/cputable" cputable;
+  include StdOptions.DistcheckOptions
+  let default = List.remove StdOptions.DistcheckOptions.default_options "successes" in
+  StdOptions.DistcheckOptions.add_options ~default options ;
+
+  include StdOptions.InputOptions
+  let default = List.remove StdOptions.InputOptions.default_options "inputtype" in
+  StdOptions.InputOptions.add_options ~default options ;
+  StdOptions.InputOptions.add_option options ~long_name:"src" ~help:"Associate Sources file" sources;
+
+  include StdOptions.OutputOptions
+  StdOptions.OutputOptions.add_options options ;
+  StdOptions.OutputOptions.add_option options ~long_name:"dump" ~help:"dump the cudf file" dump;
+
+  include StdOptions.DistribOptions;;
+  let default = List.remove StdOptions.DistribOptions.default_options "deb-host-arch" in
+  StdOptions.DistribOptions.add_options ~default options ;
+  StdOptions.DistribOptions.add_option options ~long_name:"deb-triplettable"
+    ~help:"Path to an architecture triplet table like /usr/share/dpkg/triplettable" triplettable;
+  StdOptions.DistribOptions.add_option options ~long_name:"deb-cputable"
+    ~help:"Path to a cpu table like /usr/share/dpkg/cputable" cputable;
 
 end
 

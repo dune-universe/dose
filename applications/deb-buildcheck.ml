@@ -28,16 +28,6 @@ module Options = struct
   let options = OptParser.make ~description
   include StdOptions.MakeOptions(struct let options = options end)
 
-  include StdOptions.DistcheckOptions
-  StdOptions.DistcheckOptions.add_options options ;;
-
-  include StdOptions.InputOptions
-  StdOptions.InputOptions.add_options options ;;
-
-  include StdOptions.DistribOptions;;
-  let default = ["deb-triplettable";"deb-cputable"]@StdOptions.DistribOptions.default_options in
-  StdOptions.DistribOptions.add_options ~default options ;;
-
   let dump = StdOpt.str_option ()
   let maforeign = StdOpt.store_true ()
   let noindep = StdOpt.store_true ()
@@ -46,14 +36,30 @@ module Options = struct
   let cputable = StdOpt.str_option ()
   let profiles = StdOptions.str_list_option ()
 
-  open OptParser
-  add options ~long_name:"defaultedMAforeign" ~help:"Convert Arch:all packages to Multi-Arch: foreign" maforeign;
-  add options ~long_name:"DropBuildIndep" ~help:"Drop Build-Indep dependencies" noindep;
-  add options ~long_name:"IncludeExtraSource" ~help:"Include packages with Extra-Source-Only:yes (dropped by default)" includextra;
-  add options ~long_name:"deb-triplettable" ~help:"Path to an architecture triplet table like /usr/share/dpkg/triplettable" triplettable;
-  add options ~long_name:"deb-cputable" ~help:"Path to a cpu table like /usr/share/dpkg/cputable" cputable;
-  add options ~long_name:"dump" ~help:"dump the cudf file" dump;
-  add options ~short_name:'P' ~long_name:"profiles" ~help:"comma separated list of activated build profiles" profiles;
+  include StdOptions.DistcheckOptions
+  StdOptions.DistcheckOptions.add_options options ;;
+
+  include StdOptions.InputOptions
+  StdOptions.InputOptions.add_options options ;;
+
+  include StdOptions.OutputOptions
+  StdOptions.OutputOptions.add_options options ;;
+  StdOptions.OutputOptions.add_option options ~long_name:"dump" ~help:"dump the cudf file" dump;
+
+  include StdOptions.DistribOptions;;
+  StdOptions.DistribOptions.add_options options ;;
+  StdOptions.DistribOptions.add_option options ~long_name:"deb-triplettable"
+    ~help:"Path to an architecture triplet table like /usr/share/dpkg/triplettable" triplettable;
+  StdOptions.DistribOptions.add_option options ~long_name:"deb-cputable"
+    ~help:"Path to a cpu table like /usr/share/dpkg/cputable" cputable;
+  StdOptions.DistribOptions.add_option options ~long_name:"defaultedMAforeign"
+    ~help:"Convert Arch:all packages to Multi-Arch: foreign" maforeign;
+  StdOptions.DistribOptions.add_option options ~long_name:"DropBuildIndep"
+    ~help:"Drop Build-Indep dependencies" noindep;
+  StdOptions.DistribOptions.add_option options ~long_name:"IncludeExtraSource"
+    ~help:"Include packages with Extra-Source-Only:yes (dropped by default)" includextra;
+  StdOptions.DistribOptions.add_option options ~short_name:'P' ~long_name:"profiles"
+    ~help:"comma separated list of activated build profiles" profiles;
 
 end
 
