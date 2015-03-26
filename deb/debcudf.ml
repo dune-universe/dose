@@ -316,7 +316,11 @@ let preamble =
 
 let add_extra_default extras tables pkg =
   let check = function [] :: _ -> failwith (Printf.sprintf "Malformed dep (%s %s)" pkg.name pkg.version) |l -> l in
-  let name = ("name",`String pkg.name) in
+  let name = if String.starts_with pkg.name "src:" then
+      String.sub pkg.name 4 ((String.length pkg.name) - 4)
+    else pkg.name
+  in
+  let name = ("name",`String name) in
   let number = ("number",`String pkg.version) in
   let architecture = ("architecture",`String pkg.architecture) in
   let priority = ("priority",`String pkg.priority) in
