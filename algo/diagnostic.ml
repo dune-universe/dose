@@ -288,11 +288,13 @@ let print_dot ?(addmissing=false) ?dir = function
   |{result = Success _ } -> fatal "Cannot build explanation graph on Success"
   |{result = Failure f; request = Package r } ->
       let fmt =
-        let n = (r.Cudf.package)^(string_of_int (r.Cudf.version)) in
+        let n = Printf.sprintf "%s.%s.dot"
+          (CudfAdd.decode r.Cudf.package)
+          (CudfAdd.string_of_version r)
+        in
         let f =
-          let s = CudfAdd.decode (n^".dot") in
-          if Option.is_none dir then s
-          else Filename.concat (Option.get dir) s
+          if Option.is_none dir then n
+          else Filename.concat (Option.get dir) n
         in
         let oc = open_out f in
         Format.formatter_of_out_channel oc;

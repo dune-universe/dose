@@ -141,7 +141,7 @@ module SyntacticDependencyGraph = struct
       let vertex_attributes v =
         match G.V.label v with
         |PkgV.Or i -> [`Label "Or"; `Shape `Diamond]
-        |PkgV.Pkg {value = p; root = r} -> 
+        |PkgV.Pkg {value = p; root = r} ->
             let al = ref [`Label (CudfAdd.string_of_package p)] in
             if p.Cudf.installed then al := (`Color 0x00FF00)::!al;
             if r then al := (`Shape `Record)::!al;

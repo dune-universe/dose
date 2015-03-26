@@ -176,7 +176,8 @@ module OutputOptions = struct
     if List.length default > 0 then begin
       let group = create_group group descr options in
       if List.mem "outfile" default then
-        add options ~group ~short_name:'o' ~long_name:"outfile" ~help:"Set the output file" outfile;
+        add options ~group ~short_name:'o' ~long_name:"outfile"
+        ~help:"Redirect the output to a file (default stdout)" outfile;
       if List.mem "outdir" default then
         add options ~group ~short_name:'d' ~long_name:"outdir" 
         ~help:"Set the output directory (default current directory)" outdir;
