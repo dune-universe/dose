@@ -22,12 +22,13 @@ include Util.Logging(struct let label = __FILE__ end) ;;
 
 module Options = struct
   open OptParse
-  let options = OptParser.make ~description:"find challenged packages"
+  let options = OptParser.make ~description:"Compute Challenged packages."
   include StdOptions.MakeOptions(struct let options = options end)
 
   let checkonly = StdOptions.pkglist_option ()
   let brokenlist = StdOpt.store_true ()
   let downgrades = StdOpt.store_true ()
+  let latest = StdOpt.store_true ()
   let cluster = StdOpt.store_true ()
 IFDEF HASPARMAP THEN
   let ncores = StdOpt.int_option ~default:1 ()
@@ -48,6 +49,9 @@ END
     ~help:"Print the list of broken packages" brokenlist;
   add options ~long_name:"downgrade" ~short_name:'d' 
     ~help:"Check package downgrades" downgrades;
+  add options ~long_name:"latest" ~short_name:'l' 
+    ~help:"Consider on the latest version of each package" latest;
+
   add options ~short_name:'c' 
     ~help:"Print the list of packages in a cluster" cluster;
 
@@ -75,6 +79,7 @@ let upgrade tables pkgset universe broken migrationlist =
   let getv v = Debian.Debcudf.get_cudf_version tables ("",v) in
   let to_add = 
     List.fold_left (fun l ((pkg,_),target) ->
+      let name = CudfAdd.encode pkg.Debian.Packages.name in
       let orig = getv pkg.Debian.Packages.version in
       let newv =
         match target with
@@ -82,15 +87,18 @@ let upgrade tables pkgset universe broken migrationlist =
         |`Hi v -> (getv v) + 1
         |`Lo v |`In (_,v) -> (getv v) - 1
       in
-      let p = Cudf.lookup_package universe (pkg.Debian.Packages.name,orig) in
+      let p = Cudf.lookup_package universe (name,orig) in
       let number = Debian.Evolution.string_of_range target in
-      (dummy p number newv)::l
+      if not (Cudf.mem_package universe (p.Cudf.package,newv)) then
+        (dummy p number newv)::l
+      else l
     ) [] migrationlist
   in
   let to_remove = 
     List.fold_left (fun acc ((pkg,_),_) -> 
+      let name = CudfAdd.encode pkg.Debian.Packages.name in
       let orig = getv pkg.Debian.Packages.version in
-      let p = Cudf.lookup_package universe (pkg.Debian.Packages.name,orig) in
+      let p = Cudf.lookup_package universe (name,orig) in
       p::acc
     ) broken migrationlist 
   in
@@ -175,6 +183,9 @@ let pp tables pkg =
  * cluster are real packages,
  * future are cudf packages *)
 let challenged 
+  ?(failure=true)
+  ?(explain=false)
+  ?(minimal=true)
   ?(downgrades=false) 
   ?(broken=false) 
   ?(cluster=false)
@@ -237,7 +248,7 @@ ELSE
 END
     in
     map (fun ((sn,sv,version),(cluster,vl,constr)) ->
-      let startd=Unix.gettimeofday() in
+      let starttime = Unix.gettimeofday() in
       let cluster_results = ref [] in
       Util.Progress.progress predbar;
       debug "\nSource: %s %s" sn sv;
@@ -263,7 +274,8 @@ END
         let pp_list = Diagnostic.pp_list pp_item in
         let cudf_cluster = 
           List.map (fun pkg -> 
-            let (pn,pv) = (pkg.Debian.Packages.name, getv pkg.Debian.Packages.version) in
+            let name = CudfAdd.encode pkg.Debian.Packages.name in
+            let (pn,pv) = (name, getv pkg.Debian.Packages.version) in
             Cudf.lookup_package universe (pn,pv) 
           ) cluster
         in
@@ -279,7 +291,6 @@ END
                 ));
               debug "ignored"
         | (target,equiv) ->
-            debug "Considering target %s" (Debian.Evolution.string_of_range target);
             debug "Target: %s" (Debian.Evolution.string_of_range target);
             debug "Equiv: %s" (String.concat " , " (
               List.map (Debian.Evolution.string_of_range) equiv
@@ -289,7 +300,7 @@ END
             let future = upgrade tables pkgset universe brokenlist migrationlist in
             let callback d = 
               let fmt = Format.std_formatter in
-              if broken then Diagnostic.fprintf ~pp ~failure:true ~explain:true fmt d 
+              if broken then Diagnostic.fprintf ~pp ~failure ~explain ~minimal fmt d 
             in
             if broken then Format.printf "distcheck: @,";
             let i = Depsolver.univcheck ~callback future in
@@ -298,10 +309,23 @@ END
             debug "Broken: %d" i;
             cluster_results := (((sn,sv,version),(target,equiv)),i)::!cluster_results ;
       ) discr;
-      debug "<%s,%s> : %f" sn sv (Unix.gettimeofday() -. startd); 
+      debug "<%s,%s> : %f" sn sv (Unix.gettimeofday() -. starttime); 
       !cluster_results
     ) !worktable
   in List.concat results
+;;
+
+let latest pkglist =
+  let h = Hashtbl.create (List.length pkglist) in
+  List.iter (fun p ->
+    try 
+      let q = Hashtbl.find h p.Debian.Packages.name in
+      if (Debian.Version.compare p.Debian.Packages.version q.Debian.Packages.version) > 0 then
+        Hashtbl.replace h p.Debian.Packages.name p
+      else () 
+    with Not_found -> Hashtbl.add h p.Debian.Packages.name p
+  ) pkglist;
+  Hashtbl.fold (fun _ v acc -> v::acc) h []
 ;;
 
 let main () =
@@ -315,6 +339,7 @@ let main () =
   let cluster = OptParse.Opt.get Options.cluster in
   let downgrades = OptParse.Opt.get Options.downgrades in
   let l = Debian.Packages.input_raw args in
+  let l = if OptParse.Opt.get Options.latest then latest l else l in
   let pred = challenged ~downgrades ~broken ~cluster ~clusterlist l in
   List.iter (fun (((sn,sv,version),(target,equiv)),broken) ->
     Format.printf "cluster: %s %s@." sn version;
