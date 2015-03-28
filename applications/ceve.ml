@@ -164,7 +164,7 @@ let main () =
     let (p,v) = OptParse.Opt.get Options.dst in
     let pid = get_cudfpkg (p,v) in
     List.filter_map (fun pkg ->
-      if List.mem pid (Depsolver.dependency_closure universe [pkg]) then
+      if List.mem pid (Depsolver.dependency_closure ~global_constraints universe [pkg]) then
         Some(pkg)
       else None
     ) (Cudf.get_packages universe) 
@@ -174,9 +174,9 @@ let main () =
       let l = get_cudfpkglist (p,c) in
       if OptParse.Opt.is_set Options.cone_maxdepth then
         let md = OptParse.Opt.get Options.cone_maxdepth in
-        (Depsolver.dependency_closure ~maxdepth:md universe l) @ acc
+        (Depsolver.dependency_closure ~maxdepth:md ~global_constraints universe l) @ acc
       else
-        (Depsolver.dependency_closure universe l) @ acc
+        (Depsolver.dependency_closure ~global_constraints universe l) @ acc
     ) [] (OptParse.Opt.get Options.cone))
   in
   let pkg_reverse_cone () =

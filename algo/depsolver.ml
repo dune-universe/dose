@@ -257,8 +257,8 @@ let find_listbroken ?(global_constraints=true) universe pkglist =
   !broken_pkgs
 ;;
 
-let dependency_closure ?maxdepth ?conjunctive univ pkglist =
-  Depsolver_int.dependency_closure ?maxdepth ?conjunctive univ pkglist
+let dependency_closure ?maxdepth ?conjunctive ?(global_constraints=false) univ pkglist =
+  Depsolver_int.dependency_closure ?maxdepth ?conjunctive ~global_constraints univ pkglist
 
 let reverse_dependencies univ =
   let rev = Depsolver_int.reverse_dependencies univ in

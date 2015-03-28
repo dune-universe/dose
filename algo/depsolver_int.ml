@@ -432,11 +432,12 @@ let dependency_closure_cache ?(maxdepth=max_int) ?(conjunctive=false) pool idlis
     @param universe the package universe
     @param pkglist a subset of [universe]
 *)
-let dependency_closure ?(maxdepth=max_int) ?(conjunctive=false) universe pkglist =
-  let pool = init_pool_univ ~global_constraints:false universe in
+let dependency_closure ?(maxdepth=max_int) ?(conjunctive=false) ?(global_constraints=false) universe pkglist =
+  let pool = init_pool_univ ~global_constraints universe in
+  let globalid = Cudf.universe_size universe in
   let idlist = List.map (CudfAdd.vartoint universe) pkglist in
-  let l = dependency_closure_cache ~maxdepth ~conjunctive pool idlist in
-  List.map (CudfAdd.inttovar universe) l
+  let l = dependency_closure_cache ~maxdepth ~conjunctive pool (globalid::idlist) in
+  List.filter_map (fun p -> if p <> globalid then Some (CudfAdd.inttovar universe p) else None) l
 ;;
 
 (*    XXX : elements in idlist should be included only if because
