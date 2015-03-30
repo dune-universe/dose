@@ -6,7 +6,7 @@ ceve - parse package metadata
 
 =over 
 
-=item B<ceve> [-h] [-v] [-e I<pkgspec>] [-c I<pkgspec>] [-r I<pkgspec>] [--depth=I<n>]I<> [-T I<format>] [-G I<graph type>] [-o I<filename>] I<input-spec> 
+=item B<ceve> [-h] [-v] [-c I<pkgspec>] [-r I<pkgspec>] [--depth=I<n>]I<> [-T I<format>] [-G I<graph type>] [-o I<filename>] I<input-spec> 
 
 =back
 
@@ -28,29 +28,30 @@ This option displays the help message. Can also be specified as B<--help>.
 
 Be verbose. This option can be repeated for more verbosity. 
 
-=item B<-e >I<pkgspec> 
-
-(Option Not Implemented Yet) Extract the transitive closure of packages connected (by conflict or
-dependency) to any of the packages that satisfy I<pkgspec>. Such a package
-specification is a list of packages (separated by a semicolon), where each
-package is specified as follows: (I<name>,I<version>).I<> This option can also
-be specified as --extract=I<pkgspec>.I<> 
-
 =item B<-c >I<pkgspec>
 
-Similar to the B<-c> option, but only uses the dependency relation to make
-the transitive closure. This option can also be specified as --cone=I<pkgspec>.I<>
+The B<match> of an atomic dependency (a package name p possibly together with a
+version constraint c) is the set of all packages in the repository with name p,
+and a version that satisfies the constraint c.  The dependency cone of a
+package p is the set of all matches of all atomic dependencies of p, together
+with their respective dependency cones. 
+The package specification I<pkgspec> is a list of packages (separated by a
+semicolon), where each package is specified as follows:
+(I<name>,I<version>).
+
+This option extracts the union of the dependency cones of all packages selected
+by I<pkgspec>. This option can also be specified as --cone=I<pkgspec>.
 
 =item B<-r >I<pkgspec> 
 
-Similar to the B<-e> and B<-c> options, but uses the reverse dependency
+Using the same syntax as in B<-c>, this option use the reverse dependency
 relation to make the transitive closure. This option can also be specified
-as --rcone=I<pkgspec>.I<> 
+as --rcone=I<pkgspec>.
 
 =item B<--depth >I<n> 
 
-In combination with the B<-e>, B<-c> or B<-r> options, this
-specifies the maximum depth for the transitive closure.
+In combination with the B<-c> or B<-r> options, this specifies the
+maximum depth for the transitive closure.
  
 =item B<-T >I<format> 
 
@@ -66,10 +67,10 @@ Select the input type.
 =item B<--request >I<installation-request>
 
 Specifies an installation request of the form "B<install:> I<vpkglist>" or
-"B<remove:> I<vpkglist>" or "B<upgrade:> I<vpkglist>" where I<vpkglist> is a list of (real)
-packages possibly associated with a constraint. Ex.: bash (< 2.0), exim (=
-3.1-debian1). This option can be repeated to specify install, remove and
-upgrade actions.
+"B<remove:> I<vpkglist>" or "B<upgrade:> I<vpkglist>" where I<vpkglist> is a
+list of (real) packages possibly associated with a constraint. Ex.: bash (<
+2.0), exim (= 3.1-debian1). This option can be repeated to specify install,
+remove and upgrade actions.
 
 Examples:
 
@@ -92,7 +93,8 @@ conflicts are not added to the graph.
 
 =item .
 
-B<strong> the strong dependency graph.
+B<strong> the strong dependency graph. A package p strong depends on q iff p
+cannot be installed if q is not installed.
 
 =item .
 
@@ -148,3 +150,30 @@ deb://Packages.gz (the Debian file packages.gz in the current directory)
 cudf:///home/examples/cudf/test.cudf (the CUDF file /home/examples/cudf/test.cudf)
 
 =back
+
+=head2 DEBIAN SPECIFIC OPTIONS
+
+Multi-arch annotations are handled by ceve. Packages whose's architecture is
+neither the native architecture nor in the list of foreign architectures (see
+below) are ignored.
+
+=over 8
+
+=item B<--deb-native-arch=>I<name>
+
+Specify the native architecture. The default behavior is to deduce
+the native architecture from the first package stanza in the input
+that has an architecture different from all.
+
+=item B<--deb-foreign-archs=>I<name> [,I<name>] ...
+
+Specify a comma-separated list of foreign architectures. The default
+is an empty list of foreign architectures.
+
+=item B<--deb-ignore-essential>
+
+By default all essential package are considered as a dependency of all packages
+in the universe. This option allows the user to ignore essential packages.
+
+=back
+

@@ -207,8 +207,10 @@ consists of an installation set.
 
 For all packages B<P> that are found installable, and when used in conjunction
 with B<--successes>, prints a reduced installation set containing only those
-packages in the dependency cone of B<P>.  It has no effect together with
-B<--failures>.
+packages in the dependency cone of B<P>. When used with Debian repositories,
+all essential packages and their dependencies that are not in the cone of B<P>
+are omitted.  When used in conjunction with B<--failures>, and B<--explain>,
+all dependencies chains are not printed.
 
 =item B<--summary>
 

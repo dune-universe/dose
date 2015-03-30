@@ -24,6 +24,11 @@ type result =
   |Success of (?all:bool -> unit -> int list)
   |Failure of (unit -> reason list)
 
+(** There are two types of request. One [Sng] that stays for Single and the
+  other [Lst] for List. The first one is used to check the installability
+  of one package, the other of a list of packages. For both request you
+  can ask to consider (Some globalid) or not the global constraints
+  associated to the variable globalid. **)
 type request =
   |Sng of (int option * int)
   |Lst of (int option * int list)

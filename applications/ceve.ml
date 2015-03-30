@@ -42,8 +42,6 @@ module Options = struct
     let error _ s = Printf.sprintf "%s format not supported" s in
     Opt.value_option metavar default corce error
 
-  let src = StdOptions.vpkglist_option ()
-  let dst = StdOptions.vpkg_option ()
   let cone = StdOptions.vpkglist_option ()
   let reverse_cone = StdOptions.vpkglist_option ()
   let cone_maxdepth = StdOpt.int_option ()
@@ -158,17 +156,6 @@ let main () =
   in
   let get_cudfpkg ((n,a),c) = List.hd (get_cudfpkglist ((n,a),c)) in
 
-  let pkg_src () = List.map get_cudfpkg (OptParse.Opt.get Options.src) in
-  let pkg_dst () =
-    (* all packages q in R s.t. q is in the dependency closure of p *)
-    let (p,v) = OptParse.Opt.get Options.dst in
-    let pid = get_cudfpkg (p,v) in
-    List.filter_map (fun pkg ->
-      if List.mem pid (Depsolver.dependency_closure ~global_constraints universe [pkg]) then
-        Some(pkg)
-      else None
-    ) (Cudf.get_packages universe) 
-  in
   let pkg_cone () =
     List.unique (List.fold_left (fun acc (p,c) ->
       let l = get_cudfpkglist (p,c) in
@@ -190,29 +177,13 @@ let main () =
     ) [] (OptParse.Opt.get Options.reverse_cone))
   in
 
-  let pkg_src_list = ref [] in
-  let pkg_dst_list = ref [] in
   let plist =
-    if OptParse.Opt.is_set Options.src && OptParse.Opt.is_set Options.dst then begin
-      let (p,v) = OptParse.Opt.get Options.dst in
-      let pid = get_cudfpkg (p,v) in
-      pkg_src_list := pkg_src ();
-      pkg_dst_list := [pid];
-      (pid::!pkg_src_list)
-    end
-    else if OptParse.Opt.is_set Options.src then begin
-      pkg_src_list := pkg_src ();
-      !pkg_src_list
-    end
-    else if OptParse.Opt.is_set Options.dst then begin
-      pkg_dst_list := pkg_dst ();
-      !pkg_dst_list
-    end
-    else if OptParse.Opt.is_set Options.cone then 
+    if OptParse.Opt.is_set Options.cone then 
       pkg_cone ()
     else if OptParse.Opt.is_set Options.reverse_cone then
       pkg_reverse_cone ()
-    else Cudf.get_packages universe
+    else 
+      Cudf.get_packages universe
   in
 
   let output ll =
