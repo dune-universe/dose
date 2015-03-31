@@ -155,7 +155,7 @@ let get_property prop pkg =
 ;;
 
 let is_essential pkg =
-  try Cudf.lookup_package_property pkg "essential" = "yes"
+  try Cudf.lookup_package_property pkg "essential" = "true"
   with Not_found -> false
 
 let realversionmap pkglist =
