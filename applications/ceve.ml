@@ -221,7 +221,22 @@ IFDEF HASOCAMLGRAPH THEN
           |("pkg" | "strdeps" | "conj"| "dom") as gt ->
             let g =
               if gt = "pkg" then PGraph.dependency_graph u
-              else if gt = "strdeps" then Strongdeps.strongdeps_univ u
+              else if gt = "strdeps" then
+                let g = Strongdeps.strongdeps_univ u in
+                (* if input are Debian packages and --deb-ignore-essential was
+                 * not given, connect all binary packages to the Essential:yes
+                 * packages *)
+                if global_constraints && (input_type = `Deb || input_type = `DebSrc) then begin
+                  let essential = List.filter CudfAdd.is_essential l in
+                  Defaultgraphs.PackageGraph.G.iter_edges
+                    (Defaultgraphs.PackageGraph.G.add_edge g)
+                    (Strongdeps.strongdeps u essential);
+                  Defaultgraphs.PackageGraph.G.iter_vertex
+                    (fun v -> List.iter
+                        (Defaultgraphs.PackageGraph.add_edge ~transitive:true g v)
+                        essential) g
+                end;
+                g
               else if gt = "conj" then Strongdeps.conjdeps_univ u
               else if gt = "dom" then
                 let g = Strongdeps.strongdeps_univ ~transitive:true universe in
