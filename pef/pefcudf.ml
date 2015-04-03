@@ -116,11 +116,13 @@ let get_cudf_version tables (package,version) =
     let i = fst(List.findi (fun i a -> a = version) l) in
     Hashtbl.replace tables.reverse_table (CudfAdd.encode package,i+1) version;
     i+1
-  with Not_found -> assert false
+  with Not_found ->
+    fatal "Cannot find cudf version for %s (= %s)" (CudfAdd.decode package) version
 
 let get_real_version tables (p,i) =
   try Hashtbl.find tables.reverse_table (p,i)
-  with Not_found -> ((Printf.eprintf "%s - %d\n" p i) ; assert false)
+  with Not_found ->
+    fatal "Cannot find real version for %s (= %d)" p i
 
 let loadl tables l =
   List.flatten (

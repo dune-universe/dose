@@ -89,9 +89,9 @@ module SyntacticDependencyGraph = struct
       |Or i1, Or i2 -> (i1 - i2)
       |Pkg {value = p1}, Pkg {value = p2} -> CudfAdd.compare p1 p2
       |Set s1, Set s2 -> CudfAdd.Cudf_set.compare s1 s2
-      |_, _ -> Pervasives.compare x y
+      |_, _ -> Pervasives.compare x y (* XXX *)
     let hash = function
-      |Pkg {value = p} -> Hashtbl.hash (p.Cudf.package,p.Cudf.version)
+      |Pkg {value} -> CudfAdd.hash value 
       |Set s -> Hashtbl.hash s (* XXX Can fail ! *)
       |Or i -> Hashtbl.hash i
       |Missing i -> Hashtbl.hash i (* XXX *)
@@ -99,7 +99,7 @@ module SyntacticDependencyGraph = struct
       |Or i1, Or i2 -> (i1 = i2)
       |Pkg {value = p1}, Pkg {value = p2} -> CudfAdd.equal p1 p2
       |Set s1, Set s2 -> CudfAdd.Cudf_set.equal s1 s2
-      |Missing i, Missing j -> i = j (* XXX *)
+      |Missing i, Missing j -> (i = j) (* XXX *)
       |_ -> false
   end
 
@@ -109,6 +109,7 @@ module SyntacticDependencyGraph = struct
       |DirDepends of Cudf_types.vpkglist
       |MissingDepends of Cudf_types.vpkglist
       |Conflict
+      |Condensed
     type t = s ref
 
     let compare x y = Pervasives.compare !x !y
@@ -123,7 +124,7 @@ module SyntacticDependencyGraph = struct
       include G
       let vertex_name v = string_of_int (G.V.hash v)
 
-      let graph_attributes = fun _ -> [`Rankdir `LeftToRight]
+      let graph_attributes = fun _ -> [`Rankdir `LeftToRight (* ; `Concentrate true *)]
       let get_subgraph v = None
         (*
         let open Graphviz.DotAttributes in
@@ -141,20 +142,21 @@ module SyntacticDependencyGraph = struct
       let vertex_attributes v =
         match G.V.label v with
         |PkgV.Or i -> [`Label "Or"; `Shape `Diamond]
-        |PkgV.Pkg {value = p; root = r} ->
-            let al = ref [`Label (CudfAdd.string_of_package p)] in
-            if p.Cudf.installed then al := (`Color 0x00FF00)::!al;
-            if r then al := (`Shape `Record)::!al;
+        |PkgV.Pkg {value; root} ->
+            let al = ref [`Label (CudfAdd.string_of_package value)] in
+            if value.Cudf.installed then al := (`Color 0x00FF00)::!al;
+            if root then al := (`Shape `Record)::!al;
             !al
-        |PkgV.Set s -> 
+        |PkgV.Set s when CudfAdd.Cudf_set.cardinal s > 0 -> 
             let l = CudfAdd.Cudf_set.elements s in
             let p = CudfAdd.Cudf_set.choose s in
             let str = 
-              Printf.sprintf "\"%s (=%s)\""
+              Printf.sprintf "%s (=%s)"
               (CudfAdd.decode p.Cudf.package)
               (Util.string_of_list ~delim:("[","]") CudfAdd.string_of_version l)
             in
             [`Label str; `Shape `Record]
+        |PkgV.Set s -> [`Label "empty??"; `Shape `Record] 
         |PkgV.Missing _ -> [ `Label "Missing"; `Color 0x00FF00; `Shape `Ellipse]
 
       let edge_attributes e =
@@ -167,8 +169,9 @@ module SyntacticDependencyGraph = struct
               |PkgV.Or _ -> `Style `Dashed
               |_ -> `Style `Solid
             in
-            [style ; `Label (CudfAdd.decode (Cudf_types_pp.string_of_vpkglist vpkgs))]
+            [style ; `Label (CudfAdd.decode (Cudf_types_pp.string_of_vpkglist (List.unique vpkgs)))]
         |PkgE.Conflict -> [`Color 0xFF0000; `Style `Solid; `Dir `None; `Label "#"]
+        |PkgE.Condensed -> [`Style `Solid]
     end
 
     include Graph.Graphviz.Dot(Display)
@@ -203,14 +206,13 @@ module SyntacticDependencyGraph = struct
 
       let map_edge e = []
       let map_vertex = function
-        |PkgV.Pkg {value = p} ->
-          let name = ("package",CudfAdd.decode p.Cudf.package) in
-          let version = ("version",CudfAdd.string_of_version p) in
+        |PkgV.Pkg {value} ->
+          let name = ("package",CudfAdd.decode value.Cudf.package) in
+          let version = ("version",CudfAdd.string_of_version value) in
      
           let props =
             List.filter_map (fun (key,_,_) ->
-              try let value = Cudf.lookup_package_property p key in
-              Some(key,value)
+              try Some(key,Cudf.lookup_package_property value key)
               with Not_found -> None
             ) vertex_properties
           in
@@ -243,13 +245,13 @@ module SyntacticDependencyGraph = struct
 
   (** Build the syntactic dependency graph from the give cudf universe *)
   let dependency_graph ?root univ =
-    let add_node p =
-      let r = 
+    let add_node value =
+      let root =
         match root with
         |None -> false
-        |Some pkg -> CudfAdd.equal p pkg
+        |Some pkg -> CudfAdd.equal value pkg
       in
-      G.V.create (PkgV.Pkg {value = p; root = r})
+      G.V.create (PkgV.Pkg {value; root})
     in
     let timer = Util.Timer.create "SyntacticDependencyGraph.dependency_graph" in
     Util.Timer.start timer;
@@ -283,7 +285,12 @@ module SyntacticDependencyGraph = struct
       List.iter (fun p ->
         if not(CudfAdd.equal p pkg) then
           let vp = add_node p in
-          let edge = G.E.create vpid (ref PkgE.Conflict) vp in
+          let edge =
+            if G.V.compare vpid vp > 0 then
+              G.E.create vpid (ref PkgE.Conflict) vp
+            else
+              G.E.create vp (ref PkgE.Conflict) vpid
+          in
           G.add_edge_e gr edge
       ) (CudfAdd.who_conflicts conflicts univ pkg)
     ) univ
@@ -291,12 +298,13 @@ module SyntacticDependencyGraph = struct
     Util.Timer.stop timer gr
   ;;
 
+  (* XXX rewrite this using a bsf pre and post functions *)
   let all_paths g v =
     let pp v = 
       match G.V.label v with
       |PkgV.Or i -> "Or"
-      |PkgV.Pkg {value = p; root = r} -> 
-          (CudfAdd.string_of_package p)
+      |PkgV.Pkg {value; root = r} -> 
+          (CudfAdd.string_of_package value)
       |PkgV.Set s -> 
           let l = CudfAdd.Cudf_set.elements s in
           let p = CudfAdd.Cudf_set.choose s in
@@ -341,6 +349,7 @@ module SyntacticDependencyGraph = struct
         (Util.string_of_list ~delim:("[","]") CudfAdd.string_of_version l)
     |PkgV.Missing _ -> "Missing"
 
+  (* XXX rewrite this using a bsf pre and post functions *)
   let all_paths g v =
     let bind m f = List.flatten (List.map f m) in
     let rec aux acc v =

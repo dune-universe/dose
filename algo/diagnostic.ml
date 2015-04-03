@@ -203,16 +203,14 @@ IFDEF HASOCAMLGRAPH THEN
 (** Build a SyntacticDependencyGraph from the solver output. *)
 let build_explanation_graph ?(addmissing=false) root l =
   let open Defaultgraphs.SyntacticDependencyGraph in
-  let module UG = Graph.Imperative.Graph.Concrete(G.V) in
-  let add_node p =
+  let add_node value =
     G.V.create (PkgV.Pkg {
-      value = p;
-      root = (CudfAdd.equal p root)
-        }
-      )
+      value;
+      root = (CudfAdd.equal value root)
+      }
+    )
   in
   let gr = G.create () in
-  let ugr = UG.create () in
   let c = ref 0 in
   let conflicts = ref [] in
   let missing = ref [] in
@@ -273,18 +271,162 @@ let build_explanation_graph ?(addmissing=false) root l =
           missing := (vp,vpkgs) :: !missing;
           add_edge gr vpid (PkgE.MissingDepends vpkgs) vp
       |Conflict(pkg_i,pkg_j,vpkg) ->
-          let vpid = add_node pkg_i in
-          let vp = add_node pkg_j in
-          UG.add_edge ugr vpid vp;
-          incr c;
-          conflicts := (vpid,vp,vpkg) :: !conflicts;
-          add_edge gr vpid PkgE.Conflict vp
+          if not (CudfAdd.equal pkg_i pkg_j) then begin
+            let vi = add_node pkg_i in
+            let vj = add_node pkg_j in
+            incr c;
+            conflicts := (vi,vj,vpkg) :: !conflicts;
+            if (G.V.compare vi vj) > 0 then 
+              add_edge gr vi PkgE.Conflict vj 
+            else 
+              add_edge gr vj PkgE.Conflict vi
+          end
       end
   ) l;
   (gr,!conflicts,!missing)
 ;;
 
-let print_dot ?(addmissing=false) ?dir = function
+(** condense nodes in the graph *)
+let cmp_ne x y =
+  let open Defaultgraphs.SyntacticDependencyGraph in
+  let rec cmplist v1 v2 =
+    match v1, v2 with
+    |[],[] -> 0
+    |[],_ -> 1
+    |_,[] -> -1
+    |x::xs,y::ys ->
+        let c = G.V.compare x y in
+        if c = 0 then cmplist xs ys
+        else c
+  in
+  let cmp (n1,sl1,pl1) (n2,sl2,pl2) =
+    let c = Pervasives.compare n1 n2 in
+    if c = 0 then
+      let c1 = cmplist sl1 sl2 in
+      if c1 = 0 then cmplist pl1 pl2
+      else c1
+    else c
+  in
+  cmp x y
+
+let groupby cmp filter l =
+  List.fold_left (fun map v ->
+    let k = filter v in
+    let pl =
+      try PMap.find k map
+      with Not_found -> [v] 
+    in
+    PMap.add k (v :: pl) map
+  ) (PMap.create cmp) l
+
+let name_and_edges gr v =
+  let open Defaultgraphs.SyntacticDependencyGraph in
+  let sl = List.sort ~cmp:G.V.compare (G.succ gr v) in
+  let pl = List.sort ~cmp:G.V.compare (G.pred gr v) in
+  let n =
+    match v with
+    |PkgV.Pkg { value = p } -> p.Cudf.package
+    |PkgV.Or i -> Printf.sprintf "Or%d" i
+    |PkgV.Missing _ -> "Missing"
+    |PkgV.Set _ -> assert false
+  in
+  (n,sl,pl)
+
+let getlist =
+  let open Defaultgraphs.SyntacticDependencyGraph in
+  List.filter_map (function
+    |(PkgV.Pkg { value = p }) as v -> Some (p,v)
+    |PkgV.Or _ -> None
+    |PkgV.Missing _ -> None
+    |PkgV.Set _ -> None
+  )
+
+let in_conflict gr x y =
+  let open Defaultgraphs.SyntacticDependencyGraph in
+  try
+    let e = 
+      if G.V.compare x y > 0 then
+        G.find_edge gr x y
+      else
+        G.find_edge gr y x
+    in
+    (!(G.E.label e)) = PkgE.Conflict
+  with Not_found -> false
+
+let condense gr =
+  let open Defaultgraphs.SyntacticDependencyGraph in
+  let module Visit = Graph.Traverse.Dfs(G) in
+  let h = Hashtbl.create 17 in
+  Visit.postfix (function
+    |((PkgV.Missing _)|(PkgV.Or _)) as v  ->
+      PMap.iter (fun (name,sl,pl) l ->
+        match getlist l with
+        |[] -> ()
+        |pkgl -> 
+          let vpid = 
+            G.V.create (
+              if List.length pkgl = 1 then
+                (List.hd l)
+              else
+                PkgV.Set (CudfAdd.to_set (List.map fst pkgl))
+            )
+          in
+          List.iter (fun (_,v) -> Hashtbl.add h v (vpid,sl,pl)) pkgl
+      ) (groupby cmp_ne (name_and_edges gr) (G.pred gr v));
+      (* a missing does not have any succ, so it's safe to assume the second
+       * loop interests only Or nodes *)
+      PMap.iter (fun (name,sl,pl) l ->
+        match getlist l with
+        |[] -> ()
+        |pkgl -> 
+          if List.for_all (fun (_,src) ->
+            (List.for_all (in_conflict gr src) sl) ||
+            (List.for_all (in_conflict gr src) pl)
+          ) pkgl then begin
+            let vpid = 
+              G.V.create (
+                if List.length pkgl = 1 then
+                  (List.hd l)
+                else
+                  PkgV.Set (CudfAdd.to_set (List.map fst pkgl))
+              )
+            in
+            List.iter (fun (_,v) -> Hashtbl.add h v (vpid,sl,pl)) pkgl
+          end
+      ) (groupby cmp_ne (name_and_edges gr) (G.succ gr v))
+    |_ -> ()
+  ) gr;
+  let e_to_remove = ref [] in
+  G.iter_vertex (fun v ->
+    try
+      let (vpid, sl, pl) = Hashtbl.find h v in
+      List.iter (fun dst ->
+        let e = G.find_edge gr v dst in
+        let dst = 
+          try let (c,_,_) = Hashtbl.find h dst in c
+          with Not_found -> dst
+        in
+        add_edge gr vpid (!(G.E.label e)) dst;
+        e_to_remove := e::!e_to_remove;
+      ) sl;
+      List.iter (fun src ->
+        let e = G.find_edge gr src v in
+        let src = 
+          try let (c,_,_) = Hashtbl.find h src in c
+          with Not_found -> src
+        in
+        add_edge gr src (!(G.E.label e)) vpid;
+        e_to_remove := e::!e_to_remove;
+      ) pl;
+    with Not_found -> ()
+  ) gr;
+  List.iter (G.remove_edge_e gr) !e_to_remove;
+  Hashtbl.iter (fun k _ -> G.remove_vertex gr k) h;
+  gr
+;;
+
+let print_dot ?(addmissing=false) ?dir = 
+  let open Defaultgraphs.SyntacticDependencyGraph in function
   |{result = Success _ } -> fatal "Cannot build explanation graph on Success"
   |{result = Failure f; request = Package r } ->
       let fmt =
@@ -300,32 +442,13 @@ let print_dot ?(addmissing=false) ?dir = function
         Format.formatter_of_out_channel oc;
       in
       let (gr,_,_) = build_explanation_graph ~addmissing r (f ()) in
-      Defaultgraphs.SyntacticDependencyGraph.DotPrinter.print fmt gr
+      DotPrinter.print fmt (condense gr)
   |_ ->
     warning "Tryin to build explanation graph for a Coinst (not implemented yet)"
 ;;
+
 ENDIF
-
-(** condense nodes in the graph that have the same package name
-    but different versions using the following transformation rules:
-    - Or -> (a, v 1,2) -> Node 
-
-let condense gr =
-  let module Bfs = Traverse.Bfs(G) in
-  let visit = function 
-    G.V.label v
-    |PkgV.Missing vpkgs ->
-
-  in
-  Bfs.iter visit g;
-
-  let children = ... in
-  if all children are packages then
-    if 
-*)
-
-(* END *)
-
+ 
 (* only two failures reasons. Dependency describe the dependency chain to a failure witness *)
 let print_error ?(minimal=false) pp root fmt l =
   let (deps,res) = List.partition (function Dependency _ -> true |_ -> false) l in
