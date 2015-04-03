@@ -300,6 +300,15 @@ Type: text
 Printer: text
 Speed: slow
 
+Name: ceve_strongdep_deb_dot
+Group: ceve
+Expected: tests/applications/dose-tests/ceve_strongdep_deb_dot
+Input: tests/deb/ceve_strongdep_deb
+Cmd: ./ceve.@OCAMLEXT@ -Gstrdeps -Tdot --deb-native-arch=amd64 -t deb
+Type: text
+Printer: text
+Speed: slow
+
 Name: deb_buildcheck
 Group: buildcheck
 Expected: tests/applications/dose-tests/deb-buildcheck-output
