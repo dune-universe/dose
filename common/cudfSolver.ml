@@ -17,6 +17,9 @@ module Pcre = Re_pcre
 open ExtLib
 include Util.Logging(struct let label = __FILE__ end) ;;
 
+(* FIXME: unify with deb/apt.ml *)
+let blank_regexp = Pcre.regexp "[ \t]+" ;;
+
 let check_fail file =
   let ic = open_in file in
   try begin
@@ -65,16 +68,53 @@ let rec input_all_lines acc chan =
    "$in", "$out", and "$pref"; corresponding to, respectively, input CUDF
    document, output CUDF universe, user preferences. *)
 
-(* quote string for the shell, after removing all characters disallowed in criteria *)
-let quote s = Printf.sprintf "\"%s\"" s;;
-let sanitize s = quote (Pcre.substitute ~rex:(Pcre.regexp "[^+()a-z,\"-]") ~subst:(fun _ -> "") s);;
+(* remove all characters disallowed in criteria *)
+(* TODO: should this really be done? *)
+let sanitize s = Pcre.substitute ~rex:(Pcre.regexp "[^+()a-z,\"-]") ~subst:(fun _ -> "") s;;
 
 let interpolate_solver_pat exec cudf_in cudf_out pref =
-  let (|>) f g = fun x -> g(f x) in
-  let dequote s = Pcre.regexp ("\"*"^(Pcre.quote s)^"\"*") in
-  (Pcre.substitute ~rex:(dequote "$in")   ~subst: (fun _ -> (quote cudf_in))  |>
-   Pcre.substitute ~rex:(dequote "$out")  ~subst: (fun _ -> (quote cudf_out)) |>
-   Pcre.substitute ~rex:(dequote "$pref") ~subst: (fun _ -> (sanitize pref))) exec
+  (* FIXME: the exec string is restricted to not have:
+   *  - any backslash escapes
+   *  - any spaces between two quotes
+   *  - no adjacent quotes
+   * Here is an example of what is allowed:
+   *     foobar "blub" "bla"
+   * And here what is not allowed
+   *     foobar "blub""bla"
+   *     foobar "blub bla"
+   *     foobar "blub\"bla"
+   * Using a proper shell command parsing library could lift this limitation
+   * but so far the known exec strings are:
+   *     aspcud: /usr/bin/aspcud "$in" "$out" "$pref"
+   *     mccs:   /usr/bin/mccs -i $in -o $out -lpsolve $pref
+   *     packup: /usr/bin/packup -u $pref $in $out
+   * We accept this limitation because more complexity is not required by
+   * existing solvers and because avoiding calls to /bin/sh gives a 16%
+   * performance boost. Check <20150322143442.2181.69700@hoothoot> in the
+   * dose-devel archives.
+   *)
+  let argv = Pcre.split ~rex:blank_regexp exec in
+  (* sanitize arguments by removing possible enclosing quotes *)
+  (* the re module is horribly limited and does not support lookahead and
+   * lookbehind, or non-matching groups or backreferences. So using String
+   * manipulation instead. *)
+  let quote_chars = ["\""; "'"] in
+  let argv = List.map (fun a ->
+          if List.exists (fun q -> String.starts_with a q && String.ends_with a q) quote_chars then
+            String.sub a 1 ((String.length a) - 2)
+          else a
+    ) argv in
+  let illegal_chars = ['"'; '\''; '\\'] in
+  let contains_illegal_chars = List.exists (fun a -> List.exists (String.contains a) illegal_chars) argv in
+  if contains_illegal_chars then
+    fatal "solver exec string must not contain quotes or backslashes";
+  (* assoc list mapping from wildcard to value *)
+  let mapping = [("$in", cudf_in); ("$out", cudf_out); ("$pref", sanitize pref)] in
+  (* test if the exec string contains all wildcards *)
+  let contains_all_wildcards = List.for_all (fun (w,_) -> List.mem w argv) mapping in
+  if not contains_all_wildcards then
+    fatal "solver exec string must contain $in, $out and $pref";
+  List.map (fun a -> try List.assoc a mapping with Not_found -> a) argv
 ;;
 
 exception Error of string
@@ -96,6 +136,54 @@ let check_exit_status cmd = function
 let timer3 = Util.Timer.create "cudfio" ;;
 let timer4 = Util.Timer.create "solver" ;;
 
+let try_set_close_on_exec fd =
+  try Unix.set_close_on_exec fd; true with Invalid_argument _ -> false
+
+let open_proc_full cmd env input output error toclose =
+  let cloexec = List.for_all try_set_close_on_exec toclose in
+  match Unix.fork() with
+     0 -> Unix.dup2 input Unix.stdin; Unix.close input;
+          Unix.dup2 output Unix.stdout; Unix.close output;
+          Unix.dup2 error Unix.stderr; Unix.close error;
+          if not cloexec then List.iter Unix.close toclose;
+          begin try Unix.execvpe (List.hd cmd) (Array.of_list cmd) env
+          with _ -> exit 127
+          end
+  | id -> id
+
+(* bits and pieces borrowed from ocaml stdlib/filename.ml *)
+let open_process argv env =
+  let (in_read, in_write) = Unix.pipe() in
+  let fds_to_close = ref [in_read;in_write] in
+  try
+    let (out_read, out_write) = Unix.pipe() in
+    fds_to_close := out_read::out_write:: !fds_to_close;
+    let (err_read, err_write) = Unix.pipe() in
+    fds_to_close := err_read::err_write:: !fds_to_close;
+    let inchan = Unix.in_channel_of_descr in_read in
+    let outchan = Unix.out_channel_of_descr out_write in
+    let errchan = Unix.in_channel_of_descr err_read in
+    let pid = open_proc_full argv env out_read in_write err_write [in_read; out_write; err_read] in
+    Unix.close out_read;
+    Unix.close in_write;
+    Unix.close err_write;
+    (inchan, outchan, errchan,pid)
+  with e ->
+    List.iter Unix.close !fds_to_close;
+    raise e
+;;
+
+let rec waitpid_non_intr pid =
+  try Unix.waitpid [] pid
+  with Unix.Unix_error (EINTR, _, _) -> waitpid_non_intr pid
+
+let close_process (inchan, outchan, errchan,pid) =
+  close_in inchan;
+  begin try close_out outchan with Sys_error _ -> () end;
+  close_in errchan;
+  snd(waitpid_non_intr pid)
+;;
+
 (** [execsolver] execute an external cudf solver.
     exec_pat : execution string
     cudf : a cudf document (preamble, universe, request)
@@ -109,9 +197,10 @@ let execsolver exec_pat criteria cudf =
     let solver_in = Filename.concat tmpdir "in-cudf" in
     Unix.mkfifo solver_in 0o600;
     let solver_out = Filename.concat tmpdir "out-cudf" in
-    let cmd = interpolate_solver_pat exec_pat solver_in solver_out criteria in
+    let argv = interpolate_solver_pat exec_pat solver_in solver_out criteria in
+    let argv_joined = String.join " " argv in
 
-    notice "%s" cmd;
+    notice "%s" argv_joined;
 
     (* Tell OCaml we want to capture SIGCHLD                       *)
     (* In case the external solver fails before reading its input, *)
@@ -119,7 +208,7 @@ let execsolver exec_pat criteria cudf =
     let eintr_handl = Sys.signal Sys.sigchld (Sys.Signal_handle (fun _ -> ())) in
 
     let env = Unix.environment () in
-    let (cin,cout,cerr) = Unix.open_process_full cmd env in
+    let (cin,cout,cerr,pid) = open_process argv env in
 
     Util.Timer.start timer3;
     begin
@@ -128,7 +217,7 @@ let execsolver exec_pat criteria cudf =
         let oc = Unix.out_channel_of_descr solver_in_fd in
         Cudf_printer.pp_cudf oc cudf;
         close_out oc
-      with Unix.Unix_error (Unix.EINTR,_,_) ->  info "Interrupted by EINTR while executing command '%s'" cmd
+      with Unix.Unix_error (Unix.EINTR,_,_) ->  info "Interrupted by EINTR while executing command '%s'" argv_joined
     end;
     Util.Timer.stop timer3 ();
     (* restore previous behaviour on sigchild *)
@@ -137,8 +226,8 @@ let execsolver exec_pat criteria cudf =
     Util.Timer.start timer4;
     let lines_cin = input_all_lines [] cin in
     let lines = input_all_lines lines_cin cerr in
-    let exit_code = Unix.close_process_full (cin,cout,cerr) in
-    check_exit_status cmd exit_code;
+    let exit_code = close_process (cin,cout,cerr,pid) in
+    check_exit_status argv_joined exit_code;
     notice "\n%s" (String.concat "\n" lines);
     Util.Timer.stop timer4 ();
 
