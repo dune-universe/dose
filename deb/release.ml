@@ -20,6 +20,10 @@
 open ExtLib
 open Common
 
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
+
 type release = {
   fname : string;
   origin : string;

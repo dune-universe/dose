@@ -18,6 +18,10 @@
 open Common
 module Pcre = Re_pcre
 
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
+
 let is_digit = function
   | '0'..'9' -> true
   | _ -> false

@@ -16,7 +16,9 @@ open Common
 open Algo
 open Doseparse
 
-include Util.Logging(struct let label = __FILE__ end) ;;
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
 
 #ifdef HASOCAMLGRAPH
   module DGraph = Defaultgraphs.SyntacticDependencyGraph
@@ -262,4 +264,4 @@ let main () =
   in output [plist]
 ;;
 
-StdUtils.if_application ~alternatives:["dose-ceve";"ceve"] __FILE__ (fun () -> main (); 0) ;;
+StdUtils.if_application ~alternatives:["dose-ceve";"ceve"] __label (fun () -> main (); 0) ;;

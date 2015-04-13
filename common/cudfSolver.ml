@@ -15,7 +15,10 @@
 module Pcre = Re_pcre
 
 open ExtLib
-include Util.Logging(struct let label = __FILE__ end) ;;
+
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
 
 let check_fail file =
   let ic = open_in file in

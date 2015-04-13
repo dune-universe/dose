@@ -63,7 +63,9 @@ module Options = struct
 
 end
 
-include Util.Logging(struct let label = __FILE__ end) ;;
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
 
 let timer = Util.Timer.create "Solver"
 
@@ -226,5 +228,5 @@ StdUtils.if_application
     "deb-buildcheck"; "debbuildcheck";"dose-builddebcheck";
     "deb-crossbuildcheck";"debcrossbuildcheck";
     "dose-debcrossbuildcheck"]
-  __FILE__ main
+  __label main
 ;;

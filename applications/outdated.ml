@@ -19,8 +19,6 @@ open Common
 open Algo
 open DoseparseNoRpm
 
-include Util.Logging(struct let label = __FILE__ end) ;;
-
 module Options = struct
   open OptParse
   let description =
@@ -42,6 +40,10 @@ module Options = struct
   open OptParser ;;
   add options ~long_name:"dump" ~help:"Dump the cudf package list and exit" dump;
 end
+
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
 
 let sync (sn,sv,v) p =
   let cn = CudfAdd.encode ("src/"^sn^"/"^sv) in
@@ -330,5 +332,5 @@ let main () =
 
 StdUtils.if_application
 ~alternatives:["dose-outdated";"dose3-outdated";"edos-outdated";"deb-outdated"] 
-__FILE__ main ;;
+__label main ;;
 

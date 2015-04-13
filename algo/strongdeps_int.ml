@@ -20,7 +20,9 @@ let conjbar = Util.Progress.create "Strongdeps_int.conj"
 let strongtimer = Util.Timer.create "Strongdeps_int.strong"
 let conjtimer = Util.Timer.create "Strongdeps_int.conjdep"
 
-include Util.Logging(struct let label = __FILE__ end) ;;
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
 
 module G = Defaultgraphs.PackageGraph.G
 module O = Defaultgraphs.PackageGraph.O

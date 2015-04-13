@@ -14,7 +14,9 @@ open ExtLib
 open ExtString
 open Common
 
-include Util.Logging(struct let label = __FILE__ end) ;;
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
 
 type tables = {
   units : (Packages.name, (int * (Packages.rel * string)) list) Hashtbl.t;

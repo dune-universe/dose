@@ -18,7 +18,10 @@ open Algo
 open DoseparseNoRpm
 
 let predbar = Util.Progress.create "challenged" ;;
-include Util.Logging(struct let label = __FILE__ end) ;;
+
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
 
 module Options = struct
   open OptParse
@@ -356,4 +359,4 @@ let main () =
 
 StdUtils.if_application 
 ~alternatives:["dose-challenged";"dose3-challenged";"edos-challenged";"deb-challenged"]
-__FILE__ main ;;
+__label main ;;

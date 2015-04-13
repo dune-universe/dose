@@ -44,7 +44,9 @@ module type T = sig
   val stats : state -> unit
 end
 
-include Util.Logging(struct let label = __FILE__ end) ;;
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
 
 module IntHash = 
   Hashtbl.Make (struct

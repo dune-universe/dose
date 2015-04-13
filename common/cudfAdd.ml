@@ -17,8 +17,9 @@ module OCAMLHashtbl = Hashtbl
 
 open ExtLib
 
-(* Include internal debugging functions for this module (debug, info, warning, fatal). *)
-include Util.Logging(struct let label = __FILE__ end) ;;
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
 
 let equal = Cudf.(=%)
 let compare = Cudf.(<%)

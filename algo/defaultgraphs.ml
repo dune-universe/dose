@@ -16,7 +16,9 @@ open ExtLib
 open Graph
 open Common
 
-include Util.Logging(struct let label = __FILE__ end) ;;
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
 
 let tr_timer = Util.Timer.create "Defaultgraph.GraphOper.transitive_reduction"
 let trbar = Util.Progress.create "Defaultgraph.GraphOper.transitive_reduction"

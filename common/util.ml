@@ -85,7 +85,10 @@ module MakeMessages(X : sig val label : string end) = struct
     with Invalid_argument _ -> label
 
   let create ?(enabled=false) label =
-    if not (Hashtbl.mem messages label) then
+    if label = "" then begin
+      Printf.eprintf "Logging Label Empty\n";
+      Pervasives.exit (64);
+    end else if not (Hashtbl.mem messages label) then
       let t = { label = clean label ; enabled = enabled } in
       Hashtbl.add messages (clean label) t ;
       t
@@ -155,7 +158,9 @@ module Logging(X : sig val label : string end) = struct
     ) fmt
 end
 
-include Logging(struct let label = __FILE__ end) ;;
+#define __label __FILE__
+let label =  __label ;;
+include Logging(struct let label = label end) ;;
 
 (** Printf bars are printed immediately on stderr.
  * they can be enabled or disabled (default) *)

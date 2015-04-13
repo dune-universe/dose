@@ -14,8 +14,9 @@ module OcamlHash = Hashtbl ;;
 open ExtLib ;;
 open Common ;;
 
-#define loc (Printf.sprintf "File %S, line %i" __FILE__ __LINE__)
-include Util.Logging(struct let label = loc end) ;;
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
 
 (** One un-installability reason for a package *)
 type reason =

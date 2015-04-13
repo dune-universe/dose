@@ -51,7 +51,9 @@ module Options = struct
   add options ~long_name:"trim" ~help:"Consider only installable packages" trim;
 end
 
-include Util.Logging(struct let label = __FILE__ end) ;;
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
 
 (**********************************)
 

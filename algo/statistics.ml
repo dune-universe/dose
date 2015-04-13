@@ -22,7 +22,9 @@ open Graph
 open ExtLib
 open Common
 
-include Util.Logging(struct let label = __FILE__ end) ;;
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
 
 module Make (G: Sig.I ) = struct
   module VS = Set.Make (G.V)

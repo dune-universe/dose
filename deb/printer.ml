@@ -13,6 +13,10 @@
 open ExtLib
 open Common
 
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
+
 let pp_source oc = function
   |source,None -> Printf.fprintf oc "%s" source
   |source,Some version -> Printf.fprintf oc "%s (%s)" source version

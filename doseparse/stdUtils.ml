@@ -15,7 +15,9 @@
 open ExtLib
 open Common
 
-include Util.Logging(struct let label = __FILE__ end) ;;
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
 
 let get_architectures native_edsp foreign_edsp native_opt foreign_opt =
   let cmd = "apt-config dump" in

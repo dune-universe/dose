@@ -17,7 +17,9 @@ module Pcre = Re_pcre
 open ExtLib
 open Common
 
-include Util.Logging(struct let label = __FILE__ end) ;;
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
 
 type name = string
 type version = string
@@ -45,7 +47,7 @@ module Set = Set.Make(struct
 end)
 
 let input_raw_priv parse_packages files =
-  let timer = Util.Timer.create __FILE__ in
+  let timer = Util.Timer.create __label in
   Util.Timer.start timer;
   if List.length files > 1 then info "Merging input lists" ;
   let s =

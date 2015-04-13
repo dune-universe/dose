@@ -14,7 +14,9 @@ module Pcre = Re_pcre
 open ExtLib
 open Common
 
-include Util.Logging(struct let label = __FILE__ end) ;;
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
 
 type name = string
 type version = string

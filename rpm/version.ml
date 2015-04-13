@@ -14,6 +14,10 @@
 (* external rpmEVRcmp : string -> string -> int = "rpm_EVRcmp" *)
 module Str = Re_str
 
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
+
 (** compare only version strings *)
 external rpmvercmp : string -> string -> int = "rpm_vercmp"
 

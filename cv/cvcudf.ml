@@ -3,7 +3,9 @@
 open ExtLib
 open Common
 
-include Util.Logging(struct let label = __FILE__ end) ;;
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
 
 type tables = {
   reverse_table : ((string * int), string) Hashtbl.t; (** (name,cudf_version) -> real_version  *)
