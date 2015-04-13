@@ -36,17 +36,17 @@ module Options = struct
   let cputable = StdOpt.str_option ()
   let profiles = StdOptions.str_list_option ()
 
-  include StdOptions.DistcheckOptions
+  include StdOptions.DistcheckOptions ;;
   StdOptions.DistcheckOptions.add_options options ;;
 
-  include StdOptions.InputOptions
+  include StdOptions.InputOptions ;;
   StdOptions.InputOptions.add_options options ;;
 
-  include StdOptions.OutputOptions
+  include StdOptions.OutputOptions ;;
   StdOptions.OutputOptions.add_options options ;;
   StdOptions.OutputOptions.add_option options ~long_name:"dump" ~help:"dump the cudf file" dump;
 
-  include StdOptions.DistribOptions;;
+  include StdOptions.DistribOptions ;;
   StdOptions.DistribOptions.add_options options ;;
   StdOptions.DistribOptions.add_option options ~long_name:"deb-triplettable"
     ~help:"Path to an architecture triplet table like /usr/share/dpkg/triplettable" triplettable;

@@ -29,18 +29,18 @@ module Options = struct
 
   let coinst = StdDebian.vpkglist_option ();;
 
-  include StdOptions.DistcheckOptions
+  include StdOptions.DistcheckOptions ;;
   StdOptions.DistcheckOptions.add_options options ;;
   StdOptions.DistcheckOptions.add_option options ~long_name:"coinst" ~help:"Check if these packages are coinstallable" coinst;;
 
-  include StdOptions.InputOptions
+  include StdOptions.InputOptions ;;
   let default = "dot"::(StdOptions.InputOptions.default_options) in
   StdOptions.InputOptions.add_options ~default options ;;
 
-  include StdOptions.OutputOptions;;
+  include StdOptions.OutputOptions ;;
   StdOptions.OutputOptions.add_options options ;;
 
-  include StdOptions.DistribOptions;;
+  include StdOptions.DistribOptions ;;
   let default = List.remove StdOptions.DistribOptions.default_options "deb-host-arch" in
   StdOptions.DistribOptions.add_options ~default options ;;
 
@@ -165,13 +165,13 @@ let main () =
   let callback d =
     if summary then Diagnostic.collect results d ;
     let _ = 
-      IFDEF HASOCAMLGRAPH THEN
+#ifdef HASOCAMLGRAPH 
       if not(Diagnostic.is_solution d) && (OptParse.Opt.get Options.dot) then
         let dir = OptParse.Opt.opt Options.outdir in
         Diagnostic.print_dot ~addmissing:explain ?dir d
-      ELSE
+#else
       ()
-      ENDIF
+#endif
     in
     let pp =
       if input_type = `Cudf then 

@@ -1,14 +1,14 @@
 true: -traverse
 <{common,algo,doseparse,doseparseNoRpm,deb,rpm,applications,experimental}/**>: traverse
 
-<doseparseNoRpm/*.ml{i,}>: pp(@CAMLP4OMACRO@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_OCAMLGRAPH@)
-<doseparse/*.ml{i,}>: pp(@CAMLP4OMACRO@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_OCAMLGRAPH@)
+<doseparseNoRpm/*.ml{i,}>: pp(cppo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_OCAMLGRAPH@)
+<doseparse/*.ml{i,}>: pp(cppo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_OCAMLGRAPH@)
 
-<{common,algo}/*.ml{i,}>: pp(@CAMLP4OMACRO@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_OCAMLGRAPH@)
+<{common,algo}/*.ml{i,}>: pp(cppo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_OCAMLGRAPH@)
 
-<applications/*.ml> or <experimental/*/*.ml> or <experimental/*.ml>: pp(@CAMLP4OMACRO@ @CONFIG_PARMAP@ @CONFIG_OCAMLGRAPH@)
+<applications/*.ml> or <experimental/*/*.ml> or <experimental/*.ml>: pp(cppo @CONFIG_PARMAP@ @CONFIG_OCAMLGRAPH@)
 
-<*/*.ml{i,}>: pp(@CAMLP4OMACRO@)
+<*/*.ml{i,}>: pp(cppo)
 <*/*.ml{i,}>: package(extlib), @PKG_CUDF@, package(re.pcre)
 
 <*/tests.*>: package(oUnit), package(extlib), @PKG_CUDF@, package(re.pcre), package(zip), package(bz2)

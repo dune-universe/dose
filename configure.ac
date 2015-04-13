@@ -3,12 +3,12 @@ AC_CONFIG_MACRO_DIR([m4])
 
 AC_PROG_OCAML
 if test "$OCAMLC" = "no"; then
- AC_MSG_ERROR([You must install the OCaml compiler])
+ AC_MSG_ERROR([You must install the OCaml compiler to compile dose3])
 fi
 
-AC_PROG_CAMLP4
-if test "$CAMLP4" = "no"; then
- AC_MSG_ERROR([You must install the Camlp4 pre-processor])
+AC_CHECK_PROG(CPPO_CHECK,cppo,yes)
+if test x"$CPPO_CHECK" != x"yes" ; then
+    AC_MSG_ERROR([You must install the cppo pre-processor to compile dose3])
 fi
 
 AC_PROG_FINDLIB
@@ -28,15 +28,6 @@ if test "$OCAMLBEST" = "byte" ; then
 else
   OCAMLEXT=native
 fi
-
-if test "$OCAMLBEST" = "byte" || test "$CAMLP4OOPT" = "no" || test "$OCAMLNATDYNLINK" = "no" ; then
- CAMLP4OMACRO="$CAMLP4O Camlp4MacroParser.cmo"
-else
- CAMLP4OMACRO="$CAMLP4OOPT -I_build Camlp4MacroParser.cmxs"
-fi
-AC_SUBST(CAMLP4O)
-AC_SUBST(CAMLP4OMACRO)
-
 
 #defaults
 USE_RPM=use_
@@ -96,7 +87,7 @@ if test "$HAS_PARMAP" = "yes" ; then
   if test "$OCAML_PKG_parmap" = "no"; then
    AC_MSG_ERROR([Please install OCaml findlib module 'parmap'.])
   fi
-  CONFIG_PARMAP="-DHASPARMAP"
+  CONFIG_PARMAP="-D HASPARMAP"
   PKG_PARMAP="package(parmap)"
   PARMAP=parmap
 fi
@@ -112,7 +103,7 @@ if test "$HAS_ZIP" = "yes" ; then
   if test "$OCAML_PKG_zip" = "no"; then
    AC_MSG_ERROR([Please install OCaml findlib module 'zip'.])
   fi
-  CONFIG_ZIP="-DHASZIP"
+  CONFIG_ZIP="-D HASZIP"
   PKG_ZIP="package(zip)"
   ZIP=zip
 fi
@@ -127,7 +118,7 @@ if test "$HAS_BZ2" = "yes" ; then
   if test "$OCAML_PKG_bz2" = "no"; then
    AC_MSG_ERROR([Please install OCaml findlib module 'bz2'.])
   fi
-  CONFIG_BZ2="-DHASBZ2"
+  CONFIG_BZ2="-D HASBZ2"
   PKG_BZ2="package(bz2)"
   BZ2=bz2
 fi
@@ -146,7 +137,7 @@ if test "$HAS_OCAMLGRAPH" = "yes" ; then
   PKG_OCAMLGRAPH="package(ocamlgraph)"
   MLPACK_OCAMLGRAPH="Defaultgraphs Statistics Dominators Strongdeps Strongdeps_int Strongconflicts Strongconflicts_int"
   DOC_OCAMLGRAPH="algo/Strongdeps algo/Strongconflicts algo/Strongdeps_int algo/Strongconflicts_int algo/Defaultgraphs algo/Statistics"
-  CONFIG_OCAMLGRAPH="-DHASOCAMLGRAPH"
+  CONFIG_OCAMLGRAPH="-D HASOCAMLGRAPH"
   OCAMLGRAPH=ocamlgraph
 fi
 
@@ -220,7 +211,7 @@ if test "$HAS_RPM4" = "yes" ; then
   AC_MSG_NOTICE([RPM support enabled])
   AC_CHECK_HEADERS([rpm/rpmio.h],,AC_MSG_ERROR([missing rpmio.h]))
   AC_CHECK_HEADERS([rpm/rpmtypes.h],,AC_MSG_ERROR([missing rpmtypes.h]))
-  CONFIG_RPM="-DHASRPM"
+  CONFIG_RPM="-D HASRPM"
   USE_RPM="use_rpm, use_rpm4"
   DOC_RPM="#rpm/Packages
   #rpm/Hdlists
@@ -242,7 +233,7 @@ if test "$HAS_RPM5" = "yes"; then
 #  AC_CHECK_HEADERS([rpm/rpmgi.h],,AC_MSG_ERROR([missing rpmgi.h]))
 #  AC_CHECK_HEADERS([rpm/rpm46compat.h],,AC_MSG_ERROR([missing rpm46compat.h]))
 #  AC_CHECK_HEADERS([rpm/rpm4compat.h],,AC_MSG_ERROR([missing rpm4compat.h]))
-  CONFIG_RPM="-DHASRPM"
+  CONFIG_RPM="-D HASRPM"
   USE_RPM="use_rpm, use_rpm5"
   DOC_RPM="#rpm/Packages
   #rpm/Hdlists

@@ -10,11 +10,12 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-module OcamlHash = Hashtbl
-open ExtLib
-open Common
+module OcamlHash = Hashtbl ;;
+open ExtLib ;;
+open Common ;;
 
-include Util.Logging(struct let label = __FILE__ end) ;;
+#define loc (Printf.sprintf "File %S, line %i" __FILE__ __LINE__)
+include Util.Logging(struct let label = loc end) ;;
 
 (** One un-installability reason for a package *)
 type reason =
@@ -199,7 +200,7 @@ let pp_dependencies pp fmt pathlist =
   aux fmt pathlist
 ;;
 
-IFDEF HASOCAMLGRAPH THEN
+#ifdef HASOCAMLGRAPH
 (** Build a SyntacticDependencyGraph from the solver output. *)
 let build_explanation_graph ?(addmissing=false) root l =
   let open Defaultgraphs.SyntacticDependencyGraph in
@@ -446,8 +447,7 @@ let print_dot ?(addmissing=false) ?dir =
   |_ ->
     warning "Tryin to build explanation graph for a Coinst (not implemented yet)"
 ;;
-
-ENDIF
+#endif
  
 (* only two failures reasons. Dependency describe the dependency chain to a failure witness *)
 let print_error ?(minimal=false) pp root fmt l =

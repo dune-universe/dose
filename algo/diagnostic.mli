@@ -147,7 +147,7 @@ val printf :
   ?pp:pp ->
   ?failure : bool -> ?success : bool -> ?explain : bool -> diagnosis -> unit
 
-IFDEF HASOCAMLGRAPH THEN
+#ifdef HASOCAMLGRAPH
 (** print the explanation graph in dot format to the standard formatter *)
 val print_dot : ?addmissing : bool -> ?dir : string -> diagnosis -> unit
-ENDIF
+#endif

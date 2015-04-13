@@ -36,20 +36,20 @@ module Options = struct
   let triplettable = StdOpt.str_option ()
   let cputable = StdOpt.str_option ()
 
-  include StdOptions.DistcheckOptions
+  include StdOptions.DistcheckOptions ;;
   let default = List.remove StdOptions.DistcheckOptions.default_options "successes" in
   StdOptions.DistcheckOptions.add_options ~default options ;
 
-  include StdOptions.InputOptions
+  include StdOptions.InputOptions ;;
   let default = List.remove StdOptions.InputOptions.default_options "inputtype" in
   StdOptions.InputOptions.add_options ~default options ;
   StdOptions.InputOptions.add_option options ~long_name:"src" ~help:"Associate Sources file" sources;
 
-  include StdOptions.OutputOptions
+  include StdOptions.OutputOptions ;;
   StdOptions.OutputOptions.add_options options ;
   StdOptions.OutputOptions.add_option options ~long_name:"dump" ~help:"dump the cudf file" dump;
 
-  include StdOptions.DistribOptions;;
+  include StdOptions.DistribOptions ;;
   let default = List.remove StdOptions.DistribOptions.default_options "deb-host-arch" in
   StdOptions.DistribOptions.add_options ~default options ;
   StdOptions.DistribOptions.add_option options ~long_name:"deb-triplettable"

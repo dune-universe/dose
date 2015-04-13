@@ -30,14 +30,6 @@ ifeq ("@OCAML_OS_TYPE@","freebsd")
 endif
 
 ifeq ("@OCAMLEXT@","native")
-	ifeq ("@CAMLP4OOPT@","camlp4o.opt")
-		CAMLP4CMXS=_build/Camlp4MacroParser.cmxs
-	else
-		CAMLP4CMXS=
-	endif
-endif
-
-ifeq ("@OCAMLEXT@","native")
   OCAMLBUILD=@OCAMLBUILD@
   INSTALLOPTS=-s
 else

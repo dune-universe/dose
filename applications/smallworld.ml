@@ -36,7 +36,7 @@ module Options = struct
   let combine_scatter = StdOpt.store_true ()
   let prefix = StdOpt.str_option ~default:"" ()
 
-  open OptParser
+  open OptParser ;;
   add options ~long_name:"prefix" ~help:"Prefix output fils with <prefix>" prefix;
   add options ~short_name:'g' ~long_name:"generic" ~help:"" generic;
   add options ~short_name:'p' ~long_name:"scatterplots" ~help:"" scatterplots;

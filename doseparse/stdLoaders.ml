@@ -140,7 +140,7 @@ let deb_load_universe options l =
 
 (** transform a list of rpm control stanza into a cudf packages list *)
 let rpm_load_list dll =
-IFDEF HASRPM THEN
+#ifdef HASRPM
   let tables =  Rpm.Rpmcudf.init_tables (List.flatten dll) in
   let cll = 
     List.map (fun l -> 
@@ -153,9 +153,9 @@ IFDEF HASRPM THEN
   let preamble = Rpm.Rpmcudf.preamble in
   let request = Cudf.default_request in
   (preamble,cll,request,from_cudf,to_cudf)
-ELSE
+#else
   failwith "librpm not available. re-configure with --with-rpm"
-END
+#endif
 
 (** transform a list of rpm control stanza into a cudf universe *)
 let rpm_load_universe l =
@@ -361,7 +361,7 @@ let parse_input ?(options=None) urilist =
   |`Cv, Some (StdOptions.Cv opt) -> cv_parse_input opt filelist
 
   |`Hdlist, None -> 
-IFDEF HASRPM THEN
+#ifdef HASRPM 
       let dll = 
         List.map (fun l ->
           let filelist = unpack_l `Hdlist l in
@@ -369,12 +369,12 @@ IFDEF HASRPM THEN
         ) filelist 
       in
       rpm_load_list dll
-ELSE
+#else
     fatal "hdlist Not supported. re-configure with --with-rpm"
-END
+#endif
 
   |`Synthesis, None -> 
-IFDEF HASRPM THEN
+#ifdef HASRPM 
       let dll = 
         List.map (fun l ->
           let filelist = unpack_l `Synthesis l in
@@ -382,20 +382,20 @@ IFDEF HASRPM THEN
         ) filelist
       in
       rpm_load_list dll
-ELSE
+#else
     fatal "synthesis input format not supported. re-configure with --with-rpm"
-END
+#endif
     |s,_ -> fatal "%s Not supported" (Url.scheme_to_string s)
 ;;
 
 let supported_formats () =
   let standard = ["cudf://";"deb://";"deb://-";"eclipse://";"pef://"] in
   let rpm = 
-IFDEF HASRPM THEN
+#ifdef HASRPM 
      ["hdlist://";"synthesis://"]
-ELSE
+#else
      []
-END
+#endif
    in
    standard@rpm
 ;;

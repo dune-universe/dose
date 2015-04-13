@@ -29,7 +29,7 @@ module Options = struct
   let checkonly = StdOptions.vpkglist_option ()
   let conj_only = StdOpt.store_true ()
 
-  open OptParser
+  open OptParser ;;
   add options ~long_name:"dot" ~help:"Print the strong dependency graph in dot format" dot;
   add options ~long_name:"detrans" ~help:"Print the transitive reduction of the strong dependency graph" detrans;
   add options ~long_name:"checkonly" ~help:"Check only these packages" checkonly;

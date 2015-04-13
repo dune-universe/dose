@@ -28,18 +28,18 @@ module Options = struct
   let options = OptParser.make ~description
   include StdOptions.MakeOptions(struct let options = options end)
 
-  include StdOptions.DistcheckOptions
+  include StdOptions.DistcheckOptions ;;
   StdOptions.DistcheckOptions.add_options options ;;
 
-  include StdOptions.InputOptions
+  include StdOptions.InputOptions ;;
   StdOptions.InputOptions.add_options ~default:["checkonly"] options ;;
 
-  include StdOptions.DistribOptions;;
+  include StdOptions.DistribOptions ;;
   StdOptions.DistribOptions.add_options options ;;
 
   let dump = StdOpt.store_true ()
 
-  open OptParser
+  open OptParser ;;
   add options ~long_name:"dump" ~help:"Dump the cudf package list and exit" dump;
 end
 

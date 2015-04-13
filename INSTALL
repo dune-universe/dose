@@ -7,12 +7,11 @@ On debian, dose3 **does not compile** on debian lenny.
 required libraries ( DEBIAN / RPM ) :
  - libextlib-ocaml-dev / ocaml-extlib-devel
  - libre-ocaml-dev / ??
- - camlp4 ( needed for conditional compilation )
+ - cppo ( needed for conditional compilation )
 
 additional libraries (enable compilation with --with-<library>) :
  - libzip-ocaml-dev / ?
- - libbz2-ocaml-dev and libbz2-dev / ?
- - libjson-static-camlp4-dev / ?
+ - libbz2-ocaml-dev / ?
  - libocamlgraph-ocaml-dev / ?
  - libounit-ocaml-dev / ocaml-ounit-devel
  - librpm-dev / librpm-devel
@@ -25,11 +24,11 @@ To use ocamlgraph support, dose3 needs libocamlgraph-ocaml-dev >= 1.8.5
 opam users need the following packages to compile dose with the default
 options :
 
-- opam install extlib camlbz2 camlzip ocamlgraph extlib ounit re cudf
+- opam install cppo extlib camlbz2 camlzip ocamlgraph extlib ounit re cudf
 
 OR 
 
-- opam install extlib re cudf
+- opam install cppo extlib re cudf
 
 to compile the core dose library.
 

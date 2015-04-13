@@ -18,10 +18,10 @@ open Doseparse
 
 include Util.Logging(struct let label = __FILE__ end) ;;
 
-IFDEF HASOCAMLGRAPH THEN
+#ifdef HASOCAMLGRAPH
   module DGraph = Defaultgraphs.SyntacticDependencyGraph
   module PGraph = Defaultgraphs.PackageGraph
-END
+#endif
 
 module Options = struct
   open OptParse
@@ -51,19 +51,19 @@ module Options = struct
 
   open OptParser
 
-  include StdOptions.InputOptions
+  include StdOptions.InputOptions ;;
   StdOptions.InputOptions.add_options ~default:["latest";"trim";"inputtype"] options ;;
   StdOptions.InputOptions.add_option options ~short_name:'c' ~long_name:"cone" ~help:"dependency cone" cone;;
   StdOptions.InputOptions.add_option options ~short_name:'r' ~long_name:"rcone" ~help:"reverse dependency cone" reverse_cone;;
   StdOptions.InputOptions.add_option options                 ~long_name:"depth" ~help:"max depth - in conjunction with cone" cone_maxdepth;;
   StdOptions.InputOptions.add_option options                 ~long_name:"request" ~help:"Installation Request (can be repeated)" request;;
 
-  include StdOptions.OutputOptions;;
+  include StdOptions.OutputOptions ;;
   StdOptions.OutputOptions.add_options options ;;
   StdOptions.OutputOptions.add_option options ~short_name:'G' ~help:"Graph output type format. Default syn" grp_type;;
   StdOptions.OutputOptions.add_option options ~short_name:'T' ~help:"Output type format. Default cnf" out_type;;
 
-  include StdOptions.DistribOptions;;
+  include StdOptions.DistribOptions ;;
   StdOptions.DistribOptions.add_options options ;;
 
 end;;
@@ -200,16 +200,16 @@ let main () =
       |"dimacs" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Dimacs u)
       |"cudf" -> Cudf_printer.pp_cudf oc doc
       |"table" ->
-IFDEF HASOCAMLGRAPH THEN
+#ifdef HASOCAMLGRAPH 
         Printf.fprintf oc "%d\t%d\t%d\n"
         (Cudf.universe_size u) (DGraph.G.nb_edges (DGraph.dependency_graph u))
         (nr_conflicts u)
-ELSE
+#else
         failwith (Printf.sprintf "format table not supported: needs ocamlgraph")
-END
+#endif
 
       |("dot" | "gml" | "grml") as t -> 
-IFDEF HASOCAMLGRAPH THEN
+#ifdef HASOCAMLGRAPH 
         let fmt = Format.formatter_of_out_channel oc in
         begin match OptParse.Opt.get Options.grp_type with
           |"syn" ->
@@ -252,9 +252,9 @@ IFDEF HASOCAMLGRAPH THEN
             else assert false
           |s -> failwith (Printf.sprintf "type %s not supported" s)
         end
-ELSE
+#else
         failwith (Printf.sprintf "format %s not supported: needs ocamlgraph" t)
-END
+#endif
       |_ -> assert false
       end ;
       close_out oc;

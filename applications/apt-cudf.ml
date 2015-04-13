@@ -35,7 +35,7 @@ module Options = struct
   let native_arch = StdOpt.str_option ()
   let foreign_archs = StdOptions.str_list_option ()
 
-  open OptParser
+  open OptParser ;;
   add options ~long_name:"conf" ~help:"configuration file (default:/etc/apt-cudf.conf)" conffile;
   add options ~long_name:"dump" ~help:"dump the cudf universe and solution" dump;
   add options ~long_name:"noop" ~help:"Do nothing" noop;
