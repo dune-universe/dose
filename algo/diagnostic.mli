@@ -84,7 +84,7 @@ val pp_dependencies : Common.CudfAdd.pp ->
 val pp_list :
   (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a list -> unit
 
-val print_error : ?minimal : bool -> Common.CudfAdd.pp ->
+val print_error : ?condense : bool -> ?minimal : bool -> Common.CudfAdd.pp ->
   Cudf.package -> Format.formatter -> reason list -> unit
 
 (** If the installablity query is successfull, [get_installationset] return 
@@ -135,6 +135,6 @@ val printf :
 #ifdef HASOCAMLGRAPH
 (** print the explanation graph in dot format to the standard formatter *)
 val print_dot :
-  ?pp : Common.CudfAdd.pp -> 
+  ?pp : Common.CudfAdd.pp -> ?condense : bool ->
   ?addmissing : bool -> ?dir : string -> diagnosis -> unit
 #endif

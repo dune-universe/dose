@@ -15,8 +15,8 @@ open ExtLib ;;
 open Common ;;
 
 #define __label __FILE__
-let label =  __label ;;
-include Util.Logging(struct let label = label end) ;;
+let _label =  __label ;;
+include Util.Logging(struct let label = _label end) ;;
 
 (** One un-installability reason for a package *)
 type reason =
@@ -177,8 +177,6 @@ let build_explanation_graph ?(addmissing=false) root l =
   in
   let gr = G.create () in
   let c = ref 0 in
-  let conflicts = ref [] in
-  let missing = ref [] in
   (* remove duplicate dependencies/reasons. XXX with long
      list of packages Hashtbl.hash could give wrong results *)
   let dup_reasons_table = Hashtbl.create 10 in
@@ -226,29 +224,28 @@ let build_explanation_graph ?(addmissing=false) root l =
                the latter we add a missing node to the graph. *)
             if List.length missingvpkgs > 0 then begin
               let vp = G.V.create (PkgV.Missing missingvpkgs) in incr c;
-              missing := (vp,missingvpkgs) :: !missing;
               add_edge gr vor (PkgE.MissingDepends missingvpkgs) vp
             end
           end
       |Missing(pkg,vpkgs) ->
           let vpid = add_node pkg in
           let vp = G.V.create (PkgV.Missing vpkgs) in
-          missing := (vp,vpkgs) :: !missing;
           add_edge gr vpid (PkgE.MissingDepends vpkgs) vp
       |Conflict(pkg_i,pkg_j,vpkg) ->
           if not (CudfAdd.equal pkg_i pkg_j) then begin
             let vi = add_node pkg_i in
             let vj = add_node pkg_j in
             incr c;
-            conflicts := (vi,vj,vpkg) :: !conflicts;
-            if (G.V.compare vi vj) > 0 then 
-              add_edge gr vi PkgE.Conflict vj 
+            (* if (G.V.compare vi vj) > 0 then *)
+              add_edge gr vi (PkgE.Conflict vpkg) vj
+(* 
             else 
               add_edge gr vj PkgE.Conflict vi
+              *)
           end
       end
   ) l;
-  (gr,!conflicts,!missing)
+  gr
 ;;
 
 (** condense nodes in the graph *)
@@ -297,15 +294,6 @@ let name_and_edges gr v =
   in
   (n,sl,pl)
 
-let getlist =
-  let open Defaultgraphs.SyntacticDependencyGraph in
-  List.filter_map (function
-    |(PkgV.Pkg { value = p }) as v -> Some (p,v)
-    |PkgV.Or _ -> None
-    |PkgV.Missing _ -> None
-    |PkgV.Set _ -> None
-  )
-
 let in_conflict gr x y =
   let open Defaultgraphs.SyntacticDependencyGraph in
   try
@@ -315,27 +303,29 @@ let in_conflict gr x y =
       else
         G.find_edge gr y x
     in
-    (!(G.E.label e)) = PkgE.Conflict
+    match (!(G.E.label e)) with
+    |PkgE.Conflict _ -> true
+    |_ -> false
   with Not_found -> false
 
-let condense gr =
+let condense_graph gr =
   let open Defaultgraphs.SyntacticDependencyGraph in
   let module Visit = Graph.Traverse.Dfs(G) in
   let h = Hashtbl.create 17 in
+  let getlist =
+    List.filter_map (function
+      |PkgV.Pkg { value = p ; root = false } as v -> Some( p, v ) 
+      |_ -> None
+    )
+  in
   Visit.postfix (function
     |((PkgV.Missing _)|(PkgV.Or _)) as v  ->
       PMap.iter (fun (name,sl,pl) l ->
         match getlist l with
         |[] -> ()
+        |(_,hd)::[] -> Hashtbl.add h hd (List.hd l,sl,pl)
         |pkgl -> 
-          let vpid = 
-            G.V.create (
-              if List.length pkgl = 1 then
-                (List.hd l)
-              else
-                PkgV.Set (CudfAdd.to_set (List.map fst pkgl))
-            )
-          in
+          let vpid = G.V.create (PkgV.Set (CudfAdd.to_set (List.map fst pkgl))) in
           List.iter (fun (_,v) -> Hashtbl.add h v (vpid,sl,pl)) pkgl
       ) (groupby cmp_ne (name_and_edges gr) (G.pred gr v));
       (* a missing does not have any succ, so it's safe to assume the second
@@ -343,19 +333,13 @@ let condense gr =
       PMap.iter (fun (name,sl,pl) l ->
         match getlist l with
         |[] -> ()
+        |(_,hd)::[] -> Hashtbl.add h hd (List.hd l,sl,pl)
         |pkgl -> 
           if List.for_all (fun (_,src) ->
             (List.for_all (in_conflict gr src) sl) ||
             (List.for_all (in_conflict gr src) pl)
           ) pkgl then begin
-            let vpid = 
-              G.V.create (
-                if List.length pkgl = 1 then
-                  (List.hd l)
-                else
-                  PkgV.Set (CudfAdd.to_set (List.map fst pkgl))
-              )
-            in
+            let vpid = G.V.create (PkgV.Set (CudfAdd.to_set (List.map fst pkgl))) in
             List.iter (fun (_,v) -> Hashtbl.add h v (vpid,sl,pl)) pkgl
           end
       ) (groupby cmp_ne (name_and_edges gr) (G.succ gr v))
@@ -390,7 +374,7 @@ let condense gr =
   gr
 ;;
 
-let print_dot ?(pp=CudfAdd.default_pp) ?(addmissing=false) ?dir = 
+let print_dot ?(pp=CudfAdd.default_pp) ?(condense=true) ?(addmissing=false) ?dir = 
   Defaultgraphs.SyntacticDependencyGraph.default_pp := pp;
   let open Defaultgraphs.SyntacticDependencyGraph in function
   |{result = Success _ } -> fatal "Cannot build explanation graph on Success"
@@ -407,15 +391,138 @@ let print_dot ?(pp=CudfAdd.default_pp) ?(addmissing=false) ?dir =
         let oc = open_out f in
         Format.formatter_of_out_channel oc;
       in
-      let (gr,_,_) = build_explanation_graph ~addmissing r (f ()) in
-      DotPrinter.print fmt (condense gr)
+      let gr =
+        let g = build_explanation_graph ~addmissing r (f ()) in
+        if condense then condense_graph g else g
+      in
+      DotPrinter.print fmt gr
   |_ ->
     warning "Tryin to build explanation graph for a Coinst (not implemented yet)"
 ;;
+
+let print_error_ ?(condense=true) ?(minimal=false) pp root fmt l =
+  let module DG = Defaultgraphs.SyntacticDependencyGraph in
+  let get_package v = 
+    match v with
+    |DG.PkgV.Pkg { DG.value = p } -> [p]
+    |DG.PkgV.Set s -> CudfAdd.Cudf_set.elements s
+    |_ -> raise Not_found
+  in
+  let pp_package_list ?(source=false) pp fmt pkgl =
+    if List.length pkgl = 1 then 
+      pp_package ~source pp fmt (List.hd pkgl) 
+    else begin
+      let fl = List.map pp pkgl in
+      let (n,_,_) = List.hd fl in
+      Format.fprintf fmt "package: %s@," n;
+      Format.fprintf fmt "versions: %s" (String.concat "," (List.map (fun (_,v,_) -> v) fl))
+    end
+  in
+  let pp_dependency_list pp ?(label="depends") fmt (i,vpkgs) =
+    Format.fprintf fmt "%a" (pp_package_list pp) i;
+    if vpkgs <> [] then
+      Format.fprintf fmt "@,%s: %a" label (CudfAdd.pp_vpkglist pp) vpkgs;
+  in
+  let pp_dependencies pp fmt pl = 
+    let pp_dependency pp fmt ((src,label,_) : DG.G.E.t) =
+      try
+        let l = 
+          match src with
+          |DG.PkgV.Pkg { DG.value = p } -> [p]
+          |DG.PkgV.Set l -> (CudfAdd.Cudf_set.elements l)
+          |_ -> raise Not_found
+        in
+        let vpkgs = 
+          match !label with
+          |DG.PkgE.OrDepends vpkgs
+          |DG.PkgE.DirDepends vpkgs
+          |DG.PkgE.MissingDepends vpkgs -> vpkgs
+          |_ -> []
+        in
+        if List.length l > 0 then begin
+          Format.fprintf fmt "%a" (pp_package_list pp) l;
+          if vpkgs <> [] then
+            Format.fprintf fmt "@,depends: %a" (CudfAdd.pp_vpkglist pp) (List.unique vpkgs);
+        end
+      with Not_found -> ()
+    in
+    let filter (src,_,_) = match src with (DG.PkgV.Pkg _ |DG.PkgV.Set _) -> true | _ -> false in
+    let rec aux fmt = function
+      |[path] -> Format.fprintf fmt "@[<v 1>-@,@[<v 1>depchain:@,%a@]@]" (pp_list (pp_dependency pp)) path
+      |path::pathlist ->
+          (Format.fprintf fmt "@[<v 1>-@,@[<v 1>depchain:@,%a@]@]@," (pp_list (pp_dependency pp)) path;
+          aux fmt pathlist)
+      |[] -> ()
+    in
+    aux fmt [(List.filter filter pl)]
+  in
+  let module DJ = Graph.Path.Dijkstra(Defaultgraphs.SyntacticDependencyGraph.G)(
+    struct
+      open Defaultgraphs.SyntacticDependencyGraph
+      type label = G.E.label
+      type t = int
+      let weight e = match !e with PkgE.Conflict _ -> 1000 | _ -> 0 
+      let compare = Pervasives.compare
+      let add = (+)
+      let zero = 0
+    end) 
+  in
+  let gr =
+    let g = build_explanation_graph ~addmissing:false root l  in
+    if condense then condense_graph g else g
+  in
+  let vroot = DG.G.V.create (DG.PkgV.Pkg { value = root ; DG.root = true }) in
+  let pp_reason_conflicts fmt (vi,vj,vpkg) =
+    let (i,j) = get_package vi, get_package vj in 
+    Format.fprintf fmt "@[<v 1>conflict:@,";
+    Format.fprintf fmt "@[<v 1>pkg1:@,%a@," (pp_package_list ~source:true pp) i;
+    Format.fprintf fmt "unsat-conflict: %a@]@," (CudfAdd.pp_vpkglist pp) [vpkg];
+    Format.fprintf fmt "@[<v 1>pkg2:@,%a@]" (pp_package_list ~source:true pp) j;
+    if not minimal then begin
+      let (pl1,_) = try DJ.shortest_path gr vroot vi with Not_found -> assert false in
+      let (pl2,_) = try DJ.shortest_path gr vroot vj with Not_found -> assert false in
+      if pl1 <> [] then
+        Format.fprintf fmt "@,@[<v 1>depchain1:@,%a@]" (pp_dependencies pp) pl1;
+      if pl2 <> [] then
+        Format.fprintf fmt "@,@[<v 1>depchain2:@,%a@]" (pp_dependencies pp) pl2;
+      Format.fprintf fmt "@]"
+    end else
+      Format.fprintf fmt "@,@]"
+  in
+  let pp_reason_missing fmt (vi,vpkgs) =
+    let i = try get_package vi with Not_found -> assert false in
+    Format.fprintf fmt "@[<v 1>missing:@,";
+    Format.fprintf fmt "@[<v 1>pkg:@,%a@]" 
+      (pp_dependency_list ~label:"unsat-dependency" pp) (i,List.unique vpkgs);
+    if not minimal then begin
+      let (pl,_) = DJ.shortest_path gr vroot vi in
+      if pl <> [] then begin
+        Format.fprintf fmt "@,@[<v 1>depchains:@,%a@]" (pp_dependencies pp) pl;
+        Format.fprintf fmt "@]"
+      end else
+        Format.fprintf fmt "@]"
+    end else
+      Format.fprintf fmt "@]"
+  in
+  (* here I'm realying on the order induced by iter_edges_e to
+     list the reasons. This is undertermined and can change arbitrarly *)
+  let conflicts = ref [] in
+  let missing =  ref [] in
+  Defaultgraphs.SyntacticDependencyGraph.G.iter_edges_e (fun (src,label,dst) ->
+    match !label with
+    |DG.PkgE.Conflict vpkg -> conflicts := (src,dst,vpkg)::!conflicts
+    |DG.PkgE.MissingDepends vpkgs -> missing := (src,vpkgs)::!missing
+    |_ -> ()
+  ) gr;
+  pp_list pp_reason_conflicts fmt !conflicts;
+  if List.length !conflicts > 0 && List.length !missing > 0 then Format.fprintf fmt "@,";
+  pp_list pp_reason_missing fmt !missing
+;;
+
 #endif
  
 (* only two failures reasons. Dependency describe the dependency chain to a failure witness *)
-let print_error ?(minimal=false) pp root fmt l =
+let print_error ?(condense=true) ?(minimal=false) pp root fmt l =
   let (deps,res) = List.partition (function Dependency _ -> true |_ -> false) l in
   let pp_reason fmt = function
     |Conflict (i,j,vpkg) ->
@@ -575,7 +682,7 @@ let fprintf ?(pp=CudfAdd.default_pp) ?(failure=false) ?(success=false) ?(explain
       Format.fprintf fmt "status: broken@,";
       if explain then begin
        Format.fprintf fmt "@[<v 1>reasons:@,";
-       Format.fprintf fmt "@[<v>%a@]" (print_error ~minimal pp r) (f ());
+       Format.fprintf fmt "@[<v>%a@]" (print_error_ ~minimal pp r) (f ());
        Format.fprintf fmt "@]"
       end;
       Format.fprintf fmt "@]@,"
@@ -590,7 +697,7 @@ let fprintf ?(pp=CudfAdd.default_pp) ?(failure=false) ?(success=false) ?(explain
        if explain then begin
          Format.fprintf fmt "@[<v 1>reasons:@,";
          List.iter (fun r -> 
-           Format.fprintf fmt "@[<v>%a@]@," (print_error ~minimal pp r) (f ());
+           Format.fprintf fmt "@[<v>%a@]@," (print_error_ ~minimal pp r) (f ());
          ) rl;
         Format.fprintf fmt "@]@,"
        end;
