@@ -1,3 +1,22 @@
+dose3 (4.0) UNRELEASED; urgency=low
+  * Remove dependency to camlp4. Add build dependency to cppo
+  * Add option --dot to create explanation graphs in dot format
+  * add 'out-version' field to yaml format
+  * Debian Essential packages are now kept into account while
+    generating strong dependencies. You must pass 
+    --deb-ignore-essential to restore the previous behaviour
+  * Add --latest to challenged
+  * Add new format PEF : package export format 
+  * Drop eclipse format (superceded by PEF)
+  * Drop cv format (superceded by PEF)
+  * Ceve can read source packages
+  * Add grep-able one line explanations (success/failure) to distcheck
+  * Switch architecture and name around in cudf representation for debian packages
+
+dose3 (3.3) UNRELEASED; urgency=low
+
+  * Clearly forgot to update this file ...
+
 dose3 (3.2.1) UNRELEASED; urgency=low
 
   * Support for debian multi-arch format
