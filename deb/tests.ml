@@ -169,52 +169,47 @@ let test_version =
   "debian version parsing" >::: [
     "splitting all" >:: (fun _ ->
       let v = "1:1.4-5+b1" in
-      let (e,u,r,b) = Version.split v in
-      assert_equal (e,u,r,b) ("1","1.4","5","b1")
+      assert_equal (Version.decompose v) (Version.NonNative ("1","1.4","5","b1"))
     );
     "normalize all" >:: (fun _ ->
       let v = "1:1.4-5+b1" in
-      assert_equal (Version.normalize v) "1.4-5"
+      assert_equal (Version.strip_epoch_binnmu v) (Version.NonNative ("","1.4","5",""))
     );
     "concat all" >:: (fun _ ->
       let v = "1:1.4-5+b1" in
-      assert_equal (Version.concat (Version.split v)) v
+      assert_equal (Version.compose (Version.decompose v)) v
     );
     "splitting partial 1" >:: (fun _ ->
       let v = "1.4-5+b1" in
-      let (e,u,r,b) = Version.split v in
-      assert_equal (e,u,r,b) ("","1.4","5","b1")
+      assert_equal (Version.decompose v) (Version.NonNative ("","1.4","5","b1"))
     );
     "normalize partial 1" >:: (fun _ ->
       let v = "1.4-5+b1" in
-      assert_equal (Version.normalize v) "1.4-5"
+      assert_equal (Version.strip_epoch_binnmu v) (Version.NonNative ("","1.4","5",""))
     );
     "splitting partial 2" >:: (fun _ ->
       let v = "1.4" in
-      let (e,u,r,b) = Version.split v in
-      assert_equal (e,u,r,b) ("","1.4","","")
+      assert_equal (Version.decompose v) (Version.Native ("","1.4",""))
     );
     "normalize partial 2" >:: (fun _ ->
       let v = "1.4" in
-      assert_equal (Version.normalize v) "1.4"
+      assert_equal (Version.strip_epoch_binnmu v) (Version.Native ("","1.4",""))
     );
     "splitting partial 3" >:: (fun _ ->
       let v = "0" in
-      let (e,u,r,b) = Version.split v in
-      assert_equal (e,u,r,b) ("","0","","")
+      assert_equal (Version.decompose v) (Version.Native ("","0",""))
     );
     "normalize partial 3" >:: (fun _ ->
       let v = "0" in
-      assert_equal (Version.normalize v) "0"
+      assert_equal (Version.strip_epoch_binnmu v) (Version.Native ("","0",""))
     );
     "splitting partial 4" >:: (fun _ ->
       let v = "1.1+b6" in
-      let (e,u,r,b) = Version.split v in
-      assert_equal (e,u,r,b) ("","1.1","","b6")
+      assert_equal (Version.decompose v) (Version.Native ("","1.1","b6"))
     );
     "normalize partial 4" >:: (fun _ ->
       let v = "1.1+b6" in
-      assert_equal (Version.normalize v) "1.1"
+      assert_equal (Version.strip_epoch_binnmu v) (Version.Native ("","1.1",""))
     );
   ]
 ;;
@@ -648,11 +643,11 @@ let parse_pkg_req_triplets =
 
     ("suite +name=1.2", 
      ( (Some "suite"), "+name=1.2"), 
-     returns (Some Format822.I, (("name", None), Some ("=", "1.2")), Some "suite"));
+     returns (Some Packages_types.I, (("name", None), Some ("=", "1.2")), Some "suite"));
 
     ("suite -name=1.2", 
      ( (Some "suite"), "-name=1.2"), 
-     returns (Some Format822.R, (("name", None), Some ("=", "1.2")), Some "suite"));
+     returns (Some Packages_types.R, (("name", None), Some ("=", "1.2")), Some "suite"));
 
     ("suite name/suite1", 
      ( (Some "suite"), "name/suite1"), 
@@ -668,11 +663,11 @@ let parse_pkg_req_triplets =
 
     ("none +name", 
      ( None, "+name"), 
-     returns (Some Format822.I, (("name", None), None), None));
+     returns (Some Packages_types.I, (("name", None), None), None));
 
     ("none -name", 
      ( None, "-name"), 
-     returns (Some Format822.R, (("name", None), None), None));
+     returns (Some Packages_types.R, (("name", None), None), None));
 
     ("suite name", 
      ( Some "suite", "name"), 
