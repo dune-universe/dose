@@ -154,8 +154,8 @@ endif
 testlib: 
 	@for i in $(TESTS); do\
 		echo "#######START TESTING $$i" ;\
-		$(OCAMLBUILD) $(APPFLAGS) $$i/tests.$(OCAMLEXT) ;\
-		./tests.$(OCAMLEXT) ;\
+		$(OCAMLBUILD) $(APPFLAGS) $$i/tests.$(OCAMLEXT) || exit 1;\
+		./tests.$(OCAMLEXT) || exit 1;\
 	done
 
 # stuff not not put in a distribution tarball
