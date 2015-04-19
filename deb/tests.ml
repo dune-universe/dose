@@ -634,7 +634,7 @@ let parse_popcon_triplets =
 (* parse_pkg_req *)
 let parse_pkg_req_triplets =
   let function_to_test = (fun (suite, s) -> Apt.parse_pkg_req suite s) in
-  let returns = returns_result function_to_test
+  let returns = returns_result ~printer:Printer.string_of_vpkgreq function_to_test
 (*  and raises  = raises_failure function_to_test *)
   in
   [ ("suite name=1.2", 

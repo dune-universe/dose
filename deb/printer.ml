@@ -36,6 +36,15 @@ let string_of_vpkg = function
   |((name,None),Some(op,ver)) -> Printf.sprintf "%s (%s %s)" name op ver
 ;;
 
+let string_of_vpkgreq = function
+  | None,vpkg,None -> string_of_vpkg vpkg
+  | None,vpkg,Some suite -> Printf.sprintf "%s/%s" (string_of_vpkg vpkg) suite
+  | Some Packages_types.I, vpkg, None -> Printf.sprintf "+%s" (string_of_vpkg vpkg)
+  | Some Packages_types.R, vpkg, None -> Printf.sprintf "-%s" (string_of_vpkg vpkg)
+  | Some Packages_types.I, vpkg, Some suite -> Printf.sprintf "+%s/%s" (string_of_vpkg vpkg) suite
+  | Some Packages_types.R, vpkg, Some suite -> Printf.sprintf "-%s/%s" (string_of_vpkg vpkg) suite
+;;
+
 let pp_vpkg oc vpkg = Printf.fprintf oc "%s" (string_of_vpkg vpkg)
 
 let string_of_vpkglist vpkglist =
