@@ -74,7 +74,7 @@ let default_options = function
       Debian.Debcudf.default_options with
       Debian.Debcudf.ignore_essential = true
     })
-  |`Eclipse -> Some (StdOptions.Eclipse Debian.Debcudf.default_options)
+  |`Pef -> Some (StdOptions.Pef Debian.Debcudf.default_options)
   |_ -> None
 ;;
 

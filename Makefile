@@ -105,15 +105,6 @@ $(DOSELIBS)/csw.%: opencsw/*.ml $(DOSELIBS)/debian.%
 	  fi ; \
 	done
 
-$(DOSELIBS)/cv.%:
-	$(OCAMLBUILD) $(OBFLAGS) cv/cv.otarget
-	@for i in _build/cv/cv.*; do \
-	  if [ -e $$i ]; then \
-	  cp $$i $(DOSELIBS) ; \
-	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
-	  fi ; \
-	done
-
 $(DOSELIBS)/doseparse.%: $(DOSELIBS)/debian.% $(DOSELIBS)/pef.%
 	$(OCAMLBUILD) $(OBFLAGS) doseparse/doseparse.otarget
 	@for i in _build/doseparse/doseparse.*; do \

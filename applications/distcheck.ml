@@ -60,7 +60,7 @@ let timer = Util.Timer.create "Solver"
 let guess_format t l =
   match Filename.basename(Sys.argv.(0)) with
   |"debcheck"|"dose-debcheck" -> (`Deb, true)
-  |"eclipsecheck"|"dose-eclipsecheck" -> (`Eclipse, true)
+  |"eclipsecheck"|"dose-eclipsecheck" -> (`Pef, true)
   |"rpmcheck"|"dose-rpmcheck" -> (`Synthesis,true)
   |_ when OptParse.Opt.is_set t -> 
       (Url.scheme_of_string (OptParse.Opt.get t),true)

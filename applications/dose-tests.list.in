@@ -205,22 +205,6 @@ Type: distcheck
 Printer: text
 ExitCode: 1
 
-Name: cv_default_distcheck
-Group: distcheck
-Expected: tests/applications/dose-tests/distcheck_cv_default_opt_test
-Input: cv://tests/cv/number_field.cudf
-Cmd: ./distcheck.@OCAMLEXT@ --checkonly a -f -e
-Type: distcheck
-Printer: text
-
-Name: cv_cudf_versions_distcheck
-Group: distcheck
-Expected: tests/applications/dose-tests/distcheck_cv_cv_opt_test
-Input: cv://tests/cv/number_field.cudf
-Cmd: ./distcheck.@OCAMLEXT@ --checkonly a -f -e --cv-int
-Type: distcheck
-Printer: text
-
 Name: exitcode_distcheck_64_notexistent
 Group: distcheck
 Expected: /dev/null

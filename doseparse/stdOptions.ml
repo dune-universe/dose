@@ -269,10 +269,8 @@ end
 
 type options =
   |Deb of Debian.Debcudf.options
-  |Eclipse of Debian.Debcudf.options
   |Pef of Debian.Debcudf.options
   |Edsp of Debian.Debcudf.options
-  |Cv of Cv.Cvcudf.options
   |Csw
   |Rpm
   |Cudf
@@ -291,7 +289,6 @@ module DistribOptions = struct
     "deb-host-arch";
     "deb-foreign-archs";
     "deb-ignore-essential";
-    "cv-int"
   ]
 
   let group = ref None
@@ -332,8 +329,6 @@ module DistribOptions = struct
     }
   ;;
 
-  let set_cv_options () = { Cv.Cvcudf.cv = Opt.get int_versions }
-
   let set_default_options = function
     |`Deb -> Some (
       Deb { 
@@ -345,17 +340,13 @@ module DistribOptions = struct
         Debian.Debcudf.default_options with
         Debian.Debcudf.ignore_essential = true
       })
-    |`Eclipse -> Some (Eclipse Debian.Debcudf.default_options)
     |`Pef -> Some (Pef Debian.Debcudf.default_options)
-    |`Cv -> Some (Cv Cv.Cvcudf.default_options)
     |_ -> None
 
   let set_options = function
     |`Deb |`DebSrc -> Some (Deb (set_deb_options ()))
     |`Edsp -> Some (Edsp (set_deb_options ()))
-    |`Eclipse -> Some (Eclipse Debian.Debcudf.default_options)
     |`Pef -> Some (Pef Debian.Debcudf.default_options)
-    |`Cv -> Some (Cv (set_cv_options ()))
     |_ -> None
   ;;
 
@@ -383,6 +374,5 @@ module DistribOptions = struct
     add options ~group ?short_name ?long_name ?help 
   ;;
 
-(*  let rpm_group = add_group options "Rpm Specific Options" in
-    let eclipse_group = add_group options "Eclipse Specific Options" in *)
+(*  let rpm_group = add_group options "Rpm Specific Options" in *)
 end

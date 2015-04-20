@@ -21,18 +21,15 @@ include Util.Logging(struct let label = label end) ;;
 
 type debtypes = [ `Edsp | `Deb | `DebSrc ]
 type rpmtypes = [ `Synthesis | `Hdlist ]
-type osgitypes = [ `Eclipse ]
-type othertypes = [ `Csw | `Cv | `Pef ]
+type othertypes = [ `Csw | `Pef ]
 
-type filetypes = [ `Cudf | debtypes | rpmtypes | osgitypes | othertypes ]
+type filetypes = [ `Cudf | debtypes | rpmtypes | othertypes ]
 
 let scheme_to_string = function
   | `Edsp -> "edsp"
   | `Csw -> "csw"
-  | `Cv -> "cv"
   | `Deb -> "deb"
   | `DebSrc -> "debsrc"
-  | `Eclipse -> "eclipse"
   | `Pef -> "pef"
   | `Cudf -> "cudf"
   | `Synthesis -> "synthesis"
@@ -42,19 +39,17 @@ let scheme_to_string = function
 let scheme_of_string = function
   | "edsp" -> `Edsp
   | "csw" -> `Csw
-  | "cv" -> `Cv
   | "deb" -> `Deb
   | "debsrc" -> `DebSrc
   | "cudf" -> `Cudf
-  | "eclipse" -> `Eclipse
-  | "pef" -> `Pef
+  | "eclipse" | "pef" -> `Pef
   | "synthesis" -> `Synthesis
   | "hdlist" -> `Hdlist
   | s -> fatal "unknown input scheme" s
 ;;
 
 let supported_input_types =
-  [`Edsp; `Deb ; `DebSrc ; `Synthesis ; `Hdlist ; `Eclipse ; `Pef ; `Csw ; `Cudf ; `Cv ]
+  [`Edsp; `Deb ; `DebSrc ; `Synthesis ; `Hdlist ; `Pef ; `Csw ; `Cudf ]
 ;;
 
 (***********************************************************************)

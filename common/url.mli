@@ -12,10 +12,9 @@
 
 type debtypes = [ `Edsp | `Deb | `DebSrc ]
 type rpmtypes = [ `Synthesis | `Hdlist ]
-type osgitypes = [ `Eclipse ]
-type othertypes = [ `Pef | `Csw | `Cv ]
+type othertypes = [ `Pef | `Csw ]
 
-type filetypes = [ `Cudf | debtypes | rpmtypes | osgitypes | othertypes ]
+type filetypes = [ `Cudf | debtypes | rpmtypes | othertypes ]
 
 val supported_input_types : filetypes list
 

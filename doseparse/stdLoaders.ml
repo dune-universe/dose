@@ -194,24 +194,6 @@ let load_cudf doc =
   l
 ;;
 
-let cv_load_list options file =
-  let preamble, pkglist ,request =
-    match parse_cudf file with
-    |None, pkglist, None -> Cudf.default_preamble, pkglist, Cudf.default_request
-    |None , pkglist, Some req -> Cudf.default_preamble, pkglist, req
-    |Some p , pkglist, None -> p, pkglist, Cudf.default_request
-    |Some p , pkglist, Some req -> p, pkglist, req
-  in
-  if options.Cv.Cvcudf.cv then
-    let from_cudf (p,i) = (p,string_of_int i) in
-    let to_cudf (p,v) = (p,int_of_string v) in
-    (preamble,[pkglist;[]],request,from_cudf,to_cudf)
-  else
-    let tables = Cv.Cvcudf.init_tables options pkglist file in
-    let from_cudf (p,i) = (p, Cv.Cvcudf.get_real_version tables (p,i)) in
-    let to_cudf (p,v) = (p, Cv.Cvcudf.get_cudf_version tables (p,v)) in 
-    (preamble,[pkglist;[]],request,from_cudf,to_cudf)
-
 let cudf_load_list file =
   let preamble, pkglist ,request =
     match parse_cudf file with
@@ -300,17 +282,6 @@ let csw_parse_input urilist =
   in
   csw_load_list dll
 
-let cv_parse_input options urilist =
-  match urilist with
-  |[[p]] when (unpack `Cv p) = "-" -> fatal "no stdin for cudf yet"
-  |[[p]] -> cudf_load_list (unpack `Cv p)
-  |l ->
-    if List.length (List.flatten l) > 1 then
-      warning "more than one cudf specified on the command line";
-    let p = List.hd (List.flatten l) in 
-    cv_load_list options (unpack `Cv p)
-;;
-
 let cudf_parse_input urilist =
   match urilist with
   |[[p]] when (unpack `Cudf p) = "-" -> fatal "no stdin for cudf yet"
@@ -342,11 +313,8 @@ let parse_input ?(options=None) urilist =
   match Input.guess_format urilist, options with
   |`Cudf, None -> cudf_parse_input filelist
 
-  |`Cv, None -> cv_parse_input Cv.Cvcudf.default_options filelist
-
   |`Deb, None
   |`DebSrc, None -> deb_parse_input Debian.Debcudf.default_options filelist
-  |`Eclipse, None -> pef_parse_input Debian.Debcudf.default_options filelist
   |`Pef, None -> pef_parse_input Debian.Debcudf.default_options filelist
 
   |`Deb, Some (StdOptions.Deb opt)
@@ -355,12 +323,9 @@ let parse_input ?(options=None) urilist =
 (*  |`Edsp, Some (StdOptions.Edsp opt) -> edsp_parse_input opt filelist *)
   |`Edsp, _ -> edsp_parse_input Debian.Debcudf.default_options filelist
 
-  |`Eclipse, Some (StdOptions.Eclipse opt) -> pef_parse_input opt filelist
   |`Pef, Some (StdOptions.Pef opt) -> pef_parse_input opt filelist
 
   |`Csw, None -> csw_parse_input filelist
-
-  |`Cv, Some (StdOptions.Cv opt) -> cv_parse_input opt filelist
 
   |`Hdlist, None -> 
 #ifdef HASRPM 
