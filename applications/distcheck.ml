@@ -44,9 +44,6 @@ module Options = struct
   let default = List.remove StdOptions.DistribOptions.default_options "deb-host-arch" in
   StdOptions.DistribOptions.add_options ~default options ;;
 
-  let group = add_group options "Cv Specific Options" in
-  add options ~group ~long_name:"cv-int" ~help:"" int_versions;
-
 end
 
 #define __label __FILE__
