@@ -368,10 +368,10 @@ let supported_formats () =
 ;;
 
 (** return a list of Debian packages from a debian source file *)
-let deb_load_source ?filter ?(profiles=[]) ?(noindep=false) buildarch hostarch sourcefile =
+let deb_load_source ?filter ?(dropalternatives=false) ?(profiles=[]) ?(noindep=false) buildarch hostarch sourcefile =
   Util.Timer.start deb_load_source_timer;
   let l = Debian.Sources.input_raw ?filter ~archs:[hostarch] [sourcefile] in
-  let r = Debian.Sources.sources2packages ~noindep ~profiles buildarch hostarch l in
+  let r = Debian.Sources.sources2packages ~dropalternatives ~noindep ~profiles buildarch hostarch l in
   Util.Timer.stop deb_load_source_timer r
 ;;
 

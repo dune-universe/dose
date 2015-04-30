@@ -149,16 +149,26 @@ let select hostarch profiles (v,al,pl) =
  * decide whether to select or drop that dependency *)
 (** transform a list of sources packages into dummy binary packages.
   * This function preserve the order *)
-let sources2packages ?(profiles=[]) ?(noindep=false) ?(src="src") buildarch hostarch l =
+let sources2packages ?(dropalternatives=false) ?(profiles=[]) ?(noindep=false) ?(src="src") buildarch hostarch l =
   let select (v,al,pl) =
     if matcharch hostarch al && matchprofile profiles pl then Some v else None
   in
   let conflicts l = List.filter_map select l in
+  (* imitate sbuild behaviour and drop all alternatives except those that have
+   * the same name as the first. Search for RESOLVE_ALTERNATIVES in
+   * lib/Sbuild/ResolverBase.pm in the sbuild sources *)
+  let dropalt l =
+    if dropalternatives then match l with
+     | [] -> []
+     | [p] -> [p]
+     | hd::tl -> List.filter (fun p -> fst p = fst hd) l
+    else l
+  in
   let depends ll =
     List.filter_map (fun l ->
       match List.filter_map select l with
-      |[] -> None 
-      |l -> Some l
+      |[] -> None
+      |l -> Some (dropalt l)
     ) ll
   in
   (* In contrast to B-D and B-C, B-D-I and B-C-I requirements must be satisfied
