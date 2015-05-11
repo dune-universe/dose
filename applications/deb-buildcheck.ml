@@ -35,6 +35,7 @@ module Options = struct
   let triplettable = StdOpt.str_option ()
   let cputable = StdOpt.str_option ()
   let profiles = StdOptions.str_list_option ()
+  let dropalternatives = StdOpt.store_true ()
 
   include StdOptions.DistcheckOptions ;;
   StdOptions.DistcheckOptions.add_options options ;;
@@ -60,6 +61,8 @@ module Options = struct
     ~help:"Include packages with Extra-Source-Only:yes (dropped by default)" includextra;
   StdOptions.DistribOptions.add_option options ~short_name:'P' ~long_name:"profiles"
     ~help:"comma separated list of activated build profiles" profiles;
+  StdOptions.DistribOptions.add_option options ~long_name:"drop-alternatives"
+    ~help:"replicate sbuild behaviour to only keep the first alternative of build dependencies" dropalternatives;
 
 end
 
@@ -93,6 +96,7 @@ let main () =
   (* hostarch and noindep can be None *)
   let hostarch = match options.Debian.Debcudf.host with None -> "" | Some s -> s in
   let noindep = OptParse.Opt.get Options.noindep in
+  let dropalternatives = OptParse.Opt.get Options.dropalternatives in
 
   let profiles =
     if OptParse.Opt.is_set Options.profiles then
@@ -128,7 +132,7 @@ let main () =
     |l -> 
         begin match List.rev l with
         |h::t ->
-          let srclist = StdLoaders.deb_load_source ~profiles ~filter:filter_external_sources ~noindep buildarch hostarch h in
+          let srclist = StdLoaders.deb_load_source ~dropalternatives ~profiles ~filter:filter_external_sources ~noindep buildarch hostarch h in
           let pkglist = Deb.input_raw t in
           (pkglist,srclist)
         |_ -> fatal "An impossible situation occurred ?!#"
