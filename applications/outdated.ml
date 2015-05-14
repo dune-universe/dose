@@ -260,7 +260,7 @@ let outdated
     in
     let l =
       List.filter_map (fun k ->
-        try Some(k,Cudf.lookup_package_property pkg k)
+        try Some(k,(Cudf.lookup_package_property pkg k, true))
         with Not_found -> None
       ) ["architecture";"source";"sourcenumber";"equivs"]
     in

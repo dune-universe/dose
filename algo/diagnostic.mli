@@ -68,38 +68,34 @@ val collect : summary -> diagnosis -> unit
 (** print output version *)
 val pp_out_version : Format.formatter -> unit
 
-(* Function signature for cudf package printer. The output represents
-   a triple (name, version, (field name, value) list *)
-type pp = (Cudf.package -> string * string * (string * string) list)
-
 (** [default_pp] default package printer. Extracts string values from a 
     cudf package : Name, Version, Fields. Where Fields is a list of 
     field name , value pairs . If the version of the package is
     a negative number, the version version if printed as "nan". *)
-val default_pp : pp
+val default_pp : Common.CudfAdd.pp
 
 (** default package pretty printer. *)
-val pp_package : ?source:bool -> pp -> Format.formatter -> Cudf.package -> unit
+val pp_package : ?source:bool -> ?fields:bool -> Common.CudfAdd.pp -> Format.formatter -> Cudf.package -> unit
 
 (** cudf vpkglist printer. *)
-val pp_vpkglist : pp -> Format.formatter -> Cudf_types.vpkglist -> unit
+val pp_vpkglist : Common.CudfAdd.pp -> Format.formatter -> Cudf_types.vpkglist -> unit
 
 (** print a list of cudf dependency. The label specifies the type of 
     dependency ("depends" by default) *)
 val pp_dependency :
-  pp ->
+  Common.CudfAdd.pp ->
   ?label : string ->
   Format.formatter ->
   Cudf.package * Cudf_types.vpkglist -> unit
 
 (** Print the list of dependencies of a package. *)
-val pp_dependencies : pp ->
+val pp_dependencies : Common.CudfAdd.pp ->
   Format.formatter -> (Cudf.package * Cudf_types.vpkglist) list list -> unit
 
 val pp_list :
   (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a list -> unit
 
-val print_error : ?minimal : bool -> pp ->
+val print_error : ?minimal : bool -> Common.CudfAdd.pp ->
   Cudf.package -> Format.formatter -> reason list -> unit
 
 (** If the installablity query is successfull, [get_installationset] return 
@@ -117,16 +113,16 @@ val is_solution : diagnosis -> bool
     @param [explain] : if true, print the list of all affected packages associated to
                        and installation problem. *)
 val pp_summary :
-  ?pp : (Cudf.package -> Cudf_types.pkgname * string * (string * string) list) ->
+  ?pp : Common.CudfAdd.pp ->
   ?explain : bool -> unit -> Format.formatter -> summary -> unit
 
 val print_error_human :
-  ?prefix:string -> pp ->
+  ?prefix:string -> Common.CudfAdd.pp ->
   Cudf.package -> Format.formatter -> reason list -> unit
 
 (** print a human readable explanation (DEV) *)
 val fprintf_human :
-  ?pp : pp ->
+  ?pp : Common.CudfAdd.pp ->
   ?prefix : string -> Format.formatter -> diagnosis -> unit
 
 (** [printf fmt d] print the output of the solver in yaml format 
@@ -137,14 +133,14 @@ val fprintf_human :
     @param [explain] : for installable packages, print the associated installation set
                        for not installable packages, print the all dependencies chains *)
 val fprintf :
-  ?pp : pp ->
+  ?pp : Common.CudfAdd.pp ->
   ?failure : bool ->
   ?success : bool ->
   ?explain : bool -> ?minimal:bool -> Format.formatter -> diagnosis -> unit
 
 (** like [fprintf] but print using the standard formatter *)
 val printf :
-  ?pp:pp ->
+  ?pp : Common.CudfAdd.pp ->
   ?failure : bool -> ?success : bool -> ?explain : bool -> diagnosis -> unit
 
 #ifdef HASOCAMLGRAPH

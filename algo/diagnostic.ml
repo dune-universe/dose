@@ -52,8 +52,6 @@ type result =
 
 type diagnosis = { result : result ; request : request }
 
-type pp = (Cudf.package -> string * string * (string * string) list)
-
 module ResultHash = OcamlHash.Make (
   struct
     type t = reason
@@ -108,19 +106,21 @@ let build_paths deps root =
   aux [] deps root
 ;;
 
-let pp_package ?(source=false) pp fmt pkg =
-  let (p,v,fields) = pp pkg in
+let pp_package ?(source=false) ?(fields=false) pp fmt pkg =
+  let (p,v,fieldlist) = pp pkg in
   Format.fprintf fmt "package: %s@," p;
   Format.fprintf fmt "version: %s" v;
   List.iter (function
-    |(("source"|"sourcenumber"),_) -> ()
-    |(k,v) -> Format.fprintf fmt "@,%s: %s" k v
-  ) fields;
+    |(("source"|"sourcenumber"),(_,_)) -> ()
+    |(k,(v,true)) -> Format.fprintf fmt "@,%s: %s" k v
+    |(k,(v,false)) when fields = true -> Format.fprintf fmt "@,%s: %s" k v
+    |(k,(v,_)) -> ()
+  ) fieldlist;
   if source then begin 
     try
-      let source = List.assoc "source" fields in
+      let source = fst(List.assoc "source" fieldlist) in
       let sourceversion = 
-        try "(= "^(List.assoc "sourcenumber" fields)^")" 
+        try "(= "^(fst(List.assoc "sourcenumber" fieldlist))^")" 
         with Not_found -> ""
       in
       Format.fprintf fmt "@,source: %s %s" source sourceversion
@@ -540,7 +540,7 @@ let default_pp pkg =
 let print_error_human ?(prefix="") pp root fmt l =
   let (deps,res) = List.partition (function Dependency _ -> true |_ -> false) l in
   let pp_package pkg =
-    let (p,v,fields) = pp pkg in
+    let (p,v,_) = pp pkg in
     Format.sprintf "(%s %s)" p v
   in
   let pp_dependencies fmt pathlist =
@@ -594,7 +594,7 @@ let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
       Format.fprintf fmt "@[<v 1>-@,";
       begin match req with
       |Package r -> 
-          Format.fprintf fmt "@[<v>%a@]@," (pp_package ~source:true pp) r;
+          Format.fprintf fmt "@[<v>%a@]@," (pp_package ~source:true ~fields:true pp) r;
           if minimal then
             Format.fprintf fmt "success: %a@," CudfAdd.pp_package r
       |PackageList rl -> 
@@ -616,7 +616,7 @@ let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
       Format.fprintf fmt "@]@,"
   |{result = Failure f; request = Package r } when failure ->
       Format.fprintf fmt "@[<v 1>-@,";
-      Format.fprintf fmt "@[<v>%a@]@," (pp_package ~source:true pp) r;
+      Format.fprintf fmt "@[<v>%a@]@," (pp_package ~source:true ~fields:true pp) r;
       if minimal then
         Format.fprintf fmt "failure: %a@," CudfAdd.pp_package r;
       Format.fprintf fmt "status: broken@,";

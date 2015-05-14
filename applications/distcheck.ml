@@ -28,10 +28,12 @@ module Options = struct
   include StdOptions.MakeOptions(struct let options = options end)
 
   let coinst = StdDebian.vpkglist_option ();;
+  let fields = StdOptions.str_list_option ();;
 
   include StdOptions.DistcheckOptions ;;
   StdOptions.DistcheckOptions.add_options options ;;
   StdOptions.DistcheckOptions.add_option options ~long_name:"coinst" ~help:"Check if these packages are coinstallable" coinst;;
+  StdOptions.DistcheckOptions.add_option options ~long_name:"fields" ~help:"Print additional fields if available" fields;;
 
   include StdOptions.InputOptions ;;
   let default = "dot"::(StdOptions.InputOptions.default_options) in
@@ -133,7 +135,12 @@ let main () =
       |l -> l
     end else []
   in
-  let pp = CudfAdd.pp from_cudf in
+  let fields = 
+    if OptParse.Opt.is_set Options.fields then
+      OptParse.Opt.get Options.fields 
+    else []
+  in
+  let pp = CudfAdd.pp ~fields from_cudf in
 
   info "Solving..." ;
   let failure = OptParse.Opt.get Options.failure in

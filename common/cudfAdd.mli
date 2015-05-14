@@ -143,10 +143,14 @@ val cudfop :
   (string * string) option ->
   ([> `Eq | `Neq | `Geq | `Gt | `Leq | `Lt ] * string) option
 
+(* Function signature for cudf package printer. The output represents
+   a triple (name, version, (field name, value) list *)
+type pp = Cudf.package -> string * string * (string * (string * bool)) list
+
 (** [pp ?decode from_cudf pkg] package pretty printer.
-    [from_cudf] a function that gets a (name,cudfversion) pair and returns a 
-    (name,realversion).
-    [?decode] a function that decode the package name and version
+    [from_cudf] a function that gets a (name,cudfversion) pair and returns a (name,realversion).
+    [?fields] additional fields to print.
+    [?decode] a function that decode the package name and version.
     
     returns : a pair (name,versiom,property list)
 
@@ -155,8 +159,8 @@ val cudfop :
 *)
 val pp :
   (Cudf_types.pkgname * Cudf_types.version -> 'a * Cudf_types.pkgname) ->
-  ?decode:(Cudf_types.pkgname -> string) ->
-  Cudf.package -> string * string * (string * string) list
+  ?fields: string list->
+  ?decode: (Cudf_types.pkgname -> string) -> pp
 
 val compute_pool : Cudf.universe -> int list list array * int list array
 

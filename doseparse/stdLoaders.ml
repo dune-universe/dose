@@ -50,22 +50,7 @@ let deb_load_list options ?(status=[]) dll =
   Util.Timer.stop deb_load_list_timer l
       
 let pef_load_list options dll =
-  let extras = [] in
-  let pkglist = List.flatten dll in
-  let tables = Pef.Pefcudf.init_tables Debian.Version.compare pkglist in
-  let from_cudf (p,i) = (p, Pef.Pefcudf.get_real_version tables (p,i)) in
-  let to_cudf (p,v) = (p, Pef.Pefcudf.get_cudf_version tables (p,v)) in
-  let cll = 
-    List.map (fun l ->
-      List.map (Pef.Pefcudf.tocudf ~extras tables) l
-    ) dll
-  in
-  let preamble = Pef.Pefcudf.preamble in
-  let request = Cudf.default_request in
-  (preamble,cll,request,from_cudf,to_cudf)
- 
-let pef_load_list options dll =
-  let extras = [] in
+  let extras = [("maintainer",("maintainer",`String None))] in
   let pkglist = List.flatten dll in
   let tables = Pef.Pefcudf.init_tables Debian.Version.compare pkglist in
   let from_cudf (p,i) = (p, Pef.Pefcudf.get_real_version tables (p,i)) in
@@ -265,10 +250,11 @@ let deb_parse_input options ?(status=[]) urilist =
   deb_load_list options ~status dll
 
 let pef_parse_input options urilist =
+  let extras = [("maintainer",None)] in
   let dll = 
     List.map (fun l ->
         let filelist = unpack_l `Pef l in
-        Pef.Packages.input_raw filelist
+        Pef.Packages.input_raw ~extras filelist
     ) urilist
   in
   pef_load_list options dll
