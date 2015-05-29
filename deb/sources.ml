@@ -145,59 +145,54 @@ let select hostarch profiles (v,al,pl) =
   if matcharch hostarch al && matchprofile profiles pl then Some v else None
 ;;
 
+(* the package name is encodes as src:<package-name> *)
+let src2pkg ?(dropalternatives=false) ?(profiles=[]) ?(noindep=false) ?(src="src") buildarch hostarch srcpkg =
+  let conflicts l = List.filter_map (select hostarch profiles) l in
+  (* imitate sbuild behaviour and drop all alternatives except those that have
+   * the same name as the first. Search for RESOLVE_ALTERNATIVES in
+   * lib/Sbuild/ResolverBase.pm in the sbuild sources *)
+  let dropalt l = match l with
+    | [] -> []
+    | [p] -> [p]
+    | hd::tl -> List.filter (fun p -> fst p = fst hd) l
+  in
+  let depends ll =
+    List.filter_map (fun l ->
+        match List.filter_map (select hostarch profiles) l with
+        |[] -> None
+        |l -> Some (if dropalternatives then dropalt l else l)
+      ) ll
+  in
+  let extras_profiles  = match profiles with [] -> [] | _ -> [("profiles", String.join " " profiles)] in
+  let depends_indep   = if noindep then [] else srcpkg.build_depends_indep in
+  let conflicts_indep = if noindep then [] else srcpkg.build_conflicts_indep in
+  (* when crossbuilding (host != build), implicitly depend on build-essential
+   * and crossbuild-essential-$hostarch. When compiling natively, implicitly
+   * depend on build-essential *)
+  let build_essential = if buildarch<>hostarch then
+      [[(("build-essential", Some buildarch), None)];[(("crossbuild-essential-"^hostarch, Some buildarch), None)]]
+    else
+      [[(("build-essential", Some buildarch), None)]]
+  in
+  { Packages.default_package with
+    Packages.name = src ^ sep ^ srcpkg.name ;
+    source = (srcpkg.name, Some srcpkg.version);
+    version = srcpkg.version;
+    depends = build_essential @ (depends (depends_indep @ srcpkg.build_depends @ srcpkg.build_depends_arch));
+    conflicts = conflicts (conflicts_indep @ srcpkg.build_conflicts @ srcpkg.build_conflicts_arch);
+    architecture = String.concat "," srcpkg.architecture;
+    extras = extras_profiles @ [("Type",src)]
+  }
+;;
+
 (* given archs, profile and a dependency with an architecture and profile list,
  * decide whether to select or drop that dependency *)
 (** transform a list of sources packages into dummy binary packages.
   * This function preserve the order *)
-let sources2packages ?(dropalternatives=false) ?(profiles=[]) ?(noindep=false) ?(src="src") buildarch hostarch l =
-  let select (v,al,pl) =
-    if matcharch hostarch al && matchprofile profiles pl then Some v else None
-  in
-  let conflicts l = List.filter_map select l in
-  (* imitate sbuild behaviour and drop all alternatives except those that have
-   * the same name as the first. Search for RESOLVE_ALTERNATIVES in
-   * lib/Sbuild/ResolverBase.pm in the sbuild sources *)
-  let dropalt l =
-    if dropalternatives then match l with
-     | [] -> []
-     | [p] -> [p]
-     | hd::tl -> List.filter (fun p -> fst p = fst hd) l
-    else l
-  in
-  let depends ll =
-    List.filter_map (fun l ->
-      match List.filter_map select l with
-      |[] -> None
-      |l -> Some (dropalt l)
-    ) ll
-  in
-
-  (* the package name is encodes as src:<package-name> *)
-  let src2pkg srcpkg =
-    let extras_profiles  = match profiles with [] -> [] | _ -> [("profiles", String.join " " profiles)] in
-    let depends_indep   = if noindep then [] else srcpkg.build_depends_indep in
-    let conflicts_indep = if noindep then [] else srcpkg.build_conflicts_indep in
-    (* when crossbuilding (host != build), implicitly depend on build-essential
-     * and crossbuild-essential-$hostarch. When compiling natively, implicitly
-     * depend on build-essential *)
-    let build_essential = if buildarch<>hostarch then
-      [[(("build-essential", Some buildarch), None)];[(("crossbuild-essential-"^hostarch, Some buildarch), None)]]
-    else
-      [[(("build-essential", Some buildarch), None)]]
-    in
-    { Packages.default_package with
-      Packages.name = src ^ sep ^ srcpkg.name ;
-      source = (srcpkg.name, Some srcpkg.version);
-      version = srcpkg.version;
-      depends = build_essential @ (depends (depends_indep @ srcpkg.build_depends @ srcpkg.build_depends_arch));
-      conflicts = conflicts (conflicts_indep @ srcpkg.build_conflicts @ srcpkg.build_conflicts_arch);
-      architecture = String.concat "," srcpkg.architecture;
-      extras = extras_profiles @ [("Type",src)]
-    }
-  in
-
-  List.map src2pkg l
+let sources2packages ?(dropalternatives=false) ?(profiles=[]) ?(noindep=false) ?(src="src") buildarch hostarch =
+  List.map (src2pkg ~dropalternatives ~profiles ~noindep ~src buildarch hostarch)
 ;;
+
 
 (** Check if a package is of "Type" source as encoded by the function sources2packages *)
 let is_source ?(src="src") pkg = List.mem ("Type", src) pkg.Packages.extras;;
