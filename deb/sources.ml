@@ -171,26 +171,12 @@ let sources2packages ?(dropalternatives=false) ?(profiles=[]) ?(noindep=false) ?
       |l -> Some (dropalt l)
     ) ll
   in
-  (* In contrast to B-D and B-C, B-D-I and B-C-I requirements must be satisfied
-   * by native packages. Despite that, both fields are each concatenated. B-D-I
-   * and B-C-I can not contain :any or :native modifiers. Adding :native to
-   * B-D-I and B-C-I makes sure they are satisfied by native packages *)
-  let add_native_l =
-    List.map (function
-      |(((name, None), constr), al, pl) ->
-          (((name, Some "native"), constr), al, pl)
-      |(((name, Some a), constr), al, pl) ->
-         warning "modifier %s for indep dependency %s used" a name;
-         (((name, Some a), constr), al, pl)
-    )
-  in
-  let add_native_ll = List.map add_native_l in
 
   (* the package name is encodes as src:<package-name> *)
   let src2pkg srcpkg =
     let extras_profiles  = match profiles with [] -> [] | _ -> [("profiles", String.join " " profiles)] in
-    let depends_indep   = if noindep then [] else add_native_ll srcpkg.build_depends_indep in
-    let conflicts_indep = if noindep then [] else add_native_l srcpkg.build_conflicts_indep in
+    let depends_indep   = if noindep then [] else srcpkg.build_depends_indep in
+    let conflicts_indep = if noindep then [] else srcpkg.build_conflicts_indep in
     (* when crossbuilding (host != build), implicitly depend on build-essential
      * and crossbuild-essential-$hostarch. When compiling natively, implicitly
      * depend on build-essential *)
