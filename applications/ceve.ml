@@ -156,7 +156,6 @@ let main () =
     let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
     CudfAdd.who_provides universe (name,filter)
   in
-  let get_cudfpkg ((n,a),c) = List.hd (get_cudfpkglist ((n,a),c)) in
 
   let pkg_cone () =
     List.unique (List.fold_left (fun acc (p,c) ->
