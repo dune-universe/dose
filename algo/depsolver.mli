@@ -50,6 +50,10 @@ val edos_coinstall_prod : ?global_constraints:bool -> Cudf.universe -> Cudf.pack
     by default *)
 val trim : ?global_constraints:bool -> Cudf.universe -> Cudf.universe
 
+(** remove uninstallable packages from the pkglist . global_constraints is true
+    by default *)
+val trimlist : ?global_constraints:bool -> Cudf.universe -> Cudf.package list -> Cudf.package list
+
 (** return the list of broken packages *)
 val find_broken : ?global_constraints:bool -> Cudf.universe -> Cudf.package list
 

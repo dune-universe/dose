@@ -212,6 +212,18 @@ let trim ?(global_constraints=true) universe =
   Cudf.load_universe !trimmed_pkgs
 ;;
 
+let trimlist ?(global_constraints=true) universe pkglist =
+  let trimmed_pkgs = ref [] in
+  let callback d =
+    if Diagnostic.is_solution d then
+      match d.Diagnostic.request with
+      |Diagnostic.Package p -> trimmed_pkgs := p::!trimmed_pkgs
+      |_ -> assert false
+  in
+  ignore (listcheck ~global_constraints ~callback universe pkglist);
+  !trimmed_pkgs
+;;
+
 let find_broken ?(global_constraints=true) universe =
   let broken_pkgs = ref [] in
   let callback d =

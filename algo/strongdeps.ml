@@ -22,12 +22,12 @@ include Util.Logging(struct let label = label end) ;;
 (** [strongdeps u l] build the strong dependency graph of all packages in 
     [l] wrt the universe [u] *)
 let strongdeps ?(transitive=true) universe pkglist =
-  Strongdeps_int.strongdeps ~transitive universe pkglist
+  Strongdeps_int.strongdeps ~transitive universe (Depsolver.trimlist universe pkglist)
 
 (** [strongdeps_univ u] build the strong dependency graph of 
     all packages in the universe [u] *)
 let strongdeps_univ ?(transitive=true) universe =
-  Strongdeps_int.strongdeps_univ ~transitive universe
+  Strongdeps_int.strongdeps_univ ~transitive (Depsolver.trim universe)
 
 (** compute the impact set of the node [q], that is the list of all 
     packages [p] that strong depends on [q] *)
@@ -38,7 +38,7 @@ let conjdeps_univ universe =
   let g = Defaultgraphs.PackageGraph.G.create () in
   Cudf.iter_packages (fun pkg ->
     Defaultgraphs.PackageGraph.conjdepgraph_int g universe pkg
-  ) universe;
+  ) (Depsolver.trim universe);
   g
 
 (** compute the conjunctive dependency graph considering only packages 
@@ -47,5 +47,5 @@ let conjdeps universe pkglist =
   let g = Defaultgraphs.PackageGraph.G.create () in
   List.iter (fun pkg ->
     Defaultgraphs.PackageGraph.conjdepgraph_int g universe pkg
-  ) pkglist ;
+  ) (Depsolver.trimlist universe pkglist);
   g
