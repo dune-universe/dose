@@ -209,8 +209,8 @@ module SyntacticDependencyGraph = struct
       let map_edge e = []
       let map_vertex = function
         |PkgV.Pkg {value} ->
-          let name = ("package",CudfAdd.decode value.Cudf.package) in
-          let version = ("version",CudfAdd.string_of_version value) in
+          let name = ("realpackage",CudfAdd.decode value.Cudf.package) in
+          let version = ("realversion",CudfAdd.string_of_version value) in
      
           let props =
             List.filter_map (fun (key,_,_) ->
