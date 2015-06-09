@@ -16,35 +16,38 @@
 
 open ExtLib
 open Common
-
-include Util.Logging(struct let label = __FILE__ end) ;;
+open Algo
+open Doseparse
 
 module Options = struct
   open OptParse
   let options = OptParser.make ~description:"add a decription here"
-  include Boilerplate.MakeOptions(struct let options = options end)
+  include StdOptions.MakeOptions(struct let options = options end)
 
-  let fail = StdOpt.store_true ()
-  open OptParser
+  let fail = StdOpt.store_true () 
+
+  open OptParser ;;
   add options ~short_name:'f' ~long_name:"fail" ~help:"exit with a failoure" fail;
 
-  include Boilerplate.MakeDistribOptions(struct let options = options end);;
-
 end
+
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
 
 let main () =
 
   let args = OptParse.OptParser.parse_argv Options.options in
   
   (* enable info / warning / debug information *)
-  Boilerplate.enable_debug (OptParse.Opt.get Options.verbose);
+  StdDebug.enable_debug (OptParse.Opt.get Options.verbose);
   
   (* enable a selection of progress bars *)
-  Boilerplate.enable_bars (OptParse.Opt.get Options.progress) [] ;
+  StdDebug.enable_bars (OptParse.Opt.get Options.progress) [] ;
 
   (* enable a selection of timers *)
-  Boilerplate.enable_timers (OptParse.Opt.get Options.timers) [];
-  Boilerplate.all_quiet (OptParse.Opt.get Options.quiet);
+  StdDebug.enable_timers (OptParse.Opt.get Options.timers) [];
+  StdDebug.all_quiet (OptParse.Opt.get Options.quiet);
 
   info "print some verbose info";
   warning "print some warnings";
