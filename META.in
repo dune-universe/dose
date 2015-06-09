@@ -1,7 +1,7 @@
 description = "Dose3 libraries"
 version = "@PACKAGE_VERSION@"
-archive(byte) = "common.cma algo.cma debian.cma eclipse.cma csw.cma cv.cma"
-archive(native) = "common.cmxa algo.cmxa debian.cmxa eclipse.cmxa csw.cmxa cv.cmxa"
+archive(byte) = "common.cma algo.cma debian.cma csw.cma pef.cma"
+archive(native) = "common.cmxa algo.cmxa debian.cmxa csw.cmxa pef.cmxa"
 requires = "extlib, re.pcre, cudf, @OCAMLGRAPH@, unix, @ZIP@, @BZ2@"
 
 package "common" (
@@ -25,13 +25,6 @@ archive(native) = "debian.cmxa"
 requires = "dose3.common"
 )
 
-package "eclipse" (
-version = "@PACKAGE_VERSION@"
-archive(byte) = "eclipse.cma"
-archive(native) = "eclipse.cmxa"
-requires = "dose3.common, dose3.debian" 
-)
-
 package "csw" (
 version = "@PACKAGE_VERSION@"
 archive(byte) = "csw.cma"
@@ -46,11 +39,11 @@ archive(native) = "rpm.cmxa"
 requires = "dose3.common"
 )
 
-package "cv" (
-version = "unreleased"
-archive(byte) = "cv.cma"
-archive(native) = "cv.cmxa"
-requires = "dose3.common"
+package "pef" (
+version = "@PACKAGE_VERSION@"
+archive(byte) = "pef.cma"
+archive(native) = "pef.cmxa"
+requires = "dose3.common, dose3.debian"
 )
 
 package "doseparse" (

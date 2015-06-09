@@ -13,7 +13,7 @@ DESTDIR =
 ifeq ($(DESTDIR),)
 exec_prefix=@prefix@
 BINDIR=@bindir@
-LIBDIR=$(shell ocamlfind printconf destdir)
+LIBDIR=$(shell OCAMLFIND_DESTDIR=@prefix@/lib/ocaml ocamlfind printconf destdir)
 
 INSTALL=$(OCAMLFIND) install -destdir $(LIBDIR)
 UNINSTALL=$(OCAMLFIND) remove -destdir $(LIBDIR)
