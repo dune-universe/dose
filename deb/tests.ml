@@ -903,7 +903,7 @@ let test_sources2packages =
     (
       "indep", "src:source3", returns [
         [(("build-essential", Some hostarch), None)];
-        [(("bin3", Some "native"), None)];
+        [(("bin3",None), None)];
         [(("bin1",None), None)];
         [(("bin2",None), None)]
       ]
