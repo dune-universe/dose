@@ -76,6 +76,9 @@ val default_pp : Common.CudfAdd.pp
 val pp_package : ?source:bool -> ?fields:bool -> Common.CudfAdd.pp -> Format.formatter -> Cudf.package -> unit
 
 (** cudf vpkglist printer. *)
+val pp_vpkg : Common.CudfAdd.pp -> Format.formatter -> Cudf_types.vpkg -> unit
+
+(** cudf vpkglist printer. *)
 val pp_vpkglist : Common.CudfAdd.pp -> Format.formatter -> Cudf_types.vpkglist -> unit
 
 (** print a list of cudf dependency. The label specifies the type of 

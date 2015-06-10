@@ -126,6 +126,24 @@ let pp_package ?(source=false) ?(fields=false) pp fmt pkg =
   end
 ;;
 
+let pp_vpkg pp fmt vpkg = 
+  let string_of_relop = function
+      `Eq -> "="
+    | `Neq -> "!="
+    | `Geq -> ">="
+    | `Gt -> ">"
+    | `Leq -> "<="
+    | `Lt -> "<"
+  in
+  match vpkg with
+  |(p,None) -> 
+      let (p,_,_) = pp {Cudf.default_package with Cudf.package = p} in
+      Format.fprintf fmt "%s" p
+  |(p,Some(c,v)) ->
+      debug "pp_vpkg %s %s %i" p (string_of_relop c) v;
+      let (p,v,_) = pp {Cudf.default_package with Cudf.package = p ; version = v} in
+      Format.fprintf fmt "%s (%s %s)" p (string_of_relop c) v
+
 let pp_vpkglist pp fmt = 
   (* from libcudf ... again *)
   let pp_list fmt ~pp_item ~sep l =
@@ -142,7 +160,8 @@ let pp_vpkglist pp fmt =
     | [sole] -> pp_item fmt sole
     | _ -> Format.fprintf fmt "@[<h>%a@]" aux l
   in
-  let string_of_relop = function
+  (*
+   *  let string_of_relop = function
       `Eq -> "="
     | `Neq -> "!="
     | `Geq -> ">="
@@ -159,7 +178,8 @@ let pp_vpkglist pp fmt =
         let (p,v,_) = pp {Cudf.default_package with Cudf.package = p ; version = v} in
         Format.fprintf fmt "%s (%s %s)" p (string_of_relop c) v
   in
-  pp_list fmt ~pp_item ~sep:" | "
+  *)
+  pp_list fmt ~pp_item:(pp_vpkg pp) ~sep:" | "
 
 let pp_dependency pp ?(label="depends") fmt (i,vpkgs) =
   Format.fprintf fmt "%a" (pp_package pp) i;
