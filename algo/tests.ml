@@ -339,7 +339,28 @@ let test_depclean =
     let d = { Cudf.default_package with Cudf.package = "d" ; 
               depends = [[("a",None);("b",None);("e",None)];[("c",None)]] } in
     let univ = Cudf.load_universe [a;b;c;d] in
-    Depsolver.depclean univ [d]
+    let res = Depsolver.depclean univ [d] in
+    (*
+    List.iter (fun (pkg,res) ->
+      Format.printf "Some dependencies of the package %s can be revised :" (CudfAdd.string_of_package pkg);
+      List.iter (function
+        |(vpkglist,vpkg,[]) -> 
+          Format.printf "The dependency %a from (%a) refers to a missing package therefore useless\n" 
+          (Diagnostic.pp_vpkg Diagnostic.default_pp) vpkg (Diagnostic.pp_vpkglist Diagnostic.default_pp) vpkglist
+        |(vpkglist,vpkg,_) -> 
+          Format.printf "The dependency %a from (%a) refers to a broken package therefore useless\n" 
+          (Diagnostic.pp_vpkg Diagnostic.default_pp) vpkg (Diagnostic.pp_vpkglist Diagnostic.default_pp) vpkglist
+      ) res
+    ) res;
+    *)
+    let expected = 
+      [(d,[
+        ([("a",None);("b",None);("e",None)],("e",None),[]);
+        ([("a",None);("b",None);("e",None)],("b",None),[[("b",None)];[("c",None)]])
+        ]
+      )]
+    in
+    assert_equal (List.sort res) (List.sort expected)
   )
 ;;
 
