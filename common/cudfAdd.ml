@@ -245,7 +245,7 @@ let compute_pool universe =
   let c = Array.init size (fun i -> get_package_list conflicts i) in
   let d =
     Array.init size (fun i ->
-      let p = inttovar universe i in
+      let p = Cudf.package_by_uid universe i in
       List.map (resolve_vpkgs_int universe) p.Cudf.depends
     )
   in

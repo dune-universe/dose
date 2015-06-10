@@ -330,6 +330,19 @@ let test_ =
   )
 *)
 
+let test_depclean =
+  "" >:: (fun _ ->
+    let a = { Cudf.default_package with Cudf.package = "a" } in
+    let b = { Cudf.default_package with Cudf.package = "b" ;
+              depends = [[("missing",None)]] } in
+    let c = { Cudf.default_package with Cudf.package = "c" } in
+    let d = { Cudf.default_package with Cudf.package = "d" ; 
+              depends = [[("a",None);("b",None);("e",None)];[("c",None)]] } in
+    let univ = Cudf.load_universe [a;b;c;d] in
+    Depsolver.depclean univ [d]
+  )
+;;
+
 let test_depsolver =
   "depsolver" >::: [
     test_install ;
@@ -348,6 +361,7 @@ let test_depsolver =
     test_reverse_dependencies ;
     test_reverse_dependency_closure ;
     test_conjunctive_dependency_closure ;
+    test_depclean ;
   ]
 
 let solution_set =

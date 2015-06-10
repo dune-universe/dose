@@ -123,7 +123,11 @@ type enc = Cnf | Dimacs
     @param global_constraints : enforce global constraints on the given universe.
 
   *)
-val output_clauses : ?global_constraints:bool -> ?enc:enc -> Cudf.universe -> string
+val output_clauses : ?global_constraints : bool -> ?enc : enc -> Cudf.universe -> string
+
+(** *)
+val depclean : ?global_constraints : bool -> Cudf.universe -> Cudf.package list -> 
+  (Cudf.package * (Cudf_types.vpkglist * Cudf_types.vpkg * Cudf_types.vpkgformula) list) list
 
 type solver_result =
   |Sat of (Cudf.preamble option * Cudf.universe)
