@@ -333,32 +333,49 @@ let test_ =
 let test_depclean =
   "" >:: (fun _ ->
     let a = { Cudf.default_package with Cudf.package = "a" } in
-    let b = { Cudf.default_package with Cudf.package = "b" ;
-              depends = [[("missing",None)]] } in
-    let c = { Cudf.default_package with Cudf.package = "c" } in
+    let b = { Cudf.default_package with Cudf.package = "broken" ;
+              depends = [[("missingd",None)]] } in
+    let c = { Cudf.default_package with Cudf.package = "c" ; 
+              conflicts = [("broken",None);("missingc",None)]} in
     let d = { Cudf.default_package with Cudf.package = "d" ; 
-              depends = [[("a",None);("b",None);("e",None)];[("c",None)]] } in
+              depends = [[("a",None);("broken",None);("missingd",None)];[("c",None)]] } in
     let univ = Cudf.load_universe [a;b;c;d] in
-    let res = Depsolver.depclean univ [d] in
+    let res = Depsolver.depclean univ [d;c] in
     (*
-    List.iter (fun (pkg,res) ->
-      Format.printf "Some dependencies of the package %s can be revised :" (CudfAdd.string_of_package pkg);
+    List.iter (fun (pkg,deps,conf) ->
+      Format.printf "Some dependencies of the package %s can be revised :\n" (CudfAdd.string_of_package pkg);
       List.iter (function
-        |(vpkglist,vpkg,[]) -> 
+        |(vpkglist,vpkg,[]) ->
           Format.printf "The dependency %a from (%a) refers to a missing package therefore useless\n" 
           (Diagnostic.pp_vpkg Diagnostic.default_pp) vpkg (Diagnostic.pp_vpkglist Diagnostic.default_pp) vpkglist
-        |(vpkglist,vpkg,_) -> 
+        |(vpkglist,vpkg,_) ->
           Format.printf "The dependency %a from (%a) refers to a broken package therefore useless\n" 
           (Diagnostic.pp_vpkg Diagnostic.default_pp) vpkg (Diagnostic.pp_vpkglist Diagnostic.default_pp) vpkglist
-      ) res
+      ) deps;
+      Format.printf "Some conflict of the package %s can be revised :\n" (CudfAdd.string_of_package pkg);
+      List.iter (function
+        |(vpkglist,vpkg,[]) ->
+          Format.printf "The conflict %a from (%a) refers to a missing package therefore useless\n" 
+          (Diagnostic.pp_vpkg Diagnostic.default_pp) vpkg (Diagnostic.pp_vpkglist Diagnostic.default_pp) vpkglist
+        |(vpkglist,vpkg,_) ->
+          Format.printf "The conflict %a from (%a) refers to a broken package therefore useless\n" 
+          (Diagnostic.pp_vpkg Diagnostic.default_pp) vpkg (Diagnostic.pp_vpkglist Diagnostic.default_pp) vpkglist
+      ) conf;
     ) res;
     *)
     let expected = 
-      [(d,[
-        ([("a",None);("b",None);("e",None)],("e",None),[]);
-        ([("a",None);("b",None);("e",None)],("b",None),[[("b",None)];[("c",None)]])
+      [
+        (d,[
+        ([("a",None);("broken",None);("missingd",None)],("missingd",None),[]);
+        ([("a",None);("broken",None);("missingd",None)],("broken",None),[b])
+        ],[]
+      );
+      (c,[],[
+        ([("broken",None);("missingc",None)],("missingc",None),[]);
+        ([("broken",None);("missingc",None)],("broken",None),[b]);
         ]
-      )]
+      );
+      ]
     in
     assert_equal (List.sort res) (List.sort expected)
   )

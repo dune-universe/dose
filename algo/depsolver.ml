@@ -388,51 +388,47 @@ let check_request ?cmd ?callback ?criteria ?explain cudf =
   check_request_using ?call_solver ?callback ?explain cudf
 ;;
 
-let rec enum_deps univ before acc = function
-  |vpkg :: after ->
-      let l =
-        List.map (fun (p,c) ->
-          match CudfAdd.who_provides univ (p,c) with
-          |[] -> [vpkg,(p,c),[]]
-          |_ -> [vpkg,(p,c),before@[[(p,c)]]@after]
-        ) vpkg
-      in
-      enum_deps univ (before@[vpkg]) (l::acc) after
-  |[] -> List.flatten (List.flatten acc)
-;;
+type depclean_t =
+  (Cudf.package *
+    (Cudf_types.vpkglist * Cudf_types.vpkg * Cudf.package list) list *
+    (Cudf_types.vpkglist * Cudf_types.vpkg * Cudf.package list) list
+  )
 
-(** return *)
-let depclean ?(global_constraints=true) univ pkglist =
-  let dummy = { Cudf.default_package with Cudf.package = "dummy" } in
-  let _ = Cudf.add_package univ dummy in
-  let dummyid = Cudf.uid_by_package univ dummy in
+(** Depclean. Detect useless dependencies and/or conflicts 
+    to missing or broken packages *)
+let depclean ?(global_constraints=true) ?(callback=(fun _ -> ())) univ pkglist =
   let cudfpool = Depsolver_int.init_pool_univ ~global_constraints univ in
-  let res =
-    List.fold_left (fun acc pkg ->
-      match 
-        List.fold_left (fun acc -> function
-          |(vpkg,(p,c),[]) -> (vpkg,(p,c),[])::acc
-          |(vpkg,(p,c),depends) ->
-            let dll =
-              List.map (fun vpkgs ->
-                (vpkgs, CudfAdd.resolve_vpkgs_int univ vpkgs)
-              ) depends
-            in
-            let cl =
-              List.map (fun vpkg ->
-                (vpkg, CudfAdd.resolve_vpkg_int univ vpkg)
-              ) dummy.Cudf.conflicts
-            in
-            let pool = Depsolver_int.strip_cudf_pool cudfpool in
-            let _ = pool.(dummyid) <- (dll,cl) in
-            let res = edos_coinstall_cache global_constraints univ cudfpool [dummy] in
-            if not(Diagnostic.is_solution res) then (vpkg,(p,c),depends)::acc else acc
-        ) [] (enum_deps univ [] [] pkg.Cudf.depends)
-      with
-      |[] -> acc
-      |res -> (pkg,res)::acc
-    ) [] pkglist
+  let enum univ pkg =
+    let enum vpkg =
+      List.map (fun (p,c) ->
+        match CudfAdd.who_provides univ (p,c) with
+        |[] -> (vpkg,(p,c),[])
+        |l -> (vpkg,(p,c),l)
+      ) vpkg
+    in
+    let d = List.flatten (List.map enum pkg.Cudf.depends) in
+    let c = enum pkg.Cudf.conflicts in
+    (d,c)
   in
-  Cudf.remove_package univ (dummy.Cudf.package,dummy.Cudf.version);
-  res
+  let test l = 
+    List.fold_left (fun acc -> function
+      |(vpkg,(p,c),[]) -> (vpkg,(p,c),[])::acc
+      |(vpkg,(p,c),l) ->
+          List.fold_left (fun acc pkg ->
+            let res = edos_install_cache global_constraints univ cudfpool [pkg] in
+            if not(Diagnostic.is_solution res) then (vpkg,(p,c),[pkg])::acc else acc
+          ) acc l
+    ) [] l 
+  in
+  List.filter_map (fun pkg ->
+    let res = edos_install_cache global_constraints univ cudfpool [pkg] in
+    if Diagnostic.is_solution res then begin
+      let (deps,conf) = enum univ pkg in
+      let resdep = test deps in
+      let resconf = test conf in
+      match resdep@resconf with
+      |[] -> None
+      |res -> (callback(pkg,resdep,resconf) ; Some(pkg,resdep,resconf))
+    end else None
+  ) pkglist
 ;;

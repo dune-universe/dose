@@ -126,8 +126,15 @@ type enc = Cnf | Dimacs
 val output_clauses : ?global_constraints : bool -> ?enc : enc -> Cudf.universe -> string
 
 (** *)
-val depclean : ?global_constraints : bool -> Cudf.universe -> Cudf.package list -> 
-  (Cudf.package * (Cudf_types.vpkglist * Cudf_types.vpkg * Cudf_types.vpkgformula) list) list
+type depclean_t = 
+  (Cudf.package * 
+    (Cudf_types.vpkglist * Cudf_types.vpkg * Cudf.package list) list *
+    (Cudf_types.vpkglist * Cudf_types.vpkg * Cudf.package list) list 
+  )
+
+val depclean : ?global_constraints : bool -> 
+               ?callback : (depclean_t -> unit) -> 
+                 Cudf.universe -> Cudf.package list -> depclean_t list
 
 type solver_result =
   |Sat of (Cudf.preamble option * Cudf.universe)
