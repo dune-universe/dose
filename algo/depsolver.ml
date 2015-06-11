@@ -145,20 +145,7 @@ let listcheck ?(global_constraints=true) ?callback universe pkglist =
       aux ~callback:callback_int universe idlist
 ;;
 
-let edos_install ?(global_constraints=false) univ pkg =
-  let cudfpool = Depsolver_int.init_pool_univ ~global_constraints univ in
-  let id = CudfAdd.vartoint univ pkg in
-  (* globalid is a fake package indentifier used to encode global
-   * constraints in the universe *)
-  let globalid = Cudf.universe_size univ in
-  let closure = Depsolver_int.dependency_closure_cache cudfpool [id; globalid] in
-  let solver = Depsolver_int.init_solver_closure cudfpool closure in
-  let req = if global_constraints then (Some globalid,[id]) else (None,[id]) in 
-  let res = Depsolver_int.solve solver req in
-  diagnosis solver.Depsolver_int.map univ res req
-;;
-
-let edos_coinstall_cache global_constraints univ cudfpool pkglist =
+let edos_install_cache global_constraints univ cudfpool pkglist =
   let idlist = List.map (CudfAdd.vartoint univ) pkglist in
   let globalid = Cudf.universe_size univ in
   let closure = Depsolver_int.dependency_closure_cache cudfpool (globalid::idlist) in
@@ -168,9 +155,13 @@ let edos_coinstall_cache global_constraints univ cudfpool pkglist =
   diagnosis solver.Depsolver_int.map univ res req
 ;;
 
+let edos_install ?(global_constraints=false) univ pkg =
+  let cudfpool = Depsolver_int.init_pool_univ ~global_constraints univ in
+  edos_install_cache global_constraints univ cudfpool [pkg]
+
 let edos_coinstall ?(global_constraints=false) univ pkglist =
   let cudfpool = Depsolver_int.init_pool_univ ~global_constraints univ in
-  edos_coinstall_cache global_constraints univ cudfpool pkglist
+  edos_install_cache global_constraints univ cudfpool pkglist
 ;;
 
 let edos_coinstall_prod ?(global_constraints=false) univ ll =
@@ -184,7 +175,7 @@ let edos_coinstall_prod ?(global_constraints=false) univ ll =
           List.map (fun h1 -> h1 :: t1) h
         )
   in
-  List.map (edos_coinstall_cache global_constraints univ cudfpool) (permutation ll)
+  List.map (edos_install_cache global_constraints univ cudfpool) (permutation ll)
 ;;
 
 let trim ?(global_constraints=true) universe =
