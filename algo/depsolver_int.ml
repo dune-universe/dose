@@ -295,14 +295,14 @@ let solve ?tested solver request =
   in
 
   match request with
-  |Diagnostic_int.Sng (None,i) ->
+  |(None,[i]) ->
       result S.solve S.collect_reasons (solver.map#vartoint i)
-  |Diagnostic_int.Lst (None,il) ->
+  |(None,il) ->
       result S.solve_lst S.collect_reasons_lst (List.map solver.map#vartoint il)
 
-  |Diagnostic_int.Sng (Some k,i) ->
+  |(Some k,[i]) ->
       result S.solve_lst S.collect_reasons_lst (List.map solver.map#vartoint [k;i])
-  |Diagnostic_int.Lst (Some k,il) ->
+  |(Some k,il) ->
       result S.solve_lst S.collect_reasons_lst (List.map solver.map#vartoint (k::il))
 ;;
 
@@ -311,12 +311,7 @@ let pkgcheck global_constraints callback solver tested id =
   (* global id is a fake package id encoding the global constraints of the
    * universe. it is the last element of the id array *)
   let globalid = (Array.length tested) - 1 in
-  let req = 
-    if global_constraints then begin
-      Diagnostic_int.Sng (Some globalid,id) 
-    end else
-      Diagnostic_int.Sng (None,id)
-  in
+  let req = if global_constraints then begin (Some globalid,[id]) end else (None,[id]) in
   let res =
     Util.Progress.progress progressbar_univcheck;
     if not(tested.(id)) then

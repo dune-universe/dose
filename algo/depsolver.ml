@@ -71,10 +71,7 @@ let result map universe result =
 ;;
 
 let request universe result = 
-  let from_sat = CudfAdd.inttovar universe in
-  match result with
-  |Diagnostic_int.Sng (_,i) -> Diagnostic.Package (from_sat i)
-  |Diagnostic_int.Lst (_,il) -> Diagnostic.PackageList (List.map from_sat il)
+  List.map (CudfAdd.inttovar universe) (snd result)
 ;;
 
 (* XXX here the threatment of result and request is not uniform.
@@ -156,12 +153,7 @@ let edos_install ?(global_constraints=false) univ pkg =
   let globalid = Cudf.universe_size univ in
   let closure = Depsolver_int.dependency_closure_cache cudfpool [id; globalid] in
   let solver = Depsolver_int.init_solver_closure cudfpool closure in
-  let req = 
-    if global_constraints then
-      Diagnostic_int.Sng (Some globalid,id) 
-    else
-      Diagnostic_int.Sng (None,id)
-  in
+  let req = if global_constraints then (Some globalid,[id]) else (None,[id]) in 
   let res = Depsolver_int.solve solver req in
   diagnosis solver.Depsolver_int.map univ res req
 ;;
@@ -171,12 +163,7 @@ let edos_coinstall_cache global_constraints univ cudfpool pkglist =
   let globalid = Cudf.universe_size univ in
   let closure = Depsolver_int.dependency_closure_cache cudfpool (globalid::idlist) in
   let solver = Depsolver_int.init_solver_closure cudfpool closure in
-  let req =
-    if global_constraints then
-      Diagnostic_int.Lst (Some globalid,idlist) 
-    else
-      Diagnostic_int.Lst (None,idlist)
-  in
+  let req = if global_constraints then (Some globalid,idlist) else (None,idlist) in
   let res = Depsolver_int.solve solver req in
   diagnosis solver.Depsolver_int.map univ res req
 ;;
@@ -205,7 +192,7 @@ let trim ?(global_constraints=true) universe =
   let callback d =
     if Diagnostic.is_solution d then
       match d.Diagnostic.request with
-      |Diagnostic.Package p -> trimmed_pkgs := p::!trimmed_pkgs
+      |[p] -> trimmed_pkgs := p::!trimmed_pkgs
       |_ -> assert false
   in
   ignore (univcheck ~global_constraints ~callback universe);
@@ -217,7 +204,7 @@ let trimlist ?(global_constraints=true) universe pkglist =
   let callback d =
     if Diagnostic.is_solution d then
       match d.Diagnostic.request with
-      |Diagnostic.Package p -> trimmed_pkgs := p::!trimmed_pkgs
+      |[p] -> trimmed_pkgs := p::!trimmed_pkgs
       |_ -> assert false
   in
   ignore (listcheck ~global_constraints ~callback universe pkglist);
@@ -229,7 +216,7 @@ let find_broken ?(global_constraints=true) universe =
   let callback d =
     if not (Diagnostic.is_solution d) then
       match d.Diagnostic.request with
-      |Diagnostic.Package p -> broken_pkgs := p::!broken_pkgs
+      |[p] -> broken_pkgs := p::!broken_pkgs
       |_ -> assert false
   in
   ignore (univcheck ~global_constraints ~callback universe);
@@ -238,9 +225,9 @@ let find_broken ?(global_constraints=true) universe =
 
 let callback_aux acc d =
   match d.Diagnostic.request with
-  |Diagnostic.Package p when (Diagnostic.is_solution d) -> 
+  |[p] when (Diagnostic.is_solution d) -> 
       acc := p::!acc
-  |Diagnostic.Package p ->
+  |[p] ->
       warning "Package %s is not installable" (CudfAdd.string_of_package p)
   |_ -> ()
 ;;
@@ -264,7 +251,7 @@ let find_listbroken ?(global_constraints=true) universe pkglist =
   let callback d =
     if not (Diagnostic.is_solution d) then
       match d.Diagnostic.request with
-      |Diagnostic.Package p -> broken_pkgs := p::!broken_pkgs
+      |[p] -> broken_pkgs := p::!broken_pkgs
       |_ -> assert false
   in
   ignore (listcheck ~global_constraints ~callback universe pkglist);

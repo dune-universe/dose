@@ -31,12 +31,10 @@ type reason =
   (** Conflict (a,b,vpkg) means that the package [a] is in conflict
       with package [b] because of vpkg *)
 
-(** The request provided to the solver *)
-type request =
-  |Package of Cudf.package
-  (** Check the installability of one package *)
-  |PackageList of Cudf.package list
-  (** Check the installability of a list of packages *)
+(** The request provided to the solver.
+    Check the installability of one package or the
+    coinstallability of a list of packages *)
+type request = Cudf.package list
 
 (** The result of an installability query *)
 type result =
@@ -430,7 +428,7 @@ let condense gr =
 let print_dot ?(addmissing=false) ?dir = 
   let open Defaultgraphs.SyntacticDependencyGraph in function
   |{result = Success _ } -> fatal "Cannot build explanation graph on Success"
-  |{result = Failure f; request = Package r } ->
+  |{result = Failure f; request = [r] } ->
       let fmt =
         let n = Printf.sprintf "%s.%s.dot"
           (CudfAdd.decode r.Cudf.package)
@@ -509,8 +507,8 @@ let minimize roots l =
     end
   in
   begin match roots with 
-  |Package r -> visit r
-  |PackageList rl -> List.iter visit l end;
+  |[r] -> visit r
+  |rl -> List.iter visit l end;
   H.fold (fun k _ l -> k::l) acc []
 ;;
 
@@ -577,9 +575,9 @@ let print_error_human ?(prefix="") pp root fmt l =
 ;;
 
 let fprintf_human ?(pp=default_pp) ?(prefix="") fmt = function
-  |{result = Failure f ; request = Package r } -> 
+  |{result = Failure f ; request = [r] } -> 
          print_error_human ~prefix pp r fmt (f ());
-  |{result = Failure f ; request = PackageList rl } -> 
+  |{result = Failure f ; request = rl } -> 
       let n = List.length rl in
       List.iteri (fun i r ->
         print_error_human ~prefix pp r fmt (f ());
@@ -593,11 +591,11 @@ let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
   |{result = Success f; request = req } when success ->
       Format.fprintf fmt "@[<v 1>-@,";
       begin match req with
-      |Package r -> 
+      |[r] -> 
           Format.fprintf fmt "@[<v>%a@]@," (pp_package ~source:true ~fields:true pp) r;
           if minimal then
             Format.fprintf fmt "success: %a@," CudfAdd.pp_package r
-      |PackageList rl -> 
+      |rl -> 
           Format.fprintf fmt "coinst: %s@," 
           (String.concat " , " (List.map CudfAdd.string_of_package rl));
           if minimal then
@@ -614,7 +612,7 @@ let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
        end
       end;
       Format.fprintf fmt "@]@,"
-  |{result = Failure f; request = Package r } when failure ->
+  |{result = Failure f; request = [r] } when failure ->
       Format.fprintf fmt "@[<v 1>-@,";
       Format.fprintf fmt "@[<v>%a@]@," (pp_package ~source:true ~fields:true pp) r;
       if minimal then
@@ -626,7 +624,7 @@ let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
        Format.fprintf fmt "@]"
       end;
       Format.fprintf fmt "@]@,"
-  |{result = Failure f; request = PackageList rl } when failure -> 
+  |{result = Failure f; request = rl } when failure -> 
        Format.fprintf fmt "@[<v 1>-@,";
        Format.fprintf fmt "coinst: %s@," (String.concat " , " (List.map CudfAdd.string_of_package rl));
        if minimal then
@@ -653,7 +651,7 @@ let collect results d =
     with Not_found -> ResultHash.add h k (ref [v])
   in
   match d with 
-  |{result = Failure (f) ; request = Package r } -> 
+  |{result = Failure (f) ; request = [r] } -> 
       let conflicts = ref 0 in
       let missing = ref 0 in
       List.iter (fun reason ->

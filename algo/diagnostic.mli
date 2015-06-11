@@ -25,11 +25,9 @@ type reason =
       with package [b] because of vpkg *)
 
 (** The request provided to the solver *)
-type request =
-  |Package of Cudf.package
   (** Check the installability of one package *)
-  |PackageList of Cudf.package list
   (** Check the installability of a list of packages *)
+type request = Cudf.package list
 
 (** The result of an installability query *)
 type result =

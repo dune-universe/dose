@@ -163,11 +163,7 @@ let test_coinst_prod =
     let dl = Depsolver.edos_coinstall_prod universe [al;bl] in
     let resl =
       List.map (fun res ->
-        let l =
-          match res.Diagnostic.request with
-          |Diagnostic.PackageList l -> List.sort l
-          |_ -> []
-        in
+        let l = List.sort res.Diagnostic.request in
         let r =
           match res.Diagnostic.result with
           |Diagnostic.Success _ -> true

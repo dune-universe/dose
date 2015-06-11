@@ -112,7 +112,7 @@ let strongconflicts univ =
   let try_add_edge stronglist p q x y =
     if not (IG.mem_edge cache p q) then begin
       IG.add_edge cache p q;
-      let req = Diagnostic_int.Lst (None,[p;q]) in
+      let req = (None,[p;q]) in
       match Depsolver_int.solve solver req with
       |Diagnostic_int.Success _ -> ()
       |Diagnostic_int.Failure f ->
