@@ -391,44 +391,91 @@ let check_request ?cmd ?callback ?criteria ?explain cudf =
 type depclean_t =
   (Cudf.package *
     (Cudf_types.vpkglist * Cudf_types.vpkg * Cudf.package list) list *
-    (Cudf_types.vpkglist * Cudf_types.vpkg * Cudf.package list) list
+    (Cudf_types.vpkg * Cudf.package list) list
   )
 
 (** Depclean. Detect useless dependencies and/or conflicts 
     to missing or broken packages *)
 let depclean ?(global_constraints=true) ?(callback=(fun _ -> ())) univ pkglist =
   let cudfpool = Depsolver_int.init_pool_univ ~global_constraints univ in
-  let enum univ pkg =
-    let enum vpkg =
-      List.map (fun (p,c) ->
-        match CudfAdd.who_provides univ (p,c) with
-        |[] -> (vpkg,(p,c),[])
-        |l -> (vpkg,(p,c),l)
-      ) vpkg
-    in
-    let d = List.flatten (List.map enum pkg.Cudf.depends) in
-    let c = enum pkg.Cudf.conflicts in
-    (d,c)
+  let is_broken =
+    let cache = Hashtbl.create (Cudf.universe_size univ) in
+    fun pkg -> 
+      try Hashtbl.find cache pkg with 
+      |Not_found ->
+        let r = edos_install_cache global_constraints univ cudfpool [pkg] in
+        let res = not(Diagnostic.is_solution r) in
+        Hashtbl.add cache pkg res;
+        res
   in
-  let test l = 
+  let enum_conf univ pkg =
+    List.map (fun vpkg ->
+      match CudfAdd.who_provides univ vpkg with
+      |[] -> (vpkg,[])
+      |l -> (vpkg,l)
+    ) pkg.Cudf.conflicts
+  in
+  (* for each vpkglist in the depends field create a new vpkgformula
+     where for each vpkg, only one one possible alternative is considered.
+     We will use this revised vpkgformula to check if the selected alternative
+     is a valid dependency *)
+  let enum_deps univ pkg =
+    let rec aux before acc = function
+      |vpkglist :: after ->
+          let l =
+            List.map (fun vpkg ->
+              match CudfAdd.who_provides univ vpkg with
+              |[] -> (vpkglist,vpkg,[],[])
+              |l -> (vpkglist,vpkg,before@[[vpkg]]@after,l)
+            ) vpkglist
+          in
+          aux (before@[vpkglist]) (l::acc) after
+      |[] -> List.flatten acc
+    in aux [] [] pkg.Cudf.depends
+  in
+  (* if a package is in conflict with another package that is broken or missing,
+     then the conflict can be removed *)
+  let test_conflict l = 
     List.fold_left (fun acc -> function
-      |(vpkg,(p,c),[]) -> (vpkg,(p,c),[])::acc
-      |(vpkg,(p,c),l) ->
+      |(vpkg,[]) -> (vpkg,[])::acc
+      |(vpkg,l) -> acc 
+      (* if the conflict is with a broken package, 
+         it is still a valid conflict *)
+      (*
           List.fold_left (fun acc pkg ->
-            let res = edos_install_cache global_constraints univ cudfpool [pkg] in
-            if not(Diagnostic.is_solution res) then (vpkg,(p,c),[pkg])::acc else acc
+            if is_broken pkg then (vpkg,[pkg])::acc else acc
           ) acc l
+          *)
     ) [] l 
   in
+  (* if a package p depends on a package that make p uninstallable, then it 
+     can be removed. If p depends on a missing package, the dependency can
+     be equally removed *)
+  let test_depends univ cudfpool pkg l =
+    let pool = Depsolver_int.strip_cudf_pool cudfpool in
+    List.fold_left (fun acc -> function
+      |(vpkglist,vpkg,_,[]) -> (vpkglist,vpkg,[])::acc
+      |(vpkglist,vpkg,depends,l) ->
+        let pkgid = Cudf.uid_by_package univ pkg in
+        let (pkgdeps,pkgconf) = pool.(pkgid) in
+        let dll =
+          List.map (fun vpkgs ->
+            (vpkgs, CudfAdd.resolve_vpkgs_int univ vpkgs)
+          ) depends
+        in
+        let _ = pool.(pkgid) <- (dll,pkgconf) in
+        let res = edos_install_cache global_constraints univ cudfpool [pkg] in
+        let _ = pool.(pkgid) <- (pkgdeps,pkgconf) in
+        if not(Diagnostic.is_solution res) then (vpkglist,vpkg,l)::acc else acc
+    ) [] l
+  in
   List.filter_map (fun pkg ->
-    let res = edos_install_cache global_constraints univ cudfpool [pkg] in
-    if Diagnostic.is_solution res then begin
-      let (deps,conf) = enum univ pkg in
-      let resdep = test deps in
-      let resconf = test conf in
-      match resdep@resconf with
-      |[] -> None
-      |res -> (callback(pkg,resdep,resconf) ; Some(pkg,resdep,resconf))
+    if not(is_broken pkg) then begin
+      let resdep = test_depends univ cudfpool pkg (enum_deps univ pkg) in
+      let resconf = test_conflict (enum_conf univ pkg) in
+      match resdep,resconf with
+      |[],[] -> None
+      |_,_ -> (callback(pkg,resdep,resconf) ; Some(pkg,resdep,resconf))
     end else None
   ) pkglist
 ;;

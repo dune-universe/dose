@@ -87,11 +87,11 @@ let main () =
     Format.printf "Some dependencies of the package %s can be revised :\n" (CudfAdd.string_of_package pkg);
     List.iter (function
       |(vpkglist,vpkg,[]) ->
-        Format.printf "The dependency %a from (%a) refers to a missing package therefore useless\n" 
+        Format.printf "The dependency %a from [%a] refers to a missing package therefore useless\n" 
         (Diagnostic.pp_vpkg pp) vpkg (Diagnostic.pp_vpkglist pp) vpkglist
       |(vpkglist,vpkg,l) ->
           List.iter (fun bpkg ->
-            Format.printf "The dependency %a from (%a) refers to a broken package (%a) : the dependency can be more strict\n" 
+            Format.printf "The dependency %a from [%a] refers to a broken package (%a) : the dependency can be more strict\n" 
             (Diagnostic.pp_vpkg pp) vpkg
             (Diagnostic.pp_vpkglist pp) vpkglist 
             CudfAdd.pp_package bpkg
@@ -99,14 +99,13 @@ let main () =
     ) deps;
     Format.printf "Some conflict of the package %s can be revised :\n" (CudfAdd.string_of_package pkg);
     List.iter (function
-      |(vpkglist,vpkg,[]) ->
-        Format.printf "The conflict %a from (%a) refers to a missing package therefore useless\n" 
-        (Diagnostic.pp_vpkg pp) vpkg (Diagnostic.pp_vpkglist pp) vpkglist
-      |(vpkglist,vpkg,l) ->
+      |(vpkg,[]) ->
+        Format.printf "The conflict %a refers to a missing package therefore useless\n" 
+        (Diagnostic.pp_vpkg pp) vpkg
+      |(vpkg,l) ->
           List.iter (fun bpkg ->
-            Format.printf "The conflict %a from (%a) refers to a broken package (%a): this conflict can be more precise\n" 
+            Format.printf "The conflict %a refers to a broken package (%a): this conflict can be more precise\n" 
             (Diagnostic.pp_vpkg pp) vpkg
-            (Diagnostic.pp_vpkglist pp) vpkglist
             CudfAdd.pp_package bpkg
           ) l
     ) conf;

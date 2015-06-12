@@ -129,7 +129,7 @@ val output_clauses : ?global_constraints : bool -> ?enc : enc -> Cudf.universe -
 type depclean_t = 
   (Cudf.package * 
     (Cudf_types.vpkglist * Cudf_types.vpkg * Cudf.package list) list *
-    (Cudf_types.vpkglist * Cudf_types.vpkg * Cudf.package list) list 
+    (Cudf_types.vpkg * Cudf.package list) list 
   )
 
 val depclean : ?global_constraints : bool -> 
