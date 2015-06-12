@@ -42,7 +42,7 @@ module Cudf_set =
 
 let to_set l = List.fold_right Cudf_set.add l Cudf_set.empty
 
-(* encode - decode *)
+(** Encode - Decode *)
 
 (* Specialized hashtable for encoding strings efficiently. *)
 module EncodingHashtable =
@@ -107,7 +107,7 @@ let decode s =
   Pcre.substitute ~rex:encoded_char_regexp ~subst:decode_single s
 ;;
 
-(* formatting *)
+(** Pretty Printing *)
 
 let string_of pp arg =
   ignore(pp Format.str_formatter arg);
@@ -122,6 +122,67 @@ let pp_package fmt pkg =
 
 let string_of_version = string_of pp_version
 let string_of_package = string_of pp_package
+
+type pp = Cudf.package -> string * string * (string * (string * bool)) list
+
+(** [default_pp] default package printer. If the version of the package is
+  * a negative number, the version version if printed as "nan" *)
+let default_pp pkg =
+  let v = if pkg.Cudf.version > 0 then string_of_version pkg else "nan" in
+  (pkg.Cudf.package,v,[])
+;;
+
+let pp from_cudf ?(fields=[]) ?(decode=decode) pkg =
+    let (p,i) = (pkg.Cudf.package,pkg.Cudf.version) in
+    let v = if i > 0 then snd(from_cudf (p,i)) else "nan" in
+    let default_fields = ["architecture";"source";"sourcenumber";"essential"] in
+    let f b l =
+      List.filter_map (fun k ->
+        try Some(k,(decode(Cudf.lookup_package_property pkg k),b))
+        with Not_found -> None
+      ) l
+    in
+    let l = (f false fields)@(f true default_fields) in
+    (decode p,decode v,l)
+;;
+
+let pp_vpkg pp fmt vpkg =
+  let string_of_relop = function
+      `Eq -> "="
+    | `Neq -> "!="
+    | `Geq -> ">="
+    | `Gt -> ">"
+    | `Leq -> "<="
+    | `Lt -> "<"
+  in
+  match vpkg with
+  |(p,None) ->
+      let (p,_,_) = pp {Cudf.default_package with Cudf.package = p} in
+      Format.fprintf fmt "%s" p
+  |(p,Some(c,v)) ->
+      debug "pp_vpkg %s %s %i" p (string_of_relop c) v;
+      let (p,v,_) = pp {Cudf.default_package with Cudf.package = p ; version = v} in
+      Format.fprintf fmt "%s (%s %s)" p (string_of_relop c) v
+;;
+
+let pp_vpkglist pp fmt =
+  let pp_list fmt ~pp_item ~sep l =
+    let rec aux fmt = function
+      | [] -> assert false
+      | [last] -> (* last item, no trailing sep *)
+          Format.fprintf fmt "@,%a" pp_item last
+      | vpkg :: tl -> (* at least one package in tl *)
+          Format.fprintf fmt "@,%a%s" pp_item vpkg sep ;
+          aux fmt tl
+    in
+    match l with
+    | [] -> ()
+    | [sole] -> pp_item fmt sole
+    | _ -> Format.fprintf fmt "@[<h>%a@]" aux l
+  in
+  pp_list fmt ~pp_item:(pp_vpkg pp) ~sep:" | "
+;;
+
 
 module StringSet = Set.Make(String)
 
@@ -262,6 +323,7 @@ let cudfop = function
   |Some("ALL",v) -> None
   |None -> None
   |Some(c,v) -> fatal "%s %s" c v
+;;
 
 let latest pkglist =
   let h = Hashtbl.create (List.length pkglist) in
@@ -274,19 +336,4 @@ let latest pkglist =
     with Not_found -> Hashtbl.add h p.Cudf.package p
   ) pkglist;
   Hashtbl.fold (fun _ v acc -> v::acc) h []
-;;
-
-type pp = Cudf.package -> string * string * (string * (string * bool)) list
-let pp from_cudf ?(fields=[]) ?(decode=decode) pkg =
-    let (p,i) = (pkg.Cudf.package,pkg.Cudf.version) in
-    let v = if i > 0 then snd(from_cudf (p,i)) else "nan" in
-    let default_fields = ["architecture";"source";"sourcenumber";"essential"] in
-    let f b l =
-      List.filter_map (fun k ->
-        try Some(k,(decode(Cudf.lookup_package_property pkg k),b))
-        with Not_found -> None
-      ) l
-    in
-    let l = (f false fields)@(f true default_fields) in
-    (decode p,decode v,l)
 ;;

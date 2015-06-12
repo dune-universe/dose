@@ -126,65 +126,10 @@ let pp_package ?(source=false) ?(fields=false) pp fmt pkg =
   end
 ;;
 
-let pp_vpkg pp fmt vpkg = 
-  let string_of_relop = function
-      `Eq -> "="
-    | `Neq -> "!="
-    | `Geq -> ">="
-    | `Gt -> ">"
-    | `Leq -> "<="
-    | `Lt -> "<"
-  in
-  match vpkg with
-  |(p,None) -> 
-      let (p,_,_) = pp {Cudf.default_package with Cudf.package = p} in
-      Format.fprintf fmt "%s" p
-  |(p,Some(c,v)) ->
-      debug "pp_vpkg %s %s %i" p (string_of_relop c) v;
-      let (p,v,_) = pp {Cudf.default_package with Cudf.package = p ; version = v} in
-      Format.fprintf fmt "%s (%s %s)" p (string_of_relop c) v
-
-let pp_vpkglist pp fmt = 
-  (* from libcudf ... again *)
-  let pp_list fmt ~pp_item ~sep l =
-    let rec aux fmt = function
-      | [] -> assert false
-      | [last] -> (* last item, no trailing sep *)
-          Format.fprintf fmt "@,%a" pp_item last
-      | vpkg :: tl -> (* at least one package in tl *)
-          Format.fprintf fmt "@,%a%s" pp_item vpkg sep ;
-          aux fmt tl
-    in
-    match l with
-    | [] -> ()
-    | [sole] -> pp_item fmt sole
-    | _ -> Format.fprintf fmt "@[<h>%a@]" aux l
-  in
-  (*
-   *  let string_of_relop = function
-      `Eq -> "="
-    | `Neq -> "!="
-    | `Geq -> ">="
-    | `Gt -> ">"
-    | `Leq -> "<="
-    | `Lt -> "<"
-  in
-  let pp_item fmt = function
-    |(p,None) -> 
-        let (p,_,_) = pp {Cudf.default_package with Cudf.package = p} in
-        Format.fprintf fmt "%s" p
-    |(p,Some(c,v)) ->
-        debug "pp_vpkglist %s %s %i" p (string_of_relop c) v;
-        let (p,v,_) = pp {Cudf.default_package with Cudf.package = p ; version = v} in
-        Format.fprintf fmt "%s (%s %s)" p (string_of_relop c) v
-  in
-  *)
-  pp_list fmt ~pp_item:(pp_vpkg pp) ~sep:" | "
-
 let pp_dependency pp ?(label="depends") fmt (i,vpkgs) =
   Format.fprintf fmt "%a" (pp_package pp) i;
   if vpkgs <> [] then
-    Format.fprintf fmt "@,%s: %a" label (pp_vpkglist pp) vpkgs;
+    Format.fprintf fmt "@,%s: %a" label (CudfAdd.pp_vpkglist pp) vpkgs;
 ;;
 
 let rec pp_list pp fmt = function
@@ -475,7 +420,7 @@ let print_error ?(minimal=false) pp root fmt l =
     |Conflict (i,j,vpkg) ->
         Format.fprintf fmt "@[<v 1>conflict:@,";
         Format.fprintf fmt "@[<v 1>pkg1:@,%a@," (pp_package ~source:true pp) i;
-        Format.fprintf fmt "unsat-conflict: %a@]@," (pp_vpkglist pp) [vpkg];
+        Format.fprintf fmt "unsat-conflict: %a@]@," (CudfAdd.pp_vpkglist pp) [vpkg];
         Format.fprintf fmt "@[<v 1>pkg2:@,%a@]" (pp_package ~source:true pp) j;
         if deps <> [] && not minimal then begin
           let pl1 = create_pathlist root (Dependency(i,[],[])::deps) in
@@ -544,17 +489,6 @@ let is_solution = function
   |{result = Failure _ } -> false
 ;;
 
-(** [default_pp] default package printer. If the version of the package is
-  * a negative number, the version version if printed as "nan" *)
-let default_pp pkg =
-  let v = 
-    if pkg.Cudf.version > 0 then 
-      CudfAdd.string_of_version pkg
-    else "nan"
-  in
-  (pkg.Cudf.package,v,[])
-;;
-
 let print_error_human ?(prefix="") pp root fmt l =
   let (deps,res) = List.partition (function Dependency _ -> true |_ -> false) l in
   let pp_package pkg =
@@ -581,7 +515,7 @@ let print_error_human ?(prefix="") pp root fmt l =
         end
     end
     |Missing (i,vpkgs) -> begin
-      Format.printf "%sThe dependency %a of package %s cannot be satisfied@." prefix (pp_vpkglist pp) vpkgs (pp_package i);
+      Format.printf "%sThe dependency %a of package %s cannot be satisfied@." prefix (CudfAdd.pp_vpkglist pp) vpkgs (pp_package i);
       let pl = create_pathlist root (Dependency(i,vpkgs,[])::deps) in
       if pl <> [[]] then pp_dependencies fmt pl
     end
@@ -594,7 +528,7 @@ let print_error_human ?(prefix="") pp root fmt l =
   List.iter (pp_reason fmt) res
 ;;
 
-let fprintf_human ?(pp=default_pp) ?(prefix="") fmt = function
+let fprintf_human ?(pp=CudfAdd.default_pp) ?(prefix="") fmt = function
   |{result = Failure f ; request = [r] } -> 
          print_error_human ~prefix pp r fmt (f ());
   |{result = Failure f ; request = rl } -> 
@@ -606,7 +540,7 @@ let fprintf_human ?(pp=default_pp) ?(prefix="") fmt = function
   |_ -> ()
 ;;
 
-let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) ?(minimal=false) fmt d = 
+let fprintf ?(pp=CudfAdd.default_pp) ?(failure=false) ?(success=false) ?(explain=false) ?(minimal=false) fmt d = 
   match d with
   |{result = Success f; request = req } when success ->
       Format.fprintf fmt "@[<v 1>-@,";
@@ -662,7 +596,7 @@ let fprintf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
   |_ -> ()
 ;;
 
-let printf ?(pp=default_pp) ?(failure=false) ?(success=false) ?(explain=false) d =
+let printf ?(pp=CudfAdd.default_pp) ?(failure=false) ?(success=false) ?(explain=false) d =
   fprintf ~pp ~failure ~success ~explain Format.std_formatter d
 
 let collect results d = 
@@ -721,7 +655,7 @@ let pp_summary_row explain pp fmt = function
   |_ -> ()
 ;;
 
-let pp_summary ?(pp=default_pp) ?(explain=false) () fmt result = 
+let pp_summary ?(pp=CudfAdd.default_pp) ?(explain=false) () fmt result = 
   let l =
     ResultHash.fold (fun k v acc -> 
       let l1 = Util.list_unique !v in

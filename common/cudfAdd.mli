@@ -90,20 +90,6 @@ val encode : string -> string
 *)
 val decode : string -> string
 
-(** {2 Formatting, printing, converting to string. } *)
-
-val string_of : (Format.formatter -> 'a -> 'b) -> 'a -> string
-
-val pp_version : Format.formatter -> Cudf.package -> unit
-val pp_package : Format.formatter -> Cudf.package -> unit
-
-(** return a string containg either the value of the optional field
-    "number" or the cudf version *)
-val string_of_version : Cudf.package -> string
-
-(** return a string of the form "name ( = version)" *)
-val string_of_package : Cudf.package -> string
-
 (** {2 Additional functions on the CUDF data types. } *)
 
 (** Returns a list of packages containing for each package only the
@@ -143,6 +129,30 @@ val cudfop :
   (string * string) option ->
   ([> `Eq | `Neq | `Geq | `Gt | `Leq | `Lt ] * string) option
 
+val compute_pool : Cudf.universe -> int list list array * int list array
+
+val add_to_package_list :
+  ('a, 'b list ref) ExtLib.Hashtbl.t -> 'a -> 'b -> unit
+
+val get_package_list : ('a, 'b list ref) ExtLib.Hashtbl.t -> 'a -> 'b list
+
+(** normalize_set l returns the list l without any duplicate element. *)
+val normalize_set : int list -> int list
+
+(** {2 Formatting, printing, converting to string. } *)
+
+val string_of : (Format.formatter -> 'a -> 'b) -> 'a -> string
+
+val pp_version : Format.formatter -> Cudf.package -> unit
+val pp_package : Format.formatter -> Cudf.package -> unit
+
+(** return a string containg either the value of the optional field
+    "number" or the cudf version *)
+val string_of_version : Cudf.package -> string
+
+(** return a string of the form "name ( = version)" *)
+val string_of_package : Cudf.package -> string
+
 (* Function signature for cudf package printer. The output represents
    a triple (name, version, (field name, value) list *)
 type pp = Cudf.package -> string * string * (string * (string * bool)) list
@@ -162,12 +172,16 @@ val pp :
   ?fields: string list->
   ?decode: (Cudf_types.pkgname -> string) -> pp
 
-val compute_pool : Cudf.universe -> int list list array * int list array
+(** [default_pp] default package printer. Extracts string values from a 
+    cudf package : Name, Version, Fields. Where Fields is a list of 
+    field name , value pairs . If the version of the package is
+    a negative number, the version version if printed as "nan". *)
+val default_pp : pp
 
-val add_to_package_list :
-  ('a, 'b list ref) ExtLib.Hashtbl.t -> 'a -> 'b -> unit
+(** cudf vpkglist printer. *)
+val pp_vpkg : pp -> Format.formatter -> Cudf_types.vpkg -> unit
 
-val get_package_list : ('a, 'b list ref) ExtLib.Hashtbl.t -> 'a -> 'b list
+(** cudf vpkglist printer. *)
+val pp_vpkglist : pp -> Format.formatter -> Cudf_types.vpkglist -> unit
 
-(** normalize_set l returns the list l without any duplicate element. *)
-val normalize_set : int list -> int list
+

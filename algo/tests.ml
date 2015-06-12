@@ -351,19 +351,19 @@ let test_depclean =
       List.iter (function
         |(vpkglist,vpkg,[]) ->
           Format.printf "The dependency %a from [%a] refers to a missing package therefore useless\n" 
-          (Diagnostic.pp_vpkg Diagnostic.default_pp) vpkg (Diagnostic.pp_vpkglist Diagnostic.default_pp) vpkglist
+          (CudfAdd.pp_vpkg CudfAdd.default_pp) vpkg (CudfAdd.pp_vpkglist CudfAdd.default_pp) vpkglist
         |(vpkglist,vpkg,_) ->
           Format.printf "The dependency %a from [%a] refers to a broken package therefore useless\n" 
-          (Diagnostic.pp_vpkg Diagnostic.default_pp) vpkg (Diagnostic.pp_vpkglist Diagnostic.default_pp) vpkglist
+          (CudfAdd.pp_vpkg CudfAdd.default_pp) vpkg (CudfAdd.pp_vpkglist CudfAdd.default_pp) vpkglist
       ) deps;
       Format.printf "Some conflict of the package %s can be revised :\n" (CudfAdd.string_of_package pkg);
       List.iter (function
         |(vpkg,[]) ->
           Format.printf "The conflict %a refers to a missing package therefore useless\n" 
-          (Diagnostic.pp_vpkg Diagnostic.default_pp) vpkg
+          (CudfAdd.pp_vpkg CudfAdd.default_pp) vpkg
         |(vpkg,_) ->
           Format.printf "The conflict %a refers to a broken package therefore useless\n" 
-          (Diagnostic.pp_vpkg Diagnostic.default_pp) vpkg
+          (CudfAdd.pp_vpkg CudfAdd.default_pp) vpkg
       ) conf;
     ) res;
     *)
@@ -384,7 +384,7 @@ let test_depclean =
       );
       (c,[],[
         (("missingc",None),[]);
-        (("broken",None),[b]);
+        (* (("broken",None),[b]); *)
         ]
       );
       ]
