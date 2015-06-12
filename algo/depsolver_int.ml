@@ -115,26 +115,31 @@ let init_pool_univ ~global_constraints univ =
      * However, since they are global, I've to add the at the end, after
      * I have analyzed all packages in the universe. *)
     Array.init size (fun uid ->
-      if uid = globalid then ([],[]) else (* the last index *)
-        let pkg = Cudf.package_by_uid univ uid in
-        let dll = 
-          List.map (fun vpkgs ->
-            (vpkgs, CudfAdd.resolve_vpkgs_int univ vpkgs)
-          ) pkg.Cudf.depends 
-        in
-        let cl = 
-          List.map (fun vpkg ->
-            debug "Conflict %s" (Cudf_types_pp.string_of_vpkg vpkg);
-            (vpkg, CudfAdd.resolve_vpkg_int univ vpkg)
-          ) pkg.Cudf.conflicts
-        in
-        if pkg.Cudf.keep = `Keep_package then
-          CudfAdd.add_to_package_list keep (pkg.Cudf.package,None) uid;
-          (*
-        if pkg.Cudf.keep = `Keep_version then
-          CudfAdd.add_to_package_list keep (pkg.Cudf.package,Some (`Eq pkg.Cudf.version)) uid;
-          *)
-        (dll,cl)
+      try
+        if uid = globalid then ([],[]) else begin (* the last index *)
+          let pkg = Cudf.package_by_uid univ uid in
+          let dll = 
+            List.map (fun vpkgs ->
+              (vpkgs, CudfAdd.resolve_vpkgs_int univ vpkgs)
+            ) pkg.Cudf.depends 
+          in
+          let cl = 
+            List.map (fun vpkg ->
+              debug "Conflict %s" (Cudf_types_pp.string_of_vpkg vpkg);
+              (vpkg, CudfAdd.resolve_vpkg_int univ vpkg)
+            ) pkg.Cudf.conflicts
+          in
+          if pkg.Cudf.keep = `Keep_package then
+            CudfAdd.add_to_package_list keep (pkg.Cudf.package,None) uid;
+            (*
+          if pkg.Cudf.keep = `Keep_version then
+            CudfAdd.add_to_package_list keep (pkg.Cudf.package,Some (`Eq pkg.Cudf.version)) uid;
+            *)
+          (dll,cl)
+        end
+      with Not_found ->
+        fatal ("Package uid not found during solver pool initialization. "^
+              "Packages uid must have no gaps in the given universe")
     )
   in
   if global_constraints then begin
