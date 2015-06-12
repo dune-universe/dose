@@ -138,8 +138,7 @@ let init_pool_univ ~global_constraints univ =
           (dll,cl)
         end
       with Not_found ->
-        fatal ("Package uid not found during solver pool initialization. "^
-              "Packages uid must have no gaps in the given universe")
+        fatal "Package uid not found during solver pool initialization. Packages uid must have no gaps in the given universe"
     )
   in
   if global_constraints then begin
