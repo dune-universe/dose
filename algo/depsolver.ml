@@ -441,11 +441,6 @@ let depclean ?(global_constraints=true) ?(callback=(fun _ -> ())) univ pkglist =
       |(vpkg,l) -> acc 
       (* if the conflict is with a broken package, 
          it is still a valid conflict *)
-      (*
-          List.fold_left (fun acc pkg ->
-            if is_broken pkg then (vpkg,[pkg])::acc else acc
-          ) acc l
-          *)
     ) [] l 
   in
   (* if a package p depends on a package that make p uninstallable, then it 
