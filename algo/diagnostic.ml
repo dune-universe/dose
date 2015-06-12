@@ -390,7 +390,8 @@ let condense gr =
   gr
 ;;
 
-let print_dot ?(addmissing=false) ?dir = 
+let print_dot ?(pp=CudfAdd.default_pp) ?(addmissing=false) ?dir = 
+  Defaultgraphs.SyntacticDependencyGraph.default_pp := pp;
   let open Defaultgraphs.SyntacticDependencyGraph in function
   |{result = Success _ } -> fatal "Cannot build explanation graph on Success"
   |{result = Failure f; request = [r] } ->

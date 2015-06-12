@@ -134,5 +134,7 @@ val printf :
 
 #ifdef HASOCAMLGRAPH
 (** print the explanation graph in dot format to the standard formatter *)
-val print_dot : ?addmissing : bool -> ?dir : string -> diagnosis -> unit
+val print_dot :
+  ?pp : Common.CudfAdd.pp -> 
+  ?addmissing : bool -> ?dir : string -> diagnosis -> unit
 #endif

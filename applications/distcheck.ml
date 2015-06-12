@@ -170,19 +170,19 @@ let main () =
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
   let callback d =
     if summary then Diagnostic.collect results d ;
-    let _ = 
-#ifdef HASOCAMLGRAPH 
-      if not(Diagnostic.is_solution d) && (OptParse.Opt.get Options.dot) then
-        let dir = OptParse.Opt.opt Options.outdir in
-        Diagnostic.print_dot ~addmissing:explain ?dir d
-#else
-      ()
-#endif
-    in
     let pp =
       if input_type = `Cudf then 
         fun pkg -> pp ~decode:(fun x -> x) pkg 
       else fun pkg -> pp pkg
+    in
+    let _ = 
+#ifdef HASOCAMLGRAPH 
+      if not(Diagnostic.is_solution d) && (OptParse.Opt.get Options.dot) then
+        let dir = OptParse.Opt.opt Options.outdir in
+        Diagnostic.print_dot ~pp ~addmissing:explain ?dir d
+#else
+      ()
+#endif
     in
     Diagnostic.fprintf ~pp ~failure ~success ~explain ~minimal fmt d
   in

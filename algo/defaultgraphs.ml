@@ -120,6 +120,8 @@ module SyntacticDependencyGraph = struct
     let default = ref Conflict
   end
 
+  let default_pp = ref CudfAdd.default_pp 
+
   module G = Imperative.Digraph.ConcreteBidirectionalLabeled(PkgV)(PkgE)
   module DotPrinter = struct
     module Display = struct
@@ -171,7 +173,7 @@ module SyntacticDependencyGraph = struct
               |PkgV.Or _ -> `Style `Dashed
               |_ -> `Style `Solid
             in
-            [style ; `Label (CudfAdd.decode (Cudf_types_pp.string_of_vpkglist (List.unique vpkgs)))]
+            [style ; `Label (CudfAdd.string_of (CudfAdd.pp_vpkglist !default_pp) (List.unique vpkgs))]
         |PkgE.Conflict -> [`Color 0xFF0000; `Style `Solid; `Dir `None; `Label "#"]
         |PkgE.Condensed -> [`Style `Solid]
     end
