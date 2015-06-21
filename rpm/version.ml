@@ -13,6 +13,7 @@
 (** compare epoch:version-release strings *)
 (* external rpmEVRcmp : string -> string -> int = "rpm_EVRcmp" *)
 module Str = Re_str
+open Common
 
 #define __label __FILE__
 let label =  __label ;;

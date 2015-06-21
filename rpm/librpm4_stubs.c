@@ -218,12 +218,12 @@ CAMLprim value rpm_parse_paragraph (value fd) {
   tl = append(hd,tl);
 
   k = caml_copy_string("Suggests");
-  v = get_deps(h,RPMTAG_SUGGESTSNAME);
+  v = get_deps(h,RPMTAG_SUGGESTNAME);
   hd = tuple(k,list_variant_D(v));
   tl = append(hd,tl);
 
   k = caml_copy_string("Enhances");
-  v = get_deps(h,RPMTAG_ENHANCESNAME);
+  v = get_deps(h,RPMTAG_ENHANCENAME);
   hd = tuple(k,list_variant_D(v));
   tl = append(hd,tl);
 
