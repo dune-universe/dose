@@ -388,7 +388,7 @@ let check_request ?cmd ?callback ?criteria ?explain cudf =
   check_request_using ?call_solver ?callback ?explain cudf
 ;;
 
-type depclean_t =
+type depclean_result =
   (Cudf.package *
     (Cudf_types.vpkglist * Cudf_types.vpkg * Cudf.package list) list *
     (Cudf_types.vpkg * Cudf.package list) list

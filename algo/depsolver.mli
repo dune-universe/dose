@@ -125,16 +125,23 @@ type enc = Cnf | Dimacs
   *)
 val output_clauses : ?global_constraints : bool -> ?enc : enc -> Cudf.universe -> string
 
-(** *)
-type depclean_t = 
+(** The result of the depclean function is a tuple containing a package, a list
+    of dependencies that are redundant and a list of conflicts that are redundant *)
+type depclean_result = 
   (Cudf.package * 
     (Cudf_types.vpkglist * Cudf_types.vpkg * Cudf.package list) list *
     (Cudf_types.vpkg * Cudf.package list) list 
   )
 
-val depclean : ?global_constraints : bool -> 
-               ?callback : (depclean_t -> unit) -> 
-                 Cudf.universe -> Cudf.package list -> depclean_t list
+(** For each package [p] in [packagelist], [depclean univ packagelist] detect 
+    redundundant dependencies that refer to packages that are either missing
+    or not co-installable together with the root package [p] *)
+val depclean :
+  ?global_constraints : bool -> 
+  ?callback : (depclean_result -> unit) -> 
+  Cudf.universe ->
+  Cudf.package list ->
+  depclean_result list
 
 type solver_result =
   |Sat of (Cudf.preamble option * Cudf.universe)
