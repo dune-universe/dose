@@ -51,12 +51,13 @@ let rmtmpdir path =
   begin try
     Sys.remove (Filename.concat path "in-cudf");
     Sys.remove (Filename.concat path "out-cudf")
-  with e -> () end;
-  try
+  with e -> warning "Cannot remove %s/{in-cudf,out-cudf}" path end;
+  begin try
     Unix.rmdir path
   with e ->
     warning "cannot delete temporary directory %s - not empty?" path;
     raise e
+  end
 ;;
 
 let rec input_all_lines acc chan =
@@ -158,5 +159,7 @@ let execsolver exec_pat criteria cudf =
       end with Cudf.Constraint_violation s ->
         fatal "(CUDF) Malformed solution: %s" s ;
   in
-  finally (fun () -> rmtmpdir tmpdir) aux ();
+  let res = aux () in
+  rmtmpdir tmpdir;
+  res
 ;;
