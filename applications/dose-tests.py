@@ -4,7 +4,7 @@ import unittest
 from subprocess import Popen, PIPE
 import difflib
 import uuid
-import os,sys,time
+import os,sys,time,glob
 import argparse
 from itertools import groupby, ifilter
 import yaml
@@ -18,6 +18,10 @@ except ImportError:
 import filecmp
 import cStringIO
 from sets import Set
+
+def removeTmpFiles() :
+    for f in glob.glob("/tmp/apt-cudf-universe*.cudf") :
+        os.remove(f)
 
 class Ignore(Exception):
     pass
@@ -115,7 +119,9 @@ def diff_edsp(expectedfile,resultfile):
     
 def test_application(self,expected_file,cmd,diff,exitcode):
     uid = uuid.uuid1()
+    mytmp = False
     if not os.path.exists("tmp"):
+        mytmp = True
         os.makedirs("tmp")
 
     output_file = "tmp/%s.cudf" % uid
@@ -131,6 +137,8 @@ def test_application(self,expected_file,cmd,diff,exitcode):
     d = diff(expected_file,output_file)
     output.close()
     os.remove(output_file)
+    if mytmp :
+        os.rmdir("tmp")
     self.assertTrue(d)
     self.assertTrue(ec)
 
@@ -165,6 +173,8 @@ class DoseTests(unittest.TestCase):
             return s + "\n"
     def runTest(self):
         test_application(self,self.expected,self.cmd,self.difftype,self.exitcode)
+    def tearDown(self):
+        removeTmpFiles()
 
 def suite(f,runtest,rungroup,slow=False):
     suite = unittest.TestSuite()
