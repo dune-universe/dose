@@ -282,6 +282,7 @@ module DistribOptions = struct
   let deb_foreign_archs = str_list_option ()
   let deb_host_arch = StdOpt.str_option ()
   let deb_ignore_essential = StdOpt.store_true ()
+  let deb_builds_from = StdOpt.store_true ()
   let int_versions = StdOpt.store_true ()
 
   let default_options = [
@@ -289,6 +290,7 @@ module DistribOptions = struct
     "deb-host-arch";
     "deb-foreign-archs";
     "deb-ignore-essential";
+    "deb-builds-from";
   ]
 
   let group = ref None
@@ -325,7 +327,8 @@ module DistribOptions = struct
       Debian.Debcudf.native = native;
       foreign = foreign;
       host = host;
-      ignore_essential = Opt.get deb_ignore_essential
+      ignore_essential = Opt.get deb_ignore_essential;
+      builds_from = Opt.get deb_builds_from;
     }
   ;;
 
@@ -366,6 +369,9 @@ module DistribOptions = struct
       if List.mem "deb-ignore-essential" default then
         add options ~group ~long_name:"deb-ignore-essential" 
         ~help:"Ignore Essential Packages" deb_ignore_essential;
+      if List.mem "deb-builds-from" default then
+        add options ~group ~long_name:"deb-builds-from"
+          ~help:"Add builds-from relationship of binary packages on source packages as dependency" deb_builds_from;
     end
 
   let add_option ?short_name ?long_name ?help options =

@@ -56,6 +56,7 @@ type options = {
   foreign : string list ; (* list of foreign architectures *)
   host : string option;   (* the host architecture - cross compile *)
   ignore_essential : bool;
+  builds_from : bool;
 }
 
 let default_options = {
@@ -63,7 +64,8 @@ let default_options = {
   native = None;
   foreign = [];
   host = None;
-  ignore_essential = false
+  ignore_essential = false;
+  builds_from = false;
 }
 
 let add_name_arch n a = CudfAdd.encode (Printf.sprintf "%s:%s" n a)
