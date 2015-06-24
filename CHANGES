@@ -1,4 +1,4 @@
-dose3 (4.0) UNRELEASED; urgency=low
+dose3 (4.0-rc1) UNRELEASED; urgency=low
   * Remove dependency to camlp4. Add build dependency to cppo
   * Add option --dot to create explanation graphs in dot format
   * add 'out-version' field to yaml format
@@ -12,6 +12,9 @@ dose3 (4.0) UNRELEASED; urgency=low
   * Ceve can read source packages
   * Add grep-able one line explanations (success/failure) to distcheck
   * Switch architecture and name around in cudf representation for debian packages
+  * Add new function to detect unsused dependencies/conflicts
+  * API change : Diagnostic.request, Depsolver.request, StdLoaders.load_list, 
+    Debcudf.init_tables, 
 
 dose3 (3.3) UNRELEASED; urgency=low
 
