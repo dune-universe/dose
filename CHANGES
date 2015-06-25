@@ -15,6 +15,7 @@ dose3 (4.0-rc1) UNRELEASED; urgency=low
   * Add new function to detect unsused dependencies/conflicts
   * API change : Diagnostic.request, Depsolver.request, StdLoaders.load_list, 
     Debcudf.init_tables, 
+  * add debsrc input format to ceve
 
 dose3 (3.3) UNRELEASED; urgency=low
 
