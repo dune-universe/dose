@@ -180,14 +180,14 @@ let add_extra extras tables pkg =
   [number; recommends] @ l
 ;;
 
-let tocudf tables ?(extras=[]) ?(inst=false) pkg =
+let tocudf tables ?(extras=[]) ?(extrasfun=(fun _ _ -> [])) ?(inst=false) pkg =
     { Cudf.default_package with
       Cudf.package = CudfAdd.encode pkg.name ;
       Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;
       Cudf.depends = loadll tables pkg.depends;
       Cudf.conflicts = loadlc tables pkg.name pkg.conflicts;
       Cudf.provides = loadlp tables pkg.provides ;
-      Cudf.pkg_extra = add_extra extras tables pkg ;
+      Cudf.pkg_extra = (add_extra extras tables pkg)@(extrasfun tables pkg) ;
     }
 
 let lltocudf = loadll
