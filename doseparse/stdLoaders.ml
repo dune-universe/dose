@@ -79,7 +79,7 @@ let deb_load_list options ?(status=[]) ?(raw=false) dll =
 let pef_load_list options dll =
   let extras = [("maintainer",("maintainer",`String None))] in
   let pkglist = List.flatten dll in
-  let tables = Pef.Pefcudf.init_tables Debian.Version.compare pkglist in
+  let tables = Pef.Pefcudf.init_tables Versioning.Debian.compare pkglist in
   let from_cudf (p,i) = (p, Pef.Pefcudf.get_real_version tables (p,i)) in
   let to_cudf (p,v) = (p, Pef.Pefcudf.get_cudf_version tables (p,v)) in
   let cll =
