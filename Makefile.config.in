@@ -59,6 +59,7 @@ ifeq ("@HAS_LIBCUDF@","no")
 endif
 
 LIBNAMES += common/common \
+						versioning/versioning \
 						algo/algo \
 						deb/debian \
 						opencsw/csw \

@@ -9,14 +9,14 @@ Ocamlbuild_pack.Flags.mark_tag_used "link_" ;;
 *)
 
 let modules_dirs = [
-  "common";"deb";"pef";"opencsw"; "rpm";"db";"algo";
-  "doseparse"; "doseparseNoRpm"; "applications";"experimental"; "libcudf";"cv";
+  "common"; "versioning"; "deb"; "pef"; "opencsw"; "rpm"; "algo";
+  "doseparse"; "doseparseNoRpm"; "applications"; "experimental"; "libcudf";
   "experimental/dudftocudf";
 ];;
 
 let libraries = [
-  "cudf"; "common";"debian";"pef"; "csw"; "rpm";"db";"algo";"cv";
-  "doseparse"; "doseparseNoRpm";
+  "cudf";"common";"versioning";"debian";"pef";"csw";"rpm";"algo";
+  "doseparse";"doseparseNoRpm";
 ];;
 
 let doselibs = "doselibs" ;;
@@ -27,7 +27,6 @@ List.iter (fun d -> Pathname.define_context d [doselibs]) modules_dirs ;;
 let _ = dispatch begin function
    | After_rules ->
        List.iter (fun lib ->
-         (* ocaml_lib ~dir:"doselibs" lib *)
          flag ["ocaml"; "link"; "use_"^lib; "program"; "native"] & 
          S[A("doselibs/"^lib^".cmxa")];
          
