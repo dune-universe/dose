@@ -101,7 +101,7 @@ let dominators_tarjan graph =
   ) graph;
 
   Util.Timer.start tjntimer;
-#ifdef OCAMLGRAPH1.8.6
+#ifdef OCAMLGRAPH186
   let module Dom = Dominator.Make_graph(G) in
 #else
   let module Dom = Dominator.Make(G) in

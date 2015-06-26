@@ -133,7 +133,7 @@ if test "$HAS_OCAMLGRAPH" = "yes" ; then
   if test "$OCAML_PKG_ocamlgraph" = "no"; then
    AC_MSG_ERROR([Please install OCaml findlib module 'ocamlgraph'.])
   fi
-  TMPVERSION=`$OCAMLFIND query -format %v ocamlgraph`
+  TMPVERSION=`$OCAMLFIND query -format %v ocamlgraph | sed 's/\.//g'`
   PKG_OCAMLGRAPH="package(ocamlgraph)"
   MLPACK_OCAMLGRAPH="Defaultgraphs Statistics Dominators Strongdeps Strongdeps_int Strongconflicts Strongconflicts_int"
   DOC_OCAMLGRAPH="algo/Strongdeps algo/Strongconflicts algo/Strongdeps_int algo/Strongconflicts_int algo/Defaultgraphs algo/Statistics"
