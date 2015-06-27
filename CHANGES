@@ -1,3 +1,8 @@
+dose3 (4.0-rc2) UNRELEASED; urgency=low
+  * Add new module Versioning to group all the comparison functions
+  * Add a new comparison schema (http://semver.org/)
+  * Add new two new ceve output formats: deb and debsrc
+
 dose3 (4.0-rc1) UNRELEASED; urgency=low
   * Remove dependency to camlp4. Add build dependency to cppo
   * Add option --dot to create explanation graphs in dot format
