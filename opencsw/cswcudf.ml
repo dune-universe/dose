@@ -1,6 +1,7 @@
 
 open ExtLib
 open Common
+module Version = Versioning.Debian
 
 type tables = {
   units : (Packages.name, (int * string) list) Hashtbl.t;

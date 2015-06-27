@@ -12,6 +12,7 @@
 
 open ExtLib
 open Common
+module Version = Versioning.Debian
 
 #define __label __FILE__
 let label =  __label ;;

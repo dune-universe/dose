@@ -16,6 +16,7 @@ open ExtLib
 open Common
 open Algo
 open DoseparseNoRpm
+module Version = Versioning.Debian
 
 let predbar = Util.Progress.create "challenged" ;;
 
@@ -130,7 +131,7 @@ let evalsel getv target constr =
   |`In (v1,v2) -> evalsel ((getv v2) - 1) constr
 ;;
 
-let strip v = Debian.Version.compose (Debian.Version.strip_epoch v)
+let strip v = Version.compose (Version.strip_epoch v)
 
 let version_of_target ?(strip=(fun x -> x)) getv = function
   |`Eq v -> getv (strip v)
@@ -140,8 +141,8 @@ let version_of_target ?(strip=(fun x -> x)) getv = function
 
 let lesser_or_equal getv target equivs v =
   let v_le_target =
-    match Debian.Version.decompose v with
-    |Debian.Version.Native(_,_,_) ->
+    match Version.decompose v with
+    |Version.Native(_,_,_) ->
         (* in this case the reference version is without epoch,
          * hence no aligmement of the target. We want to exclude
          * this version if it is less or equal then the reference
@@ -323,7 +324,7 @@ let latest pkglist =
   List.iter (fun p ->
     try 
       let q = Hashtbl.find h p.Debian.Packages.name in
-      if (Debian.Version.compare p.Debian.Packages.version q.Debian.Packages.version) > 0 then
+      if (Version.compare p.Debian.Packages.version q.Debian.Packages.version) > 0 then
         Hashtbl.replace h p.Debian.Packages.name p
       else () 
     with Not_found -> Hashtbl.add h p.Debian.Packages.name p

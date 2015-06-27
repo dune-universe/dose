@@ -19,6 +19,7 @@
 
 open OUnit
 open Common
+module Version = Versioning.Debian
 
 let test_dir = "tests"
 
@@ -407,8 +408,8 @@ let test_evolution =
         Printf.eprintf "(2)cluster (%s,%s)\n%!" sourcename sourceversion; 
         List.iter (fun (version,cluster) ->
           let filter x =
-            match Debian.Version.split version, Debian.Version.split x with
-            |(_,v,_,_),(_,w,_,_) -> (Debian.Version.compare v w) <= 0
+            match Version.split version, Version.split x with
+            |(_,v,_,_),(_,w,_,_) -> (Version.compare v w) <= 0
           in
           let l = Evolution.discriminants ~filter constraints_table cluster in
           Printf.eprintf "(2)v : %s\n%!" version;

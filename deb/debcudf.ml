@@ -17,6 +17,7 @@ module SSet = Set.Make(String)
 open ExtLib
 open Common
 open Packages
+module Version = Versioning.Debian
 
 #define __label __FILE__
 let label =  __label ;;

@@ -12,6 +12,7 @@
 
 open ExtLib
 open Common
+module Version = Versioning.Debian
 
 type range = [
     `Hi of string
