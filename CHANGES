@@ -1,7 +1,14 @@
+dose3 (4.0-rc3) UNRELEASED; urgency=low
+  * Minor Bugs
+
+ -- Pietro Abate <pietro.abate@pps.univ-paris-diderot.fr>  Mon, 29 June 2015 13:13:06 +0200
+
 dose3 (4.0-rc2) UNRELEASED; urgency=low
   * Add new module Versioning to group all the comparison functions
   * Add a new comparison schema (http://semver.org/)
   * Add new two new ceve output formats: deb and debsrc
+
+ -- Pietro Abate <pietro.abate@pps.univ-paris-diderot.fr>  Fri, 26 June 2015 13:13:06 +0200
 
 dose3 (4.0-rc1) UNRELEASED; urgency=low
   * Remove dependency to camlp4. Add build dependency to cppo
@@ -21,6 +28,8 @@ dose3 (4.0-rc1) UNRELEASED; urgency=low
   * API change : Diagnostic.request, Depsolver.request, StdLoaders.load_list, 
     Debcudf.init_tables, 
   * add debsrc input format to ceve
+
+ -- Pietro Abate <pietro.abate@pps.univ-paris-diderot.fr>  Wed, 24 June 2015 13:13:06 +0200
 
 dose3 (3.3) UNRELEASED; urgency=low
 
