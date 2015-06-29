@@ -199,13 +199,15 @@ install: installlib
 	@ln -s $(BINDIR)/distcheck $(BINDIR)/eclipsecheck
 	@echo "Install dose binaries to $(BINDIR)"
 
-uninstall: uninstallcudf
+uninstalllib:
 	@$(OCAMLFIND) remove -destdir $(LIBDIR) $(NAME)
+	@echo "Uninstall dose librairies from $(LIBDIR)"
+
+uninstall: uninstalllib uninstallcudf
 	@for f in $$(ls *.$(OCAMLEXT)) ; do \
 	  rm -f $(BINDIR)/$${f%.$(OCAMLEXT)} ; \
 	done
 	@rm -f $(BINDIR)/debcheck $(BINDIR)/rpmcheck $(BINDIR)/eclipsecheck
-	@echo "Uninstall dose librairies from $(LIBDIR)"
 	@echo "Uninstall dose binaries from $(BINDIR)"
 
 dist: ./$(DIST_TARBALL)
