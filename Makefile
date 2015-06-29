@@ -181,10 +181,13 @@ INSTALL_STUFF_ += $(wildcard _build/rpm/*.so)
 exclude_cudf = $(wildcard _build/doselibs/*cudf* _build/cudf/*)
 INSTALL_STUFF = $(filter-out $(exclude_cudf), $(INSTALL_STUFF_))
 
-install: META installcudf
+installlib: META installcudf
 	@test -d $(LIBDIR) || mkdir -p $(LIBDIR)
 	@test -d $(LIBDIR)/stublibs || mkdir -p $(LIBDIR)/stublibs
 	@$(INSTALL) -patch-version $(VERSION) $(NAME) $(INSTALL_STUFF)
+	@echo "Install dose librairies to $(LIBDIR)"
+
+install: installlib
 	@cd _build/applications ; \
 	install -d $(BINDIR) ; \
 	for f in $$(ls *.$(OCAMLEXT)) ; do \
@@ -193,7 +196,6 @@ install: META installcudf
 	@ln -s $(BINDIR)/distcheck $(BINDIR)/debcheck
 	@ln -s $(BINDIR)/distcheck $(BINDIR)/rpmcheck
 	@ln -s $(BINDIR)/distcheck $(BINDIR)/eclipsecheck
-	@echo "Install dose librairies to $(LIBDIR)"
 	@echo "Install dose binaries to $(BINDIR)"
 
 uninstall: uninstallcudf
