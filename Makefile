@@ -13,11 +13,12 @@ APPFLAGS := $(VERBOSE) -j 10
 #OBFLAGS := $(OBFLAGS) -tag profile -tag debug
 OBFLAGS := $(OBFLAGS) -classic-display
 
-all: itarget $(CAMLP4CMXS) $(BYTELIBS) $(OPTLIBS) $(CMXSLIBS) $(ALIBS) man
-	$(OCAMLBUILD) $(APPFLAGS) applications/apps.otarget
+all: libs apps man
 
 apps: itarget $(CAMLP4CMXS) $(BYTELIBS) $(OPTLIBS) 
 	$(OCAMLBUILD) $(APPFLAGS) applications/apps.otarget
+
+libs: itarget $(CAMLP4CMXS) $(BYTELIBS) $(OPTLIBS) $(CMXSLIBS) $(ALIBS)
 
 cleandoselib:
 	rm -Rf $(DOSELIBS)
