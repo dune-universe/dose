@@ -30,8 +30,11 @@ val bzip_open_file : string -> IO.input
     @return ExtLib.IO.input channel *)
 val std_open_file : string -> IO.input
 
+exception File_empty
+
 (** load a file either in gzip, bzip or not compressed format
-    @return ExtLib.IO.input channel *)
+    @return ExtLib.IO.input channel. Raise [File_empty] if the
+    file is empty or fail if the file does not exist *)
 val open_file : string -> IO.input
 
 val open_ch : in_channel -> IO.input

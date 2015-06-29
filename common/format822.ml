@@ -68,16 +68,18 @@ module RawInput ( Set : Set.S ) = struct
     if List.length files > 1 then info "Merging repositories" ;
     let s =
       List.fold_left (fun acc file ->
-        let ch =
-         match file with
-         (* XXX not sure about this, maybe it should be an option
-          * insted of "-" ...  *)
-         |"-" -> IO.input_channel stdin 
-         |_   -> Input.open_file file
-        in 
-        let l = parse file ch in
-        let _ = Input.close_ch ch in
-        List.fold_left (fun s x -> Set.add x s) acc l
+        try
+          let ch =
+           match file with
+           (* XXX not sure about this, maybe it should be an option
+            * insted of "-" ...  *)
+           |"-" -> IO.input_channel stdin 
+           |_   -> Input.open_file file
+          in 
+          let l = parse file ch in
+          let _ = Input.close_ch ch in
+          List.fold_left (fun s x -> Set.add x s) acc l
+        with Input.File_empty -> acc
       ) Set.empty files
     in
     info "total packages %n" (Set.cardinal s);

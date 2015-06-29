@@ -206,14 +206,16 @@ let input_raw_ch ic =
 ;;
 
 let input_raw file =
-  let ch =
-    match file with
-    |"-" -> IO.input_channel stdin
-    |_   -> Input.open_file file
-  in
-  let l = input_raw_ch ch in
-  let _ = Input.close_ch ch in
-  l
+  try
+    let ch =
+      match file with
+      |"-" -> IO.input_channel stdin
+      |_   -> Input.open_file file
+    in
+    let l = input_raw_ch ch in
+    let _ = Input.close_ch ch in
+    l
+  with Input.File_empty -> (default_request,[])
 ;;
 
 let extras_tocudf =

@@ -177,19 +177,20 @@ let rpm_load_universe l =
   (pr,Cudf.load_universe (List.flatten cll), r, f, t, w)
 
 (** parse a cudf file and return a triple (preamble,package list,request
-    option). If the package is not valid fails and exit *)
+    option). If the package is not valid returns an empty list of packages *)
 let parse_cudf doc =
   try
     let p = Cudf_parser.from_IO_in_channel (Input.open_file doc) in
     Cudf_parser.parse p
   with
+  |Input.File_empty -> None, [], None
   |Cudf_parser.Parse_error _
   |Cudf.Constraint_violation _ as exn -> begin
     fatal "Error while loading CUDF from %s: %s" doc (Printexc.to_string exn)
   end
 
 (** parse a cudf file and return a triple (preamble,universe,request option).
-    If the package is not valid fails and exit *)
+    If the package is not valid return an empty list of packages *)
 let load_cudf doc = 
   let ch = Input.open_file doc in
   let l = 
@@ -197,6 +198,7 @@ let load_cudf doc =
       let p = Cudf_parser.from_IO_in_channel ch in
       Cudf_parser.load p
     with
+    |Input.File_empty -> None, Cudf.load_universe [], None
     |Cudf_parser.Parse_error _
     |Cudf.Constraint_violation _ as exn -> begin
       fatal "Error while loading CUDF file %s:\n%s" doc (Printexc.to_string exn)

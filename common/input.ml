@@ -58,37 +58,46 @@ let std_open_file file = IO.input_channel (open_in file)
 let open_ch ch = IO.input_channel ch
 let close_ch ch = IO.close_in ch
 
+exception File_empty
+
 let open_file file =
-  if (Unix.stat file).Unix.st_size = 0 then fatal "Input file %s is empty" file;
-  let openfun = try
-      let ch = open_in file in
-      let openfun = match input_byte ch with
-        (* gzip magic is 0x1f 0x8b *)
-        | 0x1f -> (match input_byte ch with
-            | 0x8b -> gzip_open_file
-            | _ -> std_open_file)
-        (* bz2 magic is "BZh" *)
-        | 0x42 -> (match input_byte ch with
-            | 0x5a -> (match input_byte ch with
-                | 0x68 -> bzip_open_file
-                | _ -> std_open_file)
-            | _ -> std_open_file)
-        (* xz magic is 0xfd "7zXZ" *)
-        | 0xfd -> (match input_byte ch with
-            | 0x37 -> (match input_byte ch with
-                | 0x7a -> (match input_byte ch with
-                    | 0x58 -> (match input_byte ch with
-                        | 0x5a -> fatal "xz not supported."
-                        | _ -> std_open_file)
-                    | _ -> std_open_file)
-                | _ -> std_open_file)
-            | _ -> std_open_file)
-        | _ -> std_open_file
-      in
-      close_in ch;
-      openfun
-    with End_of_file -> std_open_file in
-  openfun file
+  if not (Sys.file_exists file) then
+    fatal "Input file %s does not exists." file
+  else if (Unix.stat file).Unix.st_size = 0 then (
+    warning "Input file %s is empty" file;
+    raise File_empty)
+  else begin
+    let openfun = try
+        let ch = open_in file in
+        let openfun = match input_byte ch with
+          (* gzip magic is 0x1f 0x8b *)
+          | 0x1f -> (match input_byte ch with
+              | 0x8b -> gzip_open_file
+              | _ -> std_open_file)
+          (* bz2 magic is "BZh" *)
+          | 0x42 -> (match input_byte ch with
+              | 0x5a -> (match input_byte ch with
+                  | 0x68 -> bzip_open_file
+                  | _ -> std_open_file)
+              | _ -> std_open_file)
+          (* xz magic is 0xfd "7zXZ" *)
+          | 0xfd -> (match input_byte ch with
+              | 0x37 -> (match input_byte ch with
+                  | 0x7a -> (match input_byte ch with
+                      | 0x58 -> (match input_byte ch with
+                          | 0x5a -> fatal "xz not supported."
+                          | _ -> std_open_file)
+                      | _ -> std_open_file)
+                  | _ -> std_open_file)
+              | _ -> std_open_file)
+          | _ -> std_open_file
+        in
+        close_in ch;
+        openfun
+      with End_of_file -> std_open_file 
+    in
+    openfun file
+  end
 ;;
 
 let parse_uri s =
