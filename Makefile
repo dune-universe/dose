@@ -63,7 +63,7 @@ $(DOSELIBS)/common.%: common/*.ml
 $(DOSELIBS)/versioning.%: versioning/*.ml
 	$(OCAMLBUILD) $(OBFLAGS) versioning/versioning.otarget
 	@mkdir -p $(DOSELIBS)
-	@for i in _build/versioning/versioning.*; do \
+	@for i in _build/versioning/versioning.* _build/versioning/*.cmi; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
 	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \

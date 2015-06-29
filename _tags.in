@@ -20,6 +20,7 @@ true: -traverse
 
 <common/*.ml{i,}>: @PKG_ZIP@, @PKG_BZ2@
 <versioning/*.ml{i,}>: use_common, package(re.pcre)
+<versioning/*.cma>: linkall
 <deb/*.ml{i,}>: use_common, use_versioning
 <rpm/*.ml{i,}>: use_common
 <algo/*.ml{i,}>: use_common, @PKG_OCAMLGRAPH@
@@ -38,7 +39,6 @@ true: -traverse
 <pef/*.cmx> and not <pef/pef.cmx>: for-pack(Pef)
 <opencsw/*.cmx> and not <opencsw/csw.cmx>: for-pack(Csw)
 <rpm/*.cmx> and not <rpm/rpm.cmx>: for-pack(Rpm)
-<versioning/*.cmx> and not <versioning/versioning.cmx>: for-pack(Versioning)
 <doseparse/*.cmx> and not <doseparse/doseparse*.cmx>: for-pack(Doseparse)
 <doseparseNoRpm/*.cmx> and not <doseparseNoRpm/doseparse*.cmx>: for-pack(DoseparseNoRpm)
 
