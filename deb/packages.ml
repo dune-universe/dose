@@ -72,8 +72,10 @@ let default_package = {
 (* here the _loc is taken from the the caller and not from the parser *)
 let lexbuf_wrapper type_parser (_loc,s) =
   try type_parser Packages_lexer.token_deb (Lexing.from_string s) 
-  with Format822.Syntax_error (_msg, _) ->
+  with
+  |Format822.Syntax_error (_msg, _) ->
    raise (Format822.Syntax_error (s, _loc))
+  | Parsing.Parse_error _ -> raise (Format822.Parse_error_822 (s, _loc))
 
 let parse_name = lexbuf_wrapper Packages_parser.pkgname_top
 let parse_version = lexbuf_wrapper Packages_parser.version_top
