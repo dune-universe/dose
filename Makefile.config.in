@@ -11,19 +11,20 @@ DOSELIBS = _build/doselibs
 
 DESTDIR =
 ifeq ($(DESTDIR),)
-exec_prefix=@prefix@
-BINDIR=@bindir@
-LIBDIR=$(shell OCAMLFIND_DESTDIR=@prefix@/lib/ocaml ocamlfind printconf destdir)
+  exec_prefix=@prefix@
+  BINDIR=@bindir@
+  ifeq (@libdir@,)
+    LIBDIR=$(shell OCAMLFIND_DESTDIR=@prefix@/lib/ocaml ocamlfind printconf destdir)
+  else
+    LIBDIR=@libdir@
+  endif
+else
+  LIBDIR = $(DESTDIR)/$(shell ocamlc -where)
+  BINDIR = $(DESTDIR)/usr/bin
+endif
 
 INSTALL=$(OCAMLFIND) install -destdir $(LIBDIR)
 UNINSTALL=$(OCAMLFIND) remove -destdir $(LIBDIR)
-else
-LIBDIR = $(DESTDIR)/$(shell ocamlc -where)
-BINDIR = $(DESTDIR)/usr/bin
-
-INSTALL = $(OCAMLFIND) install -destdir $(LIBDIR)
-UNINSTALL = $(OCAMLFIND) remove -destdir $(LIBDIR)
-endif
 
 ifeq ("@OCAML_OS_TYPE@","freebsd")
   LDFLAGS += -fstack-protector
