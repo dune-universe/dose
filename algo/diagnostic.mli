@@ -98,8 +98,8 @@ val get_installationset : ?minimal : bool -> diagnosis -> Cudf.package list
 val is_solution : diagnosis -> bool
 
 (** print a aggregate information of not installable packages.
-    @param [pp] : cudf package printer
-    @param [explain] : if true, print the list of all affected packages associated to
+    @param pp cudf package printer
+    @param explain if true, print the list of all affected packages associated to
                        and installation problem. *)
 val pp_summary :
   ?pp : Common.CudfAdd.pp ->
@@ -116,10 +116,10 @@ val fprintf_human :
 
 (** [printf fmt d] print the output of the solver in yaml format 
     to the formatter [fmt].
-    @param [pp] : cudf package printer
-    @param [failure] : print the list of not installable packages
-    @param [success] : print the list of installable packages
-    @param [explain] : for installable packages, print the associated installation set
+    @param pp cudf package printer
+    @param failure print the list of not installable packages
+    @param success print the list of installable packages
+    @param explain for installable packages, print the associated installation set
                        for not installable packages, print the all dependencies chains *)
 val fprintf :
   ?pp : Common.CudfAdd.pp ->
