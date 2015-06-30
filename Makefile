@@ -36,10 +36,6 @@ itarget:
 			done;\
 		done)
 
-_build/Camlp4MacroParser.cmxs:
-	@mkdir -p _build
-	ocamlopt -shared $(shell ocamlc -where)/camlp4/Camlp4Parsers/Camlp4MacroParser.cmx -o _build/Camlp4MacroParser.cmxs
-
 $(DOSELIBS)/cudf.%:
 	$(OCAMLBUILD) $(OBFLAGS) cudf/cudf.$*
 	@mkdir -p $(DOSELIBS)
