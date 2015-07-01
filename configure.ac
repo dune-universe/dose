@@ -1,4 +1,6 @@
 AC_INIT(dose3, 4.0-rc3, pietro.abate@pps.univ-paris-diderot.fr)
+AC_COPYRIGHT(Copyright 2009-2015 Mancoosi Project)
+
 AC_CONFIG_MACRO_DIR([m4])
 
 AC_PROG_OCAML
@@ -249,8 +251,9 @@ fi
 #                #include <sched.h>
 #                ]])
 
+OCAMLVERSION="OCAML$(echo $OCAMLVERSION | sed 's/\.//g')"
 
-
+AC_SUBST(OCAMLVERSION)
 AC_SUBST(CONFIG_ZIP)
 AC_SUBST(PKG_ZIP)
 AC_SUBST(ZIP)

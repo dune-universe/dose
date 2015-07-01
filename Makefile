@@ -11,14 +11,17 @@ DIST_TARBALL = $(DIST_DIR).tar.gz
 OBFLAGS := $(VERBOSE) -j 10 -no-links -cflags -warn-error,FPSXY
 APPFLAGS := $(VERBOSE) -j 10
 #OBFLAGS := $(OBFLAGS) -tag profile -tag debug
-OBFLAGS := $(OBFLAGS) -classic-display
+#OBFLAGS := $(OBFLAGS) -classic-display
+
+myocamlbuild.ml: myocamlbuild.ml.pp
+	  cppo $(CPPOFLAGS) $< -o $@
 
 all: libs apps man
 
-apps: itarget $(CAMLP4CMXS) $(BYTELIBS) $(OPTLIBS) 
+apps: myocamlbuild.ml itarget $(BYTELIBS) $(OPTLIBS) 
 	$(OCAMLBUILD) $(APPFLAGS) applications/apps.otarget
 
-libs: itarget $(CAMLP4CMXS) $(BYTELIBS) $(OPTLIBS) $(CMXSLIBS) $(ALIBS)
+libs: myocamlbuild.ml itarget $(BYTELIBS) $(OPTLIBS) $(CMXSLIBS) $(ALIBS)
 
 cleandoselib:
 	rm -Rf $(DOSELIBS)
@@ -132,6 +135,7 @@ $(DOSELIBS)/doseparseNoRpm.%: $(DOSELIBS)/debian.% $(DOSELIBS)/pef.%
 
 clean:
 	$(OCAMLBUILD) -clean
+	rm myocamlbuild.ml
 	rm -f applications/apps.itarget
 	cd doc && $(MAKE) clean
 

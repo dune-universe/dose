@@ -2,11 +2,11 @@
 open Ocamlbuild_plugin;;
 
 Options.use_ocamlfind := true ;;
-(*
+#ifdef OCAML4022
 Ocamlbuild_pack.Flags.mark_tag_used "use_" ;;
 Ocamlbuild_pack.Flags.mark_tag_used "pkg_" ;;
 Ocamlbuild_pack.Flags.mark_tag_used "link_" ;;
-*)
+#endif
 
 let modules_dirs = [
   "common"; "versioning"; "deb"; "pef"; "opencsw"; "rpm"; "algo";
