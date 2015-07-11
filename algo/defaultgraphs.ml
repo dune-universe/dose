@@ -201,6 +201,8 @@ module SyntacticDependencyGraph = struct
            "source","string",None;
            "sourcenumber","string",None;
            "multiarch","string",None;
+           "realpackage","string",None;
+           "realversion","string",None;
           ]
      
       let edge_properties = [
