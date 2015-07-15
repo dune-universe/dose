@@ -169,6 +169,7 @@ let main () =
   let failure = OptParse.Opt.get Options.failure in
   let success = OptParse.Opt.get Options.success in
   let explain = OptParse.Opt.get Options.explain in
+  let minimal = OptParse.Opt.get Options.minimal in
   let summary = OptParse.Opt.get Options.summary in
 
   let checklist =
@@ -198,7 +199,7 @@ let main () =
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
   let callback d = 
     if summary then Diagnostic.collect results d ;
-      Diagnostic.fprintf ~pp ~failure ~success ~explain fmt d
+      Diagnostic.fprintf ~pp ~failure ~success ~explain ~minimal fmt d
   in
 
   Util.Timer.start timer;
