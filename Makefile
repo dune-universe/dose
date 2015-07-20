@@ -135,7 +135,7 @@ $(DOSELIBS)/doseparseNoRpm.%: $(DOSELIBS)/debian.% $(DOSELIBS)/pef.%
 
 clean:
 	$(OCAMLBUILD) -clean
-	rm myocamlbuild.ml
+	rm -f myocamlbuild.ml
 	rm -f applications/apps.itarget
 	cd doc && $(MAKE) clean
 

@@ -318,7 +318,7 @@ Name: deb_buildcheck_profiles
 Group: buildcheck
 Expected: tests/applications/dose-tests/deb_buildcheck_profiles_results
 Input: tests/DebianPackages/deb_buildcheck_profiles_packages tests/DebianPackages/deb_buildcheck_profiles_sources
-Cmd: ./deb-buildcheck.@OCAMLEXT@ --failures --successes --deb-native-arch=amd64 --profiles=stage1,nocheck
+Cmd: ./deb-buildcheck.@OCAMLEXT@ --failures --successes --deb-native-arch=amd64 --deb-profiles=stage1,nocheck
 Type: buildcheck
 Printer: text
 ExitCode: 0
