@@ -53,15 +53,15 @@ module Options = struct
     ~help:"Path to an architecture triplet table like /usr/share/dpkg/triplettable" triplettable;
   StdOptions.DistribOptions.add_option options ~long_name:"deb-cputable"
     ~help:"Path to a cpu table like /usr/share/dpkg/cputable" cputable;
-  StdOptions.DistribOptions.add_option options ~long_name:"defaultedMAforeign"
+  StdOptions.DistribOptions.add_option options ~long_name:"deb-defaulted-m-a-foreign"
     ~help:"Convert Arch:all packages to Multi-Arch: foreign" maforeign;
-  StdOptions.DistribOptions.add_option options ~long_name:"DropBuildIndep"
+  StdOptions.DistribOptions.add_option options ~long_name:"deb-drop-indep"
     ~help:"Drop Build-Indep dependencies" noindep;
-  StdOptions.DistribOptions.add_option options ~long_name:"IncludeExtraSource"
+  StdOptions.DistribOptions.add_option options ~long_name:"deb-include-extra-source"
     ~help:"Include packages with Extra-Source-Only:yes (dropped by default)" includextra;
-  StdOptions.DistribOptions.add_option options ~short_name:'P' ~long_name:"profiles"
+  StdOptions.DistribOptions.add_option options ~short_name:'P' ~long_name:"deb-profiles"
     ~help:"comma separated list of activated build profiles" profiles;
-  StdOptions.DistribOptions.add_option options ~long_name:"drop-alternatives"
+  StdOptions.DistribOptions.add_option options ~long_name:"deb-emulate-sbuild"
     ~help:"replicate sbuild behaviour to only keep the first alternative of build dependencies" dropalternatives;
 
 end
