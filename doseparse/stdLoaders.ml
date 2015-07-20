@@ -68,6 +68,32 @@ let deb_load_list options ?(status=[]) ?(raw=false) dll =
       List.map (Debian.Debcudf.tocudf tables ~options) (Debian.Packages.merge status l)
     ) pkgll
   in
+  (* if requested, connect all cudf packages representing binary packages to
+   * the cudf packages representing the source package they each build from,
+   * respectively *)
+  let cll = if options.Debian.Debcudf.builds_from then begin
+      let univ =
+        Cudf.load_universe (CudfAdd.Cudf_set.elements (
+            List.fold_right (
+              List.fold_right CudfAdd.Cudf_set.add)
+              cll CudfAdd.Cudf_set.empty))
+      in
+      List.map2 (List.map2 (fun cudfpkg debpkg ->
+          match debpkg with
+          | Deb _ ->
+            let srcpkg = try Debian.Sources.get_src_package univ cudfpkg
+              with Debian.Sources.NotfoundSrc ->
+                failwith (Printf.sprintf "cannot find source for binary package %s"
+                            (CudfAdd.string_of_package cudfpkg))
+            in
+            (* connect to source package as "builds-from" *)
+            let srcdep = (srcpkg.Cudf.package,Some(`Eq,srcpkg.Cudf.version)) in
+            { cudfpkg with Cudf.depends = [srcdep] :: cudfpkg.Cudf.depends }
+          | DebSrc _ -> cudfpkg
+          | _ -> failwith "impossible"
+        )) cll dll
+    end else cll
+  in
   let preamble = Debian.Debcudf.preamble in
   let request = Cudf.default_request in
   (* only return the raw input if status is empty or otherwise the mapping

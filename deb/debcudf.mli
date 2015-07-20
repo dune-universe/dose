@@ -22,6 +22,7 @@ type options = {
   foreign : string list ; (** list of foreign architectures *)
   host : string option;   (** the host architecture - cross compile *)
   ignore_essential : bool ;
+  builds_from : bool ;    (** whether to add the builds-from relationship from binary to source packages *)
 }
 
 val default_options : options
