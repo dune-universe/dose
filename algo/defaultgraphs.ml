@@ -428,6 +428,8 @@ module MakePackageGraph(PkgV : Sig.COMPARABLE with type t = Cudf.package )= stru
              "source","string",None;
              "sourcenumber","string",None;
              "multiarch","string",None;
+             "realpackage","string",None;
+             "realversion","string",None;
             ]
        
         let edge_properties = [
@@ -437,8 +439,8 @@ module MakePackageGraph(PkgV : Sig.COMPARABLE with type t = Cudf.package )= stru
 
         let map_edge e = []
         let map_vertex pkg =
-          let name = ("package",CudfAdd.decode pkg.Cudf.package) in
-          let version = ("version",CudfAdd.string_of_version pkg) in
+          let name = ("realpackage",CudfAdd.decode pkg.Cudf.package) in
+          let version = ("realversion",CudfAdd.string_of_version pkg) in
      
           let props =
             List.filter_map (fun (key,_,_) ->
