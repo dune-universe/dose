@@ -55,7 +55,7 @@ module Options = struct
     ~help:"Path to a cpu table like /usr/share/dpkg/cputable" cputable;
   StdOptions.DistribOptions.add_option options ~long_name:"deb-defaulted-m-a-foreign"
     ~help:"Convert Arch:all packages to Multi-Arch: foreign" maforeign;
-  StdOptions.DistribOptions.add_option options ~long_name:"deb-drop-indep"
+  StdOptions.DistribOptions.add_option options ~long_name:"deb-drop-b-d-indep"
     ~help:"Drop Build-Indep dependencies" noindep;
   StdOptions.DistribOptions.add_option options ~long_name:"deb-include-extra-source"
     ~help:"Include packages with Extra-Source-Only:yes (dropped by default)" includextra;
