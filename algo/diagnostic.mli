@@ -125,7 +125,9 @@ val fprintf :
   ?pp : Common.CudfAdd.pp ->
   ?failure : bool ->
   ?success : bool ->
-  ?explain : bool -> ?minimal:bool -> Format.formatter -> diagnosis -> unit
+  ?explain : bool -> 
+  ?minimal : bool -> 
+  ?condense : bool -> Format.formatter -> diagnosis -> unit
 
 (** like [fprintf] but print using the standard formatter *)
 val printf :

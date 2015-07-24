@@ -374,7 +374,7 @@ let condense_graph gr =
   gr
 ;;
 
-let print_dot ?(pp=CudfAdd.default_pp) ?(condense=true) ?(addmissing=false) ?dir = 
+let print_dot ?(pp=CudfAdd.default_pp) ?(condense=false) ?(addmissing=false) ?dir = 
   Defaultgraphs.SyntacticDependencyGraph.default_pp := pp;
   let open Defaultgraphs.SyntacticDependencyGraph in function
   |{result = Success _ } -> fatal "Cannot build explanation graph on Success"
@@ -400,7 +400,7 @@ let print_dot ?(pp=CudfAdd.default_pp) ?(condense=true) ?(addmissing=false) ?dir
     warning "Tryin to build explanation graph for a Coinst (not implemented yet)"
 ;;
 
-let print_error_ ?(condense=true) ?(minimal=false) pp root fmt l =
+let print_error_ ?(condense=false) ?(minimal=false) pp root fmt l =
   let module DG = Defaultgraphs.SyntacticDependencyGraph in
   let get_package v = 
     match v with
@@ -522,7 +522,7 @@ let print_error_ ?(condense=true) ?(minimal=false) pp root fmt l =
 #endif
  
 (* only two failures reasons. Dependency describe the dependency chain to a failure witness *)
-let print_error ?(condense=true) ?(minimal=false) pp root fmt l =
+let print_error ?(condense=false) ?(minimal=false) pp root fmt l =
   let (deps,res) = List.partition (function Dependency _ -> true |_ -> false) l in
   let pp_reason fmt = function
     |Conflict (i,j,vpkg) ->
@@ -648,7 +648,8 @@ let fprintf_human ?(pp=CudfAdd.default_pp) ?(prefix="") fmt = function
   |_ -> ()
 ;;
 
-let fprintf ?(pp=CudfAdd.default_pp) ?(failure=false) ?(success=false) ?(explain=false) ?(minimal=false) fmt d = 
+let fprintf ?(pp=CudfAdd.default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
+  ?(minimal=false) ?(condense=false) fmt d = 
   match d with
   |{result = Success f; request = req } when success ->
       Format.fprintf fmt "@[<v 1>-@,";
@@ -682,7 +683,7 @@ let fprintf ?(pp=CudfAdd.default_pp) ?(failure=false) ?(success=false) ?(explain
       Format.fprintf fmt "status: broken@,";
       if explain then begin
        Format.fprintf fmt "@[<v 1>reasons:@,";
-       Format.fprintf fmt "@[<v>%a@]" (print_error_ ~minimal pp r) (f ());
+       Format.fprintf fmt "@[<v>%a@]" (print_error_ ~minimal ~condense pp r) (f ());
        Format.fprintf fmt "@]"
       end;
       Format.fprintf fmt "@]@,"
@@ -697,7 +698,7 @@ let fprintf ?(pp=CudfAdd.default_pp) ?(failure=false) ?(success=false) ?(explain
        if explain then begin
          Format.fprintf fmt "@[<v 1>reasons:@,";
          List.iter (fun r -> 
-           Format.fprintf fmt "@[<v>%a@]@," (print_error_ ~minimal pp r) (f ());
+           Format.fprintf fmt "@[<v>%a@]@," (print_error_ ~minimal ~condense pp r) (f ());
          ) rl;
         Format.fprintf fmt "@]@,"
        end;

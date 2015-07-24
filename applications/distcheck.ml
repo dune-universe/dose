@@ -147,6 +147,7 @@ let main () =
   let success = OptParse.Opt.get Options.success in
   let explain = OptParse.Opt.get Options.explain in
   let minimal = OptParse.Opt.get Options.minimal in
+  let condense = OptParse.Opt.get Options.condense in
   let summary = OptParse.Opt.get Options.summary in
   let fmt =
     if OptParse.Opt.is_set Options.outfile then
@@ -184,7 +185,7 @@ let main () =
       ()
 #endif
     in
-    Diagnostic.fprintf ~pp ~failure ~success ~explain ~minimal fmt d
+    Diagnostic.fprintf ~pp ~failure ~success ~explain ~minimal ~condense fmt d
   in
   Util.Timer.start timer;
 

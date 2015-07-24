@@ -119,6 +119,7 @@ module DistcheckOptions = struct
   let failure = StdOpt.store_true ()
   let explain = StdOpt.store_true ()
   let minimal = StdOpt.store_true ()
+  let condense = StdOpt.store_true ()
   let summary = StdOpt.store_true ()
 
   let default_options = [
@@ -126,6 +127,7 @@ module DistcheckOptions = struct
     "failure";
     "explain";
     "explain-minimal";
+    "explain-condense";
     "summary"
   ]
 
@@ -139,7 +141,9 @@ module DistcheckOptions = struct
       if List.mem "explain" default then
         add options ~group ~short_name:'e' ~long_name:"explain" ~help:"Explain the results" explain;
       if List.mem "explain-minimal" default then
-        add options ~group ~short_name:'m' ~long_name:"explain-minimal" ~help:"" minimal;
+        add options ~group ~short_name:'m' ~long_name:"explain-minimal" ~help:"Do not print dependency chains of results" minimal;
+      if List.mem "explain-condense" default then
+        add options ~group ~short_name:'c' ~long_name:"explain-condense" ~help:"Compress explanation graph" condense;
       if List.mem "failure" default then
         add options ~group ~short_name:'f' ~long_name:"failures" ~help:"Only show failures" failure;
       if List.mem "success" default then
