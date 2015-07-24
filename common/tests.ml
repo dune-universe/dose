@@ -185,12 +185,48 @@ let (test_encode, test_decode) =
 
 *)
 
+let test_shell_lexer =
+  let test_triplets = [
+    ("simple", "foo bar baz", ["foo"; "bar"; "baz"]);
+    ("simple quoted", "\"foo\" 'bar'", ["foo"; "bar"]);
+    ("simple escaped", "foo\\ bar foo\\\\bar foo\\\"bar foo\\'bar", ["foo bar"; "foo\\bar"; "foo\"bar"; "foo'bar"]);
+    ("composed", "foo\"bar\"'baz'", ["foobarbaz"]);
+    ("dquote escaped", "\"foo\\\"bar\"", ["foo\"bar"]);
+    ("uquote starts with escape", "\\\"foo \\'bar \\ baz \\\\blub", ["\"foo"; "'bar"; " baz"; "\\blub"]);
+    ("dquote starts with escape", "\"\\\"foo\" \"\\\\bar\"", ["\"foo"; "\\bar"]);
+    ("uquote ends with escape", "foo\\\" bar\\' baz\\  blub\\\\", ["foo\""; "bar'"; "baz "; "blub\\"]);
+    ("dquote ends with escape", "\"foo\\\"\" \"bar\\\\\"", ["foo\""; "bar\\"]);
+    ("compose uquote dquote", "foo\"bar\"baz", ["foobarbaz"]);
+    ("compose uquote squote", "foo'bar'baz", ["foobarbaz"]);
+    ("compose dquote squote", "\"foo\"'bar'\"baz\"", ["foobarbaz"]);
+    ("empty", "\"\" ''", [""; ""]);
+    ("compose empty", "\"\"''\"\"\"\"''''", [""]);
+    ("multispace", "foo    bar   \t   baz", ["foo"; "bar"; "baz"]);
+  ] in
+  "lexing tests" >::: (
+    List.map (fun (test_name, exec_string, argv) ->
+        ("shell_lexer " ^ test_name) >:: (fun _ ->
+            let l = Shell_lexer.parse_string exec_string in
+            assert_equal (List.length l) (List.length argv)
+              ~msg:(Printf.sprintf
+                      "Expected argument vector of length %d but got one of length %d"
+                      (List.length argv) (List.length l));
+            List.iter2 (assert_equal
+              ~msg:(Printf.sprintf
+                      "String to parse:\n\t%s\nExpected:\n\t%s\nBut got:\n\t%s\n"
+                      exec_string (String.concat "\n\t" argv)
+                      (String.concat "\n\t" l))) l argv
+          )
+      ) test_triplets
+  )
+
 let all = 
   "all tests" >::: [
     parse_uri ;
     test_encode;
     test_decode;
     test_lookup_packages;
+    test_shell_lexer;
   ]
 
 let main () =
