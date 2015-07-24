@@ -77,41 +77,10 @@ let rec input_all_lines acc chan =
 let sanitize s = Pcre.substitute ~rex:(Pcre.regexp "[^+()a-z,\"-]") ~subst:(fun _ -> "") s;;
 
 let interpolate_solver_pat exec cudf_in cudf_out pref =
-  (* FIXME: the exec string is restricted to not have:
-   *  - any backslash escapes
-   *  - any spaces between two quotes
-   *  - no adjacent quotes
-   * Here is an example of what is allowed:
-   *     foobar "blub" "bla"
-   * And here what is not allowed
-   *     foobar "blub""bla"
-   *     foobar "blub bla"
-   *     foobar "blub\"bla"
-   * Using a proper shell command parsing library could lift this limitation
-   * but so far the known exec strings are:
-   *     aspcud: /usr/bin/aspcud "$in" "$out" "$pref"
-   *     mccs:   /usr/bin/mccs -i $in -o $out -lpsolve $pref
-   *     packup: /usr/bin/packup -u $pref $in $out
-   * We accept this limitation because more complexity is not required by
-   * existing solvers and because avoiding calls to /bin/sh gives a 16%
-   * performance boost. Check <20150322143442.2181.69700@hoothoot> in the
-   * dose-devel archives.
-   *)
-  let argv = Pcre.split ~rex:blank_regexp exec in
-  (* sanitize arguments by removing possible enclosing quotes *)
-  (* the re module is horribly limited and does not support lookahead and
-   * lookbehind, or non-matching groups or backreferences. So using String
-   * manipulation instead. *)
-  let quote_chars = ["\""; "'"] in
-  let argv = List.map (fun a ->
-          if List.exists (fun q -> String.starts_with a q && String.ends_with a q) quote_chars then
-            String.sub a 1 ((String.length a) - 2)
-          else a
-    ) argv in
-  let illegal_chars = ['"'; '\''; '\\'] in
-  let contains_illegal_chars = List.exists (fun a -> List.exists (String.contains a) illegal_chars) argv in
-  if contains_illegal_chars then
-    fatal "solver exec string must not contain quotes or backslashes";
+  let argv = try Shell_lexer.parse_string exec with
+    | Shell_lexer.UnknownShellEscape s -> fatal "Unknown shell escape character: %s" s
+    | Shell_lexer.UnmatchedChar c -> fatal "Unmatched character: %c" c
+  in
   (* assoc list mapping from wildcard to value *)
   let mapping = [("$in", cudf_in); ("$out", cudf_out); ("$pref", sanitize pref)] in
   (* test if the exec string contains all wildcards *)
