@@ -179,7 +179,7 @@ let open_process argv env =
 
 let rec waitpid_non_intr pid =
   try Unix.waitpid [] pid
-  with Unix.Unix_error (EINTR, _, _) -> waitpid_non_intr pid
+  with Unix.Unix_error (Unix.EINTR, _, _) -> waitpid_non_intr pid
 
 let close_process (inchan, outchan, errchan,pid) =
   close_in inchan;
