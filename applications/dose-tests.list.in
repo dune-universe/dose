@@ -11,25 +11,27 @@ Name: apt_cudf
 Group: apt-cudf
 Expected: tests/applications/dose-tests/apt-cudf-install-i386
 Input: tests/deb/edsp/install-sarge-etch.edsp
-Cmd: ./apt-cudf.@OCAMLEXT@ --conf doc/apt-cudf/apt-cudf.conf -e --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ --conf doc/apt-cudf/apt-cudf.conf -e
 Type: edsp
 Printer: edsp
 Speed: slow
+Solver: aspcud, packup, mccs-lpsolve
 
 Name: apt_cudf_textlive
 Group: apt-cudf
 Expected: tests/applications/dose-tests/apt-cudf-install-textlive
 Input: tests/deb/edsp/textlive.edsp
-Cmd: ./apt-cudf.@OCAMLEXT@ --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ --conf doc/apt-cudf/apt-cudf.conf
 Type: edsp
 Printer: edsp
 Speed: slow
+Solver: aspcud, packup, mccs-lpsolve
 
 Name: apt_cudf_multiarch_bug_16959
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-bug-16959
 Input: tests/deb/edsp/multiarch-bug-16959.edsp
-Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf
 Type: edsp
 Printer: edsp
 
@@ -37,7 +39,7 @@ Name: apt_cudf_multiarch_same_versioned_conflict
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-same-versioned-conflict
 Input: tests/deb/edsp/multiarch-same-versioned-conflict.edsp
-Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf
 Type: edsp
 Printer: edsp
 
@@ -45,7 +47,7 @@ Name: apt_cudf_multiarch_same_provides_multi
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-same-provides-multi
 Input: tests/deb/edsp/multiarch-same-provides-multi.edsp
-Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf
 Type: edsp
 Printer: edsp
 
@@ -53,7 +55,7 @@ Name: apt_cudf_multiarch_same_provides
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-same-provides
 Input: tests/deb/edsp/multiarch-same-provides.edsp
-Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf
 Type: edsp
 Printer: edsp
 
@@ -61,7 +63,7 @@ Name: apt_cudf_multiarch_same_half
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-same-half
 Input: tests/deb/edsp/multiarch-same-half.edsp
-Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf
 Type: edsp
 Printer: edsp
 
@@ -69,7 +71,7 @@ Name: apt_cudf_multiarch_same_conflicts
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-same-conflicts
 Input: tests/deb/edsp/multiarch-same-conflicts.edsp
-Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf
 Type: edsp
 Printer: edsp
 
@@ -77,7 +79,7 @@ Name: apt_cudf_multiarch_same_conflicts_virtual
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-same-conflicts-virtual
 Input: tests/deb/edsp/multiarch-same-conflicts-virtual.edsp
-Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf
 Type: edsp
 Printer: edsp
 
@@ -85,7 +87,7 @@ Name: apt_cudf_multiarch_same_conflicts_virtual_malformed
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-same-conflicts-virtual-malformed
 Input: tests/deb/edsp/multiarch-same-conflicts-virtual-malformed.edsp
-Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf
 Type: edsp
 Printer: edsp
 
@@ -93,7 +95,7 @@ Name: apt_cudf_multiarch_same_no_deps
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-same-no-deps
 Input: tests/deb/edsp/multiarch-same-no-deps.edsp
-Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf
 Type: edsp
 Printer: edsp
 
@@ -101,7 +103,7 @@ Name: apt_cudf_multiarch_none
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-none
 Input: tests/deb/edsp/multiarch-none.edsp
-Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf
 Type: edsp
 Printer: edsp
 
@@ -109,7 +111,7 @@ Name: apt_cudf_multiarch_foreign
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-foreign
 Input: tests/deb/edsp/multiarch-foreign.edsp
-Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf
 Type: edsp
 Printer: edsp
 
@@ -117,7 +119,7 @@ Name: apt_cudf_multiarch_foreign
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-foreign-depends
 Input: tests/deb/edsp/multiarch-foreign-depends.edsp
-Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf
 Type: edsp
 Printer: edsp
 
@@ -125,7 +127,7 @@ Name: apt_cudf_multiarch_allowed
 Group: apt-cudf
 Expected: tests/applications/dose-tests/multiarch-allowed
 Input: tests/deb/edsp/multiarch-allowed.edsp
-Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf --solver=aspcud
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf
 Type: edsp
 Printer: edsp
 

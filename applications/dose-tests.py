@@ -8,6 +8,7 @@ import os,sys,time,glob
 import argparse
 from itertools import groupby, ifilter
 import yaml
+import copy
 
 try :
     from yaml import CBaseLoader as yamlLoader
@@ -18,6 +19,11 @@ except ImportError:
 import filecmp
 import cStringIO
 from sets import Set
+
+def which(program):
+    path = "/usr/share/cudf/solvers/"
+    exe_file = os.path.join(path, program)
+    return os.path.isfile(exe_file)
 
 def removeTmpFiles() :
     for f in glob.glob("/tmp/apt-cudf-universe*.cudf") :
@@ -151,23 +157,27 @@ class DoseTests(unittest.TestCase):
         self.expected = test['Expected'] 
         self.cmd = test['Cmd'].split(' ') + test['Input'].split(' ')
         self.exitcode = int(test['ExitCode']) if 'ExitCode' in test else None
-        if test['Type'] == '822' :
+        self.enctype = test['Type'] if 'Type' in test else '822'
+        self.solver = test['Solver'] if 'Solver' in test else None
+        if self.enctype == '822' :
             self.difftype = diff_822
-        elif test['Type']  == 'yaml' :
+        elif self.enctype  == 'yaml' :
             self.difftype = diff_yaml
-        elif test['Type']  == 'text' :
+        elif self.enctype  == 'text' :
             self.difftype = diff_text
-        elif test['Type']  == 'edsp' :
+        elif self.enctype  == 'edsp' :
             self.difftype = diff_text
         else :
             self.difftype = diff_text
     def shortDescription(self):
         if self.comment :
-            return "Description : " + self.comment + "\n" + ("Cmd : ") + " ".join(self.cmd) + "\nExpected file : %s" % self.expected + "\n"
+            return "Description : " + self.comment + "\n" + "\nExpected file : %s" % self.expected + "\n"
         else :
             s =     "Test : %s" % self.name
             s = s + "\nGroup : %s" % self.group
-            s = s + "\n" + ("Cmd : ") + " ".join(self.cmd)
+            s = s + "\n" + "Cmd : " + " ".join(self.cmd)
+            if self.solver : 
+                s = s + "\n" + "Solver : " + self.solver
             s = s + "\nExpected file : %s" % self.expected
             s = s + "\nExpected exitcode : %d" % self.exitcode if self.exitcode is not None else s
             return s + "\n"
@@ -188,7 +198,17 @@ def suite(f,runtest,rungroup,slow=False):
             return
         else :
             #default we run the test
-            suite.addTest(DoseTests(s))
+            if 'edsp' in s['Type'] :
+                solvers = ['aspcud','packup','mccs-lpsolve']
+                if 'Solver' in s :
+                    solvers = [x.strip() for x in s['Solver'].split(',')]
+                for solver in solvers :
+                    ss = copy.deepcopy(s)
+                    ss['Solver'] = solver
+                    ss['Cmd'] = ss['Cmd'] + " --solver " + solver
+                    suite.addTest(DoseTests(ss))
+            else :
+                suite.addTest(DoseTests(s))
     for stanza in parse822(f,lambda s: s[1]):
         s = dict(stanza)
         if s['Name'] not in runtest and 'Ignore' in s and s['Ignore'] == 'yes' :
