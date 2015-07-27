@@ -629,11 +629,14 @@ module M (X : S) = struct
   let initialize_problem 
     ?(print_var = (fun fmt -> Format.fprintf fmt "%d")) ?(buffer=false) n =
       if buffer then set_buffer true;
+      (* Remove Gc settings for the moment as they are not adapted to small
+         opam repositories
       Gc.set { (Gc.get()) with
         Gc.minor_heap_size = 4 * 1024 * 1024; (*4M*)
         Gc.major_heap_increment = 32 * 1024 * 1024; (*32M*)
         Gc.max_overhead = 150;
-      } ; (* let's fly ! *)
+      } ;
+      *)
       { st_assign = Array.make n Unknown;
         st_assign_true = IntHash.create n;
         st_reason = Array.make n None;
