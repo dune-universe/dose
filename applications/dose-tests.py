@@ -204,6 +204,8 @@ def suite(f,runtest,rungroup,slow=False):
                     solvers = [x.strip() for x in s['Solver'].split(',')]
                 for solver in solvers :
                     ss = copy.deepcopy(s)
+                    f = "%s-%s" % (ss['Expected'],solver)
+                    ss['Expected'] = f if os.path.isfile(f) else ss['Expected']
                     ss['Solver'] = solver
                     ss['Cmd'] = ss['Cmd'] + " --solver " + solver
                     suite.addTest(DoseTests(ss))
