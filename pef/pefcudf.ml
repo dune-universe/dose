@@ -60,11 +60,11 @@ let init_versions_table table =
     )
   in
   fun pkg ->
-    add pkg.name pkg.version;
-    conj_iter pkg.provides;
-    conj_iter pkg.conflicts ;
-    cnf_iter pkg.depends;
-    cnf_iter pkg.recommends;
+    add pkg#name pkg#version;
+    conj_iter pkg#provides;
+    conj_iter pkg#conflicts ;
+    cnf_iter pkg#depends;
+    cnf_iter pkg#recommends;
 ;;
 
 let init_virtual_table table pkg =
@@ -72,11 +72,11 @@ let init_virtual_table table pkg =
     if not(Hashtbl.mem table name) then
       Hashtbl.add table name ()
   in
-  List.iter (fun (name,_) -> add name) pkg.provides
+  List.iter (fun (name,_) -> add name) pkg#provides
 
 let init_unit_table table pkg =
-  if not(Hashtbl.mem table pkg.name) then
-    Hashtbl.add table pkg.name ()
+  if not(Hashtbl.mem table pkg#name) then
+    Hashtbl.add table pkg#name ()
 
 let init_versioned_table table pkg =
   let add name =
@@ -88,8 +88,8 @@ let init_versioned_table table pkg =
       List.iter (fun (name,_)-> add name) disjunction
     ) 
   in
-  List.iter (fun (name,_) -> add name) pkg.conflicts ;
-  add_iter_cnf pkg.depends
+  List.iter (fun (name,_) -> add name) pkg#conflicts ;
+  add_iter_cnf pkg#depends
 ;;
 
 let init_tables compare pkglist =
@@ -158,19 +158,19 @@ let preamble =
   CudfAdd.add_properties Cudf.default_preamble l
 
 let add_extra extras tables pkg =
-  let number = ("number",`String pkg.version) in
+  let number = ("number",`String pkg#version) in
   let l =
     List.filter_map (fun (debprop, (cudfprop,v)) ->
       let debprop = String.lowercase debprop in
       let cudfprop = String.lowercase cudfprop in
       try 
-        let s = List.assoc debprop pkg.extras in
+        let s = List.assoc debprop pkg#extras in
         let typ = Cudf_types.type_of_typedecl v in
         Some (cudfprop, Cudf_types_pp.parse_value typ s)
       with Not_found -> None
     ) extras
   in
-  let recommends = ("recommends", `Vpkgformula (loadll tables pkg.recommends)) in
+  let recommends = ("recommends", `Vpkgformula (loadll tables pkg#recommends)) in
 
   List.filter_map (function
     |(_,`Vpkglist []) -> None
@@ -182,11 +182,11 @@ let add_extra extras tables pkg =
 
 let tocudf tables ?(extras=[]) ?(extrasfun=(fun _ _ -> [])) ?(inst=false) pkg =
     { Cudf.default_package with
-      Cudf.package = CudfAdd.encode pkg.name ;
-      Cudf.version = get_cudf_version tables (pkg.name,pkg.version) ;
-      Cudf.depends = loadll tables pkg.depends;
-      Cudf.conflicts = loadlc tables pkg.name pkg.conflicts;
-      Cudf.provides = loadlp tables pkg.provides ;
+      Cudf.package = CudfAdd.encode pkg#name ;
+      Cudf.version = get_cudf_version tables (pkg#name,pkg#version) ;
+      Cudf.depends = loadll tables pkg#depends;
+      Cudf.conflicts = loadlc tables pkg#name pkg#conflicts;
+      Cudf.provides = loadlp tables pkg#provides ;
       Cudf.pkg_extra = (add_extra extras tables pkg)@(extrasfun tables pkg) ;
     }
 
