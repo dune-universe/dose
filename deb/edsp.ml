@@ -22,10 +22,10 @@ include Util.Logging(struct let label = label end) ;;
 
 type request = {
   request : string;
-  install : Packages_types.vpkg list;
-  remove : Packages_types.vpkg list;
-  architecture : Packages_types.architecture option;
-  architectures : Packages_types.architectures;
+  install : Pef.Packages_types.vpkg list;
+  remove : Pef.Packages_types.vpkg list;
+  architecture : Pef.Packages_types.architecture option;
+  architectures : Pef.Packages_types.architectures;
   autoremove : bool;
   upgrade : bool;
   distupgrade : bool;
@@ -52,35 +52,30 @@ let default_request = {
 let from_apt_request arch request = function
   |Apt.Install vpkgreqlist ->
       List.fold_left (fun acc -> function
-        |(Some Packages_types.I, ((n,None),c), _) -> {acc with install = ((n,arch),c) :: acc.install}
-        |(Some Packages_types.R, ((n,None),c), _) -> {acc with remove =  ((n,arch),c) :: acc.remove}
+        |(Some Pef.Packages_types.I, ((n,None),c), _) -> {acc with install = ((n,arch),c) :: acc.install}
+        |(Some Pef.Packages_types.R, ((n,None),c), _) -> {acc with remove =  ((n,arch),c) :: acc.remove}
         |(None, ((n,None),c), _) -> {acc with install = ((n,arch),c) :: acc.install}
 
-        |(Some Packages_types.I, vpkg, _) -> {acc with install = vpkg :: acc.install}
-        |(Some Packages_types.R, vpkg, _) -> {acc with remove = vpkg :: acc.remove}
+        |(Some Pef.Packages_types.I, vpkg, _) -> {acc with install = vpkg :: acc.install}
+        |(Some Pef.Packages_types.R, vpkg, _) -> {acc with remove = vpkg :: acc.remove}
         |(None, vpkg, _) -> {acc with install = vpkg :: acc.install}
       ) request vpkgreqlist
   |Apt.Remove vpkgreqlist ->
       List.fold_left (fun acc -> function
-        |(Some Packages_types.I, ((n,None),c), _) -> {acc with install = ((n,arch),c) :: acc.install}
-        |(Some Packages_types.R, ((n,None),c), _) -> {acc with remove = ((n,arch),c) :: acc.remove}
+        |(Some Pef.Packages_types.I, ((n,None),c), _) -> {acc with install = ((n,arch),c) :: acc.install}
+        |(Some Pef.Packages_types.R, ((n,None),c), _) -> {acc with remove = ((n,arch),c) :: acc.remove}
         |(None, ((n,None),c), _) -> {acc with remove = ((n,arch),c) :: acc.remove}
 
-        |(Some Packages_types.I, vpkg, _) -> {acc with install = vpkg :: acc.install}
-        |(Some Packages_types.R, vpkg, _) -> {acc with remove = vpkg :: acc.remove}
+        |(Some Pef.Packages_types.I, vpkg, _) -> {acc with install = vpkg :: acc.install}
+        |(Some Pef.Packages_types.R, vpkg, _) -> {acc with remove = vpkg :: acc.remove}
         |(None, vpkg, _) -> {acc with remove = vpkg :: acc.remove}
       ) request vpkgreqlist
   |Apt.Upgrade _ -> {request with upgrade = true }
   |Apt.DistUpgrade _ -> {request with distupgrade = true}
 ;;
 
-let parse_s = Packages.parse_s
-let parse_string (_,s) = s
-let parse_string_opt = function (_,"") -> None | (_,s) -> Some s
-let parse_string_list (_,s) = String.nsplit s " "
-let parse_int_s (_,s) = string_of_int(int_of_string s)
 let parse_req (loc,s) = 
-  let aux = Packages.lexbuf_wrapper Packages_parser.vpkg_top in
+  let aux = Pef.Packages.lexbuf_wrapper Pef.Packages_parser.vpkg_top in
   let l = Pcre.split ~rex:Apt.blank_regexp s in 
   List.map (fun s -> aux (loc,s)) l
 
@@ -89,63 +84,31 @@ let parse_edsp_version (_,s) =
   |["EDSP";s] when (float_of_string s) >= 0.4 -> s
   |_ -> raise Not_found
 
-(*
-let get_architectures native_opt foreign =
-  let cmd = "apt-config dump" in
-  let arch = ref "" in
-  let archs = ref [] in
-  let aux () =
-    let out = Std.input_list (Unix.open_process_in cmd) in
-    List.iter (fun s ->
-      let key, value =  ExtString.String.split s " " in
-      if key = "APT::Architecture" then
-        arch := ExtString.String.slice ~first: 1 ~last:(-2) value
-      else if key = "APT::Architectures::" || key = "APT::Architectures" then
-        let s = ExtString.String.slice ~first:1 ~last:(-2) value in
-        if s <> "" then
-          archs := (ExtString.String.slice ~first:1 ~last:(-2) value)::!archs
-    ) out;
-    debug "Automatically set native as %s and foreign archs as %s" !arch (String.concat "," !archs);
-  in
-  match native_opt, foreign with 
-  |None,None     -> aux () ; (!arch,List.filter ((<>) !arch) !archs)
-  |None,Some l   -> fatal "Native arch is missing while Foregin archs are specified"
-  |Some a,None   -> (a,[])
-  |Some a,Some l -> (a,l)
-;;
-*)
-
 let parse_request_stanza par =
   (* request must be parse before any other fields *)
-  let request = parse_s ~err:"(Invalid EDSP version)" parse_edsp_version "Request" par in
+  let request = Pef.Packages.parse_s ~err:"(Invalid EDSP version)" parse_edsp_version "Request" par in
   {
     request = request; 
-    install = parse_s ~opt:[] parse_req "Install" par;
-    remove = parse_s ~opt:[] parse_req "Remove" par;
-    upgrade = parse_s ~opt:false Packages.parse_bool "Upgrade" par;
-    architecture = parse_s ~opt:None parse_string_opt "Architecture" par;
-    architectures = parse_s ~opt:[] parse_string_list "Architectures" par;
-    distupgrade = parse_s ~opt:false Packages.parse_bool "Dist-Upgrade" par;
-    autoremove = parse_s ~opt:false Packages.parse_bool "Autoremove" par;
-    strict_pin = parse_s ~opt:true Packages.parse_bool "Strict-Pinning" par;
-    preferences = parse_s ~opt:"" Packages.parse_string "Preferences" par;
-    cmdline = parse_s ~opt:"" Packages.parse_string "Command-Line" par;
+    install = Pef.Packages.parse_s ~opt:[] parse_req "Install" par;
+    remove = Pef.Packages.parse_s ~opt:[] parse_req "Remove" par;
+    upgrade = Pef.Packages.parse_s ~opt:false Pef.Packages.parse_bool "Upgrade" par;
+    architecture = Pef.Packages.parse_s ~opt:None Pef.Packages.parse_string_opt "Architecture" par;
+    architectures = Pef.Packages.parse_s ~opt:[] Pef.Packages.parse_string_list "Architectures" par;
+    distupgrade = Pef.Packages.parse_s ~opt:false Pef.Packages.parse_bool "Dist-Upgrade" par;
+    autoremove = Pef.Packages.parse_s ~opt:false Pef.Packages.parse_bool "Autoremove" par;
+    strict_pin = Pef.Packages.parse_s ~opt:true Pef.Packages.parse_bool "Strict-Pinning" par;
+    preferences = Pef.Packages.parse_s ~opt:"" Pef.Packages.parse_string "Preferences" par;
+    cmdline = Pef.Packages.parse_s ~opt:"" Pef.Packages.parse_string "Command-Line" par;
   }
 ;;
 
-(* parse and return a string -> for extra fields *)
-let parse_bool_s = function
-  |(_,("Yes"|"yes"|"true" |"True")) -> "true"
-  |(_,("No" |"no" |"false"|"False")) -> "false" (* this one usually is not there *)
-  |(_,s) -> raise (Format822.Type_error ("wrong value : "^ s))
-
-let parse_installed = parse_s parse_bool_s "Installed"
-let parse_hold = parse_s parse_bool_s "Hold"
-let parse_apt_id = parse_s ~err:"(MISSING APT-ID)" parse_string "APT-ID"
-let parse_apt_pin = parse_s ~err:"(MISSING APT-Pin)" parse_int_s "APT-Pin"
-let parse_automatic = parse_s parse_bool_s "APT-Automatic"
-let parse_candidate = parse_s parse_bool_s "APT-Candidate"
-let parse_section = parse_s parse_string "Section"
+let parse_installed = Pef.Packages.parse_s Pef.Packages.parse_bool_s "Installed"
+let parse_hold = Pef.Packages.parse_s Pef.Packages.parse_bool_s "Hold"
+let parse_apt_id = Pef.Packages.parse_s ~err:"(MISSING APT-ID)" Pef.Packages.parse_string "APT-ID"
+let parse_apt_pin = Pef.Packages.parse_s ~err:"(MISSING APT-Pin)" Pef.Packages.parse_int_s "APT-Pin"
+let parse_automatic = Pef.Packages.parse_s Pef.Packages.parse_bool_s "APT-Automatic"
+let parse_candidate = Pef.Packages.parse_s Pef.Packages.parse_bool_s "APT-Candidate"
+let parse_section = Pef.Packages.parse_s Pef.Packages.parse_string "Section"
 
 (* (field,opt,err,multi,parsing function) *)
 let extras = [
@@ -165,12 +128,7 @@ let rec packages_parser ?(request=false) (req,acc) p =
      apt-candidate *)
   let filter par = 
     let match_field f p =
-      try 
-        begin match Packages.assoc f p with
-        |(_,("Yes"|"yes"|"True" |"true")) -> true
-        |(_,("No" |"no" |"False"|"false")) -> false
-        |_ -> false
-        end
+      try Pef.Packages.parse_bool (Pef.Packages.assoc f p)
       with Not_found -> false
     in
     let inst () = match_field "Installed" par in 
@@ -232,15 +190,15 @@ let extras_tocudf =
 let is_installed pkg =
   try
     let _loc = Format822.dummy_loc in
-    let v = Packages.assoc "Installed" pkg.Packages.extras in
-    Packages.parse_bool (_loc,v)
+    let v = pkg#get_extra "Installed" in
+    Pef.Packages.parse_bool (_loc,v)
   with Not_found -> false
 
 let is_on_hold pkg =
   try
     let _loc = Format822.dummy_loc in
-    let v = Packages.assoc "Hold" pkg.Packages.extras in
-    (Packages.parse_bool (_loc,v))
+    let v = pkg#get_extra "Hold" in
+    (Pef.Packages.parse_bool (_loc,v))
   with Not_found -> false
 
 let tocudf tables ?(options=Debcudf.default_options) ?(inst=false) pkg =
@@ -251,7 +209,7 @@ let tocudf tables ?(options=Debcudf.default_options) ?(inst=false) pkg =
         if is_on_hold pkg then "hold ok installed" 
         else "install ok installed"
       in
-      { pkg with Packages.extras = ("Status",s)::pkg.Packages.extras }
+      pkg#add_extra "Status" s
     else pkg
   in
   Debcudf.tocudf tables ~options pkg

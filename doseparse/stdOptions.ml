@@ -34,7 +34,7 @@ end
 let vpkg_option ?default ?(metavar = " <vpkg>") () =
   let parse_vpkg s = 
     let _loc = Format822.dummy_loc in
-    Debian.Packages.parse_vpkg (_loc,s)
+    Pef.Packages.parse_vpkg (_loc,s)
   in
   OptParse.Opt.value_option metavar default
   parse_vpkg (fun _ s -> Printf.sprintf "invalid vpackage '%s'" s)
@@ -44,7 +44,7 @@ let vpkg_option ?default ?(metavar = " <vpkg>") () =
 let vpkglist_option ?default ?(metavar = " <vpkglst>") () =
   let parse_vpkglist s = 
     let _loc = Format822.dummy_loc in
-    Debian.Packages.parse_vpkglist (_loc,s)
+    Pef.Packages.parse_vpkglist (_loc,s)
   in
   OptParse.Opt.value_option metavar default
   parse_vpkglist (fun _ s -> Printf.sprintf "invalid vpackage list '%s'" s)
@@ -57,9 +57,9 @@ let pkglist_option ?default ?(metavar = " <pkglst>") () =
     List.map (function
       |((n,a),Some("=",v)) -> (n,a,v)
       |((n,a),None) ->
-          raise (Debian.Packages.ParseError (s,"you must specify a version" ))
-      |_ -> raise (Debian.Packages.ParseError (s,""))
-    ) (Debian.Packages.parse_vpkglist (_loc,s))
+          raise (Pef.Packages.ParseError (s,"you must specify a version" ))
+      |_ -> raise (Pef.Packages.ParseError (s,""))
+    ) (Pef.Packages.parse_vpkglist (_loc,s))
   in
   OptParse.Opt.value_option metavar default
   parse_vpkglist (fun _ s -> Printf.sprintf "invalid package list '%s'" s)

@@ -110,7 +110,7 @@ let future ?options ?(checklist=[]) repository =
   let cluster_iter (sn,sv) l =
     List.iter (fun (version,realversion,cluster) ->
       List.iter (fun pkg ->
-        let pn = pkg.Debian.Packages.name in
+        let pn = pkg#name in
         if Hashtbl.mem constraints_table pn then begin
           Hashtbl.add realpackages pn ()
         end
@@ -129,12 +129,8 @@ let future ?options ?(checklist=[]) repository =
   let constraints_iter name constr =
     if not(Hashtbl.mem realpackages name) then begin
       let vl = Debian.Evolution.all_versions constr in
-      let pkg = {
-        Debian.Packages.default_package with 
-        Debian.Packages.name = name;
-        Debian.Packages.architecture = "all";
-        version = "1";
-        } 
+      let pkg = new Debian.Packages.package 
+        ~name:("",Some name) ~version:("",Some "1") ~architecture:("",Some "all") [] 
       in
       let cluster = [pkg] in
       version_acc := vl @ !version_acc;
@@ -180,7 +176,7 @@ let future ?options ?(checklist=[]) repository =
           let p = Debian.Debcudf.tocudf ?options tables pkg in
           let pv = p.Cudf.version in
 
-          let target = Debian.Evolution.align pkg.Debian.Packages.version target in
+          let target = Debian.Evolution.align pkg#version target in
           let newv = version_of_target getv target in
           let number = Debian.Evolution.string_of_range target in
           let equivs = List.map Debian.Evolution.string_of_range equiv in

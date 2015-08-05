@@ -4,22 +4,6 @@
 open ExtLib
 open Common
 
-let parse_relop = function
-  | "="  -> `Eq
-  | "!=" -> `Neq
-  | ">=" -> `Geq
-  | ">" | ">>"  -> `Gt
-  | "<=" -> `Leq
-  | "<" | "<<"  -> `Lt
-  | _ -> assert false   (* lexer shouldn't have returned such a RELOP! *)
-
-let parse_multiarch = function
-  |("None"|"none"|"No"|"no") -> `No
-  |("Allowed"|"allowed") -> `Allowed
-  |("Foreign"|"foreign") -> `Foreign
-  |("Same"|"same") -> `Same
-  |s -> raise (Format822.Type_error ("Field Multi-Arch has a wrong value : "^ s))
-
 %}
 
 %token <string> IDENT VIDENT STRING RELOP
@@ -32,7 +16,6 @@ let parse_multiarch = function
 %type <Packages_types.version> version_top 
 
 %type <Packages_types.architecture list> archlist_top
-%type <Packages_types.multiarch> multiarch_top 
 %type <Packages_types.source> source_top 
 
 %type <Packages_types.vpkgname> vpkgname_top
@@ -47,17 +30,15 @@ let parse_multiarch = function
 %type <Packages_types.vpkgreq list> requestlist_top
 
 %start pkgname_top version_top
-%start multiarch_top source_top
+%start source_top
 %start vpkgname_top vpkg_top vpkglist_top vpkgformula_top
 %start builddepsformula_top builddepslist_top
 %start request_top requestlist_top archlist_top
-
 
 %%
 
 pkgname_top: pkgname EOL { $1 } ;
 version_top: version EOL { $1 } ;
-multiarch_top: multiarch EOL { $1 } ;
 source_top: source EOL { $1 } ;
 
 vpkgname_top: vpkgname EOL { $1 } ;
@@ -77,7 +58,6 @@ archlist_top: archlist EOL { $1 } ;
 
 pkgname: IDENT { $1 } ;
 version: IDENT { $1 } ;
-multiarch: IDENT { parse_multiarch $1 }
 
 source:
   |IDENT                        { ($1,None) }

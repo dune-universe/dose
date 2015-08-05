@@ -19,9 +19,9 @@ let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
 let get_source pkg =
-  match pkg.Packages.source with
-  |("",None) -> (pkg.Packages.name, pkg.Packages.version)
-  |(n,None) -> (n, pkg.Packages.version)
+  match pkg#source with
+  |("",None) -> (pkg#name, pkg#version)
+  |(n,None) -> (n, pkg#version)
   |(n,Some v) -> (n,v)
 
 (** [group_by_source universe] returns a hashtbl that maps
@@ -35,8 +35,8 @@ let get_source pkg =
 let cluster packagelist =
   let th = Hashtbl.create (List.length packagelist) in
   List.iter (fun pkg ->
-    let packageversion = Version.compose (Version.strip_epoch_binnmu pkg.Packages.version) in
-    let realversion = Version.compose (Version.strip_epoch pkg.Packages.version) in
+    let packageversion = Version.compose (Version.strip_epoch_binnmu pkg#version) in
+    let realversion = Version.compose (Version.strip_epoch pkg#version) in
     let (source, sourceversion) = get_source pkg in
     try
       let h = Hashtbl.find th (source,sourceversion) in

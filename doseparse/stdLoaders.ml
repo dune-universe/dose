@@ -64,7 +64,6 @@ let deb_load_list options ?(status=[]) ?(raw=false) dll =
   let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
   let cll = 
     List.map (fun l ->
-      (* XXX this is stupid and slow *)
       List.map (Debian.Debcudf.tocudf tables ~options) (Debian.Packages.merge status l)
     ) pkgll
   in
@@ -96,8 +95,6 @@ let deb_load_list options ?(status=[]) ?(raw=false) dll =
   in
   let preamble = Debian.Debcudf.preamble in
   let request = Cudf.default_request in
-  (* only return the raw input if status is empty or otherwise the mapping
-   * from rawll to cll will be wrong *)
   let rawll = if raw && status = [] then Some dll else None in
   let l = (preamble,cll,request,from_cudf,to_cudf,rawll) in
   Util.Timer.stop deb_load_list_timer l
@@ -159,7 +156,7 @@ let edsp_load_list options file =
         Some p
       end else begin
         warning "Duplicated package (same version, name and architecture) : (%s,%s,%s)"
-          pkg.Debian.Packages.name pkg.Debian.Packages.version pkg.Debian.Packages.architecture;
+          pkg#name pkg#version pkg#architecture;
         None
       end
     ) pkglist

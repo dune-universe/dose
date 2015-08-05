@@ -109,7 +109,7 @@ let main () =
   let filter_external_sources par =
     if (OptParse.Opt.get Options.includextra) then true
     else
-      try not(Debian.Packages.parse_bool (Debian.Packages.assoc "extra-source-only" par))
+      try not(Pef.Packages.parse_bool (Pef.Packages.assoc "extra-source-only" par))
       with Not_found -> true
   in
 
@@ -155,8 +155,8 @@ let main () =
   let bl = 
     List.fold_left (fun acc pkg ->
       let pkg = 
-        if OptParse.Opt.get Options.maforeign && pkg.Packages.architecture = "all" then
-          { pkg with Packages.multiarch = `Foreign }
+        if OptParse.Opt.get Options.maforeign && pkg#architecture = "all" then
+          pkg#set_multiarch `Foreign
         else pkg
       in
       (Debcudf.tocudf ~options tables pkg)::acc

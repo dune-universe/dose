@@ -69,14 +69,14 @@ let parse_popcon s =
 *)
 
 type apt_req =
-  |Install of Packages_types.vpkgreq list
-  |Remove of Packages_types.vpkgreq list
-  |Upgrade of Packages_types.suite option
-  |DistUpgrade of Packages_types.suite option
+  |Install of Pef.Packages_types.vpkgreq list
+  |Remove of Pef.Packages_types.vpkgreq list
+  |Upgrade of Pef.Packages_types.suite option
+  |DistUpgrade of Pef.Packages_types.suite option
 
 let parse_req s = 
   let _loc = Format822.dummy_loc in
-  Packages.lexbuf_wrapper Packages_parser.request_top (_loc,s)
+  Pef.Packages.lexbuf_wrapper Pef.Packages_parser.request_top (_loc,s)
 
 let parse_pkg_req suite s =
   let (r,((n,a),c),s) = parse_req s in
@@ -195,7 +195,7 @@ let general_regexp = Pcre.regexp "^[ \t]*[*][ \t]*$" ;;
 
 let parse_pref_package (_,s) =
   if Pcre.pmatch ~rex:general_regexp s then Pref.Star
-  else Pref.Package (Packages.parse_name (Format822.dummy_loc,s))
+  else Pref.Package (Pef.Packages.parse_name (Format822.dummy_loc,s))
 
 let pin_regexp = Pcre.regexp "^([A-Za-z]+)[ \t]+(.*)$" ;;
 
@@ -213,11 +213,11 @@ let parse_pin (_,s) =
 let parse_preferences_stanza par =
   {
     Pref.package = 
-      Packages.parse_s ~err:"(MISSING PACKAGE)"
+      Pef.Packages.parse_s ~err:"(MISSING PACKAGE)"
       parse_pref_package "Package" par;
-    pin = Packages.parse_s ~err:"(MISSING PIN)" parse_pin "Pin" par;
-    pin_priority = Packages.parse_s ~err:"(MISSING Pin-Priority)"
-      Packages.parse_int "Pin-Priority" par;
+    pin = Pef.Packages.parse_s ~err:"(MISSING PIN)" parse_pin "Pin" par;
+    pin_priority = Pef.Packages.parse_s ~err:"(MISSING Pin-Priority)"
+      Pef.Packages.parse_int "Pin-Priority" par;
   }
 
 let rec preferences_parser stanza_parser acc p =

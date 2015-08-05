@@ -14,7 +14,7 @@ true: -traverse
 <*/tests.*>: package(oUnit), package(extlib), @PKG_CUDF@, package(re.pcre), package(zip), package(bz2)
 
 <common/tests.*>: use_common
-<deb/tests.*>: use_common, use_versioning, use_debian
+<deb/tests.*>: use_common, use_versioning, use_pef, use_debian
 <rpm/tests.*>: use_common, use_versioning, @USE_RPM@, use_algo, package(ocamlgraph), package(re.str)
 <algo/tests.*>: use_common, use_algo, package(ocamlgraph)
 

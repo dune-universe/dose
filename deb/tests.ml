@@ -294,7 +294,7 @@ let test_cluster =
           Hashtbl.fold (fun (sn, sv) l acc ->
             (sn,sv,SubClusterSetTest.of_list (
               List.map (fun (v,rv,cluster) -> 
-                let cl = List.map(fun pkg -> (pkg.Packages.name,pkg.Packages.version)) cluster in
+                let cl = List.map(fun pkg -> (pkg#name,pkg#version)) cluster in
                 (v,rv,PkgSetTest.of_list cl)
               ) l
             ))::acc
@@ -644,11 +644,11 @@ let parse_pkg_req_triplets =
 
     ("suite +name=1.2", 
      ( (Some "suite"), "+name=1.2"), 
-     returns (Some Packages_types.I, (("name", None), Some ("=", "1.2")), Some "suite"));
+     returns (Some Pef.Packages_types.I, (("name", None), Some ("=", "1.2")), Some "suite"));
 
     ("suite -name=1.2", 
      ( (Some "suite"), "-name=1.2"), 
-     returns (Some Packages_types.R, (("name", None), Some ("=", "1.2")), Some "suite"));
+     returns (Some Pef.Packages_types.R, (("name", None), Some ("=", "1.2")), Some "suite"));
 
     ("suite name/suite1", 
      ( (Some "suite"), "name/suite1"), 
@@ -664,11 +664,11 @@ let parse_pkg_req_triplets =
 
     ("none +name", 
      ( None, "+name"), 
-     returns (Some Packages_types.I, (("name", None), None), None));
+     returns (Some Pef.Packages_types.I, (("name", None), None), None));
 
     ("none -name", 
      ( None, "-name"), 
-     returns (Some Packages_types.R, (("name", None), None), None));
+     returns (Some Pef.Packages_types.R, (("name", None), None), None));
 
     ("suite name", 
      ( Some "suite", "name"), 
@@ -699,7 +699,7 @@ let parse_pref_package_triplets =
   in
   [ ("asterisk 1", "*",          returns Apt.Pref.Star);
     ("asterisk 2", "    *     ", returns Apt.Pref.Star);
-    ("name 1",     "name1",      returns (Apt.Pref.Package (Packages.parse_name (Format822.dummy_loc, "name1")))); ]
+    ("name 1",     "name1",      returns (Apt.Pref.Package (Pef.Packages.parse_name (Format822.dummy_loc, "name1")))); ]
 
 (* parse_pin *)
 let parse_pin_triplets =
@@ -878,8 +878,8 @@ let test_sources2packages =
   let buildarch = "amd64" in
   let sources = Sources.sources2packages ~profiles:["stage1"] buildarch hostarch packagelist in
   let function_to_test src =
-    let src = List.find (fun s -> s.Packages.name = src) sources in
-    src.Packages.depends
+    let src = List.find (fun s -> s#name = src) sources in
+    src#depends
   in
   let printer = Printer.string_of_vpkgformula in
   let returns = returns_result ~printer function_to_test in

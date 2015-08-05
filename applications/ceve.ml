@@ -88,10 +88,9 @@ let loadl to_cudf l =
 ;;
 
 let parse_request to_cudf l =
-  let open Debian in
   let pkgs_of s = (* convert request into list of packages *) 
     let rs = String.strip (snd (String.split s " ")) in
-    let  f = Packages.lexbuf_wrapper Packages_parser.vpkglist_top in
+    let  f = Pef.Packages.lexbuf_wrapper Pef.Packages_parser.vpkglist_top in
     loadl to_cudf (f (Format822.dummy_loc,rs)) 
   in              
   let parse acc s =
