@@ -29,6 +29,7 @@ type rawpackage =
   |Deb of Debian.Packages.package
   |DebSrc of Debian.Sources.source
   |Pef of Pef.Packages.package
+  |Opam of Opam.Packages.package
   |Edsp of Debian.Packages.package
   |Csw of Csw.Packages.package
 #ifdef HASRPM
@@ -99,6 +100,16 @@ let deb_load_list options ?(status=[]) ?(raw=false) dll =
   let l = (preamble,cll,request,from_cudf,to_cudf,rawll) in
   Util.Timer.stop deb_load_list_timer l
       
+let opam_load_list options dll =
+  let pkglist = List.flatten dll in
+  let tables = Pef.Pefcudf.init_tables Versioning.Debian.compare pkglist in
+  let from_cudf (p,i) = (p, Pef.Pefcudf.get_real_version tables (p,i)) in
+  let to_cudf (p,v) = (p, Pef.Pefcudf.get_cudf_version tables (p,v)) in
+  let cll = List.map (fun l -> List.map (Opam.Opamcudf.tocudf tables) l) dll in
+  let preamble = Pef.Pefcudf.preamble in
+  let request = Cudf.default_request in
+  (preamble,cll,request,from_cudf,to_cudf,None)
+
 let pef_load_list options dll =
   let extras = [("maintainer",("maintainer",`String None))] in
   let pkglist = List.flatten dll in
@@ -284,6 +295,15 @@ let pef_parse_input options urilist =
   in
   pef_load_list options dll
 
+let opam_parse_input options urilist =
+  let dll = 
+    List.map (fun l ->
+        let filelist = unpack_l `Opam l in
+        Pef.Packages.input_raw filelist
+    ) urilist
+  in
+  opam_load_list options dll
+
 let csw_parse_input urilist =
   let dll = 
     List.map (fun l ->
@@ -327,6 +347,7 @@ let parse_input ?(options=None) ?(raw=false) urilist =
   |`Deb, None
   |`DebSrc, None -> deb_parse_input Debian.Debcudf.default_options ~raw filelist
   |`Pef, None -> pef_parse_input Debian.Debcudf.default_options filelist
+  |`Opam, None -> opam_parse_input Debian.Debcudf.default_options filelist
 
   |`Deb, Some (StdOptions.Deb opt)
   |`DebSrc, Some (StdOptions.Deb opt) -> deb_parse_input opt ~raw filelist
@@ -335,6 +356,8 @@ let parse_input ?(options=None) ?(raw=false) urilist =
   |`Edsp, _ -> edsp_parse_input Debian.Debcudf.default_options filelist
 
   |`Pef, Some (StdOptions.Pef opt) -> pef_parse_input opt filelist
+
+  |`Opam, Some (StdOptions.Opam opt) -> opam_parse_input opt filelist
 
   |`Csw, None -> csw_parse_input filelist
 

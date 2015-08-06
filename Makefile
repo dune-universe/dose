@@ -88,6 +88,15 @@ $(DOSELIBS)/debian.%: deb/*.ml $(DOSELIBS)/pef.%
 	  fi ; \
 	done
 
+$(DOSELIBS)/opam.%: opam/*.ml $(DOSELIBS)/pef.%
+	$(OCAMLBUILD) $(OBFLAGS) opam/opam.otarget
+	@for i in _build/opam/opam.*; do \
+	  if [ -e $$i ]; then \
+	  cp $$i $(DOSELIBS) ; \
+	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
+	  fi ; \
+	done
+
 $(DOSELIBS)/rpm.%: rpm/*.ml $(DOSELIBS)/algo.%
 	$(OCAMLBUILD) $(OBFLAGS) rpm/rpm.otarget
 	@for i in _build/rpm/rpm.*; do \
@@ -106,7 +115,7 @@ $(DOSELIBS)/pef.%: pef/*.ml
 	  fi ; \
 	done
 
-$(DOSELIBS)/csw.%: opencsw/*.ml $(DOSELIBS)/debian.%
+$(DOSELIBS)/csw.%: opencsw/*.ml $(DOSELIBS)/versioning.%
 	$(OCAMLBUILD) $(OBFLAGS) opencsw/csw.otarget
 	@for i in _build/opencsw/csw.*; do \
 	  if [ -e $$i ]; then \

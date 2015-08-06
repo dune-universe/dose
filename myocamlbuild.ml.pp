@@ -9,13 +9,13 @@ Ocamlbuild_pack.Flags.mark_tag_used "link_" ;;
 #endif
 
 let modules_dirs = [
-  "common"; "versioning"; "pef"; "deb"; "opencsw"; "rpm"; "algo";
+  "common"; "versioning"; "pef"; "opam"; "deb"; "opencsw"; "rpm"; "algo";
   "doseparse"; "doseparseNoRpm"; "applications"; "experimental"; "libcudf";
   "experimental/dudftocudf";
 ];;
 
 let libraries = [
-  "cudf";"common";"versioning"; "pef"; "debian"; "csw";"rpm";"algo";
+  "cudf";"common";"versioning"; "pef"; "opam"; "debian"; "csw";"rpm";"algo";
   "doseparse";"doseparseNoRpm";
 ];;
 

@@ -270,6 +270,7 @@ end
 type options =
   |Deb of Debian.Debcudf.options
   |Pef of Debian.Debcudf.options
+  |Opam of Debian.Debcudf.options
   |Edsp of Debian.Debcudf.options
   |Csw
   |Rpm
@@ -344,12 +345,14 @@ module DistribOptions = struct
         Debian.Debcudf.ignore_essential = true
       })
     |`Pef -> Some (Pef Debian.Debcudf.default_options)
+    |`Opam -> Some (Opam Debian.Debcudf.default_options)
     |_ -> None
 
   let set_options = function
     |`Deb |`DebSrc -> Some (Deb (set_deb_options ()))
     |`Edsp -> Some (Edsp (set_deb_options ()))
     |`Pef -> Some (Pef Debian.Debcudf.default_options)
+    |`Opam -> Some (Opam Debian.Debcudf.default_options)
     |_ -> None
   ;;
 
