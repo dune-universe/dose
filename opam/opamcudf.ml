@@ -17,13 +17,22 @@ open Common
 
 (* ========================================= *)
 
-type extramap = (string * (string * Cudf_types.typedecl1)) list
+type options = {
+  switch : string ; (* the active switch *)
+  switches : string list ; (* list of available switches *)
+}
+
+let default_options = {
+  switch = "system";
+  switches = [];
+}
 
 let preamble = 
   (* number is a mandatory property -- no default *)
   let l = [
     ("recommends",(`Vpkgformula (Some [])));
-    ("number",(`String None)) ]
+    ("number",(`String None));
+    ]
   in
   CudfAdd.add_properties Cudf.default_preamble l
 
@@ -41,7 +50,6 @@ let add_extra extras tables pkg =
     ) extras
   in
   let recommends = ("recommends", `Vpkgformula (Pef.Pefcudf.loadll tables pkg#recommends)) in
-
   List.filter_map (function
     |(_,`Vpkglist []) -> None
     |(_,`Vpkgformula []) -> None
@@ -50,21 +58,32 @@ let add_extra extras tables pkg =
   [number; recommends] @ l
 ;;
 
-let tocudf tables ?(extras=[]) ?(extrasfun=(fun _ _ -> [])) ?(inst=false) pkg =
-    { Cudf.default_package with
-      Cudf.package = CudfAdd.encode pkg#name ;
-      Cudf.version = Pef.Pefcudf.get_cudf_version tables (pkg#name,pkg#version) ;
-      Cudf.depends = Pef.Pefcudf.loadll tables pkg#depends;
-      Cudf.conflicts = Pef.Pefcudf.loadlc tables pkg#name pkg#conflicts;
-      Cudf.provides = Pef.Pefcudf.loadlp tables pkg#provides ;
-      Cudf.pkg_extra = (add_extra extras tables pkg)@(extrasfun tables pkg) ;
-    }
+(* each package generates more than one cudf package. One for active switch
+   that is not declaclare not available by the package . Each package is 
+   translated differently considering the profiles associated to each dependency *)
+let tocudf tables ?(options=default_options) ?(extras=[]) pkg =
+  List.fold_left (fun acc switch ->
+    (* include this package if it is not declared as not available and if it is
+     * used in some dependency. Otherwise there is no point to include it *)
+    if not(List.mem switch pkg#notavailable) then
+      let cudfpkg = 
+        { Cudf.default_package with
+          Cudf.package = CudfAdd.encode (switch^":"^pkg#name);
+          Cudf.version = Pef.Pefcudf.get_cudf_version tables (pkg#name,pkg#version) ;
+          Cudf.depends = Pef.Pefcudf.loadll tables pkg#depends;
+          Cudf.conflicts = Pef.Pefcudf.loadlc tables pkg#name pkg#conflicts;
+          Cudf.provides = Pef.Pefcudf.loadlp tables pkg#provides ;
+          Cudf.pkg_extra = add_extra extras tables pkg ;
+        }
+      in (cudfpkg::acc)
+    else acc
+  ) [] (options.switch::options.switches)
 
 let load_list compare l =
   let timer = Util.Timer.create "Opam.ToCudf" in
   Util.Timer.start timer;
   let tables = Pef.Pefcudf.init_tables compare l in
-  let pkglist = List.map (tocudf tables) l in
+  let pkglist = List.flatten (List.map (tocudf tables) l) in
   Pef.Pefcudf.clear tables;
   Util.Timer.stop timer pkglist
 

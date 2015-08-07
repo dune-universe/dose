@@ -66,7 +66,8 @@ module Options = struct
   StdOptions.OutputOptions.add_option options ~short_name:'T' ~help:"Output type format. Default cnf" out_type;;
 
   include StdOptions.DistribOptions ;;
-  StdOptions.DistribOptions.add_options options ;;
+  StdOptions.DistribOptions.add_debian_options options ;;
+  StdOptions.DistribOptions.add_opam_options options ;;
 
 end;;
 

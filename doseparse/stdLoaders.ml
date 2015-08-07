@@ -105,7 +105,7 @@ let opam_load_list options dll =
   let tables = Pef.Pefcudf.init_tables Versioning.Debian.compare pkglist in
   let from_cudf (p,i) = (p, Pef.Pefcudf.get_real_version tables (p,i)) in
   let to_cudf (p,v) = (p, Pef.Pefcudf.get_cudf_version tables (p,v)) in
-  let cll = List.map (fun l -> List.map (Opam.Opamcudf.tocudf tables) l) dll in
+  let cll = List.map (fun l -> List.flatten (List.map (Opam.Opamcudf.tocudf ~options tables) l)) dll in
   let preamble = Pef.Pefcudf.preamble in
   let request = Cudf.default_request in
   (preamble,cll,request,from_cudf,to_cudf,None)
@@ -296,10 +296,11 @@ let pef_parse_input options urilist =
   pef_load_list options dll
 
 let opam_parse_input options urilist =
+  let switches = options.Opam.Opamcudf.switch::options.Opam.Opamcudf.switches in
   let dll = 
     List.map (fun l ->
         let filelist = unpack_l `Opam l in
-        Pef.Packages.input_raw filelist
+        Opam.Packages.input_raw ~switches filelist
     ) urilist
   in
   opam_load_list options dll
@@ -347,7 +348,7 @@ let parse_input ?(options=None) ?(raw=false) urilist =
   |`Deb, None
   |`DebSrc, None -> deb_parse_input Debian.Debcudf.default_options ~raw filelist
   |`Pef, None -> pef_parse_input Debian.Debcudf.default_options filelist
-  |`Opam, None -> opam_parse_input Debian.Debcudf.default_options filelist
+  |`Opam, None -> opam_parse_input Opam.Opamcudf.default_options filelist
 
   |`Deb, Some (StdOptions.Deb opt)
   |`DebSrc, Some (StdOptions.Deb opt) -> deb_parse_input opt ~raw filelist

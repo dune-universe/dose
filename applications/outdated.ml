@@ -33,7 +33,7 @@ module Options = struct
   StdOptions.InputOptions.add_options ~default:["checkonly"] options ;;
 
   include StdOptions.DistribOptions ;;
-  StdOptions.DistribOptions.add_options options ;;
+  StdOptions.DistribOptions.add_debian_options options ;;
 
   let dump = StdOpt.store_true ()
 

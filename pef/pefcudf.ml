@@ -126,20 +126,28 @@ let get_real_version tables (p,i) =
 
 let loadl tables l =
   List.flatten (
-    List.map (fun ((name,_),sel) ->
-      match CudfAdd.cudfop sel with
-      |None -> [(CudfAdd.encode name, None)]
-      |Some(op,v) -> [(CudfAdd.encode name,Some(op,get_cudf_version tables (name,v)))]
+    List.map (fun ((name,aop),constr) ->
+      let encname =
+        let n = match aop with Some a -> name^":"^a | None -> name in
+        CudfAdd.encode n
+      in
+      match CudfAdd.cudfop constr with
+      |None -> [(encname, None)]
+      |Some(op,v) -> [(encname,Some(op,get_cudf_version tables (name,v)))]
     ) l
   )
 
 let loadlc tables name l = (loadl tables l)
 
 let loadlp tables l =
-  List.map (fun ((name,_),sel) ->
-    match CudfAdd.cudfop sel with
-    |None  -> (CudfAdd.encode name, None)
-    |Some(`Eq,v) -> (CudfAdd.encode name,Some(`Eq,get_cudf_version tables (name,v)))
+  List.map (fun ((name,aop),constr) ->
+    let encname =
+      let n = match aop with Some a -> name^":"^a | None -> name in
+      CudfAdd.encode n
+    in
+    match CudfAdd.cudfop constr with
+    |None  -> (encname, None)
+    |Some(`Eq,v) -> (encname,Some(`Eq,get_cudf_version tables (name,v)))
     |_ -> assert false
   ) l
 

@@ -12,6 +12,7 @@
 
 (** Representation of a PEF stanza. *)
 
+module Pcre = Re_pcre
 open ExtLib
 open Common
 
@@ -69,7 +70,10 @@ let parse_s ?opt ?err ?(multi=false) f field par =
 let parse_string (_,s) = s
 let parse_int (_,s) = int_of_string s
 let parse_string_opt = function (_,"") -> None | (_,s) -> Some s
-let parse_string_list (_,s) = String.nsplit s " "
+
+let blank_regexp = Pcre.regexp "[ \t]+" ;;
+let comma_regexp = Pcre.regexp "[ \t]+,[ \t]+" ;;
+let parse_string_list ?(rex=blank_regexp) (_,s) = Pcre.split ~rex s
 
 (* parse and convert to a specific type *)
 let parse_bool = function
