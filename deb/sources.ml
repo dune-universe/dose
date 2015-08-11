@@ -19,10 +19,6 @@ open Common
 let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
-let parse_archlist = Pef.Packages.lexbuf_wrapper Pef.Packages_parser.archlist_top
-let parse_builddepslist = Pef.Packages.lexbuf_wrapper Pef.Packages_parser.builddepslist_top
-let parse_builddepsformula = Pef.Packages.lexbuf_wrapper Pef.Packages_parser.builddepsformula_top
-
 class source ?(name=("Package",None)) ?(version=("Version",None)) 
   ?(architecture=("Architecture",None)) ?(build_depends=("Build-Depends",None)) 
   ?(build_depends_indep=("Build-Depends-Indep",None)) ?(build_depends_arch=("Build-Depends-Arch",None))
@@ -38,31 +34,31 @@ class source ?(name=("Package",None)) ?(version=("Version",None))
     Pef.Packages.get_field_value f par version
 
   val architecture : Pef.Packages_types.architecture list =
-    let f = Pef.Packages.parse_s ~err:"(MISSING ARCH)" parse_archlist in
+    let f = Pef.Packages.parse_s ~err:"(MISSING ARCH)" Pef.Packages.parse_archlist in
     Pef.Packages.get_field_value f par architecture
 
   val build_depends : Pef.Packages_types.builddepsformula =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true parse_builddepsformula in
+    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
     Pef.Packages.get_field_value f par build_depends
 
   val build_depends_indep : Pef.Packages_types.builddepsformula =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true parse_builddepsformula in
+    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
     Pef.Packages.get_field_value f par build_depends_indep
 
   val build_depends_arch : Pef.Packages_types.builddepsformula =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true parse_builddepsformula in
+    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
     Pef.Packages.get_field_value f par build_depends_arch
 
   val build_conflicts : Pef.Packages_types.builddepslist =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true parse_builddepslist in
+    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
     Pef.Packages.get_field_value f par build_conflicts
 
   val build_conflicts_indep : Pef.Packages_types.builddepslist =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true parse_builddepslist in
+    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
     Pef.Packages.get_field_value f par build_conflicts_indep
 
   val build_conflicts_arch : Pef.Packages_types.builddepslist =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true parse_builddepslist in
+    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
     Pef.Packages.get_field_value f par build_conflicts_arch
 
   method name = name
@@ -156,6 +152,8 @@ let select hostarch profiles (v,al,pl) =
   if matcharch hostarch al && matchprofile profiles pl then Some v else None
 ;;
 
+(* XXX src2pkg could be skip using the same trick we use in opam, 
+ * where dependencies are giltered at parsing time *)
 (* the package name is encodes as src:<package-name> *)
 let src2pkg ?(dropalternatives=false) ?(profiles=[]) ?(noindep=false) ?(src="src") buildarch hostarch srcpkg =
   let conflicts l = List.filter_map (select hostarch profiles) l in

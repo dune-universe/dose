@@ -107,9 +107,9 @@ or_formula:
 /**************************************/ 
 
 buidldep:
-  |vpkg                            { ($1,[],[]) }
+  |vpkg                                 { ($1,[],[]) }
   |vpkg LBRACKET buildarchlist RBRACKET { ($1,$3,[]) }
-  |vpkg buildprofileformula { ($1,[],$2) }
+  |vpkg buildprofileformula             { ($1,[],$2) }
   |vpkg LBRACKET buildarchlist RBRACKET buildprofileformula { ($1,$3,$5) }
 ;
 
@@ -124,7 +124,7 @@ builddepslist_ne:
 ;
 
 builddepsformula:
-  | builddeps_or_formula                            { [ $1 ] }
+  | builddeps_or_formula                           { [ $1 ] }
   | builddeps_or_formula COMMA builddepsformula    { $1 :: $3 }
 ;
 
@@ -141,19 +141,19 @@ buildarch:
 ;
 
 buildarchlist:
-  |             { [] }
+  |                  { [] }
   | buildarchlist_ne { $1 }
 ;
 
 buildarchlist_ne:
-  | buildarch                       { [ $1 ] }
-  | buildarch buildarchlist_ne      { $1 :: $2 }
+  | buildarch                  { [ $1 ] }
+  | buildarch buildarchlist_ne { $1 :: $2 }
 ;
 
 /**************************************/ 
 
 buildprofileformula:
-  | { [] }
+  |                        { [] }
   | buildprofileformula_ne { $1 }
 ;
 
@@ -168,7 +168,7 @@ buildprofile:
 ;
 
 buildprofilelist:
-  |             { [] }
+  |                     { [] }
   | buildprofilelist_ne { $1 }
 ;
 

@@ -47,12 +47,44 @@ class package ?(name=("Package",None)) ?(version=("Version",None)) ?(depends=("D
 
 end
 
+let vpkglist_filter switches l =
+  let select switches (vpkg,switchlist,_) =
+    match switchlist with
+    |[] -> (Printf.eprintf "empty" ; Some vpkg)
+    |_ -> if List.exists (fun (b,s) -> b && (List.mem s switches)) switchlist then (Printf.eprintf "Some" ; Some vpkg) else (Printf.eprintf "None" ; None)
+  in
+  List.filter_map (select switches) l
+
+let vpkgformula_filter switches ll =
+  List.filter_map (fun l ->
+    match vpkglist_filter switches l with
+    |[] -> None
+    |l -> Some l
+  ) ll
+
 (* a stanza is not considered if the intersection between the
 active switch and the not available switches for a package is
 empty *)
 let parse_package_stanza switches filter par =
   let p () =
-    let pkg = new package par in
+    let pkg =
+      let depends =
+        let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
+        ("Depends",Some (vpkgformula_filter switches (f "Depends" par)))
+      in
+      let conflicts =
+        let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
+        ("Conflicts",Some (vpkglist_filter switches (f "Conflicts" par)))
+      in
+      let provides =
+        let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
+        ("Provides",Some (vpkglist_filter switches (f "Provides" par)))
+      in
+      let recommends =
+        let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
+        ("Recommends",Some (vpkgformula_filter switches (f "Recommends" par)))
+      in
+      new package ~depends ~conflicts ~recommends ~provides par in
     if List.exists (fun s -> not(List.mem s pkg#notavailable)) switches then pkg
     else
       raise (Pef.Packages.IgnorePackage (

@@ -32,6 +32,9 @@ let parse_version = lexbuf_wrapper Packages_parser.version_top
 let parse_vpkg = lexbuf_wrapper Packages_parser.vpkg_top
 let parse_vpkglist = lexbuf_wrapper Packages_parser.vpkglist_top
 let parse_vpkgformula = lexbuf_wrapper Packages_parser.vpkgformula_top
+let parse_archlist = lexbuf_wrapper Packages_parser.archlist_top
+let parse_builddepslist = lexbuf_wrapper Packages_parser.builddepslist_top
+let parse_builddepsformula = lexbuf_wrapper Packages_parser.builddepsformula_top
 
 (* assume n is lowercase *)
 (* Using lists in this case is faster then using 
