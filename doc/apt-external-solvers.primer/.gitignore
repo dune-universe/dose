@@ -7,4 +7,6 @@ apt-external-solvers.log
 apt-external-solvers.pdf
 apt-external-solvers.ps
 apt-external-solvers.toc
+apt-external-solvers.bbl
+apt-external-solvers.blg
 version.tex
