@@ -460,24 +460,12 @@ let test_multiarch =
     "multi arch same provide-conflicts" >:: (fun _ -> 
       (*
       let f = Filename.concat test_dir "deb/edsp/multiarch-same-provides.edsp" in
-      let (request,pkglist) = Edsp.input_raw ~archs:["arch1";"arch2"] f in
+      let (request,pkglist) = Edsp.input_raw f in
       let tables = Debcudf.init_tables pkglist in
-      let options = {
-        Debcudf.default_options with
-        Debcudf.native = "arch1";
-        Debcudf.foreign = ["arch2"] }
-      in
-      let default_preamble =
-        let l = List.map snd Edsp.extras_tocudf in
-        CudfAdd.add_properties Debcudf.preamble l
-      in
-      let cudf_pkglist = List.map (fun pkg -> Edsp.tocudf tables ~options pkg) pkglist in
+      let cudf_pkglist = List.map (fun pkg -> Edsp.tocudf tables pkg) pkglist in
       let universe = Cudf.load_universe cudf_pkglist in
       let cudf_request = Edsp.requesttocudf tables universe request in
-      let r = Algo.Depsolver.check_request (Some default_preamble,cudf_pkglist,cudf_request) in
-      assert_equal (Algo.Diagnostic.is_solution r) true
-      *) 
-      ()
+*) ()
     );
   ] 
 ;;

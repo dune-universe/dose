@@ -50,12 +50,6 @@ val get_real_version : tables -> Cudf_types.pkgname * Cudf_types.version -> Pef.
 *)
 val tocudf : tables -> ?options:options -> ?inst:bool -> Packages.package -> Cudf.package
 
-(** convert a debian dependency list in a cudf constraints formula *)
-val lltocudf : ?enc:bool -> tables -> Pef.Packages_types.vpkg list list -> Cudf_types.vpkgformula
-
-(** convert a debian conflict list in a cudf constraints list *)
-val ltocudf  : ?enc:bool -> tables -> Pef.Packages_types.vpkg list -> Cudf_types.vpkglist
-
 (** declare the Cudf preamble used by cudf. Namely, debcudf add :
     - a property named {b Number} of type string containing the original debian version
     - a property named {b Source} of type string

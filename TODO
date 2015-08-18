@@ -1,9 +1,6 @@
 - add --deb-output822 to DistcheckOptions to output 822 package list
   for distcheck, buildcheck etc of installable packages
 
-- Remove all references to Format in diagnostic.ml and all applications.
-  Format is too slow !
-
 - make apt-cudf output explanations when a request is not satisfiable,
   in the same style as what dose-distcheck does, if possible (beware
   of apt string mangling)
@@ -21,6 +18,10 @@
   Thu Jun 17 2010 Pietro Abate <pietro.abate@pps.jussieu.fr>
 
 -------------------
+
+- Remove all references to Format in diagnostic.ml and all applications.
+  Format is too slow !
+NOT DONE : the new formar module is now as fast as Printf
 
 - use ocaml-magic to identify compressed file types
 DONE! not using ocaml magic, but reading directly the file header.

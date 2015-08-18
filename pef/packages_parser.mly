@@ -4,6 +4,15 @@
 open ExtLib
 open Common
 
+let parse_vpkgname name =
+  try
+    match String.split name ":" with
+    |n,"any" -> (n,Some "any")
+    |n,"native" -> (n,Some "native")
+    |n,"" -> raise Parsing.Parse_error
+    |n,a -> (n,Some a)
+  with ExtString.Invalid_string -> (name,None)
+
 %}
 
 %token <string> IDENT VIDENT STRING RELOP
@@ -72,10 +81,7 @@ relop:
 
 /**************************************/ 
 
-vpkgname:
-  |IDENT              { try let (n,a) = String.split $1 ":" in (n,Some a) 
-                        with Invalid_string -> ($1,None) } 
-;
+vpkgname: IDENT { parse_vpkgname $1 } ;
 
 constr:
   |                            { None }
