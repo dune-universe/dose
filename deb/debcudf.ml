@@ -211,8 +211,9 @@ let get_cudf_version tables (package,version) =
 let get_real_version tables (name,cudfversion) =
   let package =
     (* XXX this is a hack. *)
+    let n = (CudfAdd.decode name) in
     try
-      let (n,a) = ExtString.String.split (CudfAdd.decode name) ":" in
+      let (n,a) = ExtString.String.split n ":" in
       if n = "src" then a else n
     with Invalid_string -> n
   in

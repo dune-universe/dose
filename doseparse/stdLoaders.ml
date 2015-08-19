@@ -296,11 +296,13 @@ let pef_parse_input options urilist =
   pef_load_list options dll
 
 let opam_parse_input options urilist =
+  let switch = options.Opam.Opamcudf.switch in
   let switches = options.Opam.Opamcudf.switch::options.Opam.Opamcudf.switches in
+  let profiles = options.Opam.Opamcudf.profiles in
   let dll = 
     List.map (fun l ->
         let filelist = unpack_l `Opam l in
-        Opam.Packages.input_raw ~switches filelist
+        Opam.Packages.input_raw ~switch ~switches ~profiles filelist
     ) urilist
   in
   opam_load_list options dll

@@ -287,6 +287,7 @@ module DistribOptions = struct
 
   let opam_switch = StdOpt.str_option ~default:"system" ()
   let opam_switches = str_list_option ()
+  let opam_profiles = str_list_option ()
 
   let default_options = [
     "deb-native-arch";
@@ -295,7 +296,8 @@ module DistribOptions = struct
     "deb-ignore-essential";
     "deb-builds-from";
     "opam-switch";
-    "opam-switches"
+    "opam-switches";
+    "opam-profiles"
   ]
 
   let set_deb_options () =
@@ -341,8 +343,14 @@ module DistribOptions = struct
         Opt.get opam_switches
       else []
     in
+    let profiles =
+      if Opt.is_set opam_profiles then
+        Opt.get opam_profiles
+      else []
+    in
     { Opam.Opamcudf.switch = switch;
-      switches = switches
+      switches = switches;
+      profiles = profiles;
     }
   ;;
 
@@ -418,10 +426,14 @@ module DistribOptions = struct
       let group = opam_group options in
       if List.mem "opam-switch" default then
         add options ~group ~long_name:"opam-switch"
-          ~help:"Opam Active Switch" opam_switch;
+          ~help:"Active Switch" opam_switch;
       if List.mem "opam-switches" default then
         add options ~group ~long_name:"opam-switches"
-          ~help:"Opam Available Switches" opam_switches;
+          ~help:"Available Switches" opam_switches;
+      if List.mem "opam-profiles" default then
+        add options ~group ~long_name:"opam-profiles"
+          ~help:"Build Profiles" opam_profiles;
+
     end
 
   let add_option ?group ?short_name ?long_name ?help options v =

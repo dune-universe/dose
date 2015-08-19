@@ -20,11 +20,13 @@ open Common
 type options = {
   switch : string ; (* the active switch *)
   switches : string list ; (* list of available switches *)
+  profiles : string list (* list of build profiles *)
 }
 
 let default_options = {
   switch = "system";
   switches = [];
+  profiles = [];
 }
 
 let preamble = 
@@ -65,7 +67,7 @@ let tocudf tables ?(options=default_options) ?(extras=[]) pkg =
   List.fold_left (fun acc switch ->
     (* include this package if it is not declared as not available and if it is
      * used in some dependency. Otherwise there is no point to include it *)
-    if not(List.mem switch pkg#notavailable) then
+    if List.mem "all" pkg#switch || List.mem switch pkg#switch then
       let cudfpkg = 
         { Cudf.default_package with
           Cudf.package = CudfAdd.encode (switch^":"^pkg#name);

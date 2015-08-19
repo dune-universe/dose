@@ -75,7 +75,7 @@ let parse_int (_,s) = int_of_string s
 let parse_string_opt = function (_,"") -> None | (_,s) -> Some s
 
 let blank_regexp = Pcre.regexp "[ \t]+" ;;
-let comma_regexp = Pcre.regexp "[ \t]+,[ \t]+" ;;
+let comma_regexp = Pcre.regexp "[ \t]*,[ \t]*" ;;
 let parse_string_list ?(rex=blank_regexp) (_,s) = Pcre.split ~rex s
 
 (* parse and convert to a specific type *)

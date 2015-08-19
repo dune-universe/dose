@@ -24,40 +24,56 @@ include Util.Logging(struct let label = label end) ;;
 
 class package ?(name=("Package",None)) ?(version=("Version",None)) ?(depends=("Depends",None))
     ?(conflicts=("Conflicts",None)) ?(provides=("Provides",None)) ?(recommends=("Recommends",None)) 
-    ?(notavailable=("NotAvailable",None)) ?(build_depends=("Build-Depends",None)) 
-    ?(build_depends_indep=("Build-Depends-Indep",None)) par = object
+    ?(switch=("Switch",None)) ?(build_depends=("Build-Depends",None)) par = object
   
   inherit Pef.Packages.package ~name ~version ~depends ~conflicts ~provides ~recommends par
 
-  val notavailable : string list =
-    let f = Pef.Packages.parse_s ~opt:[] (Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp) in
-    Pef.Packages.get_field_value f par notavailable
+  val switch : string list =
+    let f = Pef.Packages.parse_s ~opt:["all"] (Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp) in
+    Pef.Packages.get_field_value f par switch
 
   val build_depends : Pef.Packages_types.vpkgformula =
     let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_vpkgformula in
     Pef.Packages.get_field_value f par build_depends
 
-  val build_depends_indep : Pef.Packages_types.vpkgformula =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_vpkgformula in
-    Pef.Packages.get_field_value f par build_depends_indep
-
-  method notavailable = notavailable
+  method switch = switch
   method build_depends = build_depends
-  method build_depends_indep = build_depends_indep
 
 end
 
-let vpkglist_filter switches l =
-  let select switches (vpkg,switchlist,_) =
-    match switchlist with
-    |[] -> (Printf.eprintf "empty" ; Some vpkg)
-    |_ -> if List.exists (fun (b,s) -> b && (List.mem s switches)) switchlist then (Printf.eprintf "Some" ; Some vpkg) else (Printf.eprintf "None" ; None)
-  in
-  List.filter_map (select switches) l
+let addswitch (switch,switches) ((name,sw),constr) =
+  match sw with
+  |None -> [((name,Some switch),constr)]
+  |Some "any" -> List.map (fun s -> ((name,Some s),constr)) switches
+  |Some _ -> [((name,sw),constr)]
 
-let vpkgformula_filter switches ll =
+let matchswitch switches = function
+  | [] -> true
+  | ((true,_)::_) as al ->
+    List.exists (fun (_,a) -> List.mem a switches) al
+  | ((false,_)::_) as al ->
+    List.for_all (fun (_,a) -> not(List.mem a switches)) al
+
+let matchos profiles = function
+  | [] -> true
+  | ll ->
+      List.exists (
+        List.for_all (fun (c,p) ->
+          c = (List.mem p profiles)
+        )
+      ) ll
+
+let select (switch,switches,profiles) (v,al,pl) =
+  if matchswitch (switch::switches) al && matchos profiles pl then
+    Some (addswitch (switch,switches) v)
+  else None
+
+let vpkglist_filter options l =
+  List.flatten (List.filter_map (select options) l)
+
+let vpkgformula_filter options ll =
   List.filter_map (fun l ->
-    match vpkglist_filter switches l with
+    match vpkglist_filter options l with
     |[] -> None
     |l -> Some l
   ) ll
@@ -65,33 +81,35 @@ let vpkgformula_filter switches ll =
 (* a stanza is not considered if the intersection between the
 active switch and the not available switches for a package is
 empty *)
-let parse_package_stanza switches filter par =
+let parse_package_stanza ((switch,switches,profiles) as options) filter par =
   let p () =
     let pkg =
       let depends =
         let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
-        ("Depends",Some (vpkgformula_filter switches (f "Depends" par)))
+        ("Depends",Some (vpkgformula_filter options (f "Depends" par)))
       in
       let conflicts =
         let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
-        ("Conflicts",Some (vpkglist_filter switches (f "Conflicts" par)))
+        ("Conflicts",Some (vpkglist_filter options (f "Conflicts" par)))
       in
       let provides =
         let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
-        ("Provides",Some (vpkglist_filter switches (f "Provides" par)))
+        ("Provides",Some (vpkglist_filter options (f "Provides" par)))
       in
       let recommends =
         let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
-        ("Recommends",Some (vpkgformula_filter switches (f "Recommends" par)))
+        ("Recommends",Some (vpkgformula_filter options (f "Recommends" par)))
       in
-      new package ~depends ~conflicts ~recommends ~provides par in
-    if List.exists (fun s -> not(List.mem s pkg#notavailable)) switches then pkg
+      new package ~depends ~conflicts ~recommends ~provides par
+    in
+    if List.mem "all" pkg#switch then pkg else
+    if List.exists (fun s -> List.mem s pkg#switch) (switch::switches) then pkg
     else
       raise (Pef.Packages.IgnorePackage (
         Printf.sprintf
         "None of the active switches [%s] are available [%s]" 
-        (ExtString.String.join "," switches)
-        (ExtString.String.join "," pkg#notavailable)
+        (ExtString.String.join "," (switch::switches))
+        (ExtString.String.join "," pkg#switch)
         )
       )
   in
@@ -113,10 +131,10 @@ let parse_package_stanza switches filter par =
       raise ( Pef.Packages.ParseError (f,err) )
   end
 
-let parse_packages_in ?filter switches fname ic =
+let parse_packages_in ?filter options fname ic =
   info "Parsing Packages file %s..." fname;
   try
-    let stanza_parser = parse_package_stanza switches filter in
+    let stanza_parser = parse_package_stanza options filter in
     Format822.parse_from_ch (Pef.Packages.packages_parser fname stanza_parser []) ic
   with Pef.Packages.ParseError (field,errmsg) -> fatal "Filename %s\n %s : %s" fname field errmsg
 
@@ -129,10 +147,10 @@ module Set = struct
 end
 
 (* XXX switches = empty ==> all switches are available ?? *)
-let input_raw ?filter ?(switches=[]) =
+let input_raw ?filter ?(switch="system") ?(switches=[]) ?(profiles=[]) =
   let module M = Format822.RawInput(Set) in
-  M.input_raw (parse_packages_in ?filter switches)
+  M.input_raw (parse_packages_in ?filter (switch,switches,profiles))
 
-let input_raw_ch ?filter ?(switches=[]) =
+let input_raw_ch ?filter ?(switch="system") ?(switches=[]) ?(profiles=[]) =
   let module M = Format822.RawInput(Set) in
-  M.input_raw_ch (parse_packages_in ?filter switches)
+  M.input_raw_ch (parse_packages_in ?filter (switch,switches,profiles))
