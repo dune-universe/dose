@@ -100,15 +100,15 @@ let deb_load_list options ?(status=[]) ?(raw=false) dll =
   let l = (preamble,cll,request,from_cudf,to_cudf,rawll) in
   Util.Timer.stop deb_load_list_timer l
       
-let opam_load_list options dll =
-  let pkglist = List.flatten dll in
+let opam_load_list options file =
+  let (request,pkglist) = Opam.Packages.input_raw file in
   let tables = Pef.Pefcudf.init_tables Versioning.Debian.compare pkglist in
   let from_cudf (p,i) = (p, Pef.Pefcudf.get_real_version tables (p,i)) in
   let to_cudf (p,v) = (p, Pef.Pefcudf.get_cudf_version tables (p,v)) in
-  let cll = List.map (fun l -> List.flatten (List.map (Opam.Opamcudf.tocudf ~options tables) l)) dll in
+  let cl = List.flatten (List.map (Opam.Opamcudf.tocudf ~options tables) pkglist) in
   let preamble = Pef.Pefcudf.preamble in
-  let request = Cudf.default_request in
-  (preamble,cll,request,from_cudf,to_cudf,None)
+  let request = Opam.Packages.requesttocudf tables (Cudf.load_universe cl) request in
+  (preamble,[cl;[]],request,from_cudf,to_cudf,None)
 
 let pef_load_list options dll =
   let extras = [("maintainer",("maintainer",`String None))] in
@@ -296,16 +296,15 @@ let pef_parse_input options urilist =
   pef_load_list options dll
 
 let opam_parse_input options urilist =
-  let switch = options.Opam.Opamcudf.switch in
-  let switches = options.Opam.Opamcudf.switch::options.Opam.Opamcudf.switches in
-  let profiles = options.Opam.Opamcudf.profiles in
-  let dll = 
-    List.map (fun l ->
-        let filelist = unpack_l `Opam l in
-        Opam.Packages.input_raw ~switch ~switches ~profiles filelist
-    ) urilist
-  in
-  opam_load_list options dll
+  match urilist with
+  |[[p]] when (unpack `Opam p) = "-" -> fatal "no stdin for opam yet"
+  |[[p]] -> opam_load_list options (unpack `Opam p)
+  |l ->
+    if List.length (List.flatten l) > 1 then
+      warning "more than one opam request file specified on the command line";
+    let p = List.hd (List.flatten l) in 
+    opam_load_list options (unpack `Opam p)
+;;
 
 let csw_parse_input urilist =
   let dll = 

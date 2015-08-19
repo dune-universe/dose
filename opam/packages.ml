@@ -22,6 +22,39 @@ open Common
 let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
+type request = {
+  install : Pef.Packages_types.vpkg list;
+  remove : Pef.Packages_types.vpkg list;
+  upgrade : bool;
+  switch : string;
+  switches : string list;
+  profiles : string list;
+  preferences: string;
+}
+
+let default_request = {
+  install = [];
+  remove = [];
+  upgrade = false;
+  switch = "";
+  switches = [];
+  profiles = [];
+  preferences = "";
+}
+
+let parse_req (loc,s) = Pef.Packages.lexbuf_wrapper Pef.Packages_parser.vpkglist_top (loc,s)
+
+let parse_request_stanza par =
+  {
+    install = Pef.Packages.parse_s ~opt:[] parse_req "Install" par;
+    remove = Pef.Packages.parse_s ~opt:[] parse_req "Remove" par;
+    upgrade = Pef.Packages.parse_s ~opt:false Pef.Packages.parse_bool "Upgrade" par;
+    switch = Pef.Packages.parse_s Pef.Packages.parse_string "Switch" par;
+    switches = Pef.Packages.parse_s ~opt:[] Pef.Packages.parse_string_list "Switches" par;
+    profiles = Pef.Packages.parse_s ~opt:[] Pef.Packages.parse_string_list "Profiles" par;
+    preferences = Pef.Packages.parse_s ~opt:"" Pef.Packages.parse_string "Preferences" par;
+  }
+
 class package ?(name=("Package",None)) ?(version=("Version",None)) ?(depends=("Depends",None))
     ?(conflicts=("Conflicts",None)) ?(provides=("Provides",None)) ?(recommends=("Recommends",None)) 
     ?(switch=("Switch",None)) ?(build_depends=("Build-Depends",None)) par = object
@@ -81,8 +114,8 @@ let vpkgformula_filter options ll =
 (* a stanza is not considered if the intersection between the
 active switch and the not available switches for a package is
 empty *)
-let parse_package_stanza ((switch,switches,profiles) as options) filter par =
-  let p () =
+let parse_package_stanza ((switch,switches,profiles) as options) par =
+  try
     let pkg =
       let depends =
         let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
@@ -102,8 +135,10 @@ let parse_package_stanza ((switch,switches,profiles) as options) filter par =
       in
       new package ~depends ~conflicts ~recommends ~provides par
     in
-    if List.mem "all" pkg#switch then pkg else
-    if List.exists (fun s -> List.mem s pkg#switch) (switch::switches) then pkg
+    (* XXX here I could be a tiny bit faster by parsing the switch first and then all other
+     * fields if necessary *)
+    if List.mem "all" pkg#switch then Some pkg else
+    if List.exists (fun s -> List.mem s pkg#switch) (switch::switches) then Some pkg
     else
       raise (Pef.Packages.IgnorePackage (
         Printf.sprintf
@@ -112,11 +147,6 @@ let parse_package_stanza ((switch,switches,profiles) as options) filter par =
         (ExtString.String.join "," pkg#switch)
         )
       )
-  in
-  try
-    if Option.is_none filter then Some (p ())
-    else if (Option.get filter) par then Some (p ())
-    else None
   with 
   |Pef.Packages.IgnorePackage s -> begin
       let n = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_name "Package" par in
@@ -131,26 +161,65 @@ let parse_package_stanza ((switch,switches,profiles) as options) filter par =
       raise ( Pef.Packages.ParseError (f,err) )
   end
 
-let parse_packages_in ?filter options fname ic =
-  info "Parsing Packages file %s..." fname;
+(* parse the entire file while filtering out unwanted stanzas *)
+let rec packages_parser ?(request=false) (req,acc) p =
+  let options = (req.switch,req.switches,req.profiles) in
+  match Format822_parser.stanza_822 Format822_lexer.token_822 p.Format822.lexbuf with
+  |None -> (req,acc) (* end of file *)
+  |Some stanza when request = true ->
+      let req = parse_request_stanza stanza in
+      packages_parser (req,acc) p
+  |Some stanza -> begin
+    match (parse_package_stanza options stanza) with
+    |None -> packages_parser (req,acc) p
+    |Some st -> packages_parser (req,st::acc) p
+  end
+;;
+
+let input_raw_ch ic =
+  Format822.parse_from_ch (
+    packages_parser ~request:true (default_request,[])
+  ) ic
+;;
+
+let input_raw file =
   try
-    let stanza_parser = parse_package_stanza options filter in
-    Format822.parse_from_ch (Pef.Packages.packages_parser fname stanza_parser []) ic
-  with Pef.Packages.ParseError (field,errmsg) -> fatal "Filename %s\n %s : %s" fname field errmsg
+    let ch =
+      match file with
+      |"-" -> IO.input_channel stdin
+      |_   -> Input.open_file file
+    in
+    let l = input_raw_ch ch in
+    let _ = Input.close_ch ch in
+    l
+  with Input.File_empty -> (default_request,[])
+;;
 
-module Set = struct
-  let pkgcompare p1 p2 = compare (p1#name,p1#version) (p2#name,p2#version)
-  include Set.Make(struct
-    type t = package
-    let compare (x:t) (y:t) = pkgcompare x y
-  end)
-end
-
-(* XXX switches = empty ==> all switches are available ?? *)
-let input_raw ?filter ?(switch="system") ?(switches=[]) ?(profiles=[]) =
-  let module M = Format822.RawInput(Set) in
-  M.input_raw (parse_packages_in ?filter (switch,switches,profiles))
-
-let input_raw_ch ?filter ?(switch="system") ?(switches=[]) ?(profiles=[]) =
-  let module M = Format822.RawInput(Set) in
-  M.input_raw_ch (parse_packages_in ?filter (switch,switches,profiles))
+let requesttocudf tables universe request =
+  let to_cudf (p,v) = (p,Pef.Pefcudf.get_cudf_version tables (p,v)) in
+  let select_packages ?(remove=false) l =
+    List.map (fun vpkgname ->
+      let (name,constr) = Pef.Pefcudf.pefvpkg to_cudf vpkgname in
+      if remove then (name,None)
+      else (name,constr)
+    ) l
+  in
+  if request.upgrade then
+    let to_upgrade = function
+      |[] ->
+        let filter pkg = pkg.Cudf.installed in
+        let l = Cudf.get_packages ~filter universe in
+        List.map (fun pkg -> (pkg.Cudf.package,None)) l
+      |l -> select_packages l
+    in
+    {Cudf.default_request with
+    Cudf.request_id = "Opam";
+    Cudf.upgrade = to_upgrade request.install;
+    Cudf.remove = select_packages ~remove:true request.remove;
+    }
+  else
+    {Cudf.default_request with
+    Cudf.request_id = "Opam";
+    Cudf.install = select_packages request.install;
+    Cudf.remove = select_packages ~remove:true request.remove;
+    }

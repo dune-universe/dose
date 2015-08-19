@@ -198,9 +198,6 @@ let tocudf tables ?(extras=[]) ?(extrasfun=(fun _ _ -> [])) ?(inst=false) pkg =
       Cudf.pkg_extra = (add_extra extras tables pkg)@(extrasfun tables pkg) ;
     }
 
-let lltocudf = loadll
-let ltocudf = loadl
-
 let load_list compare l =
   let timer = Util.Timer.create "Pef.ToCudf" in
   Util.Timer.start timer;
@@ -215,3 +212,15 @@ let load_universe compare l =
   Util.Timer.start timer;
   let univ = Cudf.load_universe pkglist in
   Util.Timer.stop timer univ
+
+(** convert a pef constraint into a cudf constraint *)
+let pefvpkg to_cudf vpkgname =
+  let constr n constr =
+    match CudfAdd.cudfop constr with
+    |None -> None
+    |Some(op,v) -> Some(op,snd(to_cudf (n,v)))
+  in
+  match vpkgname with
+  |((n,None),c) -> (CudfAdd.encode n,constr n c)
+  |((n,Some ("any"|"native")),c) -> (CudfAdd.encode n,constr n c)
+  |((n,Some a),c) -> (CudfAdd.encode (n^":"^a),constr n c)
