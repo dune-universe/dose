@@ -46,18 +46,18 @@ let parse_req (loc,s) = Pef.Packages.lexbuf_wrapper Pef.Packages_parser.vpkglist
 
 let parse_request_stanza par =
   {
-    install = Pef.Packages.parse_s ~opt:[] parse_req "Install" par;
-    remove = Pef.Packages.parse_s ~opt:[] parse_req "Remove" par;
-    upgrade = Pef.Packages.parse_s ~opt:false Pef.Packages.parse_bool "Upgrade" par;
-    switch = Pef.Packages.parse_s Pef.Packages.parse_string "Switch" par;
-    switches = Pef.Packages.parse_s ~opt:[] Pef.Packages.parse_string_list "Switches" par;
-    profiles = Pef.Packages.parse_s ~opt:[] Pef.Packages.parse_string_list "Profiles" par;
-    preferences = Pef.Packages.parse_s ~opt:"" Pef.Packages.parse_string "Preferences" par;
+    install = Pef.Packages.parse_s ~opt:[] parse_req "install" par;
+    remove = Pef.Packages.parse_s ~opt:[] parse_req "remove" par;
+    upgrade = Pef.Packages.parse_s ~opt:false Pef.Packages.parse_bool "upgrade" par;
+    switch = Pef.Packages.parse_s ~err:"(Missing active Switch)" Pef.Packages.parse_string "switch" par;
+    switches = Pef.Packages.parse_s ~opt:[] Pef.Packages.parse_string_list "switches" par;
+    profiles = Pef.Packages.parse_s ~opt:[] Pef.Packages.parse_string_list "profiles" par;
+    preferences = Pef.Packages.parse_s ~opt:"" Pef.Packages.parse_string "preferences" par;
   }
 
-class package ?(name=("Package",None)) ?(version=("Version",None)) ?(depends=("Depends",None))
-    ?(conflicts=("Conflicts",None)) ?(provides=("Provides",None)) ?(recommends=("Recommends",None)) 
-    ?(switch=("Switch",None)) ?(build_depends=("Build-Depends",None)) par = object
+class package ?(name=("package",None)) ?(version=("version",None)) ?(depends=("depends",None))
+    ?(conflicts=("conflicts",None)) ?(provides=("provides",None)) ?(recommends=("recommends",None)) 
+    ?(switch=("switch",None)) ?(installedlist=("installed",None)) ?(build_depends=("build-depends",None)) par = object
   
   inherit Pef.Packages.package ~name ~version ~depends ~conflicts ~provides ~recommends par
 
@@ -65,11 +65,16 @@ class package ?(name=("Package",None)) ?(version=("Version",None)) ?(depends=("D
     let f = Pef.Packages.parse_s ~opt:["all"] (Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp) in
     Pef.Packages.get_field_value f par switch
 
+  val installedlist : string list =
+    let f = Pef.Packages.parse_s ~opt:[] (Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp) in
+    Pef.Packages.get_field_value f par installedlist
+
   val build_depends : Pef.Packages_types.vpkgformula =
     let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_vpkgformula in
     Pef.Packages.get_field_value f par build_depends
 
   method switch = switch
+  method installedlist = installedlist
   method build_depends = build_depends
 
 end
@@ -119,19 +124,19 @@ let parse_package_stanza ((switch,switches,profiles) as options) par =
     let pkg =
       let depends =
         let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
-        ("Depends",Some (vpkgformula_filter options (f "Depends" par)))
+        ("depends",Some (vpkgformula_filter options (f "depends" par)))
       in
       let conflicts =
         let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
-        ("Conflicts",Some (vpkglist_filter options (f "Conflicts" par)))
+        ("donflicts",Some (vpkglist_filter options (f "donflicts" par)))
       in
       let provides =
         let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
-        ("Provides",Some (vpkglist_filter options (f "Provides" par)))
+        ("drovides",Some (vpkglist_filter options (f "drovides" par)))
       in
       let recommends =
         let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
-        ("Recommends",Some (vpkgformula_filter options (f "Recommends" par)))
+        ("decommends",Some (vpkgformula_filter options (f "decommends" par)))
       in
       new package ~depends ~conflicts ~recommends ~provides par
     in
@@ -194,32 +199,3 @@ let input_raw file =
     l
   with Input.File_empty -> (default_request,[])
 ;;
-
-let requesttocudf tables universe request =
-  let to_cudf (p,v) = (p,Pef.Pefcudf.get_cudf_version tables (p,v)) in
-  let select_packages ?(remove=false) l =
-    List.map (fun vpkgname ->
-      let (name,constr) = Pef.Pefcudf.pefvpkg to_cudf vpkgname in
-      if remove then (name,None)
-      else (name,constr)
-    ) l
-  in
-  if request.upgrade then
-    let to_upgrade = function
-      |[] ->
-        let filter pkg = pkg.Cudf.installed in
-        let l = Cudf.get_packages ~filter universe in
-        List.map (fun pkg -> (pkg.Cudf.package,None)) l
-      |l -> select_packages l
-    in
-    {Cudf.default_request with
-    Cudf.request_id = "Opam";
-    Cudf.upgrade = to_upgrade request.install;
-    Cudf.remove = select_packages ~remove:true request.remove;
-    }
-  else
-    {Cudf.default_request with
-    Cudf.request_id = "Opam";
-    Cudf.install = select_packages request.install;
-    Cudf.remove = select_packages ~remove:true request.remove;
-    }

@@ -100,14 +100,22 @@ let deb_load_list options ?(status=[]) ?(raw=false) dll =
   let l = (preamble,cll,request,from_cudf,to_cudf,rawll) in
   Util.Timer.stop deb_load_list_timer l
       
-let opam_load_list options file =
+let opam_load_list ?options file =
   let (request,pkglist) = Opam.Packages.input_raw file in
   let tables = Pef.Pefcudf.init_tables Versioning.Debian.compare pkglist in
   let from_cudf (p,i) = (p, Pef.Pefcudf.get_real_version tables (p,i)) in
   let to_cudf (p,v) = (p, Pef.Pefcudf.get_cudf_version tables (p,v)) in
+  let options =
+    match options with
+    |None -> {
+      Opam.Opamcudf.switch = request.Opam.Packages.switch;
+      switches = request.Opam.Packages.switches;
+      profiles = request.Opam.Packages.profiles }
+    |Some opt -> opt
+  in
   let cl = List.flatten (List.map (Opam.Opamcudf.tocudf ~options tables) pkglist) in
   let preamble = Pef.Pefcudf.preamble in
-  let request = Opam.Packages.requesttocudf tables (Cudf.load_universe cl) request in
+  let request = Opam.Opamcudf.requesttocudf tables (Cudf.load_universe cl) request in
   (preamble,[cl;[]],request,from_cudf,to_cudf,None)
 
 let pef_load_list options dll =
@@ -295,15 +303,15 @@ let pef_parse_input options urilist =
   in
   pef_load_list options dll
 
-let opam_parse_input options urilist =
+let opam_parse_input ?options urilist =
   match urilist with
   |[[p]] when (unpack `Opam p) = "-" -> fatal "no stdin for opam yet"
-  |[[p]] -> opam_load_list options (unpack `Opam p)
+  |[[p]] -> opam_load_list ?options (unpack `Opam p)
   |l ->
     if List.length (List.flatten l) > 1 then
       warning "more than one opam request file specified on the command line";
     let p = List.hd (List.flatten l) in 
-    opam_load_list options (unpack `Opam p)
+    opam_load_list ?options (unpack `Opam p)
 ;;
 
 let csw_parse_input urilist =
@@ -349,17 +357,16 @@ let parse_input ?(options=None) ?(raw=false) urilist =
   |`Deb, None
   |`DebSrc, None -> deb_parse_input Debian.Debcudf.default_options ~raw filelist
   |`Pef, None -> pef_parse_input Debian.Debcudf.default_options filelist
-  |`Opam, None -> opam_parse_input Opam.Opamcudf.default_options filelist
 
   |`Deb, Some (StdOptions.Deb opt)
   |`DebSrc, Some (StdOptions.Deb opt) -> deb_parse_input opt ~raw filelist
   
 (*  |`Edsp, Some (StdOptions.Edsp opt) -> edsp_parse_input opt filelist *)
   |`Edsp, _ -> edsp_parse_input Debian.Debcudf.default_options filelist
+  |`Opam, _ -> opam_parse_input filelist
+(* |`Opam, Some (StdOptions.Opam options) -> opam_parse_input ~options filelist *)
 
   |`Pef, Some (StdOptions.Pef opt) -> pef_parse_input opt filelist
-
-  |`Opam, Some (StdOptions.Opam opt) -> opam_parse_input opt filelist
 
   |`Csw, None -> csw_parse_input filelist
 

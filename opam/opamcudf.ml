@@ -24,7 +24,7 @@ type options = {
 }
 
 let default_options = {
-  switch = "system";
+  switch = "";
   switches = [];
   profiles = [];
 }
@@ -72,6 +72,7 @@ let tocudf tables ?(options=default_options) ?(extras=[]) pkg =
         { Cudf.default_package with
           Cudf.package = CudfAdd.encode (switch^":"^pkg#name);
           Cudf.version = Pef.Pefcudf.get_cudf_version tables (pkg#name,pkg#version) ;
+          Cudf.installed = List.mem switch pkg#installedlist ;
           Cudf.depends = Pef.Pefcudf.loadll tables pkg#depends;
           Cudf.conflicts = Pef.Pefcudf.loadlc tables pkg#name pkg#conflicts;
           Cudf.provides = Pef.Pefcudf.loadlp tables pkg#provides ;
@@ -80,6 +81,40 @@ let tocudf tables ?(options=default_options) ?(extras=[]) pkg =
       in (cudfpkg::acc)
     else acc
   ) [] (options.switch::options.switches)
+
+let requesttocudf tables universe request =
+  let to_cudf (p,v) = (p,Pef.Pefcudf.get_cudf_version tables (p,v)) in
+  let select_packages ?(remove=false) l =
+    List.map (fun (vpkgname,constr) ->
+      let vpkgname =
+        match vpkgname with
+        |(n,None) -> (n,Some request.Packages.switch)
+        |_ -> vpkgname
+      in
+      let (name,constr) = Pef.Pefcudf.pefvpkg to_cudf (vpkgname,constr) in
+      if remove then (name,None)
+      else (name,constr)
+    ) l
+  in
+  if request.Packages.upgrade then
+    let to_upgrade = function
+      |[] ->
+        let filter pkg = pkg.Cudf.installed in
+        let l = Cudf.get_packages ~filter universe in
+        List.map (fun pkg -> (pkg.Cudf.package,None)) l
+      |l -> select_packages l
+    in
+    {Cudf.default_request with
+    Cudf.request_id = "Opam";
+    Cudf.upgrade = to_upgrade request.Packages.install;
+    Cudf.remove = select_packages ~remove:true request.Packages.remove;
+    }
+  else
+    {Cudf.default_request with
+    Cudf.request_id = "Opam";
+    Cudf.install = select_packages request.Packages.install;
+    Cudf.remove = select_packages ~remove:true request.Packages.remove;
+    }
 
 let load_list compare l =
   let timer = Util.Timer.create "Opam.ToCudf" in
