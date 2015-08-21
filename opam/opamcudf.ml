@@ -30,16 +30,20 @@ let default_options = {
 }
 
 let preamble = 
-  (* number is a mandatory property -- no default *)
   let l = [
     ("recommends",(`Vpkgformula (Some [])));
     ("number",(`String None));
+    ("active",(`Int None));
     ]
   in
   CudfAdd.add_properties Cudf.default_preamble l
 
-let add_extra extras tables pkg =
+let add_extra extras tables (switch,activeswitch) pkg =
   let number = ("number",`String pkg#version) in
+  let activeswitch =
+    let n = if switch = activeswitch then 1 else 0 in
+    ("active",`Int n)
+  in
   let l =
     List.filter_map (fun (debprop, (cudfprop,v)) ->
       let debprop = String.lowercase debprop in
@@ -57,26 +61,27 @@ let add_extra extras tables pkg =
     |(_,`Vpkgformula []) -> None
     |e -> Some e
   )
-  [number; recommends] @ l
+  [number; recommends; activeswitch] @ l
 ;;
 
 (* each package generates more than one cudf package. One for active switch
    that is not declaclare not available by the package . Each package is 
    translated differently considering the profiles associated to each dependency *)
 let tocudf tables ?(options=default_options) ?(extras=[]) pkg =
+  let archs = options.switch::options.switches in
   List.fold_left (fun acc switch ->
     (* include this package if it is not declared as not available and if it is
      * used in some dependency. Otherwise there is no point to include it *)
     if List.mem "all" pkg#switch || List.mem switch pkg#switch then
       let cudfpkg = 
         { Cudf.default_package with
-          Cudf.package = CudfAdd.encode (switch^":"^pkg#name);
+          Cudf.package = CudfAdd.encode (pkg#name^":"^switch);
           Cudf.version = Pef.Pefcudf.get_cudf_version tables (pkg#name,pkg#version) ;
           Cudf.installed = List.mem switch pkg#installedlist ;
-          Cudf.depends = Pef.Pefcudf.loadll tables pkg#depends;
-          Cudf.conflicts = Pef.Pefcudf.loadlc tables pkg#name pkg#conflicts;
-          Cudf.provides = Pef.Pefcudf.loadlp tables pkg#provides ;
-          Cudf.pkg_extra = add_extra extras tables pkg ;
+          Cudf.depends = Pef.Pefcudf.loadll tables ~arch:switch ~archs pkg#depends;
+          Cudf.conflicts = Pef.Pefcudf.loadlc tables ~arch:switch ~archs pkg#conflicts;
+          Cudf.provides = Pef.Pefcudf.loadlp tables ~arch:switch ~archs pkg#provides ;
+          Cudf.pkg_extra = add_extra extras tables (switch,options.switch) pkg ;
         }
       in (cudfpkg::acc)
     else acc

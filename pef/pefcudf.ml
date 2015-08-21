@@ -124,34 +124,41 @@ let get_real_version tables (p,i) =
   with Not_found ->
     fatal "Cannot find real version for %s (= %d)" p i
 
-let loadl tables l =
+let encode_vpkgname ?arch ?(archs=[]) vpkgname =
+  let aux name = function
+    |Some a -> name^":"^a
+    |None -> name
+  in
+  match vpkgname with
+  |(name,None) -> [CudfAdd.encode (aux name arch)]
+  |(name,Some ("any" | "native" )) -> List.map (fun a -> CudfAdd.encode (name^":"^a)) archs
+  |(name,Some a) -> [CudfAdd.encode (name^":"^a)]
+
+let loadl tables ?arch ?(archs=[]) l =
   List.flatten (
-    List.map (fun ((name,aop),constr) ->
-      let encname =
-        let n = match aop with Some a -> name^":"^a | None -> name in
-        CudfAdd.encode n
-      in
-      match CudfAdd.cudfop constr with
-      |None -> [(encname, None)]
-      |Some(op,v) -> [(encname,Some(op,get_cudf_version tables (name,v)))]
+    List.map (fun ((name,_) as vpkgname,constr) ->
+      List.map (fun encname ->
+        match CudfAdd.cudfop constr with
+        |None -> (encname, None)
+        |Some(op,v) -> (encname,Some(op,get_cudf_version tables (name,v)))
+      ) (encode_vpkgname ?arch ~archs vpkgname)
     ) l
   )
 
-let loadlc tables name l = (loadl tables l)
+let loadlp tables ?arch ?(archs=[]) l =
+  List.flatten (
+    List.map (fun ((name,_) as vpkgname,constr) ->
+      List.map (fun encname ->
+        match CudfAdd.cudfop constr with
+        |None -> (encname, None)
+        |Some(`Eq,v) -> (encname,Some(`Eq,get_cudf_version tables (name,v)))
+        |_ -> assert false
+      ) (encode_vpkgname ?arch ~archs vpkgname)
+    ) l
+  )
 
-let loadlp tables l =
-  List.map (fun ((name,aop),constr) ->
-    let encname =
-      let n = match aop with Some a -> name^":"^a | None -> name in
-      CudfAdd.encode n
-    in
-    match CudfAdd.cudfop constr with
-    |None  -> (encname, None)
-    |Some(`Eq,v) -> (encname,Some(`Eq,get_cudf_version tables (name,v)))
-    |_ -> assert false
-  ) l
-
-let loadll tables ll = List.map (loadl tables) ll
+let loadlc tables ?arch ?(archs=[]) l = (loadl tables ?arch ~archs l)
+let loadll tables ?arch ?(archs=[]) ll = List.map (fun l -> (loadl tables ?arch ~archs l)) ll
 
 (* ========================================= *)
 
@@ -193,7 +200,7 @@ let tocudf tables ?(extras=[]) ?(extrasfun=(fun _ _ -> [])) ?(inst=false) pkg =
       Cudf.package = CudfAdd.encode pkg#name ;
       Cudf.version = get_cudf_version tables (pkg#name,pkg#version) ;
       Cudf.depends = loadll tables pkg#depends;
-      Cudf.conflicts = loadlc tables pkg#name pkg#conflicts;
+      Cudf.conflicts = loadlc tables pkg#conflicts;
       Cudf.provides = loadlp tables pkg#provides ;
       Cudf.pkg_extra = (add_extra extras tables pkg)@(extrasfun tables pkg) ;
     }

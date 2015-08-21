@@ -114,7 +114,7 @@ let opam_load_list ?options file =
     |Some opt -> opt
   in
   let cl = List.flatten (List.map (Opam.Opamcudf.tocudf ~options tables) pkglist) in
-  let preamble = Pef.Pefcudf.preamble in
+  let preamble = Opam.Opamcudf.preamble in
   let request = Opam.Opamcudf.requesttocudf tables (Cudf.load_universe cl) request in
   (preamble,[cl;[]],request,from_cudf,to_cudf,None)
 

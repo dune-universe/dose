@@ -103,7 +103,7 @@ let matchos profiles = function
 
 let select (switch,switches,profiles) (v,al,pl) =
   if matchswitch (switch::switches) al && matchos profiles pl then
-    Some (addswitch (switch,switches) v)
+    Some (*addswitch (switch,switches*) ([v])
   else None
 
 let vpkglist_filter options l =
@@ -128,15 +128,15 @@ let parse_package_stanza ((switch,switches,profiles) as options) par =
       in
       let conflicts =
         let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
-        ("donflicts",Some (vpkglist_filter options (f "donflicts" par)))
+        ("conflicts",Some (vpkglist_filter options (f "conflicts" par)))
       in
       let provides =
         let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
-        ("drovides",Some (vpkglist_filter options (f "drovides" par)))
+        ("provides",Some (vpkglist_filter options (f "provides" par)))
       in
       let recommends =
         let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
-        ("decommends",Some (vpkgformula_filter options (f "decommends" par)))
+        ("recommends",Some (vpkgformula_filter options (f "recommends" par)))
       in
       new package ~depends ~conflicts ~recommends ~provides par
     in
