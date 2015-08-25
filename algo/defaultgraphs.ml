@@ -110,14 +110,14 @@ module SyntacticDependencyGraph = struct
       |OrDepends of Cudf_types.vpkglist
       |DirDepends of Cudf_types.vpkglist
       |MissingDepends of Cudf_types.vpkglist
-      |Conflict
+      |Conflict of Cudf_types.vpkg
       |Condensed
     type t = s ref
 
     let compare x y = Pervasives.compare !x !y
     let hash x = Hashtbl.hash !x
     let equal x y = ((compare x y) = 0)
-    let default = ref Conflict
+    let default = ref (Conflict ("",None))
   end
 
   let default_pp = ref CudfAdd.default_pp 
@@ -174,7 +174,7 @@ module SyntacticDependencyGraph = struct
               |_ -> `Style `Solid
             in
             [style ; `Label (CudfAdd.string_of (CudfAdd.pp_vpkglist !default_pp) (List.unique vpkgs))]
-        |PkgE.Conflict -> [`Color 0xFF0000; `Style `Solid; `Dir `None; `Label "#"]
+        |PkgE.Conflict _ -> [`Color 0xFF0000; `Style `Solid; `Dir `None; `Label "#"]
         |PkgE.Condensed -> [`Style `Solid]
     end
 
@@ -293,9 +293,9 @@ module SyntacticDependencyGraph = struct
           let vp = add_node p in
           let edge =
             if G.V.compare vpid vp > 0 then
-              G.E.create vpid (ref PkgE.Conflict) vp
+              G.E.create vpid (ref (PkgE.Conflict ("",None))) vp
             else
-              G.E.create vp (ref PkgE.Conflict) vpid
+              G.E.create vp (ref (PkgE.Conflict ("",None))) vpid
           in
           G.add_edge_e gr edge
       ) (CudfAdd.who_conflicts conflicts univ pkg)
@@ -303,78 +303,6 @@ module SyntacticDependencyGraph = struct
     ;
     Util.Timer.stop timer gr
   ;;
-
-  (* XXX rewrite this using a bsf pre and post functions *)
-  let all_paths g v =
-    let pp v = 
-      match G.V.label v with
-      |PkgV.Or i -> "Or"
-      |PkgV.Pkg {value; root = r} -> 
-          (CudfAdd.string_of_package value)
-      |PkgV.Set s -> 
-          let l = CudfAdd.Cudf_set.elements s in
-          let p = CudfAdd.Cudf_set.choose s in
-          Printf.sprintf "\"%s (=%s)\""
-          (CudfAdd.decode p.Cudf.package)
-          (Util.string_of_list ~delim:("[","]") CudfAdd.string_of_version l)
-      |PkgV.Missing _ -> "Missing"
-    in
-    let h = Hashtbl.create 10 in
-    let bind m f = List.flatten (List.map f m) in
-    let rec aux acc v =
-      (* let guard e = match !(G.E.label e) with |PkgE.Conflict -> [] | _ -> [e] in *)
-      if Hashtbl.mem h v then [] else begin
-        Hashtbl.add h v ();
-        bind ( (G.succ_e g v)) (fun e ->
-          let c = G.E.dst e in
-          Printf.printf "Succ of %s\n" (pp v);
-          Printf.printf "partial path : %s\n%!" (Util.string_of_list pp (c::acc));
-          match !(G.E.label e) with
-          |PkgE.Conflict -> [c::acc]
-          |PkgE.MissingDepends _ -> [c::acc]
-          |_ -> aux (c::acc) c
-        )
-      end
-    in
-    List.iter (fun l ->
-      Printf.printf "AAAAAAAAAAAAAAAAAAA\n%!";
-      Printf.printf "path : %s\n%!" (Util.string_of_list pp l);
-    ) (aux [v] v)
-  ;;
-
-  let pp v = 
-    match G.V.label v with
-    |PkgV.Or i -> "Or"
-    |PkgV.Pkg {value = p; root = r} -> 
-        (CudfAdd.string_of_package p)
-    |PkgV.Set s -> 
-        let l = CudfAdd.Cudf_set.elements s in
-        let p = CudfAdd.Cudf_set.choose s in
-        Printf.sprintf "\"%s (=%s)\""
-        (CudfAdd.decode p.Cudf.package)
-        (Util.string_of_list ~delim:("[","]") CudfAdd.string_of_version l)
-    |PkgV.Missing _ -> "Missing"
-
-  (* XXX rewrite this using a bsf pre and post functions *)
-  let all_paths g v =
-    let bind m f = List.flatten (List.map f m) in
-    let rec aux acc v =
-      bind (G.succ_e g v) (fun e ->
-        let c = G.E.dst e in
-        Printf.printf "Succ of %s\n" (pp v);
-        Printf.printf "partial path : %s\n%!" (Util.string_of_list pp (c::acc));
-        match !(G.E.label e) with
-        |PkgE.Conflict -> [acc]
-        |PkgE.MissingDepends _ -> [c::acc]
-        |_ -> aux (c::acc) c
-      )
-    in
-    let ll = (aux [v] v) in
-    List.iter (fun l ->
-      Printf.printf "path : %s\n%!" (Util.string_of_list pp l);
-    ) ll
-  ;;
-
 
 end
 
