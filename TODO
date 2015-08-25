@@ -1,3 +1,5 @@
+- add unit tests for opam and pef module
+
 - add --deb-output822 to DistcheckOptions to output 822 package list
   for distcheck, buildcheck etc of installable packages
 

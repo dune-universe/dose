@@ -307,11 +307,12 @@ let preamble =
     ("filename",(`String (Some "")));
     ("installedsize",(`Int (Some 0)));
     ("multiarch",(`String (Some "")));
+    ("native",(`Int (Some 0)));
     ]
   in
   CudfAdd.add_properties Cudf.default_preamble l
 
-let add_extra_default extras tables pkg =
+let add_extra ?native_arch extras tables pkg =
   let check = function [] :: _ -> failwith (Printf.sprintf "Malformed dep (%s %s)" pkg#name pkg#version) |l -> l in
   let name = if String.starts_with pkg#name "src:" then
       String.sub pkg#name 4 ((String.length pkg#name) - 4)
@@ -335,6 +336,10 @@ let add_extra_default extras tables pkg =
   in
   let recommends = ("recommends", `Vpkgformula (check (loadll tables pkg#recommends))) in
   let replaces = ("replaces", `Vpkglist (loadl tables pkg#replaces)) in
+  let native =
+    let n = if Option.is_some native_arch && (Option.get native_arch) = pkg#architecture then 1 else 0 in
+    ("native",`Int n)
+  in
   let extras = 
     ("Type",("type",`String None))::
     ("Filename",("filename",`String None))::
@@ -360,7 +365,7 @@ let add_extra_default extras tables pkg =
   [priority; name; architecture; number;
   source; sourcenumber; sourceversion; 
   recommends; replaces;
-  essential;build_essential]@ l
+  essential;build_essential;native]@ l
 ;;
 
 let set_keep pkg =
@@ -373,9 +378,6 @@ let set_keep pkg =
 let add_inst inst pkg =
   if inst then true 
   else Packages.is_installed pkg
-
-let add_extra extras tables pkg =
-  add_extra_default extras tables pkg
 
 let tocudf tables ?(options=default_options) ?(inst=false) pkg =
   let bind m f = List.flatten (List.map f m) in
@@ -515,7 +517,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
       Cudf.conflicts = _conflicts ;
       Cudf.provides = _provides ;
       Cudf.installed = add_inst inst pkg ;
-      Cudf.pkg_extra = add_extra options.extras_opt tables pkg ;
+      Cudf.pkg_extra = add_extra ~native_arch options.extras_opt tables pkg ;
     }
   end else
     (* :any and :native are not yet allowed in the Debian archive because of
