@@ -294,7 +294,7 @@ let test_cluster =
           Hashtbl.fold (fun (sn, sv) l acc ->
             (sn,sv,SubClusterSetTest.of_list (
               List.map (fun (v,rv,cluster) -> 
-                let cl = List.map(fun pkg -> (pkg.Packages.name,pkg.Packages.version)) cluster in
+                let cl = List.map(fun pkg -> (pkg#name,pkg#version)) cluster in
                 (v,rv,PkgSetTest.of_list cl)
               ) l
             ))::acc
@@ -460,24 +460,12 @@ let test_multiarch =
     "multi arch same provide-conflicts" >:: (fun _ -> 
       (*
       let f = Filename.concat test_dir "deb/edsp/multiarch-same-provides.edsp" in
-      let (request,pkglist) = Edsp.input_raw ~archs:["arch1";"arch2"] f in
+      let (request,pkglist) = Edsp.input_raw f in
       let tables = Debcudf.init_tables pkglist in
-      let options = {
-        Debcudf.default_options with
-        Debcudf.native = "arch1";
-        Debcudf.foreign = ["arch2"] }
-      in
-      let default_preamble =
-        let l = List.map snd Edsp.extras_tocudf in
-        CudfAdd.add_properties Debcudf.preamble l
-      in
-      let cudf_pkglist = List.map (fun pkg -> Edsp.tocudf tables ~options pkg) pkglist in
+      let cudf_pkglist = List.map (fun pkg -> Edsp.tocudf tables pkg) pkglist in
       let universe = Cudf.load_universe cudf_pkglist in
       let cudf_request = Edsp.requesttocudf tables universe request in
-      let r = Algo.Depsolver.check_request (Some default_preamble,cudf_pkglist,cudf_request) in
-      assert_equal (Algo.Diagnostic.is_solution r) true
-      *) 
-      ()
+*) ()
     );
   ] 
 ;;
@@ -644,11 +632,11 @@ let parse_pkg_req_triplets =
 
     ("suite +name=1.2", 
      ( (Some "suite"), "+name=1.2"), 
-     returns (Some Packages_types.I, (("name", None), Some ("=", "1.2")), Some "suite"));
+     returns (Some Pef.Packages_types.I, (("name", None), Some ("=", "1.2")), Some "suite"));
 
     ("suite -name=1.2", 
      ( (Some "suite"), "-name=1.2"), 
-     returns (Some Packages_types.R, (("name", None), Some ("=", "1.2")), Some "suite"));
+     returns (Some Pef.Packages_types.R, (("name", None), Some ("=", "1.2")), Some "suite"));
 
     ("suite name/suite1", 
      ( (Some "suite"), "name/suite1"), 
@@ -664,11 +652,11 @@ let parse_pkg_req_triplets =
 
     ("none +name", 
      ( None, "+name"), 
-     returns (Some Packages_types.I, (("name", None), None), None));
+     returns (Some Pef.Packages_types.I, (("name", None), None), None));
 
     ("none -name", 
      ( None, "-name"), 
-     returns (Some Packages_types.R, (("name", None), None), None));
+     returns (Some Pef.Packages_types.R, (("name", None), None), None));
 
     ("suite name", 
      ( Some "suite", "name"), 
@@ -699,7 +687,7 @@ let parse_pref_package_triplets =
   in
   [ ("asterisk 1", "*",          returns Apt.Pref.Star);
     ("asterisk 2", "    *     ", returns Apt.Pref.Star);
-    ("name 1",     "name1",      returns (Apt.Pref.Package (Packages.parse_name (Format822.dummy_loc, "name1")))); ]
+    ("name 1",     "name1",      returns (Apt.Pref.Package (Pef.Packages.parse_name (Format822.dummy_loc, "name1")))); ]
 
 (* parse_pin *)
 let parse_pin_triplets =
@@ -878,8 +866,8 @@ let test_sources2packages =
   let buildarch = "amd64" in
   let sources = Sources.sources2packages ~profiles:["stage1"] buildarch hostarch packagelist in
   let function_to_test src =
-    let src = List.find (fun s -> s.Packages.name = src) sources in
-    src.Packages.depends
+    let src = List.find (fun s -> s#name = src) sources in
+    src#depends
   in
   let printer = Printer.string_of_vpkgformula in
   let returns = returns_result ~printer function_to_test in

@@ -51,7 +51,7 @@ module Options = struct
 
   include StdOptions.DistribOptions ;;
   let default = List.remove StdOptions.DistribOptions.default_options "deb-host-arch" in
-  StdOptions.DistribOptions.add_options ~default options ;
+  StdOptions.DistribOptions.add_debian_options ~default options ;
   StdOptions.DistribOptions.add_option options ~long_name:"deb-triplettable"
     ~help:"Path to an architecture triplet table like /usr/share/dpkg/triplettable" triplettable;
   StdOptions.DistribOptions.add_option options ~long_name:"deb-cputable"

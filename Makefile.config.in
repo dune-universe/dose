@@ -65,7 +65,8 @@ LIBNAMES += common/common \
 						algo/algo \
 						deb/debian \
 						opencsw/csw \
-						pef/pef 
+						pef/pef \
+						opam/opam
 
 #rpm support
 ifeq ("@HAS_RPM@","yes")

@@ -22,7 +22,8 @@ module Options = struct
   include StdOptions.MakeOptions(struct let options = options end)
 
   include StdOptions.DistribOptions;;
-  StdOptions.DistribOptions.add_options options ;;
+  StdOptions.DistribOptions.add_debian_options options ;;
+  StdOptions.DistribOptions.add_opam_options options ;;
 
   let dot = StdOpt.store_true ()
   let detrans = StdOpt.store_true ()

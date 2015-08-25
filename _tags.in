@@ -1,5 +1,5 @@
 true: -traverse
-<{common,algo,doseparse,doseparseNoRpm,deb,rpm,applications,experimental}/**>: traverse
+<{common,algo,doseparse,doseparseNoRpm,deb,opam,opencsw,pef,rpm,applications,experimental}/**>: traverse
 
 <doseparseNoRpm/*.ml{i,}>: pp(cppo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_OCAMLGRAPH@)
 <doseparse/*.ml{i,}>: pp(cppo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_OCAMLGRAPH@)
@@ -14,7 +14,7 @@ true: -traverse
 <*/tests.*>: package(oUnit), package(extlib), @PKG_CUDF@, package(re.pcre), package(zip), package(bz2)
 
 <common/tests.*>: use_common
-<deb/tests.*>: use_common, use_versioning, use_debian
+<deb/tests.*>: use_common, use_versioning, use_pef, use_debian
 <rpm/tests.*>: use_common, use_versioning, @USE_RPM@, use_algo, package(ocamlgraph), package(re.str)
 <algo/tests.*>: use_common, use_algo, package(ocamlgraph)
 
@@ -25,9 +25,10 @@ true: -traverse
 <rpm/*.ml{i,}>: use_common
 <algo/*.ml{i,}>: use_common, @PKG_OCAMLGRAPH@
 <pef/*.ml{i,}>: use_common, use_debian
-<opencsw/*.ml{i,}>: use_common, use_debian
-<doseparse/*.ml{i,}>: use_common, use_versioning, use_debian, use_pef, use_csw, @USE_RPM@
-<doseparseNoRpm/*.ml{i,}>: use_common, use_versioning, use_debian, use_pef, use_csw
+<opam/*.ml{i,}>: use_common, use_pef
+<opencsw/*.ml{i,}>: use_common, use_versioning
+<doseparse/*.ml{i,}>: use_common, use_versioning, use_debian, use_opam, use_pef, use_csw, @USE_RPM@
+<doseparseNoRpm/*.ml{i,}>: use_common, use_versioning, use_debian, use_opam, use_pef, use_csw
 <rpm/librpm4_stubs.*>: use_rpm, use_rpm4
 <rpm/librpm5_stubs.*>: use_rpm, use_rpm5
 <rpm/rpm.cm{x,}a>: @USE_RPM@
@@ -37,12 +38,13 @@ true: -traverse
 <algo/*.cmx> and not <algo/algo.cmx>: for-pack(Algo)
 <deb/*.cmx> and not <deb/debian.cmx>: for-pack(Debian)
 <pef/*.cmx> and not <pef/pef.cmx>: for-pack(Pef)
+<opam/*.cmx> and not <opam/opam.cmx>: for-pack(Opam)
 <opencsw/*.cmx> and not <opencsw/csw.cmx>: for-pack(Csw)
 <rpm/*.cmx> and not <rpm/rpm.cmx>: for-pack(Rpm)
 <doseparse/*.cmx> and not <doseparse/doseparse*.cmx>: for-pack(Doseparse)
 <doseparseNoRpm/*.cmx> and not <doseparseNoRpm/doseparse*.cmx>: for-pack(DoseparseNoRpm)
 
-<{applications,experimental}/*>: use_common, use_versioning, use_debian, use_pef, use_csw
+<{applications,experimental}/*>: use_common, use_versioning, use_debian, use_opam, use_pef, use_csw
 <{applications,experimental}/*>: package(extlib), package(re.pcre), package(unix), package(re.str)
 <{applications,experimental}/*>: @PKG_CUDF@, @PKG_OCAMLGRAPH@, @PKG_ZIP@, @PKG_BZ2@
 

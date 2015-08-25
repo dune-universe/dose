@@ -4,21 +4,14 @@
 open ExtLib
 open Common
 
-let parse_relop = function
-  | "="  -> `Eq
-  | "!=" -> `Neq
-  | ">=" -> `Geq
-  | ">" | ">>"  -> `Gt
-  | "<=" -> `Leq
-  | "<" | "<<"  -> `Lt
-  | _ -> assert false   (* lexer shouldn't have returned such a RELOP! *)
-
-let parse_multiarch = function
-  |("None"|"none"|"No"|"no") -> `No
-  |("Allowed"|"allowed") -> `Allowed
-  |("Foreign"|"foreign") -> `Foreign
-  |("Same"|"same") -> `Same
-  |s -> raise (Format822.Type_error ("Field Multi-Arch has a wrong value : "^ s))
+let parse_vpkgname name =
+  try
+    match String.split name ":" with
+    |n,"any" -> (n,Some "any")
+    |n,"native" -> (n,Some "native")
+    |n,"" -> raise Parsing.Parse_error
+    |n,a -> (n,Some a)
+  with ExtString.Invalid_string -> (name,None)
 
 %}
 
@@ -32,7 +25,6 @@ let parse_multiarch = function
 %type <Packages_types.version> version_top 
 
 %type <Packages_types.architecture list> archlist_top
-%type <Packages_types.multiarch> multiarch_top 
 %type <Packages_types.source> source_top 
 
 %type <Packages_types.vpkgname> vpkgname_top
@@ -47,17 +39,15 @@ let parse_multiarch = function
 %type <Packages_types.vpkgreq list> requestlist_top
 
 %start pkgname_top version_top
-%start multiarch_top source_top
+%start source_top
 %start vpkgname_top vpkg_top vpkglist_top vpkgformula_top
 %start builddepsformula_top builddepslist_top
 %start request_top requestlist_top archlist_top
-
 
 %%
 
 pkgname_top: pkgname EOL { $1 } ;
 version_top: version EOL { $1 } ;
-multiarch_top: multiarch EOL { $1 } ;
 source_top: source EOL { $1 } ;
 
 vpkgname_top: vpkgname EOL { $1 } ;
@@ -77,7 +67,6 @@ archlist_top: archlist EOL { $1 } ;
 
 pkgname: IDENT { $1 } ;
 version: IDENT { $1 } ;
-multiarch: IDENT { parse_multiarch $1 }
 
 source:
   |IDENT                        { ($1,None) }
@@ -92,10 +81,7 @@ relop:
 
 /**************************************/ 
 
-vpkgname:
-  |IDENT              { try let (n,a) = String.split $1 ":" in (n,Some a) 
-                        with Invalid_string -> ($1,None) } 
-;
+vpkgname: IDENT { parse_vpkgname $1 } ;
 
 constr:
   |                            { None }
@@ -127,9 +113,9 @@ or_formula:
 /**************************************/ 
 
 buidldep:
-  |vpkg                            { ($1,[],[]) }
+  |vpkg                                 { ($1,[],[]) }
   |vpkg LBRACKET buildarchlist RBRACKET { ($1,$3,[]) }
-  |vpkg buildprofileformula { ($1,[],$2) }
+  |vpkg buildprofileformula             { ($1,[],$2) }
   |vpkg LBRACKET buildarchlist RBRACKET buildprofileformula { ($1,$3,$5) }
 ;
 
@@ -144,7 +130,7 @@ builddepslist_ne:
 ;
 
 builddepsformula:
-  | builddeps_or_formula                            { [ $1 ] }
+  | builddeps_or_formula                           { [ $1 ] }
   | builddeps_or_formula COMMA builddepsformula    { $1 :: $3 }
 ;
 
@@ -161,19 +147,19 @@ buildarch:
 ;
 
 buildarchlist:
-  |             { [] }
+  |                  { [] }
   | buildarchlist_ne { $1 }
 ;
 
 buildarchlist_ne:
-  | buildarch                       { [ $1 ] }
-  | buildarch buildarchlist_ne      { $1 :: $2 }
+  | buildarch                  { [ $1 ] }
+  | buildarch buildarchlist_ne { $1 :: $2 }
 ;
 
 /**************************************/ 
 
 buildprofileformula:
-  | { [] }
+  |                        { [] }
   | buildprofileformula_ne { $1 }
 ;
 
@@ -188,7 +174,7 @@ buildprofile:
 ;
 
 buildprofilelist:
-  |             { [] }
+  |                     { [] }
   | buildprofilelist_ne { $1 }
 ;
 

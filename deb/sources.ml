@@ -19,88 +19,95 @@ open Common
 let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
-type source = {
-  name : Packages_types.name;
-  version : Packages_types.version;
-  architecture : Packages_types.architecture list;
-  binaries : string list ;
-  build_depends : Packages_types.builddepsformula;
-  build_depends_indep : Packages_types.builddepsformula;
-  build_depends_arch : Packages_types.builddepsformula;
-  build_conflicts : Packages_types.builddepslist;
-  build_conflicts_indep : Packages_types.builddepslist;
-  build_conflicts_arch : Packages_types.builddepslist;
-}
+class source ?(name=("Package",None)) ?(version=("Version",None)) 
+  ?(architecture=("Architecture",None)) ?(build_depends=("Build-Depends",None)) 
+  ?(build_depends_indep=("Build-Depends-Indep",None)) ?(build_depends_arch=("Build-Depends-Arch",None))
+  ?(build_conflicts=("Build-Conflicts",None)) ?(build_conflicts_indep=("Build-Conflicts-Indep",None))
+  ?(build_conflicts_arch=("Build-Conflicts-Arch",None)) par = object
 
-let default_source = {
-  name = "";
-  version = "";
-  architecture = [];
-  binaries = [];
-  build_depends = [];
-  build_depends_indep = [];
-  build_depends_arch = [];
-  build_conflicts = [];
-  build_conflicts_indep = [];
-  build_conflicts_arch = [];
-}
+  val name : Pef.Packages_types.name =
+    let f = Pef.Packages.parse_s ~err:"(MISSING NAME)" Pef.Packages.parse_name in
+    Pef.Packages.get_field_value f par name
 
-let parse_s = Packages.parse_s
-let parse_name = Packages.parse_name
-let parse_version = Packages.parse_version
-let parse_builddepslist = Packages.lexbuf_wrapper Packages_parser.builddepslist_top
-let parse_builddepsformula = Packages.lexbuf_wrapper Packages_parser.builddepsformula_top
+  val version : Pef.Packages_types.version =
+    let f = Pef.Packages.parse_s ~err:"(MISSING VERSION)" Pef.Packages.parse_version in
+    Pef.Packages.get_field_value f par version
 
-let parse_architectures buildarchlist (_loc,s) =
-  let matchsource sourcearchlist buildarchlist = 
-    List.exists (fun arch ->
-      List.exists(fun source ->
-        Architecture.src_matches_arch source arch
-      ) sourcearchlist
-    ) buildarchlist
-  in
-  let sourcearchlist = Packages.lexbuf_wrapper Packages_parser.archlist_top (_loc,s) in
-  if buildarchlist = [] then sourcearchlist
-  else if matchsource sourcearchlist buildarchlist then sourcearchlist
-  else raise (Packages.IgnorePackage "")
-;;
+  val architecture : Pef.Packages_types.architecture list =
+    let f = Pef.Packages.parse_s ~err:"(MISSING ARCH)" Pef.Packages.parse_archlist in
+    Pef.Packages.get_field_value f par architecture
+
+  val build_depends : Pef.Packages_types.builddepsformula =
+    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
+    Pef.Packages.get_field_value f par build_depends
+
+  val build_depends_indep : Pef.Packages_types.builddepsformula =
+    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
+    Pef.Packages.get_field_value f par build_depends_indep
+
+  val build_depends_arch : Pef.Packages_types.builddepsformula =
+    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
+    Pef.Packages.get_field_value f par build_depends_arch
+
+  val build_conflicts : Pef.Packages_types.builddepslist =
+    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
+    Pef.Packages.get_field_value f par build_conflicts
+
+  val build_conflicts_indep : Pef.Packages_types.builddepslist =
+    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
+    Pef.Packages.get_field_value f par build_conflicts_indep
+
+  val build_conflicts_arch : Pef.Packages_types.builddepslist =
+    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
+    Pef.Packages.get_field_value f par build_conflicts_arch
+
+  method name = name
+  method version = version
+  method architecture = architecture
+  method build_depends = build_depends
+  method build_depends_indep = build_depends_indep
+  method build_depends_arch = build_depends_arch
+  method build_conflicts = build_conflicts
+  method build_conflicts_indep = build_conflicts_indep
+  method build_conflicts_arch = build_conflicts_arch
+end
 
 (* Relationships between source and binary packages
  * http://www.debian.org/doc/debian-policy/ch-relationships.html
  * Build-Depends, Build-Depends-Indep, Build-Conflicts, Build-Conflicts-Indep
 *)
-let parse_package_stanza filter archs par =
-  let parse_archs = parse_architectures archs in
-  let parse_arch = Packages.lexbuf_wrapper Packages_parser.archlist_top in
-  let p () = {
-    name = parse_s ~err:"(MISSING NAME)" parse_name "Package" par;
-    version = parse_s ~err:"(MISSING VERSION)" parse_version "Version" par;
-    architecture = parse_s ~err:"(MISSING ARCH)" parse_archs "Architecture" par;
-    binaries = [];
-    build_depends = 
-      parse_s ~opt:[] ~multi:true parse_builddepsformula "Build-Depends" par; 
-    build_depends_indep =
-      parse_s ~opt:[] ~multi:true parse_builddepsformula "Build-Depends-Indep" par;
-    build_depends_arch =
-      parse_s ~opt:[] ~multi:true parse_builddepsformula "Build-Depends-Arch" par;
-    build_conflicts = 
-      parse_s ~opt:[] ~multi:true parse_builddepslist "Build-Conflicts" par;
-    build_conflicts_indep = 
-      parse_s ~opt:[] ~multi:true parse_builddepslist "Build-Conflicts-Indep" par;
-    build_conflicts_arch =
-      parse_s ~opt:[] ~multi:true parse_builddepslist "Build-Conflicts-Arch" par
-    }
+let parse_package_stanza filter buildarchlist par =
+  let p () =
+    let pkg = new source par in
+    let matchsource sourcearchlist buildarchlist = 
+      List.exists (fun arch ->
+        List.exists(fun source ->
+          Architecture.src_matches_arch source arch
+        ) sourcearchlist
+      ) buildarchlist
+    in
+    let sourcearchlist = pkg#architecture in
+    if buildarchlist = [] then pkg
+    else if matchsource sourcearchlist buildarchlist then pkg
+    else raise (Pef.Packages.IgnorePackage "Source Architecture Mismatch")
   in
-  try
+  begin try
     if Option.is_none filter then Some (p ())
-    else if (Option.get filter) par then Some(p ()) 
+    else if (Option.get filter) par then Some(p ())
     else None
-  with Packages.IgnorePackage s -> begin
-    let n = parse_s ~opt:"?" parse_name "Package" par in
-    let v = parse_s ~opt:"?" parse_version "Version" par in
-    let al = parse_s ~opt:[] parse_arch "Architecture" par in
-    debug "Ignoring Source Package (%s,%s,%s) : %s" n v (String.concat "," al) s;
-    None
+  with
+  |Pef.Packages.IgnorePackage s -> begin
+    let n = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_name "Package" par in
+    let v = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_version "Version" par in
+    let a = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_string "Architecture" par in
+    debug "Ignoring Source Package (%s,%s,%s) : %s" n v a s;
+    None end
+  |Pef.Packages.ParseError (f,s) -> begin
+      let n = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_name "Package" par in
+      let v = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_version "Version" par in
+      let a = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_string "Architecture" par in
+      let err = Printf.sprintf "Parser Error in Source Package (%s,%s,%s) : %s" n v a s in
+      raise (Pef.Packages.ParseError (f,err) ) end
   end
 ;;
 
@@ -108,7 +115,7 @@ let parse_package_stanza filter archs par =
 let parse_sources_in ?filter ?(archs=[]) fname ic =
   info "Parsing Sources file %s..." fname;
   let stanza_parser = parse_package_stanza filter archs in
-  Format822.parse_from_ch (Packages.packages_parser fname stanza_parser []) ic
+  Format822.parse_from_ch (Pef.Packages.packages_parser fname stanza_parser []) ic
 ;;
 
 (** parse a debian Sources file. 
@@ -145,6 +152,8 @@ let select hostarch profiles (v,al,pl) =
   if matcharch hostarch al && matchprofile profiles pl then Some v else None
 ;;
 
+(* XXX src2pkg could be skip using the same trick we use in opam, 
+ * where dependencies are giltered at parsing time *)
 (* the package name is encodes as src:<package-name> *)
 let src2pkg ?(dropalternatives=false) ?(profiles=[]) ?(noindep=false) ?(src="src") buildarch hostarch srcpkg =
   let conflicts l = List.filter_map (select hostarch profiles) l in
@@ -164,8 +173,8 @@ let src2pkg ?(dropalternatives=false) ?(profiles=[]) ?(noindep=false) ?(src="src
       ) ll
   in
   let extras_profiles  = match profiles with [] -> [] | _ -> [("profiles", String.join " " profiles)] in
-  let depends_indep   = if noindep then [] else srcpkg.build_depends_indep in
-  let conflicts_indep = if noindep then [] else srcpkg.build_conflicts_indep in
+  let depends_indep   = if noindep then [] else srcpkg#build_depends_indep in
+  let conflicts_indep = if noindep then [] else srcpkg#build_conflicts_indep in
   (* when crossbuilding (host != build), implicitly depend on build-essential
    * and crossbuild-essential-$hostarch. When compiling natively, implicitly
    * depend on build-essential *)
@@ -174,15 +183,12 @@ let src2pkg ?(dropalternatives=false) ?(profiles=[]) ?(noindep=false) ?(src="src
     else
       [[(("build-essential", Some buildarch), None)]]
   in
-  { Packages.default_package with
-    Packages.name = src ^ sep ^ srcpkg.name ;
-    source = (srcpkg.name, Some srcpkg.version);
-    version = srcpkg.version;
-    depends = build_essential @ (depends (depends_indep @ srcpkg.build_depends @ srcpkg.build_depends_arch));
-    conflicts = conflicts (conflicts_indep @ srcpkg.build_conflicts @ srcpkg.build_conflicts_arch);
-    architecture = String.concat "," srcpkg.architecture;
-    extras = extras_profiles @ [("Type",src)]
-  }
+  new Packages.package ~name:("",Some(src ^ sep ^ srcpkg#name)) ~version:("",Some(srcpkg#version))
+  ~architecture:("",Some(String.concat "," srcpkg#architecture))
+  ~source:("",Some (srcpkg#name, Some srcpkg#version)) 
+  ~depends:("",Some (build_essential @ (depends (depends_indep @ srcpkg#build_depends @ srcpkg#build_depends_arch))))
+  ~conflicts:("",Some (conflicts (conflicts_indep @ srcpkg#build_conflicts @ srcpkg#build_conflicts_arch)))
+  ~extras:([],Some(extras_profiles @ [("Type",src)])) []
 ;;
 
 (* given archs, profile and a dependency with an architecture and profile list,
@@ -193,9 +199,8 @@ let sources2packages ?(dropalternatives=false) ?(profiles=[]) ?(noindep=false) ?
   List.map (src2pkg ~dropalternatives ~profiles ~noindep ~src buildarch hostarch)
 ;;
 
-
 (** Check if a package is of "Type" source as encoded by the function sources2packages *)
-let is_source ?(src="src") pkg = List.mem ("Type", src) pkg.Packages.extras;;
+let is_source ?(src="src") pkg = List.mem ("Type", src) pkg#extras;;
 
 exception MismatchSrc of Cudf.package list
 exception NotfoundSrc

@@ -66,7 +66,8 @@ module Options = struct
   StdOptions.OutputOptions.add_option options ~short_name:'T' ~help:"Output type format. Default cnf" out_type;;
 
   include StdOptions.DistribOptions ;;
-  StdOptions.DistribOptions.add_options options ;;
+  StdOptions.DistribOptions.add_debian_options options ;;
+  StdOptions.DistribOptions.add_opam_options options ;;
 
 end;;
 
@@ -88,10 +89,9 @@ let loadl to_cudf l =
 ;;
 
 let parse_request to_cudf l =
-  let open Debian in
   let pkgs_of s = (* convert request into list of packages *) 
     let rs = String.strip (snd (String.split s " ")) in
-    let  f = Packages.lexbuf_wrapper Packages_parser.vpkglist_top in
+    let  f = Pef.Packages.lexbuf_wrapper Pef.Packages_parser.vpkglist_top in
     loadl to_cudf (f (Format822.dummy_loc,rs)) 
   in              
   let parse acc s =

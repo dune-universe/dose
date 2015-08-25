@@ -87,11 +87,11 @@ let pp_pkg fmt (s,univ) =
   try
     let p = CudfAdd.Cudf_set.choose s in
     let pkg = Hashtbl.find univ (p.Cudf.package,p.Cudf.version) in
-    let apt_id = Debian.Packages.assoc "APT-ID" pkg.Packages.extras in
+    let apt_id = Pef.Packages.assoc "APT-ID" pkg#extras in
     Format.fprintf fmt "%s\n" apt_id;
-    Format.fprintf fmt "Package: %s\n" pkg.Packages.name;
-    Format.fprintf fmt "Version: %s\n" pkg.Packages.version;
-    Format.fprintf fmt "Architecture: %s\n" pkg.Packages.architecture;
+    Format.fprintf fmt "Package: %s\n" pkg#name;
+    Format.fprintf fmt "Version: %s\n" pkg#version;
+    Format.fprintf fmt "Architecture: %s\n" pkg#architecture;
   with Not_found -> fatal "apt-cudf internal error"
 ;;
 
@@ -102,9 +102,9 @@ let pp_pkg_list fmt (l,univ) =
       (List.map (fun p ->
         let pkg = Hashtbl.find univ (p.Cudf.package,p.Cudf.version) in
         Printf.sprintf "%s=%s/%s" 
-        pkg.Packages.name 
-        pkg.Packages.version
-        pkg.Packages.architecture
+        pkg#name 
+        pkg#version
+        pkg#architecture
       ) l)
     )
   with Not_found -> fatal "apt-cudf internal error"
@@ -284,7 +284,7 @@ let main () =
         Some p
       end else begin
         warning "Duplicated package (same version, name and architecture) : (%s,%s,%s)" 
-          pkg.Packages.name pkg.Packages.version pkg.Packages.architecture;
+          pkg#name pkg#version pkg#architecture;
         None
       end
     ) pkglist 

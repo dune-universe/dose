@@ -79,9 +79,18 @@ $(DOSELIBS)/algo.%: algo/*.ml $(DOSELIBS)/common.%
 	  fi ; \
 	done
 
-$(DOSELIBS)/debian.%: deb/*.ml $(DOSELIBS)/algo.%
+$(DOSELIBS)/debian.%: deb/*.ml $(DOSELIBS)/pef.%
 	$(OCAMLBUILD) $(OBFLAGS) deb/debian.otarget
 	@for i in _build/deb/debian.*; do \
+	  if [ -e $$i ]; then \
+	  cp $$i $(DOSELIBS) ; \
+	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
+	  fi ; \
+	done
+
+$(DOSELIBS)/opam.%: opam/*.ml $(DOSELIBS)/pef.%
+	$(OCAMLBUILD) $(OBFLAGS) opam/opam.otarget
+	@for i in _build/opam/opam.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
 	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
@@ -97,7 +106,7 @@ $(DOSELIBS)/rpm.%: rpm/*.ml $(DOSELIBS)/algo.%
 	  fi ; \
 	done
 
-$(DOSELIBS)/pef.%: pef/*.ml $(DOSELIBS)/debian.%
+$(DOSELIBS)/pef.%: pef/*.ml
 	$(OCAMLBUILD) $(OBFLAGS) pef/pef.otarget
 	@for i in _build/pef/pef.*; do \
 	  if [ -e $$i ]; then \
@@ -106,7 +115,7 @@ $(DOSELIBS)/pef.%: pef/*.ml $(DOSELIBS)/debian.%
 	  fi ; \
 	done
 
-$(DOSELIBS)/csw.%: opencsw/*.ml $(DOSELIBS)/debian.%
+$(DOSELIBS)/csw.%: opencsw/*.ml $(DOSELIBS)/versioning.%
 	$(OCAMLBUILD) $(OBFLAGS) opencsw/csw.otarget
 	@for i in _build/opencsw/csw.*; do \
 	  if [ -e $$i ]; then \
@@ -115,7 +124,7 @@ $(DOSELIBS)/csw.%: opencsw/*.ml $(DOSELIBS)/debian.%
 	  fi ; \
 	done
 
-$(DOSELIBS)/doseparse.%: $(DOSELIBS)/debian.% $(DOSELIBS)/pef.%
+$(DOSELIBS)/doseparse.%: $(DOSELIBS)/pef.% $(DOSELIBS)/debian.%
 	$(OCAMLBUILD) $(OBFLAGS) doseparse/doseparse.otarget
 	@for i in _build/doseparse/doseparse.*; do \
 	  if [ -e $$i ]; then \
@@ -124,7 +133,7 @@ $(DOSELIBS)/doseparse.%: $(DOSELIBS)/debian.% $(DOSELIBS)/pef.%
 	  fi ; \
 	done
 
-$(DOSELIBS)/doseparseNoRpm.%: $(DOSELIBS)/debian.% $(DOSELIBS)/pef.%
+$(DOSELIBS)/doseparseNoRpm.%: $(DOSELIBS)/pef.% $(DOSELIBS)/debian.%
 	$(OCAMLBUILD) $(OBFLAGS) doseparseNoRpm/doseparseNoRpm.otarget
 	@for i in _build/doseparseNoRpm/doseparseNoRpm.*; do \
 	  if [ -e $$i ]; then \
@@ -239,5 +248,5 @@ upload: doc
 	rsync -avz -O dose3.docdir/ scm.gforge.inria.fr:/home/groups/dose/htdocs/doc/api/
 
 .PHONY: \
-	common algo debian pef rpm cws doseparseNoRpm doseparse \
+	common algo pef debian rpm cws doseparseNoRpm doseparse \
 	all clean top-level headers test tags install uninstall dist doc man

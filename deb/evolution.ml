@@ -97,11 +97,11 @@ let constraints packagelist =
   let constraints_table = Hashtbl.create (List.length packagelist) in
   List.iter (fun pkg ->
     (* add_unique constraints_table pkg.Packages.name None; *)
-    conj_iter constraints_table pkg.Packages.conflicts ;
-    conj_iter constraints_table pkg.Packages.breaks ;
-    conj_iter constraints_table pkg.Packages.provides ;
-    cnf_iter constraints_table pkg.Packages.depends;
-    cnf_iter constraints_table pkg.Packages.pre_depends
+    conj_iter constraints_table pkg#conflicts ;
+    conj_iter constraints_table pkg#breaks ;
+    conj_iter constraints_table pkg#provides ;
+    cnf_iter constraints_table pkg#depends;
+    cnf_iter constraints_table pkg#pre_depends
   ) packagelist
   ;
   let h = Hashtbl.create (List.length packagelist) in
@@ -147,7 +147,7 @@ let align version target =
 let all_versions constr = Util.list_unique (List.map (snd) constr) ;;
 
 let migrate packagelist target =
-  List.map (fun pkg -> ((pkg,target),(align pkg.Packages.version target))) packagelist
+  List.map (fun pkg -> ((pkg,target),(align pkg#version target))) packagelist
 ;;
 
 let extract_epochs vl =
@@ -191,8 +191,8 @@ let add_epochs el vl =
 let all_ver_constr constraints_table cluster =
   let (versionlist, constr) =
     List.fold_left (fun (_vl,_cl) pkg ->
-      let pn = pkg.Packages.name in
-      let pv = pkg.Packages.version in
+      let pn = pkg#name in
+      let pv = pkg#version in
       let constr = all_constraints constraints_table pn in
       let vl = pv::(all_versions constr) in
       (vl @ _vl,constr @ _cl)

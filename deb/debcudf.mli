@@ -28,16 +28,16 @@ type options = {
 val default_options : options
 
 (** initialize the version conversion tables *)
-val init_tables : ?step:int -> ?versionlist:Packages_types.version list -> Packages.package list -> tables
+val init_tables : ?step:int -> ?versionlist:Pef.Packages_types.version list -> Packages.package list -> tables
 
 val clear : tables -> unit
 (** return the cudf version associated to a tuple (name,version). 
  * return Not_found if there is not package or cudf version associated
  * to the tuple (name,version) *)
-val get_cudf_version : tables -> Packages_types.name * Packages_types.version -> int
+val get_cudf_version : tables -> Pef.Packages_types.name * Pef.Packages_types.version -> int
 
 (** return the real version associated to a Cudf package *)
-val get_real_version : tables -> Cudf_types.pkgname * Cudf_types.version -> Packages_types.version
+val get_real_version : tables -> Cudf_types.pkgname * Cudf_types.version -> Pef.Packages_types.version
 
 (** [tocudf tbl p] 
     convert the a debian package representation to cudf.
@@ -49,12 +49,6 @@ val get_real_version : tables -> Cudf_types.pkgname * Cudf_types.version -> Pack
    @param inst : set the {i Installed} cudf field
 *)
 val tocudf : tables -> ?options:options -> ?inst:bool -> Packages.package -> Cudf.package
-
-(** convert a debian dependency list in a cudf constraints formula *)
-val lltocudf : ?enc:bool -> tables -> Packages_types.vpkg list list -> Cudf_types.vpkgformula
-
-(** convert a debian conflict list in a cudf constraints list *)
-val ltocudf  : ?enc:bool -> tables -> Packages_types.vpkg list -> Cudf_types.vpkglist
 
 (** declare the Cudf preamble used by cudf. Namely, debcudf add :
     - a property named {b Number} of type string containing the original debian version

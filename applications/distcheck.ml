@@ -44,7 +44,8 @@ module Options = struct
 
   include StdOptions.DistribOptions ;;
   let default = List.remove StdOptions.DistribOptions.default_options "deb-host-arch" in
-  StdOptions.DistribOptions.add_options ~default options ;;
+  StdOptions.DistribOptions.add_debian_options ~default options ;
+  StdOptions.DistribOptions.add_opam_options ~default options ;;
 
 end
 
