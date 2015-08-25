@@ -17,6 +17,8 @@ true: -traverse
 <deb/tests.*>: use_common, use_versioning, use_pef, use_debian
 <rpm/tests.*>: use_common, use_versioning, @USE_RPM@, use_algo, package(ocamlgraph), package(re.str)
 <algo/tests.*>: use_common, use_algo, package(ocamlgraph)
+<pef/tests.*>: use_common, use_versioning
+<opam/tests.*>: use_common, use_versioning, use_pef
 
 <common/*.ml{i,}>: @PKG_ZIP@, @PKG_BZ2@
 <versioning/*.ml{i,}>: use_common, package(re.pcre)
