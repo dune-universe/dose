@@ -400,7 +400,7 @@ let print_dot ?(pp=CudfAdd.default_pp) ?(condense=false) ?(addmissing=false) ?di
     warning "Tryin to build explanation graph for a Coinst (not implemented yet)"
 ;;
 
-let print_error_ ?(condense=false) ?(minimal=false) pp root fmt l =
+let print_error ?(condense=false) ?(minimal=false) pp root fmt l =
   let module DG = Defaultgraphs.SyntacticDependencyGraph in
   let get_package v = 
     match v with
@@ -519,7 +519,7 @@ let print_error_ ?(condense=false) ?(minimal=false) pp root fmt l =
   pp_list pp_reason_missing fmt !missing
 ;;
 
-#endif
+#else
  
 (* only two failures reasons. Dependency describe the dependency chain to a failure witness *)
 let print_error ?(condense=false) ?(minimal=false) pp root fmt l =
@@ -557,6 +557,8 @@ let print_error ?(condense=false) ?(minimal=false) pp root fmt l =
   in
   pp_list pp_reason fmt res
 ;;
+
+#endif
 
 (* XXX unplug your imperative brain and rewrite this as a tail recoursive
  * function ! *)
@@ -683,7 +685,7 @@ let fprintf ?(pp=CudfAdd.default_pp) ?(failure=false) ?(success=false) ?(explain
       Format.fprintf fmt "status: broken@,";
       if explain then begin
        Format.fprintf fmt "@[<v 1>reasons:@,";
-       Format.fprintf fmt "@[<v>%a@]" (print_error_ ~minimal ~condense pp r) (f ());
+       Format.fprintf fmt "@[<v>%a@]" (print_error ~minimal ~condense pp r) (f ());
        Format.fprintf fmt "@]"
       end;
       Format.fprintf fmt "@]@,"
@@ -698,7 +700,7 @@ let fprintf ?(pp=CudfAdd.default_pp) ?(failure=false) ?(success=false) ?(explain
        if explain then begin
          Format.fprintf fmt "@[<v 1>reasons:@,";
          List.iter (fun r -> 
-           Format.fprintf fmt "@[<v>%a@]@," (print_error_ ~minimal ~condense pp r) (f ());
+           Format.fprintf fmt "@[<v>%a@]@," (print_error ~minimal ~condense pp r) (f ());
          ) rl;
         Format.fprintf fmt "@]@,"
        end;
