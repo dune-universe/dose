@@ -1,5 +1,5 @@
 true: -traverse
-<{common,algo,doseparse,doseparseNoRpm,deb,opam,opencsw,pef,rpm,applications,experimental}/**>: traverse
+<{common,versioning,algo,doseparse,doseparseNoRpm,deb,opam,opencsw,pef,rpm,applications,experimental}/**>: traverse
 
 <doseparseNoRpm/*.ml{i,}>: pp(cppo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_OCAMLGRAPH@)
 <doseparse/*.ml{i,}>: pp(cppo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_OCAMLGRAPH@)
@@ -22,7 +22,7 @@ true: -traverse
 
 <common/*.ml{i,}>: @PKG_ZIP@, @PKG_BZ2@
 <versioning/*.ml{i,}>: use_common, package(re.pcre)
-<versioning/*.cma>: linkall
+#<versioning/*.cma>: linkall
 <deb/*.ml{i,}>: use_common, use_versioning
 <rpm/*.ml{i,}>: use_common
 <algo/*.ml{i,}>: use_common, @PKG_OCAMLGRAPH@
