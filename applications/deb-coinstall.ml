@@ -251,5 +251,5 @@ let main () =
 ;;
 
 StdUtils.if_application
-~alternatives:["dose-debcoinstall";"deb-coinstall"] __label main ;;
+~alternatives:["dose-deb-coinstall";"deb-coinstall"] __label main ;;
 
