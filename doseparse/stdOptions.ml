@@ -22,6 +22,7 @@ include Util.Logging(struct let label = label end) ;;
 module type Ot = sig
   val options :
     ?usage:string ->
+    ?status:int ->
     ?version:string ->
     ?suppress_usage:bool ->
     ?suppress_help:bool ->
@@ -93,7 +94,7 @@ module MakeOptions(O : Ot) = struct
   let quiet = StdOpt.store_true ()
   let progress = StdOpt.store_true ()
   let timers = StdOpt.store_true ()
-  let options = O.options ~version:VersionInfo.version () ;;
+  let options = O.options ~status:64 ~version:VersionInfo.version () ;;
 
   open OptParser ;;
   add options ~short_name:'v' ~long_name:"verbose" ~help:"print additional information" verbose;
