@@ -179,7 +179,7 @@ testlib:
 	done
 
 # stuff not not put in a distribution tarball
-DIST_EXCLUDE = cudf tests $(wildcard */tests) experimental
+DIST_EXCLUDE = cudf tests $(wildcard */tests) experimental doc/webpages
 
 INSTALL_STUFF_ = META
 INSTALL_STUFF_ += $(wildcard _build/doselibs/*.cma _build/doselibs/*.cmi)
