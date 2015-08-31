@@ -18,10 +18,31 @@ archive(native) = "algo.cmxa"
 requires = "@OCAMLGRAPH@, dose3.common"
 )
 
+package "versioning" (
+version = "@PACKAGE_VERSION@"
+archive(byte) = "versioning.cma"
+archive(native) = "versioning.cmxa"
+requires = "dose3.common"
+)
+
 package "debian" (
 version = "@PACKAGE_VERSION@"
 archive(byte) = "debian.cma"
 archive(native) = "debian.cmxa"
+requires = "dose3.common dose3.versioning"
+)
+
+package "opam" (
+version = "@PACKAGE_VERSION@"
+archive(byte) = "opam.cma"
+archive(native) = "opam.cmxa"
+requires = "dose3.common dose3.pef"
+)
+
+package "pef" (
+version = "@PACKAGE_VERSION@"
+archive(byte) = "pef.cma"
+archive(native) = "pef.cmxa"
 requires = "dose3.common"
 )
 
@@ -37,13 +58,6 @@ version = "@PACKAGE_VERSION@"
 archive(byte) = "rpm.cma"
 archive(native) = "rpm.cmxa"
 requires = "dose3.common"
-)
-
-package "pef" (
-version = "@PACKAGE_VERSION@"
-archive(byte) = "pef.cma"
-archive(native) = "pef.cmxa"
-requires = "dose3.common, dose3.debian"
 )
 
 package "doseparse" (
