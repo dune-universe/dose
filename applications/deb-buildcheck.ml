@@ -40,8 +40,10 @@ module Options = struct
   include StdOptions.DistcheckOptions ;;
   StdOptions.DistcheckOptions.add_options options ;;
 
+
   include StdOptions.InputOptions ;;
-  StdOptions.InputOptions.add_options options ;;
+  let default = List.remove StdOptions.InputOptions.default_options "inputtype" in
+  StdOptions.InputOptions.add_options ~default options ;
 
   include StdOptions.OutputOptions ;;
   StdOptions.OutputOptions.add_options options ;;
@@ -64,7 +66,6 @@ module Options = struct
     ~help:"comma separated list of activated build profiles" profiles;
   StdOptions.DistribOptions.add_option options ~group ~long_name:"deb-emulate-sbuild"
     ~help:"replicate sbuild behaviour to only keep the first alternative of build dependencies" dropalternatives;
-  StdOptions.DistribOptions.add_opam_options options ;;
 
 end
 
