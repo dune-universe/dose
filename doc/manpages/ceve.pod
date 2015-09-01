@@ -6,7 +6,7 @@ ceve - parse package metadata
 
 =over 
 
-=item B<ceve> [-h] [-v] [-c I<pkgspec>] [-r I<pkgspec>] [--depth=I<n>]I<> [-T I<format>] [-G I<graph type>] [-o I<filename>] I<input-spec> 
+=item B<ceve> [-h] [-v] [-c I<pkgspec>] [-r I<pkgspec>] [--depth=I<n>]I<> [-T I<format>] [-G I<graph type>] [-o I<filename>] I<input-spec> [I<input-spec>...]
 
 =back
 
@@ -16,99 +16,62 @@ Ceve is a generalized metadata parser. It reads package specifications,
 extracts package metadata from them, performs some manipulations, and outputs
 the package metadata in one of several formats. 
 
-=head1 OPTIONS
+I<input-spec> is a url specifying the input format and the file to get the
+input from. For a possible list of schemes, see the B<-t> parameter.
+
+Some examples of URLs: 
 
 =over 4
 
-=item B<-h> 
+=item .
 
-This option displays the help message. Can also be specified as B<--help>. 
+deb://Packages.gz (the Debian file packages.gz in the current directory)
 
-=item B<-v> 
+=item .
+
+cudf:///home/examples/cudf/test.cudf (the CUDF file /home/examples/cudf/test.cudf)
+
+=back
+
+=head1 OPTIONS
+
+=head2 MISC OPTIONS
+
+=over 8
+
+=item B<-h, --help>
+
+This option displays the help message.
+
+=item B<-v, --verbose>
 
 Be verbose. This option can be repeated for more verbosity. 
 
-=item B<-c >I<pkgspec>
+=item B<--version>
 
-The B<match> of an atomic dependency (a package name p possibly together with a
-version constraint c) is the set of all packages in the repository with name p,
-and a version that satisfies the constraint c.  The dependency cone of a
-package p is the set of all matches of all atomic dependencies of p, together
-with their respective dependency cones. 
-The package specification I<pkgspec> is a list of packages (separated by a
-semicolon), where each package is specified as follows:
-(I<name>,I<version>).
+Show program's version and exit.
 
-This option extracts the union of the dependency cones of all packages selected
-by I<pkgspec>. This option can also be specified as --cone=I<pkgspec>.
+=item B<--progress>
 
-=item B<-r >I<pkgspec> 
+Print progress bars.
 
-Using the same syntax as in B<-c>, this option use the reverse dependency
-relation to make the transitive closure. This option can also be specified
-as --rcone=I<pkgspec>.
+=item B<--timers>
 
-=item B<--depth >I<n> 
+Print timing information.
 
-In combination with the B<-c> or B<-r> options, this specifies the
-maximum depth for the transitive closure.
- 
-=item B<-T >I<format> 
+=item B<--quiet>
 
-Specifies the output format to use. Possible values are B<dot> for a graph
-output in Dot/GraphViz format, B<cnf> for an output in CNF format, B<dimacs>
-for an output in the DIMACS format for CNF formulae, and B<cudf> for a
-pretty-print output in an RFC 822-like format.
+Do no print any messages.
+
+=back
+
+=head2 INPUT OPTIONS
+
+=over 8
 
 =item B<-t >I<input-spec>
 
-Select the input type.
-
-=item B<--request >I<installation-request>
-
-Specifies an installation request of the form "B<install:> I<vpkglist>" or
-"B<remove:> I<vpkglist>" or "B<upgrade:> I<vpkglist>" where I<vpkglist> is a
-list of (real) packages possibly associated with a constraint. Ex.: bash (<
-2.0), exim (= 3.1-debian1). This option can be repeated to specify install,
-remove and upgrade actions.
-
-Examples:
-
-=item --request "install: bash (< 2.0), exim (= 3.1-debian1)" --request "upgrade: apt-cudf"
-
-=item B<-G >I<graph type> 
-
-Specifies the graph type format to compute. This option must be used together
-with the option B<-T >I<dot|gml|grml>. Possible values are:
-
-=item .
-
-B<syn> for the syntactic graph where disjunctions nodes and conflicts are
-explicitly added to the graph. 
-
-=item .
-
-B<pkg> for the package graph where all dependencies are threated uniformely and
-conflicts are not added to the graph.
-
-=item .
-
-B<strong> the strong dependency graph. A package p strong depends on q iff p
-cannot be installed if q is not installed.
-
-=item .
-
-B<conj> the conjunctive graph where only conjunctive dependencies are
-considered.
-
-=item B<-o >I<filename> 
-
-Instead of stdout, send output to the file I<filename>.
-
-=item I<input-spec> 
-
-This is a URL specifying both the input format and the file to get the input
-from. Possible schemes are: 
+Select the input type. Possible values are:
 
 =item .
 
@@ -116,12 +79,23 @@ B<cudf> for cudf files
 
 =item .
 
-B<deb> for Debian package files (possibly compressed with L<gzip(1)> or
-L<bzip2(1)>, depending on compile-time options for dose3) 
+B<csw>
 
 =item .
 
-B<debstdin> for Debian package files read from standard input 
+B<opam>
+
+=item .
+
+B<deb> for Debian binary package files, also known as Packages files. Possibly
+compressed with L<gzip(1)> or L<bzip2(1)>, depending on compile-time options
+for dose3.
+
+=item .
+
+B<debsrc> for Debian source package files, also knows as Sources files.
+Possibly compressed with L<gzip(1)> or L<bzip2(1)>, depending on compile-time
+options for dose3.
 
 =item .
 
@@ -137,17 +111,148 @@ B<hdlist> for RPM hdlists
 
 =item .
 
-B<synth> for urpmi synthesis hdlists 
+B<synthesis> for urpmi synthesis hdlists 
 
-Some examples of URLs: 
- 
+=item B<--trim>
+
+Consider only installable packages.
+
+=item B<--latest>
+
+Check only the latest version of each package
+
+=item B<-c, --cone=>I<pkgspec>
+
+The B<match> of an atomic dependency (a package name p possibly together with a
+version constraint c) is the set of all packages in the repository with name p,
+and a version that satisfies the constraint c.  The dependency cone of a
+package p is the set of all matches of all atomic dependencies of p, together
+with their respective dependency cones. 
+The package specification I<pkgspec> is a list of packages (separated by a
+semicolon), where each package is specified as follows:
+(I<name>,I<version>).
+
+This option extracts the union of the dependency cones of all packages selected
+by I<pkgspec>.
+
+=item B<-r, --rcone=>I<pkgspec> 
+
+Using the same syntax as in B<-c>, this option use the reverse dependency
+relation to make the transitive closure.
+
+=item B<--depth >I<n> 
+
+In combination with the B<-c> or B<-r> options, this specifies the
+maximum depth for the transitive closure.
+
+=item B<--request >I<installation-request>
+
+Specifies an installation request of the form "B<install:> I<vpkglist>" or
+"B<remove:> I<vpkglist>" or "B<upgrade:> I<vpkglist>" where I<vpkglist> is a
+list of (real) packages possibly associated with a constraint. Ex.: bash (<
+2.0), exim (= 3.1-debian1). This option can be repeated to specify install,
+remove and upgrade actions.
+
+Examples:
+
+=over 12
+
+=item --request "install: bash (< 2.0), exim (= 3.1-debian1)" --request "upgrade: apt-cudf"
+
+=back
+
+=back
+
+=head2 OUTPUT OPTIONS
+
+=over 8
+
+=item B<-o, --outfile=>I<filename>
+
+Instead of stdout, send output to the file I<filename>.
+
+=item B<-d, --outdir=>I<directory>
+
+Set the output directory (default current directory)
+
+=item B<--dot>
+
+Save the explanation graph (one for each package) in dot format.
+
+=item B<-G >I<graph type> 
+
+Specifies the graph type format to compute. This option must be used together
+with the option B<-T >I<dot|gml|grml>. Default is B<syn>. Possible values are:
+
 =item .
 
-deb://Packages.gz (the Debian file packages.gz in the current directory)
+B<syn> for the syntactic graph where disjunctions nodes and conflicts are
+explicitly added to the graph. 
 
 =item .
 
-cudf:///home/examples/cudf/test.cudf (the CUDF file /home/examples/cudf/test.cudf)
+B<pkg> for the package graph where all dependencies are threated uniformely and
+conflicts are not added to the graph.
+
+=item .
+
+B<strdeps> the strong dependency graph. A package p strong depends on q iff p
+cannot be installed if q is not installed.
+
+=item .
+
+B<strcnf>
+
+=item .
+
+B<conj> the conjunctive graph where only conjunctive dependencies are
+considered.
+
+=item .
+
+B<dom>
+
+=item B<-T >I<format> 
+
+Specifies the output format to use. Default is B<cnf>. Possible values are:
+
+=item .
+
+B<cnf> output in CNF format.
+
+=item .
+
+B<dimacs> output in DIMACS format for CNF formulae.
+
+=item .
+
+B<cudf> pretty-printed output in an RFC 822-like format
+
+=item .
+
+B<deb> binary packages in deb822 format.
+
+=item .
+
+B<debsrc> source packages in deb822 format.
+
+=item .
+
+B<dot> a graph in Dot/GraphViz format.
+
+=item .
+
+B<gml> a graph in GML format.
+
+=item .
+
+B<grml> a graph in GraphML format.
+
+=item .
+
+B<table> plain text output of three integer values: the universe size, the
+number of edges in the dependency graph, the number of conflicts in the
+universe.
 
 =back
 
@@ -175,5 +280,29 @@ is an empty list of foreign architectures.
 By default all essential package are considered as a dependency of all packages
 in the universe. This option allows the user to ignore essential packages.
 
+=item B<--deb-host-arch=>I<name>
+
+Native/cross compile host architecture, defaults to native architecture.
+
+=item B<--deb-builds-from>
+
+Add builds-from relationship of binary packages on source packages as
+dependency. This allows one to create graphs for bootstrapping purposes.
+
 =back
 
+=head1 EXAMPLES
+
+Find all the reverse binary dependencies of the package B<patchutils>:
+
+	dose-ceve --deb-native-arch amd64 -r patchutils -T deb \
+		deb:///var/lib/apt/lists/*_dists_sid_main_binary-amd64_Packages \
+		| grep-dctrl -n -s Package '' | sort -u
+
+Find all the source packages that (directly or indirectly) build depend on
+B<patchutils>:
+
+	dose-ceve -T debsrc --deb-native-arch=amd64 -r patchutils \
+		debsrc:///var/lib/apt/lists/*_dists_sid_main_source_Sources \
+		deb:///var/lib/apt/lists/*_dists_sid_main_binary-amd64_Packages \
+		| grep-dctrl -n -s Package '' | sort -u
