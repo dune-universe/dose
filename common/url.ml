@@ -25,6 +25,10 @@ type othertypes = [ `Csw | `Pef | `Opam ]
 
 type filetypes = [ `Cudf | debtypes | rpmtypes | othertypes ]
 
+let supported_input_types =
+  [`Edsp; `Deb ; `DebSrc ; `Synthesis ; `Hdlist ; `Pef ; `Opam ; `Csw ; `Cudf ]
+;;
+
 let scheme_to_string = function
   | `Edsp -> "edsp"
   | `Csw -> "csw"
@@ -47,11 +51,9 @@ let scheme_of_string = function
   | "eclipse" | "pef" -> `Pef
   | "synthesis" -> `Synthesis
   | "hdlist" -> `Hdlist
-  | s -> fatal "unknown input scheme" s
-;;
-
-let supported_input_types =
-  [`Edsp; `Deb ; `DebSrc ; `Synthesis ; `Hdlist ; `Pef ; `Opam ; `Csw ; `Cudf ]
+  | s ->
+    let supported = String.concat ", " (List.map scheme_to_string supported_input_types) in
+    fatal "unknown input scheme: \"%s\" - Must be one of: %s" s supported
 ;;
 
 (***********************************************************************)
