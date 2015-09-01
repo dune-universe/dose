@@ -461,7 +461,8 @@ let print_error ?(condense=false) ?(minimal=false) pp root fmt l =
       open Defaultgraphs.SyntacticDependencyGraph
       type label = G.E.label
       type t = int
-      let weight e = match !e with PkgE.Conflict _ -> 1000 | _ -> 0 
+      type edge = G.E.t
+      let weight e = match G.E.label e with { contents = PkgE.Conflict _ } -> 1000 | _ -> 0
       let compare = Pervasives.compare
       let add = (+)
       let zero = 0
