@@ -17,7 +17,7 @@ ifeq ($(DESTDIR),)
   ifeq (@libdir@,)
     LIBDIR=$(shell OCAMLFIND_DESTDIR=@prefix@/lib/ocaml ocamlfind printconf destdir)
   else
-    LIBDIR=@libdir@/ocaml/${OCAMLVERSION}
+    LIBDIR=@libdir@/ocaml/$(shell ocamlc -version)
   endif
 else
   LIBDIR = $(DESTDIR)/$(shell ocamlc -where)
