@@ -42,7 +42,7 @@ let default_request = {
   preferences = "";
 }
 
-let parse_req (loc,s) = Pef.Packages.lexbuf_wrapper Pef.Packages_parser.vpkglist_top (loc,s)
+let parse_req field (loc,s) = Pef.Packages.lexbuf_wrapper field Pef.Packages_parser.vpkglist_top (loc,s)
 
 let parse_request_stanza par =
   {

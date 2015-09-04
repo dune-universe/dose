@@ -24,15 +24,15 @@ open Common
 let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
-let parse_multiarch (_,s) = match s with
+let parse_multiarch field (_,s) = match s with
   |("None"|"none"|"No"|"no") -> `No
   |("Allowed"|"allowed") -> `Allowed
   |("Foreign"|"foreign") -> `Foreign
   |("Same"|"same") -> `Same
-  |_ -> raise (Format822.Type_error ("Field Multi-Arch has a wrong value : "^ s))
+  |_ -> raise (Format822.Type_error (Printf.sprintf "Field %s has a wrong value : %s" field s))
 
-let parse_source = Pef.Packages.lexbuf_wrapper Pef.Packages_parser.source_top
-let parse_binarylist = Pef.Packages.lexbuf_wrapper Pef.Packages_parser.vpkglist_top
+let parse_source field = Pef.Packages.lexbuf_wrapper field Pef.Packages_parser.source_top
+let parse_binarylist field = Pef.Packages.lexbuf_wrapper field Pef.Packages_parser.vpkglist_top
 
 class package ?(name=("Package",None)) ?(version=("Version",None)) ?(depends=("Depends",None))
     ?(conflicts=("Conflicts",None)) ?(provides=("Provides",None)) ?(recommends=("Recommends",None)) 

@@ -681,17 +681,17 @@ let parse_pref_labels_triplets =
 
 (* parse_pref_package *)
 let parse_pref_package_triplets =
-  let function_to_test = (fun s -> Apt.parse_pref_package ((),s)) in
+  let function_to_test = (fun s -> Apt.parse_pref_package "parse_pref_package_triplets " ((),s)) in
   let returns = returns_result function_to_test
 (*  and raises  = raises_failure function_to_test *)
   in
   [ ("asterisk 1", "*",          returns Apt.Pref.Star);
     ("asterisk 2", "    *     ", returns Apt.Pref.Star);
-    ("name 1",     "name1",      returns (Apt.Pref.Package (Pef.Packages.parse_name (Format822.dummy_loc, "name1")))); ]
+    ("name 1",     "name1",      returns (Apt.Pref.Package (Pef.Packages.parse_name "parse_pref_package_triplets" (Format822.dummy_loc, "name1")))); ]
 
 (* parse_pin *)
 let parse_pin_triplets =
-  let function_to_test = (fun s -> Apt.parse_pin ((),s)) in
+  let function_to_test = (fun s -> Apt.parse_pin "parse_pin_triplets" ((),s)) in
   let returns = returns_result function_to_test
 (*  and raises  = raises_failure function_to_test *)
   in

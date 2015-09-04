@@ -21,20 +21,22 @@ let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
 (* here the _loc is taken from the the caller and not from the parser *)
-let lexbuf_wrapper type_parser (_loc,s) =
+let lexbuf_wrapper field type_parser (_loc,s) =
   try type_parser Packages_lexer.token_deb (Lexing.from_string s)
   with
-  |Format822.Syntax_error (_, _) -> raise (Format822.Syntax_error (s, _loc))
+  |Format822.Syntax_error (m, _) -> 
+      let msg = Printf.sprintf "Field %s has a wrong value (%s): '%s'" field m s in
+      raise (Format822.Syntax_error (msg, _loc))
   |Parsing.Parse_error -> raise (Format822.Parse_error_822 (s, _loc))
 
-let parse_name = lexbuf_wrapper Packages_parser.pkgname_top
-let parse_version = lexbuf_wrapper Packages_parser.version_top
-let parse_vpkg = lexbuf_wrapper Packages_parser.vpkg_top
-let parse_vpkglist = lexbuf_wrapper Packages_parser.vpkglist_top
-let parse_vpkgformula = lexbuf_wrapper Packages_parser.vpkgformula_top
-let parse_archlist = lexbuf_wrapper Packages_parser.archlist_top
-let parse_builddepslist = lexbuf_wrapper Packages_parser.builddepslist_top
-let parse_builddepsformula = lexbuf_wrapper Packages_parser.builddepsformula_top
+let parse_name field = lexbuf_wrapper field Packages_parser.pkgname_top
+let parse_version field = lexbuf_wrapper field Packages_parser.version_top
+let parse_vpkg field = lexbuf_wrapper field Packages_parser.vpkg_top
+let parse_vpkglist field = lexbuf_wrapper field Packages_parser.vpkglist_top
+let parse_vpkgformula field = lexbuf_wrapper field Packages_parser.vpkgformula_top
+let parse_archlist field = lexbuf_wrapper field Packages_parser.archlist_top
+let parse_builddepslist field = lexbuf_wrapper field Packages_parser.builddepslist_top
+let parse_builddepsformula field = lexbuf_wrapper field Packages_parser.builddepsformula_top
 
 (* assume n is lowercase *)
 (* Using lists in this case is faster then using 
@@ -51,7 +53,7 @@ exception IgnorePackage of string
  * opt = None && err = Some s -> ParseError s :
  * opt = Some s -> return s *)
 let parse_s ?opt ?err ?(multi=false) f field par =
-  try let (_loc,s) = (assoc field par) in f (_loc,s)
+  try let (_loc,s) = (assoc field par) in f field (_loc,s)
   with Not_found ->
     if Option.is_none opt then
       if Option.is_none err then raise Not_found
@@ -70,23 +72,23 @@ let parse_s ?opt ?err ?(multi=false) f field par =
       end
     else Option.get opt
 
-let parse_string (_,s) = s
-let parse_int (_,s) = int_of_string s
-let parse_string_opt = function (_,"") -> None | (_,s) -> Some s
+let parse_string _ (_,s) = s
+let parse_int _ (_,s) = int_of_string s
+let parse_string_opt _ = function (_,"") -> None | (_,s) -> Some s
 
 let blank_regexp = Pcre.regexp "[ \t]+" ;;
 let comma_regexp = Pcre.regexp "[ \t]*,[ \t]*" ;;
-let parse_string_list ?(rex=blank_regexp) (_,s) = Pcre.split ~rex s
+let parse_string_list ?(rex=blank_regexp) _ (_,s) = Pcre.split ~rex s
 
 (* parse and convert to a specific type *)
-let parse_bool = function
+let parse_bool field = function
   |(_,("Yes"|"yes"|"True" |"true")) -> true
   |(_,("No" |"no" |"False"|"false")) -> false (* this one usually is not there *)
-  |(_,s) -> raise (Format822.Type_error ("wrong value : "^ s))
+  |(_,s) -> raise (Format822.Type_error (field ^ " - wrong value : "^ s))
 ;;
 
-let parse_bool_s v = string_of_bool (parse_bool v) ;;
-let parse_int_s (_,s) = string_of_int (int_of_string s) ;;
+let parse_bool_s field v = string_of_bool (parse_bool field v) ;;
+let parse_int_s field (_,s) = string_of_int (int_of_string s) ;;
 
 (* parse extra fields parse_f returns a string *)
 let parse_e extras par =
