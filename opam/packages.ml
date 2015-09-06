@@ -25,7 +25,8 @@ include Util.Logging(struct let label = label end) ;;
 type request = {
   install : Pef.Packages_types.vpkg list;
   remove : Pef.Packages_types.vpkg list;
-  upgrade : bool;
+  upgrade : Pef.Packages_types.vpkg list;
+  dist_upgrade : bool;
   switch : string;
   switches : string list;
   profiles : string list;
@@ -35,7 +36,8 @@ type request = {
 let default_request = {
   install = [];
   remove = [];
-  upgrade = false;
+  upgrade = [];
+  dist_upgrade = false;
   switch = "";
   switches = [];
   profiles = [];
@@ -48,7 +50,8 @@ let parse_request_stanza par =
   {
     install = Pef.Packages.parse_s ~opt:[] parse_req "install" par;
     remove = Pef.Packages.parse_s ~opt:[] parse_req "remove" par;
-    upgrade = Pef.Packages.parse_s ~opt:false Pef.Packages.parse_bool "upgrade" par;
+    upgrade = Pef.Packages.parse_s ~opt:[] parse_req "upgrade" par;
+    dist_upgrade = Pef.Packages.parse_s ~opt:false Pef.Packages.parse_bool "dist_upgrade" par;
     switch = Pef.Packages.parse_s ~err:"(Missing active Switch)" Pef.Packages.parse_string "switch" par;
     switches = Pef.Packages.parse_s ~opt:[] Pef.Packages.parse_string_list "switches" par;
     profiles = Pef.Packages.parse_s ~opt:[] Pef.Packages.parse_string_list "profiles" par;

@@ -34,6 +34,7 @@ let preamble =
     ("recommends",(`Vpkgformula (Some [])));
     ("number",(`String None));
     ("active",(`Int None));
+    ("version-lag",(`Nat (Some 0)));
     ]
   in
   CudfAdd.add_properties Cudf.default_preamble l
@@ -101,7 +102,7 @@ let requesttocudf tables universe request =
       else (name,constr)
     ) l
   in
-  if request.Packages.upgrade then
+  if request.Packages.dist_upgrade then
     let to_upgrade = function
       |[] ->
         let filter pkg = pkg.Cudf.installed in
@@ -119,6 +120,7 @@ let requesttocudf tables universe request =
     Cudf.request_id = "Opam";
     Cudf.install = select_packages request.Packages.install;
     Cudf.remove = select_packages ~remove:true request.Packages.remove;
+    Cudf.upgrade = select_packages request.Packages.upgrade;
     }
 
 let load_list compare l =
