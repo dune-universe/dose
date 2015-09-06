@@ -55,7 +55,127 @@ by specifying the I<host> architecture.
 
 =head1 OPTIONS
 
-=head2 OPTIONS FOR SPECIFYING ARCHITECTURES
+=head2 MISC OPTIONS
+
+=over 8
+
+=item B<--version>
+
+Show program's version and exit.
+
+=item B<-h, --help>
+
+This option displays the help message.
+
+=item B<-v, --verbose>
+
+Enable info / warnings / debug messages. This option may be repeated up
+to three times in order to increase verbosity.
+
+=item B<--progress>
+
+Print progress bars.
+
+=item B<--timers>
+
+Print timing information.
+
+=item B<--quiet>
+
+Do no print any messages.
+
+=back
+
+=head2 DISTCHECK OPTIONS
+
+=over 8
+
+=item B<-e, --explain>
+
+Give explanations. If used together with --failures then the explanation
+consists of dependency chains leading to a conflict or a dependency on a
+missing package. If used together with --successes then the explanation
+consists of an installation set.
+
+=item B<-m>, B<--explain-minimal>
+
+For all packages B<P> that are found installable, and when used in conjunction
+with B<--successes>, prints a reduced installation set containing only those
+packages in the dependency cone of B<P>. When used with Debian repositories,
+all essential packages and their dependencies that are not in the cone of B<P>
+are omitted.  When used in conjunction with B<--failures>, and B<--explain>,
+all dependencies chains are not printed.
+
+=item B<-c>, B<--explain-condense>
+
+Compress explanation graph
+
+=item B<-f --failures>
+
+Only show broken packages that fail the installability check.
+
+=item B<-s --successes> 
+
+Only show packages that do not fail the installability check. 
+
+=item B<--summary>
+
+Gives a more detailed summary of the findings.
+
+=back
+
+=head2 INPUT OPTIONS
+
+=over 8
+
+=item B<--checkonly> I<package> [,I<package>] ...
+
+Takes a comma-separated list of package names, each of them possibly with a version
+constraint, as argument. The foreground is constituted of all packages
+that match any of the expressions, all other packages are pushed into
+the background. The initial distinction between foreground and background is
+ignored. This option must not be combined with B<--coinst>.
+
+Example: --checkonly "libc6 , 2ping (= 1.2.3-1)"
+
+=item B<--latest>
+
+Only the latest version of each package is kept,
+older versions of packages are ignored.
+
+=item B<--fg=>I<file>
+
+Add packages in I<file> to the foreground.
+
+=item B<--bg=>I<file>
+
+Add packages in I<file> to the background.
+
+=back
+
+=head2 OUTPUT OPTIONS
+
+=over 8
+
+=item B<-o, --outfile=> I<file>
+
+Send output to I<file>.
+
+=item B<-d, --outdir=> I<directory>
+
+Set the output directory (default current directory).
+
+=item B<--dot>
+
+Save the explanation graph (one for each package) in dot format.
+
+=item B<--dump=>I<file>
+
+Dump the cudf file.
+
+=back
+
+=head2 DEBIAN SPECIFIC OPTIONS
 
 =over 8
 
@@ -63,66 +183,15 @@ by specifying the I<host> architecture.
 
 Specify the native architecture. This argument is mandatory.
 
+=item B<--deb-host-arch=>I<name>...
+
+Specify the host architecture.
+
 =item B<--deb-foreign-archs=>I<name> [,I<name>] ...
 
 Specify a comma-separated list of foreign architectures. The default
 is an empty list of foreign architectures. If B<--deb-host-arch> is set, it
 is used as an implicit foreign architecture.
-
-=item B<--deb-host-arch=>I<name>...
-
-Specify the host architecture.
-
-=back
-
-=head2 OPTIONS FOR FILTERING THE INPUT
-
-=over 8
-
-=item B<--latest>
-
-Only the latest version of each package is kept,
-older versions of packages are ignored.
-
-=back
-
-=head2 OPTIONS CONTROLLING OUTPUT
-
-=over 8
-
-=item B<-f --failures> 
-
-Only show broken packages that fail the installability check. 
-
-=item B<-s --successes> 
-
-Only show packages that do not fail the installability check. 
-
-=item B<-e --explain> 
-
-Give explanations. If used together with --failures then the explanation
-consists of dependency chains leading to a conflict or a dependency on a
-missing package. If used together with --successes then the explanation
-consists of an installation set.
-
-=item B<-o> I<file>
-
-Send output to I<file>.
-
-=back
-
-=head2 MISC OPTIONS
-
-=over 8
-
-=item B<-v>
-
-Enable info / warnings / debug messages. This option may be repeated up
-to three times in order to increase verbosity. 
-
-=item B<-h, --help> 
-
-Display this list of options. 
 
 =item B<--deb-ignore-essential>
 
@@ -132,6 +201,40 @@ installation problem for all packages, that is a package is installable
 if and only if it is co-installable with all essential packages. This
 option allows the user to test the installability with no essential
 packages installed.
+
+=item B<--deb-builds-from>
+
+Add builds-from relationship of binary packages on source packages as
+dependency. This allows one to create graphs for bootstrapping purposes.
+
+=item B<--deb-triplettable=>I<file>
+
+Path to an architecture triplet table like /usr/share/dpkg/triplettable
+
+=item B<--deb-cputable=>I<file>
+
+Path to a cpu table like /usr/share/dpkg/cputable
+
+=item B<--deb-defaulted-m-a-foreign>
+
+Convert Arch:all packages to Multi-Arch: foreign
+
+=item B<--deb-drop-b-d-indep>
+
+Drop Build-Indep dependencies
+
+=item B<--deb-include-extra-source>
+
+Include packages with Extra-Source-Only:yes (dropped by default)
+
+=item B<-P, --deb-profiles=>I<name>[,I<name>...]
+
+Comma separated list of activated build profiles.
+
+=item B<--deb-emulate-sbuild>
+
+Replicate sbuild behaviour to only keep the first alternative of build
+dependencies.
 
 =back
 =cut
