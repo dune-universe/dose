@@ -223,7 +223,18 @@ reqlist_ne:
 
 let error_wrapper t f lexer lexbuf =
   let syntax_error msg =
-    raise (Format822.Syntax_error (Printf.sprintf "%s (%s)" msg t, Format822.loc_of_lexbuf lexbuf)) 
+    let error lexbuf msg =
+      let curr = lexbuf.Lexing.lex_curr_p in
+      let start = lexbuf.Lexing.lex_start_p in
+      Printf.sprintf
+        "File %S, line %d, character %d-%d: %s."
+        curr.Lexing.pos_fname
+        start.Lexing.pos_lnum
+        (start.Lexing.pos_cnum - start.Lexing.pos_bol)
+        (curr.Lexing.pos_cnum - curr.Lexing.pos_bol)
+        msg
+    in
+    raise (Format822.Syntax_error (Printf.sprintf "%s (%s)" (error lexbuf msg) t, Format822.loc_of_lexbuf lexbuf)) 
   in
   try f lexer lexbuf with
   |Parsing.Parse_error -> syntax_error "parse error"
