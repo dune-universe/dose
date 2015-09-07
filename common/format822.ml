@@ -21,25 +21,20 @@ type stanza = (string * (loc * string)) list
 type doc = stanza list
 
 let dummy_loc: loc = Lexing.dummy_pos, Lexing.dummy_pos
-let extend_loc (r1_start, _r1_end) (_r2_start, r2_end) = (r1_start, r2_end)
-let loc_of_lexbuf b = (b.Lexing.lex_start_p, b.Lexing.lex_curr_p)
 
-let pp_posfname {
-  Lexing.pos_fname = _fname;
-  pos_lnum = lnum;
-  pos_bol = bol;
-  pos_cnum = cnum
-} = Printf.sprintf "%s" _fname
+let error lexbuf msg =
+  let curr = lexbuf.Lexing.lex_curr_p in
+  let start = lexbuf.Lexing.lex_start_p in
+  Printf.sprintf
+    "File %S, line %d, character %d-%d: %s."
+    curr.Lexing.pos_fname
+    start.Lexing.pos_lnum
+    (start.Lexing.pos_cnum - start.Lexing.pos_bol)
+    (curr.Lexing.pos_cnum - curr.Lexing.pos_bol)
+    msg
 
-let pp_lpos {
-  Lexing.pos_fname = _fname;
-  pos_lnum = lnum;
-  pos_bol = bol;
-  pos_cnum = cnum
-} = Printf.sprintf "%d:%d" lnum (cnum - bol)
-
-exception Parse_error_822 of string * loc       (* <msg, file, loc> *)
-exception Syntax_error of string * loc          (* <msg, file, loc> *)
+exception Parse_error_822 of string
+exception Syntax_error of string
 exception Type_error of string
 
 type f822_parser = { lexbuf: Lexing.lexbuf ; fname: string }
@@ -52,12 +47,10 @@ let from_channel ic =
 let parser_wrapper_ch ic _parser = _parser (from_channel ic)
 
 let parse_from_ch _parser ic =
-  try parser_wrapper_ch ic _parser
-  with 
-  |Syntax_error (_msg, (startpos, endpos)) ->
-    fatal "Syntax error lines %s--%s:\n%s" (pp_lpos startpos) (pp_lpos endpos) _msg
-  | Parse_error_822 (_msg, (startpos, endpos)) ->
-    fatal "Parse error lines %s--%s:\n%s" (pp_lpos startpos) (pp_lpos endpos) _msg
+  (* XXX second arg of exn to be removed *)
+  try parser_wrapper_ch ic _parser with 
+  |Syntax_error (_msg) -> fatal "%s" _msg
+  |Parse_error_822 (_msg) -> fatal "%s" _msg
 
 let timer = Util.Timer.create "Format822" 
 

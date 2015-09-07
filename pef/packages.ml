@@ -20,14 +20,18 @@ open Common
 let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
+exception ParseError of string * string
+exception IgnorePackage of string
+
 (* here the _loc is taken from the the caller and not from the parser *)
 let lexbuf_wrapper field type_parser (_loc,s) =
-  try type_parser Packages_lexer.token_deb (Lexing.from_string s)
-  with
-  |Format822.Syntax_error (m, _) -> 
+  try type_parser Packages_lexer.token_deb (Lexing.from_string s) with
+  |Format822.Syntax_error (m) -> 
       let msg = Printf.sprintf "Field %s has a wrong value (%s): '%s'" field m s in
-      raise (Format822.Syntax_error (msg, _loc))
-  |Parsing.Parse_error -> raise (Format822.Parse_error_822 (s, _loc))
+      raise (ParseError (field,msg))
+  |Parsing.Parse_error -> 
+      let msg = Printf.sprintf "Field %s has a wrong value: '%s'" field s in
+      raise (ParseError (field,msg))
 
 let parse_name field = lexbuf_wrapper field Packages_parser.pkgname_top
 let parse_version field = lexbuf_wrapper field Packages_parser.version_top
@@ -46,9 +50,6 @@ let rec assoc (n : string) = function
   |(k,_)::t -> assoc n t
   |[] -> raise Not_found
 
-exception ParseError of string * string
-exception IgnorePackage of string
-
 (* opt = None && err = None -> Not_found : this is for extras
  * opt = None && err = Some s -> ParseError s :
  * opt = Some s -> return s *)
@@ -58,17 +59,7 @@ let parse_s ?opt ?err ?(multi=false) f field par =
     if Option.is_none opt then
       if Option.is_none err then raise Not_found
       else begin
-        (*
-        let (_,((startpos,endpos),_)) = List.hd par in
-        let s = 
-          Printf.sprintf "%s : %s--%s" 
-          (Format822.pp_posfname startpos)
-          (Format822.pp_lpos startpos) 
-          (Format822.pp_lpos endpos)
-        in
-        *)
-        let s = "" in
-        raise (ParseError (field,(Option.get err)^" (no default declared) " ^ s))
+        raise (ParseError (field,(Option.get err)^" (no default declared) "))
       end
     else Option.get opt
 

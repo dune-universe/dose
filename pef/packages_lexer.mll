@@ -13,7 +13,13 @@
 (*****************************************************************************)
 
 {
+  open Common
   open Packages_parser
+
+  let raise_error lexbuf c =
+  let msg = Printf.sprintf "Pef unexpected token : '%c'" c in
+  raise (Format822.Parse_error_822 (Format822.error lexbuf msg))
+
 }
 
 let lower_letter = [ 'a' - 'z' ]
@@ -46,3 +52,4 @@ rule token_deb = parse
   | ident as s          { IDENT s }
   | blank+              { token_deb lexbuf }
   | eof                 { EOL } (* single-line parsing: EOF means in fact EOL *)
+  | _ as c              { raise_error lexbuf c }

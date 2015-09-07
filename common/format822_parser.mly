@@ -38,7 +38,6 @@ let join (loc, v) l =
 %type <Format822.stanza option> doc_822_sign
 %start doc_822 doc_822_sign stanza_822
 
-
 %%
 
 doc_822_sign:
@@ -89,14 +88,14 @@ linecont:
 
 %%
 
-let error_wrapper f =
-  fun lexer lexbuf ->
-    try f lexer lexbuf
-    with
-      | Parsing.Parse_error ->
-          raise (Format822.Parse_error_822
-                   ("RFC 822 (stanza structure) parse error",
-                    Format822.loc_of_lexbuf lexbuf))
+let error_wrapper f lexer lexbuf =
+  let syntax_error msg =
+    raise (Format822.Syntax_error (Format822.error lexbuf msg))
+  in
+  try f lexer lexbuf with
+  |Parsing.Parse_error -> syntax_error "RFC 822 parse error"
+  |Failure _m -> syntax_error "RFC 822 lexer error"
+  |_ -> syntax_error "RFC 822 error"
 
 let doc_822 = error_wrapper doc_822
 let stanza_822 = error_wrapper stanza_822

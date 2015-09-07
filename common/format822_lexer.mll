@@ -18,11 +18,10 @@
   let get_range { Lexing.lex_start_p = start_pos;
                   Lexing.lex_curr_p = end_pos } =
     (start_pos, end_pos)
-  
+
   let raise_error lexbuf c =
     let msg = Printf.sprintf "unexpected RFC 822 token : '%c'" c in
-    let loc = (lexbuf.Lexing.lex_start_p, lexbuf.Lexing.lex_curr_p) in
-    raise (Format822.Parse_error_822 (msg,loc))
+    raise (Format822.Parse_error_822 (Format822.error lexbuf msg))
 }
 
 let lower_letter = [ 'a' - 'z' ]

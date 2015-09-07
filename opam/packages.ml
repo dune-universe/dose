@@ -157,14 +157,14 @@ let parse_package_stanza ((switch,switches,profiles) as options) par =
       )
   with 
   |Pef.Packages.IgnorePackage s -> begin
-      let n = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_name "Package" par in
-      let v = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_version "Version" par in
+      let n = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_name "package" par in
+      let v = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_version "version" par in
       warning "Ignoring Package (%s,%s) : %s" n v s; 
       None
     end
   |Pef.Packages.ParseError (f,s) -> begin
-      let n = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_name "Package" par in
-      let v = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_version "Version" par in
+      let n = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_name "package" par in
+      let v = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_version "version" par in
       let err = Printf.sprintf "Parser Error in Package (%s,%s) : %s" n v s in
       raise ( Pef.Packages.ParseError (f,err) )
   end
