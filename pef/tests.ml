@@ -15,6 +15,7 @@ let parse_pef_vpkgformula =
   in
   let returns = returns_result function_to_test in
   [
+    ("depends empty", ["Depends",(Common.Format822.dummy_loc,"")], returns ([]));
     ("depends simple", ["Depends",(Common.Format822.dummy_loc,"a")], returns ([[(("a",None),None)]]));
     ("depends simple constr", ["Depends",(Common.Format822.dummy_loc,"a ( <= 3.4 )")], returns ([[(("a",None),Some("<=","3.4"))]]));
     ("depends simple arch", ["Depends",(Common.Format822.dummy_loc,"a:arch1")], returns ([[(("a",Some "arch1"),None)]]));
@@ -32,6 +33,7 @@ let parse_pef_builddepsformula =
   let returns = returns_result function_to_test in
   (* let raises  = raises_failure function_to_test in *)
   [
+    ("build depends empty", ["BuildDepends",(Common.Format822.dummy_loc,"")], returns ([]));
     ("build depends simple", ["BuildDepends",(Common.Format822.dummy_loc,"a")], returns ([[((("a",None),None),[],[])]]));
     ("build depends simple arch filter", ["BuildDepends",(Common.Format822.dummy_loc,"a [arch]")], returns ([[((("a",None),None),[(true,"arch")],[])]]));
     ("build depends simple profile filter", ["BuildDepends",(Common.Format822.dummy_loc,"a <prof>")], returns ([[((("a",None),None),[],[[(true,"prof")]])]]));
