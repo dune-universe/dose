@@ -101,11 +101,13 @@ vpkglist_ne:
 ;
 
 vpkgformula:
+  |                               { [ ] }
   | or_formula                    { [ $1 ] }
   | or_formula COMMA vpkgformula  { $1 :: $3 }
 ;
 
 or_formula:
+  |                             { [ ] }
   | vpkg                        { [ $1 ] }
   | vpkg PIPE or_formula        { $1 :: $3 }
 ;
@@ -125,16 +127,19 @@ builddepslist:
 ;
 
 builddepslist_ne:
+  |                                  { [ ] }
   | buidldep                         { [ $1 ] }
   | buidldep COMMA builddepslist_ne  { $1 :: $3 }
 ;
 
 builddepsformula:
+  |                                                { [ ] }
   | builddeps_or_formula                           { [ $1 ] }
   | builddeps_or_formula COMMA builddepsformula    { $1 :: $3 }
 ;
 
 builddeps_or_formula:
+  |                                      { [ ] }
   | buidldep                             { [ $1 ] }
   | buidldep PIPE builddeps_or_formula   { $1 :: $3 }
 ;
@@ -179,6 +184,7 @@ buildprofilelist:
 ;
 
 buildprofilelist_ne:
+  |                                   { [ ] }
   | buildprofile                      { [ $1 ] }
   | buildprofile buildprofilelist_ne  { $1 :: $2 }
 ;
