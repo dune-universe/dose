@@ -212,7 +212,7 @@ let main () =
           try
             let id = (cudfpkg.Cudf.package,cudfpkg.Cudf.version) in
             let debpkg = Hashtbl.find cudftodeb_table id in
-            Printf.fprintf oc "%a\n" Debian.Printer.pp_package debpkg
+            debpkg#pp oc
           with Not_found -> assert false
         ) is
       else
@@ -225,7 +225,7 @@ let main () =
             ) is
           )
         in
-        List.iter (Printf.fprintf oc "%a\n" Debian.Printer.pp_source) l
+        List.iter (fun pkg -> pkg#pp oc) l
       end; 0 (* exit code 0 . All packages are installable *)
     end
     else begin if failure then begin

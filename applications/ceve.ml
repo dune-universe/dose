@@ -231,15 +231,13 @@ let main () =
       |"dimacs" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Dimacs u)
       |"cudf" -> Cudf_printer.pp_cudf oc doc
       |"deb" -> List.iter (function
-          | StdLoaders.Deb p ->
-            Printf.fprintf oc "%a\n" Debian.Printer.pp_package p
+          | StdLoaders.Deb p -> p#pp oc
           | StdLoaders.DebSrc p -> ()
           | _ -> failwith "impossible"
         ) (List.map cudf2deb l)
       |"debsrc" -> List.iter (function
           | StdLoaders.Deb p -> ()
-          | StdLoaders.DebSrc p ->
-            Printf.fprintf oc "%a\n" Debian.Printer.pp_source p
+          | StdLoaders.DebSrc p -> p#pp oc
           | _ -> failwith "impossible"
         ) (List.map cudf2deb l)
       |"table" ->

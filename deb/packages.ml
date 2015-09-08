@@ -109,6 +109,35 @@ class package ?(name=("Package",None)) ?(version=("Version",None)) ?(depends=("D
   method set_multiarch v = {< multiarch = (fst multiarch,v) >}
   method set_essential v = {< essential = (fst essential,v) >}
 
+  method pp oc =
+    let pp_multiarch oc = function
+      |`No -> Printf.fprintf oc "no"
+      |`Same -> Printf.fprintf oc "same"
+      |`Foreign -> Printf.fprintf oc "foreign"
+      |`Allowed -> Printf.fprintf oc "allowed"
+    in
+    let pp_source oc = function
+      |source,None -> Printf.fprintf oc "%s" source
+      |source,Some version -> Printf.fprintf oc "%s (%s)" source version
+    in
+    Pef.Printer.pp_string oc name;
+    Pef.Printer.pp_string oc version;
+    Pef.Printer.pp_string oc architecture;
+    Pef.Printer.pp_function oc pp_multiarch multiarch;
+    Pef.Printer.pp_bool oc essential;
+    Pef.Printer.pp_bool oc build_essential;
+    Pef.Printer.pp_string oc priority;
+    Pef.Printer.pp_function oc pp_source source;
+
+    Pef.Printer.pp_vpkglist oc provides;
+    Pef.Printer.pp_vpkgformula oc depends;
+    Pef.Printer.pp_vpkgformula oc pre_depends;
+    Pef.Printer.pp_vpkglist oc conflicts;
+    Pef.Printer.pp_vpkgformula oc recommends;
+    Pef.Printer.pp_vpkgformula oc suggests;
+ 
+    Printf.fprintf oc "\n";
+
 end
 
 let parse_package_stanza filter archs extras par =

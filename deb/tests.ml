@@ -623,7 +623,7 @@ let parse_popcon_triplets =
 (* parse_pkg_req *)
 let parse_pkg_req_triplets =
   let function_to_test = (fun (suite, s) -> Apt.parse_pkg_req suite s) in
-  let returns = returns_result ~printer:Printer.string_of_vpkgreq function_to_test
+  let returns = returns_result ~printer:Pef.Printer.string_of_vpkgreq function_to_test
 (*  and raises  = raises_failure function_to_test *)
   in
   [ ("suite name=1.2", 
@@ -869,7 +869,13 @@ let test_sources2packages =
     let src = List.find (fun s -> s#name = src) sources in
     src#depends
   in
-  let printer = Printer.string_of_vpkgformula in
+  let printer vpkgformula = 
+    if List.length vpkgformula > 0 then
+      let string_of_OR = Util.string_of_list ~sep:" | " Pef.Printer.string_of_vpkg in
+      let string_of_AND = Util.string_of_list ~sep:", " string_of_OR in
+      string_of_AND vpkgformula
+    else ""
+  in
   let returns = returns_result ~printer function_to_test in
   [
     (

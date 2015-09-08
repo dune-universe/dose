@@ -15,14 +15,14 @@ let parse_pef_vpkgformula =
   in
   let returns = returns_result function_to_test in
   [
-    ("depends empty", ["Depends",(Common.Format822.dummy_loc,"")], returns ([]));
-    ("depends simple", ["Depends",(Common.Format822.dummy_loc,"a")], returns ([[(("a",None),None)]]));
-    ("depends simple constr", ["Depends",(Common.Format822.dummy_loc,"a ( <= 3.4 )")], returns ([[(("a",None),Some("<=","3.4"))]]));
-    ("depends simple arch", ["Depends",(Common.Format822.dummy_loc,"a:arch1")], returns ([[(("a",Some "arch1"),None)]]));
-    ("depends simple any", ["Depends",(Common.Format822.dummy_loc,"a:any")], returns ([[(("a",Some "any"),None)]]));
-    ("depends disj", ["Depends",(Common.Format822.dummy_loc,"a,b")], returns ([[(("a",None),None)];[(("b",None),None)]]));
-    ("depends conj", ["Depends",(Common.Format822.dummy_loc,"a|b")], returns ([[(("a",None),None);(("b",None),None)]]));
-    ("depends cnf", ["Depends",(Common.Format822.dummy_loc,"a|b,c")], returns ([[(("a",None),None);(("b",None),None)];[(("c",None),None)]]));
+    ("depends empty", ["Depends",(Common.Format822.dummy_loc,"")], returns ("Depends",[]));
+    ("depends simple", ["Depends",(Common.Format822.dummy_loc,"a")], returns ("Depends",[[(("a",None),None)]]));
+    ("depends simple constr", ["Depends",(Common.Format822.dummy_loc,"a ( <= 3.4 )")], returns ("Depends",[[(("a",None),Some("<=","3.4"))]]));
+    ("depends simple arch", ["Depends",(Common.Format822.dummy_loc,"a:arch1")], returns ("Depends",[[(("a",Some "arch1"),None)]]));
+    ("depends simple any", ["Depends",(Common.Format822.dummy_loc,"a:any")], returns ("Depends",[[(("a",Some "any"),None)]]));
+    ("depends disj", ["Depends",(Common.Format822.dummy_loc,"a,b")], returns ("Depends",[[(("a",None),None)];[(("b",None),None)]]));
+    ("depends conj", ["Depends",(Common.Format822.dummy_loc,"a|b")], returns ("Depends",[[(("a",None),None);(("b",None),None)]]));
+    ("depends cnf", ["Depends",(Common.Format822.dummy_loc,"a|b,c")], returns ("Depends",[[(("a",None),None);(("b",None),None)];[(("c",None),None)]]));
   ]
 
 let parse_pef_builddepsformula =
@@ -33,12 +33,12 @@ let parse_pef_builddepsformula =
   let returns = returns_result function_to_test in
   (* let raises  = raises_failure function_to_test in *)
   [
-    ("build depends empty", ["BuildDepends",(Common.Format822.dummy_loc,"")], returns ([]));
-    ("build depends simple", ["BuildDepends",(Common.Format822.dummy_loc,"a")], returns ([[((("a",None),None),[],[])]]));
-    ("build depends simple arch filter", ["BuildDepends",(Common.Format822.dummy_loc,"a [arch]")], returns ([[((("a",None),None),[(true,"arch")],[])]]));
-    ("build depends simple profile filter", ["BuildDepends",(Common.Format822.dummy_loc,"a <prof>")], returns ([[((("a",None),None),[],[[(true,"prof")]])]]));
+    ("build depends empty", ["BuildDepends",(Common.Format822.dummy_loc,"")], returns ("BuildDepends",[]));
+    ("build depends simple", ["BuildDepends",(Common.Format822.dummy_loc,"a")], returns ("BuildDepends",[[((("a",None),None),[],[])]]));
+    ("build depends simple arch filter", ["BuildDepends",(Common.Format822.dummy_loc,"a [arch]")], returns ("BuildDepends",[[((("a",None),None),[(true,"arch")],[])]]));
+    ("build depends simple profile filter", ["BuildDepends",(Common.Format822.dummy_loc,"a <prof>")], returns ("BuildDepends",[[((("a",None),None),[],[[(true,"prof")]])]]));
     ("build depends cnf profile filter", ["BuildDepends",(Common.Format822.dummy_loc,"a <prof1> <!prof2 prof3>")], 
-      returns ([[((("a",None),None),[],[[(true,"prof1")];[(false,"prof2");(true,"prof3")]])]]));
+      returns ("BuildDepends",[[((("a",None),None),[],[[(true,"prof1")];[(false,"prof2");(true,"prof3")]])]]));
   ]
 
 let parse_pef_archlist =
@@ -49,7 +49,7 @@ let parse_pef_archlist =
   let returns = returns_result function_to_test in
   (* let raises  = raises_failure function_to_test in *)
   [
-    ("architectures", ["Architectures",(Common.Format822.dummy_loc,"arch1 arch2")], returns (["arch1";"arch2"]));
+    ("architectures", ["Architectures",(Common.Format822.dummy_loc,"arch1 arch2")], returns ("Architectures",["arch1";"arch2"]));
   ]
 
 let pefcudf_loadl =

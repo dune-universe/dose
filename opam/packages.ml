@@ -81,23 +81,17 @@ class package ?(name=("package",None)) ?(version=("version",None)) ?(depends=("d
   method build_depends = snd build_depends
 
   method pp oc =
-    Printf.fprintf oc "%s: %s\n" (fst name) (snd name) ;
-    Printf.fprintf oc "%s: %s\n" (fst version) (snd version) ;
+    Pef.Printer.pp_string oc name;
+    Pef.Printer.pp_string oc version;
 
-    if List.length (snd switch) > 0 then
-      Printf.fprintf oc "%s: %s\n" (fst switch) (String.concat " , " (snd switch)) ;
-    if List.length (snd installedlist) > 0 then
-      Printf.fprintf oc "%s: %s\n" (fst installedlist) (String.concat " , " (snd installedlist)) ;
+    Pef.Printer.pp_string_list oc switch;
+    Pef.Printer.pp_string_list oc installedlist;
 
-    if List.length (snd provides) > 0 then
-      Printf.fprintf oc "%s: %a\n" (fst provides) Pef.Printer.pp_vpkglist (snd provides);
-    if List.length (snd depends) > 0 then
-      Printf.fprintf oc "%s: %a\n" (fst depends) Pef.Printer.pp_vpkgformula (snd depends);
-    if List.length (snd conflicts) > 0 then
-      Printf.fprintf oc "%s: %a\n" (fst conflicts) Pef.Printer.pp_vpkglist (snd conflicts);
-    if List.length (snd recommends) > 0 then
-      Printf.fprintf oc "%s: %a\n" (fst recommends) Pef.Printer.pp_vpkgformula (snd recommends);
-    Printf.fprintf oc "\n";
+    Pef.Printer.pp_vpkglist oc provides;
+    Pef.Printer.pp_vpkgformula oc depends;
+    Pef.Printer.pp_vpkglist oc conflicts;
+    Pef.Printer.pp_vpkgformula oc recommends;
+    Printf.fprintf oc "\n"
 
 end
 

@@ -155,17 +155,13 @@ class package
   method set_installed v = {< installed = (fst installed,v) >}
 
   method pp oc =
-    Printf.fprintf oc "%s: %s\n" (fst name) (snd name) ;
-    Printf.fprintf oc "%s: %s\n" (fst version) (snd version) ;
-
-    if List.length (snd provides) > 0 then
-      Printf.fprintf oc "%s: %a\n" (fst provides) Printer.pp_vpkglist (snd provides);
-    if List.length (snd depends) > 0 then 
-      Printf.fprintf oc "%s: %a\n" (fst depends) Printer.pp_vpkgformula (snd depends);
-    if List.length (snd conflicts) > 0 then
-      Printf.fprintf oc "%s: %a\n" (fst conflicts) Printer.pp_vpkglist (snd conflicts);
-    if List.length (snd recommends) > 0 then
-      Printf.fprintf oc "%s: %a\n" (fst recommends) Printer.pp_vpkgformula (snd recommends);
+    Printer.pp_string oc name;
+    Printer.pp_string oc version;
+    Printer.pp_vpkglist oc provides;
+    Printer.pp_vpkgformula oc depends;
+    Printer.pp_vpkglist oc conflicts;
+    Printer.pp_vpkgformula oc recommends;
+    Printf.fprintf oc "\n"
 
 end
 

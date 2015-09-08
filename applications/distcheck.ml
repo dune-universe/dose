@@ -113,7 +113,7 @@ let main () =
       with 
       |[] ->
         fatal "Cannot find any package corresponding to the selector %s" 
-        (Debian.Printer.string_of_vpkglist co)
+        (Util.string_of_list ~sep:", " Pef.Printer.string_of_vpkg co)
       |l -> l
     end else []
   in
@@ -132,7 +132,7 @@ let main () =
       with 
       |[] ->
         fatal "Cannot find any package corresponding to the selector %s" 
-        (Debian.Printer.string_of_vpkglist co)
+        (Util.string_of_list ~sep:", " Pef.Printer.string_of_vpkg co)
       |l -> l
     end else []
   in
