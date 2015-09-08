@@ -25,51 +25,51 @@ class source ?(name=("Package",None)) ?(version=("Version",None))
   ?(build_conflicts=("Build-Conflicts",None)) ?(build_conflicts_indep=("Build-Conflicts-Indep",None))
   ?(build_conflicts_arch=("Build-Conflicts-Arch",None)) par = object
 
-  val name : Pef.Packages_types.name =
+  val name : (string * Pef.Packages_types.name) =
     let f = Pef.Packages.parse_s ~err:"(MISSING NAME)" Pef.Packages.parse_name in
     Pef.Packages.get_field_value f par name
 
-  val version : Pef.Packages_types.version =
+  val version : (string * Pef.Packages_types.version) =
     let f = Pef.Packages.parse_s ~err:"(MISSING VERSION)" Pef.Packages.parse_version in
     Pef.Packages.get_field_value f par version
 
-  val architecture : Pef.Packages_types.architecture list =
+  val architecture : (string * Pef.Packages_types.architecture list) =
     let f = Pef.Packages.parse_s ~err:"(MISSING ARCH)" Pef.Packages.parse_archlist in
     Pef.Packages.get_field_value f par architecture
 
-  val build_depends : Pef.Packages_types.builddepsformula =
+  val build_depends : (string * Pef.Packages_types.builddepsformula) =
     let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
     Pef.Packages.get_field_value f par build_depends
 
-  val build_depends_indep : Pef.Packages_types.builddepsformula =
+  val build_depends_indep : (string * Pef.Packages_types.builddepsformula) =
     let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
     Pef.Packages.get_field_value f par build_depends_indep
 
-  val build_depends_arch : Pef.Packages_types.builddepsformula =
+  val build_depends_arch : (string * Pef.Packages_types.builddepsformula) =
     let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
     Pef.Packages.get_field_value f par build_depends_arch
 
-  val build_conflicts : Pef.Packages_types.builddepslist =
+  val build_conflicts : (string * Pef.Packages_types.builddepslist) =
     let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
     Pef.Packages.get_field_value f par build_conflicts
 
-  val build_conflicts_indep : Pef.Packages_types.builddepslist =
+  val build_conflicts_indep : (string * Pef.Packages_types.builddepslist) =
     let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
     Pef.Packages.get_field_value f par build_conflicts_indep
 
-  val build_conflicts_arch : Pef.Packages_types.builddepslist =
+  val build_conflicts_arch : (string * Pef.Packages_types.builddepslist) =
     let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
     Pef.Packages.get_field_value f par build_conflicts_arch
 
-  method name = name
-  method version = version
-  method architecture = architecture
-  method build_depends = build_depends
-  method build_depends_indep = build_depends_indep
-  method build_depends_arch = build_depends_arch
-  method build_conflicts = build_conflicts
-  method build_conflicts_indep = build_conflicts_indep
-  method build_conflicts_arch = build_conflicts_arch
+  method name = snd name
+  method version = snd version
+  method architecture = snd architecture
+  method build_depends = snd build_depends
+  method build_depends_indep = snd build_depends_indep
+  method build_depends_arch = snd build_depends_arch
+  method build_conflicts = snd build_conflicts
+  method build_conflicts_indep = snd build_conflicts_indep
+  method build_conflicts_arch = snd build_conflicts_arch
 end
 
 (* Relationships between source and binary packages

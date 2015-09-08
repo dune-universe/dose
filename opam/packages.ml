@@ -64,29 +64,42 @@ class package ?(name=("package",None)) ?(version=("version",None)) ?(depends=("d
   
   inherit Pef.Packages.package ~name ~version ~depends ~conflicts ~provides ~recommends par
 
-  val switch : string list =
+  val switch : (string * string list) =
     let f = Pef.Packages.parse_s ~opt:["all"] (Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp) in
     Pef.Packages.get_field_value f par switch
 
-  val installedlist : string list =
+  val installedlist : (string * string list) =
     let f = Pef.Packages.parse_s ~opt:[] (Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp) in
     Pef.Packages.get_field_value f par installedlist
 
-  val build_depends : Pef.Packages_types.vpkgformula =
+  val build_depends : (string * Pef.Packages_types.vpkgformula) =
     let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_vpkgformula in
     Pef.Packages.get_field_value f par build_depends
 
-  method switch = switch
-  method installedlist = installedlist
-  method build_depends = build_depends
+  method switch = snd switch
+  method installedlist = snd installedlist
+  method build_depends = snd build_depends
+
+  method pp oc =
+    Printf.fprintf oc "%s: %s\n" (fst name) (snd name) ;
+    Printf.fprintf oc "%s: %s\n" (fst version) (snd version) ;
+
+    if List.length (snd switch) > 0 then
+      Printf.fprintf oc "%s: %s\n" (fst switch) (String.concat " , " (snd switch)) ;
+    if List.length (snd installedlist) > 0 then
+      Printf.fprintf oc "%s: %s\n" (fst installedlist) (String.concat " , " (snd installedlist)) ;
+
+    if List.length (snd provides) > 0 then
+      Printf.fprintf oc "%s: %a\n" (fst provides) Pef.Printer.pp_vpkglist (snd provides);
+    if List.length (snd depends) > 0 then
+      Printf.fprintf oc "%s: %a\n" (fst depends) Pef.Printer.pp_vpkgformula (snd depends);
+    if List.length (snd conflicts) > 0 then
+      Printf.fprintf oc "%s: %a\n" (fst conflicts) Pef.Printer.pp_vpkglist (snd conflicts);
+    if List.length (snd recommends) > 0 then
+      Printf.fprintf oc "%s: %a\n" (fst recommends) Pef.Printer.pp_vpkgformula (snd recommends);
+    Printf.fprintf oc "\n";
 
 end
-
-let addswitch (switch,switches) ((name,sw),constr) =
-  match sw with
-  |None -> [((name,Some switch),constr)]
-  |Some "any" -> List.map (fun s -> ((name,Some s),constr)) switches
-  |Some _ -> [((name,sw),constr)]
 
 let matchswitch switches = function
   | [] -> true
@@ -105,12 +118,11 @@ let matchos profiles = function
       ) ll
 
 let select (switch,switches,profiles) (v,al,pl) =
-  if matchswitch (switch::switches) al && matchos profiles pl then
-    Some (*addswitch (switch,switches*) ([v])
-  else None
+  if matchswitch (switch::switches) al && matchos profiles pl then [v]
+  else []
 
 let vpkglist_filter options l =
-  List.flatten (List.filter_map (select options) l)
+  List.flatten (List.map (select options) l)
 
 let vpkgformula_filter options ll =
   List.filter_map (fun l ->

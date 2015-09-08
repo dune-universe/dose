@@ -45,69 +45,69 @@ class package ?(name=("Package",None)) ?(version=("Version",None)) ?(depends=("D
   
   inherit Pef.Packages.package ~name ~version ~depends ~conflicts ~provides ~recommends ~extras par
 
-  val architecture : Pef.Packages_types.architecture =
+  val architecture : (string * Pef.Packages_types.architecture) =
     let f = Pef.Packages.parse_s ~err:"(MISSING ARCH)" Pef.Packages.parse_string in
     Pef.Packages.get_field_value f par architecture
 
-  val multiarch : Pef.Packages_types.multiarch =
+  val multiarch : (string * Pef.Packages_types.multiarch) =
     let f = Pef.Packages.parse_s ~opt:`No parse_multiarch in
     Pef.Packages. get_field_value f par multiarch
 
-  val source : (Pef.Packages_types.name * Pef.Packages_types.version option) =
+  val source : (string * (Pef.Packages_types.name * Pef.Packages_types.version option)) =
     let f = Pef.Packages.parse_s ~opt:("",None) parse_source in
     Pef.Packages.get_field_value f par source
 
-  val essential : bool =
+  val essential : (string * bool) =
     let f = Pef.Packages.parse_s ~opt:false Pef.Packages.parse_bool in
     Pef.Packages.get_field_value f par essential
 
-  val build_essential : bool =
+  val build_essential : (string * bool) =
     let f = Pef.Packages.parse_s ~opt:false Pef.Packages.parse_bool in
     Pef.Packages.get_field_value f par build_essential
 
-  val extra_source_only : bool =
+  val extra_source_only : (string * bool) =
     let f = Pef.Packages.parse_s ~opt:false Pef.Packages.parse_bool in
     Pef.Packages.get_field_value f par extra_source_only
 
-  val priority : string =
+  val priority : (string * string) =
     let f = Pef.Packages.parse_s ~opt:"" Pef.Packages.parse_string in
     Pef.Packages.get_field_value f par priority
 
-  val pre_depends : Pef.Packages_types.vpkgformula =
+  val pre_depends : (string * Pef.Packages_types.vpkgformula) =
     let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_vpkgformula in
     Pef.Packages.get_field_value f par pre_depends
 
-  val suggests : Pef.Packages_types.vpkgformula =
+  val suggests : (string * Pef.Packages_types.vpkgformula) =
     let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_vpkgformula in
     Pef.Packages.get_field_value f par suggests
 
-  val enhances : Pef.Packages_types.vpkgformula =
+  val enhances : (string * Pef.Packages_types.vpkgformula) =
     let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_vpkgformula in
     Pef.Packages.get_field_value f par enhances
 
-  val breaks : Pef.Packages_types.vpkglist =
+  val breaks : (string * Pef.Packages_types.vpkglist) =
     let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_vpkglist in
     Pef.Packages.get_field_value f par breaks 
 
-  val replaces : Pef.Packages_types.vpkglist =
+  val replaces : (string * Pef.Packages_types.vpkglist) =
     let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_vpkglist in
     Pef.Packages.get_field_value f par replaces
 
-  method architecture = architecture
-  method multiarch = multiarch
-  method essential = essential
-  method build_essential = build_essential
-  method extra_source_only = extra_source_only
-  method priority = priority
-  method source = source
-  method pre_depends = pre_depends
-  method suggests = suggests
-  method enhances = enhances
-  method breaks = breaks
-  method replaces = replaces
+  method architecture = snd architecture
+  method multiarch = snd multiarch
+  method essential = snd essential
+  method build_essential = snd build_essential
+  method extra_source_only = snd extra_source_only
+  method priority = snd priority
+  method source = snd source
+  method pre_depends = snd pre_depends
+  method suggests = snd suggests
+  method enhances = snd enhances
+  method breaks = snd breaks
+  method replaces = snd replaces
 
-  method set_multiarch v = {< multiarch = v >}
-  method set_essential v = {< essential = v >}
+  method set_multiarch v = {< multiarch = (fst multiarch,v) >}
+  method set_essential v = {< essential = (fst essential,v) >}
 
 end
 

@@ -91,7 +91,11 @@ let parse_e extras par =
     end with Not_found -> None
   ) extras
 
-let get_field_value f par v = if Option.is_none (snd v) then f (fst v) par else Option.get (snd v)
+let get_field_value f par (field,value) =
+  let res = 
+    if Option.is_none value then f field par
+    else Option.get value
+  in (field,res)
 
 (** strip down version of the debian package format *)
 class package 
@@ -100,31 +104,31 @@ class package
   ?(conflicts=("Conflicts",None)) ?(provides=("Provides",None)) 
   ?(recommends=("Recommends",None)) ?(extras=([],None)) par = object
 
-  val name : Packages_types.name =
+  val name : (string * Packages_types.name) =
     let f = parse_s ~err:"(MISSING NAME)" parse_name in
     get_field_value f par name
 
-  val version : Packages_types.version =
+  val version : (string * Packages_types.version) =
     let f = parse_s ~err:"(MISSING VERSION)" parse_version in
     get_field_value f par version
 
-  val installed : Packages_types.installed =
+  val installed : (string * Packages_types.installed) =
     let f = parse_s ~opt:false parse_bool in
     get_field_value f par installed
 
-  val depends : Packages_types.vpkgformula =
+  val depends : (string * Packages_types.vpkgformula) =
     let f = parse_s ~opt:[] ~multi:true parse_vpkgformula in
     get_field_value f par depends
 
-  val conflicts : Packages_types.vpkglist =
+  val conflicts : (string * Packages_types.vpkglist) =
     let f = parse_s ~opt:[] ~multi:true parse_vpkglist in
     get_field_value f par conflicts
 
-  val provides : Packages_types.vpkglist =
+  val provides : (string * Packages_types.vpkglist) =
     let f = parse_s ~opt:[] ~multi:true parse_vpkglist in
     get_field_value f par provides
 
-  val recommends : Packages_types.vpkgformula =
+  val recommends : (string * Packages_types.vpkgformula) =
     let f = parse_s ~opt:[] ~multi:true parse_vpkgformula in
     get_field_value f par recommends
 
@@ -135,20 +139,33 @@ class package
     |([],Some l) -> l
     |(extras,Some l) -> l@(parse_e extras par)
   
-  method name = name
-  method version = version
-  method installed = installed
-  method depends = depends
-  method conflicts = conflicts
-  method provides = provides
-  method recommends = recommends
+  method name = snd name
+  method version = snd version
+  method installed = snd installed
+  method depends = snd depends
+  method conflicts = snd conflicts
+  method provides = snd provides
+  method recommends = snd recommends
   method extras = extras
 
   method add_extra k v = {< extras = (k,v)::extras >}
   method get_extra k = assoc k extras
   method set_extras v = {< extras = v >}
 
-  method set_installed v = {< installed = v >}
+  method set_installed v = {< installed = (fst installed,v) >}
+
+  method pp oc =
+    Printf.fprintf oc "%s: %s\n" (fst name) (snd name) ;
+    Printf.fprintf oc "%s: %s\n" (fst version) (snd version) ;
+
+    if List.length (snd provides) > 0 then
+      Printf.fprintf oc "%s: %a\n" (fst provides) Printer.pp_vpkglist (snd provides);
+    if List.length (snd depends) > 0 then 
+      Printf.fprintf oc "%s: %a\n" (fst depends) Printer.pp_vpkgformula (snd depends);
+    if List.length (snd conflicts) > 0 then
+      Printf.fprintf oc "%s: %a\n" (fst conflicts) Printer.pp_vpkglist (snd conflicts);
+    if List.length (snd recommends) > 0 then
+      Printf.fprintf oc "%s: %a\n" (fst recommends) Printer.pp_vpkgformula (snd recommends);
 
 end
 
