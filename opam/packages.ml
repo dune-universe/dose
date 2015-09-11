@@ -60,7 +60,8 @@ let parse_request_stanza par =
 
 class package ?(name=("package",None)) ?(version=("version",None)) ?(depends=("depends",None))
     ?(conflicts=("conflicts",None)) ?(provides=("provides",None)) ?(recommends=("recommends",None)) 
-    ?(switch=("switch",None)) ?(installedlist=("installed",None)) ?(build_depends=("build-depends",None)) par = object
+    ?(switch=("switch",None)) ?(installedlist=("installed",None)) ?(build_depends=("build-depends",None)) 
+    ?(hold=("hold",None)) par = object
   
   inherit Pef.Packages.package ~name ~version ~depends ~conflicts ~provides ~recommends par
 
@@ -76,9 +77,14 @@ class package ?(name=("package",None)) ?(version=("version",None)) ?(depends=("d
     let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_vpkgformula in
     Pef.Packages.get_field_value f par build_depends
 
+  val hold : (string * bool) =
+    let f = Pef.Packages.parse_s ~opt:false Pef.Packages.parse_bool in
+    Pef.Packages.get_field_value f par hold
+
   method switch = snd switch
   method installedlist = snd installedlist
   method build_depends = snd build_depends
+  method hold = snd hold
 
   method pp oc =
     Pef.Printer.pp_string oc name;
@@ -86,6 +92,7 @@ class package ?(name=("package",None)) ?(version=("version",None)) ?(depends=("d
 
     Pef.Printer.pp_string_list oc switch;
     Pef.Printer.pp_string_list oc installedlist;
+    Pef.Printer.pp_bool oc hold;
 
     Pef.Printer.pp_vpkglist oc provides;
     Pef.Printer.pp_vpkgformula oc depends;
