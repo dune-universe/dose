@@ -33,6 +33,12 @@ let error lexbuf msg =
     (curr.Lexing.pos_cnum - curr.Lexing.pos_bol)
     msg
 
+let string_of_loc (start_pos, end_pos) =
+  let line { Lexing.pos_lnum = l } = l in
+  if line start_pos = line end_pos
+  then Printf.sprintf "line: %d" (line start_pos)
+  else Printf.sprintf "lines: %d-%d" (line start_pos) (line end_pos)
+
 exception Parse_error_822 of string
 exception Syntax_error of string
 exception Type_error of string

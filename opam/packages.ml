@@ -48,14 +48,14 @@ let parse_req field (loc,s) = Pef.Packages.lexbuf_wrapper field Pef.Packages_par
 
 let parse_request_stanza par =
   {
-    install = Pef.Packages.parse_s ~opt:[] parse_req "install" par;
-    remove = Pef.Packages.parse_s ~opt:[] parse_req "remove" par;
-    upgrade = Pef.Packages.parse_s ~opt:[] parse_req "upgrade" par;
-    dist_upgrade = Pef.Packages.parse_s ~opt:false Pef.Packages.parse_bool "dist_upgrade" par;
-    switch = Pef.Packages.parse_s ~err:"(Missing active Switch)" Pef.Packages.parse_string "switch" par;
-    switches = Pef.Packages.parse_s ~opt:[] Pef.Packages.parse_string_list "switches" par;
-    profiles = Pef.Packages.parse_s ~opt:[] Pef.Packages.parse_string_list "profiles" par;
-    preferences = Pef.Packages.parse_s ~opt:"" Pef.Packages.parse_string "preferences" par;
+    install = Pef.Packages.parse_s ~default:[] parse_req "install" par;
+    remove = Pef.Packages.parse_s ~default:[] parse_req "remove" par;
+    upgrade = Pef.Packages.parse_s ~default:[] parse_req "upgrade" par;
+    dist_upgrade = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool "dist_upgrade" par;
+    switch = Pef.Packages.parse_s ~required:true Pef.Packages.parse_string "switch" par;
+    switches = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_string_list "switches" par;
+    profiles = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_string_list "profiles" par;
+    preferences = Pef.Packages.parse_s ~default:"" Pef.Packages.parse_string "preferences" par;
   }
 
 class package ?(name=("package",None)) ?(version=("version",None)) ?(depends=("depends",None))
@@ -66,19 +66,19 @@ class package ?(name=("package",None)) ?(version=("version",None)) ?(depends=("d
   inherit Pef.Packages.package ~name ~version ~depends ~conflicts ~provides ~recommends par
 
   val switch : (string * string list) =
-    let f = Pef.Packages.parse_s ~opt:["all"] (Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp) in
+    let f = Pef.Packages.parse_s ~default:["all"] (Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp) in
     Pef.Packages.get_field_value f par switch
 
   val installedlist : (string * string list) =
-    let f = Pef.Packages.parse_s ~opt:[] (Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp) in
+    let f = Pef.Packages.parse_s ~default:[] (Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp) in
     Pef.Packages.get_field_value f par installedlist
 
   val build_depends : (string * Pef.Packages_types.vpkgformula) =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_vpkgformula in
+    let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_vpkgformula in
     Pef.Packages.get_field_value f par build_depends
 
   val hold : (string * bool) =
-    let f = Pef.Packages.parse_s ~opt:false Pef.Packages.parse_bool in
+    let f = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool in
     Pef.Packages.get_field_value f par hold
 
   method switch = snd switch
@@ -139,19 +139,19 @@ let parse_package_stanza ((switch,switches,profiles) as options) par =
   try
     let pkg =
       let depends =
-        let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
+        let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_builddepsformula in
         ("depends",Some (vpkgformula_filter options (f "depends" par)))
       in
       let conflicts =
-        let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
+        let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_builddepslist in
         ("conflicts",Some (vpkglist_filter options (f "conflicts" par)))
       in
       let provides =
-        let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
+        let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_builddepslist in
         ("provides",Some (vpkglist_filter options (f "provides" par)))
       in
       let recommends =
-        let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
+        let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_builddepsformula in
         ("recommends",Some (vpkgformula_filter options (f "recommends" par)))
       in
       new package ~depends ~conflicts ~recommends ~provides par
@@ -170,14 +170,14 @@ let parse_package_stanza ((switch,switches,profiles) as options) par =
       )
   with 
   |Pef.Packages.IgnorePackage s -> begin
-      let n = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_name "package" par in
-      let v = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_version "version" par in
+      let n = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_name "package" par in
+      let v = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_version "version" par in
       warning "Ignoring Package (%s,%s) : %s" n v s; 
       None
     end
   |Pef.Packages.ParseError (f,s) -> begin
-      let n = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_name "package" par in
-      let v = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_version "version" par in
+      let n = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_name "package" par in
+      let v = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_version "version" par in
       let err = Printf.sprintf "Parser Error in Package (%s,%s) : %s" n v s in
       raise ( Pef.Packages.ParseError (f,err) )
   end

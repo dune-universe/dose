@@ -226,10 +226,10 @@ let parse_cudf doc =
     Cudf_parser.parse p
   with
   |Input.File_empty -> None, [], None
-  |Cudf_parser.Parse_error _
-  |Cudf.Constraint_violation _ as exn -> begin
+  |Cudf_parser.Parse_error (msg, loc) ->
+    fatal "Error while parsing CUDF from %s (%s): %s" doc (Format822.string_of_loc loc) msg ;
+  |Cudf.Constraint_violation _ as exn ->
     fatal "Error while loading CUDF from %s: %s" doc (Printexc.to_string exn)
-  end
 
 (** parse a cudf file and return a triple (preamble,universe,request option).
     If the package is not valid return an empty list of packages *)
@@ -241,7 +241,8 @@ let load_cudf doc =
       Cudf_parser.load p
     with
     |Input.File_empty -> None, Cudf.load_universe [], None
-    |Cudf_parser.Parse_error _
+    |Cudf_parser.Parse_error (msg, loc) ->
+      fatal "Error while parsing CUDF from %s (%s): %s" doc (Format822.string_of_loc loc) msg ;
     |Cudf.Constraint_violation _ as exn -> begin
       fatal "Error while loading CUDF file %s:\n%s" doc (Printexc.to_string exn)
     end 

@@ -212,12 +212,9 @@ let parse_pin _ (_,s) =
 
 let parse_preferences_stanza par =
   {
-    Pref.package = 
-      Pef.Packages.parse_s ~err:"(MISSING PACKAGE)"
-      parse_pref_package "Package" par;
-    pin = Pef.Packages.parse_s ~err:"(MISSING PIN)" parse_pin "Pin" par;
-    pin_priority = Pef.Packages.parse_s ~err:"(MISSING Pin-Priority)"
-      Pef.Packages.parse_int "Pin-Priority" par;
+    Pref.package = Pef.Packages.parse_s ~required:true parse_pref_package "Package" par;
+    pin = Pef.Packages.parse_s ~required:true parse_pin "Pin" par;
+    pin_priority = Pef.Packages.parse_s ~required:true Pef.Packages.parse_int "Pin-Priority" par;
   }
 
 let rec preferences_parser stanza_parser acc p =

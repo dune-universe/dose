@@ -82,43 +82,43 @@ let parse_req field (loc,s) =
 let parse_edsp_version field (_,s) =
   match String.nsplit s " " with
   |["EDSP";s] when (float_of_string s) >= 0.4 -> s
-  |_ -> raise Not_found
+  |_ -> raise (Pef.Packages.ParseError (field,"Invalid EDSP version."))
 
 let parse_request_stanza par =
   (* request must be parse before any other fields *)
-  let request = Pef.Packages.parse_s ~err:"(Invalid EDSP version)" parse_edsp_version "Request" par in
+  let request = Pef.Packages.parse_s ~required:true parse_edsp_version "Request" par in
   {
     request = request; 
-    install = Pef.Packages.parse_s ~opt:[] parse_req "Install" par;
-    remove = Pef.Packages.parse_s ~opt:[] parse_req "Remove" par;
-    upgrade = Pef.Packages.parse_s ~opt:false Pef.Packages.parse_bool "Upgrade" par;
-    architecture = Pef.Packages.parse_s ~opt:None Pef.Packages.parse_string_opt "Architecture" par;
-    architectures = Pef.Packages.parse_s ~opt:[] Pef.Packages.parse_string_list "Architectures" par;
-    distupgrade = Pef.Packages.parse_s ~opt:false Pef.Packages.parse_bool "Dist-Upgrade" par;
-    autoremove = Pef.Packages.parse_s ~opt:false Pef.Packages.parse_bool "Autoremove" par;
-    strict_pin = Pef.Packages.parse_s ~opt:true Pef.Packages.parse_bool "Strict-Pinning" par;
-    preferences = Pef.Packages.parse_s ~opt:"" Pef.Packages.parse_string "Preferences" par;
-    cmdline = Pef.Packages.parse_s ~opt:"" Pef.Packages.parse_string "Command-Line" par;
+    install = Pef.Packages.parse_s ~default:[] parse_req "Install" par;
+    remove = Pef.Packages.parse_s ~default:[] parse_req "Remove" par;
+    upgrade = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool "Upgrade" par;
+    architecture = Pef.Packages.parse_s ~default:None Pef.Packages.parse_string_opt "Architecture" par;
+    architectures = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_string_list "Architectures" par;
+    distupgrade = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool "Dist-Upgrade" par;
+    autoremove = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool "Autoremove" par;
+    strict_pin = Pef.Packages.parse_s ~default:true Pef.Packages.parse_bool "Strict-Pinning" par;
+    preferences = Pef.Packages.parse_s ~default:"" Pef.Packages.parse_string "Preferences" par;
+    cmdline = Pef.Packages.parse_s ~default:"" Pef.Packages.parse_string "Command-Line" par;
   }
 ;;
 
-let parse_installed = Pef.Packages.parse_s Pef.Packages.parse_bool_s "Installed"
-let parse_hold = Pef.Packages.parse_s Pef.Packages.parse_bool_s "Hold"
-let parse_apt_id = Pef.Packages.parse_s ~err:"(MISSING APT-ID)" Pef.Packages.parse_string "APT-ID"
-let parse_apt_pin = Pef.Packages.parse_s ~err:"(MISSING APT-Pin)" Pef.Packages.parse_int_s "APT-Pin"
-let parse_automatic = Pef.Packages.parse_s Pef.Packages.parse_bool_s "APT-Automatic"
-let parse_candidate = Pef.Packages.parse_s Pef.Packages.parse_bool_s "APT-Candidate"
-let parse_section = Pef.Packages.parse_s Pef.Packages.parse_string "Section"
+let parse_installed = Pef.Packages.parse_s Pef.Packages.parse_bool_s 
+let parse_hold = Pef.Packages.parse_s Pef.Packages.parse_bool_s
+let parse_apt_id = Pef.Packages.parse_s ~required:true Pef.Packages.parse_string
+let parse_apt_pin = Pef.Packages.parse_s ~required:true Pef.Packages.parse_int_s
+let parse_automatic = Pef.Packages.parse_s Pef.Packages.parse_bool_s
+let parse_candidate = Pef.Packages.parse_s Pef.Packages.parse_bool_s
+let parse_section = Pef.Packages.parse_s Pef.Packages.parse_string
 
 (* (field,opt,err,multi,parsing function) *)
 let extras = [
-  ("Installed", Some parse_installed);
-  ("Hold", Some parse_hold);
-  ("APT-ID", Some parse_apt_id);
-  ("APT-Pin", Some parse_apt_pin);
-  ("APT-Candidate", Some parse_candidate);
-  ("APT-Automatic", Some parse_automatic);
-  ("Section", Some parse_section);
+  ("Installed", Some (parse_installed "Installed"));
+  ("Hold", Some (parse_hold "Hold"));
+  ("APT-ID", Some (parse_apt_id "APT-ID"));
+  ("APT-Pin", Some (parse_apt_pin "APT-Pin"));
+  ("APT-Candidate", Some (parse_candidate "APT-Candidate"));
+  ("APT-Automatic", Some (parse_automatic "APT-Automatic"));
+  ("Section", Some (parse_section "Section"));
   ("APT-Release", None);
   ]
 

@@ -26,39 +26,39 @@ class source ?(name=("Package",None)) ?(version=("Version",None))
   ?(build_conflicts_arch=("Build-Conflicts-Arch",None)) par = object
 
   val name : (string * Pef.Packages_types.name) =
-    let f = Pef.Packages.parse_s ~err:"(MISSING NAME)" Pef.Packages.parse_name in
+    let f = Pef.Packages.parse_s ~required:true Pef.Packages.parse_name in
     Pef.Packages.get_field_value f par name
 
   val version : (string * Pef.Packages_types.version) =
-    let f = Pef.Packages.parse_s ~err:"(MISSING VERSION)" Pef.Packages.parse_version in
+    let f = Pef.Packages.parse_s ~required:true Pef.Packages.parse_version in
     Pef.Packages.get_field_value f par version
 
   val architecture : (string * Pef.Packages_types.architecture list) =
-    let f = Pef.Packages.parse_s ~err:"(MISSING ARCH)" Pef.Packages.parse_archlist in
+    let f = Pef.Packages.parse_s ~required:true Pef.Packages.parse_archlist in
     Pef.Packages.get_field_value f par architecture
 
   val build_depends : (string * Pef.Packages_types.builddepsformula) =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
+    let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_builddepsformula in
     Pef.Packages.get_field_value f par build_depends
 
   val build_depends_indep : (string * Pef.Packages_types.builddepsformula) =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
+    let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_builddepsformula in
     Pef.Packages.get_field_value f par build_depends_indep
 
   val build_depends_arch : (string * Pef.Packages_types.builddepsformula) =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
+    let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_builddepsformula in
     Pef.Packages.get_field_value f par build_depends_arch
 
   val build_conflicts : (string * Pef.Packages_types.builddepslist) =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
+    let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_builddepslist in
     Pef.Packages.get_field_value f par build_conflicts
 
   val build_conflicts_indep : (string * Pef.Packages_types.builddepslist) =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
+    let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_builddepslist in
     Pef.Packages.get_field_value f par build_conflicts_indep
 
   val build_conflicts_arch : (string * Pef.Packages_types.builddepslist) =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepslist in
+    let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_builddepslist in
     Pef.Packages.get_field_value f par build_conflicts_arch
 
   method name = snd name
@@ -111,15 +111,15 @@ let parse_package_stanza filter buildarchlist par =
     else None
   with
   |Pef.Packages.IgnorePackage s -> begin
-    let n = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_name "Package" par in
-    let v = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_version "Version" par in
-    let a = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_string "Architecture" par in
+    let n = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_name "Package" par in
+    let v = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_version "Version" par in
+    let a = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_string "Architecture" par in
     debug "Ignoring Source Package (%s,%s,%s) : %s" n v a s;
     None end
   |Pef.Packages.ParseError (f,s) -> begin
-      let n = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_name "Package" par in
-      let v = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_version "Version" par in
-      let a = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_string "Architecture" par in
+      let n = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_name "Package" par in
+      let v = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_version "Version" par in
+      let a = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_string "Architecture" par in
       let err = Printf.sprintf "Parser Error in Source Package (%s,%s,%s) : %s" n v a s in
       raise (Pef.Packages.ParseError (f,err) ) end
   end

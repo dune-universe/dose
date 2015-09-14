@@ -10,7 +10,7 @@ and raises_failure function_to_test failure_text =
 
 let parse_pef_vpkgformula =
   let function_to_test par =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_vpkgformula in
+    let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_vpkgformula in
     Pef.Packages.get_field_value f par ("Depends",None)
   in
   let returns = returns_result function_to_test in
@@ -27,7 +27,7 @@ let parse_pef_vpkgformula =
 
 let parse_pef_builddepsformula =
   let function_to_test par =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_builddepsformula in
+    let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_builddepsformula in
     Pef.Packages.get_field_value f par ("BuildDepends",None)
   in
   let returns = returns_result function_to_test in
@@ -43,7 +43,7 @@ let parse_pef_builddepsformula =
 
 let parse_pef_archlist =
   let function_to_test par =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_archlist in
+    let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_archlist in
     Pef.Packages.get_field_value f par ("Architectures",None)
   in
   let returns = returns_result function_to_test in

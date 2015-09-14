@@ -50,18 +50,13 @@ let rec assoc (n : string) = function
   |(k,_)::t -> assoc n t
   |[] -> raise Not_found
 
-(* opt = None && err = None -> Not_found : this is for extras
- * opt = None && err = Some s -> ParseError s :
- * opt = Some s -> return s *)
-let parse_s ?opt ?err ?(multi=false) f field par =
+let parse_s ?default ?(required=false) f field par =
   try let (_loc,s) = (assoc field par) in f field (_loc,s)
   with Not_found ->
-    if Option.is_none opt then
-      if Option.is_none err then raise Not_found
-      else begin
-        raise (ParseError (field,(Option.get err)^" (no default declared) "))
-      end
-    else Option.get opt
+    match required,default with
+    |false,None -> raise Not_found (* for extra fields *)
+    |true,None -> raise (ParseError (field,"This field is required."))
+    |_,Some d -> d (* required or not, I take into consideration the default *)
 
 let parse_string _ (_,s) = s
 let parse_int _ (_,s) = int_of_string s
@@ -105,31 +100,31 @@ class package
   ?(recommends=("Recommends",None)) ?(extras=([],None)) par = object
 
   val name : (string * Packages_types.name) =
-    let f = parse_s ~err:"(MISSING NAME)" parse_name in
+    let f = parse_s ~required:true parse_name in
     get_field_value f par name
 
   val version : (string * Packages_types.version) =
-    let f = parse_s ~err:"(MISSING VERSION)" parse_version in
+    let f = parse_s ~required:true parse_version in
     get_field_value f par version
 
   val installed : (string * Packages_types.installed) =
-    let f = parse_s ~opt:false parse_bool in
+    let f = parse_s ~default:false parse_bool in
     get_field_value f par installed
 
   val depends : (string * Packages_types.vpkgformula) =
-    let f = parse_s ~opt:[] ~multi:true parse_vpkgformula in
+    let f = parse_s ~default:[] parse_vpkgformula in
     get_field_value f par depends
 
   val conflicts : (string * Packages_types.vpkglist) =
-    let f = parse_s ~opt:[] ~multi:true parse_vpkglist in
+    let f = parse_s ~default:[] parse_vpkglist in
     get_field_value f par conflicts
 
   val provides : (string * Packages_types.vpkglist) =
-    let f = parse_s ~opt:[] ~multi:true parse_vpkglist in
+    let f = parse_s ~default:[] parse_vpkglist in
     get_field_value f par provides
 
   val recommends : (string * Packages_types.vpkgformula) =
-    let f = parse_s ~opt:[] ~multi:true parse_vpkgformula in
+    let f = parse_s ~default:[] parse_vpkgformula in
     get_field_value f par recommends
 
   val extras : (string * string) list =

@@ -29,7 +29,7 @@ let parse_multiarch field (_,s) = match s with
   |("Allowed"|"allowed") -> `Allowed
   |("Foreign"|"foreign") -> `Foreign
   |("Same"|"same") -> `Same
-  |_ -> raise (Format822.Type_error (Printf.sprintf "Field %s has a wrong value : %s" field s))
+  |_ -> raise (Pef.Packages.ParseError (field,Printf.sprintf "Wrong value : %s" s))
 
 let parse_source field = Pef.Packages.lexbuf_wrapper field Pef.Packages_parser.source_top
 let parse_binarylist field = Pef.Packages.lexbuf_wrapper field Pef.Packages_parser.vpkglist_top
@@ -46,51 +46,51 @@ class package ?(name=("Package",None)) ?(version=("Version",None)) ?(depends=("D
   inherit Pef.Packages.package ~name ~version ~depends ~conflicts ~provides ~recommends ~extras par
 
   val architecture : (string * Pef.Packages_types.architecture) =
-    let f = Pef.Packages.parse_s ~err:"(MISSING ARCH)" Pef.Packages.parse_string in
+    let f = Pef.Packages.parse_s ~required:true Pef.Packages.parse_string in
     Pef.Packages.get_field_value f par architecture
 
   val multiarch : (string * Pef.Packages_types.multiarch) =
-    let f = Pef.Packages.parse_s ~opt:`No parse_multiarch in
+    let f = Pef.Packages.parse_s ~default:`No parse_multiarch in
     Pef.Packages. get_field_value f par multiarch
 
   val source : (string * (Pef.Packages_types.name * Pef.Packages_types.version option)) =
-    let f = Pef.Packages.parse_s ~opt:("",None) parse_source in
+    let f = Pef.Packages.parse_s ~default:("",None) parse_source in
     Pef.Packages.get_field_value f par source
 
   val essential : (string * bool) =
-    let f = Pef.Packages.parse_s ~opt:false Pef.Packages.parse_bool in
+    let f = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool in
     Pef.Packages.get_field_value f par essential
 
   val build_essential : (string * bool) =
-    let f = Pef.Packages.parse_s ~opt:false Pef.Packages.parse_bool in
+    let f = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool in
     Pef.Packages.get_field_value f par build_essential
 
   val extra_source_only : (string * bool) =
-    let f = Pef.Packages.parse_s ~opt:false Pef.Packages.parse_bool in
+    let f = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool in
     Pef.Packages.get_field_value f par extra_source_only
 
   val priority : (string * string) =
-    let f = Pef.Packages.parse_s ~opt:"" Pef.Packages.parse_string in
+    let f = Pef.Packages.parse_s ~default:"" Pef.Packages.parse_string in
     Pef.Packages.get_field_value f par priority
 
   val pre_depends : (string * Pef.Packages_types.vpkgformula) =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_vpkgformula in
+    let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_vpkgformula in
     Pef.Packages.get_field_value f par pre_depends
 
   val suggests : (string * Pef.Packages_types.vpkgformula) =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_vpkgformula in
+    let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_vpkgformula in
     Pef.Packages.get_field_value f par suggests
 
   val enhances : (string * Pef.Packages_types.vpkgformula) =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_vpkgformula in
+    let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_vpkgformula in
     Pef.Packages.get_field_value f par enhances
 
   val breaks : (string * Pef.Packages_types.vpkglist) =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_vpkglist in
+    let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_vpkglist in
     Pef.Packages.get_field_value f par breaks 
 
   val replaces : (string * Pef.Packages_types.vpkglist) =
-    let f = Pef.Packages.parse_s ~opt:[] ~multi:true Pef.Packages.parse_vpkglist in
+    let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_vpkglist in
     Pef.Packages.get_field_value f par replaces
 
   method architecture = snd architecture
@@ -160,16 +160,16 @@ let parse_package_stanza filter archs extras par =
     else None
   with 
   |Pef.Packages.IgnorePackage s -> begin
-      let n = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_name "Package" par in
-      let v = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_version "Version" par in
-      let a = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_string "Architecture" par in
+      let n = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_name "Package" par in
+      let v = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_version "Version" par in
+      let a = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_string "Architecture" par in
       warning "Ignoring Package (%s,%s,%s) : %s" n v a s; 
       None
     end
   |Pef.Packages.ParseError (f,s) -> begin
-      let n = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_name "Package" par in
-      let v = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_version "Version" par in
-      let a = Pef.Packages.parse_s ~opt:"?" Pef.Packages.parse_string "Architecture" par in
+      let n = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_name "Package" par in
+      let v = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_version "Version" par in
+      let a = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_string "Architecture" par in
       let err = Printf.sprintf "Parser Error in Package (%s,%s,%s) : %s" n v a s in
       raise ( Pef.Packages.ParseError (f,err) )
   end
