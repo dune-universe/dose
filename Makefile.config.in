@@ -19,6 +19,9 @@ ifeq ($(DESTDIR),)
   else
     LIBDIR=@libdir@/ocaml/$(shell ocamlc -version)
   endif
+  ifeq ("@OCAML_OS_TYPE@","Win32")
+    LIBDIR=$(shell ocamlfind printconf destdir | cygpath -f - -m)
+  endif
 else
   LIBDIR = $(DESTDIR)/$(shell ocamlc -where)
   BINDIR = $(DESTDIR)/usr/bin
@@ -31,9 +34,28 @@ ifeq ("@OCAML_OS_TYPE@","freebsd")
   LDFLAGS += -fstack-protector
 endif
 
+LN = @LN@
+ifeq ("@OCAML_OS_TYPE@","Win32")
+  EXE=.exe
+else
+  EXE=
+endif
+
 ifeq ("@OCAMLEXT@","native")
   OCAMLBUILD=@OCAMLBUILD@
-  INSTALLOPTS=-s
+  ifeq ("@OCAML_SYSTEM@","mingw")
+    INSTALLOPTS=-s --strip-program=i686-w64-mingw32-strip
+  else
+  ifeq ("@OCAML_SYSTEM@","mingw64")
+    INSTALLOPTS=-s --strip-program=x86_64-w64-mingw32-strip
+  else
+  ifeq ("@OCAML_OS_TYPE@","Win32")
+    INSTALLOPTS=
+  else
+    INSTALLOPTS=-s
+  endif
+  endif
+  endif
 else
   OCAMLBUILD=@OCAMLBUILD@ -byte-plugin
   INSTALLOPTS=

@@ -201,11 +201,11 @@ install: installlib
 	@cd _build/applications ; \
 	install -d $(BINDIR) ; \
 	for f in $$(ls *.$(OCAMLEXT)) ; do \
-	  install $(INSTALLOPTS) $$f $(BINDIR)/$${f%.$(OCAMLEXT)} ; \
+		install $(INSTALLOPTS) $$f $(BINDIR)/$${f%.$(OCAMLEXT)}$(EXE) ; \
 	done
-	@ln -s $(BINDIR)/distcheck $(BINDIR)/debcheck
-	@ln -s $(BINDIR)/distcheck $(BINDIR)/rpmcheck
-	@ln -s $(BINDIR)/distcheck $(BINDIR)/eclipsecheck
+	@$(LN) $(BINDIR)/distcheck $(BINDIR)/debcheck$(EXE)
+	@$(LN) $(BINDIR)/distcheck $(BINDIR)/rpmcheck$(EXE)
+	@$(LN) $(BINDIR)/distcheck $(BINDIR)/eclipsecheck$(EXE)
 	@echo "Install dose binaries to $(BINDIR)"
 
 uninstalllib:
@@ -214,9 +214,9 @@ uninstalllib:
 
 uninstall: uninstalllib uninstallcudf
 	@for f in $$(ls *.$(OCAMLEXT)) ; do \
-	  rm -f $(BINDIR)/$${f%.$(OCAMLEXT)} ; \
+	  rm -f $(BINDIR)/$${f%.$(OCAMLEXT)}$(EXE) ; \
 	done
-	@rm -f $(BINDIR)/debcheck $(BINDIR)/rpmcheck $(BINDIR)/eclipsecheck
+	@rm -f $(BINDIR)/debcheck$(EXE) $(BINDIR)/rpmcheck$(EXE) $(BINDIR)/eclipsecheck$(EXE)
 	@echo "Uninstall dose binaries from $(BINDIR)"
 
 dist: ./$(DIST_TARBALL)

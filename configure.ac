@@ -3,6 +3,8 @@ AC_COPYRIGHT(Copyright 2009-2015 Mancoosi Project)
 
 AC_CONFIG_MACRO_DIR([m4])
 
+AC_CHECK_OCAML_OS_TYPE
+
 AC_PROG_OCAML
 if test "$OCAMLC" = "no"; then
  AC_MSG_ERROR([You must install the OCaml compiler to compile dose3])
@@ -199,6 +201,10 @@ if test "$HAS_BENCHMARK" = "yes" ; then
   PKG_BENCHMARK="pkg_benchmark"
 fi
 
+AS_IF([test "$OCAMLBEST" = "opt"],[OCAMLBESTCC=$OCAMLOPT],[OCAMLBESTCC=$OCAMLC])
+OCAML_CC="$($OCAMLBESTCC -config | fgrep native_c_compiler | sed -e "s/native_c_compiler: \(.*\) .*/\1/")"
+AC_PROG_CC(["${OCAML_CC}" gcc cl cc])
+
 AC_HEADER_STDC
 
 RPMPATH="-I/usr/include/rpm"
@@ -244,6 +250,19 @@ if test "$HAS_RPM5" = "yes"; then
   LINK_RPM="link_rpm5"
   HAS_RPM=yes
 fi
+
+OCAML_SYSTEM="$($OCAMLBESTCC -config | fgrep system | sed -e "s/system: \(.*\)/\1/")"
+AC_SUBST(OCAML_SYSTEM)
+
+AS_IF([test "${OCAML_OS_TYPE}" = "Win32"],[
+  AC_MSG_CHECKING([for a workable solution for ln -s])
+  ln -s configure conftestLink
+  AS_IF([test "`cmd /c dir conftestLink 2>/dev/null | fgrep SYMLINK`" = ""],[LN=cp],[LN="ln -s"])
+  AC_MSG_RESULT([$LN])
+],[
+  LN="ln -s"
+])
+AC_SUBST(LN)
 
 #AC_CHECK_HEADERS([sched.h],,AC_MSG_ERROR([missing sched.h]))
 #AC_CHECK_DECLS([sched_setaffinity], [], [], [[
