@@ -13,6 +13,7 @@
 (** Debian Specific Cudf conversion routines *)
 
 module SSet = Set.Make(String)
+module OcamlHashtbl = Hashtbl
 
 open ExtLib
 open Common
@@ -26,7 +27,7 @@ include Util.Logging(struct let label = label end) ;;
 module SMap = Map.Make (String)
 
 type tables = {
-  virtual_table : SSet.t ref Util.StringHashtbl.t; (** all names of virtual packages *)
+  virtual_table : (string * string option,SSet.t ref) OcamlHashtbl.t; (** all names of virtual packages *)
   unit_table : unit Util.StringHashtbl.t ;         (** all names of real packages    *)
   versions_table : int Util.StringHashtbl.t;       (** version -> int table          *)
   reverse_table : (string SMap.t) ref Util.IntHashtbl.t;
@@ -36,7 +37,7 @@ type tables = {
 }
 
 let create n = {
-  virtual_table = Util.StringHashtbl.create (10 * n);
+  virtual_table = OcamlHashtbl.create (10 * n);
   unit_table = Util.StringHashtbl.create (2 * n);
   versions_table = Util.StringHashtbl.create (10 * n);
   versioned_table = Util.StringHashtbl.create (10 *n);
@@ -95,7 +96,7 @@ let add_arch_info ?(native_arch="") ?(package_arch="") = function
 ;;
 
 let clear tables =
-  Util.StringHashtbl.clear tables.virtual_table;
+  OcamlHashtbl.clear tables.virtual_table;
   Util.StringHashtbl.clear tables.unit_table;
   Util.StringHashtbl.clear tables.versions_table;
   Util.StringHashtbl.clear tables.versioned_table;
@@ -111,14 +112,18 @@ let add_v table k v =
     Util.StringPairHashtbl.add table k v
 
 let add_s h k v =
-  try let s = Util.StringHashtbl.find h k in s := SSet.add v !s
-  with Not_found -> Util.StringHashtbl.add h k (ref (SSet.singleton v))
+  try let s = OcamlHashtbl.find h k in s := SSet.add v !s
+  with Not_found -> OcamlHashtbl.add h k (ref (SSet.singleton v))
 ;;
 
 (* collect names of virtual packages 
  * associates to each virtual package a list of real packages *)
 let init_virtual_table table pkg =
-  List.iter (fun ((name,_),_) -> add_s table name pkg#name) pkg#provides
+  List.iter (fun ((name,_),constr) -> 
+    match CudfAdd.cudfop constr with
+    |None -> add_s table (name,None) pkg#name
+    |Some(_,version) -> add_s table (name,Some version) pkg#name
+  ) pkg#provides
 
 (* collect names of real packages *)
 let init_unit_table table pkg = 
@@ -238,21 +243,16 @@ let loadl ?native_arch ?package_arch tables l =
       let encname = add_arch_info ?native_arch ?package_arch vpkgname in
       match CudfAdd.cudfop constr with
       |None ->
-          if (Util.StringHashtbl.mem tables.virtual_table name) &&
-          (Util.StringHashtbl.mem tables.versioned_table name) then
+          if (OcamlHashtbl.mem tables.virtual_table (name,None)) then
             [(encname, None);("--virtual-"^encname, None)]
           else
             [(encname, None)]
       |Some(op,v) ->
-          (* debian policy 7.5 . If a relationship field has 
-           * a version number attached, only real packages will 
-           * be considered to see whether the relationship is satisfied *)
-          if (Util.StringHashtbl.mem tables.virtual_table name) && 
-             not (Util.StringHashtbl.mem tables.versioned_table name) then []
-          else begin
-            debug "Conflict %s < %s %s" encname name v;
-            [(encname,Some(op,get_cudf_version tables (name,v)))]
-          end
+          let constr = Some(op,get_cudf_version tables (name,v)) in
+          if (OcamlHashtbl.mem tables.virtual_table (name,Some(v))) then 
+            [(encname,constr);("--virtual-versioned-"^encname, constr)]
+          else
+            [(encname,constr)]
     ) l
   )
 
@@ -272,16 +272,8 @@ let loadlp ?native_arch ?package_arch tables l =
   List.map (fun ((name,_) as vpkgname,constr) ->
     let encname = add_arch_info ?native_arch ?package_arch vpkgname in
     match CudfAdd.cudfop constr with
-    |None  ->
-        if (Util.StringHashtbl.mem tables.unit_table name) || 
-        (Util.StringHashtbl.mem tables.versioned_table name)
-        then ("--virtual-"^encname,None)
-        else (encname, None)
-    |Some(`Eq,v) ->
-        if (Util.StringHashtbl.mem tables.unit_table name) || 
-        (Util.StringHashtbl.mem tables.versioned_table name)
-        then ("--virtual-"^encname,Some(`Eq,get_cudf_version tables (name,v)))
-        else (encname,Some(`Eq,get_cudf_version tables (name,v)))
+    |None  -> ("--virtual-"^encname,None)
+    |Some(`Eq,v) -> ("--virtual-versioned-"^encname,Some(`Eq,get_cudf_version tables (name,v)))
     |_ -> fatal "This should never happen : a provide can be either = or unversioned"
   ) l
 
@@ -487,7 +479,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
                               debug "M-A-Same: adding conflict on real package %s for %s" pn pkg#name; 
                               Some((pn,a),None)
                             end else None
-                          ) (SSet.elements !(Util.StringHashtbl.find tables.virtual_table n))
+                          ) (SSet.elements !(OcamlHashtbl.find tables.virtual_table (n,None)))
                         with Not_found -> []
                       end
                 )
