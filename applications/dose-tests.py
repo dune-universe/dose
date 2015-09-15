@@ -25,6 +25,24 @@ def which(program):
     exe_file = os.path.join(path, program)
     return os.path.isfile(exe_file)
 
+def which(program):
+    import os
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
+
 def removeTmpFiles() :
     for f in glob.glob("/tmp/apt-cudf-universe*.cudf") :
         os.remove(f)
@@ -203,12 +221,13 @@ def suite(f,runtest,rungroup,slow=False):
                 if 'Solver' in s :
                     solvers = [x.strip() for x in s['Solver'].split(',')]
                 for solver in solvers :
-                    ss = copy.deepcopy(s)
-                    f = "%s-%s" % (ss['Expected'],solver)
-                    ss['Expected'] = f if os.path.isfile(f) else ss['Expected']
-                    ss['Solver'] = solver
-                    ss['Cmd'] = ss['Cmd'] + " --solver " + solver
-                    suite.addTest(DoseTests(ss))
+                    if which(solver) :
+                        ss = copy.deepcopy(s)
+                        f = "%s-%s" % (ss['Expected'],solver)
+                        ss['Expected'] = f if os.path.isfile(f) else ss['Expected']
+                        ss['Solver'] = solver
+                        ss['Cmd'] = ss['Cmd'] + " --solver " + solver
+                        suite.addTest(DoseTests(ss))
             else :
                 suite.addTest(DoseTests(s))
     for stanza in parse822(f,lambda s: s[1]):
