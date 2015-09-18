@@ -30,6 +30,14 @@ let to_set univ l =
   ) Cudf_set.empty l
 ;;
 
+let diff_set univ sol =
+  let is_installed p = p.Cudf.installed in
+  let before = CudfAdd.to_set (Cudf.get_packages ~filter:is_installed univ) in
+  let after = CudfAdd.to_set (Cudf.get_packages ~filter:is_installed sol) in
+  let install = Cudf_set.diff after before in
+  let remove = Cudf_set.diff before after in
+  install, remove
+
 (** [diff univ sol] for each pkgname returns the list of all 
     versions that were installed (in the solution) or removed (from the
     universe) *)
@@ -45,7 +53,6 @@ let diff univ sol =
     Hashtbl.add h pkgname s
   ) pkgnames ;
   h
-;;
 
 (**
    [all] : all versions of a package in the universe . 

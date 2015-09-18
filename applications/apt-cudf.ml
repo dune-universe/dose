@@ -83,9 +83,8 @@ let apt_get_cmdline =
   with Not_found -> ""
 ;;
 
-let pp_pkg fmt (s,univ) = 
+let pp_pkg fmt (p,univ) =
   try
-    let p = CudfAdd.Cudf_set.choose s in
     let pkg = Hashtbl.find univ (p.Cudf.package,p.Cudf.version) in
     let apt_id = Pef.Packages.assoc "APT-ID" pkg#extras in
     Format.fprintf fmt "%s\n" apt_id;
@@ -93,7 +92,6 @@ let pp_pkg fmt (s,univ) =
     Format.fprintf fmt "Version: %s\n" pkg#version;
     Format.fprintf fmt "Architecture: %s\n" pkg#architecture;
   with Not_found -> fatal "apt-cudf internal error"
-;;
 
 let pp_pkg_list fmt (l,univ) =
   try 
@@ -131,10 +129,6 @@ trendy: -removed,-notuptodate,-unsat_recommends,-new
 paranoid: -removed,-changed
 *)
 let parse_conf_file fname =
-  let pp_lpos { Lexing.pos_fname = _fname;
-                pos_lnum = lnum; pos_bol = bol; pos_cnum = cnum } =
-    Printf.sprintf "%d:%d" lnum (cnum - bol)
-  in
   let ic = open_in fname in
   let lexbuf = Lexing.from_channel ic in
   try
@@ -153,8 +147,8 @@ let parse_conf_file fname =
       )
     in
     close_in ic; r
-  with Cudf_types.Parse_error_822 (msg, (startpos, endpos)) ->
-    fatal "Parse error on file %s:%s--%s" fname (pp_lpos startpos) (pp_lpos endpos)
+  with Cudf_types.Parse_error_822 (msg, _) ->
+    fatal "%s" (Format822.error lexbuf msg)
 ;;
 
 let choose_criteria ?(criteria=None) ~conffile solver request =
@@ -295,7 +289,7 @@ let main () =
       fatal "(CUDF) Malformed universe %s" s
   in
 
-(*
+  (*
   let universe = 
     let initialsize = (2 * (List.length pkglist) - 1 ) in
     let univcache = Cudf.empty_universe ~size:initialsize () in
@@ -383,45 +377,36 @@ let main () =
   end;
 
   Util.Timer.start timer3;
-  let diff = CudfDiff.diff universe soluniv in
   let empty = ref true in
   let cache = CudfAdd.Cudf_hashtbl.create 1023 in
-  Hashtbl.iter (fun pkgname s ->
-    let inst = s.CudfDiff.installed in
-    let rem = s.CudfDiff.removed in
-    match CudfAdd.Cudf_set.is_empty inst, CudfAdd.Cudf_set.is_empty rem with
-    |false,_ -> begin
-      empty := false;
-      List.iter (fun pkg -> CudfAdd.Cudf_hashtbl.add cache pkg ()) (CudfAdd.Cudf_set.elements inst);
-      Format.printf "Install: %a@." pp_pkg (inst,univ)
-    end
-    |true,false -> begin
-      empty := false;
-      Format.printf "Remove: %a@." pp_pkg (rem,univ)
-    end
-    |true,true -> ()
-  ) diff;
+
+  let install,remove = CudfDiff.diff_set universe soluniv in
+  CudfAdd.Cudf_set.iter (fun pkg ->
+    CudfAdd.Cudf_hashtbl.add cache pkg ();
+    Format.printf "Install: %a@." pp_pkg (pkg,univ)
+  ) install;
 
   (* Print also all packages that are were requested, but don't show up in the 
    * diff because already installed *)
   List.iter (fun (n,c) ->
-    try
-      let s = Hashtbl.find diff n in
-      if (CudfAdd.Cudf_set.is_empty s.CudfDiff.installed) then begin
-        List.iter (fun pkg -> 
-          empty := false;
-          if CudfAdd.Cudf_hashtbl.mem cache pkg then () 
-          else begin
-            CudfAdd.Cudf_hashtbl.add cache pkg ();
-            Format.printf "Install: %a@." pp_pkg ((CudfAdd.Cudf_set.singleton pkg),univ);
-          end
-        ) (CudfAdd.who_provides soluniv (n,c))
+    List.iter (fun pkg -> 
+      empty := false;
+      if CudfAdd.Cudf_hashtbl.mem cache pkg then () 
+      else begin
+        CudfAdd.Cudf_hashtbl.add cache pkg ();
+        Format.printf "Install: %a@." pp_pkg (pkg,univ);
       end
-    with Not_found -> ()
+    ) (CudfAdd.who_provides soluniv (n,c))
   ) cudf_request.Cudf.install;
+
+  CudfAdd.Cudf_set.iter (fun p ->
+    Format.printf "Remove: %a@." pp_pkg (p,univ)
+  ) remove;
+
   Util.Timer.stop timer3 ();
 
   if OptParse.Opt.get Options.explain then begin
+    let diff = CudfDiff.diff universe soluniv in
     let (i,u,d,r) = CudfDiff.summary universe diff in
     Format.printf "Summary: " ;
     if i <> [] then
@@ -443,7 +428,7 @@ let main () =
     if d <> [] then 
       Format.printf "Downgraded: %a@." pp_pkg_list_tran (d,univ);
   end;
-  
+
   if !empty then 
     print_progress ~i:100 "No packages removed or installed";
 ;;
