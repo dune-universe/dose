@@ -53,11 +53,14 @@ let deb_load_list options ?(status=[]) ?(raw=false) dll =
   let pkgll = List.map (List.map (function
       | Deb p -> p
       | DebSrc p ->
+          if Option.is_none options.Debian.Debcudf.native then
+            fatal "--deb-native-arch was not specified while treating Debian Sources File";
         let buildarch = Option.get options.Debian.Debcudf.native in
         let hostarch = Option.get options.Debian.Debcudf.host in
         Debian.Sources.src2pkg ~noindep ~profiles buildarch hostarch p
       | _ -> fatal "cannot handle input"
-    )) dll in
+    )) dll 
+  in
   let pkgl = List.flatten pkgll in
   let pkgl = if status = [] then pkgl else Debian.Packages.merge status pkgl in
   let tables = Debian.Debcudf.init_tables pkgl in

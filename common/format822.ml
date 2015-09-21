@@ -53,10 +53,9 @@ let from_channel ic =
 let parser_wrapper_ch ic _parser = _parser (from_channel ic)
 
 let parse_from_ch _parser ic =
-  (* XXX second arg of exn to be removed *)
   try parser_wrapper_ch ic _parser with 
-  |Syntax_error (_msg) -> fatal "%s" _msg
-  |Parse_error_822 (_msg) -> fatal "%s" _msg
+  |Syntax_error (msg) -> fatal "%s" msg
+  |Parse_error_822 (msg) -> fatal "%s" msg
 
 let timer = Util.Timer.create "Format822" 
 
