@@ -445,10 +445,7 @@ module MakePackageGraph(PkgV : Sig.COMPARABLE with type t = Cudf.package )= stru
         !l
       end
 
-  (** Build the dependency graph from the given cudf universe *)
-  let dependency_graph ?(conjunctive=false) universe =
-    let gr = G.create () in
-    Cudf.iter_packages (fun pkg ->
+  let dependency_graph_aux conjunctive gr universe pkg =
       G.add_vertex gr pkg;
       List.iter (fun vpkgs ->
         match CudfAdd.resolve_deps universe vpkgs with
@@ -456,35 +453,35 @@ module MakePackageGraph(PkgV : Sig.COMPARABLE with type t = Cudf.package )= stru
         |l when not conjunctive -> List.iter (G.add_edge gr pkg) l
         |_ -> ()
       ) pkg.Cudf.depends
-    ) universe
-    ;
+
+  (** Build the dependency graph from the given cudf universe *)
+  let dependency_graph ?(conjunctive=false) universe =
+    let gr = G.create () in
+    Cudf.iter_packages (dependency_graph_aux conjunctive gr universe) universe;
     gr
 
   (** Build the dependency graph from the given list of packages *)
   let dependency_graph_list ?(conjunctive=false) universe pkglist =
     let gr = G.create () in
-    List.iter (fun pkg ->
-      G.add_vertex gr pkg;
-      List.iter (fun vpkgs ->
-        match CudfAdd.resolve_deps universe vpkgs with
-        |[p] -> G.add_edge gr pkg p
-        |l when not conjunctive -> List.iter (G.add_edge gr pkg) l
-        |_ -> ()
-      ) pkg.Cudf.depends
-    ) pkglist
-    ;
+    List.iter (dependency_graph_aux conjunctive gr universe) pkglist;
+    gr
+
+  let conflict_graph_aux gr universe pkg =
+    List.iter (fun (pkgname,constr) ->
+      List.iter (UG.add_edge gr pkg)
+      (CudfAdd.who_provides universe (pkgname,constr))
+    ) pkg.Cudf.conflicts
+
+  (** Build the conflict graph from the given list of packages *)
+  let conflict_graph_list universe pkglist =
+    let gr = UG.create () in
+    List.iter (conflict_graph_aux gr universe) pkglist;
     gr
 
   (** Build the conflict graph from the given cudf universe *)
   let conflict_graph universe =
     let gr = UG.create () in
-    Cudf.iter_packages (fun pkg ->
-      List.iter (fun (pkgname,constr) ->
-        List.iter (UG.add_edge gr pkg)
-        (CudfAdd.who_provides universe (pkgname,constr))
-      ) pkg.Cudf.conflicts
-    ) universe
-    ;
+    Cudf.iter_packages (conflict_graph_aux gr universe) universe;
     gr
 
   let undirect graph =
