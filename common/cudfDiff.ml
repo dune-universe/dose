@@ -65,12 +65,13 @@ type summary_t = {
   mutable r : Cudf.package list; (* removed *)
   mutable u : (Cudf.package * Cudf.package) option ; (* upgraded *)
   mutable d : (Cudf.package * Cudf.package) option ; (* downgraded *)
-  mutable nu : Cudf.package list; (* not upgraded *)
+  mutable nc : Cudf.package list; (* not changed *)
 }
 
 (* for one package *)
-let default_summary () = { u = None; d = None ; i = [] ; r = [] ; nu = [] }
+let default_summary () = { u = None; d = None ; i = [] ; r = [] ; nc = [] }
 
+(* *)
 let uniqueversion all s =
   let l = default_summary () in
   let i = Cudf_set.filter (fun pkg -> pkg.Cudf.installed) all in
@@ -96,25 +97,31 @@ let uniqueversion all s =
     if not (Cudf_set.is_empty s.installed) then
       l.i <- Cudf_set.elements s.installed;
   end;
+  l.nc <- Cudf_set.elements (Cudf_set.diff i (Cudf_set.union s.installed s.removed));
   l
 ;;
 
+(* [summary univ diff] return a tuple with 5 lists containing packages
+ * installed, upgraded, downgraded, removed, not upgraded 
+ * (all packages marked as installed but not in the categories above) *)
 let summary univ diff =
   let i = ref [] in
   let u = ref [] in
   let d = ref [] in
   let r = ref [] in
+  let nc = ref [] in
   let names = CudfAdd.pkgnames univ in
   StringSet.iter (fun pkgname ->
     let all = CudfAdd.to_set (Cudf.lookup_packages univ pkgname) in
     let s = Hashtbl.find diff pkgname in
     let l = uniqueversion all s in
-    i := l.i @ !i ; 
-    r := l.r @ !r ; 
+    i := l.i @ !i ;
+    r := l.r @ !r ;
     if not (Option.is_none l.u) then
       u := (Option.get l.u) :: !u;
     if not (Option.is_none l.d) then
       d := (Option.get l.d) :: !d;
+    nc := l.nc @ !nc;
   ) names;
-  (!i,!u,!d,!r)
+  (!i,!u,!d,!r,!nc)
 ;;

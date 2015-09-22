@@ -407,7 +407,7 @@ let main () =
 
   if OptParse.Opt.get Options.explain then begin
     let diff = CudfDiff.diff universe soluniv in
-    let (i,u,d,r) = CudfDiff.summary universe diff in
+    let (i,u,d,r,nc) = CudfDiff.summary universe diff in
     Format.printf "Summary: " ;
     if i <> [] then
       Format.printf "%d to install " (List.length i);
@@ -417,6 +417,9 @@ let main () =
       Format.printf "%d to upgrade " (List.length u);
     if d <> [] then
       Format.printf "%d to downgrade " (List.length d);
+    if nc <> [] then
+      Format.printf "%d not changed " (List.length nc);
+
     Format.printf " @.";
 
     if i <> [] then
@@ -427,6 +430,9 @@ let main () =
       Format.printf "Upgraded: %a@." pp_pkg_list_tran (u,univ);
     if d <> [] then 
       Format.printf "Downgraded: %a@." pp_pkg_list_tran (d,univ);
+    if nc <> [] && (OptParse.Opt.get Options.verbose) >= 1 then 
+      Format.printf "UnChanged: %a@." pp_pkg_list (nc,univ);
+
   end;
 
   if !empty then 
