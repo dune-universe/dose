@@ -1,7 +1,7 @@
 description = "Dose3 libraries"
 version = "@PACKAGE_VERSION@"
-archive(byte) = "common.cma algo.cma debian.cma csw.cma pef.cma"
-archive(native) = "common.cmxa algo.cmxa debian.cmxa csw.cmxa pef.cmxa"
+archive(byte) = "common.cma algo.cma versioning.cma debian.cma csw.cma pef.cma"
+archive(native) = "common.cmxa algo.cmxa versioning.cmxa debian.cmxa csw.cmxa pef.cmxa"
 requires = "extlib, re.pcre, cudf, @OCAMLGRAPH@, unix, @ZIP@, @BZ2@"
 
 package "common" (

@@ -30,13 +30,15 @@ let to_set univ l =
   ) Cudf_set.empty l
 ;;
 
+(* [diff_set univ sol] return a tuple with the set of packages to install and the
+   set of packages to remove *)
 let diff_set univ sol =
   let is_installed p = p.Cudf.installed in
   let before = CudfAdd.to_set (Cudf.get_packages ~filter:is_installed univ) in
   let after = CudfAdd.to_set (Cudf.get_packages ~filter:is_installed sol) in
   let install = Cudf_set.diff after before in
   let remove = Cudf_set.diff before after in
-  install, remove
+  (install, remove)
 
 (** [diff univ sol] for each pkgname returns the list of all 
     versions that were installed (in the solution) or removed (from the
