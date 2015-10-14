@@ -25,19 +25,26 @@ let dummy_loc: loc = Lexing.dummy_pos, Lexing.dummy_pos
 let error lexbuf msg =
   let curr = lexbuf.Lexing.lex_curr_p in
   let start = lexbuf.Lexing.lex_start_p in
-  Printf.sprintf
-    "File %S, line %d, character %d-%d: %s."
-    curr.Lexing.pos_fname
-    start.Lexing.pos_lnum
-    (start.Lexing.pos_cnum - start.Lexing.pos_bol)
-    (curr.Lexing.pos_cnum - curr.Lexing.pos_bol)
-    msg
+  if curr.Lexing.pos_fname = "" then
+    Printf.sprintf "character %d-%d: %s."
+      (start.Lexing.pos_cnum - start.Lexing.pos_bol)
+      (curr.Lexing.pos_cnum - curr.Lexing.pos_bol)
+      msg
+  else
+    Printf.sprintf
+      "File %S, line %d, character %d-%d: %s."
+      curr.Lexing.pos_fname
+      start.Lexing.pos_lnum
+      (start.Lexing.pos_cnum - start.Lexing.pos_bol)
+      (curr.Lexing.pos_cnum - curr.Lexing.pos_bol)
+      msg
 
 let string_of_loc (start_pos, end_pos) =
   let line { Lexing.pos_lnum = l } = l in
-  if line start_pos = line end_pos
-  then Printf.sprintf "line: %d" (line start_pos)
-  else Printf.sprintf "lines: %d-%d" (line start_pos) (line end_pos)
+  if line start_pos = line end_pos then
+    Printf.sprintf "line: %d" (line start_pos)
+  else
+    Printf.sprintf "lines: %d-%d" (line start_pos) (line end_pos)
 
 exception Parse_error_822 of string
 exception Syntax_error of string
