@@ -361,7 +361,8 @@ module DistribOptions = struct
         Opt.get opam_profiles
       else []
     in
-    { Opam.Opamcudf.switch = switch;
+    { Opam.Opamcudf.default_options with
+      Opam.Opamcudf.switch = switch;
       switches = switches;
       profiles = profiles;
     }

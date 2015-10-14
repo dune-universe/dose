@@ -111,6 +111,7 @@ let opam_load_list ?options file =
   let options =
     match options with
     |None -> {
+      Opam.Opamcudf.default_options with
       Opam.Opamcudf.switch = request.Opam.Packages.switch;
       switches = request.Opam.Packages.switches;
       profiles = request.Opam.Packages.profiles }

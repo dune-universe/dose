@@ -20,18 +20,20 @@ open Common
 type options = {
   switch : string ; (* the active switch *)
   switches : string list ; (* list of available switches *)
-  profiles : string list (* list of build profiles *)
+  profiles : string list ; (* list of build profiles *)
+  depopts : bool ; (* add depopts as hard dependencies *)
 }
 
 let default_options = {
   switch = "";
   switches = [];
   profiles = [];
+  depopts = false;
 }
 
 let preamble = 
   let l = [
-    ("recommends",(`Vpkgformula (Some [])));
+    ("depopts",(`Vpkgformula (Some [])));
     ("number",(`String None));
     ("active",(`Int None));
     ("version-lag",(`Nat (Some 0)));
@@ -45,6 +47,15 @@ let add_extra extras tables (switch,activeswitch) pkg =
     let n = if switch = activeswitch then 1 else 0 in
     ("active",`Int n)
   in
+  let version_lag =
+    let l = Hashtbl.find tables.Pef.Pefcudf.versions_table pkg#name in
+    let count,i =
+      List.fold_left (fun (i,r) v ->
+        if v = pkg#version then i,i else i+1, r
+      ) (0,0) l
+    in
+    ("version-lag", `Int (count - i))
+  in
   let l =
     List.filter_map (fun (debprop, (cudfprop,v)) ->
       let debprop = String.lowercase debprop in
@@ -56,72 +67,82 @@ let add_extra extras tables (switch,activeswitch) pkg =
       with Not_found -> None
     ) extras
   in
-  let recommends = ("recommends", `Vpkgformula (Pef.Pefcudf.loadll tables pkg#recommends)) in
+  let depopts = ("depopts", `Vpkgformula (Pef.Pefcudf.loadll tables pkg#depopts)) in
   List.filter_map (function
     |(_,`Vpkglist []) -> None
     |(_,`Vpkgformula []) -> None
     |e -> Some e
   )
-  [number; recommends; activeswitch] @ l
+  [number; depopts; activeswitch; version_lag] @ l
 ;;
+
+let decode name =
+  let extract_name x =
+    try String.sub x 0 (String.index x ':') with
+    | Not_found -> x
+  in
+  CudfAdd.decode (extract_name name)
 
 (* each package generates more than one cudf package. One for active switch
    that is not declaclare not available by the package . Each package is 
    translated differently considering the profiles associated to each dependency *)
 let tocudf tables ?(options=default_options) ?(extras=[]) pkg =
-  let archs = options.switch::options.switches in
+  let all_switches = (List.unique (options.switch::options.switches)) in
   List.fold_left (fun acc switch ->
     (* include this package if it is not declared as not available and if it is
      * used in some dependency. Otherwise there is no point to include it *)
     if List.mem "all" pkg#switch || List.mem switch pkg#switch then
+      let depends = if options.depopts then pkg#depends@pkg#depopts else pkg#depends in
       let cudfpkg = 
         { Cudf.default_package with
           Cudf.package = CudfAdd.encode (pkg#name^":"^switch);
-          Cudf.version = Pef.Pefcudf.get_cudf_version tables (pkg#name,pkg#version) ;
-          Cudf.installed = List.mem switch pkg#installedlist ;
+          Cudf.version = Pef.Pefcudf.get_cudf_version tables (pkg#name,pkg#version);
+          Cudf.installed = List.mem switch pkg#installedlist;
           Cudf.keep = if pkg#hold then `Keep_version else `Keep_none;
-          Cudf.depends = Pef.Pefcudf.loadll tables ~arch:switch ~archs pkg#depends;
-          Cudf.conflicts = Pef.Pefcudf.loadlc tables ~arch:switch ~archs pkg#conflicts;
-          Cudf.provides = Pef.Pefcudf.loadlp tables ~arch:switch ~archs pkg#provides ;
-          Cudf.pkg_extra = add_extra extras tables (switch,options.switch) pkg ;
+          Cudf.depends = Pef.Pefcudf.loadll tables ~arch:switch ~archs:all_switches depends;
+          Cudf.conflicts = Pef.Pefcudf.loadlc tables ~arch:switch ~archs:all_switches pkg#conflicts;
+          Cudf.provides = Pef.Pefcudf.loadlp tables ~arch:switch ~archs:all_switches pkg#provides;
+          Cudf.pkg_extra = add_extra extras tables (switch,options.switch) pkg;
         }
       in (cudfpkg::acc)
     else acc
-  ) [] (options.switch::options.switches)
+  ) [] all_switches
 
-let requesttocudf tables universe request =
+(* convert an opam vpkg list into a cudf vpkg list *)
+let encode_vpkglist tables switch vpkglist =
   let to_cudf (p,v) = (p,Pef.Pefcudf.get_cudf_version tables (p,v)) in
-  let select_packages ?(remove=false) l =
-    List.map (fun (vpkgname,constr) ->
-      let vpkgname =
-        match vpkgname with
-        |(n,None) -> (n,Some request.Packages.switch)
-        |_ -> vpkgname
-      in
-      let (name,constr) = Pef.Pefcudf.pefvpkg to_cudf (vpkgname,constr) in
-      if remove then (name,None)
-      else (name,constr)
-    ) l
-  in
+  List.map (fun (vpkgname,constr) ->
+    let vpkgname =
+      match vpkgname with
+      |(n,None) -> (n,Some switch)
+      |_ -> vpkgname
+    in
+    Pef.Pefcudf.pefvpkg to_cudf (vpkgname,constr)
+  ) vpkglist
+
+(** convert a opam request to a cudf request *)
+let requesttocudf tables universe request =
+  let remove = List.map (fun (n,_) -> (n,None)) in
+  let switch = request.Packages.switch in
   if request.Packages.dist_upgrade then
     let to_upgrade = function
       |[] ->
         let filter pkg = pkg.Cudf.installed in
         let l = Cudf.get_packages ~filter universe in
         List.map (fun pkg -> (pkg.Cudf.package,None)) l
-      |l -> select_packages l
+      |l -> encode_vpkglist tables switch l
     in
     {Cudf.default_request with
     Cudf.request_id = "Opam";
     Cudf.upgrade = to_upgrade request.Packages.install;
-    Cudf.remove = select_packages ~remove:true request.Packages.remove;
+    Cudf.remove = remove (encode_vpkglist tables switch request.Packages.remove);
     }
   else
     {Cudf.default_request with
     Cudf.request_id = "Opam";
-    Cudf.install = select_packages request.Packages.install;
-    Cudf.remove = select_packages ~remove:true request.Packages.remove;
-    Cudf.upgrade = select_packages request.Packages.upgrade;
+    Cudf.install = encode_vpkglist tables switch request.Packages.install;
+    Cudf.remove = remove (encode_vpkglist tables switch request.Packages.remove);
+    Cudf.upgrade = encode_vpkglist tables switch request.Packages.upgrade;
     }
 
 let load_list compare l =

@@ -109,7 +109,7 @@ let init_tables compare pkglist =
   Hashtbl.clear temp_versions_table ;
   tables
 
-(* versions start from 1 *)
+(* pef -> cudf . versions start from 1 *)
 let get_cudf_version tables (package,version) =
   try
     let l = Hashtbl.find tables.versions_table package in
@@ -119,6 +119,7 @@ let get_cudf_version tables (package,version) =
   with Not_found ->
     fatal "Cannot find cudf version for %s (= %s)" (CudfAdd.decode package) version
 
+(* cudf -> pef *)
 let get_real_version tables (p,i) =
   try Hashtbl.find tables.reverse_table (p,i)
   with Not_found ->
