@@ -77,16 +77,20 @@ let vpkgformula_filter options ll =
 let parse_req field (loc,s) = Pef.Packages.lexbuf_wrapper field Pef.Packages_parser.vpkglist_top (loc,s)
 
 let parse_request_stanza par =
-  {
-    install = Pef.Packages.parse_s ~default:[] parse_req "install" par;
-    remove = Pef.Packages.parse_s ~default:[] parse_req "remove" par;
-    upgrade = Pef.Packages.parse_s ~default:[] parse_req "upgrade" par;
-    dist_upgrade = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool "dist_upgrade" par;
-    switch = Pef.Packages.parse_s ~required:true Pef.Packages.parse_string "switch" par;
-    switches = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_string_list "switches" par;
-    profiles = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_string_list "profiles" par;
-    preferences = Pef.Packages.parse_s ~default:"" Pef.Packages.parse_string "preferences" par;
-  }
+  try
+    {
+      install = Pef.Packages.parse_s ~default:[] parse_req "install" par;
+      remove = Pef.Packages.parse_s ~default:[] parse_req "remove" par;
+      upgrade = Pef.Packages.parse_s ~default:[] parse_req "upgrade" par;
+      dist_upgrade = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool "dist_upgrade" par;
+      switch = Pef.Packages.parse_s ~required:true Pef.Packages.parse_string "switch" par;
+      switches = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_string_list "switches" par;
+      profiles = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_string_list "profiles" par;
+      preferences = Pef.Packages.parse_s ~default:"" Pef.Packages.parse_string "preferences" par;
+    }
+  with Pef.Packages.ParseError (cl,f,err) ->
+    let c = "Parser Error in Preamble" in
+    raise ( Pef.Packages.ParseError (c::cl,f,err) )
 
 class package ?(name=("package",None)) ?(version=("version",None)) ?(depends=("depends",None))
     ?(conflicts=("conflicts",None)) ?(provides=("provides",None)) ?(depopts=("depopts",None)) 
@@ -176,11 +180,11 @@ let parse_package_stanza ((switch,switches,profiles) as options) par =
       warning "Ignoring Package (%s,%s) : %s" n v s; 
       None
     end
-  |Pef.Packages.ParseError (f,s) -> begin
+  |Pef.Packages.ParseError (cl,f,err) -> begin
       let n = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_name "package" par in
       let v = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_version "version" par in
-      let err = Printf.sprintf "Parser Error in Package (%s,%s) : %s" n v s in
-      raise ( Pef.Packages.ParseError (f,err) )
+      let c = Printf.sprintf "Parser Error in Package (%s,%s)" n v in
+      raise ( Pef.Packages.ParseError (c::cl,f,err) )
   end
 
 (* parse the entire file while filtering out unwanted stanzas.
@@ -199,6 +203,7 @@ let rec packages_parser ?(request=false) (req,acc) p =
   end
 ;;
 
+(* this function raise Pef.Packages.ParseError *)
 let input_raw_ch ic =
   Format822.parse_from_ch (
     packages_parser ~request:true (default_request,[])
@@ -215,5 +220,8 @@ let input_raw file =
     let l = input_raw_ch ch in
     let _ = Input.close_ch ch in
     l
-  with Input.File_empty -> (default_request,[])
+  with 
+  |Input.File_empty -> (default_request,[])
+  |Pef.Packages.ParseError (cl,field,errmsg) ->
+      fatal "Filename %s\n %s\n %s : %s" file (String.concat "\n " cl) field errmsg
 ;;

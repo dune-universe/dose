@@ -20,7 +20,8 @@ open Common
 let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
-exception ParseError of string * string
+(** ParseError context list, field name * error *)
+exception ParseError of string list * string * string
 exception IgnorePackage of string
 
 (* here the _loc is taken from the the caller and not from the parser *)
@@ -28,10 +29,10 @@ let lexbuf_wrapper field type_parser (_loc,s) =
   try type_parser Packages_lexer.token_deb (Lexing.from_string s) with
   |Format822.Syntax_error (m) -> 
       let msg = Printf.sprintf "Field %s has a wrong value (%s): '%s'" field m s in
-      raise (ParseError (field,msg))
+      raise (ParseError ([],field,msg))
   |Parsing.Parse_error -> 
       let msg = Printf.sprintf "Field %s has a wrong value: '%s'" field s in
-      raise (ParseError (field,msg))
+      raise (ParseError ([],field,msg))
 
 let parse_name field = lexbuf_wrapper field Packages_parser.pkgname_top
 let parse_version field = lexbuf_wrapper field Packages_parser.version_top
@@ -55,7 +56,7 @@ let parse_s ?default ?(required=false) f field par =
   with Not_found ->
     match required,default with
     |false,None -> raise Not_found (* for extra fields *)
-    |true,None -> raise (ParseError (field,"This field is required."))
+    |true,None -> raise (ParseError ([],field,"This field is required."))
     |_,Some d -> d (* required or not, I take into consideration the default *)
 
 let parse_string _ (_,s) = s
@@ -182,7 +183,8 @@ let parse_packages_in ?filter ?(extras=[]) fname ic =
   try
     let stanza_parser = parse_package_stanza filter extras in
     Format822.parse_from_ch (packages_parser fname stanza_parser []) ic
-  with ParseError (field,errmsg) -> fatal "Filename %s\n %s : %s" fname field errmsg
+  with ParseError (cl,field,errmsg) ->
+    fatal "Filename %s\n %s\n %s : %s" fname (String.concat "\n " cl) field errmsg
 
 (**/**)
 module Set = struct

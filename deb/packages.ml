@@ -29,7 +29,7 @@ let parse_multiarch field (_,s) = match s with
   |("Allowed"|"allowed") -> `Allowed
   |("Foreign"|"foreign") -> `Foreign
   |("Same"|"same") -> `Same
-  |_ -> raise (Pef.Packages.ParseError (field,Printf.sprintf "Wrong value : %s" s))
+  |_ -> raise (Pef.Packages.ParseError ([],field,Printf.sprintf "Wrong value : %s" s))
 
 let parse_source field = Pef.Packages.lexbuf_wrapper field Pef.Packages_parser.source_top
 let parse_binarylist field = Pef.Packages.lexbuf_wrapper field Pef.Packages_parser.vpkglist_top
@@ -166,12 +166,12 @@ let parse_package_stanza filter archs extras par =
       warning "Ignoring Package (%s,%s,%s) : %s" n v a s; 
       None
     end
-  |Pef.Packages.ParseError (f,s) -> begin
+  |Pef.Packages.ParseError (cl,f,err) -> begin
       let n = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_name "Package" par in
       let v = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_version "Version" par in
       let a = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_string "Architecture" par in
-      let err = Printf.sprintf "Parser Error in Package (%s,%s,%s) : %s" n v a s in
-      raise ( Pef.Packages.ParseError (f,err) )
+      let c = Printf.sprintf "Parser Error in Package (%s,%s,%s)" n v a in
+      raise ( Pef.Packages.ParseError (c::cl,f,err) )
   end
 
 let status_filter par =
@@ -193,7 +193,8 @@ let parse_packages_in ?filter ?(archs=[]) ?(extras=[]) fname ic =
   try
     let stanza_parser = parse_package_stanza filter archs extras in
     Format822.parse_from_ch (Pef.Packages.packages_parser fname stanza_parser []) ic
-  with Pef.Packages.ParseError (field,errmsg) -> fatal "Filename %s\n %s : %s" fname field errmsg
+  with Pef.Packages.ParseError (cl,field,errmsg) ->
+    fatal "Filename %s\n %s\n %s : %s" fname (String.concat "\n " cl) field errmsg
 
 let id p = (p#name,p#version,p#architecture)
 let (>%) p1 p2 = Pervasives.compare (id p1) (id p2)

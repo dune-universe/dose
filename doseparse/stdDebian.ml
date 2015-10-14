@@ -41,8 +41,8 @@ let pkglist_option ?default ?(metavar = " <pkglst>") () =
     List.map (function
       |((n,a),Some("=",v)) -> (n,a,v)
       |((n,a),None) ->
-          raise (Pef.Packages.ParseError (s,"you must specify a version" ))
-      |_ -> raise (Pef.Packages.ParseError (s,""))
+          raise (Pef.Packages.ParseError ([],s,"you must specify a version" ))
+      |_ -> raise (Pef.Packages.ParseError ([],s,""))
     ) (Pef.Packages.parse_vpkglist "cmdline <pkglst>" (_loc,s))
   in
   OptParse.Opt.value_option metavar default
