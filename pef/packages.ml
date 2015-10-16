@@ -186,7 +186,6 @@ let parse_packages_in ?filter ?(extras=[]) fname ic =
   with ParseError (cl,field,errmsg) ->
     fatal "Filename %s\n %s\n %s : %s" fname (String.concat "\n " cl) field errmsg
 
-(**/**)
 module Set = struct
   let pkgcompare p1 p2 = compare (p1#name,p1#version) (p2#name,p2#version)
   include Set.Make(struct 
@@ -194,7 +193,6 @@ module Set = struct
     let compare (x:t) (y:t) = pkgcompare x y
   end)
 end
-(**/**)
 
 let input_raw ?(extras=[]) = 
   let module M = Format822.RawInput(Set) in
