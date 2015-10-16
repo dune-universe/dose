@@ -16,6 +16,10 @@ open ExtLib
 open Common
 open Packages
 
+#define __label __FILE__
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
+
 type tables = {
   versions_table : (string, string list) Hashtbl.t;
   reverse_table : ((string * int), string) Hashtbl.t
@@ -116,14 +120,18 @@ let get_cudf_version tables (package,version) =
     let i = fst(List.findi (fun i a -> a = version) l) in
     Hashtbl.replace tables.reverse_table (CudfAdd.encode package,i+1) version;
     i+1
-  with Not_found ->
-    fatal "Cannot find cudf version for %s (= %s)" (CudfAdd.decode package) version
+  with Not_found -> (
+    warning "Cannot find cudf version for %s (= %s)" (CudfAdd.decode package) version;
+    raise Not_found
+  )
 
 (* cudf -> pef *)
 let get_real_version tables (p,i) =
   try Hashtbl.find tables.reverse_table (p,i)
-  with Not_found ->
-    fatal "Cannot find real version for %s (= %d)" p i
+  with Not_found -> (
+    warning "Cannot find real version for %s (= %d)" p i;
+    raise Not_found
+  )
 
 let encode_vpkgname ?arch ?(archs=[]) vpkgname =
   let aux name = function
