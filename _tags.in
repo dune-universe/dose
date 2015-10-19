@@ -11,14 +11,14 @@ true: -traverse
 <*/*.ml{i,}>: pp(cppo)
 <*/*.ml{i,}>: package(extlib), @PKG_CUDF@, package(re.pcre)
 
-<*/tests.*>: package(oUnit), package(extlib), @PKG_CUDF@, package(re.pcre), package(zip), package(bz2)
+<*/tests.*>: package(oUnit), package(extlib), @PKG_CUDF@, package(re.pcre), package(zip), package(bz2), package(ocamlgraph)
 
 <common/tests.*>: use_common
-<deb/tests.*>: use_common, use_versioning, use_pef, use_debian
-<rpm/tests.*>: use_common, use_versioning, @USE_RPM@, use_algo, package(ocamlgraph), package(re.str)
-<algo/tests.*>: use_common, use_algo, package(ocamlgraph)
+<algo/tests.*>: use_common
 <pef/tests.*>: use_common, use_versioning
 <opam/tests.*>: use_common, use_versioning, use_pef
+<deb/tests.*>: use_common, use_versioning, use_pef, use_algo
+<rpm/tests.*>: use_common, use_versioning, @USE_RPM@, use_algo, package(re.str)
 
 <common/*.ml{i,}>: @PKG_ZIP@, @PKG_BZ2@
 <versioning/*.ml{i,}>: use_common, package(re.pcre)

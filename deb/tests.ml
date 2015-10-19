@@ -906,6 +906,138 @@ let test_sources2packages =
   ]
 ;;
 
+(*
+ pkgA provides pkgB | pkgC depends on pkgB | dpkg  | dose3
+--------------------+----------------------+-------+-------
+      unversioned   |      unversioned     | sat   | sat
+      unversioned   |        (= 20)        | unsat | unsat
+      unversioned   |        (<= 10)       | unsat | unsat
+      unversioned   |        (>= 20)       | unsat | unsat
+--------------------+----------------------+-------+-------
+        (= 10)      |      unversioned     | sat   | unsat  ***
+        (= 10)      |        (= 20)        | unsat | unsat
+        (= 10)      |        (<= 10)       | sat   | sat
+        (= 10)      |        (>= 20)       | unsat | unsat
+--------------------+----------------------+-------+-------
+        (= 20)      |      unversioned     | sat   | unsat  ***
+        (= 20)      |        (= 20)        | sat   | sat
+        (= 20)      |        (<= 10)       | unsat | unsat
+        (= 20)      |        (>= 20)       | sat   | sat
+--------------------+----------------------+-------+-------
+    (= 10) (= 20)   |      unversioned     | sat   | unsat  ***
+    (= 10) (= 20)   |        (= 20)        | sat   | sat
+    (= 10) (= 20)   |        (<= 10)       | sat   | sat
+    (= 10) (= 20)   |        (>= 20)       | sat   | sat
+
+
+ pkgA provides pkgB | pkgC conflicts with pkgB | dpkg  | dose3
+--------------------+--------------------------+-------+-------
+      unversioned   |        unversioned       | unsat |  sat   ***
+      unversioned   |          (= 20)          | sat   |  sat
+      unversioned   |          (<= 10)         | sat   |  sat
+      unversioned   |          (>= 20)         | sat   |  sat
+--------------------+--------------------------+-------+-------
+        (= 10)      |        unversioned       | unsat |  sat   ***
+        (= 10)      |          (= 20)          | sat   |  sat
+        (= 10)      |          (<= 10)         | unsat |  sat   ***
+        (= 10)      |          (>= 20)         | sat   |  sat
+--------------------+--------------------------+-------+-------
+        (= 20)      |        unversioned       | unsat |  sat   ***
+        (= 20)      |          (= 20)          | unsat |  sat   ***
+        (= 20)      |          (<= 10)         | sat   |  sat
+        (= 20)      |          (>= 20)         | unsat |  sat   ***
+--------------------+--------------------------+-------+-------
+    (= 10) (= 20)   |        unversioned       | unsat |  sat   ***
+    (= 10) (= 20)   |          (= 20)          | unsat |  sat   ***
+    (= 10) (= 20)   |          (<= 10)         | unsat |  sat   ***
+    (= 10) (= 20)   |          (>= 20)         | unsat |  sat   ***
+*)
+
+let test_versioned_provides =
+  let unversioned = [(("B",None),None)] in
+  let eqversioned10 = [(("B",None),Some("=","10"))] in
+  let eqversioned20 = [(("B",None),Some("=","20"))] in
+  let leqversioned = [(("B",None),Some("<=","10"))] in
+  let geqversioned = [(("B",None),Some(">=","20"))] in
+  let function_to_test univ =
+    let r = Algo.Depsolver.edos_coinstall univ (Cudf.get_packages univ) in
+    Algo.Diagnostic.is_solution r
+  in
+  let printer r = if r then "unsat" else "sat" in
+  let pr_list = Util.string_of_list ~sep:", " Pef.Printer.string_of_vpkg in
+  let returns = returns_result ~printer function_to_test in
+  let res = 
+    List.map (fun (provides,relation,result) ->
+      List.map (fun (provides,relation,result,polarity) ->
+        let a =
+          new Packages.package
+            ~name:("Package",Some "A")
+            ~version:("Version",Some "1")
+            ~architecture:("Architecture",Some "arch1")
+            ~provides:("Provides",Some provides)
+            ~extras:([],Some [("Type","bin")]) []
+        in
+        let c =
+          if polarity then
+            new Packages.package
+              ~name:("Package",Some "C")
+              ~version:("Version",Some "1")
+              ~architecture:("Architecture",Some "arch1")
+              ~depends:("Depends",Some [relation])
+              ~extras:([],Some [("Type","bin")]) []
+          else
+            new Packages.package
+              ~name:("Package",Some "C")
+              ~version:("Version",Some "1")
+              ~architecture:("Architecture",Some "arch1")
+              ~conflicts:("Conflicts",Some relation)
+              ~extras:([],Some [("Type","bin")]) []
+        in
+        let options = {options with Debcudf.native = Some "arch1" } in
+        let tables = Debcudf.init_tables [a;c] in
+        let pkga = (Debcudf.tocudf ~options tables a) in
+        let pkgc = (Debcudf.tocudf ~options tables c) in
+        let univ = Cudf.load_universe [pkga;pkgc] in
+        let s =
+          let us =
+            let o = IO.output_string () in
+            Cudf_printer.pp_io_preamble o Debcudf.preamble;
+            IO.printf o "\n";
+            Cudf_printer.pp_io_universe o univ;
+            IO.close_out o
+          in
+          Printf.sprintf "\nA Provides:%s / C %s:%s\n%s"
+          (pr_list provides)
+          (if polarity then "Depends" else "Conflicts")
+          (pr_list relation) us 
+        in
+        (s,univ,returns result)
+      ) [(provides,relation,result,true);(provides,relation,not result,false)]
+    )
+    [ 
+      (unversioned,unversioned,true);
+      (unversioned,eqversioned20,false);
+      (unversioned,leqversioned,false);
+      (unversioned,geqversioned,false);
+
+      (eqversioned10,unversioned,true);
+      (eqversioned10,eqversioned20,false);
+      (eqversioned10,leqversioned,true);
+      (eqversioned10,geqversioned,false);
+
+      (eqversioned20,unversioned,true);
+      (eqversioned20,eqversioned20,true);
+      (eqversioned20,leqversioned,false);
+      (eqversioned20,geqversioned,true);
+
+      (eqversioned10@eqversioned20,unversioned,true);
+      (eqversioned10@eqversioned20,eqversioned20,true);
+      (eqversioned10@eqversioned20,leqversioned,true);
+      (eqversioned10@eqversioned20,geqversioned,true);
+    ]
+  in List.flatten res
+;;
+
 let test_sources =
   "test_sources" >::: [
     "test select" >::: make_test_cases select_deps;
@@ -916,6 +1048,7 @@ let test_sources =
 let all = 
   "all tests" >::: [ 
     test_parsing;
+    "test versioned provides" >::: make_test_cases test_versioned_provides;
     test_mapping ;
     test_conflicts;
     test_version;
