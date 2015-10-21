@@ -238,7 +238,12 @@ let normalize_set (l : int list) =
 let who_provides univ (pkgname,constr) = 
   let pkgl = Cudf.lookup_packages ~filter:constr univ pkgname in
   let prol = Cudf.who_provides ~installed:false univ (pkgname,constr) in
-  pkgl @ (List.map fst prol)
+  let filter = function 
+    |(p,None) -> Some p
+    |(p,Some v) when Cudf.version_matches v constr -> Some p
+    |_ -> None
+  in
+  pkgl @ (List.filter_map filter prol)
 
 (* vpkg -> id list *)
 let resolve_vpkg_int univ vpkg =

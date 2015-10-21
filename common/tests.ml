@@ -107,10 +107,21 @@ let test_who_provides =
     assert_equal true (S.equal engine_provides_set set)
   )
 
+let test_who_provides_versioned =
+  "who_provides versioned" >:: (fun _ ->
+    let l = CudfAdd.who_provides universe ("electric-engine",Some(`Eq, 1)) in
+    let engine_provides_set = toset 
+      [ ("electric-engine",1) ]
+    in
+    let set = List.fold_right S.add l S.empty in
+    assert_equal true (S.equal engine_provides_set set)
+  )
+
 let test_lookup_packages =
   "look up packages" >::: [
     test_who_conflicts;
     test_who_provides;
+    test_who_provides_versioned;
   ]
 
 let (test_encode, test_decode) =
