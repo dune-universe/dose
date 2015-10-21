@@ -107,10 +107,17 @@ let pp_string oc (k,v) =
     Printf.fprintf oc "%s: %s\n" k v 
 
 let pp_bool oc (k,v) =
-  Printf.fprintf oc "%s: %b\n" k v
+  if v then
+    Printf.fprintf oc "%s: %b\n" k v
 
-let pp_function oc pp (k,v) =
-  Printf.fprintf oc "%s: %a\n" k pp v
+let pp_yes oc (k,v) =
+  if v then
+    Printf.fprintf oc "%s: %s\n" k (if v then "yes" else "no")
+
+let pp_function oc to_string (k,v) =
+  match to_string v with
+  |"" -> ()
+  |s -> Printf.fprintf oc "%s: %s\n" k s
 
 let pp_string_list ?(sep=", ") oc (k,v) =
   if List.length v > 0 then
