@@ -12,7 +12,10 @@
 
 (** Debian Specific Cudf conversion routines *)
 
-module SSet = Set.Make(String)
+module SSet = Set.Make(struct
+  type t = string * Pef.Packages_types.constr option
+  let compare = Pervasives.compare
+end)
 module OcamlHashtbl = Hashtbl
 
 open ExtLib
@@ -24,10 +27,12 @@ module Version = Versioning.Debian
 let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
+let max32int = Int32.to_int(Int32.max_int);;
+
 module SMap = Map.Make (String)
 
 type tables = {
-  virtual_table : (string * string option,SSet.t ref) OcamlHashtbl.t; (** all names of virtual packages *)
+  virtual_table : (string,SSet.t ref) OcamlHashtbl.t; (** all names of virtual packages *)
   unit_table : unit Util.StringHashtbl.t ;         (** all names of real packages    *)
   versions_table : int Util.StringHashtbl.t;       (** version -> int table          *)
   reverse_table : (string SMap.t) ref Util.IntHashtbl.t;
@@ -120,9 +125,12 @@ let add_s h k v =
  * associates to each virtual package a list of real packages *)
 let init_virtual_table table pkg =
   List.iter (fun ((name,_),constr) -> 
+    add_s table name (pkg#name,constr)
+    (*
     match CudfAdd.cudfop constr with
-    |None -> add_s table (name,None) pkg#name
-    |Some(_,version) -> add_s table (name,Some version) pkg#name
+    |None -> add_s table name (pkg#name,None)
+    |Some(_,version) as c -> add_s table name (pkg#name,c)
+  *)
   ) pkg#provides
 
 (* collect names of real packages *)
@@ -249,16 +257,32 @@ let loadl ?native_arch ?package_arch tables l =
       let encname = add_arch_info ?native_arch ?package_arch vpkgname in
       match CudfAdd.cudfop constr with
       |None ->
-          if (OcamlHashtbl.mem tables.virtual_table (name,None)) then
-            [(encname, None);("--virtual-"^encname, None)]
+          (* Versioned virtual packages will satisfiy non versioned dependencies *)
+          if (OcamlHashtbl.mem tables.virtual_table name) then
+            [(encname, None);("--virtual-"^encname,Some(`Eq,max32int - 1))]
           else
             [(encname, None)]
       |Some(op,v) ->
-          let constr = Some(op,get_cudf_version tables (name,v)) in
-          if (OcamlHashtbl.mem tables.virtual_table (name,Some(v))) then 
-            [(encname,constr);("--virtual-versioned-"^encname, constr)]
-          else
-            [(encname,constr)]
+          (* Non-versioned virtual packages will not satisfy versioned dependencies. *)
+          try
+            match SSet.elements !(OcamlHashtbl.find tables.virtual_table name) with
+            |[] -> assert false
+            |l ->
+                let dl = 
+                  List.filter_map (function
+                    |(_,None) -> Some ("--virtual-"^encname,Some(`Eq,max32int))
+                    |(_,Some _) ->
+                        let constr = Some(op,get_cudf_version tables (name,v)) in
+                        Some ("--virtual-"^encname,constr)
+                  ) l
+                in
+                if Util.StringHashtbl.mem tables.unit_table name then
+                  let constr = Some(op,get_cudf_version tables (name,v)) in
+                  (encname,constr)::dl
+                else dl
+          with Not_found -> 
+              let constr = Some(op,get_cudf_version tables (name,v)) in
+              [(encname,constr)]
     ) l
   )
 
@@ -275,13 +299,17 @@ let loadlc ?native_arch ?package_arch tables name l =
   (CudfAdd.encode name, None)::(loadl ?native_arch ?package_arch tables l)
 
 let loadlp ?native_arch ?package_arch tables l =
-  List.map (fun ((name,_) as vpkgname,constr) ->
-    let encname = add_arch_info ?native_arch ?package_arch vpkgname in
-    match CudfAdd.cudfop constr with
-    |None  -> ("--virtual-"^encname,None)
-    |Some(`Eq,v) -> ("--virtual-versioned-"^encname,Some(`Eq,get_cudf_version tables (name,v)))
-    |_ -> fatal "This should never happen : a provide can be either = or unversioned"
-  ) l
+  List.flatten (
+    List.map (fun ((name,_) as vpkgname,constr) ->
+      let encname = add_arch_info ?native_arch ?package_arch vpkgname in
+      match CudfAdd.cudfop constr with
+      |None -> [("--virtual-"^encname,Some(`Eq,max32int - 1))]
+      |Some(`Eq,v) ->
+        let constr = Some(`Eq,get_cudf_version tables (name,v)) in
+        [("--virtual-"^encname,constr);(encname,constr)]
+      |_ -> fatal "This should never happen : a provide can be either = or unversioned"
+    ) l
+  )
 
 
 (* ========================================= *)
@@ -483,12 +511,12 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
                       begin
                         debug "M-A-Same: pkg %s has a self-conflict via virtual package: %s" pkg#name n;
                         try
-                          List.filter_map (fun pn ->
+                          List.filter_map (fun (pn,_) ->
                             if pn <> pkg#name then begin
                               debug "M-A-Same: adding conflict on real package %s for %s" pn pkg#name; 
                               Some((pn,a),None)
                             end else None
-                          ) (SSet.elements !(OcamlHashtbl.find tables.virtual_table (n,None)))
+                          ) (SSet.elements !(OcamlHashtbl.find tables.virtual_table n))
                         with Not_found -> []
                       end
                 )
