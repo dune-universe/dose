@@ -215,25 +215,31 @@ let get_cudf_version tables (package,version) =
 
 let get_real_version tables (name,cudfversion) =
   let package =
-    (* XXX this is a hack. *)
+    (* XXX this is a hack. Remove --virtual- and architecture encoding *)
     let n = (CudfAdd.decode name) in
-    try
-      let (n,a) = ExtString.String.split n ":" in
-      if n = "src" then a else n
-    with Invalid_string -> n
+    if ExtString.String.starts_with n "--vir" then
+      ExtString.String.slice ~first:10 n
+    else
+      try
+        let (n,a) = ExtString.String.split n ":" in
+        if n = "src" then a else n
+      with Invalid_string -> n
   in
   try
-    let m = !(Util.IntHashtbl.find tables.reverse_table cudfversion) in
-    try SMap.find package m 
-    with Not_found ->
-      let known =
-        String.concat "," (
-          List.map (fun (n,v) ->
-            Printf.sprintf "(%s,%s)" n v
-          ) (SMap.bindings m)
-        )
-      in
-      fatal "Unable to get real version for %s (%i)\n All Known versions for this package are %s" package cudfversion known 
+    if cudfversion = max32int || cudfversion = max32int - 1 then 
+      (package,"nan")
+    else
+      let m = !(Util.IntHashtbl.find tables.reverse_table cudfversion) in
+      try (package,SMap.find package m) 
+      with Not_found ->
+        let known =
+          String.concat "," (
+            List.map (fun (n,v) ->
+              Printf.sprintf "(%s,%s)" n v
+            ) (SMap.bindings m)
+          )
+        in
+        fatal "Unable to get real version for %s (%i)\n All Known versions for this package are %s" package cudfversion known 
   with Not_found ->
     fatal "Package (%s,%d) does not have an associated debian version" name cudfversion
 
@@ -305,8 +311,8 @@ let preamble =
   CudfAdd.add_properties Cudf.default_preamble l
 
 let add_extra ?native_arch extras tables pkg =
-  let check = function [] :: _ -> failwith (Printf.sprintf "Malformed dep (%s %s)" pkg#name pkg#version) |l -> l in
-  let name = if String.starts_with pkg#name "src:" then
+  let name = 
+    if String.starts_with pkg#name "src:" then
       String.sub pkg#name 4 ((String.length pkg#name) - 4)
     else pkg#name
   in
@@ -326,11 +332,14 @@ let add_extra ?native_arch extras tables pkg =
     let cv = get_cudf_version tables ("",v) in
     ("source",`String n), ("sourcenumber", `String v), ("sourceversion", `Int cv)
   in
-  let recommends = ("recommends", `Vpkgformula (check (loadll tables pkg#recommends))) in
+  let recommends = ("recommends", `Vpkgformula (loadll tables pkg#recommends)) in
   let replaces = ("replaces", `Vpkglist (loadl tables pkg#replaces)) in
-  let native =
-    let n = if Option.is_some native_arch && (Option.get native_arch) = pkg#architecture then 1 else 0 in
-    ("native",`Int n)
+  let native = (* XXX if 0 we can ignore it *)
+    let n =
+      if Option.is_some native_arch && 
+        (Option.get native_arch) = pkg#architecture then 1 
+      else 0
+    in ("native",`Int n)
   in
   let extras = 
     ("Type",("type",`String None))::

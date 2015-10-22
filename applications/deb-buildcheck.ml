@@ -143,7 +143,7 @@ let main () =
   in
   let tables = Debcudf.init_tables (srclist @ pkglist) in
   let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
-  let from_cudf (p,v) = (p,Debian.Debcudf.get_real_version tables (p,v)) in
+  let from_cudf (p,v) = Debian.Debcudf.get_real_version tables (p,v) in
   let pp = CudfAdd.pp from_cudf in 
 
   (* XXX here latest could be a bit faster if done at the same time of the cudf

@@ -351,7 +351,7 @@ let main () =
   OptParse.Opt.set Options.criteria criteria ;
 
   let solpre,soluniv = 
-    let from_cudf (p,v) = (p,Debian.Debcudf.get_real_version tables (p,v)) in
+    let from_cudf (p,v) = Debian.Debcudf.get_real_version tables (p,v) in
     let pp = CudfAdd.pp from_cudf in
     let explain = OptParse.Opt.get Options.human in
     match Algo.Depsolver.check_request ~cmd:exec_pat ~criteria ~explain cudf with

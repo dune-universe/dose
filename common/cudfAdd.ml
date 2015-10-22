@@ -129,8 +129,7 @@ let default_pp pkg =
   (pkg.Cudf.package,v,[])
 
 let pp from_cudf ?(fields=[]) ?(decode=decode) pkg =
-    let (p,i) = (pkg.Cudf.package,pkg.Cudf.version) in
-    let v = if i > 0 then snd(from_cudf (p,i)) else "nan" in
+    let (p,v) = from_cudf (pkg.Cudf.package,pkg.Cudf.version) in
     let default_fields = ["architecture";"source";"sourcenumber";"essential"] in
     let f b l =
       List.filter_map (fun k ->
@@ -152,11 +151,16 @@ let pp_vpkg pp fmt vpkg =
   in
   match vpkg with
   |(p,None) ->
-      let (p,_,_) = pp {Cudf.default_package with Cudf.package = p} in
+      let (p,_,_) = 
+        pp {Cudf.default_package with 
+          Cudf.package = p ; 
+          version = Int32.to_int(Int32.max_int)} 
+      in
       Format.fprintf fmt "%s" p
   |(p,Some(c,v)) ->
-      let (p,v,_) = pp {Cudf.default_package with Cudf.package = p ; version = v} in
-      Format.fprintf fmt "%s (%s %s)" p (string_of_relop c) v
+      match pp {Cudf.default_package with Cudf.package = p ; version = v} with
+      |(p,("nan" | ""),_) -> Format.fprintf fmt "%s" p
+      |(p,v,_) -> Format.fprintf fmt "%s (%s %s)" p (string_of_relop c) v
 
 let pp_vpkglist pp fmt =
   let pp_list fmt ~pp_item ~sep l =

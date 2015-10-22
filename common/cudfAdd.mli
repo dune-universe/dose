@@ -168,7 +168,7 @@ type pp = Cudf.package -> string * string * (string * (string * bool)) list
     as "nan"
 *)
 val pp :
-  (Cudf_types.pkgname * Cudf_types.version -> 'a * Cudf_types.pkgname) ->
+  (Cudf_types.pkgname * Cudf_types.version -> string * string) ->
   ?fields: string list->
   ?decode: (Cudf_types.pkgname -> string) -> pp
 

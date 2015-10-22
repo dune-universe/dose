@@ -117,7 +117,7 @@ let main () =
       else []
     in
     let tables = Debian.Debcudf.init_tables (srclist@pkglist) in
-    let from_cudf (p,i) = (p,Debian.Debcudf.get_real_version tables (p,i)) in
+    let from_cudf (p,i) = Debian.Debcudf.get_real_version tables (p,i) in
     let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
     let srcl =
       let dl = List.map (Debian.Debcudf.tocudf tables ~options) srclist in

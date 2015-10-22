@@ -247,8 +247,8 @@ let outdated
           try Cudf.lookup_package_property pkg "number"
           with Not_found ->
             if (pkg.Cudf.version mod 2) = 1 then
-              Debian.Debcudf.get_real_version tables 
-              (pkg.Cudf.package,pkg.Cudf.version)
+              snd(Debian.Debcudf.get_real_version tables 
+              (pkg.Cudf.package,pkg.Cudf.version))
             else
               fatal "Real package without Debian Version"
       end
