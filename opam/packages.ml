@@ -74,7 +74,7 @@ let vpkgformula_filter options ll =
     |l -> Some l
   ) ll
 
-let parse_req field (loc,s) = Pef.Packages.lexbuf_wrapper field Pef.Packages_parser.vpkglist_top (loc,s)
+let parse_req = Pef.Packages.lexbuf_wrapper Pef.Packages_parser.vpkglist_top
 
 let parse_request_stanza par =
   try
@@ -95,25 +95,25 @@ let parse_request_stanza par =
 class package ?(name=("package",None)) ?(version=("version",None)) ?(depends=("depends",None))
     ?(conflicts=("conflicts",None)) ?(provides=("provides",None)) ?(depopts=("depopts",None)) 
     ?(switch=("switch",None)) ?(installedlist=("installed",None)) ?(build_depends=("build-depends",None)) 
-    ?(base=("base",None)) par = object
+    ?(base=("base",None)) ?(extras=([],None)) par = object
   
-  inherit Pef.Packages.package ~name ~version ~depends ~conflicts ~provides ~recommends:depopts par
+  inherit Pef.Packages.package ~name ~version ~depends ~conflicts ~provides ~recommends:depopts ~extras par
 
   val switch : (string * string list) =
-    let f = Pef.Packages.parse_s ~default:["all"] (Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp) in
-    Pef.Packages.get_field_value f par switch
+    let parse = Pef.Packages.parse_s ~default:["all"] (Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp) in
+    Pef.Packages.get_field_value ~parse ~par ~field:switch
 
   val installedlist : (string * string list) =
-    let f = Pef.Packages.parse_s ~default:[] (Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp) in
-    Pef.Packages.get_field_value f par installedlist
+    let parse = Pef.Packages.parse_s ~default:[] (Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp) in
+    Pef.Packages.get_field_value ~parse ~par ~field:installedlist
 
   val build_depends : (string * Pef.Packages_types.vpkgformula) =
-    let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_vpkgformula in
-    Pef.Packages.get_field_value f par build_depends
+    let parse = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_vpkgformula in
+    Pef.Packages.get_field_value ~parse ~par ~field:build_depends
 
   val base : (string * bool) =
-    let f = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool in
-    Pef.Packages.get_field_value f par base
+    let parse = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool in
+    Pef.Packages.get_field_value ~parse ~par ~field:base
 
   method switch = snd switch
   method installedlist = snd installedlist
@@ -140,7 +140,7 @@ end
 (* a stanza is not considered if the intersection between the
 active switch and the not available switches for a package is
 empty *)
-let parse_package_stanza ((switch,switches,profiles) as options) par =
+let parse_package_stanza ((switch,switches,profiles) as options) ?(extras=[]) par =
   try
     let pkg =
       let depends =
@@ -159,7 +159,8 @@ let parse_package_stanza ((switch,switches,profiles) as options) par =
         let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_builddepslist in
         ("provides",Some (vpkglist_filter options (f "provides" par)))
       in
-      new package ~depends ~conflicts ~provides ~depopts par
+      (* let extras = List.map (fun (f,v) -> (f,(Format822.dummy_loc,v))) extras in *)
+      new package ~depends ~conflicts ~provides ~depopts ~extras:(extras,None) par
     in
     (* XXX here I could be a tiny bit faster by parsing the switch first and then all other
      * fields if necessary *)

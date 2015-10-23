@@ -74,9 +74,9 @@ type apt_req =
   |Upgrade of Pef.Packages_types.suite option
   |DistUpgrade of Pef.Packages_types.suite option
 
-let parse_req field s = 
+let parse_req label s = 
   let _loc = Format822.dummy_loc in
-  Pef.Packages.lexbuf_wrapper field Pef.Packages_parser.request_top (_loc,s)
+  Pef.Packages.lexbuf_wrapper Pef.Packages_parser.request_top (label,(_loc,s))
 
 let parse_pkg_req suite s =
   let (r,((n,a),c),s) = parse_req "apt req suite" s in
@@ -193,13 +193,13 @@ let parse_pref_labels s =
 
 let general_regexp = Pcre.regexp "^[ \t]*[*][ \t]*$" ;;
 
-let parse_pref_package _ (_,s) =
+let parse_pref_package (_,(_,s)) =
   if Pcre.pmatch ~rex:general_regexp s then Pref.Star
-  else Pref.Package (Pef.Packages.parse_name "apt pref" (Format822.dummy_loc,s))
+  else Pref.Package (Pef.Packages.parse_name ("apt pref",(Format822.dummy_loc,s)))
 
 let pin_regexp = Pcre.regexp "^([A-Za-z]+)[ \t]+(.*)$" ;;
 
-let parse_pin _ (_,s) =
+let parse_pin (_,(_,s)) =
   try
     let substrings = Pcre.exec ~rex:pin_regexp s
     in

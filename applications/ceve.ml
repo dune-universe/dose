@@ -91,8 +91,9 @@ let loadl to_cudf l =
 let parse_request to_cudf l =
   let pkgs_of s = (* convert request into list of packages *) 
     let rs = String.strip (snd (String.split s " ")) in
-    let  f = Pef.Packages.lexbuf_wrapper "ceve pkg req" Pef.Packages_parser.vpkglist_top in
-    loadl to_cudf (f (Format822.dummy_loc,rs)) 
+    let field = ("ceve pkg req",(Format822.dummy_loc,rs)) in
+    let v = Pef.Packages.lexbuf_wrapper Pef.Packages_parser.vpkglist_top field in
+    loadl to_cudf v 
   in              
   let parse acc s =
     if String.starts_with s "install: " then

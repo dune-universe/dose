@@ -35,7 +35,7 @@ end
 let vpkg_option ?default ?(metavar = " <vpkg>") () =
   let parse_vpkg s = 
     let _loc = Format822.dummy_loc in
-    Pef.Packages.parse_vpkg "cmdline <vpkg>" (_loc,s)
+    Pef.Packages.parse_vpkg ("cmdline <vpkg>",(_loc,s))
   in
   OptParse.Opt.value_option metavar default
   parse_vpkg (fun _ s -> Printf.sprintf "invalid vpackage '%s'" s)
@@ -45,7 +45,7 @@ let vpkg_option ?default ?(metavar = " <vpkg>") () =
 let vpkglist_option ?default ?(metavar = " <vpkglst>") () =
   let parse_vpkglist s = 
     let _loc = Format822.dummy_loc in
-    Pef.Packages.parse_vpkglist "cmdline <vpkglst>" (_loc,s)
+    Pef.Packages.parse_vpkglist ("cmdline <vpkglst>",(_loc,s))
   in
   OptParse.Opt.value_option metavar default
   parse_vpkglist (fun _ s -> Printf.sprintf "invalid vpackage list '%s'" s)
@@ -60,7 +60,7 @@ let pkglist_option ?default ?(metavar = " <pkglst>") () =
       |((n,a),None) ->
           raise (Pef.Packages.ParseError ([],s,"you must specify a version" ))
       |_ -> raise (Pef.Packages.ParseError ([],s,""))
-    ) (Pef.Packages.parse_vpkglist "cmdline <pkglst>" (_loc,s))
+    ) (Pef.Packages.parse_vpkglist ("cmdline <pkglst>",(_loc,s)))
   in
   OptParse.Opt.value_option metavar default
   parse_vpkglist (fun _ s -> Printf.sprintf "invalid package list '%s'" s)

@@ -74,15 +74,15 @@ let from_apt_request arch request = function
   |Apt.DistUpgrade _ -> {request with distupgrade = true}
 ;;
 
-let parse_req field (loc,s) = 
-  let aux = Pef.Packages.lexbuf_wrapper field Pef.Packages_parser.vpkg_top in
+let parse_req (label,(loc,s)) = 
+  let aux v = Pef.Packages.lexbuf_wrapper Pef.Packages_parser.vpkg_top (label,v) in
   let l = Pcre.split ~rex:Apt.blank_regexp s in 
   List.map (fun s -> aux (loc,s)) l
 
-let parse_edsp_version field (_,s) =
+let parse_edsp_version (label,(_,s)) =
   match String.nsplit s " " with
   |["EDSP";s] when (float_of_string s) >= 0.4 -> s
-  |_ -> raise (Pef.Packages.ParseError ([],field,"Invalid EDSP version."))
+  |_ -> raise (Pef.Packages.ParseError ([],label,"Invalid EDSP version."))
 
 let parse_request_stanza par =
   (* request must be parse before any other fields *)
@@ -128,7 +128,7 @@ let rec packages_parser ?(request=false) (req,acc) p =
      apt-candidate *)
   let filter par = 
     let match_field f p =
-      try Pef.Packages.parse_bool f (Pef.Packages.assoc f p)
+      try Pef.Packages.parse_bool (f,(Pef.Packages.assoc f p))
       with Not_found -> false
     in
     let inst () = match_field "Installed" par in 
@@ -191,14 +191,14 @@ let is_installed pkg =
   try
     let _loc = Format822.dummy_loc in
     let v = pkg#get_extra "Installed" in
-    Pef.Packages.parse_bool "Installed" (_loc,v)
+    Pef.Packages.parse_bool ("Installed",(_loc,v))
   with Not_found -> false
 
 let is_on_hold pkg =
   try
     let _loc = Format822.dummy_loc in
     let v = pkg#get_extra "Hold" in
-    (Pef.Packages.parse_bool "Hold" (_loc,v))
+    (Pef.Packages.parse_bool ("Hold",(_loc,v)))
   with Not_found -> false
 
 let tocudf tables ?(options=Debcudf.default_options) ?(inst=false) pkg =

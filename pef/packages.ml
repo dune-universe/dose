@@ -1,6 +1,6 @@
 (**************************************************************************************)
-(*  Copyright (C) 2009 Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
-(*  Copyright (C) 2009 Mancoosi Project                                               *)
+(*  Copyright (C) 2015 Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
+(*  Copyright (C) 2015 Mancoosi Project                                               *)
 (*                                                                                    *)
 (*  This library is free software: you can redistribute it and/or modify              *)
 (*  it under the terms of the GNU Lesser General Public License as                    *)
@@ -24,24 +24,26 @@ include Util.Logging(struct let label = label end) ;;
 exception ParseError of string list * string * string
 exception IgnorePackage of string
 
+type parse_extras_f = (Common.Format822.field list -> string)
+
 (* here the _loc is taken from the the caller and not from the parser *)
-let lexbuf_wrapper field type_parser (_loc,s) =
+let lexbuf_wrapper type_parser (label,(_loc,s)) =
   try type_parser Packages_lexer.token_deb (Lexing.from_string s) with
   |Format822.Syntax_error (m) -> 
-      let msg = Printf.sprintf "Field %s has a wrong value (%s): '%s'" field m s in
-      raise (ParseError ([],field,msg))
+      let msg = Printf.sprintf "Field %s has a wrong value (%s): '%s'" label m s in
+      raise (ParseError ([],label,msg))
   |Parsing.Parse_error -> 
-      let msg = Printf.sprintf "Field %s has a wrong value: '%s'" field s in
-      raise (ParseError ([],field,msg))
+      let msg = Printf.sprintf "Field %s has a wrong value: '%s'" label s in
+      raise (ParseError ([],label,msg))
 
-let parse_name field = lexbuf_wrapper field Packages_parser.pkgname_top
-let parse_version field = lexbuf_wrapper field Packages_parser.version_top
-let parse_vpkg field = lexbuf_wrapper field Packages_parser.vpkg_top
-let parse_vpkglist field = lexbuf_wrapper field Packages_parser.vpkglist_top
-let parse_vpkgformula field = lexbuf_wrapper field Packages_parser.vpkgformula_top
-let parse_archlist field = lexbuf_wrapper field Packages_parser.archlist_top
-let parse_builddepslist field = lexbuf_wrapper field Packages_parser.builddepslist_top
-let parse_builddepsformula field = lexbuf_wrapper field Packages_parser.builddepsformula_top
+let parse_name v = lexbuf_wrapper Packages_parser.pkgname_top v
+let parse_version v = lexbuf_wrapper Packages_parser.version_top v
+let parse_vpkg v = lexbuf_wrapper  Packages_parser.vpkg_top v
+let parse_vpkglist v = lexbuf_wrapper Packages_parser.vpkglist_top v
+let parse_vpkgformula v = lexbuf_wrapper Packages_parser.vpkgformula_top v
+let parse_archlist v = lexbuf_wrapper Packages_parser.archlist_top v
+let parse_builddepslist v = lexbuf_wrapper Packages_parser.builddepslist_top v
+let parse_builddepsformula v = lexbuf_wrapper Packages_parser.builddepsformula_top v
 
 (* assume n is lowercase *)
 (* Using lists in this case is faster then using 
@@ -51,47 +53,47 @@ let rec assoc (n : string) = function
   |(k,_)::t -> assoc n t
   |[] -> raise Not_found
 
-let parse_s ?default ?(required=false) f field par =
-  try let (_loc,s) = (assoc field par) in f field (_loc,s)
+let parse_s ?default ?(required=false) f label par =
+  try let (_loc,s) = (assoc label par) in f (label,(_loc,s))
   with Not_found ->
     match required,default with
-    |false,None -> raise Not_found (* for extra fields *)
-    |true,None -> raise (ParseError ([],field,"This field is required."))
+    |false,None -> raise Not_found (* for extra labels *)
+    |true,None -> raise (ParseError ([],label,"This label is required."))
     |_,Some d -> d (* required or not, I take into consideration the default *)
 
-let parse_string _ (_,s) = s
-let parse_int _ (_,s) = int_of_string s
-let parse_string_opt _ = function (_,"") -> None | (_,s) -> Some s
+let parse_string (_,(_,s)) = s
+let parse_int (_,(_,s)) = int_of_string s
+let parse_string_opt (_,(_,s)) = match s with "" -> None | _ -> Some s
 
 let blank_regexp = Pcre.regexp "[ \t]+" ;;
 let comma_regexp = Pcre.regexp "[ \t]*,[ \t]*" ;;
-let parse_string_list ?(rex=blank_regexp) _ (_,s) = Pcre.split ~rex s
+let parse_string_list ?(rex=blank_regexp) (_,(_,s)) = Pcre.split ~rex s
 
 (* parse and convert to a specific type *)
-let parse_bool field = function
-  |(_,("Yes"|"yes"|"True" |"true")) -> true
-  |(_,("No" |"no" |"False"|"false")) -> false (* this one usually is not there *)
-  |(_,s) -> raise (Format822.Type_error (field ^ " - wrong value : "^ s))
+let parse_bool (label,(_,s)) = match s with
+  |("Yes"|"yes"|"True" |"true") -> true
+  |("No" |"no" |"False"|"false") -> false (* this one usually is not there *)
+  |s -> raise (Format822.Type_error (label ^ " - wrong value : "^ s))
 ;;
 
-let parse_bool_s field v = string_of_bool (parse_bool field v) ;;
-let parse_int_s field (_,s) = string_of_int (int_of_string s) ;;
+let parse_bool_s v = string_of_bool (parse_bool v)
+let parse_int_s (_,(_,s)) = string_of_int (int_of_string s)
 
-(* parse extra fields parse_f returns a string *)
+(* parse extra labels parse_f returns a string *)
 let parse_e extras par =
-  List.filter_map (fun (field, p) ->
+  List.filter_map (fun (label, p) ->
     try begin
       match p with
-      |None -> Some(field,parse_s parse_string field par)
-      |Some parse_f -> Some (field,parse_f par)
+      |None -> Some(label,parse_s parse_string label par)
+      |Some parse_f -> Some (label,parse_f par)
     end with Not_found -> None
   ) extras
 
-let get_field_value f par (field,value) =
+let get_field_value ~parse ~par ~field:(label,value) =
   let res = 
-    if Option.is_none value then f field par
+    if Option.is_none value then parse label par
     else Option.get value
-  in (field,res)
+  in (label,res)
 
 (** strip down version of the debian package format *)
 class package 
@@ -101,32 +103,32 @@ class package
   ?(recommends=("Recommends",None)) ?(extras=([],None)) par = object
 
   val name : (string * Packages_types.name) =
-    let f = parse_s ~required:true parse_name in
-    get_field_value f par name
+    let parse = parse_s ~required:true parse_name in
+    get_field_value ~parse ~par ~field:name
 
   val version : (string * Packages_types.version) =
-    let f = parse_s ~required:true parse_version in
-    get_field_value f par version
+    let parse = parse_s ~required:true parse_version in
+    get_field_value ~parse ~par ~field:version
 
   val installed : (string * Packages_types.installed) =
-    let f = parse_s ~default:false parse_bool in
-    get_field_value f par installed
+    let parse = parse_s ~default:false parse_bool in
+    get_field_value ~parse ~par ~field:installed
 
   val depends : (string * Packages_types.vpkgformula) =
-    let f = parse_s ~default:[] parse_vpkgformula in
-    get_field_value f par depends
+    let parse = parse_s ~default:[] parse_vpkgformula in
+    get_field_value ~parse ~par ~field:depends
 
   val conflicts : (string * Packages_types.vpkglist) =
-    let f = parse_s ~default:[] parse_vpkglist in
-    get_field_value f par conflicts
+    let parse = parse_s ~default:[] parse_vpkglist in
+    get_field_value ~parse ~par ~field:conflicts
 
   val provides : (string * Packages_types.vpkglist) =
-    let f = parse_s ~default:[] parse_vpkglist in
-    get_field_value f par provides
+    let parse = parse_s ~default:[] parse_vpkglist in
+    get_field_value ~parse ~par ~field:provides
 
   val recommends : (string * Packages_types.vpkgformula) =
-    let f = parse_s ~default:[] parse_vpkgformula in
-    get_field_value f par recommends
+    let parse = parse_s ~default:[] parse_vpkgformula in
+    get_field_value ~parse ~par ~field:recommends
 
   val extras : (string * string) list =
     match extras with
@@ -183,8 +185,8 @@ let parse_packages_in ?filter ?(extras=[]) fname ic =
   try
     let stanza_parser = parse_package_stanza filter extras in
     Format822.parse_from_ch (packages_parser fname stanza_parser []) ic
-  with ParseError (cl,field,errmsg) ->
-    fatal "Filename %s\n %s\n %s : %s" fname (String.concat "\n " cl) field errmsg
+  with ParseError (cl,label,errmsg) ->
+    fatal "Filename %s\n %s\n %s : %s" fname (String.concat "\n " cl) label errmsg
 
 module Set = struct
   let pkgcompare p1 p2 = compare (p1#name,p1#version) (p2#name,p2#version)

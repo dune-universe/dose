@@ -17,7 +17,8 @@ let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
 type loc = Lexing.position * Lexing.position
-type stanza = (string * (loc * string)) list
+type field = (string * (loc * string))
+type stanza = field list
 type doc = stanza list
 
 let dummy_loc: loc = Lexing.dummy_pos, Lexing.dummy_pos

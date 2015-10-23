@@ -24,15 +24,15 @@ open Common
 let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
-let parse_multiarch field (_,s) = match s with
+let parse_multiarch (label,(_,s)) = match s with
   |("None"|"none"|"No"|"no") -> `No
   |("Allowed"|"allowed") -> `Allowed
   |("Foreign"|"foreign") -> `Foreign
   |("Same"|"same") -> `Same
-  |_ -> raise (Pef.Packages.ParseError ([],field,Printf.sprintf "Wrong value : %s" s))
+  |_ -> raise (Pef.Packages.ParseError ([],label,Printf.sprintf "Wrong value : %s" s))
 
-let parse_source field = Pef.Packages.lexbuf_wrapper field Pef.Packages_parser.source_top
-let parse_binarylist field = Pef.Packages.lexbuf_wrapper field Pef.Packages_parser.vpkglist_top
+let parse_source v = Pef.Packages.lexbuf_wrapper Pef.Packages_parser.source_top v
+let parse_binarylist v = Pef.Packages.lexbuf_wrapper Pef.Packages_parser.vpkglist_top v
 
 class package ?(name=("Package",None)) ?(version=("Version",None)) ?(depends=("Depends",None))
     ?(conflicts=("Conflicts",None)) ?(provides=("Provides",None)) ?(recommends=("Recommends",None)) 
@@ -41,57 +41,57 @@ class package ?(name=("Package",None)) ?(version=("Version",None)) ?(depends=("D
     ?(extra_source_only=("Extra-Source-Only",None)) ?(priority=("Priority",None)) 
     ?(pre_depends=("Pre-Depends",None)) ?(suggests=("Suggests",None))
     ?(enhances=("Enhances",None)) ?(breaks=("Breaks",None)) ?(replaces=("Replaces",None))
-    ?(extras=([],None)) par = object
+    ?(extras=([],None)) par = object(super)
   
   inherit Pef.Packages.package ~name ~version ~depends ~conflicts ~provides ~recommends ~extras par
 
   val architecture : (string * Pef.Packages_types.architecture) =
-    let f = Pef.Packages.parse_s ~required:true Pef.Packages.parse_string in
-    Pef.Packages.get_field_value f par architecture
+    let parse = Pef.Packages.parse_s ~required:true Pef.Packages.parse_string in
+    Pef.Packages.get_field_value ~parse ~par ~field:architecture
 
   val multiarch : (string * Pef.Packages_types.multiarch) =
-    let f = Pef.Packages.parse_s ~default:`No parse_multiarch in
-    Pef.Packages. get_field_value f par multiarch
+    let parse = Pef.Packages.parse_s ~default:`No parse_multiarch in
+    Pef.Packages.get_field_value ~parse ~par ~field:multiarch
 
   val source : (string * (Pef.Packages_types.name * Pef.Packages_types.version option)) =
-    let f = Pef.Packages.parse_s ~default:("",None) parse_source in
-    Pef.Packages.get_field_value f par source
+    let parse = Pef.Packages.parse_s ~default:("",None) parse_source in
+    Pef.Packages.get_field_value ~parse ~par ~field:source
 
   val essential : (string * bool) =
-    let f = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool in
-    Pef.Packages.get_field_value f par essential
+    let parse = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool in
+    Pef.Packages.get_field_value ~parse ~par ~field:essential
 
   val build_essential : (string * bool) =
-    let f = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool in
-    Pef.Packages.get_field_value f par build_essential
+    let parse = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool in
+    Pef.Packages.get_field_value ~parse ~par ~field:build_essential
 
   val extra_source_only : (string * bool) =
-    let f = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool in
-    Pef.Packages.get_field_value f par extra_source_only
+    let parse = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool in
+    Pef.Packages.get_field_value ~parse ~par ~field:extra_source_only
 
   val priority : (string * string) =
-    let f = Pef.Packages.parse_s ~default:"" Pef.Packages.parse_string in
-    Pef.Packages.get_field_value f par priority
+    let parse = Pef.Packages.parse_s ~default:"" Pef.Packages.parse_string in
+    Pef.Packages.get_field_value ~parse ~par ~field:priority
 
   val pre_depends : (string * Pef.Packages_types.vpkgformula) =
-    let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_vpkgformula in
-    Pef.Packages.get_field_value f par pre_depends
+    let parse = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_vpkgformula in
+    Pef.Packages.get_field_value ~parse ~par ~field:pre_depends
 
   val suggests : (string * Pef.Packages_types.vpkgformula) =
-    let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_vpkgformula in
-    Pef.Packages.get_field_value f par suggests
+    let parse = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_vpkgformula in
+    Pef.Packages.get_field_value ~parse ~par ~field:suggests
 
   val enhances : (string * Pef.Packages_types.vpkgformula) =
-    let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_vpkgformula in
-    Pef.Packages.get_field_value f par enhances
+    let parse = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_vpkgformula in
+    Pef.Packages.get_field_value ~parse ~par ~field:enhances
 
   val breaks : (string * Pef.Packages_types.vpkglist) =
-    let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_vpkglist in
-    Pef.Packages.get_field_value f par breaks 
+    let parse = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_vpkglist in
+    Pef.Packages.get_field_value ~parse ~par ~field:breaks 
 
   val replaces : (string * Pef.Packages_types.vpkglist) =
-    let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_vpkglist in
-    Pef.Packages.get_field_value f par replaces
+    let parse = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_vpkglist in
+    Pef.Packages.get_field_value ~parse ~par ~field:replaces
 
   method architecture = snd architecture
   method multiarch = snd multiarch

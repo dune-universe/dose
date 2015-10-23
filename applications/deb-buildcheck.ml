@@ -112,7 +112,7 @@ let main () =
   let filter_external_sources par =
     if (OptParse.Opt.get Options.includextra) then true
     else
-      try not(Pef.Packages.parse_bool "extra-source-only" (Pef.Packages.assoc "extra-source-only" par))
+      try not(Pef.Packages.parse_bool ("extra-source-only",(Pef.Packages.assoc "extra-source-only" par)))
       with Not_found -> true
   in
 
