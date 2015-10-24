@@ -153,12 +153,12 @@ class package
   method set_installed v = {< installed = (fst installed,v) >}
 
   method pp oc =
-    Printer.pp_string oc name;
-    Printer.pp_string oc version;
-    Printer.pp_vpkglist oc provides;
-    Printer.pp_vpkgformula oc depends;
-    Printer.pp_vpkglist oc conflicts;
-    Printer.pp_vpkgformula oc recommends;
+    Printer.pp_string_wl oc name;
+    Printer.pp_string_wl oc version;
+    Printer.pp_vpkglist_wl oc provides;
+    Printer.pp_vpkgformula_wl oc depends;
+    Printer.pp_vpkglist_wl oc conflicts;
+    Printer.pp_vpkgformula_wl oc recommends;
     Printf.fprintf oc "\n"
 
 end

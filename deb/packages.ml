@@ -121,23 +121,23 @@ class package ?(name=("Package",None)) ?(version=("Version",None)) ?(depends=("D
       |source,Some version -> Printf.sprintf "%s (%s)" source version
       |_ -> ""
     in
-    Pef.Printer.pp_string oc name;
-    Pef.Printer.pp_string oc version;
-    Pef.Printer.pp_string oc architecture;
-    Pef.Printer.pp_function oc pp_multiarch multiarch;
-    Pef.Printer.pp_yes oc essential;
-    Pef.Printer.pp_yes oc build_essential;
-    Pef.Printer.pp_string oc priority;
-    Pef.Printer.pp_function oc pp_source source;
+    Pef.Printer.pp_string_wl oc name;
+    Pef.Printer.pp_string_wl oc version;
+    Pef.Printer.pp_string_wl oc architecture;
+    Pef.Printer.pp_function_wl oc pp_multiarch multiarch;
+    Pef.Printer.pp_yes_wl oc essential;
+    Pef.Printer.pp_yes_wl oc build_essential;
+    Pef.Printer.pp_string_wl oc priority;
+    Pef.Printer.pp_function_wl oc pp_source source;
 
-    Pef.Printer.pp_vpkglist oc provides;
-    Pef.Printer.pp_vpkgformula oc depends;
-    Pef.Printer.pp_vpkgformula oc pre_depends;
-    Pef.Printer.pp_vpkglist oc conflicts;
-    Pef.Printer.pp_vpkglist oc breaks;
-    Pef.Printer.pp_vpkgformula oc suggests;
-    Pef.Printer.pp_vpkgformula oc recommends;
-    Pef.Printer.pp_vpkglist oc replaces;
+    Pef.Printer.pp_vpkglist_wl oc provides;
+    Pef.Printer.pp_vpkgformula_wl oc depends;
+    Pef.Printer.pp_vpkgformula_wl oc pre_depends;
+    Pef.Printer.pp_vpkglist_wl oc conflicts;
+    Pef.Printer.pp_vpkglist_wl oc breaks;
+    Pef.Printer.pp_vpkgformula_wl oc suggests;
+    Pef.Printer.pp_vpkgformula_wl oc recommends;
+    Pef.Printer.pp_vpkglist_wl oc replaces;
  
     Printf.fprintf oc "\n";
 

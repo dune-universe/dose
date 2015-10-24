@@ -122,17 +122,17 @@ class package ?(name=("package",None)) ?(version=("version",None)) ?(depends=("d
   method depopts = snd recommends
 
   method pp oc =
-    Pef.Printer.pp_string oc name;
-    Pef.Printer.pp_string oc version;
+    Pef.Printer.pp_string_wl oc name;
+    Pef.Printer.pp_string_wl oc version;
 
-    Pef.Printer.pp_string_list oc switch;
-    Pef.Printer.pp_string_list oc installedlist;
-    Pef.Printer.pp_bool oc base;
+    Pef.Printer.pp_string_list_wl oc switch;
+    Pef.Printer.pp_string_list_wl oc installedlist;
+    Pef.Printer.pp_bool_wl oc base;
 
-    Pef.Printer.pp_vpkglist oc provides;
-    Pef.Printer.pp_vpkgformula oc depends;
-    Pef.Printer.pp_vpkgformula oc recommends;
-    Pef.Printer.pp_vpkglist oc conflicts;
+    Pef.Printer.pp_vpkglist_wl oc provides;
+    Pef.Printer.pp_vpkgformula_wl oc depends;
+    Pef.Printer.pp_vpkgformula_wl oc recommends;
+    Pef.Printer.pp_vpkglist_wl oc conflicts;
     Printf.fprintf oc "\n"
 
 end

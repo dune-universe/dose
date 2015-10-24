@@ -876,7 +876,7 @@ let test_sources2packages =
       string_of_AND vpkgformula
     else ""
   in
-  let returns = returns_result ~printer function_to_test in
+  let returns = returns_result ~printer:Pef.Printer.string_of_vpkgformula function_to_test in
   [
     (
       "any/native", "src:source1", returns [

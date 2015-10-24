@@ -72,16 +72,16 @@ class source ?(name=("Package",None)) ?(version=("Version",None))
   method build_conflicts_arch = snd build_conflicts_arch
 
   method pp oc =
-    Pef.Printer.pp_string oc name;
-    Pef.Printer.pp_string oc version;
-    Pef.Printer.pp_string_list ~sep:" " oc architecture;
+    Pef.Printer.pp_string_wl oc name;
+    Pef.Printer.pp_string_wl oc version;
+    Pef.Printer.pp_string_list_wl ~sep:" " oc architecture;
 
-    Pef.Printer.pp_builddepformula oc build_depends;
-    Pef.Printer.pp_builddeplist oc build_conflicts;
-    Pef.Printer.pp_builddepformula oc build_depends_indep;
-    Pef.Printer.pp_builddeplist oc build_conflicts_indep;
-    Pef.Printer.pp_builddepformula oc build_depends_arch;
-    Pef.Printer.pp_builddeplist oc build_conflicts_arch;
+    Pef.Printer.pp_builddepformula_wl oc build_depends;
+    Pef.Printer.pp_builddeplist_wl oc build_conflicts;
+    Pef.Printer.pp_builddepformula_wl oc build_depends_indep;
+    Pef.Printer.pp_builddeplist_wl oc build_conflicts_indep;
+    Pef.Printer.pp_builddepformula_wl oc build_depends_arch;
+    Pef.Printer.pp_builddeplist_wl oc build_conflicts_arch;
     Printf.fprintf oc "\n"
 
 end

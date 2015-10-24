@@ -17,40 +17,24 @@ open Common
 let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
+let to_string_with_label (k,v) =
+  if v <> "" then Printf.sprintf "%s: %s" k v else ""
+
 let string_of_vpkg = function
   |((name,None),None) -> name
   |((name,Some arch),None) -> Printf.sprintf "%s:%s" name arch
   |((name,Some arch),Some(op,ver)) -> Printf.sprintf "%s:%s (%s %s)" name arch op ver
   |((name,None),Some(op,ver)) -> Printf.sprintf "%s (%s %s)" name op ver
-;;
 
-let pp_vpkg oc vpkg = Printf.fprintf oc "%s" (string_of_vpkg vpkg)
+let string_of_vpkglist vpkglist =
+  Util.string_of_list ~sep:", " string_of_vpkg vpkglist
 
-let string_of_vpkglist (k,vpkglist) =
-  if List.length vpkglist > 0 then
-    let v = Util.string_of_list ~sep:", " string_of_vpkg vpkglist in
-    Printf.sprintf "%s: %s\n" k v
-  else ""
-;;
+let string_of_vpkgformula vpkgformula =
+  let string_of_OR = Util.string_of_list ~sep:" | " string_of_vpkg in
+  let string_of_AND = Util.string_of_list ~sep:", " string_of_OR in
+  string_of_AND vpkgformula
 
-let pp_vpkglist oc (k,vpkglist) = 
-  Printf.fprintf oc "%s" (string_of_vpkglist (k,vpkglist))
-;;
-
-let string_of_vpkgformula (k,vpkgformula) =
-  if List.length vpkgformula > 0 then
-    let string_of_OR = Util.string_of_list ~sep:" | " string_of_vpkg in
-    let string_of_AND = Util.string_of_list ~sep:", " string_of_OR in
-    let v = string_of_AND vpkgformula in
-    Printf.sprintf "%s: %s\n" k v
-  else ""
-;;
-
-let pp_vpkgformula oc (k,vpkgformula) =
-  Printf.fprintf oc "%s" (string_of_vpkgformula (k,vpkgformula))
-;;
-
-let strinf_of_builddep (vpkg,archfilter,buildfilter) =
+let string_of_builddep (vpkg,archfilter,buildfilter) =
   let string_of_filter l =
     String.concat " " (
       List.map (fun (b,s) ->
@@ -71,57 +55,17 @@ let strinf_of_builddep (vpkg,archfilter,buildfilter) =
   |[],_ -> Printf.sprintf "%s %s" (string_of_vpkg vpkg) (string_of_bpformula buildfilter)
   |_,_ ->
       Printf.sprintf "%s [%s] %s"
-      (string_of_vpkg vpkg) 
-      (string_of_filter archfilter)
-      (string_of_bpformula buildfilter)
-;;
+        (string_of_vpkg vpkg) 
+        (string_of_filter archfilter)
+        (string_of_bpformula buildfilter)
 
-let string_of_builddepformula (k,builddepformula) =
-  if List.length builddepformula > 0 then
-    let string_of_OR = Util.string_of_list ~sep:" | " strinf_of_builddep in
-    let string_of_AND = Util.string_of_list ~sep:", " string_of_OR in
-    let v = string_of_AND builddepformula in
-    Printf.sprintf "%s: %s\n" k v
-  else ""
-;;
+let string_of_builddepformula builddepformula =
+  let string_of_OR = Util.string_of_list ~sep:" | " string_of_builddep in
+  let string_of_AND = Util.string_of_list ~sep:", " string_of_OR in
+  string_of_AND builddepformula
 
-let pp_builddepformula oc (k,builddepformula) =
-  if List.length builddepformula > 0 then
-    Printf.fprintf oc "%s" (string_of_builddepformula (k,builddepformula))
-;;
-
-let string_of_builddeplist (k,builddeplist) =
-  if List.length builddeplist > 0 then
-    let v = Util.string_of_list ~sep:", " strinf_of_builddep builddeplist in
-    Printf.sprintf "%s: %s\n" k v
-  else ""
-;;
-
-let pp_builddeplist oc (k,builddeplist) =
-  if List.length builddeplist > 0 then
-    Printf.fprintf oc "%s" (string_of_builddeplist (k,builddeplist))
-;;
-
-let pp_string oc (k,v) =
-  if v <> "" then
-    Printf.fprintf oc "%s: %s\n" k v 
-
-let pp_bool oc (k,v) =
-  if v then
-    Printf.fprintf oc "%s: %b\n" k v
-
-let pp_yes oc (k,v) =
-  if v then
-    Printf.fprintf oc "%s: %s\n" k (if v then "yes" else "no")
-
-let pp_function oc to_string (k,v) =
-  match to_string v with
-  |"" -> ()
-  |s -> Printf.fprintf oc "%s: %s\n" k s
-
-let pp_string_list ?(sep=", ") oc (k,v) =
-  if List.length v > 0 then
-    Printf.fprintf oc "%s: %s\n" k (Util.string_of_list ~sep (fun s -> s) v)
+let string_of_builddeplist builddeplist =
+  Util.string_of_list ~sep:", " string_of_builddep builddeplist
 
 let string_of_vpkgreq = function
   | None,vpkg,None -> string_of_vpkg vpkg
@@ -130,3 +74,54 @@ let string_of_vpkgreq = function
   | Some Packages_types.R, vpkg, None -> Printf.sprintf "-%s" (string_of_vpkg vpkg)
   | Some Packages_types.I, vpkg, Some suite -> Printf.sprintf "+%s/%s" (string_of_vpkg vpkg) suite
   | Some Packages_types.R, vpkg, Some suite -> Printf.sprintf "-%s/%s" (string_of_vpkg vpkg) suite
+
+(** *)
+
+let pp_function oc ~tostring (k,v) =
+  match tostring v with
+  |"" -> ()
+  |s -> Printf.fprintf oc "%s: %s" k s
+
+let pp_string_list ?(sep=", ") oc (k,v) =
+  if List.length v > 0 then
+    Printf.fprintf oc "%s: %s" k (Util.string_of_list ~sep (fun s -> s) v)
+
+let pp_vpkg oc vpkg = Printf.fprintf oc "%s" (string_of_vpkg vpkg)
+let pp_vpkglist oc vpkglist = Printf.fprintf oc "%s" (string_of_vpkglist vpkglist)
+let pp_vpkgformula oc vpkgformula =
+  Printf.fprintf oc "%s" (string_of_vpkgformula vpkgformula)
+
+let pp_builddep oc builddep =
+  Printf.fprintf oc "%s" (string_of_builddep builddep)
+let pp_builddepformula oc builddepformula =
+  Printf.fprintf oc "%s" (string_of_builddepformula builddepformula)
+let pp_builddeplist oc builddeplist =
+    Printf.fprintf oc "%s" (string_of_builddeplist builddeplist)
+
+(** _wl -> with label *)
+
+let pp_string_wl oc (k,v) =
+  if v <> "" then Printf.fprintf oc "%s\n" (to_string_with_label (k,v))
+let pp_bool_wl oc (k,v) =
+  if v then
+    Printf.fprintf oc "%s\n" (to_string_with_label (k,string_of_bool v))
+let pp_yes_wl oc (k,v) =
+  if v then
+    Printf.fprintf oc "%s\n" (to_string_with_label (k,(if v then "yes" else "no")))
+
+let pp_list_wl_aux f oc = function
+  |(k,[]) -> ()
+  |(k,v) -> Printf.fprintf oc "%s: %a\n" k f v
+
+let pp_vpkglist_wl = pp_list_wl_aux pp_vpkglist
+let pp_vpkgformula_wl = pp_list_wl_aux pp_vpkgformula
+let pp_builddeplist_wl = pp_list_wl_aux pp_builddeplist
+let pp_builddepformula_wl = pp_list_wl_aux pp_builddepformula
+
+let pp_function_wl oc ~tostring (k,v) =
+  let s = tostring v in
+  if s <> "" then Printf.fprintf oc "%s\n" (to_string_with_label (k,s))
+let pp_string_list_wl ?(sep=", ") oc (k,v) =
+  if List.length v > 0 then
+    Printf.fprintf oc "%a\n" (pp_string_list ~sep) (k,v)
+
