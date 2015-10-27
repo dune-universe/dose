@@ -129,7 +129,7 @@ let parse_package_stanza filter buildarchlist par =
 let parse_sources_in ?filter ?(archs=[]) fname ic =
   info "Parsing Sources file %s..." fname;
   let stanza_parser = parse_package_stanza filter archs in
-  Format822.parse_from_ch (Pef.Packages.packages_parser fname stanza_parser []) ic
+  Format822.parse_from_ch (Pef.Packages.packages_parser fname stanza_parser) ic
 ;;
 
 (** parse a debian Sources file. 

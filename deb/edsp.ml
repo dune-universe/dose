@@ -112,13 +112,13 @@ let parse_section = Pef.Packages.parse_s Pef.Packages.parse_string
 
 (* (field,opt,err,multi,parsing function) *)
 let extras = [
-  ("Installed", Some (parse_installed "Installed"));
-  ("Hold", Some (parse_hold "Hold"));
-  ("APT-ID", Some (parse_apt_id "APT-ID"));
-  ("APT-Pin", Some (parse_apt_pin "APT-Pin"));
-  ("APT-Candidate", Some (parse_candidate "APT-Candidate"));
-  ("APT-Automatic", Some (parse_automatic "APT-Automatic"));
-  ("Section", Some (parse_section "Section"));
+  ("Installed", Some parse_installed);
+  ("Hold", Some parse_hold);
+  ("APT-ID", Some parse_apt_id);
+  ("APT-Pin", Some parse_apt_pin);
+  ("APT-Candidate", Some parse_candidate);
+  ("APT-Automatic", Some parse_automatic);
+  ("Section", Some parse_section);
   ("APT-Release", None);
   ]
 

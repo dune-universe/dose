@@ -22,6 +22,10 @@ open Common
 let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
+type options =
+  Pef.Packages_types.architecture * Pef.Packages_types.architecture list *
+  Pef.Packages_types.buildprofile list
+
 type request = {
   install : Pef.Packages_types.vpkg list;
   remove : Pef.Packages_types.vpkg list;

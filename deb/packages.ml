@@ -195,7 +195,7 @@ let parse_packages_in ?filter ?(archs=[]) ?(extras=[]) fname ic =
   info "Parsing Packages file %s..." fname;
   try
     let stanza_parser = parse_package_stanza filter archs extras in
-    Format822.parse_from_ch (Pef.Packages.packages_parser fname stanza_parser []) ic
+    Format822.parse_from_ch (Pef.Packages.packages_parser fname stanza_parser) ic
   with Pef.Packages.ParseError (cl,field,errmsg) ->
     fatal "Filename %s\n %s\n %s : %s" fname (String.concat "\n " cl) field errmsg
 

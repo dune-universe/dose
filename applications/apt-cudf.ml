@@ -86,7 +86,7 @@ let apt_get_cmdline =
 let pp_pkg fmt (p,univ) =
   try
     let pkg = Hashtbl.find univ (p.Cudf.package,p.Cudf.version) in
-    let apt_id = Pef.Packages.assoc "APT-ID" pkg#extras in
+    let apt_id = List.assoc "APT-ID" pkg#extras in
     Format.fprintf fmt "%s\n" apt_id;
     Format.fprintf fmt "Package: %s\n" pkg#name;
     Format.fprintf fmt "Version: %s\n" pkg#version;

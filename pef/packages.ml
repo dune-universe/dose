@@ -24,7 +24,7 @@ include Util.Logging(struct let label = label end) ;;
 exception ParseError of string list * string * string
 exception IgnorePackage of string
 
-type parse_extras_f = (Common.Format822.field list -> string)
+type parse_extras_f = (string -> Common.Format822.stanza -> string)
 
 (* here the _loc is taken from the the caller and not from the parser *)
 let lexbuf_wrapper type_parser (label,(_loc,s)) =
@@ -85,7 +85,7 @@ let parse_e extras par =
     try begin
       match p with
       |None -> Some(label,parse_s parse_string label par)
-      |Some parse_f -> Some (label,parse_f par)
+      |Some parse_f -> Some (label,parse_f label par)
     end with Not_found -> None
   ) extras
 
@@ -163,28 +163,30 @@ class package
 
 end
 
-let parse_package_stanza filter extras par =
+let parse_package_stanza ~filter ~extras par =
   let p () = new package ~extras:(extras,None) par in
   if Option.is_none filter then Some (p ())
   else if (Option.get filter) par then Some(p ())
   else None
 
-(* parse the entire file while filtering out unwanted stanzas *)
-let rec packages_parser fname stanza_parser acc p =
-  let filename = ("Filename",(Format822.dummy_loc,Filename.basename fname)) in
-  match Format822_parser.stanza_822 Format822_lexer.token_822 p.Format822.lexbuf with
-  |None -> acc
-  |Some stanza -> begin
-    match stanza_parser (filename::stanza) with
-    |None -> packages_parser fname stanza_parser acc p
-    |Some st -> packages_parser fname stanza_parser (st::acc) p
-  end
+let rec packages_parser fname stanza_parser p =
+  let rec packages_parser_aux fname stanza_parser acc p =
+    let filename = ("Filename",(Format822.dummy_loc,Filename.basename fname)) in
+    match Format822_parser.stanza_822 Format822_lexer.token_822 p.Format822.lexbuf with
+    |None -> acc
+    |Some stanza -> begin
+      match stanza_parser (filename::stanza) with
+      |None -> packages_parser_aux fname stanza_parser acc p
+      |Some st -> packages_parser_aux fname stanza_parser (st::acc) p
+    end
+  in
+  packages_parser_aux fname stanza_parser [] p
 
 let parse_packages_in ?filter ?(extras=[]) fname ic =
   info "Parsing 822 file %s..." fname;
   try
-    let stanza_parser = parse_package_stanza filter extras in
-    Format822.parse_from_ch (packages_parser fname stanza_parser []) ic
+    let stanza_parser = parse_package_stanza ~filter ~extras in
+    Format822.parse_from_ch (packages_parser fname stanza_parser) ic
   with ParseError (cl,label,errmsg) ->
     fatal "Filename %s\n %s\n %s : %s" fname (String.concat "\n " cl) label errmsg
 
