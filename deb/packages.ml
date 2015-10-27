@@ -265,8 +265,8 @@ let input_raw ?filter ?(archs=[]) ?(extras=[]) =
   M.input_raw (parse_packages_in ?filter ~archs ~extras)
 ;;
 
-(** input_raw_ch ch : parse a debian Packages file from channel [ch] *)
-let input_raw_ch ?filter ?(archs=[]) ?(extras=[]) =
+(** input_raw_in ch : parse a debian Packages file from channel [ch] *)
+let input_raw_in ?filter ?(archs=[]) ?(extras=[]) =
   let module M = Format822.RawInput(Set) in
   let extras = default_extras @ extras in
-  M.input_raw_ch (parse_packages_in ?filter ~archs ~extras)
+  M.input_raw_in (parse_packages_in ?filter ~archs ~extras)

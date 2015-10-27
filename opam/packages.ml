@@ -209,7 +209,7 @@ let rec packages_parser ?(request=false) (req,acc) p =
 ;;
 
 (* this function raise Pef.Packages.ParseError *)
-let input_raw_ch ic =
+let input_raw_in ic =
   Format822.parse_from_ch (
     packages_parser ~request:true (default_request,[])
   ) ic
@@ -222,7 +222,7 @@ let input_raw file =
       |"-" -> IO.input_channel stdin
       |_   -> Input.open_file file
     in
-    let l = input_raw_ch ch in
+    let l = input_raw_in ch in
     let _ = Input.close_ch ch in
     l
   with 

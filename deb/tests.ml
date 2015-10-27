@@ -869,13 +869,6 @@ let test_sources2packages =
     let src = List.find (fun s -> s#name = src) sources in
     src#depends
   in
-  let printer vpkgformula = 
-    if List.length vpkgformula > 0 then
-      let string_of_OR = Util.string_of_list ~sep:" | " Pef.Printer.string_of_vpkg in
-      let string_of_AND = Util.string_of_list ~sep:", " string_of_OR in
-      string_of_AND vpkgformula
-    else ""
-  in
   let returns = returns_result ~printer:Pef.Printer.string_of_vpkgformula function_to_test in
   [
     (

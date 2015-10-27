@@ -92,7 +92,7 @@ module RawInput ( Set : Set.S ) = struct
     info "total packages %n" (Set.cardinal s);
     Util.Timer.stop timer (Set.elements s)
 
-  let input_raw_ch parse ch =
+  let input_raw_in parse ch =
     Util.Timer.start timer;
     let s =
       let l = parse "" ch in

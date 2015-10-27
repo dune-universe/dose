@@ -124,25 +124,34 @@ class package :
     method pp : out_channel -> unit
   end
 
-(* [parse_package_stanza filter extras par] . *)
+(* [parse_package_stanza filter extras par]. Stanzas are filterd out
+   according to the predicate [filter]. 
+   
+   Extra fields can be parsed and addedto the stanza.
+   [extras] is a list of tuples where the first element is a label
+   indentifing a field and the second element is a parsing function. Ex : 
+   
+     [extras:[("extrafield", Some(parse_s parse_string))]] *)
 val parse_package_stanza :
   filter:(Common.Format822.stanza -> bool) option ->
     extras:(string * (string -> Common.Format822.stanza -> string) option) list ->
       Common.Format822.stanza -> package option
 
-(** Read n files from disk and return the list of all unique packages *)
+(** Read n files from disk and return the list of all unique packages. Extras have the
+    same format as in @parse_package_stanza@ *)
 val input_raw :
   ?extras:(string * (string -> Common.Format822.stanza -> string) option) list ->
     string list -> package list
 
+(** same as @parse_package_stanza@ but read packages stanzas from the given IO channel *)
 val parse_packages_in :
   ?filter:(Common.Format822.stanza -> bool) ->
     ?extras:(string * (string -> Common.Format822.stanza -> string) option) list ->
       string -> IO.input -> package list
 
-(** [input_raw_ch] behaves as [input_raw] but read the packages stanzas from
+(** [input_raw_in] behaves as [input_raw] but read the packages stanzas from
     the given IO channel *)
-val input_raw_ch :
+val input_raw_in :
   ?extras:(string * (string -> Common.Format822.stanza -> string) option) list ->
   IO.input -> package list
 

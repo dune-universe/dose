@@ -202,6 +202,6 @@ let input_raw ?(extras=[]) =
   let module M = Format822.RawInput(Set) in
   M.input_raw (parse_packages_in ~extras)
 
-let input_raw_ch ?(extras=[]) = 
+let input_raw_in ?(extras=[]) = 
   let module M = Format822.RawInput(Set) in
-  M.input_raw_ch (parse_packages_in ~extras)
+  M.input_raw_in (parse_packages_in ~extras)

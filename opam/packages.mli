@@ -18,6 +18,11 @@ val default_request : request
 
 val parse_request_stanza : Common.Format822.stanza -> request
 
+val vpkglist_filter : options ->
+  Pef.Packages_types.builddepslist -> Pef.Packages_types.vpkglist
+val vpkgformula_filter : options ->
+  Pef.Packages_types.builddepsformula -> Pef.Packages_types.vpkgformula
+
 class package :
   ?name:string * Pef.Packages_types.name option ->
   ?version:string * Pef.Packages_types.version option ->
@@ -62,5 +67,5 @@ val parse_package_stanza : options ->
 val packages_parser : ?request:bool -> request * package list ->
   Common.Format822.f822_parser -> request * package list
 
-val input_raw_ch : IO.input -> request * package list
+val input_raw_in : IO.input -> request * package list
 val input_raw : string -> request * package list
