@@ -101,7 +101,7 @@ let dominators_tarjan graph =
   ) graph;
 
   Util.Timer.start tjntimer;
-#ifdef OCAMLGRAPH186
+#if OCAMLGRAPHVERSION <= 186
   let module Dom = Dominator.Make_graph(G) in
 #else
   let module Dom = Dominator.Make(G) in

@@ -248,5 +248,5 @@ upload: doc
 	rsync -avz -O dose3.docdir/ scm.gforge.inria.fr:/home/groups/dose/htdocs/doc/api/
 
 .PHONY: \
-	common algo pef debian rpm cws doseparseNoRpm doseparse \
+	common algo pef versioning debian rpm cws doseparseNoRpm doseparse \
 	all clean top-level headers test tags install uninstall dist doc man
