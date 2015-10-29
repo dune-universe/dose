@@ -20,9 +20,8 @@ true: -traverse
 <deb/tests.*>: use_common, use_versioning, use_pef, use_algo
 <rpm/tests.*>: use_common, use_versioning, @USE_RPM@, use_algo, package(re.str)
 
-<common/*.ml{i,}>: @PKG_ZIP@, @PKG_BZ2@
 <versioning/*.ml{i,}>: use_common, package(re.pcre)
-#<versioning/*.cma>: linkall
+<common/*.ml{i,}>: @PKG_ZIP@, @PKG_BZ2@
 <deb/*.ml{i,}>: use_common, use_versioning
 <rpm/*.ml{i,}>: use_common
 <algo/*.ml{i,}>: use_common, @PKG_OCAMLGRAPH@
@@ -36,6 +35,7 @@ true: -traverse
 <rpm/rpm.cm{x,}a>: @USE_RPM@
 <rpm/rpm.cmxs>: @LINK_RPM@
 
+<versioning/*.cmx> and not <versioning/versioning.cmx>: for-pack(Versioning)
 <common/*.cmx> and not <common/common.cmx>: for-pack(Common)
 <algo/*.cmx> and not <algo/algo.cmx>: for-pack(Algo)
 <deb/*.cmx> and not <deb/debian.cmx>: for-pack(Debian)
