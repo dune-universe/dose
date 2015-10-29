@@ -35,8 +35,8 @@ let strong_depends solver p q =
   let lit = Depsolver_int.S.lit_of_var (solver.Depsolver_int.map#vartoint q) false in
   Depsolver_int.S.add_rule solver.Depsolver_int.constraints [|lit|] [];
   match Depsolver_int.solve solver (None,[p]) with
-  |Diagnostic_int.Failure _ -> true
-  |Diagnostic_int.Success _ -> false
+  |Diagnostic.FailureInt _ -> true
+  |Diagnostic.SuccessInt _ -> false
 
 (** check if [p] strong depends on any packages in [l] *)
 let check_strong univ transitive graph solver p l =
@@ -81,8 +81,8 @@ let strongdeps_int ?(transitive=true) graph univ pkglist =
       let closure = Depsolver_int.dependency_closure_cache cudfpool [id] in
       let solver = Depsolver_int.init_solver_closure cudfpool closure in
       match Depsolver_int.solve solver (None,[id]) with
-      |Diagnostic_int.Failure(_) -> ()
-      |Diagnostic_int.Success(f_int) ->
+      |Diagnostic.FailureInt(_) -> ()
+      |Diagnostic.SuccessInt(f_int) ->
           check_strong univ transitive graph solver id (f_int ())
     end
   ) pkglist ;

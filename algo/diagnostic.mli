@@ -10,6 +10,16 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
+type reason_int =
+  |DependencyInt of (int * Cudf_types.vpkg list * int list)
+  |MissingInt of (int * Cudf_types.vpkg list)
+  |ConflictInt of (int * int * Cudf_types.vpkg)
+
+type result_int =
+  |SuccessInt of (?all:bool -> unit -> int list)
+  |FailureInt of (unit -> reason_int list)
+
+type request_int = (int option * int list)
 
 (** One un-installability reason for a package *)
 type reason =

@@ -20,10 +20,10 @@ type solver
 val load : ?check : bool -> Cudf.universe -> solver
 
 (** Turn a result from Diagnostic_int into one of Diagnostic *)
-val result : Depsolver_int.identity -> Cudf.universe -> Diagnostic_int.result -> Diagnostic.result
+val result : Depsolver_int.identity -> Cudf.universe -> Diagnostic.result_int -> Diagnostic.result
 
 (** Turn a request from Diagnostic_int into one of Diagnostic *)
-val request : Cudf.universe -> Diagnostic_int.request -> Diagnostic.request
+val request : Cudf.universe -> Diagnostic.request_int -> Diagnostic.request
 
 (** check if the given package can be installed in the universe 
  

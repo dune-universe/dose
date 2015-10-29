@@ -1,6 +1,5 @@
 @MLPACK_OCAMLGRAPH@
 Diagnostic
-Diagnostic_int
 Depsolver
 Depsolver_int
 Flatten

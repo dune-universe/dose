@@ -34,11 +34,11 @@ module CG = Graph.Imperative.Graph.ConcreteLabeled(PkgV)(CflE)
 let reason univ rl =
   let from_sat = CudfAdd.inttovar univ in
   List.map (function
-    |Diagnostic_int.Dependency(i,vl,il) ->
+    |Diagnostic.DependencyInt(i,vl,il) ->
       Diagnostic.Dependency(from_sat i,vl,List.map from_sat il)
-    |Diagnostic_int.Missing(i,vl) ->
+    |Diagnostic.MissingInt(i,vl) ->
       Diagnostic.Missing(from_sat i,vl)
-    |Diagnostic_int.Conflict(i,j,vpkg) ->
+    |Diagnostic.ConflictInt(i,j,vpkg) ->
       Diagnostic.Conflict(from_sat i,from_sat j,vpkg)
   ) rl;;
 

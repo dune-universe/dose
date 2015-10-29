@@ -22,7 +22,7 @@ include Util.Logging(struct let label = label end) ;;
 module SG = Defaultgraphs.IntPkgGraph.G
 module PkgV = Defaultgraphs.IntPkgGraph.PkgV
 
-type cfl_type = Explicit | Conjunctive | Other of Diagnostic_int.reason list;;
+type cfl_type = Explicit | Conjunctive | Other of Diagnostic.reason_int list;;
 
 module CflE = struct
   type t = int * int * cfl_type
@@ -114,8 +114,8 @@ let strongconflicts univ =
       IG.add_edge cache p q;
       let req = (None,[p;q]) in
       match Depsolver_int.solve solver req with
-      |Diagnostic_int.Success _ -> ()
-      |Diagnostic_int.Failure f ->
+      |Diagnostic.SuccessInt _ -> ()
+      |Diagnostic.FailureInt f ->
         CG.add_edge_e stronglist (p, (x, y, Other (f ())), q)
     end 
   in

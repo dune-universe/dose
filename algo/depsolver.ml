@@ -38,19 +38,19 @@ let reason map universe =
   let from_sat = CudfAdd.inttovar universe in
   let globalid = Cudf.universe_size universe in
   List.filter_map (function
-    |Diagnostic_int.Dependency(i,vl,il) when i = globalid -> None
-    |Diagnostic_int.Missing(i,vl) when i = globalid -> 
+    |Diagnostic.DependencyInt(i,vl,il) when i = globalid -> None
+    |Diagnostic.MissingInt(i,vl) when i = globalid -> 
         fatal "the package encoding global constraints can't be missing"
-    |Diagnostic_int.Conflict(i,j,vpkg) when i = globalid || j = globalid -> 
+    |Diagnostic.ConflictInt(i,j,vpkg) when i = globalid || j = globalid -> 
         fatal "the package encoding global constraints can't be in conflict"
 
-    |Diagnostic_int.Dependency(i,vl,il) -> Some (
+    |Diagnostic.DependencyInt(i,vl,il) -> Some (
         Diagnostic.Dependency(from_sat (map#inttovar i),vl,List.map (fun i -> from_sat (map#inttovar i)) il)
     )
-    |Diagnostic_int.Missing(i,vl) -> Some (
+    |Diagnostic.MissingInt(i,vl) -> Some (
         Diagnostic.Missing(from_sat (map#inttovar i),vl)
     )
-    |Diagnostic_int.Conflict(i,j,vpkg) -> Some (
+    |Diagnostic.ConflictInt(i,j,vpkg) -> Some (
         Diagnostic.Conflict(from_sat (map#inttovar i),from_sat (map#inttovar j),vpkg)
     )
   )
@@ -59,14 +59,14 @@ let result map universe result =
   let from_sat = CudfAdd.inttovar universe in
   let globalid = Cudf.universe_size universe in
   match result with
-  |Diagnostic_int.Success f_int ->
+  |Diagnostic.SuccessInt f_int ->
       Diagnostic.Success (fun ?(all=false) () ->
         List.filter_map (function 
           |i when i = globalid -> None
           |i -> Some ({(from_sat i) with Cudf.installed = true})
         ) (f_int ~all ())
       )
-  |Diagnostic_int.Failure f -> Diagnostic.Failure (fun () ->
+  |Diagnostic.FailureInt f -> Diagnostic.Failure (fun () ->
       reason map universe (f ()))
 ;;
 
@@ -82,7 +82,7 @@ let request universe result =
  * Ideally the compiler should make sure that we use the correct indexes
  * but we should annotate everything making packing/unpackaing handling
  * a bit too heavy *)
-let diagnosis map universe res req =
+let diagnosis map universe ( res : Diagnostic.result_int ) req : Diagnostic.diagnosis =
   let result = result map universe res in
   let request = request universe req in
   { Diagnostic.result = result ; request = request }
@@ -92,8 +92,8 @@ let diagnosis map universe res req =
 
     @return the number of packages that cannot be installed
 *)
-let univcheck ?(global_constraints=true) ?callback universe =
-  let aux ?callback univ =
+let univcheck ?(global_constraints=true) ?(callback:(Diagnostic.diagnosis -> unit) option) universe =
+  let aux ?callback univ : int =
     let timer = Util.Timer.create "Algo.Depsolver.univcheck" in
     Util.Timer.start timer;
     let solver = Depsolver_int.init_solver_univ univ in
@@ -113,7 +113,7 @@ let univcheck ?(global_constraints=true) ?callback universe =
   match callback with
   |None -> aux universe
   |Some f ->
-      let callback_int (res,req) = f (diagnosis map universe res req) in
+      let callback_int ((res,req) : (Diagnostic.result_int * (int option * int list))) : unit = f (diagnosis map universe res req) in
       aux ~callback:callback_int universe
 ;;
 

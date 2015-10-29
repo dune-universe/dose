@@ -36,7 +36,7 @@ let progressbar_univcheck = Util.Progress.create "Depsolver_int.univcheck"
 let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
-module R = struct type reason = Diagnostic_int.reason end
+module R = struct type reason = Diagnostic.reason_int end
 module S = EdosSolver.M(R)
 
 (** associate a sat solver variable to a package id *)
@@ -74,6 +74,7 @@ end
 (* return a conversion function. If the closure is empty, 
    then we return the identity function, otherwise we 
    return a function to renumber cudf uids to solver ids *)
+(*
 let init_map closure univ =
   if List.length closure > 0 then begin
     let map = new intprojection (List.length closure) in
@@ -81,7 +82,7 @@ let init_map closure univ =
     map
   end
   else new identity
-
+*)
 (** low level solver data type *)
 type solver = {
   constraints : S.state; (** the sat problem *)
@@ -96,7 +97,7 @@ and pool = SolverPool of pool_t | CudfPool of pool_t
 
 type result =
   |Success of (unit -> int list)
-  |Failure of (unit -> Diagnostic_int.reason list)
+  |Failure of (unit -> Diagnostic.reason_int list)
 
 (* two functions to make sure we alway manipulate the correct data type *)
 let strip_solver_pool = function SolverPool p -> p | _ -> assert false
@@ -215,12 +216,12 @@ let init_solver_cache ?(buffer=false) varpool =
   let add_depend constraints vpkgs pkg_id l =
     let lit = S.lit_of_var pkg_id false in 
     if (List.length l) = 0 then 
-      S.add_rule constraints [|lit|] [Diagnostic_int.Missing(pkg_id,vpkgs)]
+      S.add_rule constraints [|lit|] [Diagnostic.MissingInt(pkg_id,vpkgs)]
     else begin
       let lits = List.map (fun id -> S.lit_of_var id true) l in
       num_disjunctions := !num_disjunctions + (List.length lits);
       S.add_rule constraints (Array.of_list (lit :: lits))
-        [Diagnostic_int.Dependency (pkg_id, vpkgs, l)];
+        [Diagnostic.DependencyInt (pkg_id, vpkgs, l)];
       if (List.length lits) > 1 then
         S.associate_vars constraints (S.lit_of_var pkg_id true) l;
     end
@@ -236,7 +237,7 @@ let init_solver_cache ?(buffer=false) varpool =
         Util.IntPairHashtbl.add conflicts pair ();
         let p = S.lit_of_var i false in
         let q = S.lit_of_var j false in
-        S.add_rule constraints [|p;q|] [Diagnostic_int.Conflict(i,j,vpkg)];
+        S.add_rule constraints [|p;q|] [Diagnostic.ConflictInt(i,j,vpkg)];
       end
     end
   in
@@ -292,10 +293,10 @@ let solve ?tested solver request =
         )
       ) l;
       let get_assignent ?(all=true) () = List.map solver.map#inttovar l in
-      Diagnostic_int.Success(get_assignent)
+      Diagnostic.SuccessInt(get_assignent)
     end else
       let get_reasons () = collect solver.constraints var in
-      Diagnostic_int.Failure(get_reasons)
+      Diagnostic.FailureInt(get_reasons)
   in
 
   match request with
@@ -330,17 +331,17 @@ let pkgcheck global_constraints callback solver tested id =
       let f ?(all=false) () =
         if all then begin
           match solve solver req with
-          |Diagnostic_int.Success(f_int) -> f_int ()
-          |Diagnostic_int.Failure _ -> assert false (* impossible *)
+          |Diagnostic.SuccessInt(f_int) -> f_int ()
+          |Diagnostic.FailureInt _ -> assert false (* impossible *)
         end else []
-      in Diagnostic_int.Success(f) 
+      in Diagnostic.SuccessInt(f) 
     end
   in
   match callback, res with
-  |None, Diagnostic_int.Success _ -> true
-  |None, Diagnostic_int.Failure _ -> false
-  |Some f, Diagnostic_int.Success _ -> ( f (res,req) ; true )
-  |Some f, Diagnostic_int.Failure _ -> ( f (res,req) ; false )
+  |None, Diagnostic.SuccessInt _ -> true
+  |None, Diagnostic.FailureInt _ -> false
+  |Some f, Diagnostic.SuccessInt _ -> ( f (res,req) ; true )
+  |Some f, Diagnostic.FailureInt _ -> ( f (res,req) ; false )
 ;;
 
 (** low level constraint solver initialization
