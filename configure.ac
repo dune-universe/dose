@@ -141,10 +141,10 @@ if test "$HAS_OCAMLGRAPH" = "yes" ; then
   PKG_OCAMLGRAPH="package(ocamlgraph)"
   MLPACK_OCAMLGRAPH="Defaultgraphs
 Statistics
-Dominators 
+Dominators
 Strongdeps
-Strongconflicts
-Strongconflicts_int"
+Strongconflicts_int
+Strongconflicts"
   CONFIG_OCAMLGRAPH="-D HASOCAMLGRAPH -D 'OCAMLGRAPHVERSION $TMPVERSION'"
   OCAMLGRAPH=ocamlgraph
 fi

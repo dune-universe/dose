@@ -1,7 +1,5 @@
 common/Common
 versioning/Versioning
-versioning/Debian_version
-versioning/Semantic_version
 algo/Algo
 deb/Debian
 pef/Pef

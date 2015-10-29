@@ -10,6 +10,7 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
+(** {2 Low level integer One un-installability reasons} *)
 type reason_int =
   |DependencyInt of (int * Cudf_types.vpkg list * int list)
   |MissingInt of (int * Cudf_types.vpkg list)
@@ -21,7 +22,7 @@ type result_int =
 
 type request_int = (int option * int list)
 
-(** One un-installability reason for a package *)
+(** {2 Un-installability reasons} *)
 type reason =
   |Dependency of (Cudf.package * Cudf_types.vpkg list * Cudf.package list)
   (** Not strictly a un-installability, Dependency (a,vpkglist,pkglist) is used
@@ -35,8 +36,6 @@ type reason =
       with package [b] because of vpkg *)
 
 (** The request provided to the solver *)
-  (** Check the installability of one package *)
-  (** Check the installability of a list of packages *)
 type request = Cudf.package list
 
 (** The result of an installability query *)
