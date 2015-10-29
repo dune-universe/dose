@@ -85,6 +85,20 @@ val get_field_value:
 
 (** {2 Generic Parsing Functions} *)
 
+(** Representation of a PEF package. This object gets a stanza 
+    (a list of list of fields) and return a pef object. Each field
+    can be directly initialized using the optional arguments, providing
+    the name of the field and an optional value. If the value is None, then
+    the value is computed by parsing the corresponding field in the 
+    822 stanza. Otherwise, the field is initialized using the given value (and
+    ignoring the value in the 822 stanza).
+
+    Extra fields can be parsed and added to the stanza.
+    The first element of [extras] is a list of tuples where the first element
+    is a label indentifing a field and the second element is a parsing
+    function. If the second element of [extras] is not None, then the list
+    of (field,value) is append to the list of parsed extras from the 822 stanza.
+*)
 class package :
   ?name:string * Packages_types.name option ->
   ?version:string * Packages_types.version option ->
@@ -98,6 +112,7 @@ class package :
     (string * string) list option) -> Common.Format822.stanza ->
   object ('a)
 
+    (** {4 Access methods } *)
     method name : Packages_types.name
     method version : Packages_types.version
     method conflicts : Packages_types.vpkglist
@@ -107,7 +122,7 @@ class package :
     method installed : Packages_types.installed
     method extras : (string * string) list
 
-    (* val are used in subclasses *)
+    (** {4 low level val . Used in subclasses} *)
     val name : (string * Packages_types.name)
     val version : (string * Packages_types.version)
     val conflicts : (string * Packages_types.vpkglist)
@@ -116,18 +131,20 @@ class package :
     val recommends : (string * Packages_types.vpkgformula)
     val installed : (string * Packages_types.installed)
 
-    method add_extra : string -> string -> 'a
+    (** {4 get/set specific fields of the object} *)
     method get_extra : string -> string
+    method add_extra : string -> string -> 'a
     method set_extras : (string * string) list -> 'a
     method set_installed : Packages_types.installed -> 'a
 
+    (* Print the object as a 822 stanza to the given channel *)
     method pp : out_channel -> unit
   end
 
 (* [parse_package_stanza filter extras par]. Stanzas are filterd out
    according to the predicate [filter]. 
    
-   Extra fields can be parsed and addedto the stanza.
+   Extra fields can be parsed and added to the stanza.
    [extras] is a list of tuples where the first element is a label
    indentifing a field and the second element is a parsing function. Ex : 
    
@@ -138,12 +155,12 @@ val parse_package_stanza :
       Common.Format822.stanza -> package option
 
 (** Read n files from disk and return the list of all unique packages. Extras have the
-    same format as in @parse_package_stanza@ *)
+    same format as in [parse_package_stanza] *)
 val input_raw :
   ?extras:(string * (string -> Common.Format822.stanza -> string) option) list ->
     string list -> package list
 
-(** same as @parse_package_stanza@ but read packages stanzas from the given IO channel *)
+(** same as [parse_package_stanza] but read packages stanzas from the given IO channel *)
 val parse_packages_in :
   ?filter:(Common.Format822.stanza -> bool) ->
     ?extras:(string * (string -> Common.Format822.stanza -> string) option) list ->

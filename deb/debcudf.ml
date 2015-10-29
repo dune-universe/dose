@@ -82,7 +82,7 @@ let add_arch native_arch name = function
   |"all" -> add_name_arch name native_arch
   |package_arch -> add_name_arch name package_arch
 
-(** add arch info to a vpkg 
+(* add arch info to a vpkg 
  - if it's a :any dependency then just encode the name without arch information :
    means that this dependency/conflict can be satified by any packages
  - if it is a :native dependency then add the native architecture
