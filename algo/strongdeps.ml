@@ -50,8 +50,8 @@ let check_strong univ transitive graph solver p l =
   ) l
 
 (* true if at least one dependency is disjunctive *)
-let somedisj pool id = 
-  let cudfpool = Depsolver_int.strip_cudf_pool pool in
+let somedisj (`CudfPool cudfpool) id = 
+  (* let cudfpool = Depsolver_int.strip_cudf_pool pool in *)
   let (depends,_) = cudfpool.(id) in
   if List.length depends > 0 then
     try

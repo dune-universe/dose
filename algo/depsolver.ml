@@ -446,8 +446,7 @@ let depclean ?(global_constraints=true) ?(callback=(fun _ -> ())) univ pkglist =
   (* if a package p depends on a package that make p uninstallable, then it 
      can be removed. If p depends on a missing package, the dependency can
      be equally removed *)
-  let test_depends univ cudfpool pkg l =
-    let pool = Depsolver_int.strip_cudf_pool cudfpool in
+  let test_depends univ (`CudfPool pool) pkg l =
     List.fold_left (fun acc -> function
       |(vpkglist,vpkg,_,[]) -> (vpkglist,vpkg,[])::acc
       |(vpkglist,vpkg,depends,l) ->

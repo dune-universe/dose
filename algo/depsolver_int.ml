@@ -39,6 +39,13 @@ include Util.Logging(struct let label = label end) ;;
 module R = struct type reason = Diagnostic.reason_int end
 module S = EdosSolver.M(R)
 
+class type projection =
+  object
+    method add : int -> unit
+    method inttovar : int -> int
+    method vartoint : int -> int
+  end
+
 (** associate a sat solver variable to a package id *)
 class intprojection size = object
 
@@ -92,16 +99,16 @@ type solver = {
 type dep_t = 
   ((Cudf_types.vpkg list * S.var list) list * 
    (Cudf_types.vpkg * S.var list) list ) 
-and pool_t = dep_t array
-and pool = SolverPool of pool_t | CudfPool of pool_t
+and pool = dep_t array
+and t = [`SolverPool of pool | `CudfPool of pool]
 
 type result =
   |Success of (unit -> int list)
   |Failure of (unit -> Diagnostic.reason_int list)
 
 (* two functions to make sure we alway manipulate the correct data type *)
-let strip_solver_pool = function SolverPool p -> p | _ -> assert false
-let strip_cudf_pool = function CudfPool p -> p | _ -> assert false
+let strip_solver_pool = function `SolverPool p -> p | _ -> assert false
+let strip_cudf_pool = function `CudfPool p -> p | _ -> assert false
 
 (* cudf uid -> cudf uid array . Here we assume cudf uid are sequential
    and we can use them as an array index *)
@@ -152,13 +159,11 @@ let init_pool_univ ~global_constraints univ =
      * for the moment we consider only `Keep_package *)
     pool.(globalid) <- (keep_dll,[])
   end;
-  CudfPool pool
-;;
+  (`CudfPool pool)
 
 (** this function creates an array indexed by solver ids that can be 
     used to init the edos solver *)
-let init_solver_pool map pool closure =
-  let cudfpool = strip_cudf_pool pool in
+let init_solver_pool map (`CudfPool cudfpool) closure =
   let convert (dll,cl) =
     let sdll = 
       List.map (fun (vpkgs,uidl) ->
@@ -202,8 +207,7 @@ let init_solver_pool map pool closure =
         convert (dll,cl)
     )
   in
-  SolverPool solverpool
-;;
+  (`SolverPool solverpool)
 
 (** initalise the sat solver. operate only on solver ids *)
 let init_solver_cache ?(buffer=false) varpool =
@@ -274,7 +278,6 @@ let init_solver_cache ?(buffer=false) varpool =
 
   S.propagate constraints ;
   constraints
-;;
 
 (** low level call to the sat solver
   
@@ -309,7 +312,6 @@ let solve ?tested solver request =
       result S.solve_lst S.collect_reasons_lst (List.map solver.map#vartoint [k;i])
   |(Some k,il) ->
       result S.solve_lst S.collect_reasons_lst (List.map solver.map#vartoint (k::il))
-;;
 
 (* this function is used to "distcheck" a list of packages *)
 let pkgcheck global_constraints callback solver tested id =
@@ -342,7 +344,6 @@ let pkgcheck global_constraints callback solver tested id =
   |None, Diagnostic.FailureInt _ -> false
   |Some f, Diagnostic.SuccessInt _ -> ( f (res,req) ; true )
   |Some f, Diagnostic.FailureInt _ -> ( f (res,req) ; false )
-;;
 
 (** low level constraint solver initialization
  
@@ -351,12 +352,13 @@ let pkgcheck global_constraints callback solver tested id =
 *)
 let init_solver_univ ?(global_constraints=true) ?(buffer=false) univ =
   let map = new identity in
+  (* here we convert a cudfpool in a varpool. The assumption
+   * that cudf package identifiers are contiguous is essential ! *)
   let cudfpool = init_pool_univ global_constraints univ in
-  let varpool = SolverPool (strip_cudf_pool cudfpool) in
+  let varpool = `SolverPool (strip_cudf_pool cudfpool) in
   let constraints = init_solver_cache ~buffer varpool in
   let solver = { constraints = constraints ; map = map } in
   solver
-;;
 
 (** low level constraint solver initialization
  
@@ -373,7 +375,6 @@ let init_solver_closure ?(buffer=false) cudfpool closure =
   let constraints = init_solver_cache ~buffer varpool in
   let solver = { constraints = constraints ; map = map } in
   solver
-;;
 
 (** return a copy of the state of the solver *)
 let copy_solver solver =
@@ -440,7 +441,6 @@ let dependency_closure ?(maxdepth=max_int) ?(conjunctive=false) ?(global_constra
   let idlist = List.map (CudfAdd.vartoint universe) pkglist in
   let l = dependency_closure_cache ~maxdepth ~conjunctive pool (globalid::idlist) in
   List.filter_map (fun p -> if p <> globalid then Some (CudfAdd.inttovar universe p) else None) l
-;;
 
 (*    XXX : elements in idlist should be included only if because
  *    of circular dependencies *)
@@ -476,4 +476,3 @@ let reverse_dependency_closure ?(maxdepth=max_int) reverse =
       Hashtbl.add h (idlist,maxdepth) result;
       result
     end
-
