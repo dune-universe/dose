@@ -236,8 +236,8 @@ credits:
 	@git log --pretty=format:'%aN        %aE' | LC_ALL=C sort -u | awk -F'\t' '{printf("\t%s <%s>\n",$$1,$$2)}';
 
 doc: all
+	$(OCAMLBUILD) -package unix scripts/pack.native
 	scripts/doc.sh
-	#$(OCAMLBUILD) dose3.docdir/index.html dose3.docdir/index.dot
 	dot -Grotate=0 -Tsvg -o dose3.docdir/index.svg dose3.docdir/index.dot
 	(cd doc && $(MAKE) all)
 
@@ -249,5 +249,5 @@ upload: doc
 	rsync -avz -O dose3.docdir/ scm.gforge.inria.fr:/home/groups/dose/htdocs/doc/api/
 
 .PHONY: \
-	common algo pef versioning debian rpm cws doseparseNoRpm doseparse \
+	common algo pef versioning debian rpm csw doseparseNoRpm doseparse \
 	all clean top-level headers test tags install uninstall dist doc man

@@ -84,11 +84,11 @@ endif
 
 LIBNAMES += common/common \
 						versioning/versioning \
-						algo/algo \
+						pef/pef \
 						deb/debian \
 						opencsw/csw \
-						pef/pef \
-						opam/opam
+						opam/opam \
+						algo/algo
 
 #rpm support
 ifeq ("@HAS_RPM@","yes")

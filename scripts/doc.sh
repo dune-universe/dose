@@ -1,5 +1,7 @@
 #!/bin/sh
 
+OCPPACK=_build/scripts/pack.native
+
 echo "Cleaning up before"
 for i in deb common opam pef algo versioning ; do
   F=$(ls $i/*.mlpack) ;
@@ -18,7 +20,12 @@ for i in deb common opam pef algo versioning ; do
       MML="$MML $f"
     fi
   done > /dev/null
-  scripts/ocp-pack -no-ml -mli -pp 'cppo -D '\''OCAMLGRAPHVERSION 186'\''' -o ${F%.mlpack}.ml $MML ;
+  $OCPPACK -no-ml -mli -pp 'cppo -D '\''OCAMLGRAPHVERSION 186'\''' -o ${F%.mlpack}.ml $MML ;
+  if [ -f $i/.ocamldoc.txt ]; then
+    cat $i/.ocamldoc.txt ${F%.mlpack}.mli > ${F%.mlpack}.mli.tmp
+    mv ${F%.mlpack}.mli.tmp ${F%.mlpack}.mli
+    rm -f ${F%.mlpack}.mli.tmp
+  fi
 done
 
 i=doseparse
@@ -31,7 +38,13 @@ for f in $ML; do
     MML="$MML $f"
   fi
 done > /dev/null
-scripts/ocp-pack -pp 'cppo -D '\''OCAMLGRAPHVERSION 186'\''' -o ${F%.mlpack}.ml $MML ;
+$OCPPACK -pp 'cppo -D '\''OCAMLGRAPHVERSION 186'\''' -o ${F%.mlpack}.ml $MML ;
+if [ -f $i/.ocamldoc.txt ]; then
+  cat $i/.ocamldoc.txt ${F%.mlpack}.ml > ${F%.mlpack}.ml.tmp
+  mv ${F%.mlpack}.ml.tmp ${F%.mlpack}.ml
+  rm -f ${F%.mlpack}.ml.tmp
+fi
+
 
 echo 
 
