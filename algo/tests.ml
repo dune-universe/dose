@@ -308,10 +308,10 @@ let test_reverse_dependency_closure =
  * not exposed in the mli *) 
 let conv solver = function
   |Depsolver_int.Success(f_int) ->
-      Diagnostic_int.Success(fun ?all () ->
+      Diagnostic.SuccessInt(fun ?all () ->
         List.map solver.Depsolver_int.map#inttovar (f_int ())
       )
-  |Depsolver_int.Failure(r) -> Diagnostic_int.Failure(r)
+  |Depsolver_int.Failure(r) -> Diagnostic.FailureInt(r)
 ;;
 
 (*
