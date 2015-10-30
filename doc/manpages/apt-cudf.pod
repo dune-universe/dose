@@ -61,6 +61,12 @@ Use a configuration file. Default in /etc/apt-cudf.conf
 
 Specify the external solver to use.
 
+=item -c <criteria>
+
+=item --criteria <criteria>
+
+Specify the optimization criteria.
+
 =item -e
 
 =item --explain
