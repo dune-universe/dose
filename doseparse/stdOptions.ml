@@ -66,6 +66,16 @@ let pkglist_option ?default ?(metavar = " <pkglst>") () =
   parse_vpkglist (fun _ s -> Printf.sprintf "invalid package list '%s'" s)
 ;;
 
+(* this is a ,-separated list of optimization criteria *)
+let criteria_option ?default ?(metavar = " <criteria>") () =
+  let parse_criteria s =
+    let _loc = Format822.dummy_loc in
+    Criteria.parse_criteria ("cmdline <criteria>",(_loc,s))
+  in
+  OptParse.Opt.value_option metavar default
+  parse_criteria (fun _ s -> Printf.sprintf "invalid criteria list '%s'" s)
+;;
+
 (* *************************************** *)
 
 let incr_str_list ?(default=Some []) ?(metavar = " <str>") =

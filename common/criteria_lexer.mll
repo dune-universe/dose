@@ -31,14 +31,25 @@ ASPCUD accepted criteria
 {
   open Criteria_parser
 
+  exception Parse_error of string
+
   let get_regexp lexbuf =
     let open Lexing in
-    let c = Lexing.lexeme_char lexbuf 2 in
-    let endpos = Bytes.index_from lexbuf.lex_buffer (lexbuf.lex_start_pos + 3) c in
+    let c = Lexing.lexeme_char lexbuf 2 in (* the delimiter can be any character *)
+    (* find the terminating delimiter *)
+    let endpos = try Bytes.index_from lexbuf.lex_buffer (lexbuf.lex_start_pos + 3) c
+      with Invalid_argument _ -> raise (Parse_error (Format822.error lexbuf "String too short"))
+         | Not_found -> raise (Parse_error (Format822.error lexbuf (Printf.sprintf "cannot find: %c" c)))
+    in
     let len = endpos - (lexbuf.lex_start_pos + 3) in
     let s = Bytes.sub_string lexbuf.lex_buffer (lexbuf.lex_start_pos + 3) len in
     lexbuf.Lexing.lex_curr_pos <- lexbuf.Lexing.lex_start_pos + ((String.length s)+4);
     s
+
+  let raise_error lexbuf c =
+    let msg = Printf.sprintf "Solver criteria unexpected token : '%c'" c in
+    raise (Parse_error (Format822.error lexbuf msg))
+
 }
 
 let lower_letter = [ 'a' - 'z' ]
@@ -47,7 +58,7 @@ let letter = lower_letter | upper_letter
 let digit = [ '0' - '9' ]
 let blank = [ ' ' '\t' ]
 let blanks = blank+
-let symbols = ['.' '_']
+let symbols = ['-' '+' '.' '_' '~']
 let ident = (letter | digit) (letter | digit | symbols)*
 
 rule token = parse
@@ -55,14 +66,15 @@ rule token = parse
   | "sum"               { SUM }
   | "unsat_recommends"  { UNSATREC }
   | "aligned"           { ALIGNED }
-  | "notuptodate"       { NOTUPDATE }
+  | "notuptodate"       { NOTUPTODATE }
   | "solution"          { SOLUTION }
   | "changed"           { CHANGED }
   | "new"               { NEW }
   | "removed"           { REMOVED }
   | "up"                { UP }
   | "down"              { DOWN }
-  | ":="                { REGEXP (get_regexp lexbuf) }
+  | ":="                { EXACT (get_regexp lexbuf) }
+  | ":~"                { REGEXP (get_regexp lexbuf) }
   | '+'                 { PLUS }
   | '-'                 { MINUS }
   | '('                 { LPAREN }
@@ -71,4 +83,4 @@ rule token = parse
   | ident as s          { IDENT s }
   | blank+              { token lexbuf }
   | eof                 { EOL }
-
+  | _ as c              { raise_error lexbuf c }

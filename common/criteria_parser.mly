@@ -25,9 +25,10 @@ open Criteria_types
 %token LPAREN RPAREN 
 %token COMMA 
 %token <string> REGEXP
+%token <string> EXACT
 %token PLUS MINUS
 %token EOL
-%token COUNT SUM UNSATREC ALIGNED NOTUPDATE 
+%token COUNT SUM UNSATREC ALIGNED NOTUPTODATE 
 %token SOLUTION CHANGED NEW REMOVED UP DOWN 
 
 %type <Criteria_types.criteria> criteria_top
@@ -48,11 +49,18 @@ predicate:
 
 crit: 
     COUNT LPAREN set RPAREN { Count($3,None) }
-    | COUNT LPAREN set COMMA field RPAREN { Printf.eprintf "SUCCESS\n" ; Count($3,Some $5) }
-/*  | SUM LPAREN set COMMA attr RPAREN { Sum($3,$5) } */
+  | COUNT LPAREN set COMMA field RPAREN { Count($3,Some $5) }
+  | SUM LPAREN set COMMA attr RPAREN { Sum($3,$5) }
   | UNSATREC LPAREN set RPAREN { Unsatrec($3) }
-/*  | ALIGNED LPAREN set COMMA attr COMMA attr RPAREN { Aligned($3,$5,$7) } */
-  | NOTUPDATE LPAREN set RPAREN { NotUpdate($3) }
+  | UNSATREC { Unsatrec(Solution) }
+  | ALIGNED LPAREN set COMMA attr COMMA attr RPAREN { Aligned($3,$5,$7) }
+  | NOTUPTODATE LPAREN set RPAREN { NotUptodate($3) }
+  | NOTUPTODATE { NotUptodate(Solution) }
+  | NEW { Count(New,None) }
+  | REMOVED { Count(Removed,None) }
+  | CHANGED { Count(Changed,None) }
+
+attr: IDENT { $1 }
 
 set:
     SOLUTION { Solution }
@@ -62,9 +70,9 @@ set:
   | UP { Up }
   | DOWN { Down }
 
-/* count(S,fieldname:=/string/) */
-
-field: IDENT REGEXP { Printf.eprintf "REG %s %s \n" $1 $2; ($1,$2) }
+field:
+    IDENT EXACT { ($1,ExactMatch($2)) }
+  | IDENT REGEXP { ($1,Regexp($2)) }
 
 %%
 
