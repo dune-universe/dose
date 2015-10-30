@@ -144,6 +144,12 @@ $(DOSELIBS)/doseparseNoRpm.%: $(DOSELIBS)/pef.% $(DOSELIBS)/debian.%
 
 clean:
 	$(OCAMLBUILD) -clean
+	@$(shell \
+		for lib in $(LIBNAMES); do \
+			libname=`basename "$$lib"` ;\
+			dirname=`dirname "$$lib"` ;\
+			rm -f $$dirname/$$libname.itarget ;\
+		done)
 	rm -f myocamlbuild.ml
 	rm -f applications/apps.itarget
 	cd doc && $(MAKE) clean
@@ -153,7 +159,7 @@ distclean: clean
 	rm -f algo/algo.mlpack
 	rm -f common/versionInfo.ml
 	rm -f db/db.mlpack
-	rm -f _tags META
+	rm -f _tags META applications/dose-tests.list dose3.odocl
 
 test: apps
 ifeq (libs,$(word 2,$(MAKECMDGOALS)))
