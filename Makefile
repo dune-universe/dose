@@ -50,7 +50,7 @@ $(DOSELIBS)/cudf.%:
 	  fi ; \
 	done
 
-$(DOSELIBS)/common.%: common/*.ml
+$(DOSELIBS)/common.%: common/*.ml common/*.mli
 	$(OCAMLBUILD) $(OBFLAGS) common/common.otarget
 	@mkdir -p $(DOSELIBS)
 	@for i in _build/common/common.*; do \
@@ -60,17 +60,17 @@ $(DOSELIBS)/common.%: common/*.ml
 	  fi ; \
 	done
 
-$(DOSELIBS)/versioning.%: versioning/*.ml
+$(DOSELIBS)/versioning.%: versioning/*.ml versioning/*.mli
 	$(OCAMLBUILD) $(OBFLAGS) versioning/versioning.otarget
 	@mkdir -p $(DOSELIBS)
-	@for i in _build/versioning/versioning.* _build/versioning/*.cmi; do \
+	@for i in _build/versioning/versioning.*; do \
 	  if [ -e $$i ]; then \
 	  cp $$i $(DOSELIBS) ; \
 	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
 	  fi ; \
 	done
 
-$(DOSELIBS)/algo.%: algo/*.ml $(DOSELIBS)/common.%
+$(DOSELIBS)/algo.%: algo/*.ml algo/*.mli $(DOSELIBS)/common.%
 	$(OCAMLBUILD) $(OBFLAGS) algo/algo.otarget
 	@for i in _build/algo/algo.*; do \
 	  if [ -e $$i ]; then \
@@ -79,7 +79,7 @@ $(DOSELIBS)/algo.%: algo/*.ml $(DOSELIBS)/common.%
 	  fi ; \
 	done
 
-$(DOSELIBS)/debian.%: deb/*.ml $(DOSELIBS)/pef.%
+$(DOSELIBS)/debian.%: deb/*.ml deb/*.mli $(DOSELIBS)/pef.%
 	$(OCAMLBUILD) $(OBFLAGS) deb/debian.otarget
 	@for i in _build/deb/debian.*; do \
 	  if [ -e $$i ]; then \
@@ -88,7 +88,7 @@ $(DOSELIBS)/debian.%: deb/*.ml $(DOSELIBS)/pef.%
 	  fi ; \
 	done
 
-$(DOSELIBS)/opam.%: opam/*.ml $(DOSELIBS)/pef.%
+$(DOSELIBS)/opam.%: opam/*.ml opam/*.mli $(DOSELIBS)/pef.%
 	$(OCAMLBUILD) $(OBFLAGS) opam/opam.otarget
 	@for i in _build/opam/opam.*; do \
 	  if [ -e $$i ]; then \
@@ -106,7 +106,7 @@ $(DOSELIBS)/rpm.%: rpm/*.ml $(DOSELIBS)/algo.%
 	  fi ; \
 	done
 
-$(DOSELIBS)/pef.%: pef/*.ml
+$(DOSELIBS)/pef.%: pef/*.ml pef/*.mli
 	$(OCAMLBUILD) $(OBFLAGS) pef/pef.otarget
 	@for i in _build/pef/pef.*; do \
 	  if [ -e $$i ]; then \
