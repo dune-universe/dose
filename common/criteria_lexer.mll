@@ -30,6 +30,15 @@ ASPCUD accepted criteria
 
 {
   open Criteria_parser
+
+  let get_regexp lexbuf =
+    let open Lexing in
+    let c = Lexing.lexeme_char lexbuf 2 in
+    let endpos = Bytes.index_from lexbuf.lex_buffer (lexbuf.lex_start_pos + 3) c in
+    let len = endpos - (lexbuf.lex_start_pos + 3) in
+    let s = Bytes.sub_string lexbuf.lex_buffer (lexbuf.lex_start_pos + 3) len in
+    lexbuf.Lexing.lex_curr_pos <- lexbuf.Lexing.lex_start_pos + ((String.length s)+4);
+    s
 }
 
 let lower_letter = [ 'a' - 'z' ]
@@ -53,6 +62,7 @@ rule token = parse
   | "removed"           { REMOVED }
   | "up"                { UP }
   | "down"              { DOWN }
+  | ":="                { REGEXP (get_regexp lexbuf) }
   | '+'                 { PLUS }
   | '-'                 { MINUS }
   | '('                 { LPAREN }

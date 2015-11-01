@@ -17,52 +17,42 @@ ASPCUD accepted criteria
         unsat_recommends = unsat_recommends(solution)
         sum(name)        = sum(name,solution)
 *)
+open Criteria_types
 
-open ExtLib
-
-type attr = string
-type set = Solution | Changed | New | Removed | Up | Down
-type crit = 
-  | Count of set 
-  | Sum of (set * attr) 
-  | Unsatrec of set 
-  | Aligned if (set * attr * attr) 
-  | NotUpdate of set
-type criteria = Minimize | Maximize
-type criteriae = criteria list
+%}
 
 %token <string> IDENT
 %token LPAREN RPAREN 
-%token COMMA
+%token COMMA 
+%token <string> REGEXP
 %token PLUS MINUS
 %token EOL
-(* crit *)
 %token COUNT SUM UNSATREC ALIGNED NOTUPDATE 
-(* set *)
 %token SOLUTION CHANGED NEW REMOVED UP DOWN 
 
-%type <criteriae> criteria
+%type <Criteria_types.criteria> criteria_top
 
-%start criteria
+%start criteria_top
 
 %%
 
-criteriae : 
-    criteria { [$1] } 
-  | criteria COMMA criteriae { $1 :: $3 }
+criteria_top: criteria EOL { $1 }
 
-criteria:
+criteria: 
+    predicate { [$1] } 
+  | predicate COMMA criteria { $1 :: $3 }
+
+predicate:
     PLUS crit { Maximize($2) } 
   | MINUS crit { Minimize($2) }
 
 crit: 
-    COUNT LPAREN set RPAREN { Count($3) }
-  | SUM LPAREN set COMMA attr RPAREN { Sum($3,$5) }
+    COUNT LPAREN set RPAREN { Count($3,None) }
+    | COUNT LPAREN set COMMA field RPAREN { Printf.eprintf "SUCCESS\n" ; Count($3,Some $5) }
+/*  | SUM LPAREN set COMMA attr RPAREN { Sum($3,$5) } */
   | UNSATREC LPAREN set RPAREN { Unsatrec($3) }
-  | ALIGNED LPAREN set COMMA attr COMMA attr RPAREN { Aligned($3,$5,$7) }
+/*  | ALIGNED LPAREN set COMMA attr COMMA attr RPAREN { Aligned($3,$5,$7) } */
   | NOTUPDATE LPAREN set RPAREN { NotUpdate($3) }
-
-attr:
 
 set:
     SOLUTION { Solution }
@@ -72,4 +62,19 @@ set:
   | UP { Up }
   | DOWN { Down }
 
+/* count(S,fieldname:=/string/) */
+
+field: IDENT REGEXP { Printf.eprintf "REG %s %s \n" $1 $2; ($1,$2) }
+
 %%
+
+let error_wrapper f lexer lexbuf =
+  let syntax_error msg =
+    raise (Format822.Syntax_error (Format822.error lexbuf msg))
+  in
+  try f lexer lexbuf with
+  |Parsing.Parse_error -> syntax_error "RFC 822 parse error"
+  |Failure _m -> syntax_error "RFC 822 lexer error"
+  |_ -> syntax_error "RFC 822 error"
+ 
+let criteria_top = error_wrapper criteria_top
