@@ -10,7 +10,7 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-(** {2 Low level integer One un-installability reasons} *)
+(** {2 Low level Integer Un-installability reasons} *)
 type reason_int =
   |DependencyInt of (int * Cudf_types.vpkg list * int list)
   |MissingInt of (int * Cudf_types.vpkg list)
@@ -52,6 +52,10 @@ type result =
 
 (** The aggregated result from the solver *)
 type diagnosis = { result : result; request : request; }
+
+(** Turn an integer result into a cudf result *)
+val diagnosis : Common.Util.projection -> Cudf.universe ->
+  result_int -> request_int -> diagnosis
 
 module ResultHash : Hashtbl.S with type key = reason
 

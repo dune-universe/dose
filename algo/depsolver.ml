@@ -34,6 +34,7 @@ let load ?(check=true) universe =
       (Cudf_checker.explain_reason (r :> Cudf_checker.bad_solution_reason)) ;
   |_,_ -> assert false
 
+(*
 let reason map universe =
   let from_sat = CudfAdd.inttovar universe in
   let globalid = Cudf.universe_size universe in
@@ -86,13 +87,14 @@ let diagnosis map universe ( res : Diagnostic.result_int ) req : Diagnostic.diag
   let result = result map universe res in
   let request = request universe req in
   { Diagnostic.result = result ; request = request }
+*)
 
 (** [univcheck ?callback universe] check all packages in the
     universe for installability 
 
     @return the number of packages that cannot be installed
 *)
-let univcheck ?(global_constraints=true) ?(callback:(Diagnostic.diagnosis -> unit) option) universe =
+let univcheck ?(global_constraints=true) ?callback universe =
   let aux ?callback univ : int =
     let timer = Util.Timer.create "Algo.Depsolver.univcheck" in
     Util.Timer.start timer;
@@ -109,11 +111,11 @@ let univcheck ?(global_constraints=true) ?(callback:(Diagnostic.diagnosis -> uni
     for id = 0 to size - 2 do if not(check id) then incr failed done;
     Util.Timer.stop timer !failed
   in
-  let map = new Depsolver_int.identity in
+  let map = new Common.Util.identity in
   match callback with
   |None -> aux universe
   |Some f ->
-      let callback_int ((res,req) : (Diagnostic.result_int * (int option * int list))) : unit = f (diagnosis map universe res req) in
+      let callback_int (res,req) = f (Diagnostic.diagnosis map universe res req) in
       aux ~callback:callback_int universe
 ;;
 
@@ -137,11 +139,11 @@ let listcheck ?(global_constraints=true) ?callback universe pkglist =
     Util.Timer.stop timer !failed
   in
   let idlist = List.map (CudfAdd.vartoint universe) pkglist in
-  let map = new Depsolver_int.identity in
+  let map = new Common.Util.identity in
   match callback with
   |None -> aux universe idlist
   |Some f ->
-      let callback_int (res,req) = f (diagnosis map universe res req) in
+      let callback_int (res,req) = f (Diagnostic.diagnosis map universe res req) in
       aux ~callback:callback_int universe idlist
 ;;
 
@@ -152,7 +154,7 @@ let edos_install_cache global_constraints univ cudfpool pkglist =
   let solver = Depsolver_int.init_solver_closure cudfpool closure in
   let req = if global_constraints then (Some globalid,idlist) else (None,idlist) in
   let res = Depsolver_int.solve solver req in
-  diagnosis solver.Depsolver_int.map univ res req
+  Diagnostic.diagnosis solver.Depsolver_int.map univ res req
 ;;
 
 let edos_install ?(global_constraints=false) univ pkg =

@@ -164,3 +164,21 @@ val range : int -> int -> int list
 val string_of_list :
   ?delim:(string * string) -> ?sep: string -> 
     ('a -> string) -> 'a list -> string
+
+(** associate a sat solver variable to a package id *)
+class type projection =
+  object
+    (** add a package id to the map *)
+    method add : int -> unit
+    (** given a package id return a sat solver variable 
+        raise Not_found if the package id is not known *)
+    method inttovar : int -> int
+    (** given a sat solver variable return a package id *)
+    method vartoint : int -> int
+  end
+
+(** identity projection *)
+class identity : projection
+
+(** [intprojection n] integer projection of size [n] *)
+class intprojection : int -> projection

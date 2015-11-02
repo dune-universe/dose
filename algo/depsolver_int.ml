@@ -39,61 +39,10 @@ include Util.Logging(struct let label = label end) ;;
 module R = struct type reason = Diagnostic.reason_int end
 module S = EdosSolver.M(R)
 
-class type projection =
-  object
-    method add : int -> unit
-    method inttovar : int -> int
-    method vartoint : int -> int
-  end
-
-(** associate a sat solver variable to a package id *)
-class intprojection size = object
-
-  val vartoint = Util.IntHashtbl.create (2 * size)
-  val inttovar = Array.create size 0
-  val mutable counter = 0
-
-  (** add a package id to the map *)
-  method add v =
-    if (size = 0) then assert false ;
-    if (counter > size - 1) then assert false;
-    (* debug "intprojection : var %d -> int %d" v counter; *)
-    Util.IntHashtbl.add vartoint v counter;
-    inttovar.(counter) <- v;
-    counter <- counter + 1
-
-  (** given a package id return a sat solver variable 
-      raise Not_found if the package id is not known *)
-  method vartoint v = Util.IntHashtbl.find vartoint v
-
-  (* given a sat solver variable return a package id *)
-  method inttovar i =
-    if (i >= size) then fatal "out of boundary i = %d size = %d" i size;
-    inttovar.(i)
-end
-
-class identity = object
-  method add (v : int) = ()
-  method vartoint (v : int) = v
-  method inttovar (v : int) = v
-end
-
-(* return a conversion function. If the closure is empty, 
-   then we return the identity function, otherwise we 
-   return a function to renumber cudf uids to solver ids *)
-(*
-let init_map closure univ =
-  if List.length closure > 0 then begin
-    let map = new intprojection (List.length closure) in
-    List.iter map#add closure;
-    map
-  end
-  else new identity
-*)
 (** low level solver data type *)
 type solver = {
   constraints : S.state; (** the sat problem *)
-  map : intprojection (** a map from cudf package ids to solver ids *)
+  map : Util.projection (** a map from cudf package ids to solver ids *)
 }
 
 type dep_t = 
@@ -105,10 +54,6 @@ and t = [`SolverPool of pool | `CudfPool of pool]
 type result =
   |Success of (unit -> int list)
   |Failure of (unit -> Diagnostic.reason_int list)
-
-(* two functions to make sure we alway manipulate the correct data type *)
-let strip_solver_pool = function `SolverPool p -> p | _ -> assert false
-let strip_cudf_pool = function `CudfPool p -> p | _ -> assert false
 
 (* cudf uid -> cudf uid array . Here we assume cudf uid are sequential
    and we can use them as an array index *)
@@ -210,8 +155,7 @@ let init_solver_pool map (`CudfPool cudfpool) closure =
   (`SolverPool solverpool)
 
 (** initalise the sat solver. operate only on solver ids *)
-let init_solver_cache ?(buffer=false) varpool =
-  let varpool = strip_solver_pool varpool in
+let init_solver_cache ?(buffer=false) (`SolverPool varpool) =
   let num_conflicts = ref 0 in
   let num_disjunctions = ref 0 in
   let num_dependencies = ref 0 in
@@ -351,11 +295,11 @@ let pkgcheck global_constraints callback solver tested id =
     @param univ cudf package universe
 *)
 let init_solver_univ ?(global_constraints=true) ?(buffer=false) univ =
-  let map = new identity in
+  let map = new Util.identity in
   (* here we convert a cudfpool in a varpool. The assumption
    * that cudf package identifiers are contiguous is essential ! *)
-  let cudfpool = init_pool_univ global_constraints univ in
-  let varpool = `SolverPool (strip_cudf_pool cudfpool) in
+  let `CudfPool pool = init_pool_univ global_constraints univ in
+  let varpool = `SolverPool pool in
   let constraints = init_solver_cache ~buffer varpool in
   let solver = { constraints = constraints ; map = map } in
   solver
@@ -368,9 +312,8 @@ let init_solver_univ ?(global_constraints=true) ?(buffer=false) univ =
 *)
 (* pool = cudf pool - closure = dependency clousure . cudf uid list *)
 let init_solver_closure ?(buffer=false) cudfpool closure =
-  let map = new intprojection (List.length closure) in
+  let map = new Util.intprojection (List.length closure) in
   List.iter map#add closure;
-  (* let globalid = (Array.length (strip_cudf_pool cudfpool)) - 1 in *)
   let varpool = init_solver_pool map cudfpool closure in
   let constraints = init_solver_cache ~buffer varpool in
   let solver = { constraints = constraints ; map = map } in
@@ -402,8 +345,7 @@ let reverse_dependencies univ =
   ) univ;
   reverse
 
-let dependency_closure_cache ?(maxdepth=max_int) ?(conjunctive=false) pool idlist =
-  let cudfpool = strip_cudf_pool pool in
+let dependency_closure_cache ?(maxdepth=max_int) ?(conjunctive=false) (`CudfPool cudfpool) idlist =
   let queue = Queue.create () in
   let visited = Hashtbl.create (2 * (List.length idlist)) in
   List.iter (fun e -> Queue.add (e,0) queue) (CudfAdd.normalize_set idlist);

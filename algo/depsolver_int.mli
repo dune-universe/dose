@@ -30,28 +30,10 @@
 module R : sig type reason = Diagnostic.reason_int end
 module S : Common.EdosSolver.T with module X = R
 
-(** associate a sat solver variable to a package id *)
-class type projection =
-  object
-    (** add a package id to the map *)
-    method add : int -> unit
-    (** given a package id return a sat solver variable 
-        raise Not_found if the package id is not known *)
-    method inttovar : int -> int
-    (** given a sat solver variable return a package id *)
-    method vartoint : int -> int
-  end
-
-(** identity projection *)
-class identity : projection
-
-(** [intprojection n] integer projection of size [n] *)
-class intprojection : int -> projection
-
 (** internal state of the sat solver. The map allows to transform
     sat solver variables (that must be contiguous) to integers 
     representing the id of a package *)
-type solver = { constraints : S.state; map : intprojection; }
+type solver = { constraints : S.state; map : Common.Util.projection; }
 
 (** Solver Package Pool. [pool_t] is an array where each index
   is an solver variable and the content of the array associates
@@ -76,11 +58,11 @@ val init_pool_univ : global_constraints : bool -> Cudf.universe -> [> `CudfPool 
 
 (** this function creates an array indexed by solver ids that can be 
     used to init the edos solver. Return a [SolverPool] *)
-val init_solver_pool : projection -> 
+val init_solver_pool : Common.Util.projection -> 
   [< `CudfPool of pool] -> 'a list -> [> `SolverPool of pool]
 
 (** Initalise the sat solver. Operates only on solver ids [SolverPool] *)
-val init_solver_cache : ?buffer:bool -> [> `SolverPool of pool] -> S.state
+val init_solver_cache : ?buffer:bool -> [< `SolverPool of pool] -> S.state
 
 (** Call the sat solver
   
@@ -121,7 +103,7 @@ val copy_solver : solver -> solver
 val reverse_dependencies : Cudf.universe -> int list array
 
 val dependency_closure_cache : ?maxdepth:int -> ?conjunctive:bool ->
-  [> `CudfPool of pool] -> int list -> S.var list
+  [< `CudfPool of pool] -> int list -> S.var list
 
 (** [dependency_closure index l] return the union of the dependency closure of
     all packages in [l] .

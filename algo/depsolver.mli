@@ -19,11 +19,13 @@ type solver
     for universe consistency (cf. Cudf_checker.is_consistent) *)
 val load : ?check : bool -> Cudf.universe -> solver
 
+(*
 (** Turn a result from Diagnostic_int into one of Diagnostic *)
 val result : Depsolver_int.identity -> Cudf.universe -> Diagnostic.result_int -> Diagnostic.result
 
 (** Turn a request from Diagnostic_int into one of Diagnostic *)
 val request : Cudf.universe -> Diagnostic.request_int -> Diagnostic.request
+*)
 
 (** check if the given package can be installed in the universe 
  
@@ -95,7 +97,6 @@ val univcheck : ?global_constraints:bool -> ?callback:(Diagnostic.diagnosis -> u
    @param global_constraints : enforce global constraints on the given universe.
    @return the number of broken packages
  *)
-
 val listcheck : ?global_constraints:bool -> ?callback:(Diagnostic.diagnosis -> unit) -> 
   Cudf.universe -> Cudf.package list -> int 
 

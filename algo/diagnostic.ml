@@ -61,6 +61,59 @@ type result =
 
 type diagnosis = { result : result ; request : request }
 
+let reason map universe =
+  let from_sat = CudfAdd.inttovar universe in
+  let globalid = Cudf.universe_size universe in
+  List.filter_map (function
+    |DependencyInt(i,vl,il) when i = globalid -> None
+    |MissingInt(i,vl) when i = globalid ->
+        fatal "the package encoding global constraints can't be missing"
+    |ConflictInt(i,j,vpkg) when i = globalid || j = globalid ->
+        fatal "the package encoding global constraints can't be in conflict"
+
+    |DependencyInt(i,vl,il) -> Some (
+        Dependency(from_sat (map#inttovar i),vl,List.map (fun i -> from_sat (map#inttovar i)) il)
+    )
+    |MissingInt(i,vl) -> Some (
+        Missing(from_sat (map#inttovar i),vl)
+    )
+    |ConflictInt(i,j,vpkg) -> Some (
+        Conflict(from_sat (map#inttovar i),from_sat (map#inttovar j),vpkg)
+    )
+  )
+
+let result map universe result =
+  let from_sat = CudfAdd.inttovar universe in
+  let globalid = Cudf.universe_size universe in
+  match result with
+  |SuccessInt f_int ->
+      Success (fun ?(all=false) () ->
+        List.filter_map (function
+          |i when i = globalid -> None
+          |i -> Some ({(from_sat i) with Cudf.installed = true})
+        ) (f_int ~all ())
+      )
+  |FailureInt f -> Failure (fun () ->
+      reason map universe (f ()))
+;;
+
+let request universe result =
+  List.map (CudfAdd.inttovar universe) (snd result)
+;;
+
+(* XXX here the threatment of result and request is not uniform.
+ * On one hand indexes in result must be processed with map#inttovar 
+ * as they represent indexes associated with the solver.
+ * On the other hand the indexes in result represent cudf uid and
+ * therefore do not need to be processed.
+ * Ideally the compiler should make sure that we use the correct indexes
+ * but we should annotate everything making packing/unpackaing handling
+ * a bit too heavy *)
+let diagnosis map universe ( res : result_int ) req : diagnosis =
+  let result = result map universe res in
+  let request = request universe req in
+  { result = result ; request = request }
+
 module ResultHash = OcamlHash.Make (
   struct
     type t = reason

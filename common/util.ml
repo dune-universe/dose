@@ -348,3 +348,42 @@ let string_of_list ?(delim=("","")) ?(sep=",") string_of_item l =
   Buffer.add_string buf (snd delim);
   Buffer.contents buf
 ;;
+
+class type projection =
+  object
+    method add : int -> unit
+    method inttovar : int -> int
+    method vartoint : int -> int
+  end
+
+(** associate a sat solver variable to a package id *)
+class intprojection size = object
+
+  val vartoint = IntHashtbl.create (2 * size)
+  val inttovar = Array.make size 0
+  val mutable counter = 0
+
+  (** add a package id to the map *)
+  method add v =
+    if (size = 0) then assert false ;
+    if (counter > size - 1) then assert false;
+    IntHashtbl.add vartoint v counter;
+    inttovar.(counter) <- v;
+    counter <- counter + 1
+
+  (** given a package id return a sat solver variable 
+      raise Not_found if the package id is not known *)
+  method vartoint v = IntHashtbl.find vartoint v
+
+  (* given a sat solver variable return a package id *)
+  method inttovar i =
+    if (i >= size) then fatal "out of boundary i = %d size = %d" i size;
+    inttovar.(i)
+end
+
+class identity = object
+  method add (v : int) = ()
+  method vartoint (v : int) = v
+  method inttovar (v : int) = v
+end
+
