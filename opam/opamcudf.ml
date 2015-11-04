@@ -37,6 +37,7 @@ let preamble =
     ("number",(`String None));
     ("active",(`Int None));
     ("version-lag",(`Nat (Some 0)));
+    ("switch",(`String None));
     ]
   in
   CudfAdd.add_properties Cudf.default_preamble l
@@ -44,6 +45,7 @@ let preamble =
 (* version-lag is the distance from the most recent package *)
 let add_extra extras tables (switch,activeswitch) pkg =
   let number = ("number",`String pkg#version) in
+  let switchprop = ("switch",`String switch) in
   let activeswitch =
     let n = if switch = activeswitch then 1 else 0 in
     ("active",`Int n)
@@ -74,7 +76,7 @@ let add_extra extras tables (switch,activeswitch) pkg =
     |(_,`Vpkgformula []) -> None
     |e -> Some e
   )
-  [number; depopts; activeswitch; version_lag] @ l
+  [switchprop; number; depopts; activeswitch; version_lag] @ l
 ;;
 
 let decode name =
