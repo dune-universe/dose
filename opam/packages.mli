@@ -32,8 +32,8 @@ class package :
   ?depopts:string * Pef.Packages_types.vpkgformula option ->
   ?switch:string * string list option ->
   ?installedlist:string * string list option ->
-  ?build_depends:string * Pef.Packages_types.vpkgformula option ->
-  ?base:string * bool option ->
+  ?pinnedlist:string * string list option ->
+  ?baselist:string * string list option ->
   ?extras:(string * Pef.Packages.parse_extras_f option) list *
           (string * string) list option ->
   Common.Format822.stanza ->
@@ -43,13 +43,13 @@ class package :
     method switch : string list
     method installed : Pef.Packages_types.installed
     method installedlist : string list
-    method base : bool
+    method pinnedlist : string list
+    method baselist : string list
     method conflicts : Pef.Packages_types.vpkglist
     method depends : Pef.Packages_types.vpkgformula
     method depopts : Pef.Packages_types.vpkgformula
     method provides : Pef.Packages_types.vpkglist
     method recommends : Pef.Packages_types.vpkgformula
-    method build_depends : Pef.Packages_types.vpkgformula
     method extras : (string * string) list
 
     method get_extra : string -> string

@@ -101,7 +101,7 @@ let tocudf tables ?(options=default_options) ?(extras=[]) pkg =
           Cudf.package = CudfAdd.encode (pkg#name^":"^switch);
           Cudf.version = Pef.Pefcudf.get_cudf_version tables (pkg#name,pkg#version);
           Cudf.installed = List.mem switch pkg#installedlist;
-          Cudf.keep = if pkg#base then `Keep_version else `Keep_none;
+          Cudf.keep = if List.mem switch pkg#baselist then `Keep_version else `Keep_none;
           Cudf.depends = Pef.Pefcudf.loadll tables ~arch:switch ~archs:all_switches depends;
           Cudf.conflicts = Pef.Pefcudf.loadlc tables ~arch:switch ~archs:all_switches pkg#conflicts;
           Cudf.provides = Pef.Pefcudf.loadlp tables ~arch:switch ~archs:all_switches pkg#provides;

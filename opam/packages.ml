@@ -98,8 +98,8 @@ let parse_request_stanza par =
 
 class package ?(name=("package",None)) ?(version=("version",None)) ?(depends=("depends",None))
     ?(conflicts=("conflicts",None)) ?(provides=("provides",None)) ?(depopts=("depopts",None)) 
-    ?(switch=("switch",None)) ?(installedlist=("installed",None)) ?(build_depends=("build-depends",None)) 
-    ?(base=("base",None)) ?(extras=([],None)) par = object
+    ?(switch=("switches",None)) ?(installedlist=("installed",None)) ?(pinnedlist=("pinned",None))
+    ?(baselist=("base",None)) ?(extras=([],None)) par = object
   
   inherit Pef.Packages.package ~name ~version ~depends ~conflicts ~provides ~recommends:depopts ~extras par
 
@@ -111,18 +111,18 @@ class package ?(name=("package",None)) ?(version=("version",None)) ?(depends=("d
     let parse = Pef.Packages.parse_s ~default:[] (Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp) in
     Pef.Packages.get_field_value ~parse ~par ~field:installedlist
 
-  val build_depends : (string * Pef.Packages_types.vpkgformula) =
-    let parse = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_vpkgformula in
-    Pef.Packages.get_field_value ~parse ~par ~field:build_depends
+  val baselist : (string * string list) =
+    let parse = Pef.Packages.parse_s ~default:[] (Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp) in
+    Pef.Packages.get_field_value ~parse ~par ~field:baselist
 
-  val base : (string * bool) =
-    let parse = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool in
-    Pef.Packages.get_field_value ~parse ~par ~field:base
+  val pinnedlist : (string * string list) =
+    let parse = Pef.Packages.parse_s ~default:[] (Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp) in
+    Pef.Packages.get_field_value ~parse ~par ~field:pinnedlist
 
   method switch = snd switch
   method installedlist = snd installedlist
-  method build_depends = snd build_depends
-  method base = snd base
+  method baselist = snd baselist
+  method pinnedlist = snd pinnedlist
   method depopts = snd recommends
 
   method pp oc =
@@ -131,7 +131,8 @@ class package ?(name=("package",None)) ?(version=("version",None)) ?(depends=("d
 
     Pef.Printer.pp_string_list_wl oc switch;
     Pef.Printer.pp_string_list_wl oc installedlist;
-    Pef.Printer.pp_bool_wl oc base;
+    Pef.Printer.pp_string_list_wl oc pinnedlist;
+    Pef.Printer.pp_string_list_wl oc baselist;
 
     Pef.Printer.pp_vpkglist_wl oc provides;
     Pef.Printer.pp_vpkgformula_wl oc depends;
