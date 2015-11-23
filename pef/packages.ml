@@ -20,22 +20,12 @@ open Common
 let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
-(** ParseError context list, field name * error *)
-exception ParseError of string list * string * string
 exception IgnorePackage of string
 
 type parse_extras_f = (string -> Common.Format822.stanza -> string)
 
-(* here the _loc is taken from the the caller and not from the parser *)
-let lexbuf_wrapper type_parser (label,(_loc,s)) =
-  try type_parser Packages_lexer.token_deb (Lexing.from_string s) with
-  |Format822.Syntax_error (m) -> 
-      let msg = Printf.sprintf "Field %s has a wrong value (%s): '%s'" label m s in
-      raise (ParseError ([],label,msg))
-  |Parsing.Parse_error -> 
-      let msg = Printf.sprintf "Field %s has a wrong value: '%s'" label s in
-      raise (ParseError ([],label,msg))
-
+let lexbuf_wrapper type_parser v =
+  Format822.lexbuf_wrapper type_parser Packages_lexer.token_deb v
 let parse_name v = lexbuf_wrapper Packages_parser.pkgname_top v
 let parse_version v = lexbuf_wrapper Packages_parser.version_top v
 let parse_vpkg v = lexbuf_wrapper  Packages_parser.vpkg_top v
@@ -58,7 +48,7 @@ let parse_s ?default ?(required=false) f label par =
   with Not_found ->
     match required,default with
     |false,None -> raise Not_found (* for extra labels *)
-    |true,None -> raise (ParseError ([],label,"This label is required."))
+    |true,None -> raise (Format822.ParseError ([],label,"This label is required."))
     |_,Some d -> d (* required or not, I take into consideration the default *)
 
 let parse_string (_,(_,s)) = s
@@ -187,7 +177,7 @@ let parse_packages_in ?filter ?(extras=[]) fname ic =
   try
     let stanza_parser = parse_package_stanza ~filter ~extras in
     Format822.parse_from_ch (packages_parser fname stanza_parser) ic
-  with ParseError (cl,label,errmsg) ->
+  with Format822.ParseError (cl,label,errmsg) ->
     fatal "Filename %s\n %s\n %s : %s" fname (String.concat "\n " cl) label errmsg
 
 module Set = struct

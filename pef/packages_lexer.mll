@@ -1,8 +1,7 @@
 (*****************************************************************************)
-(*  libCUDF - CUDF (Common Upgrade Description Format) manipulation library  *)
-(*  Copyright (C) 2009-2011  Stefano Zacchiroli <zack@pps.jussieu.fr>        *)
+(*  Copyright (C) 2009-2015 Pietro Abate <pietro.abate@pps.jussieu.fr>       *)
+(*  Copyright (C) 2009 Mancoosi Project                                      *)
 (*                                                                           *)
-(*  Adapeted for dose3                                                       *)
 (*                                                                           *)
 (*  This library is free software: you can redistribute it and/or modify     *)
 (*  it under the terms of the GNU Lesser General Public License as           *)
@@ -15,10 +14,6 @@
 {
   open Common
   open Packages_parser
-
-  let raise_error lexbuf c =
-  let msg = Printf.sprintf "Pef unexpected token : '%c'" c in
-  raise (Format822.Parse_error_822 (Format822.error lexbuf msg))
 
 }
 
@@ -52,4 +47,4 @@ rule token_deb = parse
   | ident as s          { IDENT s }
   | blank+              { token_deb lexbuf }
   | eof                 { EOL } (* single-line parsing: EOF means in fact EOL *)
-  | _ as c              { raise_error lexbuf c }
+  | _ as c              { Format822.raise_error lexbuf c }

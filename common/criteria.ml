@@ -19,38 +19,8 @@ module Pcre = Re_pcre
 let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
-(* FIXME: merge with common/format822.ml *)
-exception Parse_error_822 of string
-exception Syntax_error of string
-exception Type_error of string
-
-type f822_parser = { lexbuf: Lexing.lexbuf ; fname: string }
-
-let from_channel ic =
-  let f s n = try IO.input ic s 0 n with IO.No_more_input -> 0 in
-  { lexbuf = Lexing.from_function f ; fname = "from-input-channel" }
-
-(* since somebody else provides the channel, we do not close it here *)
-let parser_wrapper_ch ic _parser = _parser (from_channel ic)
-
-let parse_from_ch _parser ic =
-  try parser_wrapper_ch ic _parser with
-  |Syntax_error (msg) -> fatal "%s" msg
-  |Parse_error_822 (msg) -> fatal "%s" msg
-
-(* FIXME: can be combined with pef/packages.ml/ParseError *)
-exception ParseError of string list * string * string
-
-(* FIXME: can be combined with pef/packages.ml/lexbuf_wrapper *)
-let lexbuf_wrapper type_parser (label,(_loc,s)) =
-  try type_parser Criteria_lexer.token (Lexing.from_string s) with
-  |Format822.Syntax_error (m) ->
-    let msg = Printf.sprintf "Field %s has a wrong value (%s): '%s'" label m s in
-    raise (ParseError ([],label,msg))
-  |Parsing.Parse_error ->
-    let msg = Printf.sprintf "Field %s has a wrong value: '%s'" label s in
-    raise (ParseError ([],label,msg))
-
+let lexbuf_wrapper type_parser v =
+  Format822.lexbuf_wrapper type_parser Criteria_lexer.token v
 let parse_criteria v = lexbuf_wrapper Criteria_parser.criteria_top v
 
 let string_of_set = function

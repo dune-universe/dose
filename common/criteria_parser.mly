@@ -76,13 +76,4 @@ field:
 
 %%
 
-let error_wrapper f lexer lexbuf =
-  let syntax_error msg =
-    raise (Format822.Syntax_error (Format822.error lexbuf msg))
-  in
-  try f lexer lexbuf with
-  |Parsing.Parse_error -> syntax_error "RFC 822 parse error"
-  |Failure _m -> syntax_error "RFC 822 lexer error"
-  |_ -> syntax_error "RFC 822 error"
- 
-let criteria_top = error_wrapper criteria_top
+let criteria_top = Format822.error_wrapper "criteria" criteria_top

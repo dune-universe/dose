@@ -1,5 +1,5 @@
 (**************************************************************************************)
-(*  Copyright (C) 2009 Pietro Abate <pietro.abate@pps.jussieu.fr>                     *)
+(*  Copyright (C) 2009-2015 Pietro Abate <pietro.abate@pps.jussieu.fr>                *)
 (*  Copyright (C) 2009 Mancoosi Project                                               *)
 (*                                                                                    *)
 (*  This library is free software: you can redistribute it and/or modify              *)
@@ -24,6 +24,12 @@ type doc = stanza list
 
 let dummy_loc: loc = Lexing.dummy_pos, Lexing.dummy_pos
 
+exception Parse_error_822 of string
+exception Syntax_error of string
+exception Type_error of string
+(** ParseError context list, field name * error *)
+exception ParseError of string list * string * string
+
 let error lexbuf msg =
   let curr = lexbuf.Lexing.lex_curr_p in
   let start = lexbuf.Lexing.lex_start_p in
@@ -41,16 +47,36 @@ let error lexbuf msg =
       (curr.Lexing.pos_cnum - curr.Lexing.pos_bol)
       msg
 
+let raise_error lexbuf c =
+  let msg = Printf.sprintf "Unexpected token : '%c'" c in
+  raise (Parse_error_822 (error lexbuf msg))
+
+let error_wrapper t f lexer lexbuf =
+  let syntax_error msg =
+    raise (Syntax_error (Printf.sprintf "%s (%s)" (error lexbuf msg) t))
+  in
+  try f lexer lexbuf with
+  |Parsing.Parse_error -> syntax_error "parse error"
+  |Failure _m when String.starts_with _m "lexing" -> syntax_error "lexer error"
+  |Type_error _ -> syntax_error "type error"
+  |_ -> assert false
+
+(* here the _loc is taken from the the caller and not from the parser *)
+let lexbuf_wrapper type_parser type_lexer (label,(_loc,s)) =
+  try type_parser type_lexer (Lexing.from_string s) with
+  |Syntax_error (m) ->
+      let msg = Printf.sprintf "Field %s has a wrong value (%s): '%s'" label m s in
+      raise (ParseError ([],label,msg))
+  |Parsing.Parse_error ->
+      let msg = Printf.sprintf "Field %s has a wrong value: '%s'" label s in
+      raise (ParseError ([],label,msg))
+
 let string_of_loc (start_pos, end_pos) =
   let line { Lexing.pos_lnum = l } = l in
   if line start_pos = line end_pos then
     Printf.sprintf "line: %d" (line start_pos)
   else
     Printf.sprintf "lines: %d-%d" (line start_pos) (line end_pos)
-
-exception Parse_error_822 of string
-exception Syntax_error of string
-exception Type_error of string
 
 type f822_parser = { lexbuf: Lexing.lexbuf ; fname: string }
 

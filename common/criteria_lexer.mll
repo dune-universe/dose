@@ -10,45 +10,26 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-(* 
-ASPCUD accepted criteria
-
-      Default: none
-      Valid:   none, paranoid, -|+<crit>(,-|+<crit>)*
-        <crit>: count(<set>) | sum(<set>,<attr>) | unsat_recommends(<set>)
-              | aligned(<set>,<attr>,<attr>) | notuptodate(<set>)
-        <attr>: CUDF attribute name
-        <set> : solution | changed | new | removed | up | down
-      For backwards compatibility: 
-        new              = count(new)
-        removed          = count(removed)
-        changed          = count(changed)
-        notuptodate      = notuptodate(solution)
-        unsat_recommends = unsat_recommends(solution)
-        sum(name)        = sum(name,solution)
-*)
-
 {
   open Criteria_parser
-
-  exception Parse_error of string
 
   let get_regexp lexbuf =
     let open Lexing in
     let c = Lexing.lexeme_char lexbuf 2 in (* the delimiter can be any character *)
     (* find the terminating delimiter *)
-    let endpos = try Bytes.index_from lexbuf.lex_buffer (lexbuf.lex_start_pos + 3) c
-      with Invalid_argument _ -> raise (Parse_error (Format822.error lexbuf "String too short"))
-         | Not_found -> raise (Parse_error (Format822.error lexbuf (Printf.sprintf "cannot find: %c" c)))
+    let endpos =
+      try Bytes.index_from lexbuf.lex_buffer (lexbuf.lex_start_pos + 3) c with
+      |Invalid_argument _ ->
+          raise (Format822.Syntax_error (
+            Format822.error lexbuf "String too short"))
+      | Not_found ->
+          raise (Format822.Syntax_error (
+            Format822.error lexbuf (Printf.sprintf "cannot find: %c" c)))
     in
     let len = endpos - (lexbuf.lex_start_pos + 3) in
     let s = Bytes.sub_string lexbuf.lex_buffer (lexbuf.lex_start_pos + 3) len in
     lexbuf.Lexing.lex_curr_pos <- lexbuf.Lexing.lex_start_pos + ((String.length s)+4);
     s
-
-  let raise_error lexbuf c =
-    let msg = Printf.sprintf "Solver criteria unexpected token : '%c'" c in
-    raise (Parse_error (Format822.error lexbuf msg))
 
 }
 
@@ -83,4 +64,4 @@ rule token = parse
   | ident as s          { IDENT s }
   | blank+              { token lexbuf }
   | eof                 { EOL }
-  | _ as c              { raise_error lexbuf c }
+  | _ as c              { Format822.raise_error lexbuf c }
