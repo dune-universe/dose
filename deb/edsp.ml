@@ -82,7 +82,7 @@ let parse_req (label,(loc,s)) =
 let parse_edsp_version (label,(_,s)) =
   match String.nsplit s " " with
   |["EDSP";s] when (float_of_string s) >= 0.4 -> s
-  |_ -> raise (Pef.Packages.ParseError ([],label,"Invalid EDSP version."))
+  |_ -> raise (Format822.ParseError ([],label,"Invalid EDSP version."))
 
 let parse_request_stanza par =
   (* request must be parse before any other fields *)

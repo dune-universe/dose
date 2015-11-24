@@ -12,9 +12,6 @@
 
 (** {2 Exceptions} *)
 
-(** ParseError corries a context list, label, error message *)
-exception ParseError of string list * string * string
-
 (** IgnorePackage error message *)
 exception IgnorePackage of string
 

@@ -74,7 +74,7 @@ let rec input_all_lines acc chan =
 
 (* remove all characters disallowed in criteria *)
 (* TODO: should this really be done? *)
-let sanitize s = Pcre.substitute ~rex:(Pcre.regexp "[^\\[\\]+()a-z,\"-]") ~subst:(fun _ -> "") s;;
+let sanitize s = Pcre.substitute ~rex:(Pcre.regexp "[^\\[\\]+()a-z0-9,\"-]") ~subst:(fun _ -> "") s;;
 
 let interpolate_solver_pat exec cudf_in cudf_out pref =
   let argv = try Shell_lexer.parse_string exec with

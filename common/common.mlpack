@@ -9,3 +9,7 @@ CudfAdd
 CudfDiff
 VersionInfo
 Url
+Criteria_types
+Criteria_lexer
+Criteria_parser
+Criteria

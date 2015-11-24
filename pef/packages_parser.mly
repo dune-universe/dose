@@ -227,21 +227,11 @@ reqlist_ne:
 
 %%
 
-let error_wrapper t f lexer lexbuf =
-  let syntax_error msg =
-    raise (Format822.Syntax_error (Printf.sprintf "%s (%s)" (Format822.error lexbuf msg) t)) 
-  in
-  try f lexer lexbuf with
-  |Parsing.Parse_error -> syntax_error "parse error"
-  |Failure _m when String.starts_with _m "lexing" -> syntax_error "lexer error"
-  |Format822.Type_error _ -> syntax_error "type error"
-  |_ -> assert false
-
-let pkgname_top = error_wrapper "pkgname" pkgname_top
-let version_top = error_wrapper "version" version_top
-let vpkg_top = error_wrapper "vpkg" vpkg_top
-let vpkglist_top = error_wrapper "vpkglist" vpkglist_top
-let vpkgformula_top = error_wrapper "vpkgformula" vpkgformula_top
-let source_top = error_wrapper "source" source_top
-let request_top = error_wrapper "request" request_top
-let requestlist_top = error_wrapper "requestlist" requestlist_top
+let pkgname_top = Format822.error_wrapper "pkgname" pkgname_top
+let version_top = Format822.error_wrapper "version" version_top
+let vpkg_top = Format822.error_wrapper "vpkg" vpkg_top
+let vpkglist_top = Format822.error_wrapper "vpkglist" vpkglist_top
+let vpkgformula_top = Format822.error_wrapper "vpkgformula" vpkgformula_top
+let source_top = Format822.error_wrapper "source" source_top
+let request_top = Format822.error_wrapper "request" request_top
+let requestlist_top = Format822.error_wrapper "requestlist" requestlist_top
