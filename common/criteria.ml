@@ -60,7 +60,12 @@ let makefield ?(sep="=") fieldname regex =
   in
   Printf.sprintf "x-%s-%s" (sanitize fieldname) regexhash
 
-let to_string ?solver criteria =
+let is_misc2012 = function
+  |"mccs-cbc" | "mccs-lpsolve" -> false
+  |"aspcud" | "packaup" -> true
+  | _ -> true (* we assume true by default *)
+
+let to_string ?(solver="dumb") criteria =
   let pr = Printf.sprintf in
   let string_of_set = function
     | Solution -> "solution"
@@ -70,10 +75,7 @@ let to_string ?solver criteria =
     | Up -> "up"
     | Down -> "down"
   in
-  match solver with
-  | Some (("mccs-cbc" | "mccs-lpsolve") as s) ->
-      fatal "Solver Specific Optimizations (%s) are not recognized." s
-  | _ ->
+  if is_misc2012 solver then
     let l =
       List.map (fun pred ->
         let pred, crit =
@@ -100,18 +102,35 @@ let to_string ?solver criteria =
       ) criteria
     in
     String.concat "," l
+  else
+    fatal "Solver Specific Optimizations (%s) are not recognized." solver
 
-let extcount_iter f =
+(* compile the regex so that this doesn't need to be done later *)
+(* TODO: the regex should probably be multiline? *)
+let iter f =
   List.iter (function
     | Minimize (Count(_,Some(fieldname,regex))) 
     | Maximize (Count(_,Some(fieldname,regex))) ->
-      (* compile the regex so that this doesn't need to be done later *)
-      (* TODO: the regex should probably be multiline? *)
       let regexstring, sep, compiled_re = match regex with
         | Regexp r -> (r, "~", Some(Pcre.regexp r))
         | ExactMatch r -> (r, "=", None)
       in
       let cudffieldname = makefield ~sep fieldname regexstring in
-      f cudffieldname fieldname regexstring compiled_re
+      f (cudffieldname,fieldname,regexstring,compiled_re)
     | _ -> ()
   )
+
+let default_criteria = 
+  let minnew = Minimize(Count(New,None)) in
+  let minrem = Minimize(Count(Removed,None)) in
+  let minupto = Minimize(NotUptodate(Solution)) in
+  let minch = Minimize(Count(Changed,None)) in
+  let minunsat = Minimize(Unsatrec(Solution)) in
+  [
+  "upgrade", [minnew;minrem;minupto];
+  "dist-upgrade", [minupto;minnew];
+  "install", [minrem;minch];
+  "remove", [minrem;minch];
+  "paranoid", [minrem;minch];
+  "trendy", [minrem;minupto;minunsat;minnew];
+]

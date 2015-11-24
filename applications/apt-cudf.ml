@@ -148,18 +148,23 @@ let parse_conf_file fname =
           let (_,sl) = List.assoc "solver" stanza in
           let l = List.map (fun (k, (_loc, v)) -> (k,v)) stanza in
           List.filter_map (fun s -> 
-            match ExtString.String.strip s with
-            |"" -> None
-            |x -> Some(x, List.filter_map (fun (k,v) ->
-                if k = "solver" then None (* do not add solver field *)
-                else if x = "*" then begin (* parse extended MISC syntax for "*" stanza *)
-                  (* the default stanza is parsed as extended MISC syntax *)
+            let x = ExtString.String.strip s in
+            if x = "" then None else
+            let mapl =
+              List.filter_map (function
+                |("solver",_) -> None
+                |(k,v) when x = "*" ->
                   let _loc = Format822.dummy_loc in
-                  let field = (Printf.sprintf "conf file stanza \"%s\" field \"%s\"" x k,(_loc,v)) in
+                  let field =
+                    let str = Printf.sprintf "conf file stanza \"%s\" field \"%s\"" x k in
+                    (str,(_loc,v))
+                  in
                   let c = Criteria.lexbuf_wrapper Criteria_parser.criteria_top field in
                   Some(x, ExtCrit c)
-                end else (* treat all other stanzas as plain text *)
-                  Some(k, PlainCrit v)) l)
+                |(k,v) -> Some(k, PlainCrit v)
+              ) l
+            in
+            Some(x,mapl)
           ) (ExtString.String.nsplit sl ",")
         ) stanzas 
       )
@@ -169,64 +174,64 @@ let parse_conf_file fname =
     fatal "%s" (Format822.error lexbuf msg)
 ;;
 
-let choose_criteria ?(criteria=None) ?(criteria_plain=None) ~conffile solver request =
+(* the priority to choose criteria is:
+  1. --criteria-plain
+  2. --criteria
+  3. EDSP Preferences field
+  4. default criteria for given solver in /etc/apt-cudf.conf and EDSP action
+  5. default criteria for "*" default solver in /etc/apt-cudf.conf and EDSP action
+  6. default criteria as hardcoded above for given EDSP action
+  7. hardcoded paranoid criteria *)
+let choose_criteria ~criteria ~criteria_plain ~conffile solver request =
   let conf =
     if Sys.file_exists conffile then
       parse_conf_file conffile
     else []
   in
-  (* We do not use the string representation for the criteria to avoid useless
-   * parsing. The extended MISC syntax has to be used to be able to turn this
-   * default into a format understood by any solver. *)
-  let default_extcrit = [
-    "upgrade", ExtCrit [Minimize(Count(New,None));Minimize(Count(Removed,None));Minimize(NotUptodate(Solution))];
-    "dist-upgrade", ExtCrit [Minimize(NotUptodate(Solution));Minimize(Count(New,None))];
-    "install", ExtCrit [Minimize(Count(Removed,None));Minimize(Count(Changed,None))];
-    "remove", ExtCrit [Minimize(Count(Removed,None));Minimize(Count(Changed,None))];
-    "trendy", ExtCrit [Minimize(Count(Removed,None));Minimize(NotUptodate(Solution));Minimize(Unsatrec(Solution));Minimize(Count(New,None))];
-    "paranoid", ExtCrit [Minimize(Count(Removed,None));Minimize(Count(Changed,None))];
-  ] in
   let default_criteria =
-    try
+    let critnames = List.map fst Criteria.default_criteria in
+    (* test if this stanza has all the required fields *)
+    try 
       let c = List.assoc solver conf in
-      (* test if this stanza has all the required fields *)
-      List.iter (fun f -> ignore(List.assoc f c)) (List.map fst default_extcrit);
+      List.iter (fun f -> ignore(List.assoc f c)) critnames;
       c
     with Not_found ->
-      try
+      try 
         let c = List.assoc "*" conf in
-        (* test if this stanza has all the required fields *)
-        List.iter (fun f -> ignore(List.assoc f c)) (List.map fst default_extcrit);
+        List.iter (fun f -> ignore(List.assoc f c)) critnames;
         c
-      with Not_found -> default_extcrit
+      with Not_found ->
+        List.map (fun (k,v) -> (k,ExtCrit v))
+        Criteria.default_criteria
   in
-  (* the priority to choose criteria is:
-   *  1. --criteria-plain
-   *  2. --criteria
-   *  3. EDSP Preferences field
-   *  4. default criteria for given solver in /etc/apt-cudf.conf and EDSP action
-   *  5. default criteria for "*" default solver in /etc/apt-cudf.conf and EDSP action
-   *  6. default criteria as hardcoded above for given EDSP action
-   *  7. hardcoded paranoid criteria *)
-  match criteria_plain with
-  | Some c when c <> "" -> PlainCrit c
-  | _ -> begin match criteria with
-      | Some c when c <> [] -> ExtCrit c
-      | _ -> begin match request.Edsp.preferences with
-          | c when c <> "" -> begin
-              (* try parsing the Preferences field of the EDSP document *)
-              let _loc = Format822.dummy_loc in
-              let field = ("EDSP Preferences",(_loc,c)) in
-              let c = Criteria.lexbuf_wrapper Criteria_parser.criteria_top field in
-              ExtCrit c
-            end
-          | _ when request.Edsp.upgrade -> List.assoc "upgrade" default_criteria
-          | _ when request.Edsp.distupgrade -> List.assoc "dist-upgrade" default_criteria
-          | _ when request.Edsp.install <> [] -> List.assoc "install" default_criteria
-          | _ when request.Edsp.remove <> [] -> List.assoc "remove" default_criteria
-          | _ -> List.assoc "paranoid" default_criteria
-        end
-    end
+  if OptParse.Opt.is_set Options.criteria_plain then
+    PlainCrit (OptParse.Opt.get Options.criteria_plain)
+  else if OptParse.Opt.is_set Options.criteria then
+    if Criteria.is_misc2012 solver then
+      ExtCrit (OptParse.Opt.get Options.criteria)
+    else
+      fatal "You specified --criteria, but the solver does not recognize the MISC 2012 optimization language. Please specifify the optimization criteria using --criteria-plain"
+  (* try parsing the Preferences field of the EDSP document *)
+  else if request.Edsp.preferences <> "" then
+    if Criteria.is_misc2012 solver then
+      let _loc = Format822.dummy_loc in
+      let field = ("EDSP Preferences",(_loc,request.Edsp.preferences)) in
+      let c = Criteria.lexbuf_wrapper Criteria_parser.criteria_top field in
+      ExtCrit c
+    else
+      PlainCrit request.Edsp.preferences
+  else if not (Criteria.is_misc2012 solver) then
+      fatal "The solver does not recognize the MISC 2012 optimization language. Please specifify the optimization criteria using --criteria-plain"
+  else if request.Edsp.upgrade then
+    List.assoc "upgrade" default_criteria
+  else if request.Edsp.distupgrade then
+    List.assoc "dist-upgrade" default_criteria
+  else if request.Edsp.install <> [] then
+    List.assoc "install" default_criteria
+  else if request.Edsp.remove <> [] then
+    List.assoc "remove" default_criteria
+  else
+    List.assoc "paranoid" default_criteria
 ;;
 
 let parse_solver_spec filename =
@@ -276,7 +281,8 @@ let main () =
   debug "CUDFSOLVERS=%s" solver_dir;
   (* debug "TMPDIR=%s" waiting for ocaml 4.0 *)
 
-  if OptParse.Opt.is_set Options.criteria && OptParse.Opt.is_set Options.criteria_plain then
+  if OptParse.Opt.is_set Options.criteria && 
+  OptParse.Opt.is_set Options.criteria_plain then
     fatal "--criteria cannot be specified together with --criteria-plain";
 
   let ch = 
@@ -301,7 +307,8 @@ let main () =
     |"" -> request
     |_ -> begin
       let apt_req = Apt.parse_request_apt apt_get_cmdline in
-      Edsp.from_apt_request native_arch {request with Edsp.install = []; remove = []} apt_req
+      Edsp.from_apt_request native_arch 
+        {request with Edsp.install = []; remove = []} apt_req
     end
   in
 
@@ -316,38 +323,36 @@ let main () =
       Filename.basename(Sys.argv.(0))
   in
 
-  (* Hashtable storing any new cudf fields necessary for the extended count()
-   * criteria syntax.
-   *
-   * mapping from cudf field name to 3-type containing the EDSP fieldname, the
-   * regex plain text and the optional compiled regex *)
+(* Hashtable storing any new cudf fields necessary for the extended count()
+  criteria syntax.
+  mapping from cudf field name to 3-type containing the EDSP fieldname, the
+  regex plain text and the optional compiled regex
+
+  since we have an extended MISC criteria we need to see if it uses the
+  extension to the count criteria and if yes, fill the regexfield hash
+  with the correct values *)
   let regexfields = Hashtbl.create (10) in
   let criteria =
-    let cmdline_criteria = OptParse.Opt.opt Options.criteria in
-    let cmdline_criteria_plain = OptParse.Opt.opt Options.criteria_plain in
+    let criteria = OptParse.Opt.opt Options.criteria in
+    let criteria_plain = OptParse.Opt.opt Options.criteria_plain in
     let conffile = OptParse.Opt.get Options.conffile in
-    match choose_criteria ~criteria:cmdline_criteria ~criteria_plain:cmdline_criteria_plain ~conffile solver request with
-    | ExtCrit c ->
-      (* since we have an extended MISC criteria we need to see if it uses the
-       * extension to the count criteria and if yes, fill the regexfield hash
-       * with the correct values *)
-      Criteria.extcount_iter (fun cudffieldname fieldname regexstring compiledre ->
-          let hashtblval = (fieldname, regexstring, compiledre) in
-          begin match
-              try Some(Hashtbl.find regexfields cudffieldname)
-              with Not_found -> None
-            with
-            | None -> Hashtbl.add regexfields cudffieldname hashtblval
-            | Some v when v = hashtblval -> () (* mapping already exists in hashtable *)
-            | Some (_,plain,Some _) ->
-              fatal "Hash collision: md5(%s~%s)[:8] = md5(%s~%s)[:8]" fieldname plain fieldname regexstring
-            | Some (_,plain,None) ->
-              fatal "Hash collision: md5(%s=%s)[:8] = md5(%s=%s)[:8]" fieldname plain fieldname regexstring
+    match choose_criteria ~criteria ~criteria_plain ~conffile solver request with
+    |ExtCrit c ->
+      Criteria.iter (fun (cudffieldname,fieldname,regexstring,compiled_re) ->
+        let hashtblval = (fieldname,regexstring,compiled_re) in
+        try 
+          (* mapping already exists in hashtable *)
+          begin match Hashtbl.find regexfields cudffieldname with
+          |v when v = hashtblval -> ()
+          |(_,plain,_) ->
+            fatal "Hash collision: md5(%s~%s)[:8] = md5(%s~%s)[:8]"
+              fieldname plain fieldname regexstring
           end
-        ) c;
-      (* finally, retrieve the solver-specific optimization string *)
+        with Not_found ->
+          Hashtbl.add regexfields cudffieldname hashtblval
+      ) c;
       Criteria.to_string ~solver c
-    | PlainCrit c -> c (* if we have a plaintext criteria, keep it as is *)
+    |PlainCrit c -> c
   in
 
   Util.Timer.start timer2;
