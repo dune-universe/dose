@@ -344,9 +344,10 @@ let main () =
           (* mapping already exists in hashtable *)
           begin match Hashtbl.find regexfields cudffieldname with
           |v when v = hashtblval -> ()
-          |(_,plain,_) ->
-            fatal "Hash collision: md5(%s~%s)[:8] = md5(%s~%s)[:8]"
-              fieldname plain fieldname regexstring
+          |(_,plain,r) ->
+            let sep = match r with Some _ -> "~" | None -> "=" in
+            fatal "Hash collision: md5(%s%s%s)[:8] = md5(%s%s%s)[:8]"
+              fieldname sep plain fieldname sep regexstring
           end
         with Not_found ->
           Hashtbl.add regexfields cudffieldname hashtblval
