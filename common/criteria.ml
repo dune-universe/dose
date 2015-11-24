@@ -62,7 +62,7 @@ let makefield ?(sep="=") fieldname regex =
 
 let is_misc2012 = function
   |"mccs-cbc" | "mccs-lpsolve" -> false
-  |"aspcud" | "packaup" -> true
+  |"aspcud" | "packup" -> true
   | _ -> true (* we assume true by default *)
 
 let to_string ?(solver="dumb") criteria =
