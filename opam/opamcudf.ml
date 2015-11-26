@@ -15,7 +15,9 @@
 open ExtLib
 open Common
 
-(* ========================================= *)
+#define __label __FILE__ 
+let label =  __label ;;
+include Util.Logging(struct let label = label end) ;;
 
 type options = {
   switch : string ; (* the active switch *)
@@ -66,7 +68,9 @@ let add_extra extras tables (switch,activeswitch) pkg =
       try 
         let s = List.assoc debprop pkg#extras in
         let typ = Cudf_types.type_of_typedecl v in
-        Some (cudfprop, Cudf_types_pp.parse_value typ s)
+        try Some (cudfprop, Cudf_types_pp.parse_value typ s)
+        with Cudf_types_pp.Type_error _ ->
+          fatal "Cudf Parsing Error while converting properties %s: %s" debprop s
       with Not_found -> None
     ) extras
   in

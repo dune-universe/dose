@@ -381,7 +381,9 @@ let add_extra ?native_arch extras tables pkg =
       try 
         let s = pkg#get_extra debprop in
         let typ = Cudf_types.type_of_typedecl v in
-        Some (cudfprop, Cudf_types_pp.parse_value typ s)
+        try Some (cudfprop, Cudf_types_pp.parse_value typ s)
+        with Cudf_types_pp.Type_error _ ->
+          fatal "Cudf Parsing Error while converting properties %s: %s" debprop s
       with Not_found -> None
     ) extras
   in
