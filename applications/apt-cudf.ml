@@ -55,12 +55,12 @@ end
 
 let fatal fmt =
   Printf.kprintf (fun s ->
-    if OptParse.Opt.is_set Options.solver then begin
+    if OptParse.Opt.is_set Options.solver then (
       Format.printf "Error: %s" (OptParse.Opt.get Options.solver);
-      if OptParse.Opt.is_set Options.criteria then
-        Format.printf " \"%s\"" (Criteria.to_string (OptParse.Opt.get Options.criteria));
+      if OptParse.Opt.is_set Options.criteria_plain then
+        Format.printf " \"%s\"" (OptParse.Opt.get Options.criteria_plain);
       Format.printf "@."
-    end;
+    );
     Format.printf "Message: %s@." s;
     exit 1
   ) fmt
@@ -355,6 +355,10 @@ let main () =
       Criteria.to_string ~solver c
     |PlainCrit c -> c
   in
+  (* small hack to avoid another global variable. 
+   * We set criteria_plain to relect to actual criteria used
+   * by the solver and to print it in case of error *)
+  OptParse.Opt.set Options.criteria_plain criteria;
 
   Util.Timer.start timer2;
   let tables = Debcudf.init_tables pkglist in
