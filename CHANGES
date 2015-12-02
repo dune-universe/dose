@@ -1,3 +1,36 @@
+dose3 (4.1) UNRELEASED; urgency=low
+  * New optimization criteria parser. apt-cudf now accepts only optimization criterias in
+    misc2012 format.
+  * the extended MISC 2012 syntax extends the count criteria allowing the
+    following additional forms:
+      count(selector,field:=/plain/)
+      count(selector,field:~/regex/)
+  * Update Documentation
+  * Modules are renamed (compiled with -pack) :
+    Versioning.Debian
+    Versioning.Semver
+  * API change : Debian.Debcudf.get_real_version tables now returns
+    a tuple (name, version) . Name is the original Debian name without
+    encoding ( "src:" , ":$arch" , "--virtual-" ).
+  * Implement versioned provides
+  * strict dependency ocamlgraph >= 1.8.6
+  * new cudf property for deb/edsp types
+    native is 1 if the pkg architecture is equal to the native architecture,
+    0 otherwise. This can be used to maximise the number of packages
+    belonging to the native architecture ( +sum(solution,active) )
+  * better parsing and error reporting
+  * More Module refactoring (algo/deb/pef/opam)
+
+ -- Pietro Abate <pietro.abate@pps.univ-paris-diderot.fr>  Tue, 01 Dec 2015 13:13:06 +0200
+
+dose3 (4.0) UNRELEASED; urgency=low
+  * Minor Bugs
+  * Add opam module
+  * Major refactoring of parsing functions Pef/Deb/Opam
+
+ -- Pietro Abate <pietro.abate@pps.univ-paris-diderot.fr>  Mon, 29 June 2015 13:13:06 +0200
+
+
 dose3 (4.0-rc3) UNRELEASED; urgency=low
   * Minor Bugs
 
