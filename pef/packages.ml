@@ -57,7 +57,10 @@ let parse_string_opt (_,(_,s)) = match s with "" -> None | _ -> Some s
 
 let blank_regexp = Pcre.regexp "[ \t]+" ;;
 let comma_regexp = Pcre.regexp "[ \t]*,[ \t]*" ;;
-let parse_string_list ?(rex=blank_regexp) (_,(_,s)) = Pcre.split ~rex s
+let parse_string_list ?(rex=blank_regexp) (_,(_,s)) =
+  match Pcre.split ~rex s with
+  |[] -> raise Not_found
+  |l -> l
 
 (* parse and convert to a specific type *)
 let parse_bool (label,(_,s)) = match s with

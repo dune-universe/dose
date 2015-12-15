@@ -104,19 +104,23 @@ class package ?(name=("package",None)) ?(version=("version",None)) ?(depends=("d
   inherit Pef.Packages.package ~name ~version ~depends ~conflicts ~provides ~recommends:depopts ~extras par
 
   val switch : (string * string list) =
-    let parse = Pef.Packages.parse_s ~default:["all"] (Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp) in
+    let p = Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp in
+    let parse = Pef.Packages.parse_s ~default:["all"] p in
     Pef.Packages.get_field_value ~parse ~par ~field:switch
 
   val installedlist : (string * string list) =
-    let parse = Pef.Packages.parse_s ~default:[] (Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp) in
+    let p = Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp in
+    let parse = Pef.Packages.parse_s ~default:[] p in
     Pef.Packages.get_field_value ~parse ~par ~field:installedlist
 
   val baselist : (string * string list) =
-    let parse = Pef.Packages.parse_s ~default:[] (Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp) in
+    let p = Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp in
+    let parse = Pef.Packages.parse_s ~default:[] p in
     Pef.Packages.get_field_value ~parse ~par ~field:baselist
 
   val pinnedlist : (string * string list) =
-    let parse = Pef.Packages.parse_s ~default:[] (Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp) in
+    let p = Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp in
+    let parse = Pef.Packages.parse_s ~default:[] p in
     Pef.Packages.get_field_value ~parse ~par ~field:pinnedlist
 
   method switch = snd switch
@@ -147,38 +151,42 @@ active switch and the not available switches for a package is
 empty *)
 let parse_package_stanza ((switch,switches,profiles) as options) ?(extras=[]) par =
   try
-    let pkg =
-      let depends =
-        let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_builddepsformula in
-        ("depends",Some (vpkgformula_filter options (f "depends" par)))
-      in
-      let depopts =
-        let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_builddepsformula in
-        ("depopts",Some (vpkgformula_filter options (f "depopts" par)))
-      in
-      let conflicts =
-        let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_builddepslist in
-        ("conflicts",Some (vpkglist_filter options (f "conflicts" par)))
-      in
-      let provides =
-        let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_builddepslist in
-        ("provides",Some (vpkglist_filter options (f "provides" par)))
-      in
-      (* let extras = List.map (fun (f,v) -> (f,(Format822.dummy_loc,v))) extras in *)
-      new package ~depends ~conflicts ~provides ~depopts ~extras:(extras,None) par
+    let pkg_switch =
+      let p = Pef.Packages.parse_string_list ~rex:Pef.Packages.comma_regexp in
+	let f = Pef.Packages.parse_s ~default:["all"] p in
+	f "switches" par
     in
-    (* XXX here I could be a tiny bit faster by parsing the switch first and then all other
-     * fields if necessary *)
-    if List.mem "all" pkg#switch then Some pkg else
-    if List.exists (fun s -> List.mem s pkg#switch) (switch::switches) then Some pkg
-    else
+    if not (List.mem "all" pkg_switch ||
+       List.exists (fun s -> List.mem s pkg_switch) (switch::switches)) then
       raise (Pef.Packages.IgnorePackage (
         Printf.sprintf
         "None of the active switches [%s] are available [%s]" 
         (ExtString.String.join "," (switch::switches))
-        (ExtString.String.join "," pkg#switch)
+        (ExtString.String.join "," pkg_switch)
         )
       )
+    else
+      let pkg =
+        let depends =
+          let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_builddepsformula in
+          ("depends",Some (vpkgformula_filter options (f "depends" par)))
+        in
+        let depopts =
+          let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_builddepsformula in
+          ("depopts",Some (vpkgformula_filter options (f "depopts" par)))
+        in
+        let conflicts =
+          let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_builddepslist in
+          ("conflicts",Some (vpkglist_filter options (f "conflicts" par)))
+        in
+        let provides =
+          let f = Pef.Packages.parse_s ~default:[] Pef.Packages.parse_builddepslist in
+          ("provides",Some (vpkglist_filter options (f "provides" par)))
+        in
+        (* let extras = List.map (fun (f,v) -> (f,(Format822.dummy_loc,v))) extras in *)
+        new package ~depends ~conflicts ~provides ~depopts ~extras:(extras,None) par
+      in
+      Some pkg
   with 
   |Pef.Packages.IgnorePackage s -> begin
       let n = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_name "package" par in
