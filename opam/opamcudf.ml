@@ -101,16 +101,21 @@ let tocudf tables ?(options=default_options) ?(extras=[]) pkg =
      * used in some dependency. Otherwise there is no point to include it *)
     if List.mem "all" pkg#switch || List.mem switch pkg#switch then
       let depends = if options.depopts then pkg#depends@pkg#depopts else pkg#depends in
+      let keep =
+        if List.mem switch pkg#baselist then `Keep_package else 
+        if List.mem switch pkg#pinnedlist then `Keep_version 
+        else `Keep_none
+      in
       let cudfpkg = 
         { Cudf.default_package with
           Cudf.package = CudfAdd.encode (pkg#name^":"^switch);
-          Cudf.version = Pef.Pefcudf.get_cudf_version tables (pkg#name,pkg#version);
-          Cudf.installed = List.mem switch pkg#installedlist;
-          Cudf.keep = if List.mem switch pkg#baselist then `Keep_version else `Keep_none;
-          Cudf.depends = Pef.Pefcudf.loadll tables ~arch:switch ~archs:all_switches depends;
-          Cudf.conflicts = Pef.Pefcudf.loadlc tables ~arch:switch ~archs:all_switches pkg#conflicts;
-          Cudf.provides = Pef.Pefcudf.loadlp tables ~arch:switch ~archs:all_switches pkg#provides;
-          Cudf.pkg_extra = add_extra extras tables (switch,options.switch) pkg;
+          version = Pef.Pefcudf.get_cudf_version tables (pkg#name,pkg#version);
+          installed = List.mem switch pkg#installedlist;
+          keep; 
+          depends = Pef.Pefcudf.loadll tables ~arch:switch ~archs:all_switches depends;
+          conflicts = Pef.Pefcudf.loadlc tables ~arch:switch ~archs:all_switches pkg#conflicts;
+          provides = Pef.Pefcudf.loadlp tables ~arch:switch ~archs:all_switches pkg#provides;
+          pkg_extra = add_extra extras tables (switch,options.switch) pkg;
         }
       in (cudfpkg::acc)
     else acc
