@@ -159,7 +159,7 @@ let parse_conf_file fname =
                     let str = Printf.sprintf "conf file stanza \"%s\" field \"%s\"" x k in
                     (str,(_loc,v))
                   in
-                  let c = Criteria.lexbuf_wrapper Criteria_parser.criteria_top field in
+                  let c = Criteria.parse_criteria field in
                   Some(x, ExtCrit c)
                 |(k,v) -> Some(k, PlainCrit v)
               ) l
@@ -216,7 +216,7 @@ let choose_criteria ~criteria ~criteria_plain ~conffile solver request =
     if Criteria.is_misc2012 solver then
       let _loc = Format822.dummy_loc in
       let field = ("EDSP Preferences",(_loc,request.Edsp.preferences)) in
-      let c = Criteria.lexbuf_wrapper Criteria_parser.criteria_top field in
+      let c = Criteria.parse_criteria field in
       ExtCrit c
     else
       PlainCrit request.Edsp.preferences

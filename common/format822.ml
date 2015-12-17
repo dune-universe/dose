@@ -57,9 +57,9 @@ let error_wrapper t f lexer lexbuf =
   in
   try f lexer lexbuf with
   |Parsing.Parse_error -> syntax_error "parse error"
+  |Parse_error_822 s -> syntax_error s
   |Failure _m when String.starts_with _m "lexing" -> syntax_error "lexer error"
   |Type_error _ -> syntax_error "type error"
-  |_ -> assert false
 
 (* here the _loc is taken from the the caller and not from the parser *)
 let lexbuf_wrapper type_parser type_lexer (label,(_loc,s)) =

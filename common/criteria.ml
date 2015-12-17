@@ -92,7 +92,7 @@ let to_string ?(solver="dumb") criteria =
             pr "sum(%s,%s)" (string_of_set set) (makefield ~sep field r)
           | Sum (set, attr) ->
               pr "sum(%s,%s)" (string_of_set set) attr
-          | Unsatrec set -> pr "unsatrec(%s)" (string_of_set set)
+          | Unsatrec set -> pr "unsat_recommends(%s)" (string_of_set set)
           | Aligned (set, attr1, attr2) ->
               pr "aligned(%s,%s,%s)" (string_of_set set) attr1 attr2
           | NotUptodate set ->
