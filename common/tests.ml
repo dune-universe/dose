@@ -15,6 +15,11 @@ module Pcre = Re_pcre
 open OUnit
 open Common
 
+let returns_result ?(printer=(fun _ -> "(PRINTER NOT SPECIFIED)")) function_to_test expected_result =
+  (fun args () -> assert_equal ~printer (function_to_test args) expected_result)
+and raises_failure function_to_test failure_text =
+  (fun args () -> assert_raises (Failure failure_text) (fun () -> function_to_test args) )
+
 let test_dir = "tests/common"
 let cudf_dir = "tests/cudf"
 let f_legacy = Filename.concat cudf_dir "legacy.cudf"
@@ -231,6 +236,34 @@ let test_shell_lexer =
       ) test_triplets
   )
 
+let criteria_to_string =
+  let function_to_test crt = 
+    Criteria.to_string (List.assoc crt Criteria.default_criteria) in
+  let printer s = s in
+  let returns = returns_result ~printer function_to_test in
+  [
+    ("to_string upgrade", "upgrade", returns "-count(new),-count(removed),-notuptodate(solution)");
+    ("to_string trendy", "trendy", returns "-count(removed),-notuptodate(solution),-unsat_recommends(solution),-count(new)");
+  ]
+
+let criteria_parse =
+  let function_to_test crt = Criteria.parse_criteria ("test",(Format822.dummy_loc,crt)) in
+  let printer s = Criteria.to_string s in
+  let returns = returns_result ~printer function_to_test in
+  [
+    ("parse upgrade", "-count(new),-count(removed),-notuptodate(solution)", returns 
+      (List.assoc "upgrade" Criteria.default_criteria));
+    ("parse trendy", "-count(removed),-notuptodate(solution),-unsat_recommends(solution),-count(new)", returns 
+      (List.assoc "trendy" Criteria.default_criteria));
+    ("parse count exact", "-count(solution,APT-Release:=/experimental/)", returns 
+      Criteria_types.([Minimize(Count(Solution,Some("APT-Release",ExactMatch "experimental")))]));
+    ("parse count regexp", "-count(solution,APT-Release:~/stable|unstable/)", returns 
+      Criteria_types.([Minimize(Count(Solution,Some("APT-Release",Regexp "stable|unstable")))]))
+  ]
+
+let make_test_cases triplets =
+  List.map ( fun (test_name, input, assert_function) -> test_name >:: assert_function input ) triplets
+
 let all = 
   "all tests" >::: [
     parse_uri ;
@@ -238,6 +271,8 @@ let all =
     test_decode;
     test_lookup_packages;
     test_shell_lexer;
+    "criteria" >::: make_test_cases criteria_to_string;
+    "criteria" >::: make_test_cases criteria_parse;
   ]
 
 let main () =

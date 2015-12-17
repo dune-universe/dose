@@ -138,18 +138,12 @@ let opamcudf_pinned =
 let make_test_cases triplets =
   List.map ( fun (test_name, input, assert_function) -> test_name >:: assert_function input ) triplets
 
-let test_parsing =
-  "test_parsing" >::: [
+let all =
+  "all tests" >::: [
     "test depends" >::: make_test_cases parse_depends;
     "test filters" >::: make_test_cases opamcudf_filter;
     "test installed" >::: make_test_cases opamcudf_installed;
     "test pinned" >::: make_test_cases opamcudf_pinned;
-  ]
-;;
- 
-let all =
-  "all tests" >::: [
-    test_parsing;
   ]
 
 let main () =
