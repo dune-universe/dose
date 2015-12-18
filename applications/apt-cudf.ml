@@ -501,7 +501,7 @@ let main () =
   let empty = ref true in
   let cache = CudfAdd.Cudf_hashtbl.create 1023 in
 
-  let install,remove = CudfDiff.diff_set universe soluniv in
+  let (install,remove) = CudfDiff.make_solution ~universe ~solution:soluniv in
   CudfAdd.Cudf_set.iter (fun pkg ->
     CudfAdd.Cudf_hashtbl.add cache pkg ();
     Format.printf "Install: %a@." pp_pkg (pkg,univ)
@@ -527,32 +527,33 @@ let main () =
   Util.Timer.stop timer3 ();
 
   if OptParse.Opt.get Options.explain then begin
-    let diff = CudfDiff.diff universe soluniv in
-    let (i,u,d,r,nc) = CudfDiff.summary universe diff in
+    let open CudfDiff in
+    let diff = make_difference ~universe ~solution:soluniv in
+    let summary = make_summary universe diff in
     Format.printf "Summary: " ;
-    if i <> [] then
-      Format.printf "%d to install " (List.length i);
-    if r <> [] then
-      Format.printf "%d to remove " (List.length r);
-    if u <> [] then
-      Format.printf "%d to upgrade " (List.length u);
-    if d <> [] then
-      Format.printf "%d to downgrade " (List.length d);
-    if nc <> [] then
-      Format.printf "%d not changed " (List.length nc);
+    if summary.install <> [] then
+      Format.printf "%d to install " (List.length summary.install);
+    if summary.remove <> [] then
+      Format.printf "%d to remove " (List.length summary.remove);
+    if summary.upgrade <> [] then
+      Format.printf "%d to upgrade " (List.length summary.upgrade);
+    if summary.downgrade <> [] then
+      Format.printf "%d to downgrade " (List.length summary.downgrade);
+    if summary.notchange <> [] then
+      Format.printf "%d not changed " (List.length summary.notchange);
 
     Format.printf " @.";
 
-    if i <> [] then
-      Format.printf "Installed: %a@." pp_pkg_list (i,univ);
-    if r <> [] then 
-      Format.printf "Removed: %a@." pp_pkg_list (r,univ);
-    if u <> [] then 
-      Format.printf "Upgraded: %a@." pp_pkg_list_tran (u,univ);
-    if d <> [] then 
-      Format.printf "Downgraded: %a@." pp_pkg_list_tran (d,univ);
-    if nc <> [] && (OptParse.Opt.get Options.verbose) >= 1 then 
-      Format.printf "UnChanged: %a@." pp_pkg_list (nc,univ);
+    if summary.install <> [] then
+      Format.printf "Installed: %a@." pp_pkg_list (summary.install,univ);
+    if summary.remove <> [] then 
+      Format.printf "Removed: %a@." pp_pkg_list (summary.remove,univ);
+    if summary.upgrade <> [] then 
+      Format.printf "Upgraded: %a@." pp_pkg_list_tran (summary.upgrade,univ);
+    if summary.downgrade <> [] then 
+      Format.printf "Downgraded: %a@." pp_pkg_list_tran (summary.downgrade,univ);
+    if summary.notchange <> [] && (OptParse.Opt.get Options.verbose) >= 1 then 
+      Format.printf "UnChanged: %a@." pp_pkg_list (summary.notchange,univ);
 
   end;
 
