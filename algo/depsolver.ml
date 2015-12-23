@@ -20,8 +20,7 @@ include Util.Logging(struct let label = label end) ;;
 
 type solver = Depsolver_int.solver
 
-(** 
- * @param check if the universe is consistent *)
+(** @param check if the universe is consistent *)
 let load ?(check=true) universe =
   let is_consistent check universe =
     if check then Cudf_checker.is_consistent universe
@@ -33,61 +32,6 @@ let load ?(check=true) universe =
       fatal "%s"
       (Cudf_checker.explain_reason (r :> Cudf_checker.bad_solution_reason)) ;
   |_,_ -> assert false
-
-(*
-let reason map universe =
-  let from_sat = CudfAdd.inttovar universe in
-  let globalid = Cudf.universe_size universe in
-  List.filter_map (function
-    |Diagnostic.DependencyInt(i,vl,il) when i = globalid -> None
-    |Diagnostic.MissingInt(i,vl) when i = globalid -> 
-        fatal "the package encoding global constraints can't be missing"
-    |Diagnostic.ConflictInt(i,j,vpkg) when i = globalid || j = globalid -> 
-        fatal "the package encoding global constraints can't be in conflict"
-
-    |Diagnostic.DependencyInt(i,vl,il) -> Some (
-        Diagnostic.Dependency(from_sat (map#inttovar i),vl,List.map (fun i -> from_sat (map#inttovar i)) il)
-    )
-    |Diagnostic.MissingInt(i,vl) -> Some (
-        Diagnostic.Missing(from_sat (map#inttovar i),vl)
-    )
-    |Diagnostic.ConflictInt(i,j,vpkg) -> Some (
-        Diagnostic.Conflict(from_sat (map#inttovar i),from_sat (map#inttovar j),vpkg)
-    )
-  )
-
-let result map universe result = 
-  let from_sat = CudfAdd.inttovar universe in
-  let globalid = Cudf.universe_size universe in
-  match result with
-  |Diagnostic.SuccessInt f_int ->
-      Diagnostic.Success (fun ?(all=false) () ->
-        List.filter_map (function 
-          |i when i = globalid -> None
-          |i -> Some ({(from_sat i) with Cudf.installed = true})
-        ) (f_int ~all ())
-      )
-  |Diagnostic.FailureInt f -> Diagnostic.Failure (fun () ->
-      reason map universe (f ()))
-;;
-
-let request universe result = 
-  List.map (CudfAdd.inttovar universe) (snd result)
-;;
-
-(* XXX here the threatment of result and request is not uniform.
- * On one hand indexes in result must be processed with map#inttovar 
- * as they represent indexes associated with the solver.
- * On the other hand the indexes in result represent cudf uid and
- * therefore do not need to be processed.
- * Ideally the compiler should make sure that we use the correct indexes
- * but we should annotate everything making packing/unpackaing handling
- * a bit too heavy *)
-let diagnosis map universe ( res : Diagnostic.result_int ) req : Diagnostic.diagnosis =
-  let result = result map universe res in
-  let request = request universe req in
-  { Diagnostic.result = result ; request = request }
-*)
 
 (** [univcheck ?callback universe] check all packages in the
     universe for installability 
@@ -318,9 +262,9 @@ type solver_result =
 (* add a version constraint to ensure name is upgraded *)
 let upgrade_constr universe name = 
   match Cudf.get_installed universe name with
-  | [] -> name,None
+  |[] -> name,None
   |[p] -> name,Some(`Geq,p.Cudf.version)
-  | pl ->
+  |pl ->
       let p = List.hd(List.sort ~cmp:Cudf.(>%) pl) 
       in (name,Some(`Geq,p.Cudf.version))
 
@@ -474,4 +418,67 @@ let depclean ?(global_constraints=true) ?(callback=(fun _ -> ())) univ pkglist =
       |_,_ -> (callback(pkg,resdep,resconf) ; Some(pkg,resdep,resconf))
     end else None
   ) pkglist
+
+#ifdef HASOCAMLGRAPH
+(* Build a graph of install/remove actions (optionally including dependent packages *)
+(* code freely adapted from opam/src/solver/opamCudf.ml *)
+module AG = Defaultgraphs.ActionGraph
+let installation_graph ~solution:soluniv (install,remove) =
+  let module PG = Defaultgraphs.PackageGraph in
+  let module PO = Defaultgraphs.GraphOper(PG.G) in
+  let module Topo = Graph.Topological.Make(PG.G) in
+  let module S = CudfAdd.Cudf_set in
+  let packageset = S.union install remove in
+  let packagelist = S.elements packageset in
+
+  (* transitively add recompilations *)
+  let remove, install =
+    let g =
+      let filter p = p.Cudf.installed || S.mem p packageset in
+      let l = Cudf.get_packages ~filter soluniv in
+      PO.O.mirror (PG.dependency_graph_list soluniv l)
+    in
+    Topo.fold (fun p (rm,inst) ->
+	let actionned p = S.mem p rm || S.mem p inst in
+	if not (actionned p) && List.exists actionned (PG.G.pred g p)
+	then S.add p rm, S.add p inst
+	else rm, inst
+    ) g (remove, install)
+  in
+
+  let g = AG.G.create () in
+  S.iter (fun p -> AG.G.add_vertex g (AG.PkgV.Remove p)) remove;
+  S.iter (fun p -> AG.G.add_vertex g (AG.PkgV.Install p)) install;
+
+  (* reinstalls and upgrades: remove first *)
+  S.iter (fun p1 ->
+    try
+      let same_name_as_p1 p2 = p1.Cudf.package = p2.Cudf.package in
+      let p2 = S.choose (S.filter same_name_as_p1 install) in
+      AG.G.add_edge g (AG.PkgV.Remove p1) (AG.PkgV.Install p2)
+    with Not_found -> ()
+  ) remove;
+  
+  (* uninstall order *)
+  PG.G.iter_edges (fun p1 p2 ->
+    AG.G.add_edge g (AG.PkgV.Remove p1) (AG.PkgV.Remove p2)
+  ) (PG.dependency_graph_list soluniv (S.elements remove));
+
+  (* install order *)
+  PG.G.iter_edges (fun p1 p2 ->
+    if S.mem p1 install && S.mem p2 install then
+      AG.G.add_edge g (AG.PkgV.Install p2) (AG.PkgV.Install p1)
+    else if S.mem p1 install && S.mem p2 remove then
+      AG.G.add_edge g (AG.PkgV.Remove p2) (AG.PkgV.Install p1)
+  ) (PG.dependency_graph_list soluniv packagelist);
+
+  (* conflicts *)
+  PG.UG.iter_edges (fun p1 p2 ->
+    if S.mem p1 remove && S.mem p2 install then
+      AG.G.add_edge g (AG.PkgV.Remove p1) (AG.PkgV.Install p2)
+    else if S.mem p2 remove && S.mem p1 install then
+      AG.G.add_edge g (AG.PkgV.Remove p2) (AG.PkgV.Install p1)
+  ) (PG.conflict_graph_list soluniv packagelist);
+  g
 ;;
+#endif

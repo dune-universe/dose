@@ -11,6 +11,7 @@
 (**************************************************************************************)
 
 (** Specialized Ocamlgraph modules *)
+module OCAMLHashtbl = Hashtbl
 
 open ExtLib
 open Graph
@@ -308,11 +309,120 @@ end
 
 (******************************************************)
 
+module ActionGraph = struct 
+
+  module PkgV = struct
+    type t = 
+      |Install of Cudf.package
+      |Remove of Cudf.package
+    let compare x y = match x,y with
+      |Install p1, Install p2 -> CudfAdd.compare p1 p2
+      |Remove p1, Remove p2 -> CudfAdd.compare p1 p2
+      |x,y -> Pervasives.compare x y
+
+    let hash = function
+      |Install p -> Hashtbl.hash (1,p.Cudf.package,p.Cudf.version)
+      |Remove p -> Hashtbl.hash (0,p.Cudf.package,p.Cudf.version)
+
+    let equal x y = compare x y = 0
+  end
+
+  module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
+
+  let get_partial_order g =
+    let module Dfs = Graph.Traverse.Dfs(G) in
+    if Dfs.has_cycle g then
+      failwith "need a DAG without cycles as input for partial order";
+    let module Hashtbl = OCAMLHashtbl.Make(G.V) in
+    (* find all vertices with no successors (those that have all dependencies
+     * fulfilled) *)
+    let init = G.fold_vertex (fun v acc ->
+      match G.succ g v with
+        | [] -> v::acc
+        | _ -> acc
+    ) g [] in
+    let result = ref [init] in
+    let processed = Hashtbl.create (G.nb_vertex g) in
+    let tocheck = Hashtbl.create (G.nb_vertex g) in
+    (* fill the two hashtables, starting from the initial result *)
+    List.iter (fun v ->
+      Hashtbl.replace processed v ();
+      G.iter_pred (fun pred ->
+        Hashtbl.replace tocheck pred ()
+      ) g v
+    ) init;
+    while Hashtbl.length tocheck > 0 do
+      let localprocessed = Hashtbl.create (G.nb_vertex g) in
+      (* iterate over the to-be-checked vertices and check if all of their
+       * dependencies are already in the result *)
+      Hashtbl.iter (fun v _ ->
+        let satisfied = G.fold_succ (fun succ acc ->
+          if acc then Hashtbl.mem processed succ else acc
+        ) g v true in
+        (* if yes, remove this vertex from tocheck, add it to the result and 
+         * add its predecessors to tocheck*)
+        if satisfied then begin
+          Hashtbl.remove tocheck v;
+          Hashtbl.replace localprocessed v ();
+          G.iter_pred (fun pred ->
+            Hashtbl.replace tocheck pred ()
+          ) g v;
+        end;
+      ) tocheck;
+      (* add results of this round to global variables *)
+      let l = Hashtbl.fold (fun v _ acc ->
+        Hashtbl.replace processed v ();
+        v::acc
+      ) localprocessed [] in
+      result := l::!result
+    done;
+    List.rev !result
+  ;;
+
+  module DotPrinter = struct
+    module Display = struct
+      include G
+      let vertex_name = function
+        |PkgV.Install v -> Printf.sprintf "\"I %s\"" (CudfAdd.string_of_package v)
+        |PkgV.Remove v -> Printf.sprintf "\"R %s\"" (CudfAdd.string_of_package v)
+
+      let graph_attributes = fun _ -> []
+      let get_subgraph = fun _ -> None
+
+      let default_edge_attributes = fun _ -> []
+      let default_vertex_attributes = fun _ -> []
+
+      let vertex_attributes = function
+        |PkgV.Install _ -> [ `Color 0x00FF00 ]
+        |PkgV.Remove _ -> [ `Color 0xFF0000 ]
+
+      let edge_attributes e = []
+    end
+    include Graph.Graphviz.Dot(Display)
+    let print fmt g = fprint_graph fmt g
+  end 
+
+  module GmlPrinter = Gml.Print (G) (
+    struct
+       let node (v: G.V.label) = []
+       let edge (e: G.E.label) = []
+     end
+  )
+
+end
+
 (** Imperative bidirectional graph for dependecies. *)
 (** Imperative unidirectional graph for conflicts. *)
 (* Note: ConcreteBidirectionalLabelled graphs are slower and we do not use them
  * here *)
-module MakePackageGraph(PkgV : Sig.COMPARABLE with type t = Cudf.package )= struct
+module PackageGraph = struct
+
+  module PkgV = struct
+    type t = Cudf.package
+    let compare = CudfAdd.compare
+    let hash = CudfAdd.hash
+    let equal = CudfAdd.equal
+  end
 
   module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
   module UG = Imperative.Graph.Concrete(PkgV)
@@ -320,7 +430,7 @@ module MakePackageGraph(PkgV : Sig.COMPARABLE with type t = Cudf.package )= stru
   module S = Set.Make(PkgV)
 
   module DotPrinter = struct
-  module Display = struct
+    module Display = struct
       include G
       let vertex_name v = Printf.sprintf "\"%s\"" (CudfAdd.string_of_package v)
 
@@ -348,40 +458,39 @@ module MakePackageGraph(PkgV : Sig.COMPARABLE with type t = Cudf.package )= stru
 
   module GraphmlPrinter = Graphml.Print (G)(
     struct
-        let vertex_properties =
-            ["package","string",None;
-             "version","string",None;
-             "architecture","string",None;
-             "type","string",None;
-             "source","string",None;
-             "sourcenumber","string",None;
-             "multiarch","string",None;
-             "realpackage","string",None;
-             "realversion","string",None;
-            ]
-       
-        let edge_properties = [
-          "vpkglist","string",None;
-          "binaries","string",None;
-          ]
-
-        let map_edge e = []
-        let map_vertex pkg =
-          let name = ("realpackage",CudfAdd.decode pkg.Cudf.package) in
-          let version = ("realversion",CudfAdd.string_of_version pkg) in
+      let vertex_properties =
+        ["package","string",None;
+         "version","string",None;
+         "architecture","string",None;
+         "type","string",None;
+         "source","string",None;
+         "sourcenumber","string",None;
+         "multiarch","string",None;
+         "realpackage","string",None;
+         "realversion","string",None;
+        ]
      
-          let props =
-            List.filter_map (fun (key,_,_) ->
-              try let value = Cudf.lookup_package_property pkg key in
-              Some(key,value)
-              with Not_found -> None
-            ) vertex_properties
-          in
-          name :: version :: props
+      let edge_properties = [
+        "vpkglist","string",None;
+        "binaries","string",None;
+        ]
 
-        let edge_uid e = Hashtbl.hash e
-        let vertex_uid v = Hashtbl.hash v
+      let map_edge e = []
+      let map_vertex pkg =
+        let name = ("realpackage",CudfAdd.decode pkg.Cudf.package) in
+        let version = ("realversion",CudfAdd.string_of_version pkg) in
+   
+        let props =
+          List.filter_map (fun (key,_,_) ->
+            try let value = Cudf.lookup_package_property pkg key in
+            Some(key,value)
+            with Not_found -> None
+          ) vertex_properties
+        in
+        name :: version :: props
 
+      let edge_uid e = Hashtbl.hash e
+      let vertex_uid v = Hashtbl.hash v
     end)
 
   (* Maintenance Of Transitive Closures And Transitive Reductions Of Graphs *)
@@ -606,31 +715,14 @@ end
 
 (******************************************************)
 
-module PkgV = struct
-    type t = Cudf.package
-    let compare = CudfAdd.compare
-    let hash = CudfAdd.hash
-    let equal = CudfAdd.equal
-end
-
-module PkgE = struct
-  type t = float
-  let compare = Pervasives.compare
-  let hash = Hashtbl.hash
-  let equal = (=)
-  let default = 0.0
-end
-
-module PackageGraph = MakePackageGraph(PkgV)
-
 (** Integer Imperative Bidirectional Graph *)
 module IntPkgGraph = struct
 
   module PkgV = struct
-      type t = int
-      let compare = Pervasives.compare
-      let hash i = i
-      let equal = (=)
+    type t = int
+    let compare = Pervasives.compare
+    let hash i = i
+    let equal = (=)
   end
 
   module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
@@ -639,19 +731,19 @@ module IntPkgGraph = struct
 
   module DotPrinter = struct
     module Display = struct
-        include G
-        let vertex_name uid = Printf.sprintf "\"%d\"" uid
+      include G
+      let vertex_name uid = Printf.sprintf "\"%d\"" uid
 
-        let graph_attributes = fun _ -> []
-        let get_subgraph = fun _ -> None
+      let graph_attributes = fun _ -> []
+      let get_subgraph = fun _ -> None
 
-        let default_edge_attributes = fun _ -> []
-        let default_vertex_attributes = fun _ -> []
+      let default_edge_attributes = fun _ -> []
+      let default_vertex_attributes = fun _ -> []
 
-        let vertex_attributes v = []
+      let vertex_attributes v = []
 
-        let edge_attributes e = []
-      end
+      let edge_attributes e = []
+    end
     include Graph.Graphviz.Dot(Display)
     let print fmt g = fprint_graph fmt g
   end 
@@ -670,7 +762,7 @@ module IntPkgGraph = struct
     struct
        let node (v: G.V.label) = []
        let edge (e: G.E.label) = []
-     end
+    end
   )
 
   let add_edge transitive graph i j =

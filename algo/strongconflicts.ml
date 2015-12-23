@@ -28,7 +28,7 @@ module CflE = struct
   let default = (Cudf.default_package, Cudf.default_package, Other [])
 end
 
-module CG = Graph.Imperative.Graph.ConcreteLabeled(PkgV)(CflE)
+module CG = Graph.Imperative.Graph.ConcreteLabeled(PackageGraph.PkgV)(CflE)
 
 (* tempy. *)
 let reason univ rl =
