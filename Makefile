@@ -13,15 +13,19 @@ APPFLAGS := $(VERBOSE) -j 10
 #OBFLAGS := $(OBFLAGS) -tag profile -tag debug
 #OBFLAGS := $(OBFLAGS) -classic-display
 
+addnotrpm:
+	$(LN) -s doseparse doseparseNoRpm
+	cd doseparse ; $(LN) -s doseparse.mlpack doseparseNoRpm.mlpack; cd -
+
 myocamlbuild.ml: myocamlbuild.ml.pp
-	  cppo $(CPPOFLAGS) $< -o $@
+	cppo $(CPPOFLAGS) $< -o $@
 
 all: libs apps man
 
-apps: myocamlbuild.ml itarget $(BYTELIBS) $(OPTLIBS) 
+apps: addnotrpm myocamlbuild.ml itarget $(BYTELIBS) $(OPTLIBS) 
 	$(OCAMLBUILD) $(APPFLAGS) applications/apps.otarget
 
-libs: myocamlbuild.ml itarget $(BYTELIBS) $(OPTLIBS) $(CMXSLIBS) $(ALIBS)
+libs: addnotrpm myocamlbuild.ml itarget $(BYTELIBS) $(OPTLIBS) $(CMXSLIBS) $(ALIBS)
 
 cleandoselib:
 	rm -Rf $(DOSELIBS)
@@ -152,6 +156,7 @@ clean:
 		done)
 	rm -f myocamlbuild.ml
 	rm -f applications/apps.itarget
+	rm -f doseparseNoRpm doseparse/doseparseNoRpm.mlpack
 	cd doc && $(MAKE) clean
 
 distclean: clean
