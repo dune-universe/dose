@@ -1,6 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 
-OCPPACK=_build/scripts/pack.native
+# this script the documentation of all dose submodules using ocppack
+
+OCAMLEXT=${1:-native}
+OCPPACK=_build/scripts/pack.$OCAMLEXT
 
 echo "Cleaning up before"
 for i in deb common opam pef algo versioning ; do

@@ -243,7 +243,7 @@ credits:
 
 doc: all
 	$(OCAMLBUILD) -package unix scripts/pack.native
-	scripts/doc.sh
+	scripts/doc.sh $(OCAMLEXT)
 	dot -Grotate=0 -Tsvg -o dose3.docdir/index.svg dose3.docdir/index.dot
 	(cd doc && $(MAKE) all)
 
