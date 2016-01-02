@@ -10,25 +10,43 @@ OCAMLFIND=@OCAMLFIND@
 
 DOSELIBS = _build/doselibs
 
-DESTDIR =
-ifeq ($(DESTDIR),)
-  exec_prefix=@prefix@
-  BINDIR=@bindir@
-  ifeq (@libdir@,)
-    LIBDIR=$(shell OCAMLFIND_DESTDIR=@prefix@/lib/ocaml ocamlfind printconf destdir)
-  else
-    LIBDIR=@libdir@/ocaml/$(shell ocamlc -version)
-  endif
+BINDIR = @prefix@@bindir@
+# if prefix is /usr/local (default), then we use ocamlfind, 
+# otherwise use build the destdir using the given prefix
+ifeq (@prefix@,/usr/local)
   ifeq ("@OCAML_OS_TYPE@","Win32")
     LIBDIR=$(shell ocamlfind printconf destdir | cygpath -f - -m)
+  else
+    LIBDIR = $(shell ocamlfind printconf destdir)
   endif
 else
-  LIBDIR = $(DESTDIR)/$(shell ocamlc -where)
-  BINDIR = $(DESTDIR)/usr/bin
+  LIBDIR = @prefix@@libdir@/ocaml/$(shell ocamlc -version)
+endif
+
+# if DESTDIR is specified, we ignore the prefix and we use the 
+# default debian location
+ifneq ($(DESTDIR),)
+  BINDIR = $(DESTDIR)@bindir@
+  LIBDIR = $(DESTDIR)@libdir@/ocaml
 endif
 
 INSTALL=$(OCAMLFIND) install -destdir $(LIBDIR)
 UNINSTALL=$(OCAMLFIND) remove -destdir $(LIBDIR)
+
+printconf:
+	@echo
+	@echo "DESTDIR: $(DESTDIR)"
+	@echo "OCAMLFIND_DESTDIR: $(OCAMLFIND_DESTDIR)"
+	@echo "Prefix: @prefix@"
+	@echo "Libdir: $(LIBDIR)"
+	@echo "Bindir: $(BINDIR)"
+	@echo "OCAML_OS_TYPE: @OCAML_OS_TYPE@"
+	@echo "OCAML_SYSTEM: @OCAML_SYSTEM@"
+	@echo "Code type: @OCAMLEXT@"
+	@echo "----------------------"
+	@echo "Install: $(INSTALL)"
+	@echo "Remove: $(UNINSTALL)"
+	@echo
 
 ifeq ("@OCAML_OS_TYPE@","freebsd")
   LDFLAGS += -fstack-protector
@@ -103,7 +121,7 @@ BYTELIBS=$(BYTELIBNAMES:%=$(DOSELIBS)/%.cma)
 
 ifeq ("@HAS_LIBCUDF@","no")
 installcudf:
-	$(MAKE) -C cudf all @OCAMLBEST@ install
+	$(MAKE) -C cudf all @OCAMLEXT@ install
 uninstallcudf:
 	$(MAKE) -C cudf uninstall
 else

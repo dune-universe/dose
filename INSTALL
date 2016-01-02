@@ -56,9 +56,8 @@ tree you can specify --without-libcudf as configure option. If using
 an independently installed version of libcudf you'll need version >=
 0.7.
 
-
 Example:
-./configure --with-ocamlgraph --with-zip --with-bz2 
+./configure --with-ocamlgraph --with-zip --with-bz2 --prefix=/usr
 
 Compiling applications
 ----------------------
@@ -87,12 +86,42 @@ installed "graphviz".
 Install
 -------
 
-./configure --prefix=/path/to/ 
-make
-make install
+The configure script behaves as follows : 
+-prefix=PREFIX 	install architecture-independent files in PREFIX
+-bindir=DIR 	user executables in DIR [PREFIX/bin]
+-libdir=DIR 	object code libraries in DIR [PREFIX/lib/ocaml/$(OCAML_VERSION)]
 
-by default dose is installed in /usr/local/{lib,bin} 
+if --prefix is not specified, we use the ocamlfind destdir as default.
 
+The the Makefile is invoked using the env variable DESTDIR (ex: DESTDIR=/usr make) 
+then the configure script options are ignore and the installation script will 
+behave as :
+
+DESTDIR: /usr
+Libdir: /usr/lib/ocaml
+Bindir: /usr/bin
+
+If the Makefile is invoked using the env variable OCAMLFIND_DESTDIR then
+the we honor the destdir as set by ocamlfind.
+
+"make printconf" shows the current configuration.
+
+$OCAMLFIND_DESTDIR=/home/software/lib/ocaml make printconf 
+
+DESTDIR: 
+OCAMLFIND_DESTDIR: /home/software/lib/ocaml
+Prefix: /usr/local
+Libdir: /home/software/lib/ocaml
+Bindir: /usr/local/bin
+OCAML_OS_TYPE: Unix
+OCAML_SYSTEM: linux
+Code type: native
+----------------------
+Install: ocamlfind install -destdir /home/software/lib/ocaml
+Remove: ocamlfind remove -destdir /home/software/lib/ocaml
+
+
+By default dose is installed in /usr/local/bin and /usr/local/lib/ocaml
 
 Ocaml interpreter
 ----------------------------------
