@@ -93,7 +93,7 @@ let interpolate_solver_pat exec cudf_in cudf_out pref =
 exception Error of string
 exception Unsat
 
-let fatal fmt =
+let raise_error fmt =
   Printf.kprintf (fun s ->
     raise (Error s)
   ) fmt
@@ -101,9 +101,9 @@ let fatal fmt =
 
 let check_exit_status cmd = function
   |Unix.WEXITED 0   -> ()
-  |Unix.WEXITED i   -> fatal "command '%s' failed with code %d" cmd i
-  |Unix.WSIGNALED i -> fatal "command '%s' killed by signal %d" cmd i
-  |Unix.WSTOPPED i  -> fatal "command '%s' stopped by signal %d" cmd i
+  |Unix.WEXITED i   -> raise_error "command '%s' failed with code %d" cmd i
+  |Unix.WSIGNALED i -> raise_error "command '%s' killed by signal %d" cmd i
+  |Unix.WSTOPPED i  -> raise_error "command '%s' stopped by signal %d" cmd i
 ;;
 
 let timer3 = Util.Timer.create "cudfio" ;;
@@ -115,13 +115,13 @@ let try_set_close_on_exec fd =
 let open_proc_full cmd env input output error toclose =
   let cloexec = List.for_all try_set_close_on_exec toclose in
   match Unix.fork() with
-     0 -> Unix.dup2 input Unix.stdin; Unix.close input;
-          Unix.dup2 output Unix.stdout; Unix.close output;
-          Unix.dup2 error Unix.stderr; Unix.close error;
-          if not cloexec then List.iter Unix.close toclose;
-          begin try Unix.execvpe (List.hd cmd) (Array.of_list cmd) env
-          with _ -> exit 127
-          end
+  | 0 -> Unix.dup2 input Unix.stdin; Unix.close input;
+         Unix.dup2 output Unix.stdout; Unix.close output;
+         Unix.dup2 error Unix.stderr; Unix.close error;
+         if not cloexec then List.iter Unix.close toclose;
+         begin try Unix.execvpe (List.hd cmd) (Array.of_list cmd) env
+         with _ -> exit 127
+         end
   | id -> id
 
 (* bits and pieces borrowed from ocaml stdlib/filename.ml *)
@@ -171,9 +171,9 @@ let execsolver exec_pat criteria cudf =
     Unix.mkfifo solver_in 0o600;
     let solver_out = Filename.concat tmpdir "out-cudf" in
     let argv = interpolate_solver_pat exec_pat solver_in solver_out criteria in
-    let argv_joined = String.join " " argv in
+    let command = String.join " " argv in
 
-    notice "%s" argv_joined;
+    notice "Exec: %s" command;
 
     (* Tell OCaml we want to capture SIGCHLD                       *)
     (* In case the external solver fails before reading its input, *)
@@ -190,7 +190,8 @@ let execsolver exec_pat criteria cudf =
         let oc = Unix.out_channel_of_descr solver_in_fd in
         Cudf_printer.pp_cudf oc cudf;
         close_out oc
-      with Unix.Unix_error (Unix.EINTR,_,_) ->  info "Interrupted by EINTR while executing command '%s'" argv_joined
+      with Unix.Unix_error (Unix.EINTR,_,_) ->
+        info "Interrupted by EINTR while executing command '%s'" command
     end;
     Util.Timer.stop timer3 ();
     (* restore previous behaviour on sigchild *)
@@ -200,12 +201,12 @@ let execsolver exec_pat criteria cudf =
     let lines_cin = input_all_lines [] cin in
     let lines = input_all_lines lines_cin cerr in
     let exit_code = close_process (cin,cout,cerr,pid) in
-    check_exit_status argv_joined exit_code;
+    check_exit_status command exit_code;
     notice "\n%s" (String.concat "\n" lines);
     Util.Timer.stop timer4 ();
 
     if not(Sys.file_exists solver_out) then
-      fatal "(CRASH) Solution file not found"
+      raise_error "(CRASH) Solution file not found"
     else if check_fail solver_out then
       raise Unsat
     else 
@@ -213,9 +214,9 @@ let execsolver exec_pat criteria cudf =
         try Cudf_parser.load_solution_from_file solver_out universe with
         |Cudf_parser.Parse_error _
         |Cudf.Constraint_violation _ ->
-          fatal "(CRASH) Solution file contains an invalid solution"
+          raise_error "(CRASH) Solution file contains an invalid solution"
       end with Cudf.Constraint_violation s ->
-        fatal "(CUDF) Malformed solution: %s" s ;
+        raise_error "(CUDF) Malformed solution: %s" s ;
   in
   let res = aux () in
   rmtmpdir tmpdir;

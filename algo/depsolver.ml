@@ -270,7 +270,6 @@ let upgrade_constr universe name =
 
 let check_request_using ?call_solver ?callback ?criteria ?(explain=false) (pre,universe,request) =
   let intSolver ?(explain=false) universe request =
-
     let deps = 
       let k =
         Cudf.fold_packages (fun acc pkg ->
