@@ -14,8 +14,12 @@ APPFLAGS := $(VERBOSE) -j 10
 #OBFLAGS := $(OBFLAGS) -classic-display
 
 addnotrpm:
-	$(LN) -s doseparse doseparseNoRpm
-	cd doseparse ; $(LN) -s doseparse.mlpack doseparseNoRpm.mlpack; cd -
+	@if [ ! -s doseparseNoRpm ]; then $(LN) doseparse doseparseNoRpm ; fi
+	@cd doseparse ; \
+		if [ ! -s doseparseNoRpm ]; then \
+			$(LN) doseparse.mlpack doseparseNoRpm.mlpack ; \
+		fi ; \
+	cd -
 
 myocamlbuild.ml: myocamlbuild.ml.pp
 	cppo $(CPPOFLAGS) $< -o $@
