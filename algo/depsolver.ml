@@ -421,7 +421,7 @@ let depclean ?(global_constraints=true) ?(callback=(fun _ -> ())) univ pkglist =
 #ifdef HASOCAMLGRAPH
 (* Build a graph of install/remove actions (optionally including dependent packages *)
 (* code freely adapted from opam/src/solver/opamCudf.ml *)
-module AG = Defaultgraphs.ActionGraph
+(* module AG = Defaultgraphs.ActionGraph *)
 let installation_graph ~solution:soluniv (install,remove) =
   let module PG = Defaultgraphs.PackageGraph in
   let module PO = Defaultgraphs.GraphOper(PG.G) in
@@ -445,38 +445,38 @@ let installation_graph ~solution:soluniv (install,remove) =
     ) g (remove, install)
   in
 
-  let g = AG.G.create () in
-  S.iter (fun p -> AG.G.add_vertex g (AG.PkgV.Remove p)) remove;
-  S.iter (fun p -> AG.G.add_vertex g (AG.PkgV.Install p)) install;
+  let g = Defaultgraphs.ActionGraph.G.create () in
+  S.iter (fun p -> Defaultgraphs.ActionGraph.G.add_vertex g (Defaultgraphs.ActionGraph.PkgV.Remove p)) remove;
+  S.iter (fun p -> Defaultgraphs.ActionGraph.G.add_vertex g (Defaultgraphs.ActionGraph.PkgV.Install p)) install;
 
   (* reinstalls and upgrades: remove first *)
   S.iter (fun p1 ->
     try
       let same_name_as_p1 p2 = p1.Cudf.package = p2.Cudf.package in
       let p2 = S.choose (S.filter same_name_as_p1 install) in
-      AG.G.add_edge g (AG.PkgV.Remove p1) (AG.PkgV.Install p2)
+      Defaultgraphs.ActionGraph.G.add_edge g (Defaultgraphs.ActionGraph.PkgV.Remove p1) (Defaultgraphs.ActionGraph.PkgV.Install p2)
     with Not_found -> ()
   ) remove;
   
   (* uninstall order *)
   PG.G.iter_edges (fun p1 p2 ->
-    AG.G.add_edge g (AG.PkgV.Remove p1) (AG.PkgV.Remove p2)
+    Defaultgraphs.ActionGraph.G.add_edge g (Defaultgraphs.ActionGraph.PkgV.Remove p1) (Defaultgraphs.ActionGraph.PkgV.Remove p2)
   ) (PG.dependency_graph_list soluniv (S.elements remove));
 
   (* install order *)
   PG.G.iter_edges (fun p1 p2 ->
     if S.mem p1 install && S.mem p2 install then
-      AG.G.add_edge g (AG.PkgV.Install p2) (AG.PkgV.Install p1)
+      Defaultgraphs.ActionGraph.G.add_edge g (Defaultgraphs.ActionGraph.PkgV.Install p2) (Defaultgraphs.ActionGraph.PkgV.Install p1)
     else if S.mem p1 install && S.mem p2 remove then
-      AG.G.add_edge g (AG.PkgV.Remove p2) (AG.PkgV.Install p1)
+      Defaultgraphs.ActionGraph.G.add_edge g (Defaultgraphs.ActionGraph.PkgV.Remove p2) (Defaultgraphs.ActionGraph.PkgV.Install p1)
   ) (PG.dependency_graph_list soluniv packagelist);
 
   (* conflicts *)
   PG.UG.iter_edges (fun p1 p2 ->
     if S.mem p1 remove && S.mem p2 install then
-      AG.G.add_edge g (AG.PkgV.Remove p1) (AG.PkgV.Install p2)
+      Defaultgraphs.ActionGraph.G.add_edge g (Defaultgraphs.ActionGraph.PkgV.Remove p1) (Defaultgraphs.ActionGraph.PkgV.Install p2)
     else if S.mem p2 remove && S.mem p1 install then
-      AG.G.add_edge g (AG.PkgV.Remove p2) (AG.PkgV.Install p1)
+      Defaultgraphs.ActionGraph.G.add_edge g (Defaultgraphs.ActionGraph.PkgV.Remove p2) (Defaultgraphs.ActionGraph.PkgV.Install p1)
   ) (PG.conflict_graph_list soluniv packagelist);
   g
 ;;

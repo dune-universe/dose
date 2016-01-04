@@ -24,8 +24,6 @@ let conjbar = Util.Progress.create "Strongdeps_int.conj"
 let strongtimer = Util.Timer.create "Strongdeps_int.strong"
 let conjtimer = Util.Timer.create "Strongdeps_int.conjdep"
 
-module DG = Defaultgraphs.PackageGraph
-
 (** check if p strongly depends on q.
     We check if it is possible to install p without q.  *)
 (* ATT: this function makes a copy of the solver to add a clause to it *)
@@ -44,9 +42,9 @@ let check_strong univ transitive graph solver p l =
   List.iter (fun q ->
     let pkg_q = CudfAdd.inttovar univ q in
     if p <> q then
-      if not(DG.G.mem_edge graph pkg_p pkg_q) then
+      if not(Defaultgraphs.PackageGraph.G.mem_edge graph pkg_p pkg_q) then
         if strong_depends solver p q then 
-          DG.add_edge ~transitive graph pkg_p pkg_q
+          Defaultgraphs.PackageGraph.add_edge ~transitive graph pkg_p pkg_q
   ) l
 
 (* true if at least one dependency is disjunctive *)
@@ -75,7 +73,7 @@ let strongdeps_int ?(transitive=true) graph univ pkglist =
   Util.Timer.start strongtimer;
   List.iter (fun pkg ->
     Util.Progress.progress mainbar;
-    DG.G.add_vertex graph pkg;
+    Defaultgraphs.PackageGraph.G.add_vertex graph pkg;
     let id = CudfAdd.vartoint univ pkg in
     if (pkglist_size <> universe_size) || (somedisj cudfpool id) then begin 
       let closure = Depsolver_int.dependency_closure_cache cudfpool [id] in
@@ -87,33 +85,33 @@ let strongdeps_int ?(transitive=true) graph univ pkglist =
     end
   ) pkglist ;
   Util.Progress.reset mainbar;
-  debug "strong dep graph: %d nodes, %d edges" (DG.G.nb_vertex graph) (DG.G.nb_edges graph);
+  debug "strong dep graph: %d nodes, %d edges" (Defaultgraphs.PackageGraph.G.nb_vertex graph) (Defaultgraphs.PackageGraph.G.nb_edges graph);
   Util.Timer.stop strongtimer graph
 ;;
 
 let strongdeps ?(transitive=true) univ pkglist =
   let size = Cudf.universe_size univ in
-  let graph = DG.G.create ~size () in
+  let graph = Defaultgraphs.PackageGraph.G.create ~size () in
   let g = strongdeps_int ~transitive graph univ pkglist in
   g
 ;;
 
 let strongdeps_univ ?(transitive=true) univ =
   let size = Cudf.universe_size univ in
-  let graph = DG.G.create ~size () in
+  let graph = Defaultgraphs.PackageGraph.G.create ~size () in
   Util.Progress.set_total conjbar size;
 
   Util.Timer.start conjtimer;
   let l = 
     Cudf.fold_packages (fun acc pkg ->
       Util.Progress.progress conjbar;
-      DG.conjdepgraph_int ~transitive graph univ pkg;
+      Defaultgraphs.PackageGraph.conjdepgraph_int ~transitive graph univ pkg;
       pkg :: acc
     ) [] univ
   in
   Util.Progress.reset conjbar;
   Util.Timer.stop conjtimer ();
-  debug "conj dep graph: nodes %d , edges %d" (DG.G.nb_vertex graph) (DG.G.nb_edges graph);
+  debug "conj dep graph: nodes %d , edges %d" (Defaultgraphs.PackageGraph.G.nb_vertex graph) (Defaultgraphs.PackageGraph.G.nb_edges graph);
   let g = strongdeps_int ~transitive graph univ l in
   (* because the graph might still be transitive *)
   (* if not transitive then O.transitive_reduction g; *)
@@ -122,15 +120,15 @@ let strongdeps_univ ?(transitive=true) univ =
 
 (** return the impact set (list) of the node [q] in [graph] *)
 (** invariant : we assume the graph is NOT detransitivitized *)
-let impactlist = DG.pred_list
+let impactlist = Defaultgraphs.PackageGraph.pred_list
 
 (** return the list of strong dependencies of the node [q] in [graph] *)
 (** invariant : we assume the graph is NOT detransitivitized *)
-let stronglist = DG.succ_list
+let stronglist = Defaultgraphs.PackageGraph.succ_list
 
-let impactset = DG.pred_set
+let impactset = Defaultgraphs.PackageGraph.pred_set
 
-let strongset = DG.succ_set
+let strongset = Defaultgraphs.PackageGraph.succ_set
 
 
 (** [strongdeps u l] build the strong dependency graph of all packages in 
@@ -145,21 +143,21 @@ let strongdeps_univ ?(transitive=true) universe =
 
 (** compute the impact set of the node [q], that is the list of all 
     packages [p] that strong depends on [q] *)
-let impactset = DG.pred_list
+let impactset = Defaultgraphs.PackageGraph.pred_list
 
 (** compute the conjunctive dependency graph *)
 let conjdeps_univ universe =
-  let g = DG.G.create () in
+  let g = Defaultgraphs.PackageGraph.G.create () in
   Cudf.iter_packages (fun pkg ->
-    DG.conjdepgraph_int g universe pkg
+    Defaultgraphs.PackageGraph.conjdepgraph_int g universe pkg
   ) (Depsolver.trim universe);
   g
 
 (** compute the conjunctive dependency graph considering only packages 
     in [pkglist] *)
 let conjdeps universe pkglist =
-  let g = DG.G.create () in
+  let g = Defaultgraphs.PackageGraph.G.create () in
   List.iter (fun pkg ->
-    DG.conjdepgraph_int g universe pkg
+    Defaultgraphs.PackageGraph.conjdepgraph_int g universe pkg
   ) (Depsolver.trimlist universe pkglist);
   g

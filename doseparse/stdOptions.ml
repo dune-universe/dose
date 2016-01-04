@@ -215,10 +215,9 @@ end
 module InputOptions = struct
   open OptParse ;;
 
-  exception Format
   let itypes = (List.map Url.scheme_to_string Url.supported_input_types)
   let in_option ?default ?(metavar = Printf.sprintf "<%s>" (String.concat "|" itypes)) () =
-    let coerce s = if List.mem s itypes then s else raise Format in
+    let coerce s = if List.mem s itypes then s else raise Not_found in
     let supported = String.concat ", " itypes in
     let error _ s = Printf.sprintf "input format \"%s\" not supported. Must be one of: %s" s supported in
     Opt.value_option metavar default coerce error

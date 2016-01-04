@@ -5896,9 +5896,6 @@ fi
 #                #include <sched.h>
 #                ]])
 
-OCAMLVERSION="$(echo $OCAMLVERSION | sed 's/\.//g')"
-
-
 
 
 

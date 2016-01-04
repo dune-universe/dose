@@ -274,9 +274,6 @@ AC_SUBST(LN)
 #                #include <sched.h>
 #                ]])
 
-OCAMLVERSION="$(echo $OCAMLVERSION | sed 's/\.//g')"
-
-AC_SUBST(OCAMLVERSION)
 AC_SUBST(CONFIG_ZIP)
 AC_SUBST(PKG_ZIP)
 AC_SUBST(ZIP)

@@ -16,7 +16,7 @@ APPFLAGS := $(VERBOSE) -j 10
 addnotrpm:
 	@if [ ! -s doseparseNoRpm ]; then $(LN) doseparse doseparseNoRpm ; fi
 	@cd doseparse ; \
-		if [ ! -s doseparseNoRpm ]; then \
+		if [ ! -s doseparseNoRpm.mlpack ]; then \
 			$(LN) doseparse.mlpack doseparseNoRpm.mlpack ; \
 		fi ; \
 	cd -

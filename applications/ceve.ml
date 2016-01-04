@@ -31,16 +31,15 @@ module Options = struct
   let options = OptParser.make ~description
   include StdOptions.MakeOptions(struct let options = options end)
 
-  exception Format
   let otypes = ["cnf";"dimacs";"cudf";"deb";"debsrc";"dot";"gml";"grml";"table"]
   let out_option ?default ?(metavar = Printf.sprintf "<%s>" (String.concat "|" otypes)) () =
-    let corce s = if List.mem s otypes then s else raise Format in
+    let corce s = if List.mem s otypes then s else raise Not_found in
     let error _ s = Printf.sprintf "%s format not supported" s in
     Opt.value_option metavar default corce error
 
   let gtypes = ["syn";"pkg";"conj";"strdeps";"strcnf";"dom"]
   let grp_option ?default ?(metavar = Printf.sprintf "<%s>" (String.concat "|" gtypes)) () =
-    let corce s = if List.mem s gtypes then s else raise Format in
+    let corce s = if List.mem s gtypes then s else raise Not_found in
     let error _ s = Printf.sprintf "%s format not supported" s in
     Opt.value_option metavar default corce error
 
@@ -244,7 +243,7 @@ let main () =
       |"table" ->
 #ifdef HASOCAMLGRAPH 
         Printf.fprintf oc "%d\t%d\t%d\n"
-        (Cudf.universe_size u) (DGraph.G.nb_edges (DGraph.dependency_graph u))
+        (Cudf.universe_size u) (Defaultgraphs.SyntacticDependencyGraph.G.nb_edges (Defaultgraphs.SyntacticDependencyGraph.dependency_graph u))
         (nr_conflicts u)
 #else
         failwith (Printf.sprintf "format table not supported: needs ocamlgraph")
@@ -255,14 +254,14 @@ let main () =
         let fmt = Format.formatter_of_out_channel oc in
         begin match OptParse.Opt.get Options.grp_type with
           |"syn" ->
-            let g = DGraph.dependency_graph u in
-            if t = "dot" then DGraph.DotPrinter.print fmt g
-            else if t = "gml" then DGraph.GmlPrinter.print fmt g
-            else if t = "grml" then DGraph.GraphmlPrinter.print fmt g
+            let g = Defaultgraphs.SyntacticDependencyGraph.dependency_graph u in
+            if t = "dot" then Defaultgraphs.SyntacticDependencyGraph.DotPrinter.print fmt g
+            else if t = "gml" then Defaultgraphs.SyntacticDependencyGraph.GmlPrinter.print fmt g
+            else if t = "grml" then Defaultgraphs.SyntacticDependencyGraph.GraphmlPrinter.print fmt g
             else assert false
           |("pkg" | "strdeps" | "conj"| "dom") as gt ->
             let g =
-              if gt = "pkg" then PGraph.dependency_graph u
+              if gt = "pkg" then Defaultgraphs.PackageGraph.dependency_graph u
               else if gt = "strdeps" then
                 let g = Strongdeps.strongdeps_univ u in
                 (* if input are Debian packages and --deb-ignore-essential was
@@ -286,11 +285,11 @@ let main () =
               else assert false
             in
             if t = "dot" then
-              PGraph.DotPrinter.print fmt g
+              Defaultgraphs.PackageGraph.DotPrinter.print fmt g
             else if t = "gml" then
-              PGraph.GmlPrinter.print fmt g
+              Defaultgraphs.PackageGraph.GmlPrinter.print fmt g
             else if t = "grml" then
-              PGraph.GraphmlPrinter.print fmt g
+              Defaultgraphs.PackageGraph.GraphmlPrinter.print fmt g
             else assert false
           |s -> failwith (Printf.sprintf "type %s not supported" s)
         end

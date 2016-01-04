@@ -2,7 +2,7 @@
 open Ocamlbuild_plugin;;
 
 Options.use_ocamlfind := true ;;
-#if OCAMLVERSION >= 4022 
+#if OCAML_VERSION > (4, 1, 0)
 Ocamlbuild_pack.Flags.mark_tag_used "use_" ;;
 Ocamlbuild_pack.Flags.mark_tag_used "pkg_" ;;
 Ocamlbuild_pack.Flags.mark_tag_used "link_" ;;
