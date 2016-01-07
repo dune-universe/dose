@@ -1,4 +1,3 @@
-- add unit tests for opam and pef module
 
 - add --deb-output822 to DistcheckOptions to output 822 package list
   for distcheck, buildcheck etc of installable packages
@@ -20,6 +19,9 @@
   Thu Jun 17 2010 Pietro Abate <pietro.abate@pps.jussieu.fr>
 
 -------------------
+
+- add unit tests for opam and pef module
+DONE
 
 - Remove all references to Format in diagnostic.ml and all applications.
   Format is too slow !
