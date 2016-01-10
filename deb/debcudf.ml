@@ -186,7 +186,6 @@ let init_tables ?(step=1) ?(versionlist=[]) pkglist =
   List.iter (fun pkg -> ivt pkg ; ivrt pkg ; ivdt pkg ; iut pkg) pkglist ;
   let l = Util.StringPairHashtbl.fold (fun v _ acc -> v::acc) temp_versions_table [] in
   let add_reverse i (n,v) =
-    debug "Add Reverse (%s,%s) %i" n v i;
     try 
       let m = Util.IntHashtbl.find tables.reverse_table i in 
       m := (SMap.add n v !m)
@@ -198,7 +197,6 @@ let init_tables ?(step=1) ?(versionlist=[]) pkglist =
   let rec numbers (prec,i) = function
     |[] -> ()
     |(v,n)::t ->
-      debug "Numbers %s %s" n v;
       if Version.equal v prec then begin
         add tables.versions_table v i;
         if n <> "" then add_reverse i (n,v);
@@ -223,7 +221,7 @@ let get_cudf_version tables (package,version) =
 
 let get_real_version tables (name,cudfversion) =
   let package =
-    (* XXX this is a hack. Remove --virtual- and architecture encoding *)
+    (* Remove --virtual- and architecture encoding *)
     let n = (CudfAdd.decode name) in
     if ExtString.String.starts_with n "--vir" then
       ExtString.String.slice ~first:10 n
