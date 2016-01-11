@@ -21,6 +21,9 @@ additional libraries (enable compilation with --with-<library>) :
 To use rpm support, dose3 needs librpm > 4.6
 To use ocamlgraph support, dose3 needs libocamlgraph-ocaml-dev >= 1.8.6
 
+cppo >= 1.1.2
+extlib >= 1.7.0
+
 opam users need the following packages to compile dose with the default
 options :
 
