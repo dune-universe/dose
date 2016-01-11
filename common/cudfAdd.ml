@@ -140,6 +140,8 @@ let pp from_cudf ?(fields=[]) ?(decode=decode) pkg =
     let l = (f false fields)@(f true default_fields) in
     (decode p,decode v,l)
 
+let max32int = if Int32.to_int(Int32.max_int) < 0 then max_int else Int32.to_int(Int32.max_int);;
+
 let pp_vpkg pp fmt vpkg =
   let string_of_relop = function
       `Eq -> "="
@@ -154,7 +156,7 @@ let pp_vpkg pp fmt vpkg =
       let (p,_,_) = 
         pp {Cudf.default_package with 
           Cudf.package = p ; 
-          version = Int32.to_int(Int32.max_int)} 
+          version = max32int} 
       in
       Format.fprintf fmt "%s" p
   |(p,Some(c,v)) ->

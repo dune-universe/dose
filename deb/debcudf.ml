@@ -27,7 +27,7 @@ module Version = Versioning.Debian
 let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
-let max32int = Int32.to_int(Int32.max_int);;
+let max32int = if Int32.to_int(Int32.max_int) < 0 then max_int else Int32.to_int(Int32.max_int);;
 
 module SMap = Map.Make (String)
 
