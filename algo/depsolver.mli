@@ -19,20 +19,11 @@ type solver
     for universe consistency (cf. Cudf_checker.is_consistent) *)
 val load : ?check : bool -> Cudf.universe -> solver
 
-(*
-(** Turn a result from Diagnostic_int into one of Diagnostic *)
-val result : Depsolver_int.identity -> Cudf.universe -> Diagnostic.result_int -> Diagnostic.result
-
-(** Turn a request from Diagnostic_int into one of Diagnostic *)
-val request : Cudf.universe -> Diagnostic.request_int -> Diagnostic.request
-*)
-
 (** check if the given package can be installed in the universe 
  
     @param global_constraints : enforce global constraints on the given
     universe. In particular packages marked as `Keep_package must be always
     installed. Default false.
-
 *)
 val edos_install : ?global_constraints:bool -> Cudf.universe -> Cudf.package -> Diagnostic.diagnosis
 

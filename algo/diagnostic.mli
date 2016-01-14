@@ -57,6 +57,12 @@ type diagnosis = { result : result; request : request; }
 val diagnosis : Common.Util.projection -> Cudf.universe ->
   result_int -> request_int -> diagnosis
 
+(** Turn an integer result into a cudf result *)
+val result : Common.Util.projection -> Cudf.universe -> result_int -> result
+
+(** Turn an integer request into a cudf request *)
+val request : Cudf.universe -> 'a * int list -> Cudf.package list
+
 module ResultHash : Hashtbl.S with type key = reason
 
 (** Collect aggregate information about not installable packages *)
