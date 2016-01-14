@@ -695,12 +695,12 @@ module PackageGraph = struct
     end 
 
   let load pkglist filename =
-    let timer = Util.Timer.create "Defaultgraph.PackageGrah.load" in
+    let timer = Util.Timer.create "Defaultgraph.PackageGraph.load" in
     Util.Timer.start timer;
     let ic = open_in filename in
     let (detrans,graph) = ((Marshal.from_channel ic) :> (bool * G.t)) in
     close_in ic ;
-    info "Loading Strong Dependencies graph";
+    info "Loading Dependencies graph";
     (* we assume the graph is detransitivitized *)
     let sg =
       if detrans then begin 

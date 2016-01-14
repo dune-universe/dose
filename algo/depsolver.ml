@@ -20,18 +20,7 @@ include Util.Logging(struct let label = label end) ;;
 
 type solver = Depsolver_int.solver
 
-(** @param check if the universe is consistent *)
-let load ?(check=true) universe =
-  let is_consistent check universe =
-    if check then Cudf_checker.is_consistent universe
-    else (true,None)
-  in
-  match is_consistent check universe with
-  |true,None -> Depsolver_int.init_solver_univ universe 
-  |false,Some(r) -> 
-      fatal "%s"
-      (Cudf_checker.explain_reason (r :> Cudf_checker.bad_solution_reason)) ;
-  |_,_ -> assert false
+let load universe = Depsolver_int.init_solver_univ universe
 
 (** [univcheck ?callback universe] check all packages in the
     universe for installability 

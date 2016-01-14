@@ -10,17 +10,8 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-(** {2 Low level Integer Un-installability reasons} *)
-type reason_int =
-  |DependencyInt of (int * Cudf_types.vpkg list * int list)
-  |MissingInt of (int * Cudf_types.vpkg list)
-  |ConflictInt of (int * int * Cudf_types.vpkg)
-
-type result_int =
-  |SuccessInt of (?all:bool -> unit -> int list)
-  |FailureInt of (unit -> reason_int list)
-
-type request_int = (int option * int list)
+(** The request provided to the solver *)
+type request = Cudf.package list
 
 (** {2 Un-installability reasons} *)
 type reason =
@@ -34,9 +25,6 @@ type reason =
   |Conflict of (Cudf.package * Cudf.package * Cudf_types.vpkg)
   (** Conflict (a,b,vpkg) means that the package [a] is in conflict
       with package [b] because of vpkg *)
-
-(** The request provided to the solver *)
-type request = Cudf.package list
 
 (** The result of an installability query *)
 type result =
@@ -53,6 +41,19 @@ type result =
 (** The aggregated result from the solver *)
 type diagnosis = { result : result; request : request; }
 
+(** {2 Low level Integer Un-installability reasons} *)
+type reason_int =
+  |DependencyInt of (int * Cudf_types.vpkg list * int list)
+  |MissingInt of (int * Cudf_types.vpkg list)
+  |ConflictInt of (int * int * Cudf_types.vpkg)
+
+type result_int =
+  |SuccessInt of (?all:bool -> unit -> int list)
+  |FailureInt of (unit -> reason_int list)
+
+type request_int = (int option * int list)
+
+(** {2 Helpers Functions } *)
 (** Turn an integer result into a cudf result *)
 val diagnosis : Common.Util.projection -> Cudf.universe ->
   result_int -> request_int -> diagnosis

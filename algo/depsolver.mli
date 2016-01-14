@@ -26,26 +26,18 @@ val is_consistent : Cudf.universe -> Diagnostic.diagnosis
  
     @param global_constraints : enforce global constraints on the given
     universe. In particular packages marked as `Keep_package must be always
-    installed. Default false.
-*)
+    installed. Default false. *)
 val edos_install : ?global_constraints:bool -> Cudf.universe -> Cudf.package -> Diagnostic.diagnosis
 
 (** check if the give package list can be installed in the universe 
-  
     @param global_constraints : enforce global constraints on the given
     universe. In particular packages marked as `Keep_package must be always
-    installed. Default false.
-*)
+    installed. Default false.  *)
 val edos_coinstall : ?global_constraints:bool -> Cudf.universe -> Cudf.package list -> Diagnostic.diagnosis
 
 (** accept a list of list of packages and return the coinstallability test of
     the cartesian product. *)
 val edos_coinstall_prod : ?global_constraints:bool -> Cudf.universe -> Cudf.package list list -> Diagnostic.diagnosis list
-
-(** check if the universe universe is consistent (all installed packages are coinstallable)
-    This function is a wrapper of Cudf_checker.is_consistent
-*)
-val is_consistent : Cudf.universe -> Diagnostic.result
 
 (** remove uninstallable packages from the universe . global_constraints is true
     by default *)
