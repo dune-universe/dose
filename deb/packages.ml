@@ -136,11 +136,10 @@ class package ?(name=("Package",None)) ?(version=("Version",None)) ?(depends=("D
     Pef.Printer.pp_vpkglist_wl oc conflicts;
     Pef.Printer.pp_vpkglist_wl oc breaks;
     Pef.Printer.pp_vpkgformula_wl oc suggests;
+    Pef.Printer.pp_vpkgformula_wl oc enhances;
     Pef.Printer.pp_vpkgformula_wl oc recommends;
     Pef.Printer.pp_vpkglist_wl oc replaces;
  
-    Printf.fprintf oc "\n";
-
 end
 
 let parse_package_stanza filter archs extras par =
