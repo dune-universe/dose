@@ -15,9 +15,12 @@
 (** the solver is an abstract data type associated to a universe *)
 type solver
 
-(** initialize the solver. If [check] is true (default), then check 
-    for universe consistency (cf. Cudf_checker.is_consistent) *)
-val load : ?check : bool -> Cudf.universe -> solver
+(** initialize the solver *)
+val load : Cudf.universe -> solver
+
+(** check if the universe universe is consistent (all installed packages are coinstallable)
+    This function is a wrapper of Cudf_checker.is_consistent. *)
+val is_consistent : Cudf.universe -> Diagnostic.diagnosis
 
 (** check if the given package can be installed in the universe 
  
@@ -38,6 +41,11 @@ val edos_coinstall : ?global_constraints:bool -> Cudf.universe -> Cudf.package l
 (** accept a list of list of packages and return the coinstallability test of
     the cartesian product. *)
 val edos_coinstall_prod : ?global_constraints:bool -> Cudf.universe -> Cudf.package list list -> Diagnostic.diagnosis list
+
+(** check if the universe universe is consistent (all installed packages are coinstallable)
+    This function is a wrapper of Cudf_checker.is_consistent
+*)
+val is_consistent : Cudf.universe -> Diagnostic.result
 
 (** remove uninstallable packages from the universe . global_constraints is true
     by default *)

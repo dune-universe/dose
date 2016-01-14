@@ -721,6 +721,7 @@ let fprintf ?(pp=CudfAdd.default_pp) ?(failure=false) ?(success=false) ?(explain
   |{result = Success f; request = req } when success ->
       Format.fprintf fmt "@[<v 1>-@,";
       begin match req with
+      |[] -> Format.fprintf fmt "@[<v>consistent@]@,"
       |[r] -> 
           Format.fprintf fmt "@[<v>%a@]@," (pp_package ~source:true ~fields:true pp) r;
           if minimal then

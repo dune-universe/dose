@@ -45,6 +45,9 @@ let f_debian = Filename.concat cudf_dir "debian.cudf"
 let f_dominators_order = Filename.concat test_dir "dominators_order.cudf"
 let f_dominators_cycle = Filename.concat test_dir "dominators_cycle.cudf"
 
+let f_is_consistent_success = "tests/cudf/is_consistent_success.cudf"
+let f_is_consistent_failure = "tests/cudf/is_consistent_failure.cudf"
+
 let load_univ f =
   let (_,univ,_) = Cudf_parser.load_from_file f in
   univ
@@ -63,6 +66,34 @@ let cone_set = toset f_cone
 let engine_conflicts_set = toset f_engine_conflicts
 
 let solver = Depsolver.load universe ;;
+
+(* These tests could be a bit more precise... *)
+let test_is_consistent =
+  "is_consistent" >::: [
+    "success" >:: (fun _ ->
+      let universe = load_univ f_is_consistent_success in
+      let d = Depsolver.is_consistent universe in
+      match d with
+      |{ Diagnostic.result = (Diagnostic.Success f) } -> 
+          (* Diagnostic.printf ~failure:true ~success:true ~explain:true d; *)
+          assert_bool "pass" true
+
+      |{ Diagnostic.result = (Diagnostic.Failure _ ) } ->
+          (* Diagnostic.printf ~failure:true ~success:true ~explain:true d; *)
+          assert_failure "fail"
+    );
+    "failure" >:: (fun _ ->
+      let universe = load_univ f_is_consistent_failure in
+      match Depsolver.is_consistent universe with
+      |{ Diagnostic.result = (Diagnostic.Success f) } -> 
+          (* Diagnostic.printf ~failure:true ~success:true ~explain:true d; *)
+          assert_failure "fail"
+
+      |{ Diagnostic.result = (Diagnostic.Failure _ ) } ->
+          (* Diagnostic.printf ~failure:true ~success:true ~explain:true d; *)
+          assert_bool "pass" true
+    );
+  ]
 
 let test_install =
   "install" >:: (fun _ ->
@@ -412,6 +443,7 @@ let test_depsolver =
     test_reverse_dependency_closure ;
     test_conjunctive_dependency_closure ;
     test_depclean ;
+    test_is_consistent;
   ]
 
 let solution_set =
