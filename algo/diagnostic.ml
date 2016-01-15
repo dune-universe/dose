@@ -150,7 +150,7 @@ let default_result n = {
   statistic = Hashtbl.create 17
 }
 
-let pp_out_version fmt = Format.fprintf fmt "output-version: 1.0@.";;
+let pp_out_version fmt = Format.fprintf fmt "output-version: 1.1@.";;
 
 (** given a list of dependencies, return a list of list containg all
  *  paths in the dependency tree starting from [root] *)
