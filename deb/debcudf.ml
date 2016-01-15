@@ -219,18 +219,19 @@ let get_cudf_version tables (package,version) =
     raise Not_found
   end
 
+let get_real_name name = 
+  (* Remove --virtual- and architecture encoding *)
+  let n = (CudfAdd.decode name) in
+  if ExtString.String.starts_with n "--vir" then
+    ExtString.String.slice ~first:10 n
+  else
+    try
+      let (n,a) = ExtString.String.split n ":" in
+      if n = "src" then a else n
+    with Invalid_string -> n
+
 let get_real_version tables (name,cudfversion) =
-  let package =
-    (* Remove --virtual- and architecture encoding *)
-    let n = (CudfAdd.decode name) in
-    if ExtString.String.starts_with n "--vir" then
-      ExtString.String.slice ~first:10 n
-    else
-      try
-        let (n,a) = ExtString.String.split n ":" in
-        if n = "src" then a else n
-      with Invalid_string -> n
-  in
+  let package = get_real_name name in
   try
     if cudfversion = max32int || cudfversion = max32int - 1 then 
       (package,"nan")

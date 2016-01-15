@@ -212,7 +212,8 @@ let main () =
           try
             let id = (cudfpkg.Cudf.package,cudfpkg.Cudf.version) in
             let debpkg = Hashtbl.find cudftodeb_table id in
-            debpkg#pp oc
+            debpkg#pp oc;
+            Printf.fprintf oc "\n"
           with Not_found -> assert false
         ) is
       else
@@ -225,7 +226,7 @@ let main () =
             ) is
           )
         in
-        List.iter (fun pkg -> pkg#pp oc) l
+        List.iter (fun pkg -> pkg#pp oc; Printf.fprintf oc "\n") l
       end; 0 (* exit code 0 . All packages are installable *)
     end
     else begin if failure then begin

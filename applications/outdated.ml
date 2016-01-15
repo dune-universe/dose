@@ -235,9 +235,10 @@ let outdated
 
   let pp pkg =
     let p = 
-      if String.starts_with pkg.Cudf.package "src/" then
-        Printf.sprintf "Source conflict (%s)" pkg.Cudf.package
-      else pkg.Cudf.package
+      let n = Debian.Debcudf.get_real_name pkg.Cudf.package in
+      if String.starts_with n "src/" then
+        Printf.sprintf "Source conflict (%s)" n
+      else n
     in
     let v = 
       if pkg.Cudf.version > 0 then begin
@@ -260,7 +261,7 @@ let outdated
         with Not_found -> None
       ) ["architecture";"source";"sourcenumber";"equivs"]
     in
-    (CudfAdd.decode p,v,l)
+    (p,v,l)
   in
 
   let fmt = Format.std_formatter in
