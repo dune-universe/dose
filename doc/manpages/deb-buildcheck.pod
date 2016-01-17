@@ -33,7 +33,7 @@ B<Conflicts>.
 
 =cut
 
-=head1 Input Format
+=head1 INPUT FORMAT
 
 The B<binary-repositories> argument is a list of filenames containing stanzas
 in the format of L<deb-control(5)>, separated by one blank line. For instance,
@@ -42,7 +42,8 @@ I</var/lib/apt/lists/> of a Debian system, are suitable. The
 B<source-repository> argument is the name of a file containing debian source
 control stanzas, separated by one blank line. For instance, the Sources files
 as found on a Debian mirror server, or in the directory I</var/lib/apt/lists/>
-of a Debian system, are suitable. 
+of a Debian system, are suitable. B<binary-repositories> and
+B<source-repository> can be passed in compresssed format (.gz , .bz2).
 
 Multi-arch annotations are correctly considered by dose-builddebcheck. Packages
 whose's architecture is neither the native architecture nor in the list of
@@ -175,7 +176,7 @@ Dump the cudf file.
 
 =back
 
-=head2 DEBIAN SPECIFIC OPTIONS
+=head2 DEBIAN OPTIONS
 
 =over 8
 
@@ -257,7 +258,7 @@ Compute the list of source packages in Sources for which
 it is not possible to install a build environment on i386, assuming that
 the binary packages described in file Packages are available: 
 
- dose-builddebcheck -v -f -e --arch amd64 \
+ dose-builddebcheck -v -f -e --deb-native-arch=amd64 \
  /var/lib/apt/lists/ftp.fr.debian.org_debian_dists_sid_main_binary-amd64_Packages\
  /var/lib/apt/lists/ftp.fr.debian.org_debian_dists_sid_main_source_Sources
 

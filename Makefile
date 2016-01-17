@@ -272,7 +272,7 @@ man:
 
 upload: doc
 	(cd doc && $(MAKE) upload)
-	rsync -avz -O dose3.docdir/ scm.gforge.inria.fr:/home/groups/dose/htdocs/doc/api/
+	rsync -avz -O dose3.docdir/ scm.gforge.inria.fr:/home/groups/dose/htdocs/API/
 
 .PHONY: \
 	common algo pef versioning debian rpm csw doseparseNoRpm doseparse \
