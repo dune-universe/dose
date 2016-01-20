@@ -16,7 +16,7 @@ val hash : Cudf.package -> int
 (** Sort function: sorts a CUDF packages list using the standard CUDF comparison operator in ascending order *)
 val sort : Cudf.package list -> Cudf.package list
 
-(** Data structures: *)
+(** {2 Data structures} *)
 
 (** Specialized hashtable for CUDF packages. *)
 module Cudf_hashtbl : (Hashtbl.S with type key = Cudf.package)

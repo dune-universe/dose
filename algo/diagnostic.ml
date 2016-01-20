@@ -240,6 +240,10 @@ let build_explanation_graph ?(addmissing=false) root l =
     )
   in
   let gr = G.create () in
+  (* we add the root, there might be a problem on related to packages
+     not related to the root, but failing to install because of a 
+     global constraint (like conflitting essential packages) *)
+  G.add_vertex gr (add_node root);
   let c = ref 0 in
   (* remove duplicate dependencies/reasons. XXX with long
      list of packages Hashtbl.hash could give wrong results *)
@@ -544,8 +548,8 @@ let print_error ?(condense=false) ?(minimal=false) pp root fmt l =
     Format.fprintf fmt "unsat-conflict: %a@]@," (CudfAdd.pp_vpkglist pp) [vpkg];
     Format.fprintf fmt "@[<v 1>pkg2:@,%a@]" (pp_package_list ~source:true pp) j;
     if not minimal then begin
-      let (pl1,_) = try DJ.shortest_path gr vroot vi with Not_found -> assert false in
-      let (pl2,_) = try DJ.shortest_path gr vroot vj with Not_found -> assert false in
+      let pl1 = try fst(DJ.shortest_path gr vroot vi) with Not_found -> [] in
+      let pl2 = try fst(DJ.shortest_path gr vroot vj) with Not_found -> [] in
       if pl1 <> [] then
         Format.fprintf fmt "@,@[<v 1>depchain1:@,%a@]" (pp_dependencies pp) pl1;
       if pl2 <> [] then

@@ -5,6 +5,7 @@ dose3 (4.2) UNRELEASED; urgency=low
  * the new yaml format also drops the architecture suffix in the package and 
    unsat-dependency fields
  * Add new function Depsolver.is_consistent and Debian.Debcudf.get_real_name
+ * Expose Diagnostic.request and Diagnostic.result
  * Update the yaml output of outdated (no more cudf-related cruft in package names)
  * bump yaml output-version to 1.1
 

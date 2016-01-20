@@ -10,10 +10,11 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
+(** {2 Un-installability reasons} *)
+
 (** The request provided to the solver *)
 type request = Cudf.package list
 
-(** {2 Un-installability reasons} *)
 type reason =
   |Dependency of (Cudf.package * Cudf_types.vpkg list * Cudf.package list)
   (** Not strictly a un-installability, Dependency (a,vpkglist,pkglist) is used
@@ -53,7 +54,8 @@ type result_int =
 
 type request_int = (int option * int list)
 
-(** {2 Helpers Functions } *)
+(** {3 Helpers Functions } *)
+
 (** Turn an integer result into a cudf result *)
 val diagnosis : Common.Util.projection -> Cudf.universe ->
   result_int -> request_int -> diagnosis
@@ -63,6 +65,8 @@ val result : Common.Util.projection -> Cudf.universe -> result_int -> result
 
 (** Turn an integer request into a cudf request *)
 val request : Cudf.universe -> 'a * int list -> Cudf.package list
+
+(** {2 Pretty Priting Functions } *)
 
 module ResultHash : Hashtbl.S with type key = reason
 
