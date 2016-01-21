@@ -189,7 +189,7 @@ The test script of the applications needs:
 python
 python-yaml
 
-./configure --without-libcudf --with-ocamlgraph --with-zip --with-oUnit --with-bz2 --with-rpm4
+./configure --with-ocamlgraph --with-zip --with-oUnit --with-bz2
 make
 make test
 make testlib

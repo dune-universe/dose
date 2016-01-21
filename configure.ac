@@ -4,15 +4,35 @@ AC_COPYRIGHT(Copyright 2009-2015 Mancoosi Project)
 AC_CONFIG_MACRO_DIR([m4])
 
 AC_CHECK_OCAML_OS_TYPE
-
-AC_PROG_OCAML
 if test "$OCAMLC" = "no"; then
  AC_MSG_ERROR([You must install the OCaml compiler to compile dose3])
 fi
 
+AX_COMPARE_VERSION([$OCAMLVERSION], [lt], [3.12.1],
+  AC_MSG_ERROR([Your version of OCaml: $OCAMLVERSION is not supported]))
+
+AX_COMPARE_VERSION([$OCAMLVERSION], [ge], [4.00.0])
+AC_SUBST(OCAML_4,"$ax_compare_version")
+AX_COMPARE_VERSION([$OCAMLVERSION], [ge], [4.01.0])
+AC_SUBST(OCAML_4_01,"$ax_compare_version")
+AX_COMPARE_VERSION([$OCAMLVERSION], [ge], [4.02.0])
+AC_SUBST(OCAML_4_02,"$ax_compare_version")
+
 AC_CHECK_PROG(CPPO_CHECK,cppo,yes)
 if test x"$CPPO_CHECK" != x"yes" ; then
     AC_MSG_ERROR([You must install the cppo pre-processor to compile dose3])
+fi
+# this option cause problems with old versions of cppo
+CPPOFLAGS="-V OCAML:$OCAMLVERSION"
+
+AC_PROG_OCAMLLEX
+if test "$OCAMLEX" = "no"; then
+  AC_MSG_ERROR([Cannot find ocamllex])
+fi
+
+AC_PROG_OCAMLYACC
+if test "$OCAMYACC" = "no"; then
+  AC_MSG_ERROR([Cannot find ocamlyacc])
 fi
 
 AC_PROG_FINDLIB
@@ -274,6 +294,8 @@ AC_SUBST(LN)
 #                #include <sched.h>
 #                ]])
 
+
+AC_SUBST(CPPOFLAGS)
 AC_SUBST(CONFIG_ZIP)
 AC_SUBST(PKG_ZIP)
 AC_SUBST(ZIP)
@@ -336,3 +358,4 @@ AC_CONFIG_FILES([
 ])
 AC_OUTPUT
 
+make printconf
