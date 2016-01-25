@@ -38,7 +38,7 @@ let vpkg_option ?default ?(metavar = " <vpkg>") () =
     Pef.Packages.parse_vpkg ("cmdline <vpkg>",(_loc,s))
   in
   OptParse.Opt.value_option metavar default
-  parse_vpkg (fun _ s -> Printf.sprintf "invalid vpackage '%s'" s)
+  parse_vpkg (fun _ s -> Printf.sprintf "Invalid vpackage '%s'" s)
 ;;
 
 (* this is a ,-separated list of vpkgs of the form "a (<c> v)" *)
@@ -48,7 +48,7 @@ let vpkglist_option ?default ?(metavar = " <vpkglst>") () =
     Pef.Packages.parse_vpkglist ("cmdline <vpkglst>",(_loc,s))
   in
   OptParse.Opt.value_option metavar default
-  parse_vpkglist (fun _ s -> Printf.sprintf "invalid vpackage list '%s'" s)
+  parse_vpkglist (fun _ s -> Printf.sprintf "Invalid vpackage list '%s'" s)
 ;;
 
 (* this is a ,-separated list of vpkgs of the form "a (= v)" *)
@@ -63,7 +63,7 @@ let pkglist_option ?default ?(metavar = " <pkglst>") () =
     ) (Pef.Packages.parse_vpkglist ("cmdline <pkglst>",(_loc,s)))
   in
   OptParse.Opt.value_option metavar default
-  parse_vpkglist (fun _ s -> Printf.sprintf "invalid package list '%s'" s)
+  parse_vpkglist (fun _ s -> Printf.sprintf "Invalid package list '%s'" s)
 ;;
 
 (* this is a ,-separated list of optimization criteria *)
@@ -73,7 +73,7 @@ let criteria_option ?default ?(metavar = " <criteria>") () =
     Criteria.parse_criteria ("cmdline <criteria>",(_loc,s))
   in
   OptParse.Opt.value_option metavar default
-  parse_criteria (fun _ s -> Printf.sprintf "invalid criteria list '%s'" s)
+  parse_criteria (fun _ s -> Printf.sprintf "Invalid criteria list '%s'" s)
 ;;
 
 (* *************************************** *)

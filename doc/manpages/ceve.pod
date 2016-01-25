@@ -67,6 +67,9 @@ Do no print any messages.
 
 =head2 INPUT OPTIONS
 
+Dose3 accepts files compressed with L<gzip(1)> or L<bzip2(1)>, depending on
+compile-time options.
+
 =over 8
 
 =item B<-t >I<input-spec>
@@ -75,43 +78,42 @@ Select the input type. Possible values are:
 
 =item .
 
-B<cudf> for cudf files 
+B<cudf> Cudf file format 
 
 =item .
 
-B<csw>
+B<pef> PEF file format. The PEF format (Package Exchange Format) is a generic 822
+file format used to encode package dependencies. B<deb>, B<opam>, B<debsrc> and 
+B<edsp> are all based on the pef format
 
 =item .
 
-B<opam>
+B<csw> OpenCSW Solaris packages binary format
 
 =item .
 
-B<deb> for Debian binary package files, also known as Packages files. Possibly
-compressed with L<gzip(1)> or L<bzip2(1)>, depending on compile-time options
-for dose3.
+B<opam> Opam Package universe in Opam/PEF format. This format is a 822 textual 
+format encoding the opam universe.
+
+=item .
+
+B<deb> for Debian binary package files, also known as Packages files.
 
 =item .
 
 B<debsrc> for Debian source package files, also knows as Sources files.
-Possibly compressed with L<gzip(1)> or L<bzip2(1)>, depending on compile-time
-options for dose3.
 
 =item .
 
-B<edsp> for apt-get External Dependency Solver Protocol
+B<edsp> apt-get External Dependency Solver Protocol
 
 =item .
 
-B<eclipse> for Eclipse (p2) package files 
+B<hdlist> RPM hdlists. Binary file format.
 
 =item .
 
-B<hdlist> for RPM hdlists 
-
-=item .
-
-B<synthesis> for urpmi synthesis hdlists 
+B<synthesis> urpmi synthesis hdlists. XML Based format 
 
 =item B<--trim>
 
@@ -121,21 +123,25 @@ Consider only installable packages.
 
 Check only the latest version of each package
 
-=item B<-c, --cone=>I<pkgspec>
+=item B<-c, --cone=>I<vpkglist>
 
 The B<match> of an atomic dependency (a package name p possibly together with a
 version constraint c) is the set of all packages in the repository with name p,
 and a version that satisfies the constraint c.  The dependency cone of a
 package p is the set of all matches of all atomic dependencies of p, together
-with their respective dependency cones. 
-The package specification I<pkgspec> is a list of packages (separated by a
-semicolon), where each package is specified as follows:
-(I<name>,I<version>).
+with their respective dependency cones. The package specification I<pkgspec> is
+a list of packages (separated by a semicolon), where each package is specified
+as follows: (I<name>,I<version>).
 
 This option extracts the union of the dependency cones of all packages selected
-by I<pkgspec>.
+by I<vpkglist>.
 
-=item B<-r, --rcone=>I<pkgspec> 
+Example:
+=over 12
+
+=item -c 'golang-golang-x-tools (= 1:0.0~git20150716.0.87156cb+dfsg1-4),golang-golang-x-tools-dev'
+
+=item B<-r, --rcone=>I<vpkglist> 
 
 Using the same syntax as in B<-c>, this option use the reverse dependency
 relation to make the transitive closure.
@@ -306,3 +312,11 @@ B<patchutils>:
 		debsrc:///var/lib/apt/lists/*_dists_sid_main_source_Sources \
 		deb:///var/lib/apt/lists/*_dists_sid_main_binary-amd64_Packages \
 		| grep-dctrl -n -s Package '' | sort -u
+
+Find the source packages (-T debsrc) that have in a relation builds-from with
+all the binary package in the reverse dependency cone of B<libssl-dev> (a
+specific version constraint).
+
+  dose-ceve --deb-builds-from --deb-native-arch=amd64 -T debsrc \
+  -r 'libssl-dev (>= 0.9.8)' deb://Sid-amd64-Packages-050812.bz2 \
+  debsrc://Sid-Sources-050812.bz2
