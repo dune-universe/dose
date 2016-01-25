@@ -74,10 +74,16 @@ In case of normal program termination:
   uninstallable.
 *)
 let if_application ?(alternatives=[]) filename main =
-  let open Filename in
   let normalize f = 
-    try chop_extension(basename f) 
-    with Invalid_argument _ -> (basename f) 
+    let bf = Filename.basename f in
+    try
+      if String.ends_with bf ".p.byte" then
+        String.slice ~last:(String.find bf ".p.byte") bf
+      else if String.ends_with bf ".p.native" then
+        String.slice ~last:(String.find bf ".p.native") bf
+      else
+        Filename.chop_extension bf
+    with Invalid_argument _ -> bf
   in
   let names = List.map normalize (filename::alternatives) in
   let invoked_as = normalize Sys.argv.(0) in
