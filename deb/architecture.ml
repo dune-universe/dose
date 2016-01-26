@@ -52,6 +52,7 @@ let triplettable = ref [
   (("gnuabi64","linux","mips64"),    "mips64");             (* line 15 *)
   (("gnuspe","linux","powerpc"),     "powerpcspe");
   (("gnux32","linux","amd64"),       "x32");
+  (("gnuhardened1","linux","<cpu>"), "<cpu>");
   (("gnu","linux","<cpu>"),          "<cpu>");
   (("gnu","kfreebsd","<cpu>"),       "kfreebsd-<cpu>");
   (("gnu","knetbsd","<cpu>"),        "knetbsd-<cpu>");      (* line 20 *)
