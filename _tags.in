@@ -15,6 +15,7 @@ true: -traverse
 
 <common/tests.*>: use_common
 <algo/tests.*>: use_common
+<versioning/tests.*>: use_common
 <pef/tests.*>: use_common, use_versioning
 <opam/tests.*>: use_common, use_versioning, use_pef
 <deb/tests.*>: use_common, use_versioning, use_pef, use_algo
