@@ -5,7 +5,7 @@ let returns_result ?(printer=(fun _ -> "(FIXME)")) function_to_test expected_res
 and raises_failure function_to_test failure_text =
   (fun args () -> assert_raises (Failure failure_text) (fun () -> function_to_test args) )
 
-open Semver
+open SemverNode
 let get_major x = x.major
 let get_minor x = x.minor
 let get_patch x = x.patch
@@ -13,7 +13,7 @@ let get_patch x = x.patch
 let printer x = string_of_int x
 
 let test_parse_version_major =
-  let function_to_test (v,full) = get_major (parse_version ~full v) in
+  let function_to_test (v,full) = get_major (parse_version full v) in
   let returns = returns_result ~printer function_to_test in
   returns, [
     ("1.2.3",true,1);
@@ -28,7 +28,7 @@ let test_parse_version_major =
   ]
     
 let test_parse_version_minor =
-  let function_to_test (v,full) = get_minor (parse_version ~full v) in
+  let function_to_test (v,full) = get_minor (parse_version full v) in
   let returns = returns_result ~printer function_to_test in
   returns, [
     ("1.1.3",true, 1);
@@ -43,7 +43,7 @@ let test_parse_version_minor =
   ]
 
 let test_parse_version_patch =
-  let function_to_test (v,full) = get_patch (parse_version ~full v) in
+  let function_to_test (v,full) = get_patch (parse_version full v) in
   let returns = returns_result ~printer function_to_test in
   returns, [
     ("1.2.1",true, 1);
@@ -63,7 +63,7 @@ let make_test_cases_parse (assert_function,triplets) =
   ) triplets
 
 let test_parse_and_compare_gt =
-  let function_to_test (v1,v2,full) = parse_and_compare ~full v1 v2 in
+  let function_to_test (v1,v2,full) = parse_and_compare full v1 v2 in
   let returns = returns_result ~printer function_to_test in
   returns,[
     ("0.0.0","0.0.0-foo",true,1);
@@ -101,7 +101,7 @@ let test_parse_and_compare_gt =
   ]
 
 let test_parse_and_compare_eq =
-  let function_to_test (v1,v2,full) = parse_and_compare ~full v1 v2 in
+  let function_to_test (v1,v2,full) = parse_and_compare full v1 v2 in
   let returns = returns_result ~printer function_to_test in
   returns,[
     ("1.2.3","v1.2.3",true,0);
