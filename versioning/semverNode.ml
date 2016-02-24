@@ -130,8 +130,13 @@ let parse_version full version =
       build = Pcre.split sep_re parsed.(5)
     }
   with Not_found ->
-    warning "Invalid version: %s" version;
     raise (Invalid_argument "Invalid version")
+
+let parse_version_option full version =
+  try
+    Some (parse_version full version)
+  with
+    Invalid_argument _ -> None
 
 (*Compare  two elements of the prerelease part of a version*)
 let compare_identifiers = function

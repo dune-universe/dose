@@ -30,7 +30,10 @@ type version = {
     Raise Invalid_argument if the version can not be parsed *)
 val parse_version : bool -> string -> version
 
+val parse_version_option : bool -> string -> version option
+
 val compare_version : version -> version -> int
+
 
 (** Compare two strings intepreted as semantic versions. 
     If full is false a more forgiving regular expression is used for parsing. 
