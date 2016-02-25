@@ -161,9 +161,9 @@ let tests_parsing =
     (SOr ((SLt (SVersion "2")), (SAnd (SGt (SVersion "3"), SLt (SVersion "4")))), "<2||>3 <4\n");
     (SHyphen (SVersion "1", SVersion "2"), "1 - 2\n");
     (SHyphen (SVersion "1.2.3", SVersion "2"), "1.2.3 - 2\n");
-    (SStar, "\n");
-    (SVersion "1.x", "1.x\n");
-    (SVersion "1.2.x", "1.2.x\n");
+    (SEq SStar, "\n");
+    (SEq (SVersion "1.x"), "1.x\n");
+    (SEq (SVersion "1.2.x"), "1.2.x\n");
     (STilde (SVersion "1.2"), "~1.2\n");
     (STilde (SVersion "1.2.3"), "~1.2.3\n");
     (STilde (SVersion "1.2"), "~ 1.2\n");
@@ -175,7 +175,6 @@ let tests_parsing =
     (SCaret (SVersion "1.2.3+build"), "^1.2.3+build\n");
     (SGte SStar, ">=*\n");
     (SHyphen (SVersion "1.2.3pre+asdf", SVersion "2.4.3-pre+asdf"), "1.2.3pre+asdf - 2.4.3-pre+asdf\n");
-    (SStar, "\n");
   ]
 
 
@@ -302,6 +301,7 @@ let tests_debian_expresion =
     ("A (>= 1.2.3) | A (<< 2.0.0)", "A", (Or (Gte (Version v1), Lt (Version v2))));
     ("A (>= 1.2.3) | A (<< 1.2.3-beta.2)", "A", (Or (Gte (Version v1), Lt (Version v3))));
     ("A (>= 1.2.3) | A (<< 1.2.3-beta+build)", "A", (Or (Gte (Version v1), Lt (Version v4))));
+    ("A (= 1.2.3)", "A", (Eq (Version v1)));
   ]
 
 let make_test_debian_expresion =
