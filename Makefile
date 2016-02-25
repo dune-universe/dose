@@ -111,6 +111,17 @@ $(DOSELIBS)/opam.%: opam/*.ml opam/*.mli $(DOSELIBS)/pef.%
 	  fi ; \
 	done
 
+
+$(DOSELIBS)/npm.%: npm/*.ml npm/*.mli $(DOSELIBS)/pef.%
+	$(OCAMLBUILD) $(OBFLAGS) npm/npm.otarget
+	@for i in _build/npm/npm.*; do \
+	  if [ -e $$i ]; then \
+	  cp $$i $(DOSELIBS) ; \
+		rm $$i ;\
+	  rm -f $(DOSELIBS)/*.mlpack $(DOSELIBS)/*.cmx ; \
+	  fi ; \
+	done
+
 $(DOSELIBS)/rpm.%: rpm/*.ml $(DOSELIBS)/algo.%
 	$(OCAMLBUILD) $(OBFLAGS) rpm/rpm.otarget
 	@for i in _build/rpm/rpm.*; do \

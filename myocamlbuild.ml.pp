@@ -11,12 +11,12 @@ Ocamlbuild_pack.Flags.mark_tag_used "link_" ;;
 let modules_dirs = [
   "common"; "versioning"; "pef"; "opam"; "deb"; "opencsw"; "rpm"; "algo";
   "doseparse"; "doseparseNoRpm"; "applications"; "experimental"; "libcudf";
-  "experimental/dudftocudf";
+  "experimental/dudftocudf"; "npm";
 ];;
 
 let libraries = [
   "cudf";"common";"versioning"; "pef"; "opam"; "debian"; "csw";"rpm";"algo";
-  "doseparse";"doseparseNoRpm";
+  "doseparse";"doseparseNoRpm"; "npm";
 ];;
 
 let doselibs = "doselibs" ;;

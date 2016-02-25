@@ -80,7 +80,7 @@ active switch and the not available switches for a package is
 empty *)
 let parse_package_stanza ?(extras=[]) par =
   try
-    Some (new package ~depends ~conflicts ~provides ~depopts ~extras:(extras,None) par)
+    Some (new package par)
   with 
   |Pef.Packages.IgnorePackage s -> begin
       let n = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_name "package" par in

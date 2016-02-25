@@ -101,6 +101,7 @@ endif
 
 LIBNAMES += common/common \
 						versioning/versioning \
+						npm/npm \
 						pef/pef \
 						deb/debian \
 						opencsw/csw \
@@ -158,5 +159,5 @@ endif
 
 #ounit support
 ifeq ("@HAS_OUNIT@","yes")
-  TESTS= common versioning deb algo pef opam $(TEST_RPM)
+  TESTS= common versioning npm deb algo pef opam $(TEST_RPM)
 endif

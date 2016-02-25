@@ -18,6 +18,7 @@ true: -traverse
 <versioning/tests.*>: use_common
 <pef/tests.*>: use_common, use_versioning
 <opam/tests.*>: use_common, use_versioning, use_pef
+<npm/tests.*>: use_common, use_versioning, use_pef
 <deb/tests.*>: use_common, use_versioning, use_pef, use_algo
 <rpm/tests.*>: use_common, use_versioning, @USE_RPM@, use_algo, package(re.str)
 
@@ -28,6 +29,7 @@ true: -traverse
 <algo/*.ml{i,}>: use_common, @PKG_OCAMLGRAPH@
 <pef/*.ml{i,}>: use_common, use_debian
 <opam/*.ml{i,}>: use_common, use_pef
+<npm/*.ml{i,}>: use_common, use_pef
 <opencsw/*.ml{i,}>: use_common, use_versioning
 <doseparse/*.ml{i,}>: use_common, use_versioning, use_debian, use_opam, use_pef, use_csw, @USE_RPM@
 <doseparseNoRpm/*.ml{i,}>: use_common, use_versioning, use_debian, use_opam, use_pef, use_csw
@@ -42,6 +44,7 @@ true: -traverse
 <deb/*.cmx> and not <deb/debian.cmx>: for-pack(Debian)
 <pef/*.cmx> and not <pef/pef.cmx>: for-pack(Pef)
 <opam/*.cmx> and not <opam/opam.cmx>: for-pack(Opam)
+<npm/*.cmx> and not <npm/npm.cmx>: for-pack(Npm)
 <opencsw/*.cmx> and not <opencsw/csw.cmx>: for-pack(Csw)
 <rpm/*.cmx> and not <rpm/rpm.cmx>: for-pack(Rpm)
 <doseparse/*.cmx> and not <doseparse/doseparse*.cmx>: for-pack(Doseparse)

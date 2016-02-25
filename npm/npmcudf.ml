@@ -136,26 +136,25 @@ let encode_vpkglist tables switch vpkglist =
 (** convert a opam request to a cudf request *)
 let requesttocudf tables universe request =
   let remove = List.map (fun (n,_) -> (n,None)) in
-  let switch = request.Packages.switch in
   if request.Packages.dist_upgrade then
     let to_upgrade = function
       |[] ->
         let filter pkg = pkg.Cudf.installed in
         let l = Cudf.get_packages ~filter universe in
         List.map (fun pkg -> (pkg.Cudf.package,None)) l
-      |l -> encode_vpkglist tables switch l
+      |l -> encode_vpkglist tables "" l
     in
     {Cudf.default_request with
     Cudf.request_id = "Opam";
     Cudf.upgrade = to_upgrade request.Packages.install;
-    Cudf.remove = remove (encode_vpkglist tables switch request.Packages.remove);
+    Cudf.remove = remove (encode_vpkglist tables "" request.Packages.remove);
     }
   else
     {Cudf.default_request with
     Cudf.request_id = "Opam";
-    Cudf.install = encode_vpkglist tables switch request.Packages.install;
-    Cudf.remove = remove (encode_vpkglist tables switch request.Packages.remove);
-    Cudf.upgrade = encode_vpkglist tables switch request.Packages.upgrade;
+    Cudf.install = encode_vpkglist tables "" request.Packages.install;
+    Cudf.remove = remove (encode_vpkglist tables "" request.Packages.remove);
+    Cudf.upgrade = encode_vpkglist tables "" request.Packages.upgrade;
     }
 
 let load_list ?(options=default_options) compare l =

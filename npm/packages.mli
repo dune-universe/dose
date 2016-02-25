@@ -7,6 +7,10 @@ type request = {
   preferences : string;
 }
 
+type options =
+  Pef.Packages_types.architecture * Pef.Packages_types.architecture list *
+  Pef.Packages_types.buildprofile list
+
 val default_request : request
 
 val parse_request_stanza : Common.Format822.stanza -> request
@@ -29,6 +33,7 @@ class package :
     method provides : Pef.Packages_types.vpkglist
     method recommends : Pef.Packages_types.vpkgformula
     method extras : (string * string) list
+    method installed : Pef.Packages_types.installed
 
     method get_extra : string -> string
     method set_extras : (string * string) list -> 'a
@@ -38,8 +43,7 @@ class package :
     method pp : out_channel -> unit
   end
 
-val parse_package_stanza : options ->
-  ?extras:(string * Pef.Packages.parse_extras_f option) list ->
+val parse_package_stanza : ?extras:(string * Pef.Packages.parse_extras_f option) list ->
   Common.Format822.stanza -> package option
 
 val packages_parser : ?request:bool -> request * package list ->
