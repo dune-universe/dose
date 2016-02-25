@@ -16,7 +16,7 @@ open RangeDesugar
 main:
     comparator EOL {$1}
     | range EOL {$1}
-    | version EOL {$1}
+    | version EOL {SEq $1}
 ;
 
 
