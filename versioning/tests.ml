@@ -274,6 +274,39 @@ let make_test_try_parse_version =
   ) tests_try_parse_version
 
 
+(**Parser of dependencies of npm*)
+
+let tests_parse_deps =
+  [
+    ([], "{}");
+    ([("hello", "world")], "{\"hello\":\"world\"}");
+    ([("hello", "world"); ("xxx", "yyy")], "{\"hello\":\"world\",\"xxx\":\"yyy\"}");
+    ([("hello", "1.2.3-beta.4"); ("xxx", "yyy")], "{\"hello\":\"1.2.3-beta.4\",\"xxx\":\"yyy\"}");
+  ]
+
+let make_test_parse_deps =
+  List.map (fun (result, x) ->
+    (x >:: fun _ -> assert_equal result (RangeNode.parse_npm_deps x))
+  ) tests_parse_deps
+
+(**Test debian expresion*)
+
+let tests_debian_expresion =
+  let v1 = try_parse_version "1.2.3" in
+  let v2 = try_parse_version "2.0.0" in
+  [
+    ("A (= 1.2.3)", "A", (Eq (Version v1)));
+    ("A (>= 1.2.3), A (<< 2.0.0)", "A", (And (Gte (Version v1), Lt (Version v2))));
+    ("A (>= 1.2.3) | A (<< 2.0.0)", "A", (Or (Gte (Version v1), Lt (Version v2))));
+  ]
+
+let make_test_debian_expresion =
+  let printer x = x in
+  List.map (fun (result, name, x) ->
+    (result >:: fun _ -> assert_equal result (RangeDesugar.debian_of_expr name x) ~printer: printer)
+  ) tests_debian_expresion
+
+
 let suite = 
   "suite" >::: [ 
     "test_parse_version_major" >::: make_test_cases_parse test_parse_version_major;
@@ -284,6 +317,8 @@ let suite =
     "test parsing ranges" >::: make_test_parse_range;
     "test desugar" >::: make_test_desugar;
     "test try desugar" >::: make_test_try_parse_version;
+    "test parse deps" >::: make_test_parse_deps;
+    "test debian expresion" >::: make_test_debian_expresion;
   ]
 
 let main () = OUnit.run_test_tt_main suite ;;

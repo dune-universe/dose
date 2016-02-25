@@ -51,3 +51,7 @@ val string_of_version_range : (version_item * version_item * version_item * iden
 
 (** Transform a string into an operator and append the expresion to it*)
 val string_to_operator : string -> version_expr_sugar -> version_expr_sugar
+
+(** Transforms a npm's expresion into a debian dependency format. The first
+ * string is the name of the package subject to the constrains*)
+val debian_of_expr : string -> version_expr -> string

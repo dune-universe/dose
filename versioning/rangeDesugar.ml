@@ -268,3 +268,21 @@ let rec string_of_range expr =
   | And (v1, v2) -> Printf.sprintf "%s %s" (string_of_range v1) (string_of_range v2)
   | Or (v1, v2) -> Printf.sprintf "%s||%s" (string_of_range v1) (string_of_range v2)
   | Eq v -> Printf.sprintf "=%s" (string_of_range v)
+
+
+let rec debian_of_expr name expr =
+  let get_version v =
+    match v with
+    | Version v -> v
+    | _ -> raise (Invalid_argument "There is not a version in this structure")
+  in
+  let version_str v = string_of_version_range (get_version v) in
+  match expr with
+  | Lt v -> Printf.sprintf "%s (<< %s)" name (version_str v)
+  | Gt v -> Printf.sprintf "%s (>> %s)" name (version_str v)
+  | Lte v -> Printf.sprintf "%s (<= %s)" name (version_str v)
+  | Gte v -> Printf.sprintf "%s (>= %s)" name (version_str v)
+  | Eq v -> Printf.sprintf "%s (= %s)" name (version_str v)
+  | Version v -> version_str (Version v)
+  | And (x1, x2) -> Printf.sprintf "%s, %s" (debian_of_expr name x1) (debian_of_expr name x2)
+  | Or (x1, x2) -> Printf.sprintf "%s | %s" (debian_of_expr name x1) (debian_of_expr name x2)
