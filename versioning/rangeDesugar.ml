@@ -20,10 +20,10 @@ let string_of_version_range (major, minor, patch, pre_list, build_list) =
     | NumericIdentifier n -> string_of_int n
     | StringIdentifier x -> x
   in
-  let separator_pre = "." in
-  let separator_build = "+" in
-  let pre = List.fold_left (fun acc x -> Printf.sprintf "%s%s%s" acc separator_pre (string_of_identifier x)) "" pre_list in
-  let build = List.fold_left (fun acc x -> Printf.sprintf "%s%s%s" acc separator_build x) "" build_list in
+  let separator_pre acc = if acc = "" then "" else "." in
+  let separator_build acc = if acc = "" then "" else "+" in
+  let pre = List.fold_left (fun acc x -> Printf.sprintf "%s%s%s" acc (separator_pre acc) (string_of_identifier x)) "" pre_list in
+  let build = List.fold_left (fun acc x -> Printf.sprintf "%s%s%s" acc (separator_build acc) x) "" build_list in
   let others =
     match (pre, build) with
     | ("", "") -> ""

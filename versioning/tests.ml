@@ -294,10 +294,14 @@ let make_test_parse_deps =
 let tests_debian_expresion =
   let v1 = try_parse_version "1.2.3" in
   let v2 = try_parse_version "2.0.0" in
+  let v3 = try_parse_version "1.2.3-beta.2" in
+  let v4 = try_parse_version "1.2.3-beta+build" in
   [
     ("A (= 1.2.3)", "A", (Eq (Version v1)));
     ("A (>= 1.2.3), A (<< 2.0.0)", "A", (And (Gte (Version v1), Lt (Version v2))));
     ("A (>= 1.2.3) | A (<< 2.0.0)", "A", (Or (Gte (Version v1), Lt (Version v2))));
+    ("A (>= 1.2.3) | A (<< 1.2.3-beta.2)", "A", (Or (Gte (Version v1), Lt (Version v3))));
+    ("A (>= 1.2.3) | A (<< 1.2.3-beta+build)", "A", (Or (Gte (Version v1), Lt (Version v4))));
   ]
 
 let make_test_debian_expresion =
