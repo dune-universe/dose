@@ -51,3 +51,13 @@ val packages_parser : ?request:bool -> request * package list ->
 
 val input_raw_in : IO.input -> request * package list
 val input_raw : string -> request * package list
+
+(** Transform a string with the dependencies of an npm package into a
+ * vpkgformula
+ *
+ * Example input: {"p1":"1.2.3", "p2":"~1.3.4"}
+ *
+ * Raise: Parse_error if we can't parse the input
+ *        Invalid_argument: If the syntax of the constrains is not a valid range
+ * *)
+val parse_deps : string -> Pef.Packages_types.vpkgformula

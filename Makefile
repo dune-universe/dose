@@ -209,6 +209,7 @@ endif
 endif
 
 testlib: 
+	echo $(TESTS)
 	@for i in $(TESTS); do\
 		echo "#######START TESTING $$i" ;\
 		$(OCAMLBUILD) $(APPFLAGS) $$i/tests.$(OCAMLEXT) || exit 1;\

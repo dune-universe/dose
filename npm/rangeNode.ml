@@ -7,7 +7,8 @@ let parse str =
   Ranges_node_parser.main Ranges_node_lexer.token lexbuf
 
 let parse_and_desugar str =
-  let parsed = parse str in
+  let appended = Printf.sprintf "%s\n" str in
+  let parsed = parse appended in
   RangeDesugar.desugar parsed
 
 let parse_npm_deps str =
@@ -19,4 +20,5 @@ let npm_to_debian str =
   let desugared = List.map (fun (package, const) ->
       (package, parse_and_desugar const)
     ) deps in
-  List.map (fun (package, expr) -> RangeDesugar.debian_of_expr package expr) desugared
+  let debian = List.map (fun (package, expr) -> RangeDesugar.debian_of_expr package expr) desugared in
+  List.concat debian

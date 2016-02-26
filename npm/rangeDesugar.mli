@@ -1,5 +1,5 @@
 
-open SemverNode
+open Versioning.SemverNode
 
 type version_item =
   | NumberItem of int
@@ -34,10 +34,16 @@ type version_expr =
  * operator *)
 val desugar : version_expr_sugar -> version_expr
 
-(** Parses a complete and partial version *)
+(** Parses a complete and partial version
+ *
+ * Raise: Invalid_argument if the version is not valid
+ * *)
 val try_parse_version : string -> (version_item * version_item * version_item * identifier list * string list)
 
-(** Generate a string of a tree of ranges*)
+(** Generate a string of a tree of ranges
+ *
+ * Raise: Invalid_argument if the version is not valid
+ * *)
 val string_of_expr : version_expr_sugar -> string
 
 (** Compare two expression tree*)
@@ -54,4 +60,4 @@ val string_to_operator : string -> version_expr_sugar -> version_expr_sugar
 
 (** Transforms a npm's expresion into a debian dependency format. The first
  * string is the name of the package subject to the constrains*)
-val debian_of_expr : string -> version_expr -> string
+val debian_of_expr : string -> version_expr -> Pef.Packages_types.vpkg list list

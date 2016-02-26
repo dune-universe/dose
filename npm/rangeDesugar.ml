@@ -1,6 +1,6 @@
 
 module Pcre = Re_pcre
-open SemverNode
+open Versioning.SemverNode
 
 
 type version_item =
@@ -174,7 +174,7 @@ let desugar_x_range v =
     let v1 = Version (NumberItem x1, NumberItem x2, NumberItem 0, pre, build) in
     let v2 = Version (NumberItem x1, NumberItem (x2 + 1), NumberItem 0, pre, build) in
     And (Gte v1, Lt v2)
-  | _ -> raise (Invalid_argument (string_of_version_range version))
+  | _ -> Version version
 
 let desugar_tilde v1 =
   let parsed = get_version v1 in
@@ -278,11 +278,14 @@ let rec debian_of_expr name expr =
   in
   let version_str v = string_of_version_range (get_version v) in
   match expr with
-  | Lt v -> Printf.sprintf "%s (<< %s)" name (version_str v)
-  | Gt v -> Printf.sprintf "%s (>> %s)" name (version_str v)
-  | Lte v -> Printf.sprintf "%s (<= %s)" name (version_str v)
-  | Gte v -> Printf.sprintf "%s (>= %s)" name (version_str v)
-  | Eq v -> Printf.sprintf "%s (= %s)" name (version_str v)
-  | Version v -> version_str (Version v)
-  | And (x1, x2) -> Printf.sprintf "%s, %s" (debian_of_expr name x1) (debian_of_expr name x2)
-  | Or (x1, x2) -> Printf.sprintf "%s | %s" (debian_of_expr name x1) (debian_of_expr name x2)
+  | Lt v -> [[((name, None), Some ("<<", version_str v))]]
+  | Gt v -> [[((name, None), Some (">>", version_str v))]]
+  | Lte v -> [[((name, None), Some ("<=", version_str v))]]
+  | Gte v -> [[((name, None), Some (">=", version_str v))]]
+  | Eq v -> [[((name, None), Some ("=", version_str v))]]
+  | Version v -> [[((name, None), Some ("=", version_str (Version v)))]]
+  | And (x1, x2) ->
+      let l1 = List.concat (debian_of_expr name x1) in
+      let l2 = List.concat (debian_of_expr name x2) in
+      [List.rev_append l1 l2]
+  | Or (x1, x2) -> List.rev_append (debian_of_expr name x1) (debian_of_expr name x2)

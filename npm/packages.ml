@@ -75,12 +75,15 @@ class package ?(name=("package",None)) ?(version=("version",None)) ?(depends=("d
 
 end
 
-(* a stanza is not considered if the intersection between the
-active switch and the not available switches for a package is
-empty *)
+(* We generate each one of the dependencies so each internal lists are ands and
+ * the outer elements are ors *)
+let parse_deps str = RangeNode.npm_to_debian str
+
 let parse_package_stanza ?(extras=[]) par =
   try
-    Some (new package par)
+    let f = Pef.Packages.parse_s ~default:"" ~required:true Pef.Packages.parse_string in
+    let depends = ("depends", Some (parse_deps (f "depends" par))) in
+    Some (new package ~depends par)
   with 
   |Pef.Packages.IgnorePackage s -> begin
       let n = Pef.Packages.parse_s ~default:"?" Pef.Packages.parse_name "package" par in
