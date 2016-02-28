@@ -12,36 +12,42 @@
  
 (** this functions follow the semantic versioning specification http://semver.org/ *)
 
-(** A prerelease can have strings or numbers *)
-type identifier =
-  | NumericIdentifier of int
-  | StringIdentifier of string
+(** Raw version components. Raw versions are not strictly semantic versions, but
+    can also contains characters as 'x' and 'X' . Raw versions must be converted
+    to semantic versions. *)
+type raw_version = (string * string * string * string list * string list)
 
+type ident = S of string | N of int
 type version = {
   major: int;
   minor: int;
   patch: int;
-  pre: identifier list; (** A list of dot splited elements *)
+  pre: ident list;
   build: string list;
 }
 
-(** Parses a string into a version. If full is false a more forgiving
-    regular expression is used for parsing.
-    Raise Invalid_argument if the version can not be parsed *)
-val parse_version : bool -> string -> version
+(** Parses a string into a version. 
+    Fail if the version can not be parsed *)
+val parse_raw_version : string -> raw_version
 
-val parse_version_option : bool -> string -> version option
+(** Parses a string into a version. 
+    Fail if the version can not be parsed *)
+val parse_version : string -> version
 
+(** Raise Failure if the string cannot be converted *)
+val convert : raw_version -> version
+
+(** recompose a version string. For all v:
+    [equal(v,compose(parse_version v)) = true].  There may, however, be
+    small syntactic differences between [v] and [compose(parse_version v)] *)
+val compose : version -> string
+
+(** Compare two versions. Raw versions must be converted to be compared *)
 val compare_version : version -> version -> int
 
-
-(** Compare two strings intepreted as semantic versions. 
-    If full is false a more forgiving regular expression is used for parsing. 
-    Raise Invalid_argument if one of the versions can not be parsed *)
-val parse_and_compare : bool -> string -> string -> int
-
-(** like [parse_and_compare] always using the full parser *)
-val compare : bool -> string -> string -> int
+(** Compare two versions. Fail if one of the versions cannot be 
+    parsed or compared *)
+val compare : string -> string -> int
 
 (** Equality between two versions *)
-val equal : bool -> string -> string -> bool
+val equal : string -> string -> bool

@@ -78,10 +78,10 @@ val decompose: string -> version_analysis
 val compose: version_analysis -> string 
 
 (** return a version without its epoch and without its binNMU part *)
-val  strip_epoch_binnmu: string -> version_analysis
+val strip_epoch_binnmu: string -> version_analysis
 
 (** return a version without its epoch part *)
-val  strip_epoch: string -> version_analysis
+val strip_epoch: string -> version_analysis
 
 (** return the epoch component of the version. empty string if none *)
 val extract_epoch: string -> string

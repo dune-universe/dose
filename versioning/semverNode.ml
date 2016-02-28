@@ -22,128 +22,94 @@ open Common
 let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
-(* ************************ *)
-let number_identifier_str = "0|[1-9]\\d*"
-
-let number_identifier_loose_str = "[0-9]+"
-
-let non_number_identifier_str = "\\d*[a-zA-Z-][a-zA-Z0-9-]*"
-
-let main_version_builder ident =
-  Printf.sprintf "(%s)\\.(%s)\\.(%s)" ident ident ident
-
-let main_version_str =
-  main_version_builder number_identifier_str
-
-let main_version_loose_str =
-  main_version_builder number_identifier_loose_str
-
-let pre_release_identifier_builder number_ident non_number_ident =
-  Printf.sprintf "(?:%s|%s)" number_ident non_number_ident
-
-let pre_release_identifier_str =
-  pre_release_identifier_builder number_identifier_str non_number_identifier_str
-
-let pre_release_identifier_loose_str =
-  pre_release_identifier_builder number_identifier_loose_str non_number_identifier_str
-
-let pre_release_builder pre_release_ident =
-  Printf.sprintf "(?:-(%s(?:\\.%s)*))" pre_release_ident pre_release_ident
-
-let pre_release_str =
-  pre_release_builder pre_release_identifier_str
-
-let pre_release_loose_str =
-  pre_release_builder pre_release_identifier_loose_str
-
-let build_identifier_str = "[0-9A-Za-z-]+"
-
-let build_str =
-  Printf.sprintf "(?:\\+(%s(?:\\.%s)*))" build_identifier_str build_identifier_str
-
-let full_plain_str =
-  Printf.sprintf "v?%s%s?%s?" main_version_str pre_release_str build_str
-
-let full_str = Printf.sprintf "^%s$" full_plain_str
-
-let loose_plain_str =
-  Printf.sprintf "[v=\\s]*%s%s?%s?" main_version_loose_str pre_release_loose_str build_str
-
-let loose_str = Printf.sprintf "^%s$" loose_plain_str
-(* ********************************* *)
-
-let loose_re = Pcre.regexp loose_str
-let full_re = Pcre.regexp full_str
-let sep_re = Pcre.regexp "\\." 
-
-type identifier =
-  | NumericIdentifier of int
-  | StringIdentifier of string
-
+type raw_version = (string * string * string * string list * string list)
+type ident = S of string | N of int
 type version = {
   major: int;
   minor: int;
   patch: int;
-  pre: identifier list;
+  pre: ident list;
   build: string list;
 }
 
-type version_expr =
-  | And of (version_expr * version_expr)
-  | Or of (version_expr * version_expr)
-  | Version of string
-  | Gte of version_expr
-  | Lte of version_expr
-  | Gt of version_expr
-  | Lt of version_expr
-  | Star
-
-let print_version v =
-  let pre =
-    match v.pre with
-    | [] -> [StringIdentifier "None"]
-    | x -> x
+let compose_raw (major,minor,patch,pre,build) =
+  let str = 
+    match (major,minor,patch) with
+    |"","","" -> Printf.sprintf "*"
+    |_,"","" -> Printf.sprintf "%s" major
+    |_,_,"" -> Printf.sprintf "%s.%s" major minor
+    |_,_,_ -> Printf.sprintf "%s.%s.%s" major minor patch
   in
-  let pre_to_string p =
-    match p with
-    | StringIdentifier s -> "Str: " ^ s
-    | NumericIdentifier n -> "Num: " ^ (string_of_int n)
-  in
-  let pre_str = List.fold_left (fun acc x -> Printf.sprintf "%s %s" acc (pre_to_string x)) "" pre in
-  Printf.printf "major = %d; minor = %d; patch = %d; pre = %s" v.major v.minor v.patch pre_str
+  let str_pre l = String.concat "." l in
+  let str_build l = String.concat "." l in
+  match pre,build with
+  |[],[] -> str
+  |l,[] -> Printf.sprintf "%s-%s" str (str_pre l)
+  |[],l -> Printf.sprintf "%s+%s" str (str_build l)
+  |lp,lb -> Printf.sprintf "%s-%s+%s" str (str_pre lp) (str_build lb)
 
-let parse_version full version =
-  let trimmed = String.trim version in
-  let rex = if full then full_re else loose_re in
+let convert ((major,minor,patch,pre,build) as raw) = 
+  (* if x = "" then this is intepreted as a partial version and converted to 0 *)
+  let c_int = function
+    |"" -> 0
+    |("x" | "X") ->
+        fatal "%s: Conversion Error: 'X' or 'x' cannot be converted to an integer"
+        (compose_raw raw)
+    |s ->
+        try int_of_string s
+        with Failure _ ->
+          fatal "%s: Conversion Error: \"%s\" cannot be converted to an integer"
+          (compose_raw raw) s
+  in
+  let c_pre x = try N (int_of_string x) with Failure _ -> S x in
+  { major = c_int major;
+    minor = c_int minor;
+    patch = c_int patch;
+    pre   = List.map c_pre pre;
+    build
+  }
+
+let compose v =
+  let str = Printf.sprintf "%d.%d.%d" v.major v.minor v.patch in
+  let str_pre l =
+      String.concat "." (List.map (function N i -> string_of_int i | S s -> s) l)
+  in
+  let str_build l = String.concat "." l in
+  match v.pre,v.build with
+  |[],[] -> str
+  |l,[] -> Printf.sprintf "%s-%s" str (str_pre l)
+  |[],l -> Printf.sprintf "%s+%s" str (str_build l)
+  |lp,lb -> Printf.sprintf "%s-%s+%s" str (str_pre lp) (str_build lb)
+
+let rex = Pcre.regexp (
+  "^\\s*[v=]*\\s*" ^ (* optional version identifier *)
+  "([0-9]+|[xX])(\\.([0-9]+|[xX])(\\.([0-9]+|[xX]))?)?" ^ (* 3-dotted notation *)
+  "(?:-((?:[a-zA-Z0-9]+|[a-zA-Z0-9-])(?:\\.[a-zA-Z0-9]+|[a-zA-Z0-9-])*))?" ^ (* pre release *)
+  "(?:\\+([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?\\s*$" (* build indentifier *)
+)
+
+let sep_re = Pcre.regexp "\\."
+
+let parse_raw_version version =
   try
-    let parsed = Pcre.extract rex trimmed in
-    let pre_identified =
-      List.map (fun v ->
-        try NumericIdentifier (int_of_string v)
-        with Failure _ -> StringIdentifier v
-      ) (Pcre.split sep_re parsed.(4))
-    in
-    { major = int_of_string parsed.(1);
-      minor = int_of_string parsed.(2);
-      patch = int_of_string parsed.(3);
-      pre   = pre_identified;
-      build = Pcre.split sep_re parsed.(5)
-    }
+    let parsed = Pcre.extract rex version in
+    let pre   = Pcre.split sep_re parsed.(6) in
+    let build = Pcre.split sep_re parsed.(7) in
+    (parsed.(1),parsed.(3),parsed.(5),pre,build)
   with Not_found ->
-    raise (Invalid_argument "Invalid version")
+    fatal "%s: Parsing Error. Invalid Version" version
 
-let parse_version_option full version =
-  try
-    Some (parse_version full version)
-  with
-    Invalid_argument _ -> None
+let parse_version version =
+  try convert (parse_raw_version version)
+  with Failure _ ->
+    fatal "%s: Conversion Error. Invalid Version" version
 
 (*Compare  two elements of the prerelease part of a version*)
-let compare_identifiers = function
-  | (NumericIdentifier x1, NumericIdentifier y1) -> Pervasives.compare x1 y1
-  | (StringIdentifier _, NumericIdentifier _)    -> 1
-  | (NumericIdentifier _, StringIdentifier _)    -> -1
-  | (StringIdentifier s1, StringIdentifier s2)   -> String.compare s1 s2
+let compare_pre = function
+  | (N x1, N y1) -> Pervasives.compare x1 y1
+  | (S _, N _)   -> 1
+  | (N _, S _)   -> -1
+  | (S s1, S s2) -> String.compare s1 s2
 
 (* 1. Not having a prerelease is > that having one
    2. We compare each pre-release, the one with with less elements win or the
@@ -161,7 +127,7 @@ let compare_pre (l1,l2) =
       |(x1::l1,x2::[]) when l1 <> [] -> 1
       |(x1::[],x2::l2) when l2 <> [] -> -1
       |(x1::l1,x2::l2) when x1 = x2 -> check 0 (l1,l2) 
-      |(x1::_,x2::_) -> compare_identifiers (x1,x2)
+      |(x1::_,x2::_) -> compare_pre (x1,x2)
       |_,_ -> assert false
     in check 0 (l1,l2)
 
@@ -178,11 +144,11 @@ let compare_version x y =
   else
     compare_pre (x.pre,y.pre)
 
-let parse_and_compare full x y =
+let parse_and_compare x y =
   if x = y then 0 else
-    let v1 = parse_version full x in
-    let v2 = parse_version full y in
+    let v1 = parse_version x in
+    let v2 = parse_version y in
     compare_version v1 v2
 
-let compare full x y = parse_and_compare full x y
-let equal full x y = (compare full x y) = 0
+let compare x y = parse_and_compare x y
+let equal x y = (compare x y) = 0
