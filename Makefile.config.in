@@ -101,8 +101,8 @@ endif
 
 LIBNAMES += common/common \
 						versioning/versioning \
-						npm/npm \
 						pef/pef \
+						npm/npm \
 						deb/debian \
 						opencsw/csw \
 						opam/opam \

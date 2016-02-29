@@ -22,17 +22,20 @@ true: -traverse
 <deb/tests.*>: use_common, use_versioning, use_pef, use_algo
 <rpm/tests.*>: use_common, use_versioning, @USE_RPM@, use_algo, package(re.str)
 
-<versioning/*.ml{i,}>: use_common, package(re.pcre)
 <common/*.ml{i,}>: @PKG_ZIP@, @PKG_BZ2@
-<deb/*.ml{i,}>: use_common, use_versioning
+<versioning/*.ml{i,}>: use_common, package(re.pcre)
+<pef/*.ml{i,}>: use_common
+<opam/*.ml{i,}>: use_common, use_versioning, use_pef
+<npm/*.ml{i,}>: use_common, use_versioning, use_pef
+<deb/*.ml{i,}>: use_common, use_versioning, use_pef
 <rpm/*.ml{i,}>: use_common
-<algo/*.ml{i,}>: use_common, @PKG_OCAMLGRAPH@
-<pef/*.ml{i,}>: use_common, use_debian
-<opam/*.ml{i,}>: use_common, use_pef
-<npm/*.ml{i,}>: use_common, use_pef
 <opencsw/*.ml{i,}>: use_common, use_versioning
+
+<algo/*.ml{i,}>: use_common, @PKG_OCAMLGRAPH@
+
 <doseparse/*.ml{i,}>: use_common, use_versioning, use_debian, use_opam, use_pef, use_csw, @USE_RPM@
 <doseparseNoRpm/*.ml{i,}>: use_common, use_versioning, use_debian, use_opam, use_pef, use_csw
+
 <rpm/librpm4_stubs.*>: use_rpm, use_rpm4
 <rpm/librpm5_stubs.*>: use_rpm, use_rpm5
 <rpm/rpm.cm{x,}a>: @USE_RPM@

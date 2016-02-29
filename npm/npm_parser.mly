@@ -25,71 +25,69 @@ part       ::= nr | [-0-9A-Za-z]+
 
 *)
 
-type op = Gte | Lte | Gt | Lt | Eq
-type expr =
-  | And of (expr * expr)
-  | Or of (expr * expr)
-  | Version of (op * Versioning.SemverNode.version) option
+open Versioning
+
+type atom = (string * SemverNode.version) option
 
 let incr_str x = string_of_int ((int_of_string x) + 1)
-let range v1 v2 =
-	And (Version (Some (Gte, v1)), Version (Some (Lt, v2))) 
+let range v1 v2 = [
+  (Some (">=", SemverNode.compose v1));
+  (Some ("<=", SemverNode.compose v2)) ]
 
 let normalize_version version =
-  match Versioning.SemverNode.parse_raw_version version with
+  match SemverNode.parse_raw_version version with
   |(x1, "x", "", pre, build) ->
-      let v1 = Versioning.SemverNode.convert (x1,"0","0",pre,build) in
-      let v2 = Versioning.SemverNode.convert (incr_str x1,"0","0",pre,build) in
+      let v1 = SemverNode.convert (x1,"0","0",pre,build) in
+      let v2 = SemverNode.convert (incr_str x1,"0","0",pre,build) in
       range v1 v2
 
   |(x1, "x", "x", pre, build) ->
-      let v1 = Versioning.SemverNode.convert (n,"0","0",pre,build) in
-      let v2 = Versioning.SemverNode.convert (incr_str n,"0","0",pre,build) in
+      let v1 = SemverNode.convert (x1,"0","0",pre,build) in
+      let v2 = SemverNode.convert (incr_str x1,"0","0",pre,build) in
       range v1 v2
 
   |(x1, x2, "x", pre, build) ->
-      let v1 = Versioning.SemverNode.convert (x1,"0","0",pre,build) in
-      let v2 = Versioning.SemverNode.convert (x1,incr_str x2,"0",pre,build) in
+      let v1 = SemverNode.convert (x1,"0","0",pre,build) in
+      let v2 = SemverNode.convert (x1,incr_str x2,"0",pre,build) in
       range v1 v2
 
   |(x1, "", "", pre, build) ->
-      let v1 = Versioning.SemverNode.convert (x1,"0","0",pre,build) in
-      let v2 = Versioning.SemverNode.convert (incr_str n, "0","0",pre,build) in
+      let v1 = SemverNode.convert (x1,"0","0",pre,build) in
+      let v2 = SemverNode.convert (incr_str x1, "0","0",pre,build) in
       range v1 v2
 
   |(x1, x2, "", pre, build) ->
-      let v1 = Versioning.SemverNode.convert (x1,"0","0",pre,build) in
-      let v2 = Versioning.SemverNode.convert (incr_str n, "0","0",pre,build) in
+      let v1 = SemverNode.convert (x1,"0","0",pre,build) in
+      let v2 = SemverNode.convert (incr_str x1, "0","0",pre,build) in
       range v1 v2
 
-  |v -> Version (Some (Eq, Versioning.SemverNode.convert v))
+  |v -> [Some ("=", SemverNode.(compose (convert v)))]
 
 let normalize_tilde version =
-  match Versioning.SemverNode.parse_raw_version version with
+  match SemverNode.parse_raw_version version with
   | (x1,"","",pre,build) ->
-    let v1 = Versioning.SemverNode.convert (x1,"0","0",pre,build) in
-    let v2 = Versioning.SemverNode.convert (incr_str x1,"0","0",[],[]) in
+    let v1 = SemverNode.convert (x1,"0","0",pre,build) in
+    let v2 = SemverNode.convert (incr_str x1,"0","0",[],[]) in
     range v1 v2
  
   | (x1,x2,"",pre,build) ->
-    let v1 = Versioning.SemverNode.convert (x1,x2,"0",pre,build) in
-    let v2 = Versioning.SemverNode.convert (x1,incr_str x2,"0",[],[]) in
+    let v1 = SemverNode.convert (x1,x2,"0",pre,build) in
+    let v2 = SemverNode.convert (x1,incr_str x2,"0",[],[]) in
     range v1 v2
 
   | (x1,x2,x3,pre,build) as parsed ->
-    let v1 = Versioning.SemverNode.convert parsed in
-		let v2 = Versioning.SemverNode.convert (x1,incr_str x2,"0",[],[]) in
-	  range parsed v2
+    let v1 = SemverNode.convert parsed in
+    let v2 = SemverNode.convert (x1,incr_str x2,"0",[],[]) in
+    range v1 v2
 
 let normalize_caret version =
-  let parsed = Versioning.SemverNode.parse_raw_version version in
+  let parsed = SemverNode.parse_raw_version version in
   let two_zeros = ref false in
   let parsed_list =
     match parsed with
+    | (x1,("x"|"X"|""),_,_,_) -> two_zeros := true; [x1; "0"; "0"]
+    | (x1,x2,("x"|"X"|""),_,_) -> [x1; x2; "0"]
     | (x1,x2,x3,_,_) -> [x1; x2; x3]
-    | (x1,x2,("x"|"X"|"") -> [x1; x2; "0"]
-    | (x1,("x"|"X"|"") -> two_zeros := true; [x1; "0"; "0"]
-    | _ -> raise (Invalid_argument "Version not valid")
   in
   let (major,minor,patch) =
     let found = ref false in
@@ -104,100 +102,108 @@ let normalize_caret version =
         |[x1;x2;x3] -> (x1,x2,x3)
         |_ -> assert false
   in
-  let v2 = Versioning.SemverNode.convert (major,minor,patch,[],[]) in
+  let v1 = SemverNode.convert parsed in
+  let v2 = SemverNode.convert (major,minor,patch,[],[]) in
   range v1 v2
 
 let normalize_hypen version1 version2 =
-  let v1 = Versioning.SemverNode.parse_version version1 in
-  let v2 = Versioning.SemverNode.parse_version version2 in
+  let v1 = SemverNode.parse_version version1 in
+  let v2 = SemverNode.parse_version version2 in
   range v1 v2
 
 let normalize_primitive op version =
-   let v = Versioning.SemverNode.parse_version version in
-   Version (Some (string_of_op op, v)) 
+   let v = SemverNode.parse_version version in
+   [Some (op, SemverNode.compose v)]
 
-let normalize_depend name expr =
+let to_cnf ll =
+  let return a = [a] in
+  let bind m f = List.flatten (List.map f m) in
+  let rec permutation = function
+    |[] -> return []
+    |h::t ->
+        bind (permutation t) (fun t1 ->
+          List.map (fun h1 -> h1 :: t1) h
+        )
+  in
+  permutation ll
 
-let string_of_op = function
-  | "<" -> Lt
-  | ">" -> Gt
-  | "<=" -> Lte
-  | ">=" -> Gte
-  | "=" -> Eq
-  | _ -> assert false
+let normalize_depend name constr =
+  List.map (fun conj ->
+    List.map (fun c -> ((name,None),c)) conj
+  ) (to_cnf constr)
 
 %}
+
+%left TILDE CARET
+%right OR
+
 %token EOL
-%token OR
-%token HYPHEN
-%token SPACE
-%token STAR
-%token TILDE
-%token CARET
-%token <string> VERSION
-%token <string> OPERATOR
+%token OR HYPHEN STAR TILDE CARET 
+%token COMMA COLON QUOTE
+%token LCURLY RCURLY
+%token 
+%token <string> IDENT
+%token <string> RELOP
 
-%start version, depends, depend
-%type <Pef.Packages_types.vpkg> depend
-%type <Pef.Packages_types.vpkgformula> depends
+%type <Pef.Packages_types.vpkg list list> depend_top
+%type <Pef.Packages_types.vpkgformula> depends_top
+%type <Pef.Packages_types.vpkgformula> dependlist_top
 
+%start depends_top dependlist_top depend_top
 %%
 
-depends:
-  LCURLY dependlist RCURLY {$2}
-;
+depends_top: depends EOL   { $1 } ;
+
+depend_top: depend EOL     { $1 } ;
+dependlist_top: dependlist EOL   { $1 } ;
+
+depends: LCURLY dependlist RCURLY { $2 } ;
 
 dependlist:
-    depend COMMA dependlist { ($1, $3) :: $5 }
-  | depend                  { [($1, $3)] }
-  |                         {[]}
+  depend                  { $1 }
+  | depend COMMA dependlist { $1 @ $3 }
 ;
 
 depend:
-  name COLON QUOTE rangelist QUOTE { normalize_depend $1 $3 }
+  name COLON QUOTE rangelist QUOTE { normalize_depend $1 $4 (* vpkgformula *) }
+;
 
-name: QUOTE IDENT QUOTE     { $1 }
+name: QUOTE IDENT QUOTE     { $2 }
+;
 
 rangelist:
-    range OR range          { }
-  | range                   { }
-
-range:
-    hyphen                  { $1 }
-  | simplelist              { $1 }
   |                         { [] }
+  | simplelist              { [$1] }
+  | simplelist OR rangelist { $1 :: $3 (*vpkg list list *) }
+;
 
 simplelist:
-    simple simple           { $1 :: $2 }
-  |                         { [] }
-
-simple:
-    primitive               { $1 }
-  | partial                 { $1 }
-  | tilde                   { $1 }
-  | caret                   { $1 }
-
-(* here we use IDENT instead of partial as the semantic
-   of 1.x - 2.x is not clear *)
-hyphen:
-  IDENT HYPHEN IDENT     { normalize_hypen $1 $3 }
+  |                          { [] }
+  | partial                  { $1 }
+  | partial simplelist       { $1 @ $2 (* vpkg list *) }
 ;
-
-tilde: TILDE IDENT       { normalize_tilde $2 } ;
-
-carret: CARET IDENT      { normalize_caret $2 } ;
-
-primitive: RELOP IDENT   { normalize_primitive $1 $2 } ;
 
 partial: 
-    IDENT                { normalize_version $1 }
-  | STAR                 { Version None }
-  |                      { Version None }
+    IDENT range       { match $2 with
+                        |None    -> normalize_version $1 (* vpkg list *)
+                        |Some v2 -> normalize_hypen $1 v2
+                      }
+  | TILDE IDENT       { normalize_tilde $2 }
+  | CARET IDENT       { normalize_caret $2 }
+  | RELOP IDENT       { normalize_primitive $1 $2 }
+  | STAR              { [None] }
 ;
 
+range:
+    HYPHEN IDENT      { Some $2 }
+  |                   { None }
+
 %%
- 
-let version_top = Format822.error_wrapper "version" version
-let depends_top = Format822.error_wrapper "depends" depends
-let depend_top = Format822.error_wrapper "depend" depend
+
+open Common
+
+let dependlist_top = Format822.error_wrapper "dependlist" dependlist_top
+let depends_top = Format822.error_wrapper "depends" depends_top
+let depend_top = Format822.error_wrapper "depend" depend_top
+
 

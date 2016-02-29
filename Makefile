@@ -11,7 +11,7 @@ DIST_TARBALL = $(DIST_DIR).tar.gz
 OBFLAGS := $(VERBOSE) -j 10 -no-links -cflags -warn-error,FPSXY
 APPFLAGS := $(VERBOSE) -j 10
 #OBFLAGS := $(OBFLAGS) -tag profile -tag debug
-#OBFLAGS := $(OBFLAGS) -classic-display
+OBFLAGS := $(OBFLAGS) -classic-display
 
 addnotrpm:
 	@if [ ! -s doseparseNoRpm ]; then $(LN) doseparse doseparseNoRpm ; fi
@@ -111,8 +111,7 @@ $(DOSELIBS)/opam.%: opam/*.ml opam/*.mli $(DOSELIBS)/pef.%
 	  fi ; \
 	done
 
-
-$(DOSELIBS)/npm.%: npm/*.ml npm/*.mli $(DOSELIBS)/pef.%
+$(DOSELIBS)/npm.%: npm/*.ml npm/*.mli $(DOSELIBS)/versioning.% $(DOSELIBS)/pef.%
 	$(OCAMLBUILD) $(OBFLAGS) npm/npm.otarget
 	@for i in _build/npm/npm.*; do \
 	  if [ -e $$i ]; then \
