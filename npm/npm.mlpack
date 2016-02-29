@@ -1,8 +1,4 @@
 Npmcudf
 Packages
-Ranges_node_lexer
-Ranges_node_parser
-Npm_deps_lexer
-Npm_deps_parser
-RangeNode
-RangeDesugar
+Npm_lexer
+Npm_parser
