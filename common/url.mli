@@ -12,7 +12,7 @@
 
 type debtypes = [ `Edsp | `Deb | `DebSrc ]
 type rpmtypes = [ `Synthesis | `Hdlist ]
-type othertypes = [ `Pef | `Csw | `Opam ]
+type othertypes = [ `Pef | `Csw | `Opam | `Npm ]
 
 type filetypes = [ `Cudf | debtypes | rpmtypes | othertypes ]
 

@@ -30,6 +30,7 @@ type rawpackage =
   |DebSrc of Debian.Sources.source
   |Pef of Pef.Packages.package
   |Opam of Opam.Packages.package
+  |Npm of Npm.Packages.package
   |Edsp of Debian.Packages.package
   |Csw of Csw.Packages.package
 #ifdef HASRPM
@@ -103,6 +104,19 @@ let deb_load_list options ?(status=[]) ?(raw=false) dll =
   let l = (preamble,cll,request,from_cudf,to_cudf,rawll) in
   Util.Timer.stop deb_load_list_timer l
       
+let npm_load_list file =
+  let (request,pkglist) = Npm.Packages.input_raw file in
+  let tables = Pef.Pefcudf.init_tables Versioning.SemverNode.compare pkglist in
+  let from_cudf (p,i) = (p, Pef.Pefcudf.get_real_version tables (p,i)) in
+  let to_cudf (p,v) = (p, Pef.Pefcudf.get_cudf_version tables (p,v)) in
+  let cl = List.map (Pef.Pefcudf.tocudf tables) pkglist in
+  let preamble = Npm.Npmcudf.preamble in
+  let request = Cudf.default_request in
+  (*
+  let request = Npm.Npmcudf.requesttocudf tables (Cudf.load_universe cl) request in
+  *)
+  (preamble,[cl;[]],request,from_cudf,to_cudf,None)
+
 let opam_load_list ?options file =
   let (request,pkglist) = Opam.Packages.input_raw file in
   let tables = Pef.Pefcudf.init_tables Versioning.Debian.compare pkglist in
@@ -308,6 +322,17 @@ let pef_parse_input options urilist =
   in
   pef_load_list options dll
 
+let npm_parse_input ?options urilist =
+  match urilist with
+  |[[p]] when (unpack `Npm p) = "-" -> fatal "no stdin for npm yet"
+  |[[p]] -> npm_load_list (unpack `Npm p)
+  |l ->
+    if List.length (List.flatten l) > 1 then
+      warning "more than one npm request file specified on the command line";
+    let p = List.hd (List.flatten l) in 
+    npm_load_list (unpack `Npm p)
+;;
+
 let opam_parse_input ?options urilist =
   match urilist with
   |[[p]] when (unpack `Opam p) = "-" -> fatal "no stdin for opam yet"
@@ -369,6 +394,7 @@ let parse_input ?(options=None) ?(raw=false) urilist =
 (*  |`Edsp, Some (StdOptions.Edsp opt) -> edsp_parse_input opt filelist *)
   |`Edsp, _ -> edsp_parse_input Debian.Debcudf.default_options filelist
   |`Opam, _ -> opam_parse_input filelist
+  |`Npm, _ -> npm_parse_input filelist
 (* |`Opam, Some (StdOptions.Opam options) -> opam_parse_input ~options filelist *)
 
   |`Pef, Some (StdOptions.Pef opt) -> pef_parse_input opt filelist
