@@ -32,7 +32,7 @@ type atom = (string * SemverNode.version) option
 let incr_str x = string_of_int ((int_of_string x) + 1)
 let range v1 v2 = [
   (Some (">=", SemverNode.compose v1));
-  (Some ("<=", SemverNode.compose v2)) ]
+  (Some ("<", SemverNode.compose v2)) ]
 
 let normalize_version version =
   match SemverNode.parse_raw_version version with
