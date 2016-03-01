@@ -105,6 +105,7 @@ let normalize_caret version =
   let v1 =
     match parsed_list with
     | [x1;x2;x3] -> SemverNode.convert (x1, x2, x3, [], [])
+    | _          -> assert false
   in
   let v2 = SemverNode.convert (major,minor,patch,[],[]) in
   range v1 v2
