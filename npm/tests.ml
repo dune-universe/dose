@@ -122,9 +122,7 @@ let suite =
   "suite" >::: [ 
     "test basic " >::: make_test_cases_parse test_parse_basic;
     "test tilde" >::: make_test_cases_parse test_parse_tilde;
-(*
     "test caret" >::: make_test_cases_parse test_parse_caret;
-*)
     "test ranges" >::: make_test_cases_parse test_parse_ranges;
     "test simplelist" >::: make_test_cases_parse test_parse_simplelist;
     "test orlist" >::: make_test_cases_parse test_parse_orlist;
