@@ -52,7 +52,7 @@ let test_parse_caret =
     returns_result ~printer function_to_test result 
   in
   returns, [
-    ("^1.2",[">= 1.2.0";"<= 2.0.0"]);
+    ("^1.2",[">= 1.2.0"; "< 2.0.0"]);
     ("^1.2.x",[">=1.2.0"; "< 2.0.0"]);
     ("^0.0.x",[">=0.0.0"; "< 0.1.0"]);
     ("^0.0",[">=0.0.0"; "< 0.1.0"]);
@@ -67,8 +67,8 @@ let test_parse_ranges =
     returns_result ~printer function_to_test result 
   in
   returns, [
-    ("1.x",[">= 1.0.0";"<= 2.0.0"]);
-    ("0.x",[">= 0.0.0";"<= 1.0.0"]);
+    ("1.x",[">= 1.0.0";"< 2.0.0"]);
+    ("0.x",[">= 0.0.0";"< 1.0.0"]);
   ]
 
 let test_parse_tilde =
@@ -98,7 +98,7 @@ let test_parse_simplelist =
     returns_result ~printer function_to_test result v
   in
   returns, [
-    (">1.2.0 <1.2.3",[">= 1.0.0";"<= 2.0.0"]);
+    (">1.2.0 <1.2.3",[">= 1.0.0";"< 2.0.0"]);
   ]
 
 let test_parse_orlist =
@@ -110,9 +110,9 @@ let test_parse_orlist =
     returns_result ~printer function_to_test result v
   in
   returns, [
-    ("1.2.7 || 2.0.0",[">= 1.0.0";"<= 2.0.0"]);
-    ("1.2.7 || <2.0.0",[">= 1.0.0";"<= 2.0.0"]);
-    ("1.2.7 || >=1.2.9 <2.0.0",[">= 1.0.0";"<= 2.0.0"]);
+    ("1.2.7 || 2.0.0",[">= 1.0.0";"< 2.0.0"]);
+    ("1.2.7 || <2.0.0",[">= 1.0.0";"< 2.0.0"]);
+    ("1.2.7 || >=1.2.9 <2.0.0",[">= 1.0.0";"< 2.0.0"]);
   ]
 
 let make_test_cases_parse (assert_function,triplets) =
