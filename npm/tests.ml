@@ -9,14 +9,22 @@ and raises_failure function_to_test failure_text =
 
 let printer x = Pef.Printer.string_of_vpkgformula x
 
+let concat_ands v =
+  if v = [] then "foo" else
+  String.concat " , " (
+    List.map (fun v ->
+      if v = "" then "foo" 
+      else Printf.sprintf "foo (%s)" v
+    ) v) 
+
 let parse_pef_vpkgformula v =
+  Pef.Packages.parse_vpkgformula ("depends", (Format822.dummy_loc,concat_ands v))
+
+
+let parse_pef_vpkgformula_or v =
   let str vl =
     if vl = [] then "foo" else
-    String.concat " , " (
-      List.map (fun v ->
-        if v = "" then "foo" 
-        else Printf.sprintf "foo (%s)" v
-      ) vl) 
+    String.concat " | " (List.map (fun v -> concat_ands v) vl)
   in
   Pef.Packages.parse_vpkgformula ("depends", (Format822.dummy_loc,str v))
 
@@ -39,7 +47,6 @@ let test_parse_basic =
     ("=21.2.3",["= 21.2.3"]);
     ("v=34.2.3",["= 34.2.3"]);
     ("*",[""]);
-    ("",[""]);
   ]
 ;;
 
@@ -98,25 +105,31 @@ let test_parse_simplelist =
     returns_result ~printer function_to_test result v
   in
   returns, [
-    (">1.2.0 <1.2.3",[">= 1.0.0";"< 2.0.0"]);
+    (">1.2.0 <1.2.3",["> 1.2.0";"< 1.2.3"]);
   ]
 
 let test_parse_orlist =
   let function_to_test v =
     let str s = Printf.sprintf "\"foo\" : \"%s\"" s in
-    Packages.parse_dependlist ("depends",(Format822.dummy_loc,str v)) in
+    Packages.parse_depend ("depends",(Format822.dummy_loc,str v)) in
   let returns result v =
-    let result = parse_pef_vpkgformula result in
+    let result = parse_pef_vpkgformula_or result in
     returns_result ~printer function_to_test result v
   in
   returns, [
-    ("1.2.7 || 2.0.0",[">= 1.0.0";"< 2.0.0"]);
-    ("1.2.7 || <2.0.0",[">= 1.0.0";"< 2.0.0"]);
-    ("1.2.7 || >=1.2.9 <2.0.0",[">= 1.0.0";"< 2.0.0"]);
+    ("1.2.7 || 2.0.0",[["= 1.2.7"];["= 2.0.0"]]);
+    ("1.2.7 || <2.0.0",[["= 1.2.7"];["< 2.0.0"]]);
+    ("1.2.7 || >=1.2.9 || <2.0.0",[["= 1.2.7"];[">= 1.2.9"]; ["< 2.0.0"]]);
+    ("1.2.7 || >=1.2.9 <2.0.0",[["= 1.2.7"];[">= 1.2.9"; "= 1.2.7"]; ["< 2.0.0"]]);
+    ("1.2.7",[["= 1.2.7"]]);
+    ("1.2.7 || >=1.2.9",[["= 1.2.7"];[">= 1.2.9"]]);
+    ("1.2.7 >=1.2.9",[["= 1.2.7"; ">= 1.2.9"]]);
   ]
+
 
 let make_test_cases_parse (assert_function,triplets) =
   List.map ( fun (v,result) -> v >:: assert_function result v) triplets
+
 
 let suite = 
   "suite" >::: [ 
