@@ -54,15 +54,15 @@ let test_parse_caret =
   let function_to_test v =
     let str s = Printf.sprintf "\"foo\" : \"%s\"" s in
     Packages.parse_depend ("depends",(Format822.dummy_loc,str v)) in
-  let returns result =
-    let result = parse_pef_vpkgformula result in
-    returns_result ~printer function_to_test result 
+  let returns result v =
+    let result = parse_pef_vpkgformula_or result in
+    returns_result ~printer function_to_test result v
   in
   returns, [
-    ("^1.2",[">= 1.2.0"; "< 2.0.0"]);
-    ("^1.2.x",[">=1.2.0"; "< 2.0.0"]);
-    ("^0.0.x",[">=0.0.0"; "< 0.1.0"]);
-    ("^0.0",[">=0.0.0"; "< 0.1.0"]);
+    ("^1.2",[[">= 1.2.0"; "< 2.0.0"]]);
+    ("^1.2.x",[[">=1.2.0"; "< 2.0.0"]]);
+    ("^0.0.x",[[">=0.0.0"; "< 0.1.0"]]);
+    ("^0.0",[[">=0.0.0"; "< 0.1.0"]]);
   ]
 
 let test_parse_ranges =
@@ -76,6 +76,7 @@ let test_parse_ranges =
   returns, [
     ("1.x",[">= 1.0.0";"< 2.0.0"]);
     ("0.x",[">= 0.0.0";"< 1.0.0"]);
+    ("x",[">= 0.0.0"]);
   ]
 
 let test_parse_tilde =
@@ -117,6 +118,7 @@ let test_parse_orlist =
     returns_result ~printer function_to_test result v
   in
   returns, [
+    (">=1.2.7 <2.0.0",[[">= 1.2.7"; "< 2.0.0"]]);
     ("1.2.7 || 2.0.0",[["= 1.2.7"];["= 2.0.0"]]);
     ("1.2.7 || <2.0.0",[["= 1.2.7"];["< 2.0.0"]]);
     ("1.2.7 || >=1.2.9 || <2.0.0",[["= 1.2.7"];[">= 1.2.9"]; ["< 2.0.0"]]);
