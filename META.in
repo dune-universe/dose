@@ -1,7 +1,7 @@
 description = "Dose3 libraries"
 version = "@PACKAGE_VERSION@"
-archive(byte) = "common.cma algo.cma versioning.cma pef.cma debian.cma csw.cma opam.cma"
-archive(native) = "common.cmxa algo.cmxa versioning.cmxa pef.cmxa debian.cmxa csw.cmxa opam.cmxa"
+archive(byte) = "common.cma algo.cma versioning.cma pef.cma debian.cma csw.cma opam.cma npm.cma"
+archive(native) = "common.cmxa algo.cmxa versioning.cmxa pef.cmxa debian.cmxa csw.cmxa opam.cmxa npm.cmxa"
 requires = "extlib, re.pcre, cudf, @OCAMLGRAPH@, unix, @ZIP@, @BZ2@"
 
 package "common" (
@@ -70,4 +70,10 @@ package "doseparseNoRpm" (
 version = "@PACKAGE_VERSION@"
 archive(byte) = "doseparseNoRpm.cma"
 archive(native) = "doseparseNoRpm.cmxa"
+)
+
+package "npm" (
+version = "@PACKAGE_VERSION@"
+archive(byte) = "npm.cma"
+archive(native) = "npm.cmxa"
 )
