@@ -83,14 +83,14 @@ let compose v =
 
 let rex = Pcre.regexp (
   "^\\s*[v=]*\\s*" ^ (* optional version identifier *)
-  "([0-9]+|[xX])(\\.([0-9]+|[xX])(\\.([0-9]+|[xX]))?)?" ^ (* 3-dotted notation *)
+  "([0-9]+|[xX])(\\.([0-9]+|[xX])?(\\.([0-9]+|[xX])?)?)?" ^ (* 3-dotted notation *)
   "(?:-((?:[a-zA-Z0-9]+|[a-zA-Z0-9-])(?:\\.[a-zA-Z0-9]+|[a-zA-Z0-9-])*))?" ^ (* pre release *)
   "(?:\\+([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?\\s*$" (* build indentifier *)
 )
 
 let sep_re = Pcre.regexp "\\."
 
-let parse_raw_version version =
+let rec parse_raw_version version =
   try
     let parsed = Pcre.extract rex version in
     let pre   = Pcre.split sep_re parsed.(6) in
