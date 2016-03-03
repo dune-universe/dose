@@ -60,8 +60,8 @@ let normalize_version version =
       range v1 v2
 
   |(x1, x2, "", pre, build) ->
-      let v1 = SemverNode.convert (x1,"0","0",pre,build) in
-      let v2 = SemverNode.convert (incr_str x1, "0","0",pre,build) in
+      let v1 = SemverNode.convert (x1, x2, "0", pre, build) in
+      let v2 = SemverNode.convert (x1, incr_str x2, "0", pre, build) in
       range v1 v2
 
   |v -> [Some ("=", SemverNode.(compose (convert v)))]
