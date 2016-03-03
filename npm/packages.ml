@@ -18,6 +18,8 @@
 open ExtLib
 open Common
 
+module Pcre = Re_pcre
+
 #define __label __FILE__
 let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
@@ -27,7 +29,7 @@ let lexbuf_wrapper type_parser v =
   with Format822.ParseError _ ->
     match v with
     | (_, (_, package)) -> 
-      let splited = Str.split (Str.regexp " : ") package in
+      let splited = Pcre.split (Pcre.regexp " : ") package in
       let base64 = Bytes.to_string (Base64.str_encode (List.nth splited 1)) in
       [[("", None), Some ("=", base64)]]
 
