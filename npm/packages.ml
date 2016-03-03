@@ -23,10 +23,18 @@ let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
 let lexbuf_wrapper type_parser v =
-    Format822.lexbuf_wrapper type_parser Npm_lexer.token v
+  try Format822.lexbuf_wrapper type_parser Npm_lexer.token v
+  with Format822.ParseError _ ->
+    match v with
+    | (_, (_, package)) -> 
+      let splited = Str.split (Str.regexp " : ") package in
+      let base64 = Bytes.to_string (Base64.str_encode (List.nth splited 1)) in
+      [[("", None), Some ("=", base64)]]
+
 let parse_dependlist v = lexbuf_wrapper Npm_parser.dependlist_top v ;;
 let parse_depends v = lexbuf_wrapper Npm_parser.depends_top v ;;
-let parse_depend v = lexbuf_wrapper Npm_parser.depend_top v ;;
+let parse_depend v = lexbuf_wrapper Npm_parser.depend_top v;;
+
 
 type request = {
   install : Pef.Packages_types.vpkg list;
