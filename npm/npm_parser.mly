@@ -111,8 +111,8 @@ let normalize_caret version =
   let two_zeros = ref false in
   let parsed_list =
     match parsed with
-    | (x1,("x"|"X"|""),_,_,_) -> two_zeros := true; [x1; "0"; "0"]
-    | (x1,x2,("x"|"X"|""),_,_) -> [x1; x2; "0"]
+    | (x1,("x"|"X"|"*"|""),_,_,_) -> two_zeros := true; [x1; "0"; "0"]
+    | (x1,x2,("x"|"X"|"*"|""),_,_) -> [x1; x2; "0"]
     | (x1,x2,x3,_,_) -> [x1; x2; x3]
   in
   let (major,minor,patch) =
