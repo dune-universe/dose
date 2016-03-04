@@ -76,18 +76,27 @@ let normalize_version version =
         let v1 = SemverNode.convert (x1, x2, "0", pre, build) in
         let v2 = SemverNode.convert (x1, incr_str x2, "0", pre, build) in
         range v1 v2
-    | v ->
+    | (x1, x2, x3, _, _) as v->
         [Some ("=", SemverNode.(compose (convert v)))]
-  with Invalid_argument _ -> [Some ("=", version)]
+  with Invalid_argument _ ->
+    [Some ("=", version)]
 
 let normalize_tilde version =
   match SemverNode.parse_raw_version version with
-  | (x1,"","",pre,build) ->
+  | (x1,"","",pre,build)
+  | (x1,"*","*",pre,build)
+  | (x1,"x","x",pre,build)
+  | (x1,"X","x",pre,build)
+  | (x1,"x","X",pre,build)
+  | (x1,"X","X",pre,build) ->
     let v1 = SemverNode.convert (x1,"0","0",pre,build) in
     let v2 = SemverNode.convert (incr_str x1,"0","0",[],[]) in
     range v1 v2
  
-  | (x1,x2,"",pre,build) ->
+  | (x1,x2,"",pre,build)
+  | (x1,x2,"*",pre,build)
+  | (x1,x2,"x",pre,build)
+  | (x1,x2,"X",pre,build) ->
     let v1 = SemverNode.convert (x1,x2,"0",pre,build) in
     let v2 = SemverNode.convert (x1,incr_str x2,"0",[],[]) in
     range v1 v2
