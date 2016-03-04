@@ -58,8 +58,8 @@ let convert ((major,minor,patch,pre,build) as raw) =
     |s ->
         try int_of_string s
         with Failure _ ->
-          fatal "%s: Conversion Error: \"%s\" cannot be converted to an integer"
-          (compose_raw raw) s
+          let composed = compose_raw raw in
+          raise (Invalid_argument (Printf.sprintf "%s: Conversion Error: \"%s\" cannot be converted to an integer" composed s))
   in
   let c_pre x = try N (int_of_string x) with Failure _ -> S x in
   { major = c_int major;
