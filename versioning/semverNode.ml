@@ -53,8 +53,8 @@ let convert ((major,minor,patch,pre,build) as raw) =
   let c_int = function
     |"" -> 0
     |("x" | "X") ->
-        fatal "%s: Conversion Error: 'X' or 'x' cannot be converted to an integer"
-        (compose_raw raw)
+        let composed = compose_raw raw in
+        raise (Invalid_argument (Printf.sprintf "'%s': Conversion Error: 'X' or 'x' cannot be converted to an integer" composed))
     |s ->
         try int_of_string s
         with Failure _ ->
@@ -90,19 +90,21 @@ let rex = Pcre.regexp (
 
 let sep_re = Pcre.regexp "\\."
 
-let rec parse_raw_version version =
+let parse_raw_version version =
   try
     let parsed = Pcre.extract rex version in
     let pre   = Pcre.split sep_re parsed.(6) in
     let build = Pcre.split sep_re parsed.(7) in
     (parsed.(1),parsed.(3),parsed.(5),pre,build)
   with Not_found ->
-    fatal "%s: Parsing Error. Invalid Version" version
+    raise (Invalid_argument (Printf.sprintf "%s: Parsing Error. Invalid Version" version))
 
 let parse_version version =
-  try convert (parse_raw_version version)
-  with Failure _ ->
-    fatal "%s: Conversion Error. Invalid Version" version
+  try
+    convert (parse_raw_version version)
+  with
+    Invalid_argument _ ->
+      raise (Invalid_argument (Printf.sprintf "%s: Conversion Error. Invalid Version" version))
 
 (*Compare  two elements of the prerelease part of a version*)
 let compare_pre = function
