@@ -8,7 +8,7 @@ let inside = ref false
 
 let blank = [ ' ' '\t' ]
 let hypen = blank+ '-' blank+
-let ident = ['0'-'9' 'A'-'Z' 'a'-'z' '.' '+' '-' 'v' '=']+
+let ident = ['0'-'9' 'A'-'Z' 'a'-'z' '.' '+' '-' 'v' '=' '*']+
 
 rule token = parse
   | "||"                { OR }
@@ -16,7 +16,7 @@ rule token = parse
   | ('>' | '<')   as op { RELOP (Char.escaped op) }
   | (">=" | "<=") as op { RELOP op }
   | ("!=" | "=") as op  { RELOP op }
-  | "*"                 { STAR }
+  | "(?!\\.)*(?!\\.)"   { STAR }
   | "~"                 { TILDE }
   | "^"                 { CARET }
   | "\""                { QUOTE }

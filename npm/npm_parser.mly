@@ -37,28 +37,33 @@ let range v1 v2 = [
 let normalize_version version =
   try
     match SemverNode.parse_raw_version version with
-    | ("x", "", "", pre, build) ->
+    | ("x", "", "", pre, build)
+    | ("*", "", "", pre, build) ->
         let v1 = SemverNode.convert ("0","0","0",pre,build) in
         [(Some (">=", SemverNode.compose v1))]
-    |(x1, "x", "", pre, build) ->
+    |(x1, "x", "", pre, build)
+    |(x1, "*", "", pre, build) ->
         let v1 = SemverNode.convert (x1,"0","0",pre,build) in
         let v2 = SemverNode.convert (incr_str x1,"0","0",pre,build) in
         range v1 v2
 
     |(x1, "x", "x", pre, build)
-    |(x1, "X", "X", pre, build) ->
+    |(x1, "X", "X", pre, build)
+    |(x1, "*", "*", pre, build) ->
         let v1 = SemverNode.convert (x1,"0","0",pre,build) in
         let v2 = SemverNode.convert (incr_str x1,"0","0",pre,build) in
         range v1 v2
 
     |(x1, x2, "x", pre, build)
-    |(x1, x2, "X", pre, build) ->
+    |(x1, x2, "X", pre, build)
+    |(x1, x2, "*", pre, build) ->
         let v1 = SemverNode.convert (x1,x2,"0",pre,build) in
         let v2 = SemverNode.convert (x1,incr_str x2,"0",pre,build) in
         range v1 v2
 
     |("x", _, _, pre, build)
-    |("X", _, _, pre, build) ->
+    |("X", _, _, pre, build)
+    |("*", _, _, pre, build) ->
         let v1 = SemverNode.convert ("0","0","0",pre,build) in
         [(Some (">=", SemverNode.compose v1))]
 

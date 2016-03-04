@@ -83,7 +83,7 @@ let compose v =
 
 let rex = Pcre.regexp (
   "^\\s*[v=]*\\s*" ^ (* optional version identifier *)
-  "([0-9]+|[xX])(\\.([0-9]+|[xX])?(\\.([0-9]+|[xX])?)?)?" ^ (* 3-dotted notation *)
+  "([0-9]+|[xX*])(\\.([0-9]+|[xX*])?(\\.([0-9]+|[xX*])?)?)?" ^ (* 3-dotted notation *)
   "(?:-((?:[a-zA-Z0-9]+|[a-zA-Z0-9-])(?:\\.[a-zA-Z0-9]+|[a-zA-Z0-9-])*))?" ^ (* pre release *)
   "(?:\\+([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?\\s*$" (* build indentifier *)
 )
