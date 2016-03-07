@@ -97,34 +97,43 @@ let normalize_tilde version =
     range v1 v2
 
 let normalize_caret version =
-  let parsed = SemverNode.parse_raw_version version in
-  let two_zeros = ref false in
-  let parsed_list =
-    match parsed with
-    | (x1,("x"|"X"|"*"|""),_,_,_) -> two_zeros := true; [x1; "0"; "0"]
-    | (x1,x2,("x"|"X"|"*"|""),_,_) -> [x1; x2; "0"]
-    | (x1,x2,x3,_,_) -> [x1; x2; x3]
+  let caret_normal version =
+    let parsed = SemverNode.parse_raw_version version in
+    let two_zeros = ref false in
+    let parsed_list =
+      match parsed with
+      | (x1,("x"|"X"|"*"|""),_,_,_) -> two_zeros := true; [x1; "0"; "0"]
+      | (x1,x2,("x"|"X"|"*"|""),_,_) -> [x1; x2; "0"]
+      | (x1,x2,x3,_,_) -> [x1; x2; x3]
+    in
+    let (major,minor,patch) =
+      let found = ref false in
+      let check_update n = if !found then "0" else (found := true; incr_str n) in
+      let generate_range x = if x <> "0" then check_update x else "0" in
+      let generated = List.map generate_range parsed_list in
+      if List.for_all (fun x -> x = "0") generated then
+        if !two_zeros then ("1", "0", "0") 
+        else ("0", "1", "0")
+        else
+          match generated with
+          |[x1;x2;x3] -> (x1,x2,x3)
+          |_ -> assert false
+    in
+    let v1 =
+      match parsed_list with
+      | [x1;x2;x3] -> SemverNode.convert (x1, x2, x3, [], [])
+      | _          -> assert false
+    in
+    let v2 = SemverNode.convert (major,minor,patch,[],[]) in
+    range v1 v2
   in
-  let (major,minor,patch) =
-    let found = ref false in
-    let check_update n = if !found then "0" else (found := true; incr_str n) in
-    let generate_range x = if x <> "0" then check_update x else "0" in
-    let generated = List.map generate_range parsed_list in
-    if List.for_all (fun x -> x = "0") generated then
-      if !two_zeros then ("1", "0", "0") 
-      else ("0", "1", "0")
-      else
-        match generated with
-        |[x1;x2;x3] -> (x1,x2,x3)
-        |_ -> assert false
+  let caret_star =
+    let v1 = SemverNode.convert ("0","0","0",[],[]) in
+    [(Some (">=", SemverNode.compose v1))]
   in
-  let v1 =
-    match parsed_list with
-    | [x1;x2;x3] -> SemverNode.convert (x1, x2, x3, [], [])
-    | _          -> assert false
-  in
-  let v2 = SemverNode.convert (major,minor,patch,[],[]) in
-  range v1 v2
+  if version = "*"
+    then caret_star
+    else caret_normal version
 
 
 let normalize_hypen version1 version2 =
