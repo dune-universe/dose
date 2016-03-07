@@ -37,7 +37,13 @@ let range v1 v2 = [
 let normalize_version version =
   try
     match SemverNode.parse_raw_version version with
-    | (("x"|"*"), "", "", pre, build) ->
+    | (("x"|"X"|"*"), "", "", pre, build) ->
+        let v1 = SemverNode.convert ("0","0","0",pre,build) in
+        [(Some (">=", SemverNode.compose v1))]
+    | (("x"|"X"|"*"), ("x"|"X"|"*"), ("x"|"X"|"*"), pre, build) ->
+        let v1 = SemverNode.convert ("0","0","0",pre,build) in
+        [(Some (">=", SemverNode.compose v1))]
+    | (("x"|"X"|"*"), ("x"|"X"|"*"), "", pre, build) ->
         let v1 = SemverNode.convert ("0","0","0",pre,build) in
         [(Some (">=", SemverNode.compose v1))]
     |(x1, ("x"|"*"), "", pre, build) ->
