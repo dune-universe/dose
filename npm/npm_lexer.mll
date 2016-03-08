@@ -2,12 +2,6 @@
 open Common
 open Npm_parser
 
-let inside = ref false
-
-let fix_duplicate_equals op =
-  match op with
-  | "==" -> "="
-  | op2 -> op2
 
 }
 
@@ -20,7 +14,8 @@ rule token = parse
   | hypen               { HYPHEN }
   | ('>' | '<')   as op { RELOP (Char.escaped op) }
   | (">=" | "<=") as op { RELOP op }
-  | ("!=" | "=" | "==") as op  { RELOP (fix_duplicate_equals op) }
+  | ("==")              { RELOP "=" }
+  | ("!=" | "=" ) as op { RELOP op }
   | "(?!\\.)*(?!\\.)"   { STAR }
   | "~"                 { TILDE }
   | "^"                 { CARET }
