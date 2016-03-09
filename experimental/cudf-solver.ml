@@ -119,15 +119,18 @@ let main () =
           Depsolver.check_request (p,l,r) 
       in
       begin match r with
-      |Algo.Depsolver.Error s -> fatal "%s" s
+      |Algo.Depsolver.Error s ->
+          fatal "%s" s
       |Algo.Depsolver.Unsat _ ->
           fatal "(UNSAT) No Solutions according to the given preferences"
       |Algo.Depsolver.Sat (solpre,soluniv) ->
-        if OptParse.Opt.get Options.cudf then begin
+        if OptParse.Opt.get Options.cudf then
+          begin
           if not(Option.is_none solpre) then 
             Cudf_printer.pp_preamble stdout (Option.get solpre);
           Cudf_printer.pp_universe stdout soluniv
-        end else if OptParse.Opt.get Options.action then
+          end else
+            if OptParse.Opt.get Options.action then
 	    let filter p = p.Cudf.package <> "dose-dummy-request" in
           let soluniv = Cudf.load_universe (Cudf.get_packages ~filter soluniv) in
           let diff = CudfDiff.make_difference ~universe:l ~solution:soluniv in
@@ -147,18 +150,17 @@ let main () =
             i,r
           in
           let g = Depsolver.installation_graph ~solution:soluniv (install,remove) in
-          (*
           let al = Defaultgraphs.ActionGraph.get_partial_order g in
-          List.iter (fun l ->`````:
+          List.iter (fun l ->
             List.iter (function
               |Defaultgraphs.ActionGraph.PkgV.Install p -> Printf.printf "Install %s\n" (CudfAdd.string_of_package p)
               |Defaultgraphs.ActionGraph.PkgV.Remove p -> Printf.printf "Remove %s\n" (CudfAdd.string_of_package p)
             ) l;
             Printf.printf "\n"
           ) (List.rev al);
-          *)
           Defaultgraphs.ActionGraph.DotPrinter.print Format.std_formatter g
         else if OptParse.Opt.get Options.summary then
+          print_endline "";
           let diff = CudfDiff.make_difference ~universe:l ~solution:soluniv in
           let summary = CudfDiff.make_summary l diff in
           pp_summary Format.std_formatter summary
