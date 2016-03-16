@@ -184,4 +184,5 @@ val pp_vpkg : pp -> Format.formatter -> Cudf_types.vpkg -> unit
 (** cudf vpkglist printer. *)
 val pp_vpkglist : pp -> Format.formatter -> Cudf_types.vpkglist -> unit
 
-
+(** Compute the depenency cone of a list of packages *)
+val cone: Cudf.universe -> Cudf.package list -> Cudf.package list

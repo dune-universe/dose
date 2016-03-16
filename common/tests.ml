@@ -101,6 +101,40 @@ let test_who_conflicts =
     assert_equal true (S.equal engine_conflicts_set set)
   )
 
+let cone_cases =
+  let open Cudf in
+  let printer xs =
+    List.fold_left (fun acc x -> Printf.sprintf "%s, %s" acc x.package) "" xs
+  in
+  let univ_ls = Cudf.fold_packages (fun acc x -> x :: acc) [] universe in
+  let cone input = CudfAdd.cone universe input in
+  let pedal_ls = [Cudf.package_by_uid universe 3] in
+  let engine_ls = [Cudf.package_by_uid universe 8] in
+  let engine_cone = [Cudf.package_by_uid universe 18; Cudf.package_by_uid universe 8] in
+  [
+    ("cone universe", univ_ls, (fun c () -> assert_equal (List.length (cone c)) (List.length univ_ls)));
+    ("cone pedal", pedal_ls, (fun c () -> assert_equal (cone c) pedal_ls ~printer:printer));
+    ("cone engine", engine_ls, (fun c () -> assert_equal (cone c) engine_cone ~printer:printer));
+  ]
+
+
+let criteria_parse =
+  let function_to_test crt = Criteria.parse_criteria ("test",(Format822.dummy_loc,crt)) in
+  let printer s = Criteria.to_string s in
+  let returns = returns_result ~printer function_to_test in
+  [
+    ("parse upgrade", "-count(new),-count(removed),-notuptodate(solution)", returns 
+      (List.assoc "upgrade" Criteria.default_criteria));
+    ("parse trendy", "-count(removed),-notuptodate(solution),-unsat_recommends(solution),-count(new)", returns 
+      (List.assoc "trendy" Criteria.default_criteria));
+    ("parse count exact", "-count(solution,APT-Release:=/experimental/)", returns 
+      Criteria_types.([Minimize(Count(Solution,Some("APT-Release",ExactMatch "experimental")))]));
+    ("parse count regexp", "-count(solution,APT-Release:~/stable|unstable/)", returns 
+      Criteria_types.([Minimize(Count(Solution,Some("APT-Release",Regexp "stable|unstable")))]))
+  ]
+
+
+
 let test_who_provides =
   "who_provides" >:: (fun _ ->
     let l = CudfAdd.who_provides universe ("electric-engine",None) in
@@ -273,6 +307,7 @@ let all =
     test_shell_lexer;
     "criteria" >::: make_test_cases criteria_to_string;
     "criteria" >::: make_test_cases criteria_parse;
+    "cone" >::: make_test_cases cone_cases;
   ]
 
 let main () =

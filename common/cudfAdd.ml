@@ -331,3 +331,32 @@ let latest pkglist =
     with Not_found -> Hashtbl.add h p.Cudf.package p
   ) pkglist;
   Hashtbl.fold (fun _ v acc -> v::acc) h []
+
+let cone universe pkgs =
+  let conjunctive = false in
+  let l = ref [] in
+  let queue = Queue.create () in
+  let visited = Hashtbl.create (2 * (List.length pkgs)) in
+  List.iter (fun pkg -> Queue.add (Cudf.uid_by_package universe pkg) queue) pkgs;
+  while (Queue.length queue > 0) do
+    let id = Queue.take queue in
+    let pkg = Cudf.package_by_uid universe id in
+    if not(Hashtbl.mem visited id) then begin
+      l := pkg :: !l;
+      Hashtbl.add visited id ();
+      List.iter (fun vpkgs ->
+        match resolve_vpkgs_int universe vpkgs with
+        |[i] when not(Hashtbl.mem visited i) -> begin
+            Queue.add i queue;
+        end
+        |dsj when not conjunctive ->
+          List.iter (fun i ->
+            if not(Hashtbl.mem visited i) then begin
+              Queue.add i queue;
+            end
+          ) dsj
+        |_ -> ()
+      ) pkg.Cudf.depends
+    end
+  done;
+  !l
