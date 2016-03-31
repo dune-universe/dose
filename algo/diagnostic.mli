@@ -93,18 +93,6 @@ val pp_out_version : Format.formatter -> unit
 (** default package pretty printer. *)
 val pp_package : ?source:bool -> ?fields:bool -> Common.CudfAdd.pp -> Format.formatter -> Cudf.package -> unit
 
-(** print a list of cudf dependency. The label specifies the type of 
-    dependency ("depends" by default) *)
-val pp_dependency :
-  Common.CudfAdd.pp ->
-  ?label : string ->
-  Format.formatter ->
-  Cudf.package * Cudf_types.vpkglist -> unit
-
-(** Print the list of dependencies of a package. *)
-val pp_dependencies : Common.CudfAdd.pp ->
-  Format.formatter -> (Cudf.package * Cudf_types.vpkglist) list list -> unit
-
 val pp_list :
   (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a list -> unit
 
@@ -128,15 +116,6 @@ val is_solution : diagnosis -> bool
 val pp_summary :
   ?pp : Common.CudfAdd.pp ->
   ?explain : bool -> unit -> Format.formatter -> summary -> unit
-
-val print_error_human :
-  ?prefix:string -> Common.CudfAdd.pp ->
-  Cudf.package -> Format.formatter -> reason list -> unit
-
-(** print a human readable explanation (DEV) *)
-val fprintf_human :
-  ?pp : Common.CudfAdd.pp ->
-  ?prefix : string -> Format.formatter -> diagnosis -> unit
 
 (** [printf fmt d] print the output of the solver in yaml format 
     to the formatter [fmt].

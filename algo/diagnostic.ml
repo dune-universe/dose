@@ -152,22 +152,6 @@ let default_result n = {
 
 let pp_out_version fmt = Format.fprintf fmt "output-version: 1.1@.";;
 
-(** given a list of dependencies, return a list of list containg all
- *  paths in the dependency tree starting from [root] *)
-let build_paths deps root =
-  let bind m f = List.flatten (List.map f m) in
-  let rec aux acc deps root =
-    match List.partition (fun (i,_,_) -> CudfAdd.equal i root) deps with
-    |([],_) when (List.length acc) = 1 -> [] 
-    |(rootlist,_) ->
-        bind rootlist (function
-          |(i,v,[]) -> [List.rev acc]
-          |(i,v,l) -> bind l (fun r -> aux ((i,v)::acc) deps r)
-        )
-  in
-  aux [] deps root
-;;
-
 let pp_package ?(source=false) ?(fields=false) pp fmt pkg =
   let (p,v,fieldlist) = pp pkg in
   Format.fprintf fmt "package: %s@," p;
@@ -210,22 +194,6 @@ let rec pp_collection pp fmt = function
       (Format.fprintf fmt "@[<v 1>%a@]@," pp h ;
       pp_collection pp fmt t)
   |[] -> ()
-;;
-
-let create_pathlist root deps =
-  let dl = List.map (function Dependency x -> x |_ -> assert false) deps in
-  build_paths (List.unique dl) root
-;;
-
-let pp_dependencies pp fmt pathlist =
-  let rec aux fmt = function
-    |[path] -> Format.fprintf fmt "@[<v 1>-@,@[<v 1>depchain:@,%a@]@]" (pp_list (pp_dependency pp)) path
-    |path::pathlist ->
-        (Format.fprintf fmt "@[<v 1>-@,@[<v 1>depchain:@,%a@]@]@," (pp_list (pp_dependency pp)) path;
-        aux fmt pathlist)
-    |[] -> ()
-  in
-  aux fmt pathlist
 ;;
 
 (** Build a SyntacticDependencyGraph from the solver output. *)
@@ -624,57 +592,6 @@ let get_installationset ?(minimal=false) = function
 let is_solution = function
   |{result = Success _ } -> true
   |{result = Failure _ } -> false
-;;
-
-let print_error_human ?(prefix="") pp root fmt l =
-  let (deps,res) = List.partition (function Dependency _ -> true |_ -> false) l in
-  let pp_package pkg =
-    let (p,v,_) = pp pkg in
-    Format.sprintf "(%s %s)" p v
-  in
-  let pp_dependencies fmt pathlist =
-    List.iter (fun path ->
-      List.iter (fun (i,vpkgs) ->
-        if i.Cudf.package <> "dose-dummy-request" then
-          Format.fprintf fmt "%s%s@." prefix (pp_package i)
-      ) path
-    ) pathlist
-  in
-  let pp_reason fmt = function
-    |Conflict (i,j,vpkg) -> begin
-      Format.printf "%sThere is a conflict " prefix;
-      Format.printf "between package %s and package %s@." (pp_package i) (pp_package j);
-      if deps <> [] then begin
-          let pl1 = create_pathlist root (Dependency(i,[],[])::deps) in
-          let pl2 = create_pathlist root (Dependency(j,[],[])::deps) in
-          if pl1 <> [[]] then pp_dependencies fmt pl1;
-          if pl2 <> [[]] then pp_dependencies fmt pl2;
-        end
-    end
-    |Missing (i,vpkgs) -> begin
-      Format.printf "%sThe dependency %a of package %s cannot be satisfied@." prefix (CudfAdd.pp_vpkglist pp) vpkgs (pp_package i);
-      let pl = create_pathlist root (Dependency(i,vpkgs,[])::deps) in
-      if pl <> [[]] then pp_dependencies fmt pl
-    end
-    |_ -> assert false 
-  in
-  if root.Cudf.package = "dose-dummy-request" then
-    Format.printf "%sThe request cannot be satisfied@," prefix
-  else
-    Format.printf "%sThe request for package %s cannot be satisfied@," prefix (pp_package root);
-  List.iter (pp_reason fmt) res
-;;
-
-let fprintf_human ?(pp=CudfAdd.default_pp) ?(prefix="") fmt = function
-  |{result = Failure f ; request = [r] } -> 
-         print_error_human ~prefix pp r fmt (f ());
-  |{result = Failure f ; request = rl } -> 
-      let n = List.length rl in
-      List.iteri (fun i r ->
-        print_error_human ~prefix pp r fmt (f ());
-        if i <> (n-1) then Format.fprintf fmt "@."
-      ) rl;
-  |_ -> ()
 ;;
 
 let fprintf ?(pp=CudfAdd.default_pp) ?(failure=false) ?(success=false) ?(explain=false) 
