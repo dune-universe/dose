@@ -158,9 +158,7 @@ val printf :
   ?pp : Common.CudfAdd.pp ->
   ?failure : bool -> ?success : bool -> ?explain : bool -> diagnosis -> unit
 
-#ifdef HASOCAMLGRAPH
 (** print the explanation graph in dot format to the standard formatter *)
 val print_dot :
   ?pp : Common.CudfAdd.pp -> ?condense : bool ->
   ?addmissing : bool -> ?dir : string -> diagnosis -> unit
-#endif

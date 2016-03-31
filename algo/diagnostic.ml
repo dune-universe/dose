@@ -228,7 +228,6 @@ let pp_dependencies pp fmt pathlist =
   aux fmt pathlist
 ;;
 
-#ifdef HASOCAMLGRAPH
 (** Build a SyntacticDependencyGraph from the solver output. *)
 let build_explanation_graph ?(addmissing=false) root l =
   let open Defaultgraphs.SyntacticDependencyGraph in
@@ -587,47 +586,6 @@ let print_error ?(condense=false) ?(minimal=false) pp root fmt l =
   if List.length !conflicts > 0 && List.length !missing > 0 then Format.fprintf fmt "@,";
   pp_list pp_reason_missing fmt !missing
 ;;
-
-#else
- 
-(* only two failures reasons. Dependency describe the dependency chain to a failure witness *)
-let print_error ?(condense=false) ?(minimal=false) pp root fmt l =
-  let (deps,res) = List.partition (function Dependency _ -> true |_ -> false) l in
-  let pp_reason fmt = function
-    |Conflict (i,j,vpkg) ->
-        Format.fprintf fmt "@[<v 1>conflict:@,";
-        Format.fprintf fmt "@[<v 1>pkg1:@,%a@," (pp_package ~source:true pp) i;
-        Format.fprintf fmt "unsat-conflict: %a@]@," (CudfAdd.pp_vpkglist pp) [vpkg];
-        Format.fprintf fmt "@[<v 1>pkg2:@,%a@]" (pp_package ~source:true pp) j;
-        if deps <> [] && not minimal then begin
-          let pl1 = create_pathlist root (Dependency(i,[],[])::deps) in
-          let pl2 = create_pathlist root (Dependency(j,[],[])::deps) in
-          if pl1 <> [[]] then
-            Format.fprintf fmt "@,@[<v 1>depchain1:@,%a@]" (pp_dependencies pp) pl1;
-          if pl2 <> [[]] then
-            Format.fprintf fmt "@,@[<v 1>depchain2:@,%a@]" (pp_dependencies pp) pl2;
-          Format.fprintf fmt "@]"
-        end else
-          Format.fprintf fmt "@,@]"
-    |Missing (i,vpkgs) ->
-        Format.fprintf fmt "@[<v 1>missing:@,";
-        Format.fprintf fmt "@[<v 1>pkg:@,%a@]" 
-          (pp_dependency ~label:"unsat-dependency" pp) (i,vpkgs);
-        if not minimal then begin
-          let pl = create_pathlist root (Dependency(i,vpkgs,[])::deps) in
-          if pl <> [[]] then begin
-            Format.fprintf fmt "@,@[<v 1>depchains:@,%a@]" (pp_dependencies pp) pl;
-            Format.fprintf fmt "@]"
-          end else
-            Format.fprintf fmt "@]"
-        end else
-          Format.fprintf fmt "@]"
-    |_ -> assert false 
-  in
-  pp_list pp_reason fmt res
-;;
-
-#endif
 
 (* XXX unplug your imperative brain and rewrite this as a tail recoursive
  * function ! *)

@@ -178,13 +178,9 @@ let main () =
       else fun pkg -> pp pkg
     in
     let _ = 
-#ifdef HASOCAMLGRAPH 
       if not(Diagnostic.is_solution d) && (OptParse.Opt.get Options.dot) then
         let dir = OptParse.Opt.opt Options.outdir in
         Diagnostic.print_dot ~pp ~addmissing:explain ?dir d
-#else
-      ()
-#endif
     in
     Diagnostic.fprintf ~pp ~failure ~success ~explain ~minimal ~condense fmt d
   in

@@ -31,7 +31,7 @@ true: -traverse
 <rpm/*.ml{i,}>: use_common
 <opencsw/*.ml{i,}>: use_common, use_versioning
 
-<algo/*.ml{i,}>: use_common, @PKG_OCAMLGRAPH@
+<algo/*.ml{i,}>: use_common, package(ocamlgraph)
 
 <doseparse/*.ml{i,}>: use_common, use_versioning, use_debian, use_opam, use_npm, use_pef, use_csw, @USE_RPM@
 <doseparseNoRpm/*.ml{i,}>: use_common, use_versioning, use_debian, use_opam, use_npm, use_pef, use_csw
@@ -54,8 +54,8 @@ true: -traverse
 <doseparseNoRpm/*.cmx> and not <doseparseNoRpm/doseparse*.cmx>: for-pack(DoseparseNoRpm)
 
 <{applications,experimental}/*>: use_common, use_versioning, use_debian, use_opam, use_npm, use_pef, use_csw
-<{applications,experimental}/*>: package(extlib), package(re.pcre), package(unix), package(re.str)
-<{applications,experimental}/*>: @PKG_CUDF@, @PKG_OCAMLGRAPH@, @PKG_ZIP@, @PKG_BZ2@
+<{applications,experimental}/*>: package(extlib), package(re.pcre), package(unix), package(re.str), package(ocamlgraph)
+<{applications,experimental}/*>: @PKG_CUDF@, @PKG_ZIP@, @PKG_BZ2@
 
 <applications/apt-cudf.*>: use_doseparseNoRpm, use_algo
 <applications/deb-buildcheck.*>: use_algo, use_doseparseNoRpm

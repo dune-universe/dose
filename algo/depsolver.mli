@@ -159,10 +159,8 @@ val check_request_using:
   ?explain : bool ->
   Cudf.cudf -> solver_result
 
-#ifdef HASOCAMLGRAPH
 (** Build the installation graph from a cudf solution universe and sets of packages to be 
     installed/removed (see CudfAdd.make_summary) *)
 val installation_graph: solution:Cudf.universe -> 
   (Common.CudfAdd.Cudf_set.t * Common.CudfAdd.Cudf_set.t) -> 
     Defaultgraphs.ActionGraph.G.t
-#endif

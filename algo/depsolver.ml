@@ -444,7 +444,6 @@ let depclean ?(global_constraints=true) ?(callback=(fun _ -> ())) univ pkglist =
     end else None
   ) pkglist
 
-#ifdef HASOCAMLGRAPH
 (* Build a graph of install/remove actions (optionally including dependent packages *)
 (* code freely adapted from opam/src/solver/opamCudf.ml *)
 (* module AG = Defaultgraphs.ActionGraph *)
@@ -506,4 +505,3 @@ let installation_graph ~solution:soluniv (install,remove) =
   ) (PG.conflict_graph_list soluniv packagelist);
   g
 ;;
-#endif

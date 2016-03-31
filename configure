@@ -628,11 +628,7 @@ LIBOBJS
 OCAMLEXT
 PKG_XML
 PKG_CURL
-OCAMLGRAPH
 CONFIG_OCAMLGRAPH
-PKG_OCAMLGRAPH
-DOC_OCAMLGRAPH
-MLPACK_OCAMLGRAPH
 PKG_CUDF
 INCLUDE_CUDF
 DOC_RPM
@@ -672,14 +668,13 @@ OCAML_PKG_expat
 HAS_XML
 OCAML_PKG_curl
 HAS_CURL
-OCAML_PKG_ocamlgraph
-HAS_OCAMLGRAPH
 OCAML_PKG_bz2
 HAS_BZ2
 OCAML_PKG_zip
 HAS_ZIP
 OCAML_PKG_parmap
 HAS_PARMAP
+OCAML_PKG_ocamlgraph
 OCAML_PKG_re_pcre
 OCAML_PKG_extlib
 OCAML_PKG_cudf
@@ -755,7 +750,6 @@ with_libcudf
 with_parmap
 with_zip
 with_bz2
-with_ocamlgraph
 with_curl
 with_xml
 with_oUnit
@@ -1397,7 +1391,6 @@ Optional Packages:
  --with-parmap
  --with-zip
  --with-bz2
- --with-ocamlgraph
  --with-curl
  --with-xml
  --with-oUnit
@@ -3774,11 +3767,9 @@ PKG_ZIP=pkg_
 PKG_PARMAP=pkg_
 PKG_XML=pkg_
 PKG_CUDF=use_cudf
-PKG_OCAMLGRAPH=pkg_
 PKG_CURL=pkg_
 PKG_OUNIT=pkg_
 PKG_BENCHMARK=pkg_
-DOC_OCAMLGRAPH=""
 DOC_RPM=""
 
 
@@ -3889,6 +3880,36 @@ if test "$OCAML_PKG_re.pcre" = "no"; then
 fi
 
 
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package ocamlgraph" >&5
+$as_echo_n "checking for OCaml findlib package ocamlgraph... " >&6; }
+
+  unset found
+  unset pkg
+  found=no
+  for pkg in ocamlgraph  ; do
+    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
+       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+       OCAML_PKG_ocamlgraph=$pkg
+       found=yes
+       break
+    fi
+  done
+  if test "$found" = "no" ; then
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+     OCAML_PKG_ocamlgraph=no
+  fi
+
+
+
+if test "$OCAML_PKG_ocamlgraph" = "no"; then
+ as_fn_error $? "Please install OCaml findlib module 'ocamlgraph'." "$LINENO" 5
+fi
+TMPVERSION=`$OCAMLFIND query -format %v ocamlgraph | sed 's/\.//g'`
+CONFIG_OCAMLGRAPH="-D 'OCAMLGRAPHVERSION $TMPVERSION'"
+
+
 # Check whether --with-parmap was given.
 if test "${with_parmap+set}" = set; then :
   withval=$with_parmap; HAS_PARMAP=yes
@@ -3929,7 +3950,6 @@ $as_echo "not found" >&6; }
   PKG_PARMAP="package(parmap)"
   PARMAP=parmap
 fi
-
 
 
 # Check whether --with-zip was given.
@@ -4013,55 +4033,6 @@ $as_echo "not found" >&6; }
   CONFIG_BZ2="-D HASBZ2"
   PKG_BZ2="package(bz2)"
   BZ2=bz2
-fi
-
-
-# Check whether --with-ocamlgraph was given.
-if test "${with_ocamlgraph+set}" = set; then :
-  withval=$with_ocamlgraph; HAS_OCAMLGRAPH=yes
-else
-  HAS_OCAMLGRAPH=no
-fi
-
-
-if test "$HAS_OCAMLGRAPH" = "yes" ; then
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package ocamlgraph" >&5
-$as_echo_n "checking for OCaml findlib package ocamlgraph... " >&6; }
-
-  unset found
-  unset pkg
-  found=no
-  for pkg in ocamlgraph  ; do
-    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
-       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
-$as_echo "found" >&6; }
-       OCAML_PKG_ocamlgraph=$pkg
-       found=yes
-       break
-    fi
-  done
-  if test "$found" = "no" ; then
-     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-     OCAML_PKG_ocamlgraph=no
-  fi
-
-
-
-  if test "$OCAML_PKG_ocamlgraph" = "no"; then
-   as_fn_error $? "Please install OCaml findlib module 'ocamlgraph'." "$LINENO" 5
-  fi
-  TMPVERSION=`$OCAMLFIND query -format %v ocamlgraph | sed 's/\.//g'`
-  PKG_OCAMLGRAPH="package(ocamlgraph)"
-  MLPACK_OCAMLGRAPH="Defaultgraphs
-Statistics
-Dominators
-Strongdeps
-Strongconflicts_int
-Strongconflicts"
-  CONFIG_OCAMLGRAPH="-D HASOCAMLGRAPH -D 'OCAMLGRAPHVERSION $TMPVERSION'"
-  OCAMLGRAPH=ocamlgraph
 fi
 
 
@@ -5334,9 +5305,6 @@ fi
 
 done
 
-#  AC_CHECK_HEADERS([rpm/rpmgi.h],,AC_MSG_ERROR([missing rpmgi.h]))
-#  AC_CHECK_HEADERS([rpm/rpm46compat.h],,AC_MSG_ERROR([missing rpm46compat.h]))
-#  AC_CHECK_HEADERS([rpm/rpm4compat.h],,AC_MSG_ERROR([missing rpm4compat.h]))
   CONFIG_RPM="-D HASRPM"
   USE_RPM="use_rpm, use_rpm5"
   DOC_RPM="#rpm/Packages
@@ -5368,17 +5336,6 @@ else
   LN="ln -s"
 
 fi
-
-
-#AC_CHECK_HEADERS([sched.h],,AC_MSG_ERROR([missing sched.h]))
-#AC_CHECK_DECLS([sched_setaffinity], [], [], [[
-#                #define _GNU_SOURCE 1
-#                #include <sched.h>
-#                ]])
-
-
-
-
 
 
 
@@ -5432,7 +5389,7 @@ if test "$BUILD_EXP" = "yes" ; then
 
 fi
 
-ac_config_files="$ac_config_files Makefile.config _tags META dose3.odocl algo/algo.mlpack common/versionInfo.ml applications/dose-tests.list"
+ac_config_files="$ac_config_files Makefile.config _tags META dose3.odocl common/versionInfo.ml applications/dose-tests.list"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6145,7 +6102,6 @@ do
     "_tags") CONFIG_FILES="$CONFIG_FILES _tags" ;;
     "META") CONFIG_FILES="$CONFIG_FILES META" ;;
     "dose3.odocl") CONFIG_FILES="$CONFIG_FILES dose3.odocl" ;;
-    "algo/algo.mlpack") CONFIG_FILES="$CONFIG_FILES algo/algo.mlpack" ;;
     "common/versionInfo.ml") CONFIG_FILES="$CONFIG_FILES common/versionInfo.ml" ;;
     "applications/dose-tests.list") CONFIG_FILES="$CONFIG_FILES applications/dose-tests.list" ;;
 

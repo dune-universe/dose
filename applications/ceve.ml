@@ -20,10 +20,8 @@ open Doseparse
 let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
-#ifdef HASOCAMLGRAPH
-  module DGraph = Defaultgraphs.SyntacticDependencyGraph
-  module PGraph = Defaultgraphs.PackageGraph
-#endif
+module DGraph = Defaultgraphs.SyntacticDependencyGraph
+module PGraph = Defaultgraphs.PackageGraph
 
 module Options = struct
   open OptParse
@@ -243,16 +241,12 @@ let main () =
         ) (List.map cudf2deb l)
     end;
     |"table" ->
-#ifdef HASOCAMLGRAPH 
       Printf.fprintf oc "%d\t%d\t%d\n"
-      (Cudf.universe_size u) (Defaultgraphs.SyntacticDependencyGraph.G.nb_edges (Defaultgraphs.SyntacticDependencyGraph.dependency_graph u))
+      (Cudf.universe_size u) 
+      (Defaultgraphs.SyntacticDependencyGraph.G.nb_edges 
+        (Defaultgraphs.SyntacticDependencyGraph.dependency_graph u))
       (nr_conflicts u)
-#else
-      fatal "format table not supported: needs ocamlgraph"
-#endif
-
     |("dot" | "gml" | "grml") as t -> 
-#ifdef HASOCAMLGRAPH 
       let fmt = Format.formatter_of_out_channel oc in
       begin match OptParse.Opt.get Options.grp_type with
         |"syn" ->
@@ -295,9 +289,6 @@ let main () =
           else fatal "Option -T %s not supported together with -G %s" t gt
         |s -> fatal "Opation %s not supported" s
       end
-#else
-      fatal "-T %s not supported: needs ocamlgraph" t
-#endif
     |t -> fatal "-T %s format unknown." t
     end ;
     close_out oc;

@@ -1,3 +1,10 @@
+
+dose3 (4.3) UNRELEASED; urgency=low
+ * Fix exitcode problem with apt-cudf
+ * Add new comparison functions to parse npm like versions
+ * Make ocamlgraph a hard dependency of dose.
+ * Switch to ocamlgraph based explanation graphs by default
+
 dose3 (4.2) UNRELEASED; urgency=low
 
  * Fix META file and other compilation problems (notably on 32 bits architectures)
