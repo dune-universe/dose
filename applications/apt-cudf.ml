@@ -53,14 +53,18 @@ module Options = struct
 
 end
 
+let doseexit () =
+  if OptParse.Opt.is_set Options.solver then (
+    Format.printf "Error: %s" (OptParse.Opt.get Options.solver);
+    if OptParse.Opt.is_set Options.criteria_plain then
+      Format.printf " \"%s\"" (OptParse.Opt.get Options.criteria_plain);
+    Format.printf "@."
+  )
+;;
+
 let fatal fmt =
   Printf.kprintf (fun s ->
-    if OptParse.Opt.is_set Options.solver then (
-      Format.printf "Error: %s" (OptParse.Opt.get Options.solver);
-      if OptParse.Opt.is_set Options.criteria_plain then
-        Format.printf " \"%s\"" (OptParse.Opt.get Options.criteria_plain);
-      Format.printf "@."
-    );
+    doseexit ();
     Format.printf "Message: %s@." s;
     exit 1
   ) fmt
@@ -466,7 +470,8 @@ let main () =
 
   (* do nothing. *)
   if OptParse.Opt.get Options.noop then begin
-    info "Noop & Exit."; exit(0)
+    info "Noop & Exit.";
+    exit 0
   end;
 
   let exec_pat = fst (parse_solver_spec (Filename.concat solver_dir solver)) in
@@ -477,12 +482,15 @@ let main () =
     let explain = OptParse.Opt.get Options.human in
     match Algo.Depsolver.check_request ~cmd:exec_pat ~criteria ~explain cudf with
     |Algo.Depsolver.Error s -> fatal "%s" s
-    |Algo.Depsolver.Unsat None ->
-      fatal "(UNSAT) No Solutions according to the given preferences"
+    |Algo.Depsolver.Unsat None -> begin
+      doseexit ();
+      Format.printf "Message: (UNSAT) No Solutions according to the given preferences@.";
+      exit 0
+    end
     |Algo.Depsolver.Unsat Some d -> begin
       Format.printf "Error: (UNSAT) No Solutions according to the given preferences@.";
       Format.printf "%a@." (Algo.Diagnostic.fprintf_human ~prefix:"Message: " ~pp) d;
-      exit 1
+      exit 0
     end
     |Algo.Depsolver.Sat s -> s
   in
