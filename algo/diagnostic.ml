@@ -157,21 +157,26 @@ let pp_package ?(source=false) ?(fields=false) pp fmt pkg =
   Format.fprintf fmt "package: %s@," p;
   Format.fprintf fmt "version: %s" v;
   List.iter (function
-    |(("source"|"sourcenumber"),(_,_)) -> ()
+    |(("source"|"sourcenumber"|"type"|"essential"),_) -> ()
     |(k,(v,true)) -> Format.fprintf fmt "@,%s: %s" k v
     |(k,(v,false)) when fields = true -> Format.fprintf fmt "@,%s: %s" k v
     |(k,(v,_)) -> ()
   ) fieldlist;
-  if source then begin 
+  if source then
     try
-      let source = fst(List.assoc "source" fieldlist) in
-      let sourceversion = 
-        try "(= "^(fst(List.assoc "sourcenumber" fieldlist))^")" 
-        with Not_found -> ""
-      in
-      Format.fprintf fmt "@,source: %s %s" source sourceversion
+      if fst(List.assoc "type" fieldlist) = "src" then
+        let source = fst(List.assoc "source" fieldlist) in
+        let sourceversion = 
+          try "(= "^(fst(List.assoc "sourcenumber" fieldlist))^")" 
+          with Not_found -> ""
+        in begin
+          Format.fprintf fmt "@,source: %s %s" source sourceversion;
+          Format.fprintf fmt "@,type: src"
+        end
+      else
+        if fst(List.assoc "essential" fieldlist) = "true" then
+          Format.fprintf fmt "@,essential: true"
     with Not_found -> ()
-  end
 ;;
 
 let pp_dependency pp ?(label="depends") fmt (i,vpkgs) =
