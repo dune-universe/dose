@@ -77,9 +77,10 @@ let init_pool_univ ~global_constraints univ =
             ) pkg.Cudf.depends 
           in
           let cl = 
-            List.map (fun vpkg ->
-              debug "Conflict %s" (Cudf_types_pp.string_of_vpkg vpkg);
-              (vpkg, CudfAdd.resolve_vpkg_int univ vpkg)
+            List.filter_map (fun vpkg ->
+              match CudfAdd.resolve_vpkg_int univ vpkg with
+              |[] -> None
+              |l -> Some (vpkg, l)
             ) pkg.Cudf.conflicts
           in
           if pkg.Cudf.keep = `Keep_package then
