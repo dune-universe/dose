@@ -130,7 +130,7 @@ let default_pp pkg =
 
 let pp from_cudf ?(fields=[]) ?(decode=decode) pkg =
     let (p,v) = from_cudf (pkg.Cudf.package,pkg.Cudf.version) in
-    let default_fields = ["architecture";"source";"sourcenumber";"essential"] in
+    let default_fields = ["architecture";"source";"sourcenumber";"essential";"type"] in
     let f b l =
       List.filter_map (fun k ->
         try Some(k,(decode(Cudf.lookup_package_property pkg k),b))

@@ -230,8 +230,8 @@ let get_real_name name =
       if n = "src" then a else n
     with Invalid_string -> n
 
-let get_real_version tables (name,cudfversion) =
-  let package = get_real_name name in
+let get_real_version tables (cudfname,cudfversion) =
+  let package = get_real_name cudfname in
   try
     if cudfversion = max32int || cudfversion = max32int - 1 then 
       (package,"nan")
@@ -248,7 +248,7 @@ let get_real_version tables (name,cudfversion) =
         in
         fatal "Unable to get real version for %s (%i)\n All Known versions for this package are %s" package cudfversion known 
   with Not_found ->
-    fatal "Package (%s,%d) does not have an associated debian version" name cudfversion
+    fatal "Package (%s,%d) does not have an associated debian version" cudfname cudfversion
 
 let loadl ?native_arch ?package_arch tables l =
   List.flatten (
@@ -328,7 +328,6 @@ let preamble =
     ("sourcenumber",(`String (Some "")));
     ("sourceversion",(`Int (Some 1))) ;
     ("essential",(`Bool (Some false))) ;
-    ("buildessential",(`Bool (Some false))) ;
     ("filename",(`String (Some "")));
     ("installedsize",(`Int (Some 0)));
     ("multiarch",(`String (Some "")));
@@ -339,16 +338,21 @@ let preamble =
 
 let add_extra ?native_arch extras tables pkg =
   let name = 
-    if String.starts_with pkg#name "src:" then
-      String.sub pkg#name 4 ((String.length pkg#name) - 4)
-    else pkg#name
+    let n = 
+      if String.starts_with pkg#name "src:" then
+        String.sub pkg#name 4 ((String.length pkg#name) - 4)
+      else pkg#name
+    in
+    Some ("name",`String n) 
   in
-  let name = ("name",`String name) in
-  let number = ("number",`String pkg#version) in
-  let architecture = ("architecture",`String pkg#architecture) in
-  let priority = ("priority",`String pkg#priority) in
-  let essential = ("essential", `Bool pkg#essential) in
-  let build_essential = ("buildessential", `Bool pkg#build_essential) in
+  let number = Some ("number",`String pkg#version) in
+  let architecture = Some ("architecture",`String pkg#architecture) in
+  let priority = Some ("priority",`String pkg#priority) in
+  let essential =
+    if pkg#essential then 
+      Some ("essential", `Bool true) 
+    else None 
+  in
   let (source,sourcenumber,sourceversion) =
     let (n,v) =
       match pkg#source with
@@ -357,16 +361,25 @@ let add_extra ?native_arch extras tables pkg =
       |(n,Some v) -> (n,v)
     in
     let cv = get_cudf_version tables ("",v) in
-    ("source",`String n), ("sourcenumber", `String v), ("sourceversion", `Int cv)
+    Some ("source",`String n),
+    Some ("sourcenumber", `String v),
+    Some ("sourceversion", `Int cv)
   in
-  let recommends = ("recommends", `Vpkgformula (loadll tables pkg#recommends)) in
-  let replaces = ("replaces", `Vpkglist (loadl tables pkg#replaces)) in
-  let native = (* XXX if 0 we can ignore it *)
-    let n =
-      if Option.is_some native_arch && 
-        (Option.get native_arch) = pkg#architecture then 1 
-      else 0
-    in ("native",`Int n)
+  let recommends = 
+    match loadll tables pkg#recommends with
+    |[] -> None
+    |l -> Some ("recommends", `Vpkgformula l) 
+  in
+  let replaces = 
+    match loadl tables pkg#replaces with
+    |[] -> None
+    |l -> Some ("replaces", `Vpkglist l)
+  in
+  let native =
+    if Option.is_some native_arch && 
+      (Option.get native_arch) = pkg#architecture 
+    then Some ("native",`Int 1)
+    else None
   in
   let extras = 
     ("Type",("type",`String None))::
@@ -387,15 +400,14 @@ let add_extra ?native_arch extras tables pkg =
     ) extras
   in
   List.filter_map (function
-    |(_,`Vpkglist []) -> None
-    |(_,`Vpkgformula []) -> None
-    |(_,`String "") -> None
-    |e -> Some e
+    |Some (_,`Vpkglist []) -> None
+    |Some (_,`Vpkgformula []) -> None
+    |Some (_,`String "") -> None
+    |e -> e
   )
   [priority; name; architecture; number;
   source; sourcenumber; sourceversion; 
-  recommends; replaces;
-  essential;build_essential;native]@ l
+  recommends; replaces; essential;native]@ l
 ;;
 
 let set_keep pkg =
@@ -510,11 +522,11 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
                       end
                   |false, true ->             (* a virtual package and a self conflict *)
                       begin
-                        debug "M-A-Same: pkg %s has a self-conflict via virtual package: %s" pkg#name n;
+                        (*debug "M-A-Same: pkg %s has a self-conflict via virtual package: %s" pkg#name n;*)
                         try
                           List.filter_map (fun (pn,_) ->
                             if pn <> pkg#name then begin
-                              debug "M-A-Same: adding conflict on real package %s for %s" pn pkg#name; 
+                              (*debug "M-A-Same: adding conflict on real package %s for %s" pn pkg#name; *)
                               Some((pn,a),None)
                             end else None
                           ) (SSet.elements !(OcamlHashtbl.find tables.virtual_table n))

@@ -162,20 +162,23 @@ let pp_package ?(source=false) ?(fields=false) pp fmt pkg =
     |(k,(v,false)) when fields = true -> Format.fprintf fmt "@,%s: %s" k v
     |(k,(v,_)) -> ()
   ) fieldlist;
+  try
+    if fst(List.assoc "essential" fieldlist) = "true" then
+      Format.fprintf fmt "@,essential: true"
+  with Not_found -> ();
+  try
+    if fst(List.assoc "type" fieldlist) = "src" then
+      Format.fprintf fmt "@,type: src"
+  with Not_found -> ();
   if source then
     try
-      if fst(List.assoc "type" fieldlist) = "src" then
-        let source = fst(List.assoc "source" fieldlist) in
-        let sourceversion = 
-          try "(= "^(fst(List.assoc "sourcenumber" fieldlist))^")" 
-          with Not_found -> ""
-        in begin
-          Format.fprintf fmt "@,source: %s %s" source sourceversion;
-          Format.fprintf fmt "@,type: src"
-        end
-      else
-        if fst(List.assoc "essential" fieldlist) = "true" then
-          Format.fprintf fmt "@,essential: true"
+      let source = fst(List.assoc "source" fieldlist) in
+      let sourceversion = 
+        try "(= "^(fst(List.assoc "sourcenumber" fieldlist))^")" 
+        with Not_found -> ""
+      in begin
+        Format.fprintf fmt "@,source: %s %s" source sourceversion;
+      end;
     with Not_found -> ()
 ;;
 
