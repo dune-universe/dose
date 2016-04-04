@@ -52,6 +52,31 @@ let univcheck ?(global_constraints=true) ?callback universe =
       aux ~callback:callback_int universe
 ;;
 
+let univcheck ?(global_constraints=true) ?callback universe =
+  let keeplist = 
+    Cudf.fold_packages (fun acc pkg ->
+      if pkg.Cudf.installed then
+        match pkg.Cudf.keep with
+        |`Keep_package -> pkg::acc
+        |`Keep_version -> pkg::acc
+        |_ -> acc
+      else acc
+    ) [] universe
+  in
+  let keepset = CudfAdd.to_set keeplist in
+  let partition =
+    Enum.map (fun pkg ->
+      let s = CudfAdd.Cudf_set.union (CudfAdd.to_set (CudfAdd.cone universe [pkg])) keepset in
+      (Cudf.load_universe (CudfAdd.Cudf_set.elements s))
+    ) (List.enum (Cudf.get_packages universe)) 
+  in
+  Enum.fold (fun u acc ->
+    info "Run : %d" (Cudf.universe_size u);
+    let b = univcheck ~global_constraints ?callback u in 
+    b+acc
+  ) 0 partition
+;;
+
 (** [listcheck ?callback universe pkglist] check if a subset of packages 
     un the universe are installable.
 
