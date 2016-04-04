@@ -235,7 +235,7 @@ let outdated
 
   let pp pkg =
     let p = 
-      let n = Debian.Debcudf.get_real_name pkg.Cudf.package in
+      let (n,_) = Debian.Debcudf.get_real_name pkg.Cudf.package in
       if String.starts_with n "src/" then
         Printf.sprintf "Source conflict (%s)" n
       else n

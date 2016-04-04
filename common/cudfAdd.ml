@@ -129,18 +129,22 @@ let default_pp pkg =
   (pkg.Cudf.package,v,[])
 
 let pp from_cudf ?(fields=[]) ?(decode=decode) pkg =
-    let (p,v) = from_cudf (pkg.Cudf.package,pkg.Cudf.version) in
-    let default_fields = ["architecture";"source";"sourcenumber";"essential";"type"] in
-    let f b l =
-      List.filter_map (fun k ->
-        try Some(k,(decode(Cudf.lookup_package_property pkg k),b))
-        with Not_found -> None
-      ) l
-    in
-    let l = (f false fields)@(f true default_fields) in
-    (decode p,decode v,l)
+  let (p,v) = from_cudf (pkg.Cudf.package,pkg.Cudf.version) in
+  let default_fields = ["architecture";"source";"sourcenumber";"essential";"type"] in
+  let f b l acc =
+    List.fold_left (fun acc k ->
+      try (k,(decode(Cudf.lookup_package_property pkg k),b))::acc
+      with Not_found -> acc
+    ) acc l
+  in
+  let l = (f false fields (f true default_fields [])) in
+  (p,v,l)
 
-let max32int = if Int32.to_int(Int32.max_int) < 0 then max_int else Int32.to_int(Int32.max_int);;
+let max32int =
+  if Int32.to_int(Int32.max_int) < 0 then
+    max_int
+  else Int32.to_int(Int32.max_int)
+;;
 
 let pp_vpkg pp fmt vpkg =
   let string_of_relop = function

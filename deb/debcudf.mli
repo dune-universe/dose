@@ -37,7 +37,7 @@ val clear : tables -> unit
 val get_cudf_version : tables -> Pef.Packages_types.name * Pef.Packages_types.version -> int
 
 (** Get the orgininal debian package name. Remove deb -> cudf conversion cruft *)
-val get_real_name : Cudf_types.pkgname -> string
+val get_real_name : Cudf_types.pkgname -> (string * string option)
 
 (** return the real version associated to a Cudf package *)
 val get_real_version : tables -> Cudf_types.pkgname * Cudf_types.version -> 

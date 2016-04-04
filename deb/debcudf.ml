@@ -221,23 +221,23 @@ let get_cudf_version tables (package,version) =
 
 let get_real_name name = 
   (* Remove --virtual- and architecture encoding *)
-  let n = (CudfAdd.decode name) in
-  if ExtString.String.starts_with n "--vir" then
-    ExtString.String.slice ~first:10 n
+  let dn = (CudfAdd.decode name) in
+  if ExtString.String.starts_with dn "--vir" then
+    (ExtString.String.slice ~first:10 dn,None)
   else
     try
-      let (n,a) = ExtString.String.split n ":" in
-      if n = "src" then a else n
-    with Invalid_string -> n
+      let (n,a) = ExtString.String.split dn ":" in
+      if n = "src" then (a,None) else (n,Some a)
+    with Invalid_string -> (dn,None)
 
 let get_real_version tables (cudfname,cudfversion) =
-  let package = get_real_name cudfname in
+  let (debname,arch) = get_real_name cudfname in
   try
     if cudfversion = max32int || cudfversion = max32int - 1 then 
-      (package,"nan")
+      (debname,"nan")
     else
       let m = !(Util.IntHashtbl.find tables.reverse_table cudfversion) in
-      try (package,SMap.find package m) 
+      try (debname,SMap.find debname m) 
       with Not_found ->
         let known =
           String.concat "," (
@@ -246,7 +246,7 @@ let get_real_version tables (cudfname,cudfversion) =
             ) (SMap.bindings m)
           )
         in
-        fatal "Unable to get real version for %s (%i)\n All Known versions for this package are %s" package cudfversion known 
+        fatal "Unable to get real version for %s (%i)\n All Known versions for this package are %s" debname cudfversion known 
   with Not_found ->
     fatal "Package (%s,%d) does not have an associated debian version" cudfname cudfversion
 
