@@ -234,11 +234,11 @@ let outdated
   in
 
   let pp pkg =
-    let p = 
-      let (n,_) = Debian.Debcudf.get_real_name pkg.Cudf.package in
+    let (p,a) = 
+      let (n,a) = Debian.Debcudf.get_real_name pkg.Cudf.package in
       if String.starts_with n "src/" then
-        Printf.sprintf "Source conflict (%s)" n
-      else n
+        (Printf.sprintf "Source conflict (%s)" n,a)
+      else (n,a)
     in
     let v = 
       if pkg.Cudf.version > 0 then begin
@@ -248,8 +248,10 @@ let outdated
           try Cudf.lookup_package_property pkg "number"
           with Not_found ->
             if (pkg.Cudf.version mod 2) = 1 then
-              snd(Debian.Debcudf.get_real_version tables 
-              (pkg.Cudf.package,pkg.Cudf.version))
+              let (_,_,v) =
+                Debian.Debcudf.get_real_version tables 
+                (pkg.Cudf.package,pkg.Cudf.version)
+              in v
             else
               fatal "Real package without Debian Version"
       end
@@ -261,7 +263,7 @@ let outdated
         with Not_found -> None
       ) ["architecture";"source";"sourcenumber";"equivs"]
     in
-    (p,v,l)
+    (p,a,v,l)
   in
 
   let fmt = Format.std_formatter in

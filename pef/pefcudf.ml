@@ -30,10 +30,12 @@ let create n = {
   reverse_table = Hashtbl.create n;
 }
 
+(*
 type lookup = {
-  from_cudf : Cudf.package -> (string * string);
+  from_cudf : Cudf.package -> (string * string option * string);
   to_cudf : (string * string) -> Cudf.package
 }
+*)
 
 let clear tables =
   Hashtbl.clear tables.versions_table;

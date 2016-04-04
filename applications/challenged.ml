@@ -166,8 +166,10 @@ let pp tables pkg =
     try Cudf.lookup_package_property pkg "number"
     with Not_found ->
       if (pkg.Cudf.version mod 2) = 1 then
-        snd(Debian.Debcudf.get_real_version tables
-        (pkg.Cudf.package,pkg.Cudf.version))
+        let (_,_,v) =
+          Debian.Debcudf.get_real_version tables
+          (pkg.Cudf.package,pkg.Cudf.version)
+        in v
       else if pkg.Cudf.version = 0 then
         (* this is a dependency without constraint *)
         ""
@@ -180,7 +182,7 @@ let pp tables pkg =
       try Some(k,(Cudf.lookup_package_property pkg k,true))
       with Not_found -> None
     ) ["architecture";"source";"sourcenumber";"equivs"]
-  in (pkg.Cudf.package,v,l)
+  in (pkg.Cudf.package,None,v,l)
 
 (* repository are real packages, 
  * packagelist are cudf packages, 

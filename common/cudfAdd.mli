@@ -155,7 +155,7 @@ val string_of_package : Cudf.package -> string
 
 (* Function signature for cudf package printer. The output represents
    a triple (name, version, (field name, value) list *)
-type pp = Cudf.package -> string * string * (string * (string * bool)) list
+type pp = Cudf.package -> string * string option * string * (string * (string * bool)) list
 
 (** [pp ?decode from_cudf pkg] package pretty printer.
     [from_cudf] a function that gets a (name,cudfversion) pair and returns a (name,realversion).
@@ -168,7 +168,7 @@ type pp = Cudf.package -> string * string * (string * (string * bool)) list
     as "nan"
 *)
 val pp :
-  (Cudf_types.pkgname * Cudf_types.version -> string * string) ->
+  (Cudf_types.pkgname * Cudf_types.version -> string * string option * string) ->
   ?fields: string list->
   ?decode: (Cudf_types.pkgname -> string) -> pp
 

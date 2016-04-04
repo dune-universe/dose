@@ -41,7 +41,9 @@ val get_real_name : Cudf_types.pkgname -> (string * string option)
 
 (** return the real version associated to a Cudf package *)
 val get_real_version : tables -> Cudf_types.pkgname * Cudf_types.version -> 
-  (Pef.Packages_types.name * Pef.Packages_types.version)
+  (Pef.Packages_types.name *
+   Pef.Packages_types.architecture option *
+   Pef.Packages_types.version)
 
 (** [tocudf tbl p] 
     convert the a debian package representation to cudf.

@@ -107,7 +107,7 @@ let deb_load_list options ?(status=[]) ?(raw=false) dll =
 let npm_load_list file =
   let (request,pkglist) = Npm.Packages.input_raw file in
   let tables = Pef.Pefcudf.init_tables Versioning.SemverNode.compare pkglist in
-  let from_cudf (p,i) = (p, Pef.Pefcudf.get_real_version tables (p,i)) in
+  let from_cudf (p,i) = (p,None,Pef.Pefcudf.get_real_version tables (p,i)) in
   let to_cudf (p,v) = (p, Pef.Pefcudf.get_cudf_version tables (p,v)) in
   let cl = List.map (Pef.Pefcudf.tocudf tables) pkglist in
   let preamble = Npm.Npmcudf.preamble in
@@ -120,7 +120,7 @@ let npm_load_list file =
 let opam_load_list ?options file =
   let (request,pkglist) = Opam.Packages.input_raw file in
   let tables = Pef.Pefcudf.init_tables Versioning.Debian.compare pkglist in
-  let from_cudf (p,i) = (p, Pef.Pefcudf.get_real_version tables (p,i)) in
+  let from_cudf (p,i) = (p,None,Pef.Pefcudf.get_real_version tables (p,i)) in
   let to_cudf (p,v) = (p, Pef.Pefcudf.get_cudf_version tables (p,v)) in
   let options =
     match options with
@@ -140,7 +140,7 @@ let pef_load_list options dll =
   let extras = [("maintainer",("maintainer",`String None))] in
   let pkglist = List.flatten dll in
   let tables = Pef.Pefcudf.init_tables Versioning.Debian.compare pkglist in
-  let from_cudf (p,i) = (p, Pef.Pefcudf.get_real_version tables (p,i)) in
+  let from_cudf (p,i) = (p,None,Pef.Pefcudf.get_real_version tables (p,i)) in
   let to_cudf (p,v) = (p, Pef.Pefcudf.get_cudf_version tables (p,v)) in
   let cll =
     List.map (fun l ->
@@ -154,7 +154,7 @@ let pef_load_list options dll =
 let csw_load_list dll =
   let pkglist = List.flatten dll in
   let tables = Csw.Cswcudf.init_tables pkglist in
-  let from_cudf (p,i) = (p, Csw.Cswcudf.get_real_version tables (p,i)) in
+  let from_cudf (p,i) = (p,None,Csw.Cswcudf.get_real_version tables (p,i)) in
   let to_cudf (p,v) = (p, Csw.Cswcudf.get_cudf_version tables (p,v)) in
   let cll = 
     List.map (fun l ->
@@ -222,7 +222,7 @@ let rpm_load_list dll =
     ) dll
   in
   (* Rpm.Rpmcudf.clear tables; *)
-  let from_cudf (p,i) = (p,string_of_int i) in
+  let from_cudf (p,i) = (p,None,string_of_int i) in
   let to_cudf (p,v) = (p,Rpm.Rpmcudf.get_cudf_version tables (p,v)) in
   let preamble = Rpm.Rpmcudf.preamble in
   let request = Cudf.default_request in
@@ -277,7 +277,7 @@ let cudf_load_list file =
     |Some p , pkglist, None -> p, pkglist, Cudf.default_request
     |Some p , pkglist, Some req -> p, pkglist, req
   in
-  let from_cudf (p,i) = (p,string_of_int i) in
+  let from_cudf (p,i) = (p,None,string_of_int i) in
   let to_cudf (p,v) = (p,int_of_string v) in
   (preamble,[pkglist;[]],request,from_cudf,to_cudf,None)
 

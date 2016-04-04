@@ -153,7 +153,7 @@ let default_result n = {
 let pp_out_version fmt = Format.fprintf fmt "output-version: 1.1@.";;
 
 let pp_package ?(source=false) ?(fields=false) pp fmt pkg =
-  let (p,v,fieldlist) = pp pkg in
+  let (p,a,v,fieldlist) = pp pkg in
   Format.fprintf fmt "package: %s@," p;
   Format.fprintf fmt "version: %s" v;
   List.iter (function
@@ -456,9 +456,9 @@ let print_error ?(condense=false) ?(minimal=false) pp root fmt l =
       pp_package ~source pp fmt (List.hd pkgl) 
     else begin
       let fl = List.map pp pkgl in
-      let (n,_,_) = List.hd fl in
+      let (n,_,_,_) = List.hd fl in
       Format.fprintf fmt "package: %s@," n;
-      Format.fprintf fmt "versions: %s" (String.concat "," (List.map (fun (_,v,_) -> v) fl))
+      Format.fprintf fmt "versions: %s" (String.concat "," (List.map (fun (_,_,v,_) -> v) fl))
     end
   in
   let pp_dependency_list pp ?(label="depends") fmt (i,vpkgs) =
@@ -725,8 +725,8 @@ let pp_summary ?(pp=CudfAdd.default_pp) ?(explain=false) () fmt result =
       let l1 = Util.list_unique !v in
       begin match k with
         |Conflict(i,j,_) ->
-            let (pi,vi,_) = pp i in
-            let (pj,vj,_) = pp j in
+            let (pi,_,vi,_) = pp i in
+            let (pj,_,vj,_) = pp j in
             result.unique_conflict <- result.unique_conflict + 1;
             if pi = pj then
               result.unique_selfconflict <- result.unique_selfconflict + 1;

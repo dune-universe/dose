@@ -120,16 +120,16 @@ let pp_package fmt pkg =
 let string_of_version = string_of pp_version
 let string_of_package = string_of pp_package
 
-type pp = Cudf.package -> string * string * (string * (string * bool)) list
+type pp = Cudf.package -> string * string option * string * (string * (string * bool)) list
 
 (** [default_pp] default package printer. If the version of the package is
   * a negative number, the version version if printed as "nan" *)
 let default_pp pkg =
   let v = if pkg.Cudf.version > 0 then string_of_version pkg else "nan" in
-  (pkg.Cudf.package,v,[])
+  (pkg.Cudf.package,None,v,[])
 
 let pp from_cudf ?(fields=[]) ?(decode=decode) pkg =
-  let (p,v) = from_cudf (pkg.Cudf.package,pkg.Cudf.version) in
+  let (p,a,v) = from_cudf (pkg.Cudf.package,pkg.Cudf.version) in
   let default_fields = ["architecture";"source";"sourcenumber";"essential";"type"] in
   let f b l acc =
     List.fold_left (fun acc k ->
@@ -138,7 +138,7 @@ let pp from_cudf ?(fields=[]) ?(decode=decode) pkg =
     ) acc l
   in
   let l = (f false fields (f true default_fields [])) in
-  (p,v,l)
+  (p,a,v,l)
 
 let max32int =
   if Int32.to_int(Int32.max_int) < 0 then
@@ -155,18 +155,18 @@ let pp_vpkg pp fmt vpkg =
     | `Leq -> "<="
     | `Lt -> "<"
   in
+  let dummy p v = {Cudf.default_package with Cudf.package = p ; version = v} in
   match vpkg with
   |(p,None) ->
-      let (p,_,_) = 
-        pp {Cudf.default_package with 
-          Cudf.package = p ; 
-          version = max32int} 
-      in
-      Format.fprintf fmt "%s" p
+      begin match pp (dummy p max32int) with
+      |(p,None,_,_) -> Format.fprintf fmt "%s" p
+      |(p,Some a,_,_) -> Format.fprintf fmt "%s:%s" p a end
   |(p,Some(c,v)) ->
-      match pp {Cudf.default_package with Cudf.package = p ; version = v} with
-      |(p,("nan" | ""),_) -> Format.fprintf fmt "%s" p
-      |(p,v,_) -> Format.fprintf fmt "%s (%s %s)" p (string_of_relop c) v
+      match pp (dummy p v) with
+      |(p,None,("nan" | ""),_) -> Format.fprintf fmt "%s" p
+      |(p,None,v,_) -> Format.fprintf fmt "%s (%s %s)" p (string_of_relop c) v
+      |(p,Some a,("nan" | ""),_) -> Format.fprintf fmt "%s:%s" p a
+      |(p,Some a,v,_) -> Format.fprintf fmt "%s:%s (%s %s)" p a (string_of_relop c) v
 
 let pp_vpkglist pp fmt =
   let pp_list fmt ~pp_item ~sep l =

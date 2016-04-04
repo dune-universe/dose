@@ -234,10 +234,10 @@ let get_real_version tables (cudfname,cudfversion) =
   let (debname,arch) = get_real_name cudfname in
   try
     if cudfversion = max32int || cudfversion = max32int - 1 then 
-      (debname,"nan")
+      (debname,arch,"nan")
     else
       let m = !(Util.IntHashtbl.find tables.reverse_table cudfversion) in
-      try (debname,SMap.find debname m) 
+      try (debname,arch,SMap.find debname m) 
       with Not_found ->
         let known =
           String.concat "," (
