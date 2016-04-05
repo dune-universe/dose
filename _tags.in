@@ -31,7 +31,7 @@ true: -traverse
 <rpm/*.ml{i,}>: use_common
 <opencsw/*.ml{i,}>: use_common, use_versioning
 
-<algo/*.ml{i,}>: use_common, package(ocamlgraph)
+<algo/*.ml{i,}>: use_common, package(ocamlgraph), @PKG_PARMAP@
 
 <doseparse/*.ml{i,}>: use_common, use_versioning, use_debian, use_opam, use_npm, use_pef, use_csw, @USE_RPM@
 <doseparseNoRpm/*.ml{i,}>: use_common, use_versioning, use_debian, use_opam, use_npm, use_pef, use_csw
@@ -57,18 +57,18 @@ true: -traverse
 <{applications,experimental}/*>: package(extlib), package(re.pcre), package(unix), package(re.str), package(ocamlgraph)
 <{applications,experimental}/*>: @PKG_CUDF@, @PKG_ZIP@, @PKG_BZ2@
 
-<applications/apt-cudf.*>: use_doseparseNoRpm, use_algo
-<applications/deb-buildcheck.*>: use_algo, use_doseparseNoRpm
+<applications/apt-cudf.*>: use_doseparseNoRpm, use_algo, @PKG_PARMAP@
+<applications/deb-buildcheck.*>: use_algo, use_doseparseNoRpm, @PKG_PARMAP@
 
-<applications/distcheck.*>: @USE_RPM@, use_algo, use_doseparse
-<applications/ceve.*>: @USE_RPM@, use_algo, use_doseparse
-<applications/smallworld.*>: @USE_RPM@, use_algo, use_doseparse
+<applications/distcheck.*>: @USE_RPM@, use_algo, use_doseparse, @PKG_PARMAP@
+<applications/ceve.*>: @USE_RPM@, use_algo, use_doseparse, @PKG_PARMAP@
+<applications/smallworld.*>: @USE_RPM@, use_algo, use_doseparse, @PKG_PARMAP@
 <applications/tests.*>: @USE_RPM@, use_algo, use_doseparse, use_doseparseNoRpm, @PKG_PARMAP@
-<applications/strong-deps.*>: @USE_RPM@, use_algo, use_doseparse
-<applications/dominators-graph.*>: @USE_RPM@, use_doseparse, use_algo
+<applications/strong-deps.*>: @USE_RPM@, use_algo, use_doseparse, @PKG_PARMAP@
+<applications/dominators-graph.*>: @USE_RPM@, use_doseparse, use_algo, @PKG_PARMAP@
 <applications/challenged.*>: use_algo, use_doseparseNoRpm, @PKG_PARMAP@
-<applications/outdated.*>: use_algo, use_doseparseNoRpm
-<applications/deb-coinstall.*>: @USE_RPM@, use_algo, use_doseparse
+<applications/outdated.*>: use_algo, use_doseparseNoRpm, @PKG_PARMAP@
+<applications/deb-coinstall.*>: @USE_RPM@, use_algo, use_doseparse, @PKG_PARMAP@
 
 <experimental/strong-conflicts.*>: @USE_RPM@, use_algo, use_doseparse
 <experimental/randcudf.*>: use_algo, use_doseparseNoRpm
