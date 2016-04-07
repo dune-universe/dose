@@ -55,6 +55,12 @@ let timestamp () =
     tm.Unix.tm_sec
 ;;
 
+let max32int =
+  if Int32.to_int(Int32.max_int) < 0 then
+    max_int
+  else Int32.to_int(Int32.max_int)
+;;
+
 type label = string
 
 module type Messages = sig

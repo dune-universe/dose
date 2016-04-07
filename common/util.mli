@@ -23,6 +23,8 @@ val memo : ('a -> 'b) -> 'a -> 'b
 
 val timestamp : unit -> string
 
+val max32int : int
+
 (** Debug, ProgressBars, Timers and Loggers *)
 
 type label = string

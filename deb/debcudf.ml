@@ -27,8 +27,6 @@ module Version = Versioning.Debian
 let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
-let max32int = if Int32.to_int(Int32.max_int) < 0 then max_int else Int32.to_int(Int32.max_int);;
-
 module SMap = Map.Make (String)
 
 type tables = {
@@ -233,7 +231,7 @@ let get_real_name name =
 let get_real_version tables (cudfname,cudfversion) =
   let (debname,arch) = get_real_name cudfname in
   try
-    if cudfversion = max32int || cudfversion = max32int - 1 then 
+    if cudfversion = Util.max32int || cudfversion = Util.max32int - 1 then 
       (debname,arch,"nan")
     else
       let m = !(Util.IntHashtbl.find tables.reverse_table cudfversion) in
@@ -258,7 +256,7 @@ let loadl ?native_arch ?package_arch tables l =
       |None ->
           (* Versioned virtual packages will satisfiy non versioned dependencies *)
           if (OcamlHashtbl.mem tables.virtual_table name) then
-            [(encname, None);("--virtual-"^encname,Some(`Eq,max32int - 1))]
+            [(encname, None);("--virtual-"^encname,Some(`Eq,Util.max32int - 1))]
           else
             [(encname, None)]
       |Some(op,v) ->
@@ -269,7 +267,7 @@ let loadl ?native_arch ?package_arch tables l =
             |l ->
                 let dl = 
                   List.filter_map (function
-                    |(_,None) -> Some ("--virtual-"^encname,Some(`Eq,max32int))
+                    |(_,None) -> Some ("--virtual-"^encname,Some(`Eq,Util.max32int))
                     |(_,Some _) ->
                         let constr = Some(op,get_cudf_version tables (name,v)) in
                         Some ("--virtual-"^encname,constr)
@@ -302,7 +300,7 @@ let loadlp ?native_arch ?package_arch tables l =
     List.map (fun ((name,_) as vpkgname,constr) ->
       let encname = add_arch_info ?native_arch ?package_arch vpkgname in
       match CudfAdd.cudfop constr with
-      |None -> [("--virtual-"^encname,Some(`Eq,max32int - 1))]
+      |None -> [("--virtual-"^encname,Some(`Eq,Util.max32int - 1))]
       |Some(`Eq,v) ->
         let constr = Some(`Eq,get_cudf_version tables (name,v)) in
         [("--virtual-"^encname,constr);(encname,constr)]
