@@ -169,6 +169,14 @@ let main () =
 
   Diagnostic.pp_out_version fmt;
 
+  if OptParse.Opt.is_set Options.deb_native_arch then
+    Format.fprintf fmt "native-architecture: %s@."
+	(OptParse.Opt.get Options.deb_native_arch);
+ 
+  if OptParse.Opt.is_set Options.deb_foreign_archs then
+    Format.fprintf fmt "foreign-architecture: %s@."
+	(String.concat "," (OptParse.Opt.get Options.deb_foreign_archs));
+ 
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
   let callback d =
     if summary then Diagnostic.collect results d ;

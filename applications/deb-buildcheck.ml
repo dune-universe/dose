@@ -112,7 +112,8 @@ let main () =
   let filter_external_sources par =
     if (OptParse.Opt.get Options.includextra) then true
     else
-      try not(Pef.Packages.parse_bool ("extra-source-only",(Pef.Packages.assoc "extra-source-only" par)))
+      try not(Pef.Packages.parse_bool
+        ("extra-source-only",(Pef.Packages.assoc "extra-source-only" par)))
       with Not_found -> true
   in
 
@@ -135,7 +136,13 @@ let main () =
     |l -> 
         begin match List.rev l with
         |h::t ->
-          let srclist = StdLoaders.deb_load_source ~dropalternatives ~profiles ~filter:filter_external_sources ~noindep buildarch hostarch h in
+          let srclist =
+            StdLoaders.deb_load_source 
+              ~dropalternatives 
+              ~profiles 
+              ~filter:filter_external_sources 
+              ~noindep buildarch hostarch h 
+          in
           let pkglist = Deb.input_raw t in
           (pkglist,srclist)
         |_ -> fatal "An impossible situation occurred ?!#"
@@ -189,13 +196,16 @@ let main () =
   Diagnostic.pp_out_version fmt;
 
   if OptParse.Opt.is_set Options.deb_native_arch then
-    Format.fprintf fmt "native-architecture: %s@." (OptParse.Opt.get Options.deb_native_arch);
+    Format.fprintf fmt "native-architecture: %s@."
+      (OptParse.Opt.get Options.deb_native_arch);
 
   if OptParse.Opt.is_set Options.deb_foreign_archs then
-    Format.fprintf fmt "foreign-architecture: %s@." (String.concat "," (OptParse.Opt.get Options.deb_foreign_archs));
+    Format.fprintf fmt "foreign-architecture: %s@."
+      (String.concat "," (OptParse.Opt.get Options.deb_foreign_archs));
 
   if OptParse.Opt.is_set Options.deb_host_arch then
-    Format.fprintf fmt "host-architecture: %s@." (OptParse.Opt.get Options.deb_host_arch);
+    Format.fprintf fmt "host-architecture: %s@."
+      (OptParse.Opt.get Options.deb_host_arch);
 
   let results = Diagnostic.default_result universe_size in
 
