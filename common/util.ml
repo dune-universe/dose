@@ -304,6 +304,18 @@ module StringHashtbl = Hashtbl.Make (
   end
 )
 
+let hits = ref 0;;
+let miss = ref 0;;
+let hashcons table x =
+  try 
+    let s = StringHashtbl.find table x in
+    incr hits;
+    s 
+  with Not_found ->
+    incr miss;
+    StringHashtbl.add table x x; x
+;;
+
 module StringPairHashtbl = Hashtbl.Make (
   struct
     type t = string * string

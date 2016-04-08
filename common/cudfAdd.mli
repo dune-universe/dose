@@ -125,9 +125,16 @@ val vartoint : Cudf.universe -> Cudf.package -> int
 *)
 val inttovar : Cudf.universe -> int -> Cudf.package
 
-val cudfop :
+(*
+(** convert pef operators to cudf *)
+val cudf_op:
+  string -> [> `Eq | `Neq | `Geq | `Gt | `Leq | `Lt ] 
+
+(** convert pef constraints to cudf *)
+val cudf_constr:
   (string * string) option ->
   ([> `Eq | `Neq | `Geq | `Gt | `Leq | `Lt ] * string) option
+*)
 
 val compute_pool : Cudf.universe -> int list list array * int list array
 

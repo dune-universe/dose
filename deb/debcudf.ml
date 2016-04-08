@@ -30,13 +30,13 @@ include Util.Logging(struct let label = label end) ;;
 module SMap = Map.Make (String)
 
 type tables = {
-  virtual_table : (string,SSet.t ref) OcamlHashtbl.t; (** all names of virtual packages *)
-  unit_table : unit Util.StringHashtbl.t ;         (** all names of real packages    *)
-  versions_table : int Util.StringHashtbl.t;       (** version -> int table          *)
+  virtual_table : (string,SSet.t ref) OcamlHashtbl.t; (** all names of virtual packages    *)
+  unit_table : unit Util.StringHashtbl.t ;            (** all names of real packages       *)
+  versions_table : int Util.StringHashtbl.t;          (** version -> int table             *)
   reverse_table : (string SMap.t) ref Util.IntHashtbl.t;
-  versioned_table : unit Util.StringHashtbl.t;     (** all (versions,name) tuples. 
-                                                       all versions mentioned of depends, 
-                                                       pre_depends, conflict and breaks    *)
+  versioned_table : unit Util.StringHashtbl.t;        (** all (versions,name) tuples. 
+                                                        all versions mentioned of depends, 
+                                                        pre_depends, conflict and breaks   *)
 }
 
 let create n = {
@@ -106,60 +106,55 @@ let clear tables =
   Util.IntHashtbl.clear tables.reverse_table
 ;;
 
-let add table k v =
+(* string version -> int version Hash *)
+let add_v tables k v =
+  if not(Util.StringHashtbl.mem tables.versions_table k) then
+    Util.StringHashtbl.add tables.versions_table k v
+
+(* package names Set *)
+let add_p table k =
   if not(Util.StringHashtbl.mem table k) then
-    Util.StringHashtbl.add table k v
+    Util.StringHashtbl.add table k ()
 
-let add_v table k v =
-  if not(Util.StringPairHashtbl.mem table k) then
-    Util.StringPairHashtbl.add table k v
+(* (version,name) Set *)
+let add_pairs tables table (v,p) =
+  if not(Util.StringPairHashtbl.mem table (v,p)) then
+    Util.StringPairHashtbl.add table (v,p) ()
 
+(* name -> (name,constr) Hash *)
 let add_s h k v =
   try let s = OcamlHashtbl.find h k in s := SSet.add v !s
   with Not_found -> OcamlHashtbl.add h k (ref (SSet.singleton v))
 ;;
 
 (* collect names of virtual packages 
- * associates to each virtual package a list of real packages *)
-let init_virtual_table table pkg =
+   associates to each virtual package a list of real packages *)
+let init_virtual_table tables pkg =
   List.iter (fun ((name,_),constr) -> 
-    add_s table name (pkg#name,constr)
-    (*
-    match CudfAdd.cudfop constr with
-    |None -> add_s table name (pkg#name,None)
-    |Some(_,version) as c -> add_s table name (pkg#name,c)
-  *)
+    add_s tables.virtual_table name (pkg#name,constr)
   ) pkg#provides
 
 (* collect names of real packages *)
-let init_unit_table table pkg = 
-  add table pkg#name ()
-
-(* collect all versions mentioned of depends, pre_depends, conflict and breaks *)
-let init_versioned_table table pkg =
-  let conj_iter l = List.iter (fun ((name,_),_)-> add table name ()) l in
-  let cnf_iter ll = List.iter conj_iter ll in
-  conj_iter pkg#conflicts ;
-  conj_iter pkg#breaks ;
-  cnf_iter pkg#pre_depends ;
-  cnf_iter pkg#depends
-;;
+let init_unit_table tables pkg = 
+  add_p tables.unit_table pkg#name
 
 (* collect all versions mentioned anywhere in the universe, including source fields *)
-let init_versions_table table pkg =
+let init_versions_table tables table pkg =
+  let versionedtables = tables.versioned_table in
   let conj_iter l =
     List.iter (fun ((name,_),constr) ->
-      match CudfAdd.cudfop constr with
+      add_p versionedtables name;
+      match constr with
       |None -> ()
-      |Some(_,version) -> add_v table (version,name) ()
+      |Some(_,version) -> add_pairs tables table (version,name)
     ) l
   in
   let cnf_iter ll = List.iter conj_iter ll in
   let add_source pv = function
-    |(p,None) -> add_v table (pv,p) ()
-    |(p,Some(v)) -> add_v table (v,p) ()
+    |(p,None) -> add_pairs tables table (pv,p)
+    |(p,Some(v)) -> add_pairs tables table (v,p)
   in 
-  add_v table (pkg#version,pkg#name) ();
+  add_pairs tables table (pkg#version,pkg#name);
   conj_iter pkg#breaks;
   conj_iter pkg#provides;
   conj_iter pkg#conflicts ;
@@ -174,14 +169,12 @@ let init_tables ?(step=1) ?(versionlist=[]) pkglist =
   let n = List.length pkglist in
   let tables = create n in 
   let temp_versions_table = Util.StringPairHashtbl.create (10 * n) in
-  let ivrt = init_virtual_table tables.virtual_table in
-  (* XXX init_versions_table and init_versioned_table can be done at the same time !!! *)
-  let ivt = init_versions_table temp_versions_table in
-  let ivdt = init_versioned_table tables.versioned_table in
-  let iut = init_unit_table tables.unit_table in
+  let ivrt = init_virtual_table tables in
+  let ivt = init_versions_table tables temp_versions_table in
+  let iut = init_unit_table tables in
 
-  List.iter (fun v -> add_v temp_versions_table (v,"") ()) versionlist; 
-  List.iter (fun pkg -> ivt pkg ; ivrt pkg ; ivdt pkg ; iut pkg) pkglist ;
+  List.iter (fun v -> add_pairs tables temp_versions_table (v,"")) versionlist; 
+  List.iter (fun pkg -> ivt pkg; ivrt pkg ; iut pkg) pkglist ;
   let l = Util.StringPairHashtbl.fold (fun v _ acc -> v::acc) temp_versions_table [] in
   let add_reverse i (n,v) =
     try 
@@ -196,11 +189,11 @@ let init_tables ?(step=1) ?(versionlist=[]) pkglist =
     |[] -> ()
     |(v,n)::t ->
       if Version.equal v prec then begin
-        add tables.versions_table v i;
+        add_v tables v i;
         if n <> "" then add_reverse i (n,v);
         numbers (prec,i) t
       end else begin
-        add tables.versions_table v (i+step);
+        add_v tables v (i+step);
         if n <> "" then add_reverse (i+step) (n,v);
         numbers (v,(i+step)) t
       end
@@ -252,7 +245,7 @@ let loadl ?native_arch ?package_arch tables l =
   List.flatten (
     List.map (fun ((name,_) as vpkgname,constr) ->
       let encname = add_arch_info ?native_arch ?package_arch vpkgname in
-      match CudfAdd.cudfop constr with
+      match constr with
       |None ->
           (* Versioned virtual packages will satisfiy non versioned dependencies *)
           if (OcamlHashtbl.mem tables.virtual_table name) then
@@ -261,6 +254,7 @@ let loadl ?native_arch ?package_arch tables l =
             [(encname, None)]
       |Some(op,v) ->
           (* Non-versioned virtual packages will not satisfy versioned dependencies. *)
+          let op = Pef.Pefcudf.pefcudf_op op in
           try
             match SSet.elements !(OcamlHashtbl.find tables.virtual_table name) with
             |[] -> assert false
@@ -299,9 +293,9 @@ let loadlp ?native_arch ?package_arch tables l =
   List.flatten (
     List.map (fun ((name,_) as vpkgname,constr) ->
       let encname = add_arch_info ?native_arch ?package_arch vpkgname in
-      match CudfAdd.cudfop constr with
+      match constr with
       |None -> [("--virtual-"^encname,Some(`Eq,Util.max32int - 1))]
-      |Some(`Eq,v) ->
+      |Some("=",v) ->
         let constr = Some(`Eq,get_cudf_version tables (name,v)) in
         [("--virtual-"^encname,constr);(encname,constr)]
       |_ -> fatal "This should never happen : a provide can be either = or unversioned"

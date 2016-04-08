@@ -21,11 +21,13 @@ let label =  __label ;;
 include Util.Logging(struct let label = label end) ;;
 
 type tables = {
+  strings_table : string Util.StringHashtbl.t;
   versions_table : (string, string list) Hashtbl.t;
   reverse_table : ((string * int), string) Hashtbl.t
 }
 
 let create n = {
+  strings_table = Util.StringHashtbl.create n;
   versions_table = Hashtbl.create n;
   reverse_table = Hashtbl.create n;
 }
@@ -38,20 +40,62 @@ type lookup = {
 *)
 
 let clear tables =
+  Util.StringHashtbl.clear tables.strings_table;
   Hashtbl.clear tables.versions_table;
   Hashtbl.clear tables.reverse_table
 ;;
 
-let init_versions_table table =
+let pefcudf_op = function
+  |("<<" | "<") -> `Lt
+  |(">>" | ">") -> `Gt
+  |"<=" -> `Leq
+  |">=" -> `Geq
+  |"=" -> `Eq
+  |"!=" -> `Neq
+  |c -> fatal "Unknown operator: %s" c
+
+let pefcudf_constr = function
+  |None -> None
+  |Some("ALL",_) -> None
+  |Some(c,v) -> Some(pefcudf_op c,v)
+
+(*
+(* pef vpkg -> cudf *)
+let pefvpkg to_cudf = function
+  |Packages_types.Name n -> (CudfAdd.encode n,None)
+  |Packages_types.NameArch (n,a) -> (CudfAdd.encode (n^":"^a),None)
+  |Packages_types.NameConstr (n,(op,v))
+  |Packages_types.NameArchConstr (n,("any"|"native"),(op,v)) ->
+      let name = CudfAdd.encode n in
+      (name,Some(pefcudf_op op,snd(to_cudf (name,v))))
+  |Packages_types.NameArchConstr (n,a,(op,v)) ->
+      let name = CudfAdd.encode (n^":"^a) in
+      (name,Some(pefcudf_op op,snd(to_cudf (name,v))))
+*)
+(** convert a pef constraint into a cudf constraint *)
+let pefvpkg to_cudf vpkgname =
+  let constr n = function
+    |None -> None
+    |Some(op,v) -> Some(pefcudf_op op,snd(to_cudf (n,v)))
+  in
+  match vpkgname with
+  |((n,None),c) -> (CudfAdd.encode n,constr n c)
+  |((n,Some ("any"|"native")),c) -> (CudfAdd.encode n,constr n c)
+  |((n,Some a),c) -> (CudfAdd.encode (n^":"^a),constr n c)
+
+
+let init_versions_table tables table =
   let add name version =
     try
+      let version = Util.hashcons tables.strings_table version in
       let l = Hashtbl.find table name in
       Hashtbl.replace table name (version::l)
-    with Not_found -> Hashtbl.add table name [version]
+    with Not_found ->
+      Hashtbl.add table name [version]
   in
   let conj_iter =
     List.iter (fun ((name,_),sel) ->
-      match CudfAdd.cudfop sel with
+      match pefcudf_constr sel with
       |None -> ()
       |Some(_,version) -> add name version
     ) 
@@ -59,7 +103,7 @@ let init_versions_table table =
   let cnf_iter = 
     List.iter (fun disjunction ->
       List.iter (fun ((name,_),sel) ->
-        match CudfAdd.cudfop sel with
+        match pefcudf_constr sel with
         |None -> ()
         |Some(_,version) -> add name version
       ) disjunction
@@ -102,7 +146,7 @@ let init_tables compare pkglist =
   let n = 2 * List.length pkglist in
   let tables = create n in 
   let temp_versions_table = Hashtbl.create n in
-  let ivt = init_versions_table temp_versions_table in
+  let ivt = init_versions_table tables temp_versions_table in
 
   List.iter (fun pkg -> ivt pkg) pkglist ;
 
@@ -118,6 +162,7 @@ let init_tables compare pkglist =
 (* pef -> cudf . versions start from 1 *)
 let get_cudf_version tables (package,version) =
   try
+    let version = Util.hashcons tables.strings_table version in
     let l = Hashtbl.find tables.versions_table package in
     let i = fst(List.findi (fun i a -> a = version) l) in
     Hashtbl.replace tables.reverse_table (CudfAdd.encode package,i+1) version;
@@ -149,7 +194,7 @@ let loadl tables ?arch ?(archs=[]) l =
   List.flatten (
     List.map (fun ((name,_) as vpkgname,constr) ->
       List.map (fun encname ->
-        match CudfAdd.cudfop constr with
+        match pefcudf_constr constr with
         |None -> (encname, None)
         |Some(op,v) -> (encname,Some(op,get_cudf_version tables (name,v)))
       ) (encode_vpkgname ?arch ~archs vpkgname)
@@ -160,7 +205,7 @@ let loadlp tables ?arch ?(archs=[]) l =
   List.flatten (
     List.map (fun ((name,_) as vpkgname,constr) ->
       List.map (fun encname ->
-        match CudfAdd.cudfop constr with
+        match pefcudf_constr constr with
         |None -> (encname, None)
         |Some(`Eq,v) -> (encname,Some(`Eq,get_cudf_version tables (name,v)))
         |_ -> assert false
@@ -233,14 +278,4 @@ let load_universe compare l =
   let univ = Cudf.load_universe pkglist in
   Util.Timer.stop timer univ
 
-(** convert a pef constraint into a cudf constraint *)
-let pefvpkg to_cudf vpkgname =
-  let constr n constr =
-    match CudfAdd.cudfop constr with
-    |None -> None
-    |Some(op,v) -> Some(op,snd(to_cudf (n,v)))
-  in
-  match vpkgname with
-  |((n,None),c) -> (CudfAdd.encode n,constr n c)
-  |((n,Some ("any"|"native")),c) -> (CudfAdd.encode n,constr n c)
-  |((n,Some a),c) -> (CudfAdd.encode (n^":"^a),constr n c)
+

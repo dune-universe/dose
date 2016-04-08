@@ -4,6 +4,9 @@
 open ExtLib
 open Common
 
+(* hash cons table *)
+let h = Util.StringHashtbl.create 10000
+
 let parse_vpkgname name =
   try
     match String.split name ":" with
@@ -66,7 +69,7 @@ archlist_top: archlist EOL { $1 } ;
 /**************************************/ 
 
 pkgname: IDENT { $1 } ;
-version: IDENT { $1 } ;
+version: IDENT { Util.hashcons h $1 } ;
 
 source:
   |IDENT                        { ($1,None) }
