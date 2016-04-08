@@ -303,16 +303,19 @@ let compute_pool universe =
   in
   (d,c)
 
-let cudfop = function
-  |Some(("<<" | "<"),v) -> Some(`Lt,v)
-  |Some((">>" | ">"),v) -> Some(`Gt,v)
-  |Some("<=",v) -> Some(`Leq,v)
-  |Some(">=",v) -> Some(`Geq,v)
-  |Some("=",v) -> Some(`Eq,v)
-  |Some("!=",v) -> Some(`Neq,v)
-  |Some("ALL",v) -> None
+let cudf_op = function
+  |("<<" | "<") -> `Lt
+  |(">>" | ">") -> `Gt
+  |"<=" -> `Leq
+  |">=" -> `Geq
+  |"=" -> `Eq
+  |"!=" -> `Neq
+  |c -> fatal "Unknown operator: %s" c
+
+let cudf_constr = function
   |None -> None
-  |Some(c,v) -> fatal "%s %s" c v
+  |Some("ALL",_) -> None
+  |Some(c,v) -> Some(cudf_op c,v)
 
 let latest pkglist =
   let h = Hashtbl.create (List.length pkglist) in

@@ -71,19 +71,3 @@ let cluster packagelist =
   info "Binary (effective) Clusters: %d" !i;
   h
 ;;
-
-(** convert a deb constraint into a cudf constraint *)
-let debvpkg to_cudf ((n,a),c) =
-  let name =
-    CudfAdd.encode (
-      if Option.is_none a then n
-      else (n^":"^(Option.get a))
-    )
-  in
-  let constr =
-    match CudfAdd.cudfop c with
-    |None -> None
-    |Some(op,v) -> Some(op,snd(to_cudf (name,v)))
-  in
-  (name,constr)
-;;

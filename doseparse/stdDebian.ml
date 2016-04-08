@@ -53,7 +53,7 @@ let pkglist tables universe vpkglist =
   let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
   List.flatten (
     List.map (fun ((n,a),c) ->
-      let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
+      let (name,filter) = Pef.Pefcudf.pefvpkg to_cudf ((n,a),c) in
       Cudf.lookup_packages ~filter universe name
     ) vpkglist
   )

@@ -161,6 +161,11 @@ module IntPairHashtbl : Hashtbl.S with type key = int * int
 module StringHashtbl : Hashtbl.S with type key = string
 module StringPairHashtbl : Hashtbl.S with type key = string * string
 
+(** hash consing for strings *)
+val hashcons: string StringHashtbl.t -> string -> string
+val hits : int ref
+val miss : int ref
+
 val range : int -> int -> int list
 
 val string_of_list :

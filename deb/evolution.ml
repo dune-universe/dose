@@ -84,9 +84,9 @@ let add_unique h k v =
 (* collect dependency information *)
 let conj_iter t l =
   List.iter (fun ((name,_),sel) ->
-    match CudfAdd.cudfop sel with
+    match sel with
     |None -> add_unique t name None
-    |Some(c,v) -> add_unique t name (Some(c,v))
+    |Some(c,v) -> add_unique t name (Some(Pef.Pefcudf.pefcudf_op c,v))
   ) l
 let cnf_iter t ll = List.iter (conj_iter t) ll
 

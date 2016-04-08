@@ -107,7 +107,7 @@ let main () =
         List.flatten (
           List.filter_map (fun ((n,a),c) ->
             try
-              let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
+              let (name,filter) = Pef.Pefcudf.pefvpkg to_cudf ((n,a),c) in
               Some(Cudf.lookup_packages ~filter universe name)
             with Not_found -> None
           ) co
@@ -127,7 +127,7 @@ let main () =
       match
         List.filter_map (fun ((n,a),c) ->
           try
-            let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
+            let (name,filter) = Pef.Pefcudf.pefvpkg to_cudf ((n,a),c) in
             Some(Cudf.lookup_packages ~filter universe name)
           with Not_found -> None
         ) co
@@ -242,6 +242,8 @@ let main () =
 
     Format.fprintf fmt "total-packages: %d@." universe_size;
     Format.fprintf fmt "broken-packages: %d@." nbp;
+    Format.fprintf fmt "string-cache-hits: %d@." !Util.hits;
+    Format.fprintf fmt "string-cache-miss: %d@." !Util.miss;
     if summary then 
       Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~explain ~pp ()) results;
     nbp

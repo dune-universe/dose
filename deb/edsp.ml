@@ -234,7 +234,7 @@ let requesttocudf tables universe request =
   in
   let select_packages ?(remove=false) l =
     List.map (fun ((n,a),c) ->
-      let (name,constr) = Debutil.debvpkg to_cudf ((n,a),c) in
+      let (name,constr) = Pef.Pefcudf.pefvpkg to_cudf ((n,a),c) in
       if remove then (name,None)
       else begin
         match constr, request.strict_pin with

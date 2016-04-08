@@ -77,10 +77,10 @@ let loadl to_cudf l =
         let n = match aop with Some a -> name^":"^a | None -> name in
         CudfAdd.encode n
       in
-      match CudfAdd.cudfop sel with
+      match sel with
       |None -> [(encname, None)]
       |Some(op,v) ->
-          [(encname,Some(op,snd(to_cudf (encname,v))))]
+          [(encname,Some(Pef.Pefcudf.pefcudf_op op,snd(to_cudf (encname,v))))]
     ) l
   )
 ;;
@@ -154,7 +154,7 @@ let main () =
     if OptParse.Opt.get Options.trim then Depsolver.trim ~global_constraints u else u
   in
   let get_cudfpkglist ((n,a),c) =
-    let (name,filter) = Debian.Debutil.debvpkg to_cudf ((n,a),c) in
+    let (name,filter) = Pef.Pefcudf.pefvpkg to_cudf ((n,a),c) in
     CudfAdd.who_provides universe (name,filter)
   in
 
