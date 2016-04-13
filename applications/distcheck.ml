@@ -103,9 +103,9 @@ let main () =
       let co = OptParse.Opt.get Options.checkonly in
       match
         List.flatten (
-          List.filter_map (fun ((n,a),c) ->
+          List.filter_map (fun vpkg ->
             try
-              let (name,filter) = Pef.Pefcudf.pefvpkg to_cudf ((n,a),c) in
+              let (name,filter) = Pef.Pefcudf.pefvpkg to_cudf vpkg in
               Some(Cudf.lookup_packages ~filter universe name)
             with Not_found -> None
           ) co
@@ -123,9 +123,9 @@ let main () =
       info "--coinst specified, consider all packages as background packages";
       let co = OptParse.Opt.get Options.coinst in
       match
-        List.filter_map (fun ((n,a),c) ->
+        List.filter_map (fun vpkg ->
           try
-            let (name,filter) = Pef.Pefcudf.pefvpkg to_cudf ((n,a),c) in
+            let (name,filter) = Pef.Pefcudf.pefvpkg to_cudf vpkg in
             Some(Cudf.lookup_packages ~filter universe name)
           with Not_found -> None
         ) co

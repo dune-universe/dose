@@ -55,7 +55,8 @@ let vpkglist_option ?default ?(metavar = " <vpkglst>") () =
 let pkglist_option ?default ?(metavar = " <pkglst>") () =
   let parse_vpkglist s = 
     let _loc = Format822.dummy_loc in
-    List.map (function
+    List.map (fun vpkg ->
+      match Pef.Packages_types._compatiblity_vpkg_filter vpkg with
       |((n,a),Some("=",v)) -> (n,a,v)
       |((n,a),None) ->
           raise (Format822.ParseError ([],s,"you must specify a version" ))

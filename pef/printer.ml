@@ -20,11 +20,21 @@ include Util.Logging(struct let label = label end) ;;
 let to_string_with_label (k,v) =
   if v <> "" then Printf.sprintf "%s: %s" k v else ""
 
+(*
 let string_of_vpkg = function
   |((name,None),None) -> name
   |((name,Some arch),None) -> Printf.sprintf "%s:%s" name arch
   |((name,Some arch),Some(op,ver)) -> Printf.sprintf "%s:%s (%s %s)" name arch op ver
   |((name,None),Some(op,ver)) -> Printf.sprintf "%s (%s %s)" name op ver
+*)
+
+let string_of_vpkg = function
+  |Packages_types.Name name -> name
+  |Packages_types.NameConstr(name,(op,ver)) ->
+      Printf.sprintf "%s (%s %s)" name op ver
+  |Packages_types.NameArch(name,arch) -> Printf.sprintf "%s:%s" name arch
+  |Packages_types.NameArchConstr(name,arch,(op,ver)) ->
+      Printf.sprintf "%s:%s (%s %s)" name arch op ver
 
 let string_of_vpkglist vpkglist =
   Util.string_of_list ~sep:", " string_of_vpkg vpkglist

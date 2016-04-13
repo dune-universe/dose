@@ -72,7 +72,8 @@ end;;
 
 let loadl to_cudf l =
   List.flatten (
-    List.map (fun ((name,aop),sel) ->
+    List.map (fun vpkg ->
+      let ((name,aop),sel) = Pef.Packages_types._compatiblity_vpkg_filter vpkg in
       let encname =
         let n = match aop with Some a -> name^":"^a | None -> name in
         CudfAdd.encode n
@@ -153,14 +154,14 @@ let main () =
     in
     if OptParse.Opt.get Options.trim then Depsolver.trim ~global_constraints u else u
   in
-  let get_cudfpkglist ((n,a),c) =
-    let (name,filter) = Pef.Pefcudf.pefvpkg to_cudf ((n,a),c) in
+  let get_cudfpkglist vpkg =
+    let (name,filter) = Pef.Pefcudf.pefvpkg to_cudf vpkg in
     CudfAdd.who_provides universe (name,filter)
   in
 
   let pkg_cone () =
-    List.unique (List.fold_left (fun acc (p,c) ->
-      let l = get_cudfpkglist (p,c) in
+    List.unique (List.fold_left (fun acc vpkg ->
+      let l = get_cudfpkglist vpkg in
       if OptParse.Opt.is_set Options.cone_maxdepth then
         let md = OptParse.Opt.get Options.cone_maxdepth in
         (Depsolver.dependency_closure ~maxdepth:md ~global_constraints universe l) @ acc
@@ -169,8 +170,8 @@ let main () =
     ) [] (OptParse.Opt.get Options.cone))
   in
   let pkg_reverse_cone () =
-    List.unique (List.fold_left (fun acc (p,c) ->
-      let l = get_cudfpkglist (p,c) in
+    List.unique (List.fold_left (fun acc vpkg ->
+      let l = get_cudfpkglist vpkg in
       if OptParse.Opt.is_set Options.cone_maxdepth then
         let md = OptParse.Opt.get Options.cone_maxdepth in
         (Depsolver.reverse_dependency_closure ~maxdepth:md universe l) @ acc

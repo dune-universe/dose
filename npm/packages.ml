@@ -31,12 +31,11 @@ let lexbuf_wrapper type_parser v =
     | (_, (_, package)) -> 
       let splited = Pcre.split (Pcre.regexp " : ") package in
       let base64 = Bytes.to_string (Base64.str_encode (List.nth splited 1)) in
-      [[("", None), Some ("=", base64)]]
+      [[Pef.Packages_types.make_vpkg(("",None),Some("=", base64))]]
 
 let parse_dependlist v = lexbuf_wrapper Npm_parser.dependlist_top v ;;
 let parse_depends v = lexbuf_wrapper Npm_parser.depends_top v ;;
 let parse_depend v = lexbuf_wrapper Npm_parser.depend_top v;;
-
 
 type request = {
   install : Pef.Packages_types.vpkg list;

@@ -54,12 +54,6 @@ let pefcudf_op = function
   |"!=" -> `Neq
   |c -> fatal "Unknown operator: %s" c
 
-let pefcudf_constr = function
-  |None -> None
-  |Some("ALL",_) -> None
-  |Some(c,v) -> Some(pefcudf_op c,v)
-
-(*
 (* pef vpkg -> cudf *)
 let pefvpkg to_cudf = function
   |Packages_types.Name n -> (CudfAdd.encode n,None)
@@ -71,18 +65,6 @@ let pefvpkg to_cudf = function
   |Packages_types.NameArchConstr (n,a,(op,v)) ->
       let name = CudfAdd.encode (n^":"^a) in
       (name,Some(pefcudf_op op,snd(to_cudf (name,v))))
-*)
-(** convert a pef constraint into a cudf constraint *)
-let pefvpkg to_cudf vpkgname =
-  let constr n = function
-    |None -> None
-    |Some(op,v) -> Some(pefcudf_op op,snd(to_cudf (n,v)))
-  in
-  match vpkgname with
-  |((n,None),c) -> (CudfAdd.encode n,constr n c)
-  |((n,Some ("any"|"native")),c) -> (CudfAdd.encode n,constr n c)
-  |((n,Some a),c) -> (CudfAdd.encode (n^":"^a),constr n c)
-
 
 let init_versions_table tables table =
   let add name version =
@@ -94,18 +76,18 @@ let init_versions_table tables table =
       Hashtbl.add table name [version]
   in
   let conj_iter =
-    List.iter (fun ((name,_),sel) ->
-      match pefcudf_constr sel with
-      |None -> ()
-      |Some(_,version) -> add name version
+    List.iter (function
+      |Packages_types.NameConstr (name,(_,version))
+      |Packages_types.NameArchConstr (name,_,(_,version)) -> add name version
+      |_ -> ()
     ) 
   in
   let cnf_iter = 
     List.iter (fun disjunction ->
-      List.iter (fun ((name,_),sel) ->
-        match pefcudf_constr sel with
-        |None -> ()
-        |Some(_,version) -> add name version
+      List.iter (function
+        |Packages_types.NameConstr (name,(_,version))
+        |Packages_types.NameArchConstr (name,_,(_,version)) -> add name version
+        |_ -> ()
       ) disjunction
     )
   in
@@ -122,7 +104,12 @@ let init_virtual_table table pkg =
     if not(Hashtbl.mem table name) then
       Hashtbl.add table name ()
   in
-  List.iter (fun (name,_) -> add name) pkg#provides
+  List.iter (function
+    |Packages_types.Name (name)
+    |Packages_types.NameConstr (name,_)
+    |Packages_types.NameArch (name,_)
+    |Packages_types.NameArchConstr (name,_,_) -> add name
+  ) pkg#provides
 
 let init_unit_table table pkg =
   if not(Hashtbl.mem table pkg#name) then
@@ -135,10 +122,20 @@ let init_versioned_table table pkg =
   in
   let add_iter_cnf =
     List.iter (fun disjunction ->
-      List.iter (fun (name,_)-> add name) disjunction
+      List.iter (function
+        |Packages_types.Name (name)
+        |Packages_types.NameConstr (name,_)
+        |Packages_types.NameArch (name,_)
+        |Packages_types.NameArchConstr (name,_,_) -> add name
+      ) disjunction
     ) 
   in
-  List.iter (fun (name,_) -> add name) pkg#conflicts ;
+  List.iter (function
+    |Packages_types.Name (name)
+    |Packages_types.NameConstr (name,_)
+    |Packages_types.NameArch (name,_)
+    |Packages_types.NameArchConstr (name,_,_) -> add name
+  ) pkg#conflicts ;
   add_iter_cnf pkg#depends
 ;;
 
@@ -191,25 +188,37 @@ let encode_vpkgname ?arch ?(archs=[]) vpkgname =
   |(name,Some a) -> [CudfAdd.encode (name^":"^a)]
 
 let loadl tables ?arch ?(archs=[]) l =
+  let f name l constr =
+    List.map (fun encname ->
+      match constr with
+      |None -> (encname, None)
+      |Some(op,v) -> (encname,Some(pefcudf_op op,get_cudf_version tables (name,v)))
+    ) l
+  in
   List.flatten (
-    List.map (fun ((name,_) as vpkgname,constr) ->
-      List.map (fun encname ->
-        match pefcudf_constr constr with
-        |None -> (encname, None)
-        |Some(op,v) -> (encname,Some(op,get_cudf_version tables (name,v)))
-      ) (encode_vpkgname ?arch ~archs vpkgname)
+    List.map (function
+      |Packages_types.Name n -> f n (encode_vpkgname ?arch ~archs (n,None)) None
+      |Packages_types.NameArch (n,a) -> f n (encode_vpkgname ?arch ~archs (n,Some a)) None
+      |Packages_types.NameConstr (n,c) -> f n (encode_vpkgname ?arch ~archs (n,None)) (Some c)
+      |Packages_types.NameArchConstr (n,a,c) -> f n (encode_vpkgname ?arch ~archs (n,Some a)) (Some c)
     ) l
   )
 
 let loadlp tables ?arch ?(archs=[]) l =
+  let f name l constr =
+    List.map (fun encname ->
+      match constr with
+      |None -> (encname, None)
+      |Some("=",v) -> (encname,Some(`Eq,get_cudf_version tables (name,v)))
+      |_ -> assert false
+    ) l
+  in
   List.flatten (
-    List.map (fun ((name,_) as vpkgname,constr) ->
-      List.map (fun encname ->
-        match pefcudf_constr constr with
-        |None -> (encname, None)
-        |Some(`Eq,v) -> (encname,Some(`Eq,get_cudf_version tables (name,v)))
-        |_ -> assert false
-      ) (encode_vpkgname ?arch ~archs vpkgname)
+    List.map (function
+      |Packages_types.Name n -> f n (encode_vpkgname ?arch ~archs (n,None)) None
+      |Packages_types.NameArch (n,a) -> f n (encode_vpkgname ?arch ~archs (n,Some a)) None
+      |Packages_types.NameConstr (n,c) -> f n (encode_vpkgname ?arch ~archs (n,None)) (Some c)
+      |Packages_types.NameArchConstr (n,a,c) -> f n (encode_vpkgname ?arch ~archs (n,Some a)) (Some c)
     ) l
   )
 

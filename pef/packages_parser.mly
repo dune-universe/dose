@@ -91,7 +91,7 @@ constr:
   |LPAREN relop version RPAREN { Some ($2, $3) }
 ;
 
-vpkg: vpkgname constr { ($1, $2) } ;
+vpkg: vpkgname constr { Packages_types.make_vpkg ($1, $2) } ;
 
 vpkglist:
   |             { [] }
@@ -213,9 +213,9 @@ request:
 ;
 
 req_aux:
-  |vpkgname              { (($1,None),None) }
-  |vpkgname EQ version   { (($1,Some("=",$3)),None) }
-  |vpkgname SLASH IDENT  { (($1,None),Some $3) }
+  |vpkgname              { (Packages_types.make_vpkg ($1,None),None) }
+  |vpkgname EQ version   { (Packages_types.make_vpkg ($1,Some("=",$3)),None) }
+  |vpkgname SLASH IDENT  { (Packages_types.make_vpkg ($1,None),Some $3) }
 ;
 
 reqlist:

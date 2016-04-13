@@ -111,9 +111,8 @@ let future ?options ?(checklist=[]) repository =
     List.iter (fun (version,realversion,cluster) ->
       List.iter (fun pkg ->
         let pn = pkg#name in
-        if Hashtbl.mem constraints_table pn then begin
+        if Hashtbl.mem constraints_table pn then
           Hashtbl.add realpackages pn ()
-        end
       ) cluster;
       let (versionlist, constr) =
         Debian.Evolution.all_ver_constr constraints_table cluster
@@ -225,8 +224,8 @@ let outdated
     let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
     if OptParse.Opt.is_set Options.checkonly then begin
       List.flatten (
-        List.map (fun ((n,a),c) ->
-          let (name,filter) = Pef.Pefcudf.pefvpkg to_cudf ((n,a),c) in
+        List.map (fun vpkg ->
+          let (name,filter) = Pef.Pefcudf.pefvpkg to_cudf vpkg in
           Cudf.lookup_packages ~filter universe name
         ) (OptParse.Opt.get Options.checkonly)
       )

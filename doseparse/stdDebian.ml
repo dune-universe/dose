@@ -38,7 +38,8 @@ let vpkglist_option ?default ?(metavar = " <vpkglst>") () =
 let pkglist_option ?default ?(metavar = " <pkglst>") () =
   let parse_vpkglist s =
     let _loc = Format822.dummy_loc in
-    List.map (function
+    List.map (fun vpkg ->
+      match Pef.Packages_types._compatiblity_vpkg_filter vpkg with
       |((n,a),Some("=",v)) -> (n,a,v)
       |((n,a),None) ->
           raise (Format822.ParseError ([],s,"you must specify a version" ))
@@ -52,8 +53,8 @@ let pkglist_option ?default ?(metavar = " <pkglst>") () =
 let pkglist tables universe vpkglist =
   let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
   List.flatten (
-    List.map (fun ((n,a),c) ->
-      let (name,filter) = Pef.Pefcudf.pefvpkg to_cudf ((n,a),c) in
+    List.map (fun vpkg ->
+      let (name,filter) = Pef.Pefcudf.pefvpkg to_cudf vpkg in
       Cudf.lookup_packages ~filter universe name
     ) vpkglist
   )

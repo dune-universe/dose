@@ -170,8 +170,8 @@ let main () =
     if OptParse.Opt.is_set Options.checkonly then begin
       info "--checkonly specified, consider all packages as background packages";
       List.flatten (
-        List.map (fun ((n,a),c) ->
-          let (name,filter) = Pef.Pefcudf.pefvpkg to_cudf ((n,a),c) in
+        List.map (fun vpkg ->
+          let (name,filter) = Pef.Pefcudf.pefvpkg to_cudf vpkg in
           Cudf.lookup_packages ~filter universe name
         ) (OptParse.Opt.get Options.checkonly)
       )

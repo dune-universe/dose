@@ -130,7 +130,8 @@ let add_s h k v =
 (* collect names of virtual packages 
    associates to each virtual package a list of real packages *)
 let init_virtual_table tables pkg =
-  List.iter (fun ((name,_),constr) -> 
+  List.iter (fun vpkg ->
+    let ((name,_),constr) = Pef.Packages_types._compatiblity_vpkg_filter vpkg in 
     add_s tables.virtual_table name (pkg#name,constr)
   ) pkg#provides
 
@@ -142,7 +143,8 @@ let init_unit_table tables pkg =
 let init_versions_table tables table pkg =
   let versionedtables = tables.versioned_table in
   let conj_iter l =
-    List.iter (fun ((name,_),constr) ->
+    List.iter (fun vpkg ->
+      let ((name,_),constr) = Pef.Packages_types._compatiblity_vpkg_filter vpkg in
       add_p versionedtables name;
       match constr with
       |None -> ()
@@ -241,9 +243,10 @@ let get_real_version tables (cudfname,cudfversion) =
   with Not_found ->
     fatal "Package (%s,%d) does not have an associated debian version" cudfname cudfversion
 
-let loadl ?native_arch ?package_arch tables l =
+let loadl ?native_arch ?package_arch tables ( l : Pef.Packages_types.vpkglist ) =
   List.flatten (
-    List.map (fun ((name,_) as vpkgname,constr) ->
+    List.map (fun vpkg ->
+      let ((name,_) as vpkgname,constr) = Pef.Packages_types._compatiblity_vpkg_filter vpkg in
       let encname = add_arch_info ?native_arch ?package_arch vpkgname in
       match constr with
       |None ->
@@ -277,7 +280,7 @@ let loadl ?native_arch ?package_arch tables l =
     ) l
   )
 
-let loadll ?native_arch ?package_arch tables ll =
+let loadll ?native_arch ?package_arch tables ( ll : Pef.Packages_types.vpkgformula ) =
   List.filter_map (fun l ->
     match loadl ?native_arch ?package_arch tables l with
     |[] -> None
@@ -286,12 +289,13 @@ let loadll ?native_arch ?package_arch tables ll =
 
 (* we add a self conflict here, because in debian each package is in conflict
    with all other versions of the same package *)
-let loadlc ?native_arch ?package_arch tables name l =
+let loadlc ?native_arch ?package_arch tables name (l : Pef.Packages_types.vpkglist) =
   (CudfAdd.encode name, None)::(loadl ?native_arch ?package_arch tables l)
 
 let loadlp ?native_arch ?package_arch tables l =
   List.flatten (
-    List.map (fun ((name,_) as vpkgname,constr) ->
+    List.map (fun vpkg ->
+      let ((name,_) as vpkgname,constr) = Pef.Packages_types._compatiblity_vpkg_filter vpkg in
       let encname = add_arch_info ?native_arch ?package_arch vpkgname in
       match constr with
       |None -> [("--virtual-"^encname,Some(`Eq,Util.max32int - 1))]
@@ -457,9 +461,10 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
            let any = (CudfAdd.encode (pkg#name^":any"),None) in
            let l = 
              loadlp ~native_arch ~package_arch tables (
-               bind pkg#provides (fun ((name,_), c) ->
-                   [((name, Some "any"), c);
-                   ((name,None),c)]
+               bind pkg#provides (fun vpkg ->
+                 let ((name,_), c) = Pef.Packages_types._compatiblity_vpkg_filter vpkg in
+                   [Pef.Packages_types.make_vpkg ((name, Some "any"), c);
+                    Pef.Packages_types.make_vpkg ((name,None),c)]
                )
              )
            in any::l
@@ -487,8 +492,8 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
       in
       let multiarchconflicts =
         let selfconflict = function
-	  | ((n,a),None) -> (n = pkg#name) || List.exists (fun ((p,_),_) -> p=n) pkg#provides 
-	  | ((n,a),_)    -> (n = pkg#name)
+          |((n,a),None) -> (n = pkg#name) || List.exists (fun vpkg -> let ((p,_),_) = Pef.Packages_types._compatiblity_vpkg_filter vpkg in p=n) pkg#provides 
+          |((n,a),_)    -> (n = pkg#name)
 	in
         let realpackage = Util.StringHashtbl.mem tables.unit_table in
         match pkg#multiarch with
@@ -500,16 +505,17 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
             (* XXX : Duplicated conflicts ! *)
             bind (native_arch::options.foreign) (fun arch ->
               let l =
-                bind originalconflicts (fun ((n,a),c) ->
+                bind originalconflicts (fun vpkg ->
+                  let ((n,a),c) = Pef.Packages_types._compatiblity_vpkg_filter vpkg in
                   (*
                   debug "M-A-Same: examining pkg %s, conflicting with package %s (self confl = %b)" pkg.name n (selfconflict ((n,a),c));
                   *)
                   match realpackage n, selfconflict ((n,a),c) with
-                  |true,false  -> [((n,a),c)]  (* real conflict *)
+                  |true,false  -> [Pef.Packages_types.make_vpkg ((n,a),c)]  (* real conflict *)
                   |true, true  -> []           (* self conflict on real package, drop it *)
                   |false,false ->
                       begin match c with 
-                      |None -> [((n,a),None)] (* virtual conflict *)
+                      |None -> [Pef.Packages_types.make_vpkg ((n,a),None)] (* virtual conflict *)
                       |_ -> []                (* real conflict on non-existent package, drop it *)
                       end
                   |false, true ->             (* a virtual package and a self conflict *)
@@ -519,7 +525,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
                           List.filter_map (fun (pn,_) ->
                             if pn <> pkg#name then begin
                               (*debug "M-A-Same: adding conflict on real package %s for %s" pn pkg#name; *)
-                              Some((pn,a),None)
+                              Some(Pef.Packages_types.make_vpkg((pn,a),None))
                             end else None
                           ) (SSet.elements !(OcamlHashtbl.find tables.virtual_table n))
                         with Not_found -> []
@@ -564,12 +570,14 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
     { Cudf.default_package with
       Cudf.package = encpkgname ;
       Cudf.version = get_cudf_version tables (pkg#name,pkg#version) ;
+      (*
       Cudf.keep = if options.ignore_essential then `Keep_none else set_keep pkg;
       Cudf.depends = loadll tables (pkg#pre_depends @ pkg#depends); 
       Cudf.conflicts = loadlc tables pkg#name (pkg#breaks @ pkg#conflicts) ;
       Cudf.provides = loadlp tables pkg#provides ;
       Cudf.installed = add_inst inst pkg; 
       Cudf.pkg_extra = add_extra options.extras_opt tables pkg ;
+      *)
     }
 
 let load_list ?options l =

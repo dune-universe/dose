@@ -24,14 +24,6 @@ let get_source pkg =
   |(n,None) -> (n, pkg#version)
   |(n,Some v) -> (n,v)
 
-(** [group_by_source universe] returns a hashtbl that maps
-    (source,sourceversion) -> to a packages list *)
-(* the idea is : if the normalized version of the package is equal to
- * the source version, then add it to the table indexed by source version,
- * otherwise add it to the table indexed by package version *)
-(* actually it should be sourceversion -> list of list of clusters grouped by
- * version *)
-(* (source,sourceversion) -> [= packageversion -> (ref[pkg],realversion) =] *)
 let cluster packagelist =
   let th = Hashtbl.create (List.length packagelist) in
   List.iter (fun pkg ->

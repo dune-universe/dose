@@ -126,7 +126,6 @@ let normalize_caret version =
     then caret_star
     else caret_normal version
 
-
 let normalize_hypen version1 version2 =
   let v1 = SemverNode.parse_version version1 in
   let v2 = SemverNode.parse_version version2 in
@@ -153,7 +152,9 @@ let to_cnf ll =
 
 let normalize_depend name constr =
   List.map (fun conj ->
-    List.map (fun c -> ((name,None),c)) conj
+    List.map (fun c -> 
+      Pef.Packages_types.make_vpkg ((name,None),c)
+    ) conj
   ) (to_cnf constr)
 
 %}

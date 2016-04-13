@@ -83,7 +83,8 @@ let add_unique h k v =
 
 (* collect dependency information *)
 let conj_iter t l =
-  List.iter (fun ((name,_),sel) ->
+  List.iter (fun vpkg ->
+    let ((name,_),sel) = Pef.Packages_types._compatiblity_vpkg_filter vpkg in
     match sel with
     |None -> add_unique t name None
     |Some(c,v) -> add_unique t name (Some(Pef.Pefcudf.pefcudf_op c,v))
@@ -93,7 +94,7 @@ let cnf_iter t ll = List.iter (conj_iter t) ll
 (** [constraints universe] returns a map between package names
     and an ordered list of constraints where the package name is
     mentioned *)
-let constraints packagelist =
+let constraints ( packagelist : Packages.package list ) =
   let constraints_table = Hashtbl.create (List.length packagelist) in
   List.iter (fun pkg ->
     (* add_unique constraints_table pkg.Packages.name None; *)

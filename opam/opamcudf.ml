@@ -124,13 +124,14 @@ let tocudf tables ?(options=default_options) ?(extras=[]) pkg =
 (* convert an opam vpkg list into a cudf vpkg list *)
 let encode_vpkglist tables switch vpkglist =
   let to_cudf (p,v) = (p,Pef.Pefcudf.get_cudf_version tables (p,v)) in
-  List.map (fun (vpkgname,constr) ->
+  List.map (fun vpkg ->
+    let (vpkgname,constr) = Pef.Packages_types._compatiblity_vpkg_filter vpkg in
     let vpkgname =
       match vpkgname with
       |(n,None) -> (n,Some switch)
       |_ -> vpkgname
     in
-    Pef.Pefcudf.pefvpkg to_cudf (vpkgname,constr)
+    Pef.Pefcudf.pefvpkg to_cudf (Pef.Packages_types.make_vpkg (vpkgname,constr))
   ) vpkglist
 
 (** convert a opam request to a cudf request *)

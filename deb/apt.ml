@@ -79,10 +79,10 @@ let parse_req label s =
   Pef.Packages.lexbuf_wrapper Pef.Packages_parser.request_top (label,(_loc,s))
 
 let parse_pkg_req suite s =
-  let (r,((n,a),c),s) = parse_req "apt req suite" s in
+  let (r,vpkg,s) = parse_req "apt req suite" s in
   begin match suite with
-  |None -> (r,((n,a),c),s)
-  |Some suite -> (r,((n,a),c),Some suite)
+  |None -> (r,vpkg,s)
+  |Some suite -> (r,vpkg,Some suite)
   end
 ;;
 

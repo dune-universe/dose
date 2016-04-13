@@ -185,8 +185,9 @@ let main () =
   let checklist =
     if OptParse.Opt.is_set Options.checkonly then begin
       List.flatten (
-        List.map (fun ((n,a),c) ->
-          let (name,filter) = Pef.Pefcudf.pefvpkg to_cudf (("src:"^n,a),c) in
+        List.map (fun vpkg ->
+          let ((n,a),c) = Pef.Packages_types._compatiblity_vpkg_filter vpkg in
+          let (name,filter) = Pef.Pefcudf.pefvpkg to_cudf (Pef.Packages_types.make_vpkg (("src:"^n,a),c)) in
           Cudf.lookup_packages ~filter universe name
         ) (OptParse.Opt.get Options.checkonly)
       )

@@ -51,25 +51,31 @@ let default_request = {
 (* convert a apt command line request to edsp request *)
 let from_apt_request arch request = function
   |Apt.Install vpkgreqlist ->
-      List.fold_left (fun acc -> function
-        |(Some Pef.Packages_types.I, ((n,None),c), _) -> {acc with install = ((n,arch),c) :: acc.install}
-        |(Some Pef.Packages_types.R, ((n,None),c), _) -> {acc with remove =  ((n,arch),c) :: acc.remove}
-        |(None, ((n,None),c), _) -> {acc with install = ((n,arch),c) :: acc.install}
+    List.fold_left (fun acc -> function
+      |(Some Pef.Packages_types.I, Pef.Packages_types.NameConstr(n,c), _) -> 
+          {acc with install = Pef.Packages_types.make_vpkg ((n,arch),Some c) :: acc.install}
+      |(Some Pef.Packages_types.R,  Pef.Packages_types.NameConstr(n,c), _) ->
+          {acc with remove =  Pef.Packages_types.make_vpkg ((n,arch),Some c) :: acc.remove}
+      |(None,  Pef.Packages_types.NameConstr(n,c), _) ->
+          {acc with install = Pef.Packages_types.make_vpkg ((n,arch),Some c) :: acc.install}
 
-        |(Some Pef.Packages_types.I, vpkg, _) -> {acc with install = vpkg :: acc.install}
-        |(Some Pef.Packages_types.R, vpkg, _) -> {acc with remove = vpkg :: acc.remove}
-        |(None, vpkg, _) -> {acc with install = vpkg :: acc.install}
-      ) request vpkgreqlist
+      |(Some Pef.Packages_types.I, vpkg, _) -> {acc with install = vpkg :: acc.install}
+      |(Some Pef.Packages_types.R, vpkg, _) -> {acc with remove = vpkg :: acc.remove}
+      |(None, vpkg, _) -> {acc with install = vpkg :: acc.install}
+    ) request vpkgreqlist
   |Apt.Remove vpkgreqlist ->
-      List.fold_left (fun acc -> function
-        |(Some Pef.Packages_types.I, ((n,None),c), _) -> {acc with install = ((n,arch),c) :: acc.install}
-        |(Some Pef.Packages_types.R, ((n,None),c), _) -> {acc with remove = ((n,arch),c) :: acc.remove}
-        |(None, ((n,None),c), _) -> {acc with remove = ((n,arch),c) :: acc.remove}
+    List.fold_left (fun acc -> function
+      |(Some Pef.Packages_types.I, Pef.Packages_types.NameConstr(n,c), _) ->
+          {acc with install = Pef.Packages_types.make_vpkg ((n,arch),Some c) :: acc.install}
+      |(Some Pef.Packages_types.R, Pef.Packages_types.NameConstr(n,c), _) ->
+          {acc with remove = Pef.Packages_types.make_vpkg ((n,arch),Some c) :: acc.remove}
+      |(None,  Pef.Packages_types.NameConstr(n,c), _) ->
+          {acc with remove = Pef.Packages_types.make_vpkg ((n,arch),Some c) :: acc.remove}
 
-        |(Some Pef.Packages_types.I, vpkg, _) -> {acc with install = vpkg :: acc.install}
-        |(Some Pef.Packages_types.R, vpkg, _) -> {acc with remove = vpkg :: acc.remove}
-        |(None, vpkg, _) -> {acc with remove = vpkg :: acc.remove}
-      ) request vpkgreqlist
+      |(Some Pef.Packages_types.I, vpkg, _) -> {acc with install = vpkg :: acc.install}
+      |(Some Pef.Packages_types.R, vpkg, _) -> {acc with remove = vpkg :: acc.remove}
+      |(None, vpkg, _) -> {acc with remove = vpkg :: acc.remove}
+    ) request vpkgreqlist
   |Apt.Upgrade _ -> {request with upgrade = true }
   |Apt.DistUpgrade _ -> {request with distupgrade = true}
 ;;
@@ -233,16 +239,15 @@ let requesttocudf tables universe request =
       fatal "Package %s does not have a suitable candidate" name
   in
   let select_packages ?(remove=false) l =
-    List.map (fun ((n,a),c) ->
-      let (name,constr) = Pef.Pefcudf.pefvpkg to_cudf ((n,a),c) in
+    List.map (fun vpkg ->
+      let (name,constr) = Pef.Pefcudf.pefvpkg to_cudf vpkg in
       if remove then (name,None)
-      else begin
+      else
         match constr, request.strict_pin with
         |None, false -> (name, None)
         |_, _ -> (name,Some(`Eq,(get_candidate (name,constr)).Cudf.version))
         (* FIXME: when apt will accept version constraints different from `Eq,
            we will need to pass them through. *)
-      end
     ) l
   in
   if request.upgrade || request.distupgrade then

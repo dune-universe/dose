@@ -174,17 +174,13 @@ let src2pkg ?(dropalternatives=false) ?(profiles=[]) ?(noindep=false) ?(src="src
   (* imitate sbuild behaviour and drop all alternatives except those that have
    * the same name as the first. Search for RESOLVE_ALTERNATIVES in
    * lib/Sbuild/ResolverBase.pm in the sbuild sources *)
-  let dropalt l = match l with
-    | [] -> []
-    | [p] -> [p]
-    | hd::tl -> List.filter (fun p -> fst p = fst hd) l
-  in
+  let dropalt l = List.filter ((=) (List.hd l)) l in
   let depends ll =
     List.filter_map (fun l ->
-        match List.filter_map (select hostarch profiles) l with
-        |[] -> None
-        |l -> Some (if dropalternatives then dropalt l else l)
-      ) ll
+      match List.filter_map (select hostarch profiles) l with
+      |[] -> None
+      |l -> Some (if dropalternatives then dropalt l else l)
+    ) ll
   in
   let extras_profiles  = match profiles with [] -> [] | _ -> [("profiles", String.join " " profiles)] in
   let depends_indep   = if noindep then [] else srcpkg#build_depends_indep in
@@ -193,9 +189,10 @@ let src2pkg ?(dropalternatives=false) ?(profiles=[]) ?(noindep=false) ?(src="src
    * and crossbuild-essential-$hostarch. When compiling natively, implicitly
    * depend on build-essential *)
   let build_essential = if buildarch<>hostarch then
-      [[(("build-essential", Some buildarch), None)];[(("crossbuild-essential-"^hostarch, Some buildarch), None)]]
+      [[Pef.Packages_types.make_vpkg (("build-essential", Some buildarch), None)];
+       [Pef.Packages_types.make_vpkg (("crossbuild-essential-"^hostarch, Some buildarch), None)]]
     else
-      [[(("build-essential", Some buildarch), None)]]
+      [[Pef.Packages_types.make_vpkg (("build-essential", Some buildarch), None)]]
   in
   new Packages.package ~name:("",Some(src ^ sep ^ srcpkg#name)) ~version:("",Some(srcpkg#version))
   ~architecture:("",Some(String.concat "," srcpkg#architecture))
