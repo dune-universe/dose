@@ -115,6 +115,7 @@ module RawInput ( Set : Set.S ) = struct
         with Input.File_empty -> acc
       ) Set.empty files
     in
+    Parsing.clear_parser ();
     info "total packages %n" (Set.cardinal s);
     Util.Timer.stop timer (Set.elements s)
 
