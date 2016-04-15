@@ -32,7 +32,7 @@ let strong_depends solver p q =
   let solver = Depsolver_int.copy_solver solver in
   let lit = Depsolver_int.S.lit_of_var (solver.Depsolver_int.map#vartoint q) false in
   Depsolver_int.S.add_rule solver.Depsolver_int.constraints [|lit|] [];
-  match Depsolver_int.solve solver (None,[p]) with
+  match Depsolver_int.solve solver ~explain:false (None,[p]) with
   |Diagnostic.FailureInt _ -> true
   |Diagnostic.SuccessInt _ -> false
 
@@ -78,7 +78,7 @@ let strongdeps_int ?(transitive=true) graph univ pkglist =
     if (pkglist_size <> universe_size) || (somedisj cudfpool id) then begin 
       let closure = Depsolver_int.dependency_closure_cache cudfpool [id] in
       let solver = Depsolver_int.init_solver_closure cudfpool closure in
-      match Depsolver_int.solve solver (None,[id]) with
+      match Depsolver_int.solve solver ~explain:true (None,[id]) with
       |Diagnostic.FailureInt(_) -> ()
       |Diagnostic.SuccessInt(f_int) ->
           check_strong univ transitive graph solver id (f_int ())

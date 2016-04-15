@@ -62,26 +62,26 @@ val init_solver_pool : Common.Util.projection ->
   [< `CudfPool of pool] -> 'a list -> [> `SolverPool of pool]
 
 (** Initalise the sat solver. Operates only on solver ids [SolverPool] *)
-val init_solver_cache : ?buffer:bool -> [< `SolverPool of pool] -> S.state
+val init_solver_cache : ?buffer:bool -> ?explain:bool -> [< `SolverPool of pool] -> S.state
 
 (** Call the sat solver
   
     @param tested: optional int array used to cache older results
 *)
-val solve : ?tested:bool array -> solver -> int option * int list -> Diagnostic.result_int
+val solve : ?tested:bool array -> explain:bool -> solver -> int option * int list -> Diagnostic.result_int
 
 (* [pkgcheck global_constraints callback solver tested id].
    This function is used to "distcheck" a list of packages *)
 val pkgcheck : bool -> 
   (Diagnostic.result_int * (int option * int list) -> 'a) option -> 
-    solver -> bool array -> int -> bool
+    bool -> solver -> bool array -> int -> bool
 
 (** Constraint solver initialization
  
     @param buffer debug buffer to print out debug messages
     @param univ cudf package universe
 *)
-val init_solver_univ : ?global_constraints:bool -> ?buffer:bool -> Cudf.universe -> solver
+val init_solver_univ : ?global_constraints:bool -> ?buffer:bool -> ?explain:bool -> Cudf.universe -> solver
 
 (** Constraint solver initialization
  

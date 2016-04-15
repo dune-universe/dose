@@ -27,18 +27,18 @@ let load universe = Depsolver_int.init_solver_univ universe
 
     @return the number of packages that cannot be installed
 *)
-let univcheck ?(global_constraints=true) ?callback universe =
-  let aux ?callback univ : int =
+let univcheck ?(global_constraints=true) ?callback ?(explain=true) universe =
+  let aux ?callback univ =
     let timer = Util.Timer.create "Algo.Depsolver.univcheck" in
     Util.Timer.start timer;
-    let solver = Depsolver_int.init_solver_univ univ in
+    let solver = Depsolver_int.init_solver_univ ~explain univ in
     let failed = ref 0 in
     (* This is size + 1 because we encode the global constraint of the
      * universe as a package that must be tested like any other *)
     let size = (Cudf.universe_size univ) + 1 in
     let tested = Array.make size false in
     Util.Progress.set_total Depsolver_int.progressbar_univcheck size ;
-    let check = Depsolver_int.pkgcheck global_constraints callback solver tested in
+    let check = Depsolver_int.pkgcheck global_constraints callback explain solver tested in
     (* we do not test the last package that encodes the global constraints
      * on the universe as it is tested all the time with all other packages. *)
     for id = 0 to size - 2 do if not(check id) then incr failed done;
@@ -58,17 +58,20 @@ let univcheck ?(global_constraints=true) ?callback universe =
     @param pkglist list of packages to be checked
     @return the number of packages that cannot be installed
 *)
-let listcheck ?(global_constraints=true) ?callback universe pkglist =
+let listcheck ?(global_constraints=true) ?callback ?(explain=true) universe pkglist =
   let aux ?callback univ idlist =
-    let solver = Depsolver_int.init_solver_univ univ in
+    let solver = Depsolver_int.init_solver_univ ~explain univ in
     let timer = Util.Timer.create "Algo.Depsolver.listcheck" in
     Util.Timer.start timer;
     let failed = ref 0 in
     let size = (Cudf.universe_size univ) + 1 in
     let tested = Array.make size false in
     Util.Progress.set_total Depsolver_int.progressbar_univcheck size ;
-    let check = Depsolver_int.pkgcheck global_constraints callback solver tested in
-    List.iter (function id when id = size -> () |id -> if not(check id) then incr failed) idlist ;
+    let check = Depsolver_int.pkgcheck global_constraints callback explain solver tested in
+    List.iter (function
+      |id when id = size -> ()
+      |id -> if not(check id) then incr failed
+    ) idlist ;
     Util.Timer.stop timer !failed
   in
   let idlist = List.map (CudfAdd.vartoint universe) pkglist in
@@ -80,14 +83,12 @@ let listcheck ?(global_constraints=true) ?callback universe pkglist =
       aux ~callback:callback_int universe idlist
 ;;
 
-let univcheck_lowmem ?(global_constraints=true) ?callback universe =
+let univcheck_lowmem ?(global_constraints=true) ?callback ?(explain=true) universe =
   let keeplist =
     Cudf.fold_packages (fun acc pkg ->
-      (*if pkg.Cudf.installed then*)
         match pkg.Cudf.keep with
         |`Keep_package |`Keep_version  -> pkg::acc
         |_ -> acc
-      (*else acc*)
     ) [] universe
   in
   (* Split the universe in 10 subuniverses of size 1/10 *)
@@ -109,7 +110,7 @@ let univcheck_lowmem ?(global_constraints=true) ?callback universe =
     let u = Cudf.load_universe (CudfAdd.Cudf_set.elements su) in
     let pkglist = CudfAdd.Cudf_set.elements stt in
     debug "Univcheck run : %d" (Cudf.universe_size u);
-    let b = listcheck ~global_constraints ?callback u pkglist in
+    let b = listcheck ~global_constraints ?callback ~explain u pkglist in
     b+acc
   ) 0 partition
 ;;
@@ -120,7 +121,7 @@ let edos_install_cache global_constraints univ cudfpool pkglist =
   let closure = Depsolver_int.dependency_closure_cache cudfpool (globalid::idlist) in
   let solver = Depsolver_int.init_solver_closure cudfpool closure in
   let req = if global_constraints then (Some globalid,idlist) else (None,idlist) in
-  let res = Depsolver_int.solve solver req in
+  let res = Depsolver_int.solve solver ~explain:true req in
   Diagnostic.diagnosis solver.Depsolver_int.map univ res req
 ;;
 

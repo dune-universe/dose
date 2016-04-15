@@ -89,11 +89,17 @@ let main () =
     if OptParse.Opt.get Options.latest then CudfAdd.latest fg_pkglist
     else fg_pkglist
   in
+  let fn = List.length fg_pkglist in
+  let bn = List.length bg_pkglist in
   let universe = 
     let s = CudfAdd.to_set (fg_pkglist @ bg_pkglist) in
     Cudf.load_universe (CudfAdd.Cudf_set.elements s) 
   in
   let universe_size = Cudf.universe_size universe in
+  info "Cudf Universe: %d packages" universe_size;
+
+  (* we get back a bit of memory *)
+  if universe_size > 500000 then Gc.full_major () ;
 
   if OptParse.Opt.is_set Options.checkonly && 
     OptParse.Opt.is_set Options.coinst then
@@ -117,7 +123,7 @@ let main () =
         fatal "Cannot find any package corresponding to the selector %s" 
         (Util.string_of_list ~sep:", " Pef.Printer.string_of_vpkg co)
       |l -> l
-    end else []
+    end else if bg_pkglist = [] then fg_pkglist else []
   in
 
   let coinstlist = 
@@ -148,7 +154,12 @@ let main () =
   info "Solving..." ;
   let failure = OptParse.Opt.get Options.failure in
   let success = OptParse.Opt.get Options.success in
-  let explain = OptParse.Opt.get Options.explain in
+  let explain =
+    if success || failure then
+      OptParse.Opt.get Options.explain 
+    else false
+  in
+  let explain_summary = OptParse.Opt.get Options.explain in
   let minimal = OptParse.Opt.get Options.minimal in
   let condense = OptParse.Opt.get Options.condense in
   let summary = OptParse.Opt.get Options.summary in
@@ -180,19 +191,21 @@ let main () =
 	(String.concat "," (OptParse.Opt.get Options.deb_foreign_archs));
  
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
+
   let callback d =
-    if summary then Diagnostic.collect results d ;
     let pp =
       if input_type = `Cudf then 
         fun pkg -> pp ~decode:(fun x -> x) pkg 
       else fun pkg -> pp pkg
     in
-    let _ = 
-      if not(Diagnostic.is_solution d) && (OptParse.Opt.get Options.dot) then
-        let dir = OptParse.Opt.opt Options.outdir in
-        Diagnostic.print_dot ~pp ~addmissing:explain ?dir d
-    in
-    Diagnostic.fprintf ~pp ~failure ~success ~explain ~minimal ~condense fmt d
+    if summary then Diagnostic.collect results d ;
+
+    (if not(Diagnostic.is_solution d) && (OptParse.Opt.get Options.dot) then
+      let dir = OptParse.Opt.opt Options.outdir in
+      Diagnostic.print_dot ~pp ~addmissing:explain ?dir d);
+
+    if failure || success then
+      Diagnostic.fprintf ~pp ~failure ~success ~explain ~minimal ~condense fmt d
   in
   Util.Timer.start timer;
 
@@ -216,19 +229,26 @@ let main () =
     let global_constraints = not(OptParse.Opt.get Options.deb_ignore_essential) in
     let nbp =
       if (OptParse.Opt.is_set Options.checkonly) && (List.length checklist) = 0 then 0
-      else if OptParse.Opt.is_set Options.checkonly then 
-        Depsolver.listcheck ~global_constraints ~callback universe checklist
-      else if bg_pkglist = [] then
-          univcheck ~global_constraints ~callback universe 
+      else if OptParse.Opt.is_set Options.checkonly || not(bg_pkglist = []) then 
+        let subuniverse =
+          let l =
+            if global_constraints then
+              Cudf.fold_packages (fun acc pkg ->
+                  match pkg.Cudf.keep with
+                  |`Keep_package |`Keep_version  -> pkg::acc
+                  |_ -> acc
+              ) checklist universe
+            else checklist
+          in
+          Cudf.load_universe (CudfAdd.cone universe l)
+        in
+        Depsolver.listcheck ~global_constraints ~callback ~explain subuniverse checklist
       else
-        Depsolver.listcheck ~global_constraints ~callback universe fg_pkglist
+        univcheck ~global_constraints ~callback ~explain universe 
     in
     ignore(Util.Timer.stop timer ());
     
     if failure || success then Format.fprintf fmt "@]@.";
-    
-    let fn = List.length fg_pkglist in
-    let bn = List.length bg_pkglist in
     
     let nb,nf = 
       let cl = List.length checklist in
@@ -243,7 +263,7 @@ let main () =
     Format.fprintf fmt "total-packages: %d@." universe_size;
     Format.fprintf fmt "broken-packages: %d@." nbp;
     if summary then 
-      Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~explain ~pp ()) results;
+      Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~explain:explain_summary ~pp ()) results;
     nbp
   end
 ;;

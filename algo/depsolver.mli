@@ -77,21 +77,25 @@ val find_listinstallable : ?global_constraints:bool -> Cudf.universe ->
 
     @return the number of broken packages
  *)
-val univcheck : ?global_constraints:bool -> ?callback:(Diagnostic.diagnosis -> unit) -> Cudf.universe -> int
+val univcheck : ?global_constraints:bool -> ?callback:(Diagnostic.diagnosis -> unit) -> 
+  ?explain:bool -> Cudf.universe -> int
 
-val univcheck_lowmem : ?global_constraints:bool -> ?callback:(Diagnostic.diagnosis -> unit) -> Cudf.universe -> int
+val univcheck_lowmem : ?global_constraints:bool -> 
+  ?callback:(Diagnostic.diagnosis -> unit) -> ?explain:bool -> Cudf.universe -> int
 
-(** [listcheck ~callback:c solver l] check if all packages in [l] can be
+(** [listcheck ~callback:c subuniverse l] check if all packages in [l] can be
    installed.
   
    Invariant : l is a subset of universe can be installed in the solver universe.
+
+   It is responsability of the user to pass listcheck an appropriate subuniverse`
 
    @param callback : execute a function for each package.
    @param global_constraints : enforce global constraints on the given universe.
    @return the number of broken packages
  *)
 val listcheck : ?global_constraints:bool -> ?callback:(Diagnostic.diagnosis -> unit) -> 
-  Cudf.universe -> Cudf.package list -> int 
+  ?explain:bool -> Cudf.universe -> Cudf.package list -> int 
 
 (** [dependency_closure universe l] compute the dependencies closure 
     of the give package list.

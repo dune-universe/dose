@@ -182,7 +182,11 @@ let main () =
 
   let failure = OptParse.Opt.get Options.failure in
   let success = OptParse.Opt.get Options.success in
-  let explain = OptParse.Opt.get Options.explain in
+  let explain =
+    if success || failure then
+      OptParse.Opt.get Options.explain
+    else false
+  in
   let minimal = OptParse.Opt.get Options.minimal in
   let summary = OptParse.Opt.get Options.summary in
 
@@ -216,11 +220,26 @@ let main () =
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
   let callback d = 
     if summary then Diagnostic.collect results d ;
+    if failure || success then
       Diagnostic.fprintf ~pp ~failure ~success ~explain ~minimal fmt d
   in
 
   Util.Timer.start timer;
-  let nbp = Depsolver.listcheck ~callback universe checklist in
+  let subuniverse =
+    if checklist <> sl then
+      let l =
+        if not(OptParse.Opt.get Options.deb_ignore_essential) then
+          Cudf.fold_packages (fun acc pkg ->
+              match pkg.Cudf.keep with
+              |`Keep_package |`Keep_version  -> pkg::acc
+              |_ -> acc
+          ) checklist universe
+        else checklist
+      in
+      Cudf.load_universe (CudfAdd.cone universe l)
+    else universe
+  in
+  let nbp = Depsolver.listcheck ~callback ~explain subuniverse checklist in
   ignore(Util.Timer.stop timer ());
 
   if failure || success then Format.fprintf fmt "@]@.";

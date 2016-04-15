@@ -156,21 +156,22 @@ let init_solver_pool map (`CudfPool cudfpool) closure =
   (`SolverPool solverpool)
 
 (** initalise the sat solver. operate only on solver ids *)
-let init_solver_cache ?(buffer=false) (`SolverPool varpool) =
+let init_solver_cache ?(buffer=false) ?(explain=true) (`SolverPool varpool) =
   let num_conflicts = ref 0 in
   let num_disjunctions = ref 0 in
   let num_dependencies = ref 0 in
+  let if_explain l = if explain then l else [] in
   let varsize = Array.length varpool in
 
   let add_depend constraints vpkgs pkg_id l =
     let lit = S.lit_of_var pkg_id false in 
     if (List.length l) = 0 then 
-      S.add_rule constraints [|lit|] [Diagnostic.MissingInt(pkg_id,vpkgs)]
+      S.add_rule constraints [|lit|] (if_explain [Diagnostic.MissingInt(pkg_id,vpkgs)])
     else begin
       let lits = List.map (fun id -> S.lit_of_var id true) l in
       num_disjunctions := !num_disjunctions + (List.length lits);
       S.add_rule constraints (Array.of_list (lit :: lits))
-        [Diagnostic.DependencyInt (pkg_id, vpkgs, l)];
+        (if_explain [Diagnostic.DependencyInt (pkg_id, vpkgs, l)]);
       if (List.length lits) > 1 then
         S.associate_vars constraints (S.lit_of_var pkg_id true) l;
     end
@@ -186,7 +187,7 @@ let init_solver_cache ?(buffer=false) (`SolverPool varpool) =
         Util.IntPairHashtbl.add conflicts pair ();
         let p = S.lit_of_var i false in
         let q = S.lit_of_var j false in
-        S.add_rule constraints [|p;q|] [Diagnostic.ConflictInt(i,j,vpkg)];
+        S.add_rule constraints [|p;q|] (if_explain [Diagnostic.ConflictInt(i,j,vpkg)]);
       end
     end
   in
@@ -228,7 +229,7 @@ let init_solver_cache ?(buffer=false) (`SolverPool varpool) =
   
     @param tested: optional int array used to cache older results
 *)
-let solve ?tested solver request =
+let solve ?tested ~explain solver request =
   S.reset solver.constraints;
 
   let result solve collect var =
@@ -240,11 +241,17 @@ let solve ?tested solver request =
           (Option.get tested).(i) <- true;
         )
       ) l;
-      let get_assignent ?(all=true) () = List.map solver.map#inttovar l in
-      Diagnostic.SuccessInt(get_assignent)
+      if explain then
+        let get_assignent ?(all=true) () = List.map solver.map#inttovar l in
+        Diagnostic.SuccessInt(get_assignent)
+      else
+        Diagnostic.SuccessInt(fun ?(all=false) () -> [])
     end else
-      let get_reasons () = collect solver.constraints var in
-      Diagnostic.FailureInt(get_reasons)
+      if explain then
+        let get_reasons () = collect solver.constraints var in
+        Diagnostic.FailureInt(get_reasons)
+      else
+        Diagnostic.FailureInt(fun () -> [])
   in
 
   match request with
@@ -259,7 +266,7 @@ let solve ?tested solver request =
       result S.solve_lst S.collect_reasons_lst (List.map solver.map#vartoint (k::il))
 
 (* this function is used to "distcheck" a list of packages *)
-let pkgcheck global_constraints callback solver tested id =
+let pkgcheck global_constraints callback explain solver tested id =
   (* global id is a fake package id encoding the global constraints of the
    * universe. it is the last element of the id array *)
   let globalid = (Array.length tested) - 1 in
@@ -267,7 +274,7 @@ let pkgcheck global_constraints callback solver tested id =
   let res =
     Util.Progress.progress progressbar_univcheck;
     if not(tested.(id)) then
-      solve ~tested solver req 
+      solve ~tested ~explain solver req 
     else begin
       (* this branch is true only if the package was previously
          added to the tested packages and therefore it is installable
@@ -275,13 +282,16 @@ let pkgcheck global_constraints callback solver tested id =
          of installed packages despite the fact the the package was already
          tested. This is done to provide one installation set for each package
          in the universe *)
-      let f ?(all=false) () =
-        if all then begin
-          match solve solver req with
-          |Diagnostic.SuccessInt(f_int) -> f_int ()
-          |Diagnostic.FailureInt _ -> assert false (* impossible *)
-        end else []
-      in Diagnostic.SuccessInt(f) 
+      if explain then
+        let f ?(all=false) () =
+          if all then begin
+            match solve solver ~explain req with
+            |Diagnostic.SuccessInt(f_int) -> f_int ()
+            |Diagnostic.FailureInt _ -> assert false (* impossible *)
+          end else []
+        in Diagnostic.SuccessInt(f)
+      (* avoid to allocate anything on the stack if not stricly needed *)
+      else Diagnostic.SuccessInt(fun ?(all=false) () -> [])
     end
   in
   match callback, res with
@@ -295,13 +305,13 @@ let pkgcheck global_constraints callback solver tested id =
     @param buffer debug buffer to print out debug messages
     @param univ cudf package universe
 *)
-let init_solver_univ ?(global_constraints=true) ?(buffer=false) univ =
+let init_solver_univ ?(global_constraints=true) ?(buffer=false) ?(explain=true) univ =
   let map = new Util.identity in
   (* here we convert a cudfpool in a varpool. The assumption
    * that cudf package identifiers are contiguous is essential ! *)
   let `CudfPool pool = init_pool_univ global_constraints univ in
   let varpool = `SolverPool pool in
-  let constraints = init_solver_cache ~buffer varpool in
+  let constraints = init_solver_cache ~buffer ~explain varpool in
   let solver = { constraints = constraints ; map = map } in
   solver
 
