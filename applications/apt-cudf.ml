@@ -475,8 +475,8 @@ let main () =
   let exec_pat = fst (parse_solver_spec (Filename.concat solver_dir solver)) in
 
   let solpre,soluniv = 
-    let from_cudf (p,v) = Debian.Debcudf.get_real_version tables (p,v) in
-    let pp = CudfAdd.pp from_cudf in
+    (*let pp = CudfAdd.pp from_cudf in*)
+    (*let from_cudf (p,v) = Debian.Debcudf.get_real_version tables (p,v) in*)
     let explain = false in
     match Algo.Depsolver.check_request ~cmd:exec_pat ~criteria ~explain cudf with
     |Algo.Depsolver.Error s -> fatal "%s" s
