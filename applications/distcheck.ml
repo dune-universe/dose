@@ -27,6 +27,7 @@ module Options = struct
   let options = OptParser.make ~description
   include StdOptions.MakeOptions(struct let options = options end)
 
+  let lowmem = StdOpt.store_false ();;
   let coinst = StdDebian.vpkglist_option ();;
   let fields = StdOptions.str_list_option ();;
 
@@ -34,6 +35,7 @@ module Options = struct
   StdOptions.DistcheckOptions.add_options options ;;
   StdOptions.DistcheckOptions.add_option options ~long_name:"coinst" ~help:"Check if these packages are coinstallable" coinst;;
   StdOptions.DistcheckOptions.add_option options ~long_name:"fields" ~help:"Print additional fields if available" fields;;
+  StdOptions.DistcheckOptions.add_option options ~long_name:"lowmem" ~help:"Serialise multiple distcheck runs to save memory" lowmem;;
 
   include StdOptions.InputOptions ;;
   let default = "dot"::(StdOptions.InputOptions.default_options) in
@@ -205,14 +207,19 @@ let main () =
     Format.fprintf fmt "total-tuples: %d@." number_checks;
     Format.fprintf fmt "broken-tuples: %d@." nbt;
     nbt
-  end else begin 
+  end else begin
+    let univcheck = 
+      if OptParse.Opt.get Options.lowmem 
+      then Depsolver.univcheck
+      else Depsolver.univcheck_lowmem
+    in
     let global_constraints = not(OptParse.Opt.get Options.deb_ignore_essential) in
     let nbp =
       if (OptParse.Opt.is_set Options.checkonly) && (List.length checklist) = 0 then 0
       else if OptParse.Opt.is_set Options.checkonly then 
         Depsolver.listcheck ~global_constraints ~callback universe checklist
       else if bg_pkglist = [] then
-          Depsolver.univcheck ~global_constraints ~callback universe 
+          univcheck ~global_constraints ~callback universe 
       else
         Depsolver.listcheck ~global_constraints ~callback universe fg_pkglist
     in

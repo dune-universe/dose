@@ -80,6 +80,40 @@ let listcheck ?(global_constraints=true) ?callback universe pkglist =
       aux ~callback:callback_int universe idlist
 ;;
 
+let univcheck_lowmem ?(global_constraints=true) ?callback universe =
+  let keeplist =
+    Cudf.fold_packages (fun acc pkg ->
+      (*if pkg.Cudf.installed then*)
+        match pkg.Cudf.keep with
+        |`Keep_package |`Keep_version  -> pkg::acc
+        |_ -> acc
+      (*else acc*)
+    ) [] universe
+  in
+  (* Split the universe in 10 subuniverses of size 1/10 *)
+  let chunkssize = ((Cudf.universe_size universe) / 10) + 1 in
+  (* The set of packages that must be present in each universe *)
+  let keepset = CudfAdd.to_set (CudfAdd.cone universe keeplist) in
+  let (_,_,partition) =
+    Enum.fold (fun pkg (acc,tested,e) ->
+      let c = CudfAdd.cone universe [pkg] in
+      let s = CudfAdd.Cudf_set.union (CudfAdd.to_set c) acc in
+      if Cudf_set.cardinal s >= chunkssize then begin
+        let totest = Cudf_set.diff s tested in
+        Enum.push e (s,totest);
+        (keepset,Cudf_set.union tested totest,e)
+      end else (s,tested,e)
+    ) (keepset,Cudf_set.empty,Enum.empty ()) (List.enum (Cudf.get_packages universe))
+  in
+  Enum.fold (fun (su,stt) acc ->
+    let u = Cudf.load_universe (CudfAdd.Cudf_set.elements su) in
+    let pkglist = CudfAdd.Cudf_set.elements stt in
+    debug "Univcheck run : %d" (Cudf.universe_size u);
+    let b = listcheck ~global_constraints ?callback u pkglist in
+    b+acc
+  ) 0 partition
+;;
+
 let edos_install_cache global_constraints univ cudfpool pkglist =
   let idlist = List.map (CudfAdd.vartoint univ) pkglist in
   let globalid = Cudf.universe_size univ in

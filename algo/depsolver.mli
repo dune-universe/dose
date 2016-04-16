@@ -79,6 +79,8 @@ val find_listinstallable : ?global_constraints:bool -> Cudf.universe ->
  *)
 val univcheck : ?global_constraints:bool -> ?callback:(Diagnostic.diagnosis -> unit) -> Cudf.universe -> int
 
+val univcheck_lowmem : ?global_constraints:bool -> ?callback:(Diagnostic.diagnosis -> unit) -> Cudf.universe -> int
+
 (** [listcheck ~callback:c solver l] check if all packages in [l] can be
    installed.
   
