@@ -213,7 +213,6 @@ let main () =
             let id = (cudfpkg.Cudf.package,cudfpkg.Cudf.version) in
             let debpkg = Hashtbl.find cudftodeb_table id in
             debpkg#pp oc;
-            Printf.fprintf oc "\n"
           with Not_found -> assert false
         ) is
       else

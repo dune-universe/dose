@@ -133,6 +133,7 @@ class package ?(name=("Package",None)) ?(version=("Version",None)) ?(depends=("D
     Pef.Printer.pp_vpkgformula_wl oc enhances;
     Pef.Printer.pp_vpkgformula_wl oc recommends;
     Pef.Printer.pp_vpkglist_wl oc replaces;
+    Printf.fprintf oc "\n"
  
 end
 
