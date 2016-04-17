@@ -37,7 +37,7 @@ let parse_binarylist v = Pef.Packages.lexbuf_wrapper Pef.Packages_parser.vpkglis
 class package ?(name=("Package",None)) ?(version=("Version",None)) ?(depends=("Depends",None))
     ?(conflicts=("Conflicts",None)) ?(provides=("Provides",None)) ?(recommends=("Recommends",None)) 
     ?(architecture=("Architecture",None)) ?(multiarch=("Multi-Arch",None)) ?(source=("Source",None))
-    ?(essential=("Essential",None)) ?(build_essential=("Build-Essential",None)) 
+    ?(essential=("Essential",None)) 
     ?(extra_source_only=("Extra-Source-Only",None)) ?(priority=("Priority",None)) 
     ?(pre_depends=("Pre-Depends",None)) ?(suggests=("Suggests",None))
     ?(enhances=("Enhances",None)) ?(breaks=("Breaks",None)) ?(replaces=("Replaces",None))
@@ -60,10 +60,6 @@ class package ?(name=("Package",None)) ?(version=("Version",None)) ?(depends=("D
   val essential : (string * bool) =
     let parse = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool in
     Pef.Packages.get_field_value ~parse ~par ~field:essential
-
-  val build_essential : (string * bool) =
-    let parse = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool in
-    Pef.Packages.get_field_value ~parse ~par ~field:build_essential
 
   val extra_source_only : (string * bool) =
     let parse = Pef.Packages.parse_s ~default:false Pef.Packages.parse_bool in
@@ -96,7 +92,6 @@ class package ?(name=("Package",None)) ?(version=("Version",None)) ?(depends=("D
   method architecture = snd architecture
   method multiarch = snd multiarch
   method essential = snd essential
-  method build_essential = snd build_essential
   method extra_source_only = snd extra_source_only
   method priority = snd priority
   method source = snd source
@@ -126,7 +121,6 @@ class package ?(name=("Package",None)) ?(version=("Version",None)) ?(depends=("D
     Pef.Printer.pp_string_wl oc architecture;
     Pef.Printer.pp_function_wl oc pp_multiarch multiarch;
     Pef.Printer.pp_yes_wl oc essential;
-    Pef.Printer.pp_yes_wl oc build_essential;
     Pef.Printer.pp_string_wl oc priority;
     Pef.Printer.pp_function_wl oc pp_source source;
 
