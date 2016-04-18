@@ -42,7 +42,11 @@ module Options = struct
 
 
   include StdOptions.InputOptions ;;
-  let default = List.remove StdOptions.InputOptions.default_options "inputtype" in
+  let default = 
+    List.fold_left (fun acc e ->
+      List.remove acc e
+    ) StdOptions.InputOptions.default_options ["inputtype";"fg";"bg"]
+  in
   StdOptions.InputOptions.add_options ~default options ;
 
   include StdOptions.OutputOptions ;;
@@ -223,8 +227,8 @@ let main () =
 
   let nb = universe_size in
   let nf = List.length sl in
-  Format.fprintf fmt "background-packages: %d@." nb;
-  Format.fprintf fmt "foreground-packages: %d@." (if nf = 0 then nb else nf);
+  Format.fprintf fmt "binary-packages: %d@." nb;
+  Format.fprintf fmt "source-packages: %d@." (if nf = 0 then nb else nf);
   Format.fprintf fmt "broken-packages: %d@." nbp;
 
   if summary then
