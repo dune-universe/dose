@@ -209,7 +209,7 @@ def suite(f,runtest,rungroup,slow=False):
     groups = Set()
     tests = Set()
     groupFound=False
-    testsFound=False
+    testFound=False
     def addtest(s) :
         # we run the slow tests only if 
         if (slow and 'Speed' in s and s['Speed'] == 'slow') :

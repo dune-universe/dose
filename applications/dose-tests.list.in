@@ -179,7 +179,7 @@ Type: distcheck
 Printer: text
 ExitCode: 0
 
-Name: checkonly_ignore_essential_distcheck.
+Name: checkonly_ignore_essential_distcheck
 Group: distcheck
 Comment: We **do not** consider essential packages. 
 Expected: tests/applications/dose-tests/distcheck_test_ignore_essential_checkonly
