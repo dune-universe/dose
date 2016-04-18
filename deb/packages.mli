@@ -14,7 +14,6 @@ class package :
   ?multiarch:string * Pef.Packages_types.multiarch option ->
   ?source:string * Pef.Packages_types.source option ->
   ?essential:string * bool option ->
-  ?build_essential:string * bool option ->
   ?extra_source_only:string * bool option ->
   ?priority:string * string option ->
   ?pre_depends:string * Pef.Packages_types.vpkgformula option ->
@@ -39,7 +38,6 @@ class package :
 		(** {4 Debian specific methods } *)
     method architecture : Pef.Packages_types.architecture
     method breaks : Pef.Packages_types.vpkglist
-    method build_essential : bool
     method enhances : Pef.Packages_types.vpkgformula
     method essential : bool
     method extra_source_only : bool
@@ -63,7 +61,6 @@ class package :
 		(** {4 Debian specific val } *)
     val architecture : string * Pef.Packages_types.architecture
     val breaks : string * Pef.Packages_types.vpkglist
-    val build_essential : string * bool
     val enhances : string * Pef.Packages_types.vpkgformula
     val essential : string * bool
     val extra_source_only : string * bool
