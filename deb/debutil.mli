@@ -15,8 +15,3 @@ val cluster : Packages.package list ->
   (Pef.Packages_types.name * Pef.Packages_types.version, 
 		(Pef.Packages_types.version * Pef.Packages_types.version * Packages.package list) list) ExtLib.Hashtbl.t
 
-val debvpkg :
-  (string * string -> 'a * 'b) ->
-  (string * string option) * (string * string) option ->
-  string * ([> `Eq | `Geq | `Gt | `Leq | `Lt | `Neq ] * 'b) option
-

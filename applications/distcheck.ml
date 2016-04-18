@@ -242,8 +242,6 @@ let main () =
 
     Format.fprintf fmt "total-packages: %d@." universe_size;
     Format.fprintf fmt "broken-packages: %d@." nbp;
-    Format.fprintf fmt "string-cache-hits: %d@." !Util.hits;
-    Format.fprintf fmt "string-cache-miss: %d@." !Util.miss;
     if summary then 
       Format.fprintf fmt "@[%a@]@." (Diagnostic.pp_summary ~explain ~pp ()) results;
     nbp
