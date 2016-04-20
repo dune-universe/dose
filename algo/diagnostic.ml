@@ -150,7 +150,7 @@ let default_result n = {
   statistic = Hashtbl.create 17
 }
 
-let pp_out_version fmt = Format.fprintf fmt "output-version: 1.1@.";;
+let pp_out_version fmt = Format.fprintf fmt "output-version: 1.2@.";;
 
 let pp_package ?(source=false) ?(fields=false) pp fmt pkg =
   let (p,a,v,fieldlist) = pp pkg in

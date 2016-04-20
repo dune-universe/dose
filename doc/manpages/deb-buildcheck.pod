@@ -144,14 +144,6 @@ Example: --checkonly "libc6 , 2ping (= 1.2.3-1)"
 Only the latest version of each package is kept,
 older versions of packages are ignored.
 
-=item B<--fg=>I<file>
-
-Add packages in I<file> to the foreground.
-
-=item B<--bg=>I<file>
-
-Add packages in I<file> to the background.
-
 =back
 
 =head2 OUTPUT OPTIONS

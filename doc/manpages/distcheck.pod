@@ -85,16 +85,29 @@ distcheck must be invoked with a file argument of the form hdlist://
 
 =cut
 
-=head2 Eclipse
+=head2 Npm
 
-The input is an 822 file containing the encoding of OSGi plugins  content.xml
-files. 
+The input file is a 822 encoding of an npm repository. 
 
 =cut
 
-=head2 Cv
+=head2 Opam
 
-Internal use only. Undocumented.
+The input file is a 822 encoding of an opam repository. 
+
+=cut
+
+=head2 Pef
+
+The input is a generic 822 file. Versions are compared by default using the
+debian comparing function, or if provided the function specified by B<--compare>
+
+=cut
+
+=head2 Eclipse
+
+The input is a 822 file containing the encoding of OSGi plugins  content.xml
+files. 
 
 =cut
 
@@ -189,6 +202,10 @@ co-installability, namely (a=2,b=11), (a=2,b=12), (a=3,b=11) and
 
 Print additional fields if available
 
+=item B<--lowmem>
+
+Serialise multiple distcheck runs to save memory. This might take more time.
+
 =back
 
 =head2 INPUT OPTIONS
@@ -265,6 +282,13 @@ Add packages in I<file> to the foreground.
 =item B<--bg=>I<file>
 
 Add packages in I<file> to the background.
+
+=item B<--compare>
+
+When specified with a B<pef> file, select the comparison function used by the
+pef -> cudf enconding. Possible values are B<deb> 
+(<https://www.debian.org/doc/debian-policy/ch-controlfields.html#s-f-Version>) , 
+B<semver> (<http://semver.org/>) , B<npm> (<https://docs.npmjs.com/misc/semver>)
 
 =back
 
