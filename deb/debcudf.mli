@@ -23,6 +23,7 @@ type options = {
   host : string option;   (** the host architecture - cross compile *)
   ignore_essential : bool ;
   builds_from : bool ;    (** whether to add the builds-from relationship from binary to source packages *)
+  drop_bd_indep : bool ;  (** whether or not to ignore the Build-Depends-Indep field *)
 }
 
 val default_options : options

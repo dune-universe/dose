@@ -61,6 +61,7 @@ type options = {
   host : string option;   (* the host architecture - cross compile *)
   ignore_essential : bool;
   builds_from : bool;
+  drop_bd_indep : bool;
 }
 
 let default_options = {
@@ -70,6 +71,7 @@ let default_options = {
   host = None;
   ignore_essential = false;
   builds_from = false;
+  drop_bd_indep = false;
 }
 
 let add_name_arch n = function

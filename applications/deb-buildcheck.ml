@@ -30,7 +30,6 @@ module Options = struct
 
   let dump = StdOpt.str_option ()
   let maforeign = StdOpt.store_true ()
-  let noindep = StdOpt.store_true ()
   let includextra = StdOpt.store_true ()
   let triplettable = StdOpt.str_option ()
   let cputable = StdOpt.str_option ()
@@ -62,8 +61,6 @@ module Options = struct
     ~help:"Path to a cpu table like /usr/share/dpkg/cputable" cputable;
   StdOptions.DistribOptions.add_option options ~group ~long_name:"deb-defaulted-m-a-foreign"
     ~help:"Convert Arch:all packages to Multi-Arch: foreign" maforeign;
-  StdOptions.DistribOptions.add_option options ~group ~long_name:"deb-drop-b-d-indep"
-    ~help:"Drop Build-Indep dependencies" noindep;
   StdOptions.DistribOptions.add_option options ~group ~long_name:"deb-include-extra-source"
     ~help:"Include packages with Extra-Source-Only:yes (dropped by default)" includextra;
   StdOptions.DistribOptions.add_option options ~group ~short_name:'P' ~long_name:"deb-profiles"
@@ -100,9 +97,9 @@ let main () =
   let options = Options.set_deb_options () in
   (* buildarch and native arch must be set to some architecture at this point *)
   let buildarch = Option.get options.Debian.Debcudf.native in
-  (* hostarch and noindep can be None *)
+  (* hostarch can be None *)
   let hostarch = match options.Debian.Debcudf.host with None -> "" | Some s -> s in
-  let noindep = OptParse.Opt.get Options.noindep in
+  let noindep = options.Debian.Debcudf.drop_bd_indep in
   let dropalternatives = OptParse.Opt.get Options.dropalternatives in
 
   let profiles =

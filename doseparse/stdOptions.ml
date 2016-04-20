@@ -306,6 +306,7 @@ module DistribOptions = struct
   let deb_host_arch = StdOpt.str_option ()
   let deb_ignore_essential = StdOpt.store_true ()
   let deb_builds_from = StdOpt.store_true ()
+  let deb_drop_bd_indep = StdOpt.store_true ()
 
   let opam_switch = StdOpt.str_option ~default:"system" ()
   let opam_switches = str_list_option ()
@@ -317,6 +318,7 @@ module DistribOptions = struct
     "deb-foreign-archs";
     "deb-ignore-essential";
     "deb-builds-from";
+    "deb-drop-b-d-indep";
     "opam-switch";
     "opam-switches";
     "opam-profiles"
@@ -355,6 +357,7 @@ module DistribOptions = struct
       host = host;
       ignore_essential = Opt.get deb_ignore_essential;
       builds_from = Opt.get deb_builds_from;
+      drop_bd_indep = Opt.get deb_drop_bd_indep;
     }
   ;;
 
@@ -441,6 +444,9 @@ module DistribOptions = struct
       if List.mem "deb-builds-from" default then
         add options ~group ~long_name:"deb-builds-from"
           ~help:"Add builds-from relationship of binary packages on source packages as dependency" deb_builds_from;
+      if List.mem "deb-drop-b-d-indep" default then
+        add options ~group ~long_name:"deb-drop-b-d-indep"
+          ~help:"Drop the Build-Depends-Indep field from source packages (build no Architecture:all packages)" deb_drop_bd_indep;
     end
 
   let add_opam_options ?(default=default_options) options =

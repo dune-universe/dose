@@ -295,6 +295,10 @@ Native/cross compile host architecture, defaults to native architecture.
 Add builds-from relationship of binary packages on source packages as
 dependency. This allows one to create graphs for bootstrapping purposes.
 
+=item B<--deb-drop-b-d-indep>
+
+Drop Build-Depends-Indep dependencies from Debian source packages.
+
 =back
 
 =head1 EXAMPLES

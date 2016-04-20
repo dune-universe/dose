@@ -50,7 +50,11 @@ module Options = struct
   StdOptions.OutputOptions.add_option options ~long_name:"dump" ~help:"dump the cudf file" dump;
 
   include StdOptions.DistribOptions ;;
-  let default = List.remove StdOptions.DistribOptions.default_options "deb-host-arch" in
+  let default =
+    List.fold_left (fun acc e ->
+      List.remove acc e
+    ) StdOptions.DistribOptions.default_options ["deb-host-arch";"deb-drop-b-d-indep"]
+  in
   StdOptions.DistribOptions.add_debian_options ~default options ;
   StdOptions.DistribOptions.add_option options ~long_name:"deb-triplettable"
     ~help:"Path to an architecture triplet table like /usr/share/dpkg/triplettable" triplettable;
