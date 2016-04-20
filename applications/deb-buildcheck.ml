@@ -33,7 +33,6 @@ module Options = struct
   let includextra = StdOpt.store_true ()
   let triplettable = StdOpt.str_option ()
   let cputable = StdOpt.str_option ()
-  let profiles = StdOptions.str_list_option ()
   let dropalternatives = StdOpt.store_true ()
 
   include StdOptions.DistcheckOptions ;;
@@ -63,8 +62,6 @@ module Options = struct
     ~help:"Convert Arch:all packages to Multi-Arch: foreign" maforeign;
   StdOptions.DistribOptions.add_option options ~group ~long_name:"deb-include-extra-source"
     ~help:"Include packages with Extra-Source-Only:yes (dropped by default)" includextra;
-  StdOptions.DistribOptions.add_option options ~group ~short_name:'P' ~long_name:"deb-profiles"
-    ~help:"comma separated list of activated build profiles" profiles;
   StdOptions.DistribOptions.add_option options ~group ~long_name:"deb-emulate-sbuild"
     ~help:"replicate sbuild behaviour to only keep the first alternative of build dependencies" dropalternatives;
 
@@ -101,14 +98,7 @@ let main () =
   let hostarch = match options.Debian.Debcudf.host with None -> "" | Some s -> s in
   let noindep = options.Debian.Debcudf.drop_bd_indep in
   let dropalternatives = OptParse.Opt.get Options.dropalternatives in
-
-  let profiles =
-    if OptParse.Opt.is_set Options.profiles then
-      OptParse.Opt.get Options.profiles
-    else
-      try String.nsplit (Sys.getenv "DEB_BUILD_PROFILES") " "
-      with Not_found -> []
-  in
+  let profiles = options.Debian.Debcudf.profiles in
 
   let filter_external_sources par =
     if (OptParse.Opt.get Options.includextra) then true

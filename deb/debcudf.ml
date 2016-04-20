@@ -62,6 +62,7 @@ type options = {
   ignore_essential : bool;
   builds_from : bool;
   drop_bd_indep : bool;
+  profiles : string list; (* list of active build profiles *)
 }
 
 let default_options = {
@@ -72,6 +73,7 @@ let default_options = {
   ignore_essential = false;
   builds_from = false;
   drop_bd_indep = false;
+  profiles = [];
 }
 
 let add_name_arch n = function

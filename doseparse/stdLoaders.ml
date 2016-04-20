@@ -49,8 +49,7 @@ let read_deb ?filter ?(extras=[]) fname =
 let deb_load_list options ?(status=[]) ?(raw=false) dll =
   Util.Timer.start deb_load_list_timer;
   let noindep = options.Debian.Debcudf.drop_bd_indep in
-  (* FIXME: allow to pass build profiles to sources2packages *)
-  let profiles = [] in
+  let profiles = options.Debian.Debcudf.profiles in
   let pkgll = List.map (List.map (function
       | Deb p -> p
       | DebSrc p ->

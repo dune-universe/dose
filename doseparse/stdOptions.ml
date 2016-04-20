@@ -307,6 +307,7 @@ module DistribOptions = struct
   let deb_ignore_essential = StdOpt.store_true ()
   let deb_builds_from = StdOpt.store_true ()
   let deb_drop_bd_indep = StdOpt.store_true ()
+  let deb_profiles = str_list_option ()
 
   let opam_switch = StdOpt.str_option ~default:"system" ()
   let opam_switches = str_list_option ()
@@ -319,6 +320,7 @@ module DistribOptions = struct
     "deb-ignore-essential";
     "deb-builds-from";
     "deb-drop-b-d-indep";
+    "deb-profiles";
     "opam-switch";
     "opam-switches";
     "opam-profiles"
@@ -350,6 +352,13 @@ module DistribOptions = struct
           []
       end
     in
+    let profiles =
+      if Opt.is_set deb_profiles then
+        Opt.get deb_profiles
+      else
+        try String.nsplit (Sys.getenv "DEB_BUILD_PROFILES") " "
+        with Not_found -> []
+    in
     {
       Debian.Debcudf.default_options with
       Debian.Debcudf.native = native;
@@ -358,6 +367,7 @@ module DistribOptions = struct
       ignore_essential = Opt.get deb_ignore_essential;
       builds_from = Opt.get deb_builds_from;
       drop_bd_indep = Opt.get deb_drop_bd_indep;
+      profiles = profiles;
     }
   ;;
 
@@ -447,6 +457,9 @@ module DistribOptions = struct
       if List.mem "deb-drop-b-d-indep" default then
         add options ~group ~long_name:"deb-drop-b-d-indep"
           ~help:"Drop the Build-Depends-Indep field from source packages (build no Architecture:all packages)" deb_drop_bd_indep;
+      if List.mem "deb-profiles" default then
+        add options ~group ~long_name:"deb-profiles"
+          ~help:"comma separated list of activated build profiles" deb_profiles;
     end
 
   let add_opam_options ?(default=default_options) options =
