@@ -59,19 +59,6 @@ let pefcudf_constr = function
   |Some("ALL",_) -> None
   |Some(c,v) -> Some(pefcudf_op c,v)
 
-(*
-(* pef vpkg -> cudf *)
-let pefvpkg to_cudf = function
-  |Packages_types.Name n -> (CudfAdd.encode n,None)
-  |Packages_types.NameArch (n,a) -> (CudfAdd.encode (n^":"^a),None)
-  |Packages_types.NameConstr (n,(op,v))
-  |Packages_types.NameArchConstr (n,("any"|"native"),(op,v)) ->
-      let name = CudfAdd.encode n in
-      (name,Some(pefcudf_op op,snd(to_cudf (name,v))))
-  |Packages_types.NameArchConstr (n,a,(op,v)) ->
-      let name = CudfAdd.encode (n^":"^a) in
-      (name,Some(pefcudf_op op,snd(to_cudf (name,v))))
-*)
 (** convert a pef constraint into a cudf constraint *)
 let pefvpkg to_cudf vpkgname =
   let constr n = function

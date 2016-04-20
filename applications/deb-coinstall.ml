@@ -41,7 +41,11 @@ module Options = struct
   StdOptions.DistcheckOptions.add_options ~default options ;
 
   include StdOptions.InputOptions ;;
-  let default = List.remove StdOptions.InputOptions.default_options "inputtype" in
+  let default = 
+    List.fold_left (fun acc e ->
+      List.remove acc e
+    ) StdOptions.InputOptions.default_options ["inputtype";"compare"]
+  in
   StdOptions.InputOptions.add_options ~default options ;
   StdOptions.InputOptions.add_option options ~long_name:"src" ~help:"Associate Sources file" sources;
 

@@ -43,7 +43,7 @@ module Options = struct
   let default = 
     List.fold_left (fun acc e ->
       List.remove acc e
-    ) StdOptions.InputOptions.default_options ["inputtype";"fg";"bg"]
+    ) StdOptions.InputOptions.default_options ["inputtype";"fg";"bg";"compare"]
   in
   StdOptions.InputOptions.add_options ~default options ;
 

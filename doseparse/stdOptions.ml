@@ -222,12 +222,20 @@ module InputOptions = struct
     let error _ s = Printf.sprintf "input format \"%s\" not supported. Must be one of: %s" s supported in
     Opt.value_option metavar default coerce error
 
+  let vtypes = Versioning.Utils.supported_formats
+  let comp_option ?default ?(metavar = Printf.sprintf "<%s>" (String.concat "|" vtypes)) () =
+    let coerce s = if List.mem s vtypes then s else raise Not_found in
+    let supported = String.concat ", " vtypes in
+    let error _ s = Printf.sprintf "comparison function \"%s\" not supported. Must be one of: %s" s supported in
+    Opt.value_option metavar default coerce error
+
   let trim = StdOpt.store_true ()
   let latest = StdOpt.store_true ()
   let checkonly = StdDebian.vpkglist_option ()
   let background = incr_str_list ()
   let foreground = incr_str_list ()
   let inputtype = in_option ()
+  let compare = comp_option ()
 
   let default_options = [
     (* "trim"; *)
@@ -236,6 +244,7 @@ module InputOptions = struct
     "checkonly";
     "bg";
     "fg";
+    "compare";
   ]
 
   let group = ref None
@@ -278,6 +287,10 @@ module InputOptions = struct
         add options ~group ~long_name:"bg"
         ~help:("Additional Packages lists that are NOT checked but used "^
                "for resolving dependencies (can be repeated)") background;
+      if List.mem "compare" default then
+        add options ~group ~long_name:"compare"
+        ~help:"When used with a pef input type, selects a comparison function" compare;
+
     end
   ;;
 

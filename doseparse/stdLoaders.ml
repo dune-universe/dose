@@ -135,10 +135,11 @@ let opam_load_list ?options file =
   let request = Opam.Opamcudf.requesttocudf tables (Cudf.load_universe cl) request in
   (preamble,[cl;[]],request,from_cudf,to_cudf,None)
 
-let pef_load_list options dll =
+let pef_load_list ?compare options dll =
+  let compare = match compare with Some c -> c |None -> Versioning.Debian.compare in
   let extras = [("maintainer",("maintainer",`String None))] in
   let pkglist = List.flatten dll in
-  let tables = Pef.Pefcudf.init_tables Versioning.Debian.compare pkglist in
+  let tables = Pef.Pefcudf.init_tables compare pkglist in
   let from_cudf (p,i) = (p,None,Pef.Pefcudf.get_real_version tables (p,i)) in
   let to_cudf (p,v) = (p, Pef.Pefcudf.get_cudf_version tables (p,v)) in
   let cll =
@@ -311,7 +312,7 @@ let deb_parse_input options ?(status=[]) ?(raw=false) urilist =
   in
   deb_load_list options ~status ~raw dll
 
-let pef_parse_input options urilist =
+let pef_parse_input ?compare options urilist =
   let extras = [("maintainer",None)] in
   let dll = 
     List.map (fun l ->
@@ -319,7 +320,7 @@ let pef_parse_input options urilist =
         Pef.Packages.input_raw ~extras filelist
     ) urilist
   in
-  pef_load_list options dll
+  pef_load_list ?compare options dll
 
 let npm_parse_input ?options urilist =
   match urilist with
@@ -378,14 +379,14 @@ let edsp_parse_input options urilist =
 (* If yes return that instance of scheme, and the list of paths  *)
 (* in uris.                                                      *)
 (** parse a list of uris of the same type and return a cudf packages list *)
-let parse_input ?(options=None) ?(raw=false) urilist =
+let parse_input ?(options=None) ?(raw=false) ?compare urilist =
   let filelist = List.map (List.map Input.parse_uri) urilist in
   match Input.guess_format urilist, options with
   |`Cudf, None -> cudf_parse_input filelist
 
   |`Deb, None
   |`DebSrc, None -> deb_parse_input Debian.Debcudf.default_options ~raw filelist
-  |`Pef, None -> pef_parse_input Debian.Debcudf.default_options filelist
+  |`Pef, None -> pef_parse_input ?compare Debian.Debcudf.default_options filelist
 
   |`Deb, Some (StdOptions.Deb opt)
   |`DebSrc, Some (StdOptions.Deb opt) -> deb_parse_input opt ~raw filelist
@@ -396,7 +397,7 @@ let parse_input ?(options=None) ?(raw=false) urilist =
   |`Npm, _ -> npm_parse_input filelist
 (* |`Opam, Some (StdOptions.Opam options) -> opam_parse_input ~options filelist *)
 
-  |`Pef, Some (StdOptions.Pef opt) -> pef_parse_input opt filelist
+  |`Pef, Some (StdOptions.Pef opt) -> pef_parse_input ?compare opt filelist
 
   |`Csw, None -> csw_parse_input filelist
 
@@ -449,18 +450,18 @@ let deb_load_source ?filter ?(dropalternatives=false) ?(profiles=[]) ?(noindep=f
 ;;
 
 (** parse and merge a list of files into a cudf package list *)
-let load_list ?(options=None) ?(raw=false) urilist =
+let load_list ?(options=None) ?(raw=false) ?compare urilist =
   info "Parsing and normalizing..." ;
   Util.Timer.start load_list_timer;
-  let u = parse_input ~options ~raw urilist in
+  let u = parse_input ~options ~raw ?compare urilist in
   Util.Timer.stop load_list_timer u
 ;;
 
 (** parse and merge a list of files into a cudf universe *)
-let load_universe ?(options=None) ?(raw=false) uris =
+let load_universe ?(options=None) ?(raw=false) ?compare uris =
   info "Parsing and normalizing..." ;
   Util.Timer.start load_list_timer;
-  let (pr,cll,r,f,t,w) = parse_input ~options ~raw [uris] in
+  let (pr,cll,r,f,t,w) = parse_input ~options ~raw ?compare [uris] in
   let u = (pr,Cudf.load_universe (List.flatten cll), r, f, t, w) in
   Util.Timer.stop load_list_timer u
 ;;
