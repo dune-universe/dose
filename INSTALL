@@ -8,18 +8,18 @@ required libraries ( DEBIAN / RPM ) :
  - libextlib-ocaml-dev / ocaml-extlib-devel
  - libre-ocaml-dev / ??
  - cppo ( needed for conditional compilation )
+ - libocamlgraph-ocaml-dev >= 1.8.6
+ - libocamlgraph-ocaml-dev 
 
 additional libraries (enable compilation with --with-<library>) :
  - libzip-ocaml-dev / ?
  - libbz2-ocaml-dev / ?
- - libocamlgraph-ocaml-dev / ?
  - libounit-ocaml-dev / ocaml-ounit-devel
  - librpm-dev / librpm-devel
  - libexpat-ocaml-dev (for --with-xml)
  - libbenchmark-ocaml-dev (for --with-benchmark)
 
 To use rpm support, dose3 needs librpm > 4.6
-To use ocamlgraph support, dose3 needs libocamlgraph-ocaml-dev >= 1.8.6
 
 cppo >= 1.1.2
 extlib >= 1.7.0
@@ -44,7 +44,6 @@ make
 --with-rpm4
 --with-rpm5
 --with-xml
---with-ocamlgraph
 --with-parmap
 --with-zip
 --with-bz2
@@ -60,7 +59,7 @@ an independently installed version of libcudf you'll need version >=
 0.7.
 
 Example:
-./configure --with-ocamlgraph --with-zip --with-bz2 --prefix=/usr
+./configure --with-zip --with-bz2 --prefix=/usr
 
 Compiling applications
 ----------------------
@@ -82,9 +81,7 @@ $ocamlbuild -use-ocamlfind experimental/outdated.native
 
 Building the documentation
 --------------------------
-"make doc" builds the documentation. For this it is necessary to have
-configured with option --with-ocamlgraph. You also need to have
-installed "graphviz".
+"make doc" builds the documentation. You need to have installed "graphviz".
 
 Install
 -------
@@ -189,7 +186,7 @@ The test script of the applications needs:
 python
 python-yaml
 
-./configure --with-ocamlgraph --with-zip --with-oUnit --with-bz2
+./configure --with-zip --with-oUnit --with-bz2
 make
 make test
 make testlib
