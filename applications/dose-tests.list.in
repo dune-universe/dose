@@ -308,7 +308,7 @@ Speed: slow
 Name: deb_buildcheck_cross
 Group: buildcheck
 Expected: tests/applications/dose-tests/apt-get-build-dep-armel-results
-Input: tests/DebianPackages/Sid-amd64-Packages-050812.bz2 tests/DebianPackages/Sid-armel-Packages-050812.bz2 tests/DebianPackages/Sid-Sources-050812.bz2
+Input: tests/DebianPackages/crossbuild-essential-armel tests/DebianPackages/Sid-amd64-Packages-050812.bz2 tests/DebianPackages/Sid-armel-Packages-050812.bz2 tests/DebianPackages/Sid-Sources-050812.bz2
 Cmd: ./deb-buildcheck.@OCAMLEXT@ --failures --successes --latest --deb-native-arch=amd64 --deb-foreign-archs=armel --deb-host-arch=armel
 Type: buildcheck
 Printer: text
