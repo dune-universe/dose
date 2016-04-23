@@ -9,7 +9,6 @@ required libraries ( DEBIAN / RPM ) :
  - libre-ocaml-dev / ??
  - cppo ( needed for conditional compilation )
  - libocamlgraph-ocaml-dev >= 1.8.6
- - libocamlgraph-ocaml-dev 
 
 additional libraries (enable compilation with --with-<library>) :
  - libzip-ocaml-dev / ?
