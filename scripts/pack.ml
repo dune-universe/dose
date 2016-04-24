@@ -6,7 +6,7 @@
 (*                                                                     *)
 (*  Copyright 2011 OCamlPro SAS                                        *)
 (*  All rights reserved.  This file is distributed under the terms of  *)
-(*  the GNU Public License version 3.0.                                *)
+(*  the GNU General Public License version 3.0.                        *)
 (*                                                                     *)
 (***********************************************************************)
 
