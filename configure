@@ -640,6 +640,11 @@ LINK_RPM
 BZ2
 PKG_BZ2
 CONFIG_BZ2
+LINK_MINISAT
+USE_MINISAT
+MINISAT
+PKG_MINISAT
+CONFIG_MINISAT
 PARMAP
 PKG_PARMAP
 CONFIG_PARMAP
@@ -672,6 +677,8 @@ OCAML_PKG_bz2
 HAS_BZ2
 OCAML_PKG_zip
 HAS_ZIP
+OCAML_PKG_minisat
+HAS_MINISAT
 OCAML_PKG_parmap
 HAS_PARMAP
 OCAML_PKG_ocamlgraph
@@ -748,6 +755,7 @@ enable_option_checking
 with_bytecodeonly
 with_libcudf
 with_parmap
+with_minisat
 with_zip
 with_bz2
 with_curl
@@ -1389,6 +1397,7 @@ Optional Packages:
  --with-bytecodeonly
  --without-libcudf
  --with-parmap
+ --with-minisat
  --with-zip
  --with-bz2
  --with-curl
@@ -3765,12 +3774,15 @@ HAS_RPM=no
 PKG_BZ2=pkg_
 PKG_ZIP=pkg_
 PKG_PARMAP=pkg_
+PKG_MINISAT=pkg_
 PKG_XML=pkg_
 PKG_CUDF=use_cudf
 PKG_CURL=pkg_
 PKG_OUNIT=pkg_
 PKG_BENCHMARK=pkg_
 DOC_RPM=""
+USE_MINISAT=use_
+LINK_MINISAT=link_
 
 
 # Check whether --with-libcudf was given.
@@ -3950,6 +3962,52 @@ $as_echo "not found" >&6; }
   PKG_PARMAP="package(parmap)"
   PARMAP=parmap
 fi
+
+
+
+# Check whether --with-minisat was given.
+if test "${with_minisat+set}" = set; then :
+  withval=$with_minisat; HAS_MINISAT=yes
+else
+  HAS_MINISAT=no
+fi
+
+
+if test "$HAS_MINISAT" = "yes" ; then
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package minisat" >&5
+$as_echo_n "checking for OCaml findlib package minisat... " >&6; }
+
+  unset found
+  unset pkg
+  found=no
+  for pkg in minisat  ; do
+    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
+       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+       OCAML_PKG_minisat=$pkg
+       found=yes
+       break
+    fi
+  done
+  if test "$found" = "no" ; then
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+     OCAML_PKG_minisat=no
+  fi
+
+
+
+  if test "$OCAML_PKG_minisat" = "no"; then
+   as_fn_error $? "Please install OCaml findlib module 'minisat'." "$LINENO" 5
+  fi
+  CONFIG_MINISAT="-D HASMINISAT"
+  PKG_MINISAT="package(minisat)"
+  MINISAT=minisat
+  USE_MINISAT=use_minisat
+  LINK_MINISAT=link_minisat
+fi
+
 
 
 # Check whether --with-zip was given.
@@ -5336,6 +5394,12 @@ else
   LN="ln -s"
 
 fi
+
+
+
+
+
+
 
 
 

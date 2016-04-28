@@ -13,3 +13,4 @@ Criteria_types
 Criteria_lexer
 Criteria_parser
 Criteria
+MinisatSolver

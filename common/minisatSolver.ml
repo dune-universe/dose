@@ -1,11 +1,12 @@
 
+#ifdef HASMINISAT
 module M (X : EdosSolver.S) = struct
 
   module X = X
   type var = Minisat.var
   type lit = Minisat.lit
   type state = Minisat.solver
-  type value = Minisat.value
+  type value = Minisat.lbool
   
   let lit_of_var var = function
     |true -> Minisat.pos_lit var
@@ -33,3 +34,5 @@ module M (X : EdosSolver.S) = struct
   let dump _ = failwith "Not Implemented in Minisat"
   let debug _ = failwith "Not Implemented in Minisat"
 end
+#else
+#endif

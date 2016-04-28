@@ -60,12 +60,14 @@ HAS_RPM=no
 PKG_BZ2=pkg_
 PKG_ZIP=pkg_
 PKG_PARMAP=pkg_
+PKG_MINISAT=pkg_
 PKG_XML=pkg_
 PKG_CUDF=use_cudf
 PKG_CURL=pkg_
 PKG_OUNIT=pkg_
 PKG_BENCHMARK=pkg_
 DOC_RPM=""
+USE_MINISAT=use_
 
 AC_ARG_WITH(libcudf,
         [ --without-libcudf ],
@@ -120,6 +122,24 @@ if test "$HAS_PARMAP" = "yes" ; then
   PKG_PARMAP="package(parmap)"
   PARMAP=parmap
 fi
+
+
+AC_ARG_WITH(minisat,
+        [ --with-minisat ],
+        HAS_MINISAT=yes,
+        HAS_MINISAT=no)
+AC_SUBST(HAS_MINISAT)
+if test "$HAS_MINISAT" = "yes" ; then
+  AC_CHECK_OCAML_PKG([minisat])
+  if test "$OCAML_PKG_minisat" = "no"; then
+   AC_MSG_ERROR([Please install OCaml findlib module 'minisat'.])
+  fi
+  CONFIG_MINISAT="-D HASMINISAT"
+  PKG_MINISAT="package(minisat)"
+  MINISAT=minisat
+  USE_MINISAT=use_minisat
+fi
+
 
 AC_ARG_WITH(zip,
         [ --with-zip ],
@@ -275,6 +295,11 @@ AC_SUBST(ZIP)
 AC_SUBST(CONFIG_PARMAP)
 AC_SUBST(PKG_PARMAP)
 AC_SUBST(PARMAP)
+
+AC_SUBST(CONFIG_MINISAT)
+AC_SUBST(PKG_MINISAT)
+AC_SUBST(MINISAT)
+AC_SUBST(USE_MINISAT)
 
 AC_SUBST(CONFIG_BZ2)
 AC_SUBST(PKG_BZ2)

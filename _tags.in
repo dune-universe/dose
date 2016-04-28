@@ -4,7 +4,7 @@ true: -traverse
 <doseparseNoRpm/*.ml{i,}>: pp(cppo @CPPOFLAGS@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_OCAMLGRAPH@)
 <doseparse/*.ml{i,}>: pp(cppo @CPPOFLAGS@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_OCAMLGRAPH@)
 
-<{common,algo,versioning}/*.ml{i,}>: pp(cppo @CPPOFLAGS@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_OCAMLGRAPH@)
+<{common,algo,versioning}/*.ml{i,}>: pp(cppo @CPPOFLAGS@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_OCAMLGRAPH@ @CONFIG_MINISAT@)
 
 <applications/*.ml> or <experimental/*/*.ml> or <experimental/*.ml>: pp(cppo @CPPOFLAGS@ @CONFIG_PARMAP@ @CONFIG_OCAMLGRAPH@)
 
@@ -22,7 +22,7 @@ true: -traverse
 <deb/tests.*>: use_common, use_versioning, use_pef, use_algo
 <rpm/tests.*>: use_common, use_versioning, @USE_RPM@, use_algo, package(re.str)
 
-<common/*.ml{i,}>: @PKG_ZIP@, @PKG_BZ2@
+<common/*.ml{i,}>: @PKG_ZIP@, @PKG_BZ2@, @PKG_MINISAT@
 <versioning/*.ml{i,}>: use_common, package(re.pcre)
 <pef/*.ml{i,}>: use_common
 <opam/*.ml{i,}>: use_common, use_versioning, use_pef
@@ -57,18 +57,18 @@ true: -traverse
 <{applications,experimental}/*>: package(extlib), package(re.pcre), package(unix), package(re.str), package(ocamlgraph)
 <{applications,experimental}/*>: @PKG_CUDF@, @PKG_ZIP@, @PKG_BZ2@
 
-<applications/apt-cudf.*>: use_doseparseNoRpm, use_algo
-<applications/deb-buildcheck.*>: use_algo, use_doseparseNoRpm
+<applications/apt-cudf.*>: use_doseparseNoRpm, use_algo, @PKG_MINISAT@
+<applications/deb-buildcheck.*>: use_algo, use_doseparseNoRpm, @PKG_MINISAT@
 
-<applications/distcheck.*>: @USE_RPM@, use_algo, use_doseparse
-<applications/ceve.*>: @USE_RPM@, use_algo, use_doseparse
+<applications/distcheck.*>: @USE_RPM@, use_algo, use_doseparse, @PKG_MINISAT@
+<applications/ceve.*>: @USE_RPM@, use_algo, use_doseparse, @PKG_MINISAT@
 <applications/smallworld.*>: @USE_RPM@, use_algo, use_doseparse
 <applications/tests.*>: @USE_RPM@, use_algo, use_doseparse, use_doseparseNoRpm, @PKG_PARMAP@
 <applications/strong-deps.*>: @USE_RPM@, use_algo, use_doseparse
 <applications/dominators-graph.*>: @USE_RPM@, use_doseparse, use_algo
-<applications/challenged.*>: use_algo, use_doseparseNoRpm, @PKG_PARMAP@
-<applications/outdated.*>: use_algo, use_doseparseNoRpm
-<applications/deb-coinstall.*>: @USE_RPM@, use_algo, use_doseparse
+<applications/challenged.*>: use_algo, use_doseparseNoRpm, @PKG_PARMAP@, @PKG_MINISAT@
+<applications/outdated.*>: use_algo, use_doseparseNoRpm, @PKG_MINISAT@
+<applications/deb-coinstall.*>: @USE_RPM@, use_algo, use_doseparse, @PKG_MINISAT@
 
 <experimental/strong-conflicts.*>: @USE_RPM@, use_algo, use_doseparse
 <experimental/randcudf.*>: use_algo, use_doseparseNoRpm
