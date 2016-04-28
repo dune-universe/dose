@@ -51,7 +51,7 @@ module Options = struct
   open OptParser
 
   include StdOptions.InputOptions ;;
-  StdOptions.InputOptions.add_options ~default:["latest";"trim";"inputtype"] options ;;
+  StdOptions.InputOptions.add_options ~default:["latest";"trim";"inputtype";"compare"] options ;;
   StdOptions.InputOptions.add_option options ~short_name:'c' ~long_name:"cone" ~help:"dependency cone" cone;;
   StdOptions.InputOptions.add_option options ~short_name:'r' ~long_name:"rcone" ~help:"reverse dependency cone" reverse_cone;;
   StdOptions.InputOptions.add_option options                 ~long_name:"depth" ~help:"max depth - in conjunction with cone" cone_maxdepth;;
@@ -197,11 +197,13 @@ let main () =
         open_out (OptParse.Opt.get Options.outfile)
       else stdout
     in
-    if OptParse.Opt.is_set Options.grp_type then (
+    begin
       let t = OptParse.Opt.get Options.out_type in
-      if not(t = "dot" || t = "gml" || t= "grml") then
-        info "Option -G %s is not compatible with format %s. Ingored" (OptParse.Opt.get Options.grp_type) t
-    );
+      if List.mem t ["dot";"gml";"grml"] then
+        let g = OptParse.Opt.get Options.grp_type in
+        if not(List.mem g ["pkg";"strdeps";"conj";"dom";"syn"]) then
+          info "Option -G %s is not compatible with format %s. Ingored" g t
+    end;
     begin match OptParse.Opt.get Options.out_type with
     |"cnf" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Cnf u)
     |"dimacs" -> Printf.fprintf oc "%s" (Depsolver.output_clauses ~global_constraints ~enc:Depsolver.Dimacs u)

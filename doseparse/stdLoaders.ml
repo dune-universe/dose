@@ -106,7 +106,7 @@ let deb_load_list options ?(status=[]) ?(raw=false) dll =
 let npm_load_list file =
   let (request,pkglist) = Npm.Packages.input_raw file in
   let tables = Pef.Pefcudf.init_tables Versioning.SemverNode.compare pkglist in
-  let from_cudf (p,i) = (p,None,Pef.Pefcudf.get_real_version tables (p,i)) in
+  let from_cudf (p,i) = Pef.Pefcudf.get_real_version tables (p,i) in
   let to_cudf (p,v) = (p, Pef.Pefcudf.get_cudf_version tables (p,v)) in
   let cl = List.map (Pef.Pefcudf.tocudf tables) pkglist in
   let preamble = Npm.Npmcudf.preamble in
@@ -119,7 +119,7 @@ let npm_load_list file =
 let opam_load_list ?options file =
   let (request,pkglist) = Opam.Packages.input_raw file in
   let tables = Pef.Pefcudf.init_tables Versioning.Debian.compare pkglist in
-  let from_cudf (p,i) = (p,None,Pef.Pefcudf.get_real_version tables (p,i)) in
+  let from_cudf (p,i) = Pef.Pefcudf.get_real_version tables (p,i) in
   let to_cudf (p,v) = (p, Pef.Pefcudf.get_cudf_version tables (p,v)) in
   let options =
     match options with
@@ -140,8 +140,8 @@ let pef_load_list ?compare options dll =
   let extras = [("maintainer",("maintainer",`String None))] in
   let pkglist = List.flatten dll in
   let tables = Pef.Pefcudf.init_tables compare pkglist in
-  let from_cudf (p,i) = (p,None,Pef.Pefcudf.get_real_version tables (p,i)) in
-  let to_cudf (p,v) = (p, Pef.Pefcudf.get_cudf_version tables (p,v)) in
+  let from_cudf (p,i) = Pef.Pefcudf.get_real_version tables (p,i) in
+  let to_cudf (p,v) = (p,Pef.Pefcudf.get_cudf_version tables (p,v)) in
   let cll =
     List.map (fun l ->
       List.map (Pef.Pefcudf.tocudf ~extras tables) l

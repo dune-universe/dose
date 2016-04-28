@@ -155,17 +155,24 @@ let get_cudf_version tables (package,version) =
     Hashtbl.replace tables.reverse_table (CudfAdd.encode package,i+1) version;
     i+1
   with Not_found -> (
-    warning "Cannot find cudf version for %s (= %s)" (CudfAdd.decode package) version;
+    warning "Cannot find cudf version for pef package %s (= %s)" package version;
     raise Not_found
   )
 
 (* cudf -> pef *)
 let get_real_version tables (p,i) =
-  try Hashtbl.find tables.reverse_table (p,i)
-  with Not_found -> (
-    warning "Cannot find real version for %s (= %d)" p i;
-    raise Not_found
-  )
+  let n = 
+    try fst(ExtString.String.split p "%3a")
+    with Invalid_string -> p
+  in
+  if i = Util.max32int || i = Util.max32int - 1 then
+    (CudfAdd.decode n,None,"nan")
+  else
+    try (CudfAdd.decode n,None,Hashtbl.find tables.reverse_table (n,i))
+    with Not_found -> (
+	warning "Cannot find real version for cudf package %s (= %d)" p i;
+	raise Not_found
+    )
 
 let encode_vpkgname ?arch ?(archs=[]) vpkgname =
   let aux name = function
