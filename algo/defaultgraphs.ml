@@ -123,7 +123,7 @@ module SyntacticDependencyGraph = struct
 
   let default_pp = ref CudfAdd.default_pp 
 
-  module G = Imperative.Digraph.ConcreteBidirectionalLabeled(PkgV)(PkgE)
+  module G = Imperative.Digraph.ConcreteLabeled(PkgV)(PkgE)
   module DotPrinter = struct
     module Display = struct
       include G
@@ -715,7 +715,7 @@ end
 
 (******************************************************)
 
-(** Integer Imperative Bidirectional Graph *)
+(** Integer Imperative Bidirectional Graph. Mainly used in Strong Conflicts *)
 module IntPkgGraph = struct
 
   module PkgV = struct
@@ -725,7 +725,7 @@ module IntPkgGraph = struct
     let equal = (=)
   end
 
-  module G = Imperative.Digraph.ConcreteBidirectional(PkgV)
+  module G = Imperative.Digraph.Concrete(PkgV)
   module S = Set.Make(PkgV)
   module O = GraphOper(G)
 
@@ -765,40 +765,17 @@ module IntPkgGraph = struct
     end
   )
 
-  let add_edge transitive graph i j =
-    let rec adapt k red =
-      let new_red = 
-        S.fold (fun l acc ->
-          if k <> l then G.add_edge graph k l;
-          G.fold_succ (fun m acc' ->
-            if not (G.mem_edge graph k m) 
-            then S.add m acc'
-            else acc'
-          ) graph l acc
-        ) red S.empty 
-      in
-      if S.is_empty new_red then ()
-      else adapt k new_red
-    in
-  begin
+  let add_edge graph i j =
     debug "Adding edge from %d to %d" i j;
-    G.add_edge graph i j;
-    if transitive then begin
-      adapt i (S.singleton j);
-      G.iter_pred (fun k ->
-        if not (G.mem_edge graph k j) then
-          adapt k (S.singleton j)
-      ) graph i
-    end
-  end
+    G.add_edge graph i j
 
   (** add to the graph all conjunctive dependencies of package id *)
-  let conjdepgraph_int ?(transitive=false) graph univ id =
+  let conjdepgraph_int graph univ id =
     G.add_vertex graph id;
     let p = CudfAdd.inttovar univ id in
     List.iter (fun vpkgs ->
       match CudfAdd.resolve_vpkgs_int univ vpkgs with
-      |[q] when q <> id -> add_edge transitive graph id q
+      |[q] when q <> id -> add_edge graph id q
       |_ -> ()
     ) p.Cudf.depends
 
