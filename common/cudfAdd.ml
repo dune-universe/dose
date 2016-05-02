@@ -330,7 +330,6 @@ let latest ?(n=1) pkglist =
   ) h []
 
 let cone universe pkgs =
-  let conjunctive = false in
   let l = ref [] in
   let queue = Queue.create () in
   let visited = Hashtbl.create (2 * (List.length pkgs)) in
@@ -343,16 +342,11 @@ let cone universe pkgs =
       Hashtbl.add visited id ();
       List.iter (fun vpkgs ->
         match resolve_vpkgs_int universe vpkgs with
-        |[i] when not(Hashtbl.mem visited i) -> begin
-            Queue.add i queue;
-        end
-        |dsj when not conjunctive ->
+        |[i] when not(Hashtbl.mem visited i) -> Queue.add i queue;
+        |dsj ->
           List.iter (fun i ->
-            if not(Hashtbl.mem visited i) then begin
-              Queue.add i queue;
-            end
+            if not(Hashtbl.mem visited i) then Queue.add i queue;
           ) dsj
-        |_ -> ()
       ) pkg.Cudf.depends
     end
   done;

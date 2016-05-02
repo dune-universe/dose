@@ -84,35 +84,68 @@ let listcheck ?(global_constraints=true) ?callback ?(explain=true) universe pkgl
 ;;
 
 let univcheck_lowmem ?(global_constraints=true) ?callback ?(explain=true) universe =
-  let keeplist =
-    Cudf.fold_packages (fun acc pkg ->
-        match pkg.Cudf.keep with
-        |`Keep_package |`Keep_version  -> pkg::acc
-        |_ -> acc
-    ) [] universe
+  let (keeplist,pkglist) =
+    Cudf.fold_packages (fun (acc1,acc2) pkg ->
+	match pkg.Cudf.keep with
+	|`Keep_package |`Keep_version  -> pkg::acc1,pkg::acc2
+	|_ -> acc1,pkg::acc2
+    ) ([],[]) universe
   in
   (* Split the universe in 10 subuniverses of size 1/10 *)
-  let chunkssize = ((Cudf.universe_size universe) / 10) + 1 in
+  let chunkssize = ((Cudf.universe_size universe) / 20) + 1 in
   (* The set of packages that must be present in each universe *)
   let keepset = CudfAdd.to_set (CudfAdd.cone universe keeplist) in
-  let (_,_,partition) =
-    Enum.fold (fun pkg (acc,tested,e) ->
-      let c = CudfAdd.cone universe [pkg] in
-      let s = CudfAdd.Cudf_set.union (CudfAdd.to_set c) acc in
-      if Cudf_set.cardinal s >= chunkssize then begin
-        let totest = Cudf_set.diff s tested in
-        Enum.push e (s,totest);
-        (keepset,Cudf_set.union tested totest,e)
-      end else (s,tested,e)
-    ) (keepset,Cudf_set.empty,Enum.empty ()) (List.enum (Cudf.get_packages universe))
+  debug "univcheck lowmem make paritions chunksize=%d" chunkssize;
+  let partitions keepset l =
+    let rec aux (univ,tested) = function
+      |[] -> (univ,[])
+      |pkg::rest ->
+        if not(Cudf_set.mem pkg tested || Cudf_set.mem pkg univ) then begin
+          let pkgcone = CudfAdd.to_set(CudfAdd.cone universe [pkg]) in
+          let newuniv = Cudf_set.union pkgcone univ in
+          (*debug "Old Universe %d" (Cudf_set.cardinal univ);*)
+          (*debug "Cone %d" (Cudf_set.cardinal pkgcone);*)
+          (*debug "Cone+Keep %d" (Cudf_set.cardinal newuniv);*)
+          if Cudf_set.cardinal newuniv >= chunkssize then begin
+            (newuniv,rest)
+          end else aux (newuniv,tested) rest
+        end else aux (univ,tested) rest
+    in
+    let rec make lr count =
+	Enum.make
+	  ~next:(fun () ->
+	    match !lr with
+	    | (_,[]) -> raise Enum.No_more_elements
+	    | (tested,t) ->
+              decr count;
+              let (newuniv,rest) = aux (keepset,tested) t in
+              let totest = Cudf_set.diff newuniv tested in
+              let tested = Cudf_set.union tested totest in
+              (*debug "New Universe %d" (Cudf_set.cardinal newuniv);*)
+              (*debug "Tested %d" (Cudf_set.cardinal tested);*)
+              (*debug "ToTest %d" (Cudf_set.cardinal totest);*)
+              lr := (tested,rest);
+              (newuniv,totest)
+	  )
+	  ~count:(fun () ->
+	    if !count < 0 then count := List.length (snd !lr);
+	    !count
+	  )
+	  ~clone:(fun () ->
+	    make (ref !lr) (ref !count)
+	  )
+    in
+    make (ref (CudfAdd.Cudf_set.empty,l)) (ref (-1))
   in
   Enum.fold (fun (su,stt) acc ->
-    let u = Cudf.load_universe (CudfAdd.Cudf_set.elements su) in
+    (*debug "univcheck lowmem run : %d" (CudfAdd.Cudf_set.cardinal su);*)
+    (*debug "univcheck lowmem totest : %d" (CudfAdd.Cudf_set.cardinal stt);*)
+    let l = CudfAdd.Cudf_set.elements su in
+    let u = Cudf.load_universe l in
     let pkglist = CudfAdd.Cudf_set.elements stt in
-    debug "Univcheck run : %d" (Cudf.universe_size u);
     let b = listcheck ~global_constraints ?callback ~explain u pkglist in
     b+acc
-  ) 0 partition
+  ) 0 (partitions keepset pkglist)
 ;;
 
 let edos_install_cache global_constraints univ cudfpool pkglist =
