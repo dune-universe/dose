@@ -230,7 +230,7 @@ module InputOptions = struct
     Opt.value_option metavar default coerce error
 
   let trim = StdOpt.store_true ()
-  let latest = StdOpt.store_true ()
+  let latest = StdOpt.int_option ()
   let checkonly = StdDebian.vpkglist_option ()
   let background = incr_str_list ()
   let foreground = incr_str_list ()
@@ -278,7 +278,7 @@ module InputOptions = struct
         ~help:"Consider only installable packages" trim;
       if List.mem "latest" default then
         add options ~group ~long_name:"latest" 
-        ~help:"Check only the latest version of each package" latest;
+        ~help:"Consider only the latest N versions of each package" latest;
       if List.mem "fg" default then
         add options ~group ~long_name:"fg"
         ~help:("Additional Packages lists that are checked and used "^

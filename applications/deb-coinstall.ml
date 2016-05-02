@@ -156,7 +156,8 @@ let main () =
   let (fg_pkglist, bg_pkglist) = match pkgll with [fg;bg] -> (fg,bg) | _ -> assert false in
 
   let fg_pkglist = 
-    if OptParse.Opt.get Options.latest then CudfAdd.latest fg_pkglist
+    if OptParse.Opt.is_set Options.latest then
+      CudfAdd.latest ~n:(OptParse.Opt.get Options.latest) fg_pkglist
     else fg_pkglist
   in
   let universe = 

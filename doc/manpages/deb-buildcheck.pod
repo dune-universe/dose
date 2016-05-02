@@ -139,9 +139,9 @@ ignored. This option must not be combined with B<--coinst>.
 
 Example: --checkonly "libc6 , 2ping (= 1.2.3-1)"
 
-=item B<--latest>
+=item B<--latest> I<n>
 
-Only the latest version of each package is kept,
+Consider only the latest -I<n> most recent versions of each package,
 older versions of packages are ignored.
 
 =back

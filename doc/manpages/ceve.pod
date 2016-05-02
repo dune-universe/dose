@@ -119,9 +119,10 @@ B<synthesis> urpmi synthesis hdlists. XML Based format
 
 Consider only installable packages.
 
-=item B<--latest>
+=item B<--latest> I<n>
 
-Check only the latest version of each package
+Consider only the latest -I<n> most recent versions of each package,
+older versions of packages are ignored.
 
 =item B<-c, --cone=>I<vpkglist>
 

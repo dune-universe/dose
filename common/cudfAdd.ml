@@ -24,7 +24,9 @@ include Util.Logging(struct let label = label end) ;;
 let equal = Cudf.(=%)
 let compare = Cudf.(<%)
 
-let sort = List.sort ~cmp:compare
+let sort ?(asc=false) l =
+  let cmp = if asc then (fun a b -> compare b a) else compare in
+  List.sort ~cmp l
 let hash p = Hashtbl.hash (p.Cudf.package,p.Cudf.version)
 
 module Cudf_hashtbl =
@@ -317,17 +319,15 @@ let cudf_constr = function
   |Some("ALL",_) -> None
   |Some(c,v) -> Some(cudf_op c,v)
 
-let latest pkglist =
+let latest ?(n=1) pkglist =
   let h = Hashtbl.create (List.length pkglist) in
   List.iter (fun p ->
-    try
-      let q = Hashtbl.find h p.Cudf.package in
-      if (compare p q) > 0 then
-        Hashtbl.replace h p.Cudf.package p
-      else ()
-    with Not_found -> Hashtbl.add h p.Cudf.package p
+    add_to_package_list h p.Cudf.package p
   ) pkglist;
-  Hashtbl.fold (fun _ v acc -> v::acc) h []
+  Hashtbl.fold (fun _ { contents = l } acc ->
+    if List.length l <= n then l@acc
+    else (fst(List.split_nth n (sort ~asc:true l)))@acc
+  ) h []
 
 let cone universe pkgs =
   let conjunctive = false in

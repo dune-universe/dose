@@ -13,8 +13,9 @@ val compare : Cudf.package -> Cudf.package -> int
 (** A hash function for CUDF packages, using only their name and version. *)
 val hash : Cudf.package -> int
 
-(** Sort function: sorts a CUDF packages list using the standard CUDF comparison operator in ascending order *)
-val sort : Cudf.package list -> Cudf.package list
+(** Sort function: sorts a CUDF packages list using the 
+    standard CUDF comparison operator in ascending order. *)
+val sort : ?asc: bool -> Cudf.package list -> Cudf.package list
 
 (** {2 Data structures} *)
 
@@ -92,9 +93,9 @@ val decode : string -> string
 
 (** {2 Additional functions on the CUDF data types. } *)
 
-(** Returns a list of packages containing for each package only the
-    latest version *)
-val latest: Cudf.package list -> Cudf.package list
+(** Returns a list of packages containing for each package [n]
+    most recent version (default the latest version) *)
+val latest: ?n : int -> Cudf.package list -> Cudf.package list
 
 (** Set of strings *)
 module StringSet : (Set.S with type elt = ExtLib.String.t)

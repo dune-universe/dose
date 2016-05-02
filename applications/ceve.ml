@@ -146,10 +146,12 @@ let main () =
   let universe =
     let s = CudfAdd.to_set (fg_pkglist @ bg_pkglist) in
     let u = 
-      if OptParse.Opt.get Options.latest then
-        Cudf.load_universe (CudfAdd.latest (CudfAdd.Cudf_set.elements s))
+      let sl = CudfAdd.Cudf_set.elements s in
+      if OptParse.Opt.is_set Options.latest then
+        let l = CudfAdd.latest ~n:(OptParse.Opt.get Options.latest) sl in
+        Cudf.load_universe l
       else 
-        Cudf.load_universe (CudfAdd.Cudf_set.elements s)
+        Cudf.load_universe sl
     in
     if OptParse.Opt.get Options.trim then Depsolver.trim ~global_constraints u else u
   in

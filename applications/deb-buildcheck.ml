@@ -148,8 +148,8 @@ let main () =
      conversion *)
   let sl = 
     let l = List.map (fun pkg -> Debcudf.tocudf ~options tables pkg) srclist in
-    if OptParse.Opt.get Options.latest then
-      CudfAdd.latest l
+    if OptParse.Opt.is_set Options.latest then
+      CudfAdd.latest ~n:(OptParse.Opt.get Options.latest) l
     else
       l
   in

@@ -76,8 +76,8 @@ let parse_uri =
 module S = CudfAdd.Cudf_set
 
 let (universe,request) =
-  let (_,univ,request) = Cudf_parser.parse_from_file f_legacy in
-  (Cudf.load_universe univ,Option.get request)
+  let (_,pkglist,request) = Cudf_parser.parse_from_file f_legacy in
+  (Cudf.load_universe pkglist,Option.get request)
 
 let toset l =
   List.fold_right (fun e set ->
@@ -132,8 +132,6 @@ let criteria_parse =
     ("parse count regexp", "-count(solution,APT-Release:~/stable|unstable/)", returns 
       Criteria_types.([Minimize(Count(Solution,Some("APT-Release",Regexp "stable|unstable")))]))
   ]
-
-
 
 let test_who_provides =
   "who_provides" >:: (fun _ ->
@@ -295,6 +293,34 @@ let criteria_parse =
       Criteria_types.([Minimize(Count(Solution,Some("APT-Release",Regexp "stable|unstable")))]))
   ]
 
+let dummy name version =
+  {Cudf.default_package with
+   Cudf.package = name;
+   version = version;
+  }
+
+module PkgSetTest = OUnitDiff.SetMake (struct
+  type t = Cudf.package
+  let compare = CudfAdd.compare
+  let pp_printer = CudfAdd.pp_package 
+  let pp_print_sep = OUnitDiff.pp_comma_separator
+end)
+
+let returns_result_pkgset function_to_test expected_result =
+  (fun args () -> PkgSetTest.assert_equal (function_to_test args) expected_result)
+
+let latest_cases =
+  let a1,a2,a3,a4 = dummy "a" 1, dummy "a" 2, dummy "a" 3, dummy "a" 4 in
+  let b4,b2 = dummy "b" 4, dummy "b" 2 in
+  let univ = [a1;a2;a3;a4;b4;b2] in
+  let returns = returns_result_pkgset (fun u -> PkgSetTest.of_list (CudfAdd.latest u)) in
+  let returns_nth n = returns_result_pkgset (fun u -> PkgSetTest.of_list (CudfAdd.latest ~n u)) in
+  [
+    ("latest", univ, returns (PkgSetTest.of_list [a1;b2])) ;
+    ("latest 3", univ, returns_nth 3 (PkgSetTest.of_list [a1;a2;a3;b4;b2])) ;
+    ("latest 2", univ, returns_nth 2 (PkgSetTest.of_list [a1;a2;b4;b2])) ;
+  ]
+  
 let make_test_cases triplets =
   List.map ( fun (test_name, input, assert_function) -> test_name >:: assert_function input ) triplets
 
@@ -308,6 +334,7 @@ let all =
     "criteria" >::: make_test_cases criteria_to_string;
     "criteria" >::: make_test_cases criteria_parse;
     "cone" >::: make_test_cases cone_cases;
+    "cudfadd" >::: make_test_cases latest_cases;
   ]
 
 let main () =
