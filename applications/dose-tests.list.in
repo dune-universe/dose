@@ -150,11 +150,29 @@ Type: distcheck
 Printer: text
 ExitCode: 1
 
+Name: failure_distcheck_lowmem
+Group: distcheck
+Expected: tests/applications/dose-tests/distcheck_test_failure
+Input: deb://tests/DebianPackages/sid.packages.bz2
+Cmd: ./distcheck.@OCAMLEXT@ -f -e --lowmem
+Type: distcheck
+Printer: text
+ExitCode: 1
+
 Name: success_distcheck
 Group: distcheck
 Expected: tests/applications/dose-tests/distcheck_test_success
 Input: deb://tests/DebianPackages/lenny.packages.bz2
 Cmd: ./distcheck.@OCAMLEXT@ -s 
+Type: distcheck
+Printer: text
+ExitCode: 0
+
+Name: success_distcheck_lowmem
+Group: distcheck
+Expected: tests/applications/dose-tests/distcheck_test_success
+Input: deb://tests/DebianPackages/lenny.packages.bz2
+Cmd: ./distcheck.@OCAMLEXT@ -s --lowmem
 Type: distcheck
 Printer: text
 ExitCode: 0
