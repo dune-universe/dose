@@ -10,6 +10,8 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
+open Common
+
 (** {2 Exceptions} *)
 
 (** IgnorePackage error message *)
@@ -17,45 +19,45 @@ exception IgnorePackage of string
 
 (** {2 Common Parsing Functions} *)
 
-val parse_name : Common.Format822.field -> Packages_types.name
-val parse_version : Common.Format822.field -> Packages_types.version
-val parse_vpkg : Common.Format822.field -> Packages_types.vpkg
-val parse_vpkglist : Common.Format822.field -> Packages_types.vpkglist
-val parse_vpkgformula : Common.Format822.field -> Packages_types.vpkgformula
-val parse_archlist : Common.Format822.field -> Packages_types.architecture list
-val parse_builddepslist : Common.Format822.field -> Packages_types.builddepslist
-val parse_builddepsformula : Common.Format822.field -> Packages_types.builddepsformula
+val parse_name : Format822.field -> Packages_types.name
+val parse_version : Format822.field -> Packages_types.version
+val parse_vpkg : Format822.field -> Packages_types.vpkg
+val parse_vpkglist : Format822.field -> Packages_types.vpkglist
+val parse_vpkgformula : Format822.field -> Packages_types.vpkgformula
+val parse_archlist : Format822.field -> Packages_types.architecture list
+val parse_builddepslist : Format822.field -> Packages_types.builddepslist
+val parse_builddepsformula : Format822.field -> Packages_types.builddepsformula
 
-val parse_string : Common.Format822.field -> string
-val parse_string_opt : Common.Format822.field -> string option
-val parse_string_list : ?rex:Re.re -> Common.Format822.field -> string list
+val parse_string : Format822.field -> string
+val parse_string_opt : Format822.field -> string option
+val parse_string_list : ?rex:Re.re -> Format822.field -> string list
 
-val parse_int : Common.Format822.field -> int
-val parse_int_s : Common.Format822.field -> string
+val parse_int : Format822.field -> int
+val parse_int_s : Format822.field -> string
 
-val parse_bool : Common.Format822.field -> bool
-val parse_bool_s : Common.Format822.field -> string
+val parse_bool : Format822.field -> bool
+val parse_bool_s : Format822.field -> string
 
 (** {2 Generic Parsing Functions} *)
 
 val lexbuf_wrapper :
   ((Lexing.lexbuf -> Packages_parser.token) -> Lexing.lexbuf -> 'a) ->
-  Common.Format822.field -> 'a
+  Format822.field -> 'a
 
 (* [assoc label stanza] returns the value associated with label a in stanza.
    Raise [Not_found] if there is no value associated with label in stanza. *)
-val assoc : string -> Common.Format822.stanza -> Common.Format822.value
+val assoc : string -> Format822.stanza -> Format822.value
 
 val blank_regexp : Re.re
 val comma_regexp : Re.re
 
 (** Parsing function for extra values. An extra value can only be a string.
     Ex. [parse_s ?required:true parse_string] *)
-type parse_extras_f = (string -> Common.Format822.stanza -> string)
+type parse_extras_f = (string -> Format822.stanza -> string)
 
 val parse_e :
   (string * parse_extras_f option) list ->
-    Common.Format822.stanza -> (string * string) list
+    Format822.stanza -> (string * string) list
 
 (** parse_s is a generic function used to extract and parse a field from a
     stanza and cast it to a value. [?default] assign a default value if the
@@ -64,10 +66,10 @@ val parse_e :
     [parse_s] gets a parsing function, a label and a stanza and returns the 
     value associated to the label. *)
 val parse_s : ?default:'a -> ?required:bool ->
-  (Common.Format822.field -> 'a) -> string -> Common.Format822.stanza -> 'a
+  (Format822.field -> 'a) -> string -> Format822.stanza -> 'a
 
 (** get_field_value is a generic function used to extract and parse values
-    from a Common.Format822.stanza. It gets a parsing function [parse], a
+    from a Format822.stanza. It gets a parsing function [parse], a
     stanza [par] and a tuple [field] where the first element is the label
     associated to the value to be parsed and the second element is a parsed
     value. If the parsed value is not none, the the function returns it 
@@ -76,8 +78,8 @@ val parse_s : ?default:'a -> ?required:bool ->
     is used to initialize a [package] object with certains defaults values without
     parsing the entire stanza. *)
 val get_field_value:
-  parse:(string -> Common.Format822.stanza -> 'a) -> 
-    par:Common.Format822.stanza -> 
+  parse:(string -> Format822.stanza -> 'a) -> 
+    par:Format822.stanza -> 
       field:(string * 'a option) -> (string * 'a)
 
 (** {2 Generic Parsing Functions} *)
@@ -106,7 +108,7 @@ class package :
   ?recommends:string * Packages_types.vpkgformula option ->
   ?extras:(
     (string * parse_extras_f option) list * 
-    (string * string) list option) -> Common.Format822.stanza ->
+    (string * string) list option) -> Format822.stanza ->
   object ('a)
 
     (** {4 Access methods } *)
@@ -147,26 +149,26 @@ class package :
    
      [extras:[("extrafield", Some(parse_s parse_string))]] *)
 val parse_package_stanza :
-  filter:(Common.Format822.stanza -> bool) option ->
-    extras:(string * (string -> Common.Format822.stanza -> string) option) list ->
-      Common.Format822.stanza -> package option
+  filter:(Format822.stanza -> bool) option ->
+    extras:(string * (string -> Format822.stanza -> string) option) list ->
+      Format822.stanza -> package option
 
 (** Read n files from disk and return the list of all unique packages. Extras have the
     same format as in [parse_package_stanza] *)
 val input_raw :
-  ?extras:(string * (string -> Common.Format822.stanza -> string) option) list ->
+  ?extras:(string * (string -> Format822.stanza -> string) option) list ->
     string list -> package list
 
 (** same as [parse_package_stanza] but read packages stanzas from the given IO channel *)
 val parse_packages_in :
-  ?filter:(Common.Format822.stanza -> bool) ->
-    ?extras:(string * (string -> Common.Format822.stanza -> string) option) list ->
+  ?filter:(Format822.stanza -> bool) ->
+    ?extras:(string * (string -> Format822.stanza -> string) option) list ->
       string -> IO.input -> package list
 
 (** [input_raw_in] behaves as [input_raw] but read the packages stanzas from
     the given IO channel *)
 val input_raw_in :
-  ?extras:(string * (string -> Common.Format822.stanza -> string) option) list ->
+  ?extras:(string * (string -> Format822.stanza -> string) option) list ->
   IO.input -> package list
 
 (** {2 Low Level Parsing Functions} *)
@@ -175,6 +177,6 @@ val input_raw_in :
    Parse the entire file [fname] parsing the raw file using [f822_parser] 
    while filtering out unwanted stanzas using the [stanza_parser]. *)
 val packages_parser : string -> 
-  (Common.Format822.stanza -> 'package option) ->
-    Common.Format822.f822_parser -> 
+  (Format822.stanza -> 'package option) ->
+    Format822.f822_parser -> 
       'package list

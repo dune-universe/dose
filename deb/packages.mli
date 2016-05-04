@@ -1,7 +1,9 @@
 
+open Common
+
 val parse_multiarch : string * ('a * string) -> Pef.Packages_types.multiarch
-val parse_source : Common.Format822.field -> Pef.Packages_types.source
-val parse_binarylist : Common.Format822.field -> Pef.Packages_types.vpkglist
+val parse_source : Format822.field -> Pef.Packages_types.source
+val parse_binarylist : Format822.field -> Pef.Packages_types.vpkglist
 
 class package :
   ?name:string * Pef.Packages_types.name option ->
@@ -23,7 +25,7 @@ class package :
   ?replaces:string * Pef.Packages_types.vpkglist option ->
   ?extras:(string * Pef.Packages.parse_extras_f option) list *
           (string * string) list option ->
-  Common.Format822.stanza ->
+  Format822.stanza ->
   object ('a)
     (** {4 Access methods } *)
     method name : Pef.Packages_types.name
@@ -88,13 +90,13 @@ class package :
   end
 
 val parse_package_stanza :
-  (Common.Format822.stanza -> bool) option ->
+  (Format822.stanza -> bool) option ->
   Pef.Packages_types.architecture list ->
   (string * Pef.Packages.parse_extras_f option) list ->
-  Common.Format822.stanza -> package option
+  Format822.stanza -> package option
 
 val parse_packages_in :
-  ?filter:(Common.Format822.stanza -> bool) ->
+  ?filter:(Format822.stanza -> bool) ->
   ?archs:Pef.Packages_types.architecture list ->
   ?extras:(string * Pef.Packages.parse_extras_f option) list ->
   string -> IO.input -> package list
@@ -106,13 +108,13 @@ val is_on_hold : package -> bool
 val default_extras : (string * 'a option) list
 
 val input_raw :
-  ?filter:(Common.Format822.stanza -> bool) ->
+  ?filter:(Format822.stanza -> bool) ->
   ?archs:Pef.Packages_types.architecture list ->
   ?extras:(string * Pef.Packages.parse_extras_f option) list ->
   string list -> package list
 
 val input_raw_in :
-  ?filter:(Common.Format822.stanza -> bool) ->
+  ?filter:(Format822.stanza -> bool) ->
   ?archs:Pef.Packages_types.architecture list ->
   ?extras:(string * Pef.Packages.parse_extras_f option) list ->
   IO.input -> package list

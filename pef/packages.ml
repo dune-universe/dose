@@ -22,7 +22,7 @@ include Util.Logging(struct let label = label end) ;;
 
 exception IgnorePackage of string
 
-type parse_extras_f = (string -> Common.Format822.stanza -> string)
+type parse_extras_f = (string -> Format822.stanza -> string)
 
 let lexbuf_wrapper type_parser v =
   Format822.lexbuf_wrapper type_parser Packages_lexer.token_deb v

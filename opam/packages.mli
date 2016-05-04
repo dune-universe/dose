@@ -1,4 +1,6 @@
 
+open Common
+
 type request = {
   install : Pef.Packages_types.vpkg list;
   remove : Pef.Packages_types.vpkg list;
@@ -16,7 +18,7 @@ type options =
 
 val default_request : request
 
-val parse_request_stanza : Common.Format822.stanza -> request
+val parse_request_stanza : Format822.stanza -> request
 
 val vpkglist_filter : options ->
   Pef.Packages_types.builddepslist -> Pef.Packages_types.vpkglist
@@ -36,7 +38,7 @@ class package :
   ?baselist:string * string list option ->
   ?extras:(string * Pef.Packages.parse_extras_f option) list *
           (string * string) list option ->
-  Common.Format822.stanza ->
+  Format822.stanza ->
   object ('a)
     method name : Pef.Packages_types.name
     method version : Pef.Packages_types.version
@@ -62,10 +64,10 @@ class package :
 
 val parse_package_stanza : options ->
   ?extras:(string * Pef.Packages.parse_extras_f option) list ->
-  Common.Format822.stanza -> package option
+  Format822.stanza -> package option
 
 val packages_parser : ?request:bool -> request * package list ->
-  Common.Format822.f822_parser -> request * package list
+  Format822.f822_parser -> request * package list
 
 val input_raw_in : IO.input -> request * package list
 val input_raw : string -> request * package list
