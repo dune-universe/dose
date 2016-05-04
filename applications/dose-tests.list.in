@@ -150,6 +150,15 @@ Type: distcheck
 Printer: text
 ExitCode: 1
 
+Name: failure_distcheck_summary
+Group: distcheck
+Expected: tests/applications/dose-tests/distcheck_test_failure
+Input: deb://tests/DebianPackages/sid.packages.bz2
+Cmd: ./distcheck.native --summary
+Type: distcheck
+Printer: text
+ExitCode: 1
+
 Name: failure_distcheck_lowmem
 Group: distcheck
 Expected: tests/applications/dose-tests/distcheck_test_failure

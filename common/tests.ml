@@ -316,9 +316,9 @@ let latest_cases =
   let returns = returns_result_pkgset (fun u -> PkgSetTest.of_list (CudfAdd.latest u)) in
   let returns_nth n = returns_result_pkgset (fun u -> PkgSetTest.of_list (CudfAdd.latest ~n u)) in
   [
-    ("latest", univ, returns (PkgSetTest.of_list [a1;b2])) ;
-    ("latest 3", univ, returns_nth 3 (PkgSetTest.of_list [a1;a2;a3;b4;b2])) ;
-    ("latest 2", univ, returns_nth 2 (PkgSetTest.of_list [a1;a2;b4;b2])) ;
+    ("latest", univ, returns (PkgSetTest.of_list [a4;b4])) ;
+    ("latest 3", univ, returns_nth 3 (PkgSetTest.of_list [a4;a2;a3;b4;b2])) ;
+    ("latest 2", univ, returns_nth 2 (PkgSetTest.of_list [a3;a4;b4;b2])) ;
   ]
   
 let make_test_cases triplets =

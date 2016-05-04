@@ -159,15 +159,16 @@ let main () =
   info "Solving..." ;
   let failure = OptParse.Opt.get Options.failure in
   let success = OptParse.Opt.get Options.success in
-  let explain =
-    if success || failure then
-      OptParse.Opt.get Options.explain 
-    else false
-  in
   let explain_summary = OptParse.Opt.get Options.explain in
   let minimal = OptParse.Opt.get Options.minimal in
   let condense = OptParse.Opt.get Options.condense in
   let summary = OptParse.Opt.get Options.summary in
+  let explain =
+    if summary then true else
+    if success || failure then
+      OptParse.Opt.get Options.explain 
+    else false
+  in
   let fmt =
     if OptParse.Opt.is_set Options.outfile then
       let f =
