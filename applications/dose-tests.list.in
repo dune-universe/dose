@@ -152,7 +152,7 @@ ExitCode: 1
 
 Name: failure_distcheck_summary
 Group: distcheck
-Expected: tests/applications/dose-tests/distcheck_test_failure
+Expected: tests/applications/dose-tests/distcheck_test_failure_summary
 Input: deb://tests/DebianPackages/sid.packages.bz2
 Cmd: ./distcheck.native --summary
 Type: distcheck
