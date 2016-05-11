@@ -362,7 +362,8 @@ let upgrade_constr universe name =
       let p = List.hd(List.sort ~cmp:Cudf.(>%) pl) 
       in (name,Some(`Geq,p.Cudf.version))
 
-let check_request_using ?call_solver ?callback ?criteria ?(explain=false) (pre,universe,request) =
+let check_request_using ?call_solver ?(global_constraints=false) 
+  ?callback ?criteria ?(explain=false) (pre,universe,request) =
   let intSolver ?(explain=false) universe request =
     let deps = 
       let k =
@@ -397,26 +398,27 @@ let check_request_using ?call_solver ?callback ?criteria ?(explain=false) (pre,u
     (* XXX it should be possible to add a package to a cudf document ! *)
     let pkglist = Cudf.get_packages universe in
     let universe = Cudf.load_universe (dummy::pkglist) in
-    edos_install universe dummy
+    (dummy,edos_install ~global_constraints universe dummy)
   in
   match call_solver with
   | None ->
-    let d = intSolver universe request in
+    let (dummy,d) = intSolver universe request in
     if Diagnostic.is_solution d then
-      let is = Diagnostic.get_installationset d in
+      let is = List.remove (Diagnostic.get_installationset d) dummy in
       Sat (Some pre,Cudf.load_universe is)
     else
       if explain then Unsat (Some d) else Unsat None
   | Some call_solver ->
     try Sat(call_solver (pre,universe,request)) with
     |CudfSolver.Unsat when not explain -> Unsat None
-    |CudfSolver.Unsat when explain -> Unsat (Some (intSolver ~explain universe request))
+    |CudfSolver.Unsat when explain ->
+        Unsat (Some (snd(intSolver ~explain universe request)))
     |CudfSolver.Error s -> Error s
 ;;
 
 (** check if a cudf request is satisfiable. we do not care about
  * universe consistency . We try to install a dummy package *)
-let check_request ?cmd ?callback ?criteria ?explain cudf =
+let check_request ?cmd ?(global_constraints=false) ?callback ?criteria ?explain cudf =
   let call_solver =
     match cmd with
     | Some cmd ->
@@ -424,7 +426,7 @@ let check_request ?cmd ?callback ?criteria ?explain cudf =
         Some (CudfSolver.execsolver cmd criteria)
     | None -> None
   in
-  check_request_using ?call_solver ?callback ?explain cudf
+  check_request_using ~global_constraints ?call_solver ?callback ?explain cudf
 ;;
 
 type depclean_result =

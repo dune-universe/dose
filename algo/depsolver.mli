@@ -139,7 +139,7 @@ val depclean :
   ?callback : (depclean_result -> unit) -> 
   Cudf.universe ->
   Cudf.package list ->
-  depclean_result list
+    depclean_result list
 
 type solver_result =
   |Sat of (Cudf.preamble option * Cudf.universe)
@@ -153,17 +153,23 @@ type solver_result =
     if ?explain is specified and there is no solution for the give request, the
     result will contain the failure reason.
 *)
-val check_request : ?cmd : string -> ?callback:(int array * Diagnostic.diagnosis -> unit) -> 
-  ?criteria:string -> ?explain : bool -> Cudf.cudf -> solver_result
+val check_request :
+  ?cmd : string ->
+  ?global_constraints : bool ->
+  ?callback:(int array * Diagnostic.diagnosis -> unit) -> 
+  ?criteria:string ->
+  ?explain : bool ->
+     Cudf.cudf -> solver_result
 
 (** Same as [check_request], but allows to specify any function to call the
     external solver. It should raise [Depsolver.Unsat] on failure *)
 val check_request_using:
   ?call_solver:(Cudf.cudf -> Cudf.preamble option * Cudf.universe) ->
+  ?global_constraints : bool ->
   ?callback:(int array * Diagnostic.diagnosis -> unit) ->
   ?criteria:string ->
   ?explain : bool ->
-  Cudf.cudf -> solver_result
+    Cudf.cudf -> solver_result
 
 (** Build the installation graph from a cudf solution universe and sets of packages to be 
     installed/removed (see CudfAdd.make_summary) *)
