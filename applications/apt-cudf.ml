@@ -506,10 +506,19 @@ let main () =
   Util.Timer.start timer3;
   let empty = ref true in
   let cache = CudfAdd.Cudf_hashtbl.create 1023 in
+  (* In Debian (and thus for apt and dpkg), packages can only be installed in a
+   * single version at a time. Thus, any up or downgrades always implicitly
+   * remove the old version. Therefore, if a package installation request just
+   * changes the version of the package, we remember this in a hash table such
+   * that we do not generate a removal request for that package as well. As a
+   * result, every package (name) only shows up exactly once in the solution.
+   * Package removals are not explicitly shown for upgrades. *)
+  let notremoved = Util.StringHashtbl.create 1023 in
 
   let (install,remove) = CudfDiff.make_solution ~universe ~solution:soluniv in
   CudfAdd.Cudf_set.iter (fun pkg ->
     CudfAdd.Cudf_hashtbl.add cache pkg ();
+    Util.StringHashtbl.add notremoved pkg.Cudf.package ();
     Format.printf "Install: %a@." pp_pkg (pkg,univ)
   ) install;
 
@@ -527,7 +536,8 @@ let main () =
   ) cudf_request.Cudf.install;
 
   CudfAdd.Cudf_set.iter (fun p ->
-    Format.printf "Remove: %a@." pp_pkg (p,univ)
+    if Util.StringHashtbl.mem notremoved p.Cudf.package then ()
+    else Format.printf "Remove: %a@." pp_pkg (p,univ)
   ) remove;
 
   Util.Timer.stop timer3 ();
