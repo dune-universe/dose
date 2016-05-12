@@ -18,7 +18,7 @@
     let c = Lexing.lexeme_char lexbuf 2 in (* the delimiter can be any character *)
     (* find the terminating delimiter *)
     let endpos =
-      try Bytes.index_from lexbuf.lex_buffer (lexbuf.lex_start_pos + 3) c with
+      try String.index_from lexbuf.lex_buffer (lexbuf.lex_start_pos + 3) c with
       |Invalid_argument _ ->
           raise (Format822.Syntax_error (
             Format822.error lexbuf "String too short"))
@@ -27,7 +27,7 @@
             Format822.error lexbuf (Printf.sprintf "cannot find: %c" c)))
     in
     let len = endpos - (lexbuf.lex_start_pos + 3) in
-    let s = Bytes.sub_string lexbuf.lex_buffer (lexbuf.lex_start_pos + 3) len in
+    let s = String.sub lexbuf.lex_buffer (lexbuf.lex_start_pos + 3) len in
     lexbuf.Lexing.lex_curr_pos <- lexbuf.Lexing.lex_start_pos + ((String.length s)+4);
     s
 
