@@ -1,4 +1,14 @@
 
+dose3 (4.4) UNRELEASED; urgency=low
+ * add --compare to ceve when used with pef://
+ * improvements to distcheck --lowmem
+ * API change : CudfAdd.latest 
+ * API change : add parameter to check_request and check_request_using 
+ * apt-cudf : package up or downgrades are expressed in a single 
+   "Install" request and that these do not show up as a "Remove" request anymore.
+
+ -- Pietro Abate <pietro.abate@inria.fr>  Thur, 21 Apr 2016 13:13:06 +0200
+
 dose3 (4.3) UNRELEASED; urgency=low
  * Fix exitcode problem with apt-cudf
  * Add new comparison functions to parse npm like versions
