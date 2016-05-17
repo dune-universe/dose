@@ -77,7 +77,7 @@ let triangle reverse xpred ypred common =
    @param mdf
 *)
 let strongconflicts univ =
-  let solver = Depsolver_int.init_solver_univ univ in
+  let solver = Depsolver_int.init_solver_univ ~global_constraints:true univ in
   let reverse = Depsolver_int.reverse_dependencies univ in
   let size = Cudf.universe_size univ in
   let cache = IG.make size in

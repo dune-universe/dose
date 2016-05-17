@@ -20,7 +20,8 @@ include Util.Logging(struct let label = label end) ;;
 
 type solver = Depsolver_int.solver
 
-let load universe = Depsolver_int.init_solver_univ universe
+let load ?(global_constraints=true) universe =
+  Depsolver_int.init_solver_univ ~global_constraints universe
 
 (** [univcheck ?callback universe] check all packages in the
     universe for installability 
@@ -31,7 +32,7 @@ let univcheck ?(global_constraints=true) ?callback ?(explain=true) universe =
   let aux ?callback univ =
     let timer = Util.Timer.create "Algo.Depsolver.univcheck" in
     Util.Timer.start timer;
-    let solver = Depsolver_int.init_solver_univ ~explain univ in
+    let solver = Depsolver_int.init_solver_univ ~global_constraints ~explain univ in
     let failed = ref 0 in
     (* This is size + 1 because we encode the global constraint of the
      * universe as a package that must be tested like any other *)
@@ -60,7 +61,7 @@ let univcheck ?(global_constraints=true) ?callback ?(explain=true) universe =
 *)
 let listcheck ?(global_constraints=true) ?callback ?(explain=true) universe pkglist =
   let aux ?callback univ idlist =
-    let solver = Depsolver_int.init_solver_univ ~explain univ in
+    let solver = Depsolver_int.init_solver_univ ~global_constraints ~explain univ in
     let timer = Util.Timer.create "Algo.Depsolver.listcheck" in
     Util.Timer.start timer;
     let failed = ref 0 in
@@ -151,23 +152,26 @@ let univcheck_lowmem ?(global_constraints=true) ?callback ?(explain=true) univer
 let edos_install_cache global_constraints univ cudfpool pkglist =
   let idlist = List.map (CudfAdd.vartoint univ) pkglist in
   let globalid = Cudf.universe_size univ in
-  let closure = Depsolver_int.dependency_closure_cache cudfpool (globalid::idlist) in
+  let closure =
+    let l = if global_constraints then (globalid::idlist) else idlist in
+    Depsolver_int.dependency_closure_cache cudfpool l 
+  in
   let solver = Depsolver_int.init_solver_closure cudfpool closure in
   let req = if global_constraints then (Some globalid,idlist) else (None,idlist) in
   let res = Depsolver_int.solve solver ~explain:true req in
   Diagnostic.diagnosis solver.Depsolver_int.map univ res req
 ;;
 
-let edos_install ?(global_constraints=false) univ pkg =
+let edos_install ?(global_constraints=true) univ pkg =
   let cudfpool = Depsolver_int.init_pool_univ ~global_constraints univ in
   edos_install_cache global_constraints univ cudfpool [pkg]
 
-let edos_coinstall ?(global_constraints=false) univ pkglist =
+let edos_coinstall ?(global_constraints=true) univ pkglist =
   let cudfpool = Depsolver_int.init_pool_univ ~global_constraints univ in
   edos_install_cache global_constraints univ cudfpool pkglist
 ;;
 
-let edos_coinstall_prod ?(global_constraints=false) univ ll =
+let edos_coinstall_prod ?(global_constraints=true) univ ll =
   let cudfpool = Depsolver_int.init_pool_univ ~global_constraints univ in
   let return a = [a] in
   let bind m f = List.flatten (List.map f m) in
@@ -362,7 +366,7 @@ let upgrade_constr universe name =
       let p = List.hd(List.sort ~cmp:Cudf.(>%) pl) 
       in (name,Some(`Geq,p.Cudf.version))
 
-let check_request_using ?call_solver ?(global_constraints=false) 
+let check_request_using ?call_solver ?(global_constraints=true) 
   ?callback ?criteria ?(explain=false) (pre,universe,request) =
   let intSolver ?(explain=false) universe request =
     let deps = 
@@ -418,7 +422,7 @@ let check_request_using ?call_solver ?(global_constraints=false)
 
 (** check if a cudf request is satisfiable. we do not care about
  * universe consistency . We try to install a dummy package *)
-let check_request ?cmd ?(global_constraints=false) ?callback ?criteria ?explain cudf =
+let check_request ?cmd ?(global_constraints=true) ?callback ?criteria ?explain cudf =
   let call_solver =
     match cmd with
     | Some cmd ->

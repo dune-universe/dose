@@ -304,7 +304,7 @@ let pkgcheck global_constraints callback explain solver tested id =
     @param buffer debug buffer to print out debug messages
     @param univ cudf package universe
 *)
-let init_solver_univ ?(global_constraints=true) ?(buffer=false) ?(explain=true) univ =
+let init_solver_univ ~global_constraints ?(buffer=false) ?(explain=true) univ =
   let map = new Util.identity in
   (* here we convert a cudfpool in a varpool. The assumption
    * that cudf package identifiers are contiguous is essential ! *)

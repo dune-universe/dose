@@ -15,8 +15,9 @@
 (** the solver is an abstract data type associated to a universe *)
 type solver
 
-(** initialize the solver *)
-val load : Cudf.universe -> solver
+(** initialize the solver. ~global_constraints is true by default to
+    enforce keep_* constraints *)
+val load : ?global_constraints: bool -> Cudf.universe -> solver
 
 (** check if the universe universe is consistent (all installed packages are coinstallable)
     This function is a wrapper of Cudf_checker.is_consistent. *)
@@ -26,38 +27,60 @@ val is_consistent : Cudf.universe -> Diagnostic.diagnosis
  
     @param global_constraints : enforce global constraints on the given
     universe. In particular packages marked as `Keep_package must be always
-    installed. Default false. *)
+    installed. Default true. *)
 val edos_install : ?global_constraints:bool -> Cudf.universe -> Cudf.package -> Diagnostic.diagnosis
 
 (** check if the give package list can be installed in the universe 
     @param global_constraints : enforce global constraints on the given
     universe. In particular packages marked as `Keep_package must be always
-    installed. Default false.  *)
+    installed. Default true.  *)
 val edos_coinstall : ?global_constraints:bool -> Cudf.universe -> Cudf.package list -> Diagnostic.diagnosis
 
 (** accept a list of list of packages and return the coinstallability test of
-    the cartesian product. *)
+    the cartesian product. 
+    @param global_constraints : enforce global constraints on the given
+    universe. In particular packages marked as `Keep_package must be always
+    installed. Default true. 
+    *)
 val edos_coinstall_prod : ?global_constraints:bool -> Cudf.universe -> Cudf.package list list -> Diagnostic.diagnosis list
 
-(** remove uninstallable packages from the universe . global_constraints is true
-    by default *)
+(** remove uninstallable packages from the universe . 
+    @param global_constraints : enforce global constraints on the given
+    universe. In particular packages marked as `Keep_package must be always
+    installed. Default true. 
+    *)
 val trim : ?global_constraints:bool -> Cudf.universe -> Cudf.universe
 
-(** remove uninstallable packages from the pkglist . global_constraints is true
-    by default *)
+(** remove uninstallable packages from the pkglist.
+    @param global_constraints : enforce global constraints on the given
+    universe. In particular packages marked as `Keep_package must be always
+    installed. Default true. 
+    *)
 val trimlist : ?global_constraints:bool -> Cudf.universe -> Cudf.package list -> Cudf.package list
 
-(** return the list of broken packages *)
+(** return the list of broken packages.
+    @param global_constraints : enforce global constraints on the given
+    universe. In particular packages marked as `Keep_package must be always
+    installed. Default true. *)
 val find_broken : ?global_constraints:bool -> Cudf.universe -> Cudf.package list
 
-(** return the list of installable packages *)
+(** return the list of installable packages.
+    @param global_constraints : enforce global constraints on the given
+    universe. In particular packages marked as `Keep_package must be always
+    installed. Default true. *)
 val find_installable : ?global_constraints:bool -> Cudf.universe -> Cudf.package list
 
-(** return the list of broken packages *)
+(** return the list of broken packages.
+    @param global_constraints : enforce global constraints on the given
+    universe. In particular packages marked as `Keep_package must be always
+    installed. Default true. *)
 val find_listbroken : ?global_constraints:bool -> Cudf.universe ->
   Cudf.package list -> Cudf.package list
 
-(** return the list of installable packages *)
+(** return the list of installable packages.
+    @param global_constraints : enforce global constraints on the given
+    universe. In particular packages marked as `Keep_package must be always
+    installed. Default true. *)
 val find_listinstallable : ?global_constraints:bool -> Cudf.universe ->
   Cudf.package list -> Cudf.package list
 
@@ -152,7 +175,9 @@ type solver_result =
     if ?criteria is specified it will be used as optimization criteria. 
     if ?explain is specified and there is no solution for the give request, the
     result will contain the failure reason.
-*)
+    @param global_constraints : enforce global constraints on the given
+    universe. In particular packages marked as `Keep_package must be always
+    installed. Default true. *)
 val check_request :
   ?cmd : string ->
   ?global_constraints : bool ->
@@ -162,7 +187,10 @@ val check_request :
      Cudf.cudf -> solver_result
 
 (** Same as [check_request], but allows to specify any function to call the
-    external solver. It should raise [Depsolver.Unsat] on failure *)
+    external solver. It should raise [Depsolver.Unsat] on failure.
+    @param global_constraints : enforce global constraints on the given
+    universe. In particular packages marked as `Keep_package must be always
+    installed. Default true. *)
 val check_request_using:
   ?call_solver:(Cudf.cudf -> Cudf.preamble option * Cudf.universe) ->
   ?global_constraints : bool ->

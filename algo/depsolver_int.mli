@@ -81,7 +81,8 @@ val pkgcheck : bool ->
     @param buffer debug buffer to print out debug messages
     @param univ cudf package universe
 *)
-val init_solver_univ : ?global_constraints:bool -> ?buffer:bool -> ?explain:bool -> Cudf.universe -> solver
+val init_solver_univ : global_constraints: bool -> ?buffer: bool -> 
+  ?explain: bool -> Cudf.universe -> solver
 
 (** Constraint solver initialization
  

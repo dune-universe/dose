@@ -48,6 +48,15 @@ let f_dominators_cycle = Filename.concat test_dir "dominators_cycle.cudf"
 let f_is_consistent_success = "tests/cudf/is_consistent_success.cudf"
 let f_is_consistent_failure = "tests/cudf/is_consistent_failure.cudf"
 
+module NV = struct
+  type t = (Cudf_types.pkgname * Cudf_types.version)
+  let compare = compare
+  let pp_printer fmt (n,v) = Format.fprintf fmt "(\"%s\",%d)" n v
+  let pp_print_sep fmt () = Format.fprintf fmt ";"
+end
+
+module ListNV = OUnitDiff.ListSimpleMake(NV);;
+
 let load_univ f =
   let (_,univ,_) = Cudf_parser.load_from_file f in
   univ
@@ -124,8 +133,8 @@ let test_coinst_real =
   )
 
 (* try to coinstall a and b while b has a conflict with c
- * that is declared as keep. Since global_constraints:true
- * this should not be possible *)
+   that is declared as keep. Since global_constraints:true
+   by default this should not be possible *)
 let test_coinst_constraints =
   "coinst constraints" >:: (fun _ ->
     let a = { Cudf.default_package with 
@@ -148,14 +157,15 @@ let test_coinst_constraints =
       keep = `Keep_version;
     } in
     let universe = Cudf.load_universe [a;b;c;d] in
-    let d = Depsolver.edos_coinstall ~global_constraints:true universe [a;b] in
+    let d = Depsolver.edos_coinstall universe [a;b] in
+    Diagnostic.printf d;
     assert_bool "pass" (not(Diagnostic.is_solution d))
   )
 
 (* Like above but since the default for global_constraints is false
  * then a and b can be co-installed *)
 let test_coinst_negative_constraints =
-  "coinst constraints" >:: (fun _ ->
+  "coinst negative constraints" >:: (fun _ ->
     let a = { Cudf.default_package with 
       Cudf.package = "a";
       Cudf.version = 1;
@@ -171,7 +181,8 @@ let test_coinst_negative_constraints =
       keep = `Keep_package;
     } in
     let universe = Cudf.load_universe [a;b;c] in
-    let d = Depsolver.edos_coinstall universe [a;b] in
+    let d = Depsolver.edos_coinstall ~global_constraints:false universe [a;b] in
+    Diagnostic.printf d;
     assert_bool "pass" (Diagnostic.is_solution d)
   )
 
@@ -217,7 +228,7 @@ let test_essential_broken =
       Cudf.package = "c";
     } in
     let universe = Cudf.load_universe [pkg1;pkg2] in
-    let d = Depsolver.edos_install ~global_constraints:true universe pkg2 in
+    let d = Depsolver.edos_install universe pkg2 in
     assert_bool "pass" (not(Diagnostic.is_solution d))
   ) 
 
@@ -239,7 +250,7 @@ let test_essential_multi =
       Cudf.package = "c";
     } in
     let universe = Cudf.load_universe [pkg1a;pkg1b;pkg2] in
-    let d = Depsolver.edos_install ~global_constraints:true universe pkg2 in
+    let d = Depsolver.edos_install universe pkg2 in
     assert_bool "pass" (Diagnostic.is_solution d)
   ) 
 
