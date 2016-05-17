@@ -85,10 +85,9 @@ let init_pool_univ ~global_constraints univ =
           in
           if pkg.Cudf.keep = `Keep_package then
             CudfAdd.add_to_package_list keep (pkg.Cudf.package,None) uid;
-            (*
           if pkg.Cudf.keep = `Keep_version then
-            CudfAdd.add_to_package_list keep (pkg.Cudf.package,Some (`Eq pkg.Cudf.version)) uid;
-            *)
+            CudfAdd.add_to_package_list keep 
+              (pkg.Cudf.package,Some (`Eq, pkg.Cudf.version)) uid;
           (dll,cl)
         end
       with Not_found ->
