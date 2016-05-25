@@ -55,7 +55,17 @@ module NV = struct
   let pp_print_sep fmt () = Format.fprintf fmt ";"
 end
 
-module ListNV = OUnitDiff.ListSimpleMake(NV);;
+module SetNV = OUnitDiff.SetMake(NV);;
+
+module PKG = struct
+  type t = Cudf.package
+  let compare = CudfAdd.compare
+  let pp_printer fmt n =
+    Format.fprintf fmt "(\"%s\",%d)" n.Cudf.package n.Cudf.version
+  let pp_print_sep fmt () = Format.fprintf fmt ";"
+end
+
+module SetPKG = OUnitDiff.SetMake(PKG);;
 
 let load_univ f =
   let (_,univ,_) = Cudf_parser.load_from_file f in
@@ -137,53 +147,127 @@ let test_coinst_real =
    by default this should not be possible *)
 let test_coinst_constraints =
   "coinst constraints" >:: (fun _ ->
-    let a = { Cudf.default_package with 
+    let a1 = { Cudf.default_package with 
       Cudf.package = "a";
-      Cudf.version = 1;
+      version = 1;
     } in
-    let b = { Cudf.default_package with 
+    let b1 = { Cudf.default_package with 
       Cudf.package = "b";
-      Cudf.version = 1;
+      version = 1;
       conflicts = [("c",None)];
     } in
-    let c = { Cudf.default_package with 
+    let c1 = { Cudf.default_package with 
       Cudf.package = "c";
-      Cudf.version = 1;
+      version = 1;
+      installed = true;
       keep = `Keep_package;
     } in
-    let d = { Cudf.default_package with 
+    let d1 = { Cudf.default_package with 
       Cudf.package = "d";
-      Cudf.version = 1;
+      version = 1;
+      installed = true;
       keep = `Keep_version;
     } in
-    let universe = Cudf.load_universe [a;b;c;d] in
-    let d = Depsolver.edos_coinstall universe [a;b] in
-    Diagnostic.printf d;
+    let universe = Cudf.load_universe [a1;b1;c1;d1] in
+    let d = Depsolver.edos_coinstall universe [a1;b1] in
     assert_bool "pass" (not(Diagnostic.is_solution d))
   )
+
+let test_keep_package =
+  let test installed = 
+    let a1 = { Cudf.default_package with 
+      Cudf.package = "a";
+      version = 1;
+    } in
+    let b1 = { Cudf.default_package with 
+      Cudf.package = "b";
+      version = 1;
+      depends = [[("c",Some (`Gt, 1))]]
+    } in
+    let c1 = { Cudf.default_package with 
+      Cudf.package = "c";
+      version = 1;
+      installed = installed;
+      keep = `Keep_package;
+      conflicts = [("c",None)];
+    } in
+    let c2 = { Cudf.default_package with 
+      Cudf.package = "c";
+      version = 2;
+      conflicts = [("c",None)];
+    } in
+    let universe = Cudf.load_universe [a1;b1;c1;c2] in
+    let d = Depsolver.edos_install universe b1 in
+    SetPKG.assert_equal 
+      (SetPKG.of_list [b1;c2])
+      (SetPKG.of_list (Diagnostic.get_installationset d))
+  in
+  "keep package" >::: [
+    "not installed" >:: (fun _ -> test false);
+    "installed" >:: (fun _ -> test true);
+  ]
+
+let test_keep_version =
+  let test installed =
+    let a1 = { Cudf.default_package with 
+      Cudf.package = "a";
+      version = 1;
+    } in
+    let b1 = { Cudf.default_package with 
+      Cudf.package = "b";
+      version = 1;
+      depends = [[("c",Some (`Gt, 1))]]
+    } in
+    let c1 = { Cudf.default_package with 
+      Cudf.package = "c";
+      version = 1;
+      conflicts = [("c",None)];
+      installed = installed;
+      keep = `Keep_version;
+    } in
+    let c2 = { Cudf.default_package with 
+      Cudf.package = "c";
+      version = 2;
+      conflicts = ["c",None]
+    } in
+    let universe = Cudf.load_universe [a1;b1;c1;c2] in
+    let d = Depsolver.edos_install universe b1 in
+    if installed then
+      assert_bool "pass" (not(Diagnostic.is_solution d))
+    else
+      SetPKG.assert_equal 
+        (SetPKG.of_list [b1;c2])
+        (SetPKG.of_list (Diagnostic.get_installationset d))
+  in
+  "keep version" >::: [
+    "installed" >:: (fun _ -> test true);
+    "not installed" >:: (fun _ -> test false)
+  ]
 
 (* Like above but since the default for global_constraints is false
  * then a and b can be co-installed *)
 let test_coinst_negative_constraints =
   "coinst negative constraints" >:: (fun _ ->
-    let a = { Cudf.default_package with 
+    let a1 = { Cudf.default_package with
       Cudf.package = "a";
-      Cudf.version = 1;
+      version = 1;
     } in
-    let b = { Cudf.default_package with 
+    let b1 = { Cudf.default_package with
       Cudf.package = "b";
-      Cudf.version = 1;
+      version = 1;
       conflicts = [("c",None)];
     } in
-    let c = { Cudf.default_package with 
+    let c1 = { Cudf.default_package with
       Cudf.package = "c";
-      Cudf.version = 1;
+      version = 1;
+      installed = true;
       keep = `Keep_package;
     } in
-    let universe = Cudf.load_universe [a;b;c] in
-    let d = Depsolver.edos_coinstall ~global_constraints:false universe [a;b] in
-    Diagnostic.printf d;
-    assert_bool "pass" (Diagnostic.is_solution d)
+    let universe = Cudf.load_universe [a1;b1;c1] in
+    let d = Depsolver.edos_coinstall ~global_constraints:false universe [a1;b1] in
+    SetPKG.assert_equal 
+      (SetPKG.of_list [a1;b1])
+      (SetPKG.of_list (Diagnostic.get_installationset d))
   )
 
 let test_coinst_prod = 
@@ -221,8 +305,9 @@ let test_essential_broken =
   "essential broken" >:: (fun _ -> 
     let pkg1 = { Cudf.default_package with 
       Cudf.package = "a";
-      Cudf.depends = [[("b",None)]];
-      Cudf.keep = `Keep_package;
+      depends = [[("b",None)]];
+      installed = true;
+      keep = `Keep_package;
     } in
     let pkg2 = { Cudf.default_package with 
       Cudf.package = "c";
@@ -244,6 +329,7 @@ let test_essential_multi =
       Cudf.package = "a";
       version = 2;
       conflicts = [("c",None)];
+      installed = true;
       keep = `Keep_package;
     } in
     let pkg2 = { Cudf.default_package with 
@@ -346,16 +432,6 @@ let test_reverse_dependency_closure =
     assert_equal true (S.equal rev_dependency_set set)
   )
 
-(* XXX this is the same function in Depsolver.conv that is
- * not exposed in the mli *) 
-let conv solver = function
-  |Depsolver_int.Success(f_int) ->
-      Diagnostic.SuccessInt(fun ?all () ->
-        List.map solver.Depsolver_int.map#inttovar (f_int ())
-      )
-  |Depsolver_int.Failure(r) -> Diagnostic.FailureInt(r)
-;;
-
 (*
 let test_ =
   "" >:: (fun _ ->
@@ -431,6 +507,11 @@ let test_depclean =
       );
       ]
     in
+    (*
+    SetPKG.assert_equal 
+      (SetPKG.of_list expected)
+      (SetPKG.of_list res)
+  *)
     assert_equal (List.sort res) (List.sort expected)
   )
 ;;
@@ -455,11 +536,21 @@ let test_depsolver =
     test_conjunctive_dependency_closure ;
     test_depclean ;
     test_is_consistent;
+    test_keep_package;
+    test_keep_version;
   ]
 
-let solution_set =
-  let (_,pl,_) = Cudf_parser.parse_from_file f_legacy_sol in
-  List.fold_right S.add pl S.empty
+module PKGTUPLE = struct
+  type t = Cudf.package * Cudf.package
+  let compare = Pervasives.compare
+  let pp_printer fmt (p,q) =
+    Format.fprintf fmt "%s -> %s" 
+      (CudfAdd.string_of_package p)
+      (CudfAdd.string_of_package q)
+  let pp_print_sep fmt () = Format.fprintf fmt ";"
+end
+
+module SetPKGTUPLE = OUnitDiff.SetMake(PKGTUPLE);;
 
 let test_strong ?(transitive=true) file ?(checkonly=[]) l =
   let module G = Defaultgraphs.PackageGraph.G in
@@ -479,16 +570,9 @@ let test_strong ?(transitive=true) file ?(checkonly=[]) l =
       (p,q)
     ) l
   in
-  (*
-  if not((List.sort sdedges) = (List.sort testedges)) then
-    List.iter (fun (p,q) -> 
-      Printf.eprintf "%s -> %s\n" 
-      (CudfAdd.string_of_package p)
-      (CudfAdd.string_of_package q)
-    ) sdedges
-  ;
-  *)
-  assert_equal (List.sort sdedges) (List.sort testedges)
+  SetPKGTUPLE.assert_equal
+    (SetPKGTUPLE.of_list testedges)
+    (SetPKGTUPLE.of_list sdedges)
 
 let test_strongcfl file l =
   let universe = load_univ file in
@@ -506,16 +590,10 @@ let test_strongcfl file l =
       (p,q)
     ) l
   in
-  (*
-  if not((List.sort scedges) = (List.sort testedges)) then
-    List.iter (fun (p,q) -> 
-      Printf.eprintf "%s <-> %s\n" 
-      (CudfAdd.string_of_package p)
-      (CudfAdd.string_of_package q)
-    ) scedges
-  ;
-  *)
-  assert_equal (List.sort scedges) (List.sort testedges)
+  SetPKGTUPLE.assert_equal
+    (SetPKGTUPLE.of_list testedges)
+    (SetPKGTUPLE.of_list scedges)
+;;
 
 let strongdep_simple =
   "strongdep simple" >:: (fun _ ->
@@ -563,6 +641,7 @@ let strongdep_conj =
     in
     test_strong f_strongdeps_conj edge_list
   )
+;;
 
 let strongdep_deep_dsj =
   "strongdep deep disj" >:: (fun _ ->
@@ -637,6 +716,19 @@ let test_dependency_graph =
     ()
   )
 
+module Edge = struct
+  open Defaultgraphs.PackageGraph
+  type t = G.edge
+  let compare = G.E.compare 
+  let pp_printer fmt e =
+    Format.fprintf fmt "%s -> %s" 
+      (CudfAdd.string_of_package (G.E.src e))
+      (CudfAdd.string_of_package (G.E.dst e))
+  let pp_print_sep fmt () = Format.fprintf fmt ";"
+end
+
+module SetEDGE = OUnitDiff.SetMake(Edge);;
+
 let test_dominators_tarjan_order =
   "dominators tarjan order" >:: (fun _ ->
     let universe = load_univ f_dominators_order in
@@ -645,20 +737,23 @@ let test_dominators_tarjan_order =
     let edges = ["quebec","romeo"] in
     let edges_packages = 
       List.map (fun (p,q) -> 
-        Cudf.lookup_package universe (p,1),
-        Cudf.lookup_package universe (q,1)
+        let pkg_p = Cudf.lookup_package universe (p,1) in
+        let pkg_q = Cudf.lookup_package universe (q,1) in
+        (pkg_p,pkg_q)
       ) edges
     in
-    let size = Defaultgraphs.PackageGraph.G.nb_edges dg in
+    let edges_expected = List.map (fun (p,q) ->
+      Defaultgraphs.PackageGraph.G.E.create p () q
+      ) edges_packages
+    in
     let all = 
       List.map (fun (p,q) ->
         Defaultgraphs.PackageGraph.G.find_all_edges dg p q
       ) edges_packages 
     in
-    List.iter (fun l ->
-      assert_equal ~msg:"too many edges" (List.length l) 1
-    ) all ;
-    assert_equal ~msg:"too many edges in the graph" size 1
+    SetEDGE.assert_equal
+      (SetEDGE.of_list edges_expected)
+      (SetEDGE.of_list (List.flatten all))
   )
 
 let test_dominators_tarjan_cycle =
@@ -678,22 +773,23 @@ let test_dominators_tarjan_cycle =
     in
     let edges_packages = 
       List.map (fun (p,q) -> 
-        try
-          Cudf.lookup_package dom_univ p,
-          Cudf.lookup_package dom_univ q
-        with Not_found -> failwith (Printf.sprintf "(%s,%s) not found" (fst p) (fst q))
+        let pkg_p = Cudf.lookup_package dom_univ p in
+        let pkg_q = Cudf.lookup_package dom_univ q in
+        (pkg_p,pkg_q)
       ) edges
     in
-    let size = Defaultgraphs.PackageGraph.G.nb_edges dg in
+    let edges_expected = List.map (fun (p,q) ->
+      Defaultgraphs.PackageGraph.G.E.create p () q
+      ) edges_packages
+    in
     let all = 
       List.map (fun (p,q) ->
         Defaultgraphs.PackageGraph.G.find_all_edges dg p q
       ) edges_packages 
     in
-    List.iter (fun l ->
-      assert_equal ~msg:"too many edges" (List.length l) 1
-    ) all ;
-    assert_equal ~msg:"too many edges in the graph" size (List.length edges)
+    SetEDGE.assert_equal
+      (SetEDGE.of_list edges_expected)
+      (SetEDGE.of_list (List.flatten all))
   )
 
 let test_dominators_tarjan_legacy =
@@ -716,22 +812,23 @@ let test_dominators_tarjan_legacy =
     in
     let edges_packages = 
       List.map (fun (p,q) -> 
-        try
-          Cudf.lookup_package dom_univ p,
-          Cudf.lookup_package dom_univ q
-        with Not_found -> failwith (Printf.sprintf "(%s,%s) not found" (fst p) (fst q))
+        let pkg_p = Cudf.lookup_package dom_univ p in
+        let pkg_q = Cudf.lookup_package dom_univ q in
+        (pkg_p,pkg_q)
       ) edges
     in
-    let size = Defaultgraphs.PackageGraph.G.nb_edges dg in
+    let edges_expected = List.map (fun (p,q) ->
+      Defaultgraphs.PackageGraph.G.E.create p () q
+      ) edges_packages
+    in
     let all = 
       List.map (fun (p,q) ->
         Defaultgraphs.PackageGraph.G.find_all_edges dg p q
       ) edges_packages 
     in
-    List.iter (fun l ->
-      assert_equal ~msg:"too many edges" (List.length l) 1
-    ) all ;
-    assert_equal ~msg:"too many edges in the graph" size (List.length edges)
+    SetEDGE.assert_equal
+      (SetEDGE.of_list edges_expected)
+      (SetEDGE.of_list (List.flatten all))
   )
 
 
@@ -740,12 +837,26 @@ let test_dominators_direct_order =
     let universe = load_univ f_dominators_order in
     let g = Strongdeps.strongdeps_univ ~transitive:false universe in
     let dg = Dominators.dominators_direct g in
-    let romeo = Cudf.lookup_package universe ("romeo",1) in
-    let quebec = Cudf.lookup_package universe ("quebec",1) in
-    let size = Defaultgraphs.PackageGraph.G.nb_edges dg in
-    let all = Defaultgraphs.PackageGraph.G.find_all_edges dg quebec romeo in
-    assert_equal ~msg:"too many edges between quebec and romeo" (List.length all) 1;
-    assert_equal ~msg:"too many edges in the graph" size 1
+    let edges = [("quebec",1),("romeo",1)] in
+    let edges_packages = 
+      List.map (fun (p,q) -> 
+        let pkg_p = Cudf.lookup_package universe p in
+        let pkg_q = Cudf.lookup_package universe q in
+        (pkg_p,pkg_q)
+      ) edges
+    in
+    let edges_expected = List.map (fun (p,q) ->
+      Defaultgraphs.PackageGraph.G.E.create p () q
+      ) edges_packages
+    in
+    let all = 
+      List.map (fun (p,q) ->
+        Defaultgraphs.PackageGraph.G.find_all_edges dg p q
+      ) edges_packages 
+    in
+    SetEDGE.assert_equal
+      (SetEDGE.of_list edges_expected)
+      (SetEDGE.of_list (List.flatten all))
   )
 
 let test_dominators =
