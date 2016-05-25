@@ -26,6 +26,7 @@ let test_dir = "tests"
 let f_packages = Filename.concat test_dir "DebianPackages/Packages.bz2" ;;
 let f_release = Filename.concat test_dir "DebianPackages/Release" ;;
 let f_discriminants = Filename.concat test_dir "deb/discriminants" ;;
+let f_essential = Filename.concat test_dir "deb/essential" ;;
 
 (* XXX TODO:
   * add test for default arch
@@ -702,7 +703,9 @@ let parse_pin_triplets =
 (* Makes a list of test cases from a list of triplets:
     (test_name, string_to_parse, assert_function) *)
 let make_test_cases triplets =
-  List.map ( fun (test_name, input, assert_function) -> test_name >:: assert_function input ) triplets
+  List.map (fun (test_name, input, assert_function) ->
+    test_name >:: assert_function input
+  ) triplets
 
 let test_parsing =
   "test_parsing" >::: [
@@ -1038,6 +1041,42 @@ let test_sources =
   ]
 ;;
 
+module PKG = struct
+  type t = Cudf.package
+  let compare = CudfAdd.compare
+  let pp_printer fmt n =
+    Format.fprintf fmt "(\"%s\",%d)" n.Cudf.package n.Cudf.version
+  let pp_print_sep fmt () = Format.fprintf fmt ";"
+end
+
+module SETPKG = struct
+  module S = OUnitDiff.SetMake(PKG);;
+  type t = S.t
+  let compare = S.compare
+  let pp_printer fmt n = S.pp_printer fmt n
+  let pp_print_sep fmt () = Format.fprintf fmt ";"
+end
+
+module SetPKG = OUnitDiff.SetMake(SETPKG);;
+
+let test_essential_constraints =
+  "test essential" >:: (fun _ ->
+    let f = f_essential in
+    let archs = [] in
+    let options = Debcudf.default_options in
+    let pkgl = Packages.input_raw ~archs [f] in
+    let tables = Debcudf.init_tables pkgl in
+    let essential =
+      List.map (fun (_,l) ->
+        SETPKG.S.of_list l
+      ) (Debcudf.get_essential ~options tables)
+    in
+    SetPKG.assert_equal
+      (SetPKG.of_list [])
+      (SetPKG.of_list essential)
+  )
+;;
+
 let all = 
   "all tests" >::: [ 
     test_parsing;
@@ -1049,7 +1088,8 @@ let all =
     test_evolution;
     test_version_comparison;
     test_architecture_matching;
-    test_sources
+    test_sources;
+    test_essential_constraints;
   ]
 
 let main () =

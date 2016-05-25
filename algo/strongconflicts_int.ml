@@ -73,11 +73,9 @@ let triangle reverse xpred ypred common =
   else
     false
 
-(* [strongconflicts mdf] return the list of strong conflicts
-   @param mdf
-*)
+(* [strongconflicts mdf] return the list of strong conflicts *)
 let strongconflicts univ =
-  let solver = Depsolver_int.init_solver_univ ~global_constraints:true univ in
+  let solver = Depsolver_int.init_solver_univ univ in
   let reverse = Depsolver_int.reverse_dependencies univ in
   let size = Cudf.universe_size univ in
   let cache = IG.make size in
@@ -112,8 +110,7 @@ let strongconflicts univ =
   let try_add_edge stronglist p q x y =
     if not (IG.mem_edge cache p q) then begin
       IG.add_edge cache p q;
-      let req = (None,[p;q]) in
-      match Depsolver_int.solve solver ~explain:true req with
+      match Depsolver_int.solve solver ~explain:true [p;q] with
       |Diagnostic.SuccessInt _ -> ()
       |Diagnostic.FailureInt f ->
         CG.add_edge_e stronglist (p, (x, y, Other (f ())), q)
@@ -135,8 +132,8 @@ let strongconflicts univ =
 
     if not(IG.mem_edge cache x y) then begin
       let donei = ref 0 in
-      let pkg_x = CudfAdd.inttovar univ x in
-      let pkg_y = CudfAdd.inttovar univ y in
+      let pkg_x = CudfAdd.inttopkg univ x in
+      let pkg_y = CudfAdd.inttopkg univ y in
       let (a,b) =
         (to_set (Depsolver_int.reverse_dependency_closure reverse [x]),
         to_set (Depsolver_int.reverse_dependency_closure reverse [y])) in
@@ -170,7 +167,7 @@ let strongconflicts univ =
         debug "triangle %s - %s (%s)" 
           (CudfAdd.string_of_package pkg_x)
           (CudfAdd.string_of_package pkg_y)
-          (CudfAdd.string_of_package (CudfAdd.inttovar univ p));
+          (CudfAdd.string_of_package (CudfAdd.inttopkg univ p));
         try_add_edge strongraph p x x y; incr donei;
         try_add_edge strongraph p y x y; incr donei;
       else if triangle reverse xpred ypred common then

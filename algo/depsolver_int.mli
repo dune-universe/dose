@@ -33,7 +33,12 @@ module S : Common.EdosSolver.T with module X = R
 (** internal state of the sat solver. The map allows to transform
     sat solver variables (that must be contiguous) to integers 
     representing the id of a package *)
-type solver = { constraints : S.state; map : Common.Util.projection; }
+type solver = {
+  constraints : S.state;        (** the sat problem *)
+  map : Common.Util.projection; (** a map from cudf package ids to solver ids *)
+  globalid : int                (** the last index of the cudfpool. Used to encode 
+                                    a 'dummy' package and to enforce global constraints *)
+}
 
 (** Solver Package Pool. [pool_t] is an array where each index
   is an solver variable and the content of the array associates
@@ -49,12 +54,16 @@ and pool = dep_t array
 and t = [`SolverPool of pool | `CudfPool of pool]
 
 type result =
-  | Success of (unit -> int list)
-  | Failure of (unit -> Diagnostic.reason_int list)
+  | Success of (unit -> int list) (** return a function providing the list of the 
+                                      cudf packages belonging to the installation set *)
+  | Failure of (unit -> Diagnostic.reason_int list) (** return a function with the
+                                                        failure explanations *)
 
 (** Given a cudf universe , this function returns a [CudfPool]. 
     We assume that cudf uid are sequential and we can use them as an array index *)
-val init_pool_univ : global_constraints : bool -> Cudf.universe -> [> `CudfPool of pool]
+val init_pool_univ :
+  ?global_constraints:(Cudf_types.vpkglist * int list) list ->
+    Cudf.universe -> [> `CudfPool of pool]
 
 (** this function creates an array indexed by solver ids that can be 
     used to init the edos solver. Return a [SolverPool] *)
@@ -62,27 +71,37 @@ val init_solver_pool : Common.Util.projection ->
   [< `CudfPool of pool] -> 'a list -> [> `SolverPool of pool]
 
 (** Initalise the sat solver. Operates only on solver ids [SolverPool] *)
-val init_solver_cache : ?buffer:bool -> ?explain:bool -> [< `SolverPool of pool] -> S.state
+val init_solver_cache : ?buffer:bool -> ?explain:bool ->
+  [< `SolverPool of pool] -> S.state
 
 (** Call the sat solver
   
     @param tested: optional int array used to cache older results
+    @param explain: if try we add all the information needed to create the 
+                    explanation graph
 *)
-val solve : ?tested:bool array -> explain:bool -> solver -> int option * int list -> Diagnostic.result_int
+val solve :
+	?tested: bool array ->
+	explain: bool -> solver ->
+	Diagnostic.request_int ->
+		Diagnostic.result_int
 
-(* [pkgcheck global_constraints callback solver tested id].
-   This function is used to "distcheck" a list of packages *)
-val pkgcheck : bool -> 
-  (Diagnostic.result_int * (int option * int list) -> 'a) option -> 
-    bool -> solver -> bool array -> int -> bool
+(* [pkgcheck callback solver tested id].
+   This function is used to "distcheck" a list of packages 
+   *)
+val pkgcheck :
+	(Diagnostic.result_int * Diagnostic.request_int -> 'a) option -> 
+	bool -> solver -> bool array -> int -> 
+		bool
 
 (** Constraint solver initialization
  
     @param buffer debug buffer to print out debug messages
     @param univ cudf package universe
 *)
-val init_solver_univ : global_constraints: bool -> ?buffer: bool -> 
-  ?explain: bool -> Cudf.universe -> solver
+val init_solver_univ :
+  ?global_constraints:(Cudf_types.vpkglist * int list) list -> ?buffer: bool -> 
+    ?explain: bool -> Cudf.universe -> solver
 
 (** Constraint solver initialization
  
@@ -105,20 +124,6 @@ val reverse_dependencies : Cudf.universe -> int list array
 
 val dependency_closure_cache : ?maxdepth:int -> ?conjunctive:bool ->
   [< `CudfPool of pool] -> int list -> S.var list
-
-(** [dependency_closure index l] return the union of the dependency closure of
-    all packages in [l] .
-
-    @param maxdepth the maximum cone depth (infinite by default)
-    @param conjunctive consider only conjunctive dependencies (false by default)
-    @param universe the package universe
-    @param pkglist a subset of [universe]
-*)
-val dependency_closure :
-  ?maxdepth:int ->
-  ?conjunctive:bool ->
-  ?global_constraints:bool ->
-  Cudf.universe -> Cudf.package list -> Cudf.package list
 
 (** return the dependency closure of the reverse dependency graph.
     The visit is bfs.    

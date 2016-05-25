@@ -63,7 +63,7 @@ let deb_load_list options ?(status=[]) ?(raw=false) dll =
   in
   let pkgl = List.flatten pkgll in
   let pkgl = if status = [] then pkgl else Debian.Packages.merge status pkgl in
-  let tables = Debian.Debcudf.init_tables pkgl in
+  let tables = Debian.Debcudf.init_tables ~options pkgl in
   let from_cudf (p,i) = Debian.Debcudf.get_real_version tables (p,i) in
   let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
   let cll = 
@@ -100,7 +100,8 @@ let deb_load_list options ?(status=[]) ?(raw=false) dll =
   let preamble = Debian.Debcudf.preamble in
   let request = Cudf.default_request in
   let rawll = if raw && status = [] then Some dll else None in
-  let l = (preamble,cll,request,from_cudf,to_cudf,rawll) in
+  let global_constraints = Debian.Debcudf.get_essential ~options tables in
+  let l = (preamble,cll,request,from_cudf,to_cudf,rawll,global_constraints) in
   Util.Timer.stop deb_load_list_timer l
       
 let npm_load_list file =
@@ -114,7 +115,7 @@ let npm_load_list file =
   (*
   let request = Npm.Npmcudf.requesttocudf tables (Cudf.load_universe cl) request in
   *)
-  (preamble,[cl;[]],request,from_cudf,to_cudf,None)
+  (preamble,[cl;[]],request,from_cudf,to_cudf,None,[])
 
 let opam_load_list ?options file =
   let (request,pkglist) = Opam.Packages.input_raw file in
@@ -133,7 +134,7 @@ let opam_load_list ?options file =
   let cl = List.flatten (List.map (Opam.Opamcudf.tocudf ~options tables) pkglist) in
   let preamble = Opam.Opamcudf.preamble in
   let request = Opam.Opamcudf.requesttocudf tables (Cudf.load_universe cl) request in
-  (preamble,[cl;[]],request,from_cudf,to_cudf,None)
+  (preamble,[cl;[]],request,from_cudf,to_cudf,None,[])
 
 let pef_load_list ?compare options dll =
   let compare = match compare with Some c -> c |None -> Versioning.Debian.compare in
@@ -149,7 +150,7 @@ let pef_load_list ?compare options dll =
   in
   let preamble = Pef.Pefcudf.preamble in
   let request = Cudf.default_request in
-  (preamble,cll,request,from_cudf,to_cudf,None)
+  (preamble,cll,request,from_cudf,to_cudf,None,[])
 
 let csw_load_list dll =
   let pkglist = List.flatten dll in
@@ -163,7 +164,7 @@ let csw_load_list dll =
   in
   let preamble = Csw.Cswcudf.preamble in
   let request = Cudf.default_request in
-  (preamble,cll,request,from_cudf,to_cudf,None)
+  (preamble,cll,request,from_cudf,to_cudf,None,[])
  
 let edsp_load_list options file =
   let (request,pkglist) = Debian.Edsp.input_raw file in
@@ -179,7 +180,7 @@ let edsp_load_list options file =
     Debian.Debcudf.native = native_arch;
     Debian.Debcudf.foreign = foreign_archs
   } in
-  let tables = Debian.Debcudf.init_tables pkglist in
+  let tables = Debian.Debcudf.init_tables ~options pkglist in
   let preamble =
     let l = List.map snd Debian.Edsp.extras_tocudf in
     Common.CudfAdd.add_properties Debian.Debcudf.preamble l
@@ -201,16 +202,17 @@ let edsp_load_list options file =
   let request = Debian.Edsp.requesttocudf tables (Cudf.load_universe cudfpkglist) request in
   let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
   let from_cudf (p,i) = Debian.Debcudf.get_real_version tables (p,i) in
-  (preamble,[cudfpkglist;[]],request,from_cudf,to_cudf,None)
+  let global_constraints = Debian.Debcudf.get_essential ~options tables in
+  (preamble,[cudfpkglist;[]],request,from_cudf,to_cudf,None,global_constraints)
 
 let edsp_load_universe options file =
-  let (pr,l,r,f,t,w) = edsp_load_list options file in
-  (pr,Cudf.load_universe (List.hd l), r, f, t, w)
+  let (pr,l,r,f,t,w,e) = edsp_load_list options file in
+  (pr,Cudf.load_universe (List.hd l), r, f, t, w,e)
 
 (** transform a list of debian control stanza into a cudf universe *)
 let deb_load_universe options ?(raw=false) l =
-  let (pr,cll,r,f,t,w) = deb_load_list options ~raw l in
-  (pr,Cudf.load_universe (List.flatten cll), r, f, t, w)
+  let (pr,cll,r,f,t,w,e) = deb_load_list options ~raw l in
+  (pr,Cudf.load_universe (List.flatten cll), r, f, t, w,e)
 
 (** transform a list of rpm control stanza into a cudf packages list *)
 let rpm_load_list dll =
@@ -226,7 +228,7 @@ let rpm_load_list dll =
   let to_cudf (p,v) = (p,Rpm.Rpmcudf.get_cudf_version tables (p,v)) in
   let preamble = Rpm.Rpmcudf.preamble in
   let request = Cudf.default_request in
-  (preamble,cll,request,from_cudf,to_cudf,None)
+  (preamble,cll,request,from_cudf,to_cudf,None,[])
 #else
   failwith "librpm not available. re-configure with --with-rpm"
 #endif
@@ -279,11 +281,11 @@ let cudf_load_list file =
   in
   let from_cudf (p,i) = (p,None,string_of_int i) in
   let to_cudf (p,v) = (p,int_of_string v) in
-  (preamble,[pkglist;[]],request,from_cudf,to_cudf,None)
+  (preamble,[pkglist;[]],request,from_cudf,to_cudf,None,[])
 
 let cudf_load_universe file =
-  let (pr,l,r,f,t,w) = cudf_load_list file in
-  (pr,Cudf.load_universe (List.hd l), r, f, t, w)
+  let (pr,l,r,f,t,w,_) = cudf_load_list file in
+  (pr,Cudf.load_universe (List.hd l), r, f, t, w,[])
 
 let unpack_l expected l = List.fold_left (fun acc (t,(_,_,_,_,f),_) ->
     if t = expected then f::acc
@@ -461,8 +463,8 @@ let load_list ?(options=None) ?(raw=false) ?compare urilist =
 let load_universe ?(options=None) ?(raw=false) ?compare uris =
   info "Parsing and normalizing..." ;
   Util.Timer.start load_list_timer;
-  let (pr,cll,r,f,t,w) = parse_input ~options ~raw ?compare [uris] in
-  let u = (pr,Cudf.load_universe (List.flatten cll), r, f, t, w) in
+  let (pr,cll,r,f,t,w,e) = parse_input ~options ~raw ?compare [uris] in
+  let u = (pr,Cudf.load_universe (List.flatten cll), r, f, t, w,e) in
   Util.Timer.stop load_list_timer u
 ;;
 

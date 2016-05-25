@@ -37,6 +37,8 @@ type tables = {
   versioned_table : unit Util.StringHashtbl.t;        (** all (versions,name) tuples. 
                                                         all versions mentioned of depends, 
                                                         pre_depends, conflict and breaks   *)
+  essential_table:
+    (string,Packages.package list ref) Hashtbl.t;     (** name -> packages list            *)
 }
 
 let create n = {
@@ -45,6 +47,7 @@ let create n = {
   versions_table = Util.StringHashtbl.create (10 * n);
   versioned_table = Util.StringHashtbl.create (10 *n);
   reverse_table = Util.IntHashtbl.create (10 * n);
+  essential_table = Hashtbl.create (n / 100);
 }
 
 type lookup = {
@@ -107,7 +110,8 @@ let clear tables =
   Util.StringHashtbl.clear tables.unit_table;
   Util.StringHashtbl.clear tables.versions_table;
   Util.StringHashtbl.clear tables.versioned_table;
-  Util.IntHashtbl.clear tables.reverse_table
+  Util.IntHashtbl.clear tables.reverse_table;
+  Hashtbl.clear tables.essential_table;
 ;;
 
 (* string version -> int version Hash *)
@@ -121,7 +125,7 @@ let add_p table k =
     Util.StringHashtbl.add table k ()
 
 (* (version,name) Set *)
-let add_pairs tables table (v,p) =
+let add_pairs table (v,p) =
   if not(Util.StringPairHashtbl.mem table (v,p)) then
     Util.StringPairHashtbl.add table (v,p) ()
 
@@ -150,15 +154,15 @@ let init_versions_table tables table pkg =
       add_p versionedtables name;
       match constr with
       |None -> ()
-      |Some(_,version) -> add_pairs tables table (version,name)
+      |Some(_,version) -> add_pairs table (version,name)
     ) l
   in
   let cnf_iter ll = List.iter conj_iter ll in
   let add_source pv = function
-    |(p,None) -> add_pairs tables table (pv,p)
-    |(p,Some(v)) -> add_pairs tables table (v,p)
-  in 
-  add_pairs tables table (pkg#version,pkg#name);
+    |(p,None) -> add_pairs table (pv,p)
+    |(p,Some(v)) -> add_pairs table (v,p)
+  in
+  add_pairs table (pkg#version,pkg#name);
   conj_iter pkg#breaks;
   conj_iter pkg#provides;
   conj_iter pkg#conflicts ;
@@ -169,16 +173,19 @@ let init_versions_table tables table pkg =
   add_source pkg#version pkg#source
 ;;
 
-let init_tables ?(step=1) ?(versionlist=[]) pkglist =
+let init_tables ?(options=default_options) ?(step=1) ?(versionlist=[]) pkglist =
   let n = List.length pkglist in
   let tables = create n in 
   let temp_versions_table = Util.StringPairHashtbl.create (10 * n) in
   let ivrt = init_virtual_table tables in
   let ivt = init_versions_table tables temp_versions_table in
   let iut = init_unit_table tables in
-
-  List.iter (fun v -> add_pairs tables temp_versions_table (v,"")) versionlist; 
-  List.iter (fun pkg -> ivt pkg; ivrt pkg ; iut pkg) pkglist ;
+  let iet pkg =
+    if not options.ignore_essential && pkg#essential then
+      CudfAdd.add_to_package_list tables.essential_table (pkg#name) pkg
+  in
+  List.iter (fun v -> add_pairs temp_versions_table (v,"")) versionlist; 
+  List.iter (fun pkg -> iet pkg; ivt pkg; ivrt pkg ; iut pkg) pkglist ;
   let l = Util.StringPairHashtbl.fold (fun v _ acc -> v::acc) temp_versions_table [] in
   let add_reverse i (n,v) =
     try 
@@ -406,16 +413,7 @@ let add_extra ?native_arch extras tables pkg =
   recommends; replaces; essential;native]@ l
 ;;
 
-let set_keep pkg =
-  match pkg#essential,Packages.is_on_hold pkg with
-  |_,true -> `Keep_version
-  |true,_ -> `Keep_package
-  |false,_ -> `Keep_none
-;;
-
-let add_inst inst pkg =
-  if inst then true 
-  else Packages.is_installed pkg
+let add_inst inst pkg = inst || Packages.is_installed pkg 
 
 let tocudf tables ?(options=default_options) ?(inst=false) pkg =
   let bind m f = List.flatten (List.map f m) in
@@ -538,19 +536,18 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
     let _depends = 
       loadll ~native_arch ~package_arch tables (pkg#pre_depends @ pkg#depends)
     in
-    (* XXX: if ignore essential for the moment we also ignore keep *)
-    let _keep =
-      if options.ignore_essential then
+    let _keep pkg =
+      if (package_arch <> native_arch && package_arch <> "all") then
         `Keep_none
-      else if (package_arch <> native_arch && package_arch <> "all") then
-        `Keep_none
+      else if Packages.is_on_hold pkg && Packages.is_installed pkg then
+        `Keep_version
       else
-        set_keep pkg
+        `Keep_none
     in
     { Cudf.default_package with
       Cudf.package = _name ;
       Cudf.version = _version ;
-      Cudf.keep = _keep ;
+      Cudf.keep = _keep pkg ;
       Cudf.depends = _depends ;
       Cudf.conflicts = _conflicts ;
       Cudf.provides = _provides ;
@@ -568,7 +565,7 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
     { Cudf.default_package with
       Cudf.package = encpkgname ;
       Cudf.version = get_cudf_version tables (pkg#name,pkg#version) ;
-      Cudf.keep = if options.ignore_essential then `Keep_none else set_keep pkg;
+      Cudf.keep = if Packages.is_on_hold pkg then `Keep_version else `Keep_none ;
       Cudf.depends = loadll tables (pkg#pre_depends @ pkg#depends); 
       Cudf.conflicts = loadlc tables pkg#name (pkg#breaks @ pkg#conflicts) ;
       Cudf.provides = loadlp tables pkg#provides ;
@@ -576,10 +573,15 @@ let tocudf tables ?(options=default_options) ?(inst=false) pkg =
       Cudf.pkg_extra = add_extra options.extras_opt tables pkg ;
     }
 
+let get_essential ?(options=default_options) tables =
+  Hashtbl.fold (fun name { contents = l } acc ->
+    ([(name,None)],List.map (tocudf tables ~options) l)::acc
+  ) tables.essential_table []
+
 let load_list ?options l =
   let timer = Util.Timer.create "Debian.ToCudf" in
   Util.Timer.start timer;
-  let tables = init_tables l in
+  let tables = init_tables ?options l in
   let pkglist = List.map (tocudf tables ?options) l in
   clear tables;
   Util.Timer.stop timer pkglist

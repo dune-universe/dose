@@ -1,11 +1,27 @@
+(**************************************************************************)
+(*  This file is part of a library developed with the support of the      *)
+(*  Mancoosi Project. http://www.mancoosi.org                             *)
+(*                                                                        *)
+(*  Main author(s):  Pietro Abate                                         *) 
+(*                                                                        *)
+(*  This library is free software: you can redistribute it and/or modify  *)
+(*  it under the terms of the GNU Lesser General Public License as        *)
+(*  published by the Free Software Foundation, either version 3 of the    *)
+(*  License, or (at your option) any later version.  A special linking    *)
+(*  exception to the GNU Lesser General Public License applies to this    *)
+(*  library, see the COPYING file for more information.                   *)
+(**************************************************************************)
+
 (** Library of additional functions for the CUDF format. *)
 
 (** {2 Basic comparison operations for packages} *)
 
-(** Equality test: two CUDF packages are equal if their names and versions are equal. *)
+(** Equality test: two CUDF packages are equal if their names and versions
+    are equal. *)
 val equal : Cudf.package -> Cudf.package -> bool
 
-(** Compare function: compares two CUDF packages using standard CUDF comparison operator (i.e. comparing by their name and version). *)
+(** Compare function: compares two CUDF packages using standard CUDF 
+    comparison operator (i.e. comparing by their name and version). *)
 val compare : Cudf.package -> Cudf.package -> int
 
 (** {2 Specialized data structures for CUDF packages} *)
@@ -119,12 +135,12 @@ val realversionmap : Cudf.package list ->
   (Cudf_types.pkgname * string, Cudf.package) ExtLib.Hashtbl.t
 
 (** Return the unique cudf id of a package in a universe *)
-val vartoint : Cudf.universe -> Cudf.package -> int
+val pkgtoint : Cudf.universe -> Cudf.package -> int
 
 (** Given a universe and a cudf id returns the corresponding package.
     Raise Not_found if the id does not correspond to a package.
 *)
-val inttovar : Cudf.universe -> int -> Cudf.package
+val inttopkg : Cudf.universe -> int -> Cudf.package
 
 (*
 (** convert pef operators to cudf *)

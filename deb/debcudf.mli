@@ -30,13 +30,16 @@ type options = {
 val default_options : options
 
 (** initialize the version conversion tables *)
-val init_tables : ?step:int -> ?versionlist:Pef.Packages_types.version list -> Packages.package list -> tables
+val init_tables :
+  ?options:options -> ?step:int -> ?versionlist:Pef.Packages_types.version list ->
+    Packages.package list -> tables
 
 val clear : tables -> unit
 (** return the cudf version associated to a tuple (name,version). 
  * return Not_found if there is not package or cudf version associated
  * to the tuple (name,version) *)
-val get_cudf_version : tables -> Pef.Packages_types.name * Pef.Packages_types.version -> int
+val get_cudf_version :
+  tables -> Pef.Packages_types.name * Pef.Packages_types.version -> int
 
 (** Get the orgininal debian package name. Remove deb -> cudf conversion cruft *)
 val get_real_name : Cudf_types.pkgname -> (string * string option)
@@ -46,6 +49,9 @@ val get_real_version : tables -> Cudf_types.pkgname * Cudf_types.version ->
   (Pef.Packages_types.name *
    Pef.Packages_types.architecture option *
    Pef.Packages_types.version)
+
+val get_essential :
+  ?options:options -> tables -> (Cudf_types.vpkglist * Cudf.package list) list
 
 (** [tocudf tbl p] 
     convert the a debian package representation to cudf.

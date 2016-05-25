@@ -87,8 +87,12 @@ let main () =
   let options = Options.set_options input_type in
   let (fg,bg) = Options.parse_cmdline (input_type,implicit) posargs in
 
-  let (preamble,pkgll,_,from_cudf,to_cudf,_) = StdLoaders.load_list ~options [fg;bg] in
-  let (fg_pkglist, bg_pkglist) = match pkgll with [fg;bg] -> (fg,bg) | _ -> assert false in
+  let (preamble,pkgll,_,from_cudf,to_cudf,_,global_constraints) =
+    StdLoaders.load_list ~options [fg;bg]
+  in
+  let (fg_pkglist, bg_pkglist) =
+    match pkgll with [fg;bg] -> (fg,bg) | _ -> assert false
+  in
   let fg_pkglist =
     if OptParse.Opt.is_set Options.latest then
       CudfAdd.latest ~n:(OptParse.Opt.get Options.latest) fg_pkglist
@@ -232,23 +236,23 @@ let main () =
       then Depsolver.univcheck
       else Depsolver.univcheck_lowmem
     in
-    let global_constraints = not(OptParse.Opt.get Options.deb_ignore_essential) in
     let nbp =
       if (OptParse.Opt.is_set Options.checkonly) && (List.length checklist) = 0 then 0
       else if OptParse.Opt.is_set Options.checkonly || not(bg_pkglist = []) then 
+        (*
         let subuniverse =
           let l =
-            if global_constraints then
-              Cudf.fold_packages (fun acc pkg ->
-                  match pkg.Cudf.keep with
-                  |`Keep_package |`Keep_version  -> pkg::acc
-                  |_ -> acc
-              ) checklist universe
-            else checklist
+            Cudf.fold_packages (fun acc pkg ->
+                match pkg.Cudf.keep with
+                |`Keep_package |`Keep_version | `Keep_feature 
+                  when pkg.Cudf.installed -> pkg::acc
+                |_ -> acc
+            ) checklist universe
           in
           Cudf.load_universe (CudfAdd.cone universe l)
         in
-        Depsolver.listcheck ~global_constraints ~callback ~explain subuniverse checklist
+        *)
+        Depsolver.listcheck ~global_constraints ~callback ~explain universe checklist
       else
         univcheck ~global_constraints ~callback ~explain universe 
     in

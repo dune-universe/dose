@@ -223,7 +223,7 @@ let realversionmap pkglist =
   ) pkglist ;
   h
 
-let vartoint universe p =
+let pkgtoint universe p =
   try Cudf.uid_by_package universe p
   with Not_found-> begin
     warning 
@@ -232,7 +232,7 @@ let vartoint universe p =
     raise Not_found
   end
 
-let inttovar = Cudf.package_by_uid
+let inttopkg = Cudf.package_by_uid
 
 let normalize_set (l : int list) = 
   List.rev (List.fold_left (fun results x ->

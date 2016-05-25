@@ -772,7 +772,7 @@ module IntPkgGraph = struct
   (** add to the graph all conjunctive dependencies of package id *)
   let conjdepgraph_int graph univ id =
     G.add_vertex graph id;
-    let p = CudfAdd.inttovar univ id in
+    let p = CudfAdd.inttopkg univ id in
     List.iter (fun vpkgs ->
       match CudfAdd.resolve_vpkgs_int univ vpkgs with
       |[q] when q <> id -> add_edge graph id q

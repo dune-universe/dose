@@ -48,11 +48,15 @@ type reason_int =
   |MissingInt of (int * Cudf_types.vpkg list)
   |ConflictInt of (int * int * Cudf_types.vpkg)
 
+(** the low-level result. All integers are sat solver indexes and need to be
+    converted using a projection map. Moreover the result also contains the
+    global constraints index that must filtered out before returing the final
+    result to the user *)
 type result_int =
   |SuccessInt of (?all:bool -> unit -> int list)
   |FailureInt of (unit -> reason_int list)
 
-type request_int = (int option * int list)
+type request_int = int list
 
 (** {3 Helpers Functions } *)
 
@@ -64,7 +68,7 @@ val diagnosis : Common.Util.projection -> Cudf.universe ->
 val result : Common.Util.projection -> Cudf.universe -> result_int -> result
 
 (** Turn an integer request into a cudf request *)
-val request : Cudf.universe -> 'a * int list -> Cudf.package list
+val request : Cudf.universe -> request_int -> Cudf.package list
 
 (** {2 Pretty Priting Functions } *)
 
@@ -91,7 +95,8 @@ val collect : summary -> diagnosis -> unit
 val pp_out_version : Format.formatter -> unit
 
 (** default package pretty printer. *)
-val pp_package : ?source:bool -> ?fields:bool -> Common.CudfAdd.pp -> Format.formatter -> Cudf.package -> unit
+val pp_package : ?source:bool -> ?fields:bool -> Common.CudfAdd.pp ->
+  Format.formatter -> Cudf.package -> unit
 
 val pp_list :
   (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a list -> unit

@@ -42,7 +42,10 @@ module S = EdosSolver.M(R)
 (** low level solver data type *)
 type solver = {
   constraints : S.state; (** the sat problem *)
-  map : Util.projection (** a map from cudf package ids to solver ids *)
+  map : Util.projection; (** a map from cudf package ids to solver ids *)
+  globalid : int (* the last index of the cudfpool. 
+                    Used to encode a 'dummy' package and to enforce global
+                    constraints *)
 }
 
 type dep_t = 
@@ -57,19 +60,19 @@ type result =
 
 (* cudf uid -> cudf uid array . Here we assume cudf uid are sequential
    and we can use them as an array index *)
-let init_pool_univ ~global_constraints univ =
-  let size = (Cudf.universe_size univ) + 1 in
+let init_pool_univ ?global_constraints univ =
   (* the last element of the array *)
-  let globalid = size - 1 in
+  let size = Cudf.universe_size univ in
   let keep = Hashtbl.create 200 in
   let pool = 
     (* here I initalize the pool to size + 1, that is I reserve one spot
      * to encode the global constraints associated with the universe.
      * However, since they are global, I've to add the at the end, after
      * I have analyzed all packages in the universe. *)
-    Array.init size (fun uid ->
+    Array.init (size + 1) (fun uid ->
       try
-        if uid = globalid then ([],[]) else begin (* the last index *)
+        if uid = size then ([],[])  (* the last index *)
+        else begin
           let pkg = Cudf.package_by_uid univ uid in
           let dll = 
             List.map (fun vpkgs ->
@@ -83,27 +86,43 @@ let init_pool_univ ~global_constraints univ =
               |l -> Some (vpkg, l)
             ) pkg.Cudf.conflicts
           in
-          if pkg.Cudf.keep = `Keep_package then
-            CudfAdd.add_to_package_list keep (pkg.Cudf.package,None) uid;
-          if pkg.Cudf.keep = `Keep_version then
-            CudfAdd.add_to_package_list keep 
-              (pkg.Cudf.package,Some (`Eq, pkg.Cudf.version)) uid;
+          if pkg.Cudf.installed then begin
+            match pkg.Cudf.keep with
+            |`Keep_none -> ()
+            |`Keep_package ->
+              List.iter (fun id ->
+                CudfAdd.add_to_package_list keep (pkg.Cudf.package,None) id
+              ) (CudfAdd.resolve_vpkg_int univ (pkg.Cudf.package,None));
+            |`Keep_version ->
+              CudfAdd.add_to_package_list keep 
+                (pkg.Cudf.package,Some (`Eq, pkg.Cudf.version)) uid;
+            |`Keep_feature ->
+              List.iter (function
+                |(name,None) ->
+                  List.iter (fun id ->
+                    CudfAdd.add_to_package_list keep (name,None) id
+                  ) (CudfAdd.resolve_vpkg_int univ (name,None));
+                |(name,Some(`Eq,v)) ->
+                  List.iter (fun id ->
+                    CudfAdd.add_to_package_list keep (name,Some(`Eq,v)) id
+                  ) (CudfAdd.resolve_vpkg_int univ (name,Some(`Eq,v)));
+              ) pkg.Cudf.provides
+          end ;
           (dll,cl)
         end
       with Not_found ->
-        fatal "Package uid not found during solver pool initialization. Packages uid must have no gaps in the given universe"
+        fatal "Package uid (%d) not found during solver pool initialization. Packages uid must have no gaps in the given universe" uid
     )
   in
-  if global_constraints then begin
-    let keep_dll =
-      Hashtbl.fold (fun cnstr {contents = l} acc ->
-        ([cnstr],l) :: acc
-      ) keep []
-    in
-    (* here in theory we could encode more complex contraints .
-     * for the moment we consider only `Keep_package *)
-    pool.(globalid) <- (keep_dll,[])
-  end;
+  let keep_dll =
+    Hashtbl.fold (fun cnstr {contents = l} acc ->
+      ([cnstr],l) :: acc
+    ) keep (
+      if Option.is_none global_constraints then []
+      else Option.get global_constraints
+    )
+  in
+  pool.(size) <- (keep_dll,[]);
   (`CudfPool pool)
 
 (** this function creates an array indexed by solver ids that can be 
@@ -135,21 +154,9 @@ let init_solver_pool map (`CudfPool cudfpool) closure =
     in (sdll,scl)
   in
 
-  (* while in init_pool_univ we create a pool that is bigger
-   * then the universe to keep into consideration the space
-   * needed to encode the global contraint, here we assume that
-   * the pool is already of the correct size and the closure
-   * contains also the globalid *) 
-  let globalid = Array.length cudfpool in
   let solverpool = 
-    let size = List.length closure in
-    Array.init size (fun sid ->
-      if sid = globalid then 
-        convert cudfpool.(globalid)
-      else
-        let uid = map#inttovar sid in
-        let (dll,cl) = cudfpool.(uid) in
-        convert (dll,cl)
+    Array.init (List.length closure) (fun sid ->
+      convert (cudfpool.(map#inttovar sid))
     )
   in
   (`SolverPool solverpool)
@@ -214,7 +221,7 @@ let init_solver_cache ?(buffer=false) ?(explain=true) (`SolverPool varpool) =
     exec_depends constraints id dll;
     exec_conflicts constraints id cl
   ) varpool;
-    
+
   Util.IntPairHashtbl.clear conflicts;
 
   debug "n. disjunctions %d" !num_disjunctions;
@@ -234,46 +241,33 @@ let solve ?tested ~explain solver request =
   let result solve collect var =
     (* Real call to the SAT solver *)
     if solve solver.constraints var then begin
-      let l = S.assignment_true solver.constraints in
-      List.iter (fun i -> 
+      if explain then (
+        let l = S.assignment_true solver.constraints in
+        if not(Option.is_none tested) then
+          List.iter (fun i -> (Option.get tested).(i) <- true) l;
+        Diagnostic.SuccessInt(fun ?(all=false) () -> l)
+      ) else (
         if not(Option.is_none tested) then (
-          (Option.get tested).(i) <- true;
-        )
-      ) l;
-      if explain then
-        let get_assignent ?(all=true) () = List.map solver.map#inttovar l in
-        Diagnostic.SuccessInt(get_assignent)
-      else
+          let l = S.assignment_true solver.constraints in
+          List.iter (fun i -> (Option.get tested).(i) <- true) l);
         Diagnostic.SuccessInt(fun ?(all=false) () -> [])
+      )
     end else
       if explain then
-        let get_reasons () = collect solver.constraints var in
-        Diagnostic.FailureInt(get_reasons)
+        Diagnostic.FailureInt(fun () -> collect solver.constraints var)
       else
         Diagnostic.FailureInt(fun () -> [])
   in
+  (* the global id "package" is always co-installed *)
+  let il = List.map solver.map#vartoint (solver.globalid :: request) in
+  result S.solve_lst S.collect_reasons_lst il
 
-  match request with
-  |(None,[i]) ->
-      result S.solve S.collect_reasons (solver.map#vartoint i)
-  |(None,il) ->
-      result S.solve_lst S.collect_reasons_lst (List.map solver.map#vartoint il)
-
-  |(Some k,[i]) ->
-      result S.solve_lst S.collect_reasons_lst (List.map solver.map#vartoint [k;i])
-  |(Some k,il) ->
-      result S.solve_lst S.collect_reasons_lst (List.map solver.map#vartoint (k::il))
-
-(* this function is used to "distcheck" a list of packages *)
-let pkgcheck global_constraints callback explain solver tested id =
-  (* global id is a fake package id encoding the global constraints of the
-   * universe. it is the last element of the id array *)
-  let globalid = (Array.length tested) - 1 in
-  let req = if global_constraints then begin (Some globalid,[id]) end else (None,[id]) in
+(* this function is used to "distcheck" a list of packages. The id is a cudfpool index *)
+let pkgcheck callback explain solver tested id =
   let res =
     Util.Progress.progress progressbar_univcheck;
     if not(tested.(id)) then
-      solve ~tested ~explain solver req 
+      solve ~tested ~explain solver [id]
     else begin
       (* this branch is true only if the package was previously
          added to the tested packages and therefore it is installable
@@ -284,7 +278,7 @@ let pkgcheck global_constraints callback explain solver tested id =
       if explain then
         let f ?(all=false) () =
           if all then begin
-            match solve solver ~explain req with
+            match solve solver ~explain [id] with
             |Diagnostic.SuccessInt(f_int) -> f_int ()
             |Diagnostic.FailureInt _ -> assert false (* impossible *)
           end else []
@@ -296,23 +290,23 @@ let pkgcheck global_constraints callback explain solver tested id =
   match callback, res with
   |None, Diagnostic.SuccessInt _ -> true
   |None, Diagnostic.FailureInt _ -> false
-  |Some f, Diagnostic.SuccessInt _ -> ( f (res,req) ; true )
-  |Some f, Diagnostic.FailureInt _ -> ( f (res,req) ; false )
+  |Some f, Diagnostic.SuccessInt _ -> ( f (res,[id]) ; true )
+  |Some f, Diagnostic.FailureInt _ -> ( f (res,[id]) ; false )
 
 (** low level constraint solver initialization
  
     @param buffer debug buffer to print out debug messages
     @param univ cudf package universe
 *)
-let init_solver_univ ~global_constraints ?(buffer=false) ?(explain=true) univ =
+let init_solver_univ ?global_constraints ?(buffer=false) ?(explain=true) univ =
   let map = new Util.identity in
   (* here we convert a cudfpool in a varpool. The assumption
    * that cudf package identifiers are contiguous is essential ! *)
-  let `CudfPool pool = init_pool_univ global_constraints univ in
+  let `CudfPool pool = init_pool_univ ?global_constraints univ in
   let varpool = `SolverPool pool in
   let constraints = init_solver_cache ~buffer ~explain varpool in
-  let solver = { constraints = constraints ; map = map } in
-  solver
+  let globalid = Cudf.universe_size univ in
+  { constraints = constraints ; map = map; globalid = globalid }
 
 (** low level constraint solver initialization
  
@@ -321,13 +315,13 @@ let init_solver_univ ~global_constraints ?(buffer=false) ?(explain=true) univ =
     @param closure subset of packages used to initialize the solver
 *)
 (* pool = cudf pool - closure = dependency clousure . cudf uid list *)
-let init_solver_closure ?(buffer=false) cudfpool closure =
+let init_solver_closure ?(buffer=false) (`CudfPool cudfpool) closure =
+  let globalid = Array.length cudfpool - 1 in
   let map = new Util.intprojection (List.length closure) in
   List.iter map#add closure;
-  let varpool = init_solver_pool map cudfpool closure in
+  let varpool = init_solver_pool map (`CudfPool cudfpool) closure in
   let constraints = init_solver_cache ~buffer varpool in
-  let solver = { constraints = constraints ; map = map } in
-  solver
+  { constraints = constraints ; map = map; globalid = globalid }
 
 (** return a copy of the state of the solver *)
 let copy_solver solver =
@@ -346,7 +340,7 @@ let reverse_dependencies univ =
   Cudf.iteri_packages (fun i p ->
     List.iter (fun ll ->
       List.iter (fun q ->
-        let j = CudfAdd.vartoint univ q in
+        let j = CudfAdd.pkgtoint univ q in
         if i <> j then
           if not(List.mem i reverse.(j)) then
             reverse.(j) <- i::reverse.(j)
@@ -355,10 +349,12 @@ let reverse_dependencies univ =
   ) univ;
   reverse
 
-let dependency_closure_cache ?(maxdepth=max_int) ?(conjunctive=false) (`CudfPool cudfpool) idlist =
+let dependency_closure_cache ?(maxdepth=max_int) 
+  ?(conjunctive=false) (`CudfPool cudfpool) idlist =
   let queue = Queue.create () in
+  let globalid = (Array.length cudfpool - 1) in
   let visited = Hashtbl.create (2 * (List.length idlist)) in
-  List.iter (fun e -> Queue.add (e,0) queue) (CudfAdd.normalize_set idlist);
+  List.iter (fun e -> Queue.add (e,0) queue) (CudfAdd.normalize_set (globalid::idlist));
   while (Queue.length queue > 0) do
     let (id,level) = Queue.take queue in
     if not(Hashtbl.mem visited id) && level < maxdepth then begin
@@ -378,21 +374,6 @@ let dependency_closure_cache ?(maxdepth=max_int) ?(conjunctive=false) (`CudfPool
     end
   done;
   Hashtbl.fold (fun k _ l -> k::l) visited []
-
-(** [dependency_closure index l] return the union of the dependency closure of
-    all packages in [l] .
-
-    @param maxdepth the maximum cone depth (infinite by default)
-    @param conjunctive consider only conjunctive dependencies (false by default)
-    @param universe the package universe
-    @param pkglist a subset of [universe]
-*)
-let dependency_closure ?(maxdepth=max_int) ?(conjunctive=false) ?(global_constraints=false) universe pkglist =
-  let pool = init_pool_univ ~global_constraints universe in
-  let globalid = Cudf.universe_size universe in
-  let idlist = List.map (CudfAdd.vartoint universe) pkglist in
-  let l = dependency_closure_cache ~maxdepth ~conjunctive pool (globalid::idlist) in
-  List.filter_map (fun p -> if p <> globalid then Some (CudfAdd.inttovar universe p) else None) l
 
 (*    XXX : elements in idlist should be included only if because
  *    of circular dependencies *)

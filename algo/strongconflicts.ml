@@ -32,7 +32,7 @@ module CG = Graph.Imperative.Graph.ConcreteLabeled(PackageGraph.PkgV)(CflE)
 
 (* tempy. *)
 let reason univ rl =
-  let from_sat = CudfAdd.inttovar univ in
+  let from_sat = CudfAdd.inttopkg univ in
   List.map (function
     |Diagnostic.DependencyInt(i,vl,il) ->
       Diagnostic.Dependency(from_sat i,vl,List.map from_sat il)
@@ -58,7 +58,7 @@ let strongconflicts universe =
   let g = CG.create () in
   let universe  = Depsolver.trim universe in
   let ig = Strongconflicts_int.strongconflicts universe in
-  let inttovar = CudfAdd.inttovar universe in
+  let inttovar = CudfAdd.inttopkg universe in
   (* convert output graph *)
   ICG.iter_vertex (fun v -> CG.add_vertex g (inttovar v)) ig;
   ICG.iter_edges_e (fun (x, (x', y', l), y) ->

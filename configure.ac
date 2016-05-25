@@ -1,5 +1,5 @@
-AC_INIT(dose3, 4.3, pietro.abate@pps.univ-paris-diderot.fr)
-AC_COPYRIGHT(Copyright 2009-2015 Mancoosi Project)
+AC_INIT(dose3, 5.0, pietro.abate@inria.fr)
+AC_COPYRIGHT(Copyright 2009-2016 Mancoosi Project)
 
 AC_CONFIG_MACRO_DIR([m4])
 

@@ -32,24 +32,25 @@ let strong_depends solver p q =
   let solver = Depsolver_int.copy_solver solver in
   let lit = Depsolver_int.S.lit_of_var (solver.Depsolver_int.map#vartoint q) false in
   Depsolver_int.S.add_rule solver.Depsolver_int.constraints [|lit|] [];
-  match Depsolver_int.solve solver ~explain:false (None,[p]) with
+  match Depsolver_int.solve solver ~explain:false [p] with
   |Diagnostic.FailureInt _ -> true
   |Diagnostic.SuccessInt _ -> false
 
 (** check if [p] strong depends on any packages in [l] *)
 let check_strong univ transitive graph solver p l =
-  let pkg_p = CudfAdd.inttovar univ p in
+  let pkg_p = CudfAdd.inttopkg univ p in
   List.iter (fun q ->
-    let pkg_q = CudfAdd.inttovar univ q in
-    if p <> q then
-      if not(Defaultgraphs.PackageGraph.G.mem_edge graph pkg_p pkg_q) then
-        if strong_depends solver p q then 
-          Defaultgraphs.PackageGraph.add_edge ~transitive graph pkg_p pkg_q
+    let q = solver.Depsolver_int.map#inttovar q in
+    if q <> solver.Depsolver_int.globalid then
+      let pkg_q = CudfAdd.inttopkg univ q in
+      if p <> q then
+        if not(Defaultgraphs.PackageGraph.G.mem_edge graph pkg_p pkg_q) then
+          if strong_depends solver p q then 
+            Defaultgraphs.PackageGraph.add_edge ~transitive graph pkg_p pkg_q
   ) l
 
 (* true if at least one dependency is disjunctive *)
 let somedisj (`CudfPool cudfpool) id = 
-  (* let cudfpool = Depsolver_int.strip_cudf_pool pool in *)
   let (depends,_) = cudfpool.(id) in
   if List.length depends > 0 then
     try
@@ -65,7 +66,7 @@ let somedisj (`CudfPool cudfpool) id =
    might be hidden in the closure.
 *)
 let strongdeps_int ?(transitive=true) graph univ pkglist =
-  let cudfpool = Depsolver_int.init_pool_univ ~global_constraints:false univ in
+  let cudfpool = Depsolver_int.init_pool_univ univ in
   let pkglist_size = List.length pkglist in
   let universe_size = Cudf.universe_size univ in
 
@@ -74,26 +75,27 @@ let strongdeps_int ?(transitive=true) graph univ pkglist =
   List.iter (fun pkg ->
     Util.Progress.progress mainbar;
     Defaultgraphs.PackageGraph.G.add_vertex graph pkg;
-    let id = CudfAdd.vartoint univ pkg in
+    let id = CudfAdd.pkgtoint univ pkg in
     if (pkglist_size <> universe_size) || (somedisj cudfpool id) then begin 
       let closure = Depsolver_int.dependency_closure_cache cudfpool [id] in
       let solver = Depsolver_int.init_solver_closure cudfpool closure in
-      match Depsolver_int.solve solver ~explain:true (None,[id]) with
+      match Depsolver_int.solve solver ~explain:true [id] with
       |Diagnostic.FailureInt(_) -> ()
       |Diagnostic.SuccessInt(f_int) ->
           check_strong univ transitive graph solver id (f_int ())
     end
   ) pkglist ;
   Util.Progress.reset mainbar;
-  debug "strong dep graph: %d nodes, %d edges" (Defaultgraphs.PackageGraph.G.nb_vertex graph) (Defaultgraphs.PackageGraph.G.nb_edges graph);
+  debug "strong dep graph: %d nodes, %d edges"
+    (Defaultgraphs.PackageGraph.G.nb_vertex graph)
+    (Defaultgraphs.PackageGraph.G.nb_edges graph);
   Util.Timer.stop strongtimer graph
 ;;
 
 let strongdeps ?(transitive=true) univ pkglist =
   let size = Cudf.universe_size univ in
   let graph = Defaultgraphs.PackageGraph.G.create ~size () in
-  let g = strongdeps_int ~transitive graph univ pkglist in
-  g
+  strongdeps_int ~transitive graph univ pkglist
 ;;
 
 let strongdeps_univ ?(transitive=true) univ =
@@ -111,7 +113,9 @@ let strongdeps_univ ?(transitive=true) univ =
   in
   Util.Progress.reset conjbar;
   Util.Timer.stop conjtimer ();
-  debug "conj dep graph: nodes %d , edges %d" (Defaultgraphs.PackageGraph.G.nb_vertex graph) (Defaultgraphs.PackageGraph.G.nb_edges graph);
+  debug "conj dep graph: nodes %d , edges %d"
+    (Defaultgraphs.PackageGraph.G.nb_vertex graph)
+    (Defaultgraphs.PackageGraph.G.nb_edges graph);
   let g = strongdeps_int ~transitive graph univ l in
   (* because the graph might still be transitive *)
   (* if not transitive then O.transitive_reduction g; *)

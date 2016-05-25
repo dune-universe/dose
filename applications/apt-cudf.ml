@@ -393,14 +393,17 @@ let main () =
           | Some fieldvalue -> begin
               let matches = match compiledre with
                 | None when String.exists fieldvalue plain -> true (* plain text search *)
-                | Some compiledre when Pcre.pmatch ~rex:compiledre fieldvalue -> true (* regex match *)
+                | Some compiledre
+                  when Pcre.pmatch ~rex:compiledre fieldvalue -> true (* regex match *)
                 | _ -> false
               in
               match matches with
-              | true -> { acc with Cudf.pkg_extra = (cudffield, `Int 1) :: acc.Cudf.pkg_extra }
+              | true ->
+                  { acc with Cudf.pkg_extra = (cudffield, `Int 1) :: acc.Cudf.pkg_extra }
               | false -> acc (* no match *)
             end
-        ) regexfields p in
+        ) regexfields p 
+      in
       if not(Hashtbl.mem univ (p.Cudf.package,p.Cudf.version)) then begin
         Hashtbl.add univ (p.Cudf.package,p.Cudf.version) pkg;
         Some p
@@ -477,8 +480,16 @@ let main () =
   let solpre,soluniv = 
     (*let pp = CudfAdd.pp from_cudf in*)
     (*let from_cudf (p,v) = Debian.Debcudf.get_real_version tables (p,v) in*)
+    let dummy = { Algo.Depsolver.dummy_request with
+      Cudf.depends =
+        List.map (fun (_,pkglist) ->
+          List.map (fun pkg ->
+            (pkg.Cudf.package,Some(`Eq,pkg.Cudf.version))
+          ) pkglist
+        ) (Debcudf.get_essential tables) }
+    in
     let explain = false in
-    match Algo.Depsolver.check_request ~cmd:exec_pat ~criteria ~explain cudf with
+    match Algo.Depsolver.check_request ~cmd:exec_pat ~dummy ~criteria ~explain cudf with
     |Algo.Depsolver.Error s -> fatal "%s" s
     |Algo.Depsolver.Unsat None -> begin
       doseexit ();

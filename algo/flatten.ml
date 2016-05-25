@@ -17,7 +17,7 @@ let print_list fmt pr sep l =
 
 module Package = struct
   type t = int
-  let print univ fmt i = CudfAdd.pp_package fmt (CudfAdd.inttovar univ i)
+  let print univ fmt i = CudfAdd.pp_package fmt (CudfAdd.inttopkg univ i)
   let compare (x : int) y = compare x y
 end
 
@@ -316,7 +316,7 @@ let repository universe =
   let c = CudfAdd.init_conflicts universe in
   Cudf.iteri_packages (fun i p1 ->
     List.iter (fun p2 ->
-      let j = CudfAdd.vartoint universe p2 in
+      let j = CudfAdd.pkgtoint universe p2 in
       Conflict.add confl i j
     ) (CudfAdd.who_conflicts c universe p1);
 
@@ -325,7 +325,7 @@ let repository universe =
         let dl =
           List.fold_left (fun l2 vpkg ->
             let l = CudfAdd.who_provides universe vpkg in
-            List.fold_left (fun acc i -> (CudfAdd.vartoint universe i)::acc) l2 l
+            List.fold_left (fun acc i -> (CudfAdd.pkgtoint universe i)::acc) l2 l
           ) [] disjunction
         in 
         Formula.lit_disj (List.unique ~cmp dl)

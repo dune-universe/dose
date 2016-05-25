@@ -372,6 +372,7 @@ class type projection =
     method add : int -> unit
     method inttovar : int -> int
     method vartoint : int -> int
+    method size : int
   end
 
 (** associate a sat solver variable to a package id *)
@@ -379,6 +380,7 @@ class intprojection size = object
 
   val vartoint = IntHashtbl.create (2 * size)
   val inttovar = Array.make size 0
+  val size = size
   val mutable counter = 0
 
   (** add a package id to the map *)
@@ -397,11 +399,16 @@ class intprojection size = object
   method inttovar i =
     if (i >= size) then fatal "out of boundary i = %d size = %d" i size;
     inttovar.(i)
+
+  method size = size
 end
 
 class identity = object
-  method add (v : int) = ()
+  method add (v : int) =
+    warning "There is no point of adding element to the identity projection"; ()
   method vartoint (v : int) = v
   method inttovar (v : int) = v
+  method size =
+    warning "This is the identity projetion. size unknown"; 0
 end
 

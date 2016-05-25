@@ -124,7 +124,7 @@ let main () =
         Sources.sources2packages ~noindep:true ~profiles:[] native native origsourcelist
       else []
     in
-    let tables = Debian.Debcudf.init_tables (srclist@pkglist) in
+    let tables = Debian.Debcudf.init_tables ~options (srclist@pkglist) in
     let from_cudf (p,i) = Debian.Debcudf.get_real_version tables (p,i) in
     let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
     let srcl =
@@ -147,13 +147,18 @@ let main () =
       ) dll
     in
     let preamble = Debian.Debcudf.preamble in
-    (preamble,cll,srcl,from_cudf,to_cudf)
+    let global_constraints = Debian.Debcudf.get_essential ~options tables in
+    (preamble,cll,srcl,from_cudf,to_cudf,global_constraints)
   in
 
   let sources = OptParse.Opt.opt Options.sources in
-  let (preamble,pkgll,srclist,from_cudf,to_cudf) = deb_load_list options sources [fg;bg] in
+  let (preamble,pkgll,srclist,from_cudf,to_cudf,global_constraints) =
+    deb_load_list options sources [fg;bg]
+  in
 
-  let (fg_pkglist, bg_pkglist) = match pkgll with [fg;bg] -> (fg,bg) | _ -> assert false in
+  let (fg_pkglist, bg_pkglist) =
+    match pkgll with [fg;bg] -> (fg,bg) | _ -> assert false
+  in
 
   let fg_pkglist = 
     if OptParse.Opt.is_set Options.latest then
@@ -206,8 +211,6 @@ let main () =
     else
       Format.std_formatter
   in
-
-  let global_constraints = not(OptParse.Opt.get Options.deb_ignore_essential) in
 
   Util.Timer.start timer;
   let result = Depsolver.edos_coinstall ~global_constraints universe checklist in

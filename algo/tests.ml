@@ -244,6 +244,48 @@ let test_keep_version =
     "not installed" >:: (fun _ -> test false)
   ]
 
+
+let test_keep_broken =
+  "keep package broken" >:: (fun _ -> 
+    let a1 = { Cudf.default_package with 
+      Cudf.package = "a";
+      depends = [[("b",None)]];
+      installed = true;
+      keep = `Keep_package;
+    } in
+    let a2 = { Cudf.default_package with 
+      Cudf.package = "c";
+    } in
+    let universe = Cudf.load_universe [a1;a2] in
+    let d = Depsolver.edos_install universe a2 in
+    assert_bool "pass" (not(Diagnostic.is_solution d))
+  ) 
+
+let test_keep_multi =
+  "keep multi" >:: (fun _ -> 
+    let a1 = { Cudf.default_package with 
+      Cudf.package = "a";
+      version = 1;
+      installed = true;
+      keep = `Keep_package;
+    } in
+    let a2 = { Cudf.default_package with 
+      Cudf.package = "a";
+      version = 2;
+      conflicts = [("c",None)];
+      installed = true;
+      keep = `Keep_package;
+    } in
+    let c1 = { Cudf.default_package with 
+      Cudf.package = "c";
+    } in
+    let universe = Cudf.load_universe [a1;a2;c1] in
+    let d = Depsolver.edos_install universe c1 in
+    SetPKG.assert_equal 
+      (SetPKG.of_list [a1;c1])
+      (SetPKG.of_list (Diagnostic.get_installationset d))
+  ) 
+
 (* Like above but since the default for global_constraints is false
  * then a and b can be co-installed *)
 let test_coinst_negative_constraints =
@@ -264,10 +306,13 @@ let test_coinst_negative_constraints =
       keep = `Keep_package;
     } in
     let universe = Cudf.load_universe [a1;b1;c1] in
-    let d = Depsolver.edos_coinstall ~global_constraints:false universe [a1;b1] in
+    let d = Depsolver.edos_coinstall universe [a1;b1] in
+    assert_bool "pass" (not(Diagnostic.is_solution d))
+    (*
     SetPKG.assert_equal 
       (SetPKG.of_list [a1;b1])
       (SetPKG.of_list (Diagnostic.get_installationset d))
+  *)
   )
 
 let test_coinst_prod = 
@@ -301,45 +346,6 @@ let test_coinst_prod =
     assert_equal (List.sort resl) (List.sort res_expected)
   )
 
-let test_essential_broken =
-  "essential broken" >:: (fun _ -> 
-    let pkg1 = { Cudf.default_package with 
-      Cudf.package = "a";
-      depends = [[("b",None)]];
-      installed = true;
-      keep = `Keep_package;
-    } in
-    let pkg2 = { Cudf.default_package with 
-      Cudf.package = "c";
-    } in
-    let universe = Cudf.load_universe [pkg1;pkg2] in
-    let d = Depsolver.edos_install universe pkg2 in
-    assert_bool "pass" (not(Diagnostic.is_solution d))
-  ) 
-
-let test_essential_multi =
-  "essential multi" >:: (fun _ -> 
-    let pkg1a = { Cudf.default_package with 
-      Cudf.package = "a";
-      version = 1;
-      installed = true;
-      keep = `Keep_package;
-    } in
-    let pkg1b = { Cudf.default_package with 
-      Cudf.package = "a";
-      version = 2;
-      conflicts = [("c",None)];
-      installed = true;
-      keep = `Keep_package;
-    } in
-    let pkg2 = { Cudf.default_package with 
-      Cudf.package = "c";
-    } in
-    let universe = Cudf.load_universe [pkg1a;pkg1b;pkg2] in
-    let d = Depsolver.edos_install universe pkg2 in
-    assert_bool "pass" (Diagnostic.is_solution d)
-  ) 
-
 (* debian testing 18/11/2009 *)
 let test_distribcheck =
   "distribcheck" >:: (fun _ -> 
@@ -363,21 +369,20 @@ let test_selfprovide =
 
 let test_dependency_closure = 
   "dependency closure" >:: (fun _ -> 
-    let dependency_set = toset f_dependency in
+    let (_,pl,_) = Cudf_parser.parse_from_file f_dependency in
     let car = Cudf.lookup_package universe ("car",1) in
     let l = Depsolver.dependency_closure universe [car] in
-    (* List.iter (fun pkg -> print_endline (CudfAdd.print_package pkg)) l; *)
-    let set = List.fold_right S.add l S.empty in
-    assert_equal true (S.equal dependency_set set)
+    SetPKG.assert_equal 
+      (SetPKG.of_list pl)
+      (SetPKG.of_list l)
   )
 
 let test_conjunctive_dependency_closure =
   "dependency closure conjunctive" >:: (fun _ ->
     List.iter (fun pkg ->
+      (*Printf.eprintf "%s\n%!" (CudfAdd.string_of_package pkg);*)
       let dcl = Depsolver.dependency_closure ~conjunctive:true universe [pkg] in
-(*      print_endline (CudfAdd.print_package pkg);
-      List.iter (fun pkg -> print_endline (CudfAdd.print_package pkg)) dcl;
-      print_newline (); *)
+      (*List.iter (fun pkg -> Printf.eprintf "%s\n%!" (CudfAdd.string_of_package pkg)) dcl;*)
       let d = Depsolver.edos_coinstall universe dcl in
       match d.Diagnostic.result with
       |Diagnostic.Success _ -> assert_bool "pass" true
@@ -390,17 +395,13 @@ let test_conjunctive_dependency_closure =
 
 let test_conj_dependency = 
   "conjunctive dependency closure" >:: (fun _ -> 
-    let conj_dependency_set = toset f_conj_dependency in
+    let (_,pl,_) = Cudf_parser.parse_from_file f_conj_dependency in
     let pkg = Cudf.lookup_package universe ("bicycle",7) in
     let g = Strongdeps.conjdeps universe [pkg] in
     let l = Defaultgraphs.PackageGraph.conjdeps g pkg in
-    (*
-    List.iter (fun pkg ->
-      print_endline (CudfAdd.string_of_package pkg)
-      ) l;
-    *)
-    let set = List.fold_right S.add l S.empty in
-    assert_equal true (S.equal conj_dependency_set set)
+    SetPKG.assert_equal 
+      (SetPKG.of_list pl)
+      (SetPKG.of_list l)
   )
 
 let test_reverse_dependencies =
@@ -411,11 +412,10 @@ let test_reverse_dependencies =
     let battery = Cudf.lookup_package universe ("battery",3) in
     let h = Depsolver.reverse_dependencies universe in
     let l = CudfAdd.Cudf_hashtbl.find h battery in
-    let set = List.fold_right S.add l S.empty in
-    let rev_dependency_set =
-      List.fold_right S.add [car;electric_engine1;electric_engine2] S.empty
-    in
-    assert_equal true (S.equal rev_dependency_set set)
+    let pl = [car;electric_engine1;electric_engine2] in
+    SetPKG.assert_equal 
+      (SetPKG.of_list pl)
+      (SetPKG.of_list l)
   )
 
 let test_reverse_dependency_closure =
@@ -425,11 +425,10 @@ let test_reverse_dependency_closure =
     let window = Cudf.lookup_package universe ("window",3) in
     let door = Cudf.lookup_package universe ("door",2) in
     let l = Depsolver.reverse_dependency_closure universe [glass] in
-    let set = List.fold_right S.add l S.empty in
-    let rev_dependency_set =
-      List.fold_right S.add [car;glass;door;window] S.empty
-    in
-    assert_equal true (S.equal rev_dependency_set set)
+    let pl = [car;glass;door;window] in
+    SetPKG.assert_equal 
+      (SetPKG.of_list pl)
+      (SetPKG.of_list l)
   )
 
 (*
@@ -525,8 +524,8 @@ let test_depsolver =
     test_coinst_constraints ;
     test_coinst_negative_constraints ;
     test_trim ;
-    test_essential_broken ;
-    test_essential_multi ;
+    test_keep_broken ;
+    test_keep_multi ;
     test_distribcheck ;
     test_selfprovide ;
     test_dependency_closure ;

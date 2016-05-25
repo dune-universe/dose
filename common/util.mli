@@ -182,6 +182,7 @@ class type projection =
     method inttovar : int -> int
     (** given a sat solver variable return a package id *)
     method vartoint : int -> int
+    method size : int
   end
 
 (** identity projection *)

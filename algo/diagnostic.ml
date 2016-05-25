@@ -27,7 +27,7 @@ type result_int =
   |SuccessInt of (?all:bool -> unit -> int list)
   |FailureInt of (unit -> reason_int list)
 
-type request_int = (int option * int list)
+type request_int = int list
 
 (** One un-installability reason for a package *)
 type reason =
@@ -62,14 +62,14 @@ type result =
 type diagnosis = { result : result ; request : request }
 
 let reason map universe =
-  let from_sat = CudfAdd.inttovar universe in
-  let globalid = Cudf.universe_size universe in
+  let from_sat = CudfAdd.inttopkg universe in
+  let globalid = map#vartoint (Cudf.universe_size universe) in
   List.filter_map (function
     |DependencyInt(i,vl,il) when i = globalid -> None
     |MissingInt(i,vl) when i = globalid ->
-        fatal "the package encoding global constraints can't be missing"
+        fatal "the package encoding global constraints can't be missing (uid %d)" i
     |ConflictInt(i,j,vpkg) when i = globalid || j = globalid ->
-        fatal "the package encoding global constraints can't be in conflict"
+        fatal "the package encoding global constraints can't be in conflict (uid %d - %d)" i j
 
     |DependencyInt(i,vl,il) -> Some (
         Dependency(from_sat (map#inttovar i),vl,List.map (fun i -> from_sat (map#inttovar i)) il)
@@ -83,14 +83,14 @@ let reason map universe =
   )
 
 let result map universe result =
-  let from_sat = CudfAdd.inttovar universe in
-  let globalid = Cudf.universe_size universe in
+  let from_sat = CudfAdd.inttopkg universe in
+  let globalid = map#vartoint (Cudf.universe_size universe) in
   match result with
   |SuccessInt f_int ->
       Success (fun ?(all=false) () ->
         List.filter_map (function
           |i when i = globalid -> None
-          |i -> Some ({(from_sat i) with Cudf.installed = true})
+          |i -> Some ({(from_sat (map#inttovar i)) with Cudf.installed = true})
         ) (f_int ~all ())
       )
   |FailureInt f -> Failure (fun () ->
@@ -98,7 +98,7 @@ let result map universe result =
 ;;
 
 let request universe result =
-  List.map (CudfAdd.inttovar universe) (snd result)
+  List.map (CudfAdd.inttopkg universe) result
 ;;
 
 (* XXX here the threatment of result and request is not uniform.
@@ -109,7 +109,7 @@ let request universe result =
  * Ideally the compiler should make sure that we use the correct indexes
  * but we should annotate everything making packing/unpackaing handling
  * a bit too heavy *)
-let diagnosis map universe ( res : result_int ) req : diagnosis =
+let diagnosis map universe res req =
   let result = result map universe res in
   let request = request universe req in
   { result = result ; request = request }

@@ -96,7 +96,7 @@ let timer = Util.Timer.create "Solver"
 
 (* the repository should contain only the most recent version of each
    package *)
-let future ?options ?(checklist=[]) repository =
+let future ~options ?(checklist=[]) repository =
 
   let worktable = Hashtbl.create 1024 in
   let version_acc = ref [] in
@@ -155,7 +155,7 @@ let future ?options ?(checklist=[]) repository =
   info "Total Names: %d" (Hashtbl.length worktable);
   info "Total versions: %d" (List.length versionlist);
 
-  let tables = Debian.Debcudf.init_tables ~step:2 ~versionlist repository in
+  let tables = Debian.Debcudf.init_tables ~options ~step:2 ~versionlist repository in
   let getv v = Debian.Debcudf.get_cudf_version tables ("",v) in
 
   let pkgset = 
@@ -165,7 +165,7 @@ let future ?options ?(checklist=[]) repository =
       let acc0 = 
         (* by assumption all packages in a cluster are syncronized *)
         List.fold_left (fun l pkg ->
-          let p = Debian.Debcudf.tocudf ?options tables pkg in
+          let p = Debian.Debcudf.tocudf ~options tables pkg in
           CudfAdd.Cudf_set.add (sync (sn,version,1) p) l
         ) acc0 cluster
       in
@@ -173,7 +173,7 @@ let future ?options ?(checklist=[]) repository =
       List.fold_left (fun acc1 (target,equiv) ->
         incr sync_index;
         List.fold_left (fun acc2 pkg ->
-          let p = Debian.Debcudf.tocudf ?options tables pkg in
+          let p = Debian.Debcudf.tocudf ~options tables pkg in
           let pv = p.Cudf.version in
 
           let target = Debian.Evolution.align pkg#version target in
@@ -207,9 +207,9 @@ let outdated
   ?(explain=false) 
   ?(summary=false)
   ?(checklist=None) 
-  ?options repository =
+  ~options repository =
 
-  let universe, tables = future ?options repository in
+  let universe, tables = future ~options repository in
  
   let universe_size = Cudf.universe_size universe in
   info "Total future: %d" universe_size;
@@ -279,9 +279,9 @@ let outdated
   Util.Timer.start timer;
   let broken =
     if checklist <> [] then
-      Depsolver.listcheck ~callback ~global_constraints:false universe checklist
+      Depsolver.listcheck ~callback universe checklist
     else
-      Depsolver.univcheck ~callback ~global_constraints:false universe
+      Depsolver.univcheck ~callback universe
   in
   ignore(Util.Timer.stop timer ());
 
