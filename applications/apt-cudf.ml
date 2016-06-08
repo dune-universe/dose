@@ -478,8 +478,6 @@ let main () =
   let exec_pat = fst (parse_solver_spec (Filename.concat solver_dir solver)) in
 
   let solpre,soluniv = 
-    (*let pp = CudfAdd.pp from_cudf in*)
-    (*let from_cudf (p,v) = Debian.Debcudf.get_real_version tables (p,v) in*)
     let dummy = { Algo.Depsolver.dummy_request with
       Cudf.depends =
         List.map (fun (_,pkglist) ->

@@ -16,10 +16,16 @@ dose3 (5.0) UNRELEASED; urgency=low
  * improvements to the documentation and test units
  * add --compare to ceve when used with pef://
  * improvements to distcheck --lowmem
+ * StdOptions.lastest now returns an integer to consider only the last n versions
+   of each package
  * API change : CudfAdd.latest 
+ * API change : CudfAdd.inttovar -> CudfAdd.inttopkg
  * API change : add parameter to check_request and check_request_using 
  * apt-cudf : package up or downgrades are expressed in a single 
    "Install" request and that these do not show up as a "Remove" request anymore.
+ * StdOptions.DistribOptions.add_options are now different for each input ( ex.
+   StdOptions.DistribOptions.add_debian_options )uu
+ * Debian.Printer.pp_* functions are now methods of the Debian.package class
 
  -- Pietro Abate <pietro.abate@inria.fr>  Thur, 06 Jun 2016 13:13:06 +0200
 

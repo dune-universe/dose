@@ -46,9 +46,10 @@ module Options = struct
 
   include StdOptions.DistribOptions ;;
   let default =
-    List.fold_left (fun acc e ->
-      List.remove acc e
-    ) StdOptions.DistribOptions.default_options ["deb-host-arch";"deb-drop-b-d-indep";"deb-profiles"]
+    List.fold_left
+      List.remove
+      StdOptions.DistribOptions.default_options
+      ["deb-host-arch";"deb-drop-b-d-indep";"deb-profiles"]
   in
   StdOptions.DistribOptions.add_debian_options ~default options ;
   StdOptions.DistribOptions.add_opam_options ~default options ;;
