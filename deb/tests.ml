@@ -1071,8 +1071,10 @@ let test_essential_constraints =
         SETPKG.S.of_list l
       ) (Debcudf.get_essential ~options tables)
     in
+    let cc = Debcudf.tocudf ~options tables (List.find (fun p -> p#name = "cc" && p#version = "1") pkgl) in
+    let dd = Debcudf.tocudf ~options tables (List.find (fun p -> p#name = "dd" && p#version = "1") pkgl) in
     SetPKG.assert_equal
-      (SetPKG.of_list [])
+      (SetPKG.of_list [SETPKG.S.of_list [cc]; SETPKG.S.of_list [dd]])
       (SetPKG.of_list essential)
   )
 ;;
