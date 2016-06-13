@@ -235,7 +235,7 @@ let rpm_load_list dll =
 
 (** transform a list of rpm control stanza into a cudf universe *)
 let rpm_load_universe l =
-  let (pr,cll,r,f,t,w) = rpm_load_list [l] in
+  let (pr,cll,r,f,t,w,_) = rpm_load_list [l] in
   (pr,Cudf.load_universe (List.flatten cll), r, f, t, w)
 
 (** parse a cudf file and return a triple (preamble,package list,request
