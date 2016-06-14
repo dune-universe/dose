@@ -92,8 +92,6 @@ let version_of_target getv = function
   |`Lo v |`In (_,v) -> (getv v) - 1
 ;;
 
-let timer = Util.Timer.create "Solver"
-
 (* the repository should contain only the most recent version of each
    package *)
 let future ~options ?(checklist=[]) repository =
@@ -273,17 +271,16 @@ let outdated
   let results = Diagnostic.default_result universe_size in
   let callback d = 
     if summary then Diagnostic.collect results d ;
-    Diagnostic.fprintf ~pp ~failure ~explain fmt d 
+    if failure then
+      Diagnostic.fprintf ~pp ~failure ~explain fmt d 
   in
 
-  Util.Timer.start timer;
   let broken =
     if checklist <> [] then
-      Depsolver.listcheck ~callback universe checklist
+      Depsolver.listcheck ~callback ~explain universe checklist
     else
-      Depsolver.univcheck ~callback universe
+      Depsolver.univcheck ~callback ~explain universe
   in
-  ignore(Util.Timer.stop timer ());
 
   if failure then Format.fprintf fmt "@]@.";
 
@@ -306,8 +303,9 @@ let main () =
 
   StdDebug.enable_debug (OptParse.Opt.get Options.verbose);
   StdDebug.enable_bars (OptParse.Opt.get Options.progress)
-    ["Depsolver_int.univcheck";"Depsolver_int.init_solver"] ;
-  StdDebug.enable_timers (OptParse.Opt.get Options.timers) ["Solver"];
+  ["Depsolver_int.univcheck";"Depsolver_int.init_solver"];
+  StdDebug.enable_timers (OptParse.Opt.get Options.timers)
+    ["Algo.Depsolver.solver"; "Algo.Depsolver.init" ] ;
   StdDebug.all_quiet (OptParse.Opt.get Options.quiet);
 
   let checklist = OptParse.Opt.opt Options.checkonly in

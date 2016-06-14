@@ -240,19 +240,6 @@ let main () =
     let nbp =
       if (OptParse.Opt.is_set Options.checkonly) && (List.length checklist) = 0 then 0
       else if OptParse.Opt.is_set Options.checkonly || not(bg_pkglist = []) then 
-        (*
-        let subuniverse =
-          let l =
-            Cudf.fold_packages (fun acc pkg ->
-                match pkg.Cudf.keep with
-                |`Keep_package |`Keep_version | `Keep_feature 
-                  when pkg.Cudf.installed -> pkg::acc
-                |_ -> acc
-            ) checklist universe
-          in
-          Cudf.load_universe (CudfAdd.cone universe l)
-        in
-        *)
         Depsolver.listcheck ~global_constraints ~callback ~explain universe checklist
       else
         univcheck ~global_constraints ~callback ~explain universe 

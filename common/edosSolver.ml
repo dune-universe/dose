@@ -12,6 +12,7 @@
 (*  library, see the COPYING file for more information.                                *)
 (***************************************************************************************)
 
+
 module type S = sig
   type reason
 end
@@ -54,6 +55,27 @@ module IntHash =
     let equal = (=)
     let hash i = i
   end)
+
+open ExtLib
+(*
+let (@) l1 l2 =
+  let rec geq = function
+    |[],[] -> true
+    |_::_,[] -> true
+    |[],_::_ -> false
+    |_::r1,_::r2 -> geq (r1,r2)
+  in 
+  if geq (l1,l2) then List.append l2 l1 else List.append l1 l2
+*)
+
+(* join two lists ignoring the order *)
+let (@) l1 l2 =
+  let rec aux l1 l2 acc =
+    match (l1,l2) with
+    |x::r1,y::r2 -> aux r1 r2 (x::y::acc)
+    |l1,[] -> List.fold_left (fun accu x -> x::accu) l1 acc
+    |[],l2 -> List.fold_left (fun accu x -> x::accu) l2 acc
+  in aux l1 l2 []
 
 module M (X : S) = struct
 
@@ -442,10 +464,6 @@ module M (X : S) = struct
       reasons := !r.reasons @ !reasons;
       for i = 0 to Array.length !r.all_lits - 1 do
         let p = !r.all_lits.(i) in
-(*
-      for i = 0 to Array.length !r.lits - 1 do
-        let p = !r.lits.(i) in
-*)
         let x = var_of_lit p in
         if  st.st_seen_var.(x) <> st.st_seen then begin
           assert (val_of_lit st p = False);

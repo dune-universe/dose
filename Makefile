@@ -10,7 +10,8 @@ DIST_TARBALL = $(DIST_DIR).tar.gz
 #VERBOSE := -classic-display
 OBFLAGS := $(VERBOSE) -j 10 -no-links -cflags -warn-error,FPSXY
 APPFLAGS := $(VERBOSE) -j 10
-#OBFLAGS := $(OBFLAGS) -tag profile -tag debug
+#OBFLAGS := $(OBFLAGS) -tag debug
+#OBFLAGS := $(OBFLAGS) -tag profile
 #OBFLAGS := $(OBFLAGS) -classic-display
 
 addnotrpm:
