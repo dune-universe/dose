@@ -10,25 +10,9 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-(** Dependency solver. Low Level API *)
-
-(** Implementation of the EDOS algorithms (and more).
-    This module respects the cudf semantic. 
-
-    This module contains two type of functions.
-    Normal functions work on a cudf universe. These are just a wrapper to
-    _cache functions.
-
-    _cache functions work on a pool of ids that is a more compact
-    representation of a cudf universe based on arrays of integers.
-    _cache function can be used to avoid recreating the pool for each
-    operation and therefore speed up operations.
-*)
-
 open ExtLib
 open Common
 
-(** progress bar *)
 let progressbar_init = Util.Progress.create "Depsolver_int.init_solver"
 let progressbar_univcheck = Util.Progress.create "Depsolver_int.univcheck"
 
@@ -39,20 +23,19 @@ include Util.Logging(struct let label = label end) ;;
 module R = struct type reason = Diagnostic.reason_int end
 module S = EdosSolver.M(R)
 
-(** low level solver data type *)
 type solver = {
-  constraints : S.state; (** the sat problem *)
-  map : Util.projection; (** a map from cudf package ids to solver ids *)
-  globalid : int (* the last index of the cudfpool. 
-                    Used to encode a 'dummy' package and to enforce global
-                    constraints *)
+  constraints : S.state;
+  map : Util.projection;
+  globalid : (bool * bool) * int
 }
+
+type global_constraints = (Cudf_types.vpkglist * int list) list
 
 type dep_t = 
   ((Cudf_types.vpkg list * S.var list) list * 
    (Cudf_types.vpkg * S.var list) list ) 
 and pool = dep_t array
-and t = [`SolverPool of pool | `CudfPool of pool]
+and t = [`SolverPool of pool | `CudfPool of (bool * pool)]
 
 type result =
   |Success of (unit -> int list)
@@ -60,7 +43,7 @@ type result =
 
 (* cudf uid -> cudf uid array . Here we assume cudf uid are sequential
    and we can use them as an array index *)
-let init_pool_univ ?global_constraints univ =
+let init_pool_univ ~global_constraints univ =
   (* the last element of the array *)
   let size = Cudf.universe_size univ in
   let keep = Hashtbl.create 200 in
@@ -117,17 +100,14 @@ let init_pool_univ ?global_constraints univ =
   let keep_dll =
     Hashtbl.fold (fun cnstr {contents = l} acc ->
       ([cnstr],l) :: acc
-    ) keep (
-      if Option.is_none global_constraints then []
-      else Option.get global_constraints
-    )
+    ) keep global_constraints
   in
   pool.(size) <- (keep_dll,[]);
-  (`CudfPool pool)
+  (`CudfPool (keep_dll <> [],pool))
 
 (** this function creates an array indexed by solver ids that can be 
     used to init the edos solver *)
-let init_solver_pool map (`CudfPool cudfpool) closure =
+let init_solver_pool map (`CudfPool (keep_constraints,cudfpool)) closure =
   let convert (dll,cl) =
     let sdll = 
       List.map (fun (vpkgs,uidl) ->
@@ -258,9 +238,16 @@ let solve ?tested ~explain solver request =
       else
         Diagnostic.FailureInt(fun () -> [])
   in
-  (* the global id "package" is always co-installed *)
-  let il = List.map solver.map#vartoint (solver.globalid :: request) in
-  result S.solve_lst S.collect_reasons_lst il
+  match request,solver.globalid with
+  |[],((false,false),_) -> Diagnostic.SuccessInt(fun ?(all=false) () -> [])
+  |[],(((_,true)|(true,_)),gid) -> result S.solve S.collect_reasons (solver.map#vartoint gid)
+  |[i],((false,false),_) -> result S.solve S.collect_reasons (solver.map#vartoint i)
+  |l,((false,false),_) ->
+      let il = List.map solver.map#vartoint l in
+      result S.solve_lst S.collect_reasons_lst il
+  |l,(_,gid) ->
+      let il = List.map solver.map#vartoint (gid :: l) in
+      result S.solve_lst S.collect_reasons_lst il
 
 (* this function is used to "distcheck" a list of packages. The id is a cudfpool index *)
 let pkgcheck callback explain solver tested id =
@@ -298,15 +285,17 @@ let pkgcheck callback explain solver tested id =
     @param buffer debug buffer to print out debug messages
     @param univ cudf package universe
 *)
-let init_solver_univ ?global_constraints ?(buffer=false) ?(explain=true) univ =
+let init_solver_univ ~global_constraints ?(buffer=false) ?(explain=true) univ =
   let map = new Util.identity in
   (* here we convert a cudfpool in a varpool. The assumption
    * that cudf package identifiers are contiguous is essential ! *)
-  let `CudfPool pool = init_pool_univ ?global_constraints univ in
+  let `CudfPool (keep_constraints,pool) = init_pool_univ ~global_constraints univ in
   let varpool = `SolverPool pool in
   let constraints = init_solver_cache ~buffer ~explain varpool in
-  let globalid = Cudf.universe_size univ in
-  { constraints = constraints ; map = map; globalid = globalid }
+  let gid = Cudf.universe_size univ in
+  let global_constraints = global_constraints <> [] in
+  { constraints = constraints ; map = map;
+    globalid = ((keep_constraints,global_constraints),gid) }
 
 (** low level constraint solver initialization
  
@@ -315,13 +304,19 @@ let init_solver_univ ?global_constraints ?(buffer=false) ?(explain=true) univ =
     @param closure subset of packages used to initialize the solver
 *)
 (* pool = cudf pool - closure = dependency clousure . cudf uid list *)
-let init_solver_closure ?(buffer=false) (`CudfPool cudfpool) closure =
-  let globalid = Array.length cudfpool - 1 in
+let init_solver_closure ~global_constraints ?(buffer=false) 
+  (`CudfPool (keep_constraints,cudfpool)) closure =
+  let gid = Array.length cudfpool - 1 in
+  let global_constraints = global_constraints <> [] in
   let map = new Util.intprojection (List.length closure) in
   List.iter map#add closure;
-  let varpool = init_solver_pool map (`CudfPool cudfpool) closure in
+  let varpool =
+    init_solver_pool map
+      (`CudfPool (keep_constraints,cudfpool)) closure
+  in
   let constraints = init_solver_cache ~buffer varpool in
-  { constraints = constraints ; map = map; globalid = globalid }
+  { constraints ; map = map;
+    globalid = ((keep_constraints,global_constraints),gid) }
 
 (** return a copy of the state of the solver *)
 let copy_solver solver =
@@ -350,7 +345,7 @@ let reverse_dependencies univ =
   reverse
 
 let dependency_closure_cache ?(maxdepth=max_int) 
-  ?(conjunctive=false) (`CudfPool cudfpool) idlist =
+  ?(conjunctive=false) (`CudfPool (_,cudfpool)) idlist =
   let queue = Queue.create () in
   let globalid = (Array.length cudfpool - 1) in
   let visited = Hashtbl.create (2 * (List.length idlist)) in

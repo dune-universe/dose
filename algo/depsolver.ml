@@ -88,11 +88,16 @@ let listcheck ?(global_constraints=[]) ?callback ?(explain=true) universe pkglis
     let tested = Array.make size false in
     Util.Progress.set_total Depsolver_int.progressbar_univcheck size ;
     let check = Depsolver_int.pkgcheck callback explain solver tested in
-    List.iter (function
-      |id when solver.Depsolver_int.globalid = None ||
-              (Option.get solver.Depsolver_int.globalid) = id -> ()
-      |id -> if not(check id) then incr failed
-    ) idlist ;
+    begin match (fst solver.Depsolver_int.globalid) with
+    |(false,false) ->
+        List.iter (fun id -> if not(check id) then incr failed) idlist
+    |_ -> 
+        let gid = snd solver.Depsolver_int.globalid in
+        List.iter (function
+          |id when id = gid -> ()
+          |id ->if not(check id) then incr failed
+        ) idlist 
+    end;
     Util.Timer.stop timer_solver !failed
   in
   let idlist = List.map (CudfAdd.pkgtoint universe) pkglist in
@@ -167,8 +172,8 @@ let univcheck_lowmem ?(global_constraints=[]) ?callback ?(explain=true) universe
 let edos_install_cache univ cudfpool pkglist =
   let idlist = List.map (CudfAdd.pkgtoint univ) pkglist in
   let closure = Depsolver_int.dependency_closure_cache cudfpool idlist in
-  let solver = Depsolver_int.init_solver_closure cudfpool closure in
-  let res = Depsolver_int.solve solver ~explain:true idlist in
+  let solver = Depsolver_int.init_solver_closure ~global_constraints:[] cudfpool closure in
+  let res = Depsolver_int.solve solver  ~explain:true idlist in
   Diagnostic.diagnosis solver.Depsolver_int.map univ res idlist
 ;;
 
@@ -550,7 +555,7 @@ let depclean ?(global_constraints=[]) ?(callback=(fun _ -> ())) universe pkglist
   (* if a package p depends on a package that make p uninstallable, then it 
      can be removed. If p depends on a missing package, the dependency can
      be equally removed *)
-  let test_depends univ (`CudfPool pool) pkg l =
+  let test_depends univ (`CudfPool (_,pool)) pkg l =
     List.fold_left (fun acc -> function
       |(vpkglist,vpkg,_,[]) -> (vpkglist,vpkg,[])::acc
       |(vpkglist,vpkg,depends,l) ->

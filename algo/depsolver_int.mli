@@ -34,11 +34,17 @@ module S : Common.EdosSolver.T with module X = R
     sat solver variables (that must be contiguous) to integers 
     representing the id of a package *)
 type solver = {
-  constraints : S.state;        (** the sat problem *)
-  map : Common.Util.projection; (** a map from cudf package ids to solver ids *)
-  globalid : int                (** the last index of the cudfpool. Used to encode 
-                                    a 'dummy' package and to enforce global constraints *)
+  constraints : S.state;         (** the sat problem *)
+  map : Common.Util.projection;  (** a map from cudf package ids to solver ids *)
+  globalid : (bool * bool) * int (** (keep_constrains,global_constrains),gui) where
+                                     gid is the last index of the cudfpool. Used to encode 
+                                     a 'dummy' package and to enforce global constraints.
+                                     keep_constrains and global_constrains are true if either
+                                     keep_constrains or global_constrains are enforceble.
+                                  *)
 }
+
+type global_constraints = (Cudf_types.vpkglist * int list) list
 
 (** Solver Package Pool. [pool_t] is an array where each index
   is an solver variable and the content of the array associates
@@ -50,8 +56,10 @@ type dep_t =
 and pool = dep_t array
 (** A pool can either be a low level representation of the universe
     where all integers are interpreted as solver variables or a universe
-    where all integers are interpreted as cudf package indentifiers *)
-and t = [`SolverPool of pool | `CudfPool of pool]
+    where all integers are interpreted as cudf package indentifiers. The
+    boolean associate to the cudfpool is true if keep_constrains are 
+    present in the universe. *)
+and t = [`SolverPool of pool | `CudfPool of (bool * pool)]
 
 type result =
   | Success of (unit -> int list) (** return a function providing the list of the 
@@ -61,14 +69,12 @@ type result =
 
 (** Given a cudf universe , this function returns a [CudfPool]. 
     We assume that cudf uid are sequential and we can use them as an array index *)
-val init_pool_univ :
-  ?global_constraints:(Cudf_types.vpkglist * int list) list ->
-    Cudf.universe -> [> `CudfPool of pool]
+val init_pool_univ : global_constraints : global_constraints -> Cudf.universe -> [> `CudfPool of (bool * pool)]
 
 (** this function creates an array indexed by solver ids that can be 
     used to init the edos solver. Return a [SolverPool] *)
 val init_solver_pool : Common.Util.projection -> 
-  [< `CudfPool of pool] -> 'a list -> [> `SolverPool of pool]
+  [< `CudfPool of (bool * pool)] -> 'a list -> [> `SolverPool of pool]
 
 (** Initalise the sat solver. Operates only on solver ids [SolverPool] *)
 val init_solver_cache : ?buffer:bool -> ?explain:bool ->
@@ -99,8 +105,7 @@ val pkgcheck :
     @param buffer debug buffer to print out debug messages
     @param univ cudf package universe
 *)
-val init_solver_univ :
-  ?global_constraints:(Cudf_types.vpkglist * int list) list -> ?buffer: bool -> 
+val init_solver_univ : global_constraints : global_constraints -> ?buffer: bool -> 
     ?explain: bool -> Cudf.universe -> solver
 
 (** Constraint solver initialization
@@ -110,7 +115,8 @@ val init_solver_univ :
     @param closure subset of packages used to initialize the solver
 *)
 (* pool = cudf pool - closure = dependency clousure . cudf uid list *)
-val init_solver_closure : ?buffer:bool -> [< `CudfPool of pool] -> int list -> solver
+val init_solver_closure : global_constraints : global_constraints -> ?buffer:bool ->
+  [< `CudfPool of (bool * pool)] -> int list -> solver
 
 (** return a copy of the state of the solver *)
 val copy_solver : solver -> solver
@@ -123,7 +129,7 @@ val copy_solver : solver -> solver
 val reverse_dependencies : Cudf.universe -> int list array
 
 val dependency_closure_cache : ?maxdepth:int -> ?conjunctive:bool ->
-  [< `CudfPool of pool] -> int list -> S.var list
+  [< `CudfPool of (bool * pool)] -> int list -> S.var list
 
 (** return the dependency closure of the reverse dependency graph.
     The visit is bfs.    

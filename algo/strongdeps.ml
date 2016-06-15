@@ -41,7 +41,8 @@ let check_strong univ transitive graph solver p l =
   let pkg_p = CudfAdd.inttopkg univ p in
   List.iter (fun q ->
     let q = solver.Depsolver_int.map#inttovar q in
-    if q <> solver.Depsolver_int.globalid then
+    let gid = (snd solver.Depsolver_int.globalid) in
+    if q <> gid then
       let pkg_q = CudfAdd.inttopkg univ q in
       if p <> q then
         if not(Defaultgraphs.PackageGraph.G.mem_edge graph pkg_p pkg_q) then
@@ -50,7 +51,7 @@ let check_strong univ transitive graph solver p l =
   ) l
 
 (* true if at least one dependency is disjunctive *)
-let somedisj (`CudfPool cudfpool) id = 
+let somedisj (`CudfPool (_,cudfpool)) id = 
   let (depends,_) = cudfpool.(id) in
   if List.length depends > 0 then
     try
@@ -66,7 +67,8 @@ let somedisj (`CudfPool cudfpool) id =
    might be hidden in the closure.
 *)
 let strongdeps_int ?(transitive=true) graph univ pkglist =
-  let cudfpool = Depsolver_int.init_pool_univ univ in
+  let global_constraints = [] in
+  let cudfpool = Depsolver_int.init_pool_univ ~global_constraints univ in
   let pkglist_size = List.length pkglist in
   let universe_size = Cudf.universe_size univ in
 
@@ -78,7 +80,7 @@ let strongdeps_int ?(transitive=true) graph univ pkglist =
     let id = CudfAdd.pkgtoint univ pkg in
     if (pkglist_size <> universe_size) || (somedisj cudfpool id) then begin 
       let closure = Depsolver_int.dependency_closure_cache cudfpool [id] in
-      let solver = Depsolver_int.init_solver_closure cudfpool closure in
+      let solver = Depsolver_int.init_solver_closure ~global_constraints cudfpool closure in
       match Depsolver_int.solve solver ~explain:true [id] with
       |Diagnostic.FailureInt(_) -> ()
       |Diagnostic.SuccessInt(f_int) ->
