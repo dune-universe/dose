@@ -286,7 +286,7 @@ Add packages in I<file> to the background.
 =item B<--compare>
 
 When specified with a B<pef> file, select the comparison function used by the
-pef -> cudf enconding. Possible values are B<deb> 
+pef -> cudf encoding. Possible values are B<deb> 
 (<https://www.debian.org/doc/debian-policy/ch-controlfields.html#s-f-Version>) , 
 B<semver> (<http://semver.org/>) , B<npm> (<https://docs.npmjs.com/misc/semver>)
 
