@@ -1,4 +1,4 @@
-AC_INIT(dose3, 5.0~rc1, pietro.abate@inria.fr)
+AC_INIT(dose3, 5.0~rc2, pietro.abate@inria.fr)
 AC_COPYRIGHT(Copyright 2009-2016 Mancoosi Project)
 
 AC_CONFIG_MACRO_DIR([m4])
