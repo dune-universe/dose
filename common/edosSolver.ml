@@ -57,7 +57,7 @@ module IntHash =
   end)
 
 open ExtLib
-(*
+
 let (@) l1 l2 =
   let rec geq = function
     |[],[] -> true
@@ -66,16 +66,6 @@ let (@) l1 l2 =
     |_::r1,_::r2 -> geq (r1,r2)
   in 
   if geq (l1,l2) then List.append l2 l1 else List.append l1 l2
-*)
-
-(* join two lists ignoring the order *)
-let (@) l1 l2 =
-  let rec aux l1 l2 acc =
-    match (l1,l2) with
-    |x::r1,y::r2 -> aux r1 r2 (x::y::acc)
-    |l1,[] -> List.fold_left (fun accu x -> x::accu) l1 acc
-    |[],l2 -> List.fold_left (fun accu x -> x::accu) l2 acc
-  in aux l1 l2 []
 
 module M (X : S) = struct
 

@@ -35,6 +35,7 @@ dose3 (4.3) UNRELEASED; urgency=low
  * Make ocamlgraph a hard dependency of dose.
  * Switch to ocamlgraph based explanation graphs by default
  * add {foregin,native}-architecture field to distcheck output
+ * add essential cudf property only if really needed. Assuming default otherwise.
  * bump output-version to 1.2
  * add --lowmem option to distcheck (slow, but consumes less memory)
  * remove build-essential field from buildcheck
