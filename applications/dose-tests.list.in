@@ -141,6 +141,15 @@ Printer: text
 ExitCode: 0
 Speed: slow
 
+Name: distcheck_opam
+Group: distcheck
+Expected: tests/applications/dose-tests/opam_stack_overflow
+Input: opam://tests/opam/stack_overflow.opam
+Cmd: ./distcheck.@OCAMLEXT@ -f -e
+Type: distcheck
+Printer: text
+ExitCode: 1
+
 Name: failure_distcheck
 Group: distcheck
 Expected: tests/applications/dose-tests/distcheck_test_failure
