@@ -22,8 +22,6 @@ AC_CHECK_PROG(CPPO_CHECK,cppo,yes)
 if test x"$CPPO_CHECK" != x"yes" ; then
     AC_MSG_ERROR([You must install the cppo pre-processor to compile dose3])
 fi
-# this option cause problems with old versions of cppo
-CPPOFLAGS="-V OCAML:$OCAMLVERSION"
 
 AC_PROG_OCAMLLEX
 if test "$OCAMLEX" = "no"; then
@@ -267,7 +265,6 @@ AS_IF([test "${OCAML_OS_TYPE}" = "Win32"],[
 ])
 AC_SUBST(LN)
 
-AC_SUBST(CPPOFLAGS)
 AC_SUBST(CONFIG_ZIP)
 AC_SUBST(PKG_ZIP)
 AC_SUBST(ZIP)

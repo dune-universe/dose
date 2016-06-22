@@ -30,7 +30,7 @@ let lexbuf_wrapper type_parser v =
     match v with
     | (_, (_, package)) -> 
       let splited = Pcre.split (Pcre.regexp " : ") package in
-      let base64 = Bytes.to_string (Base64.str_encode (List.nth splited 1)) in
+      let base64 = (Base64.str_encode (List.nth splited 1)) in
       [[("", None), Some ("=", base64)]]
 
 let parse_dependlist v = lexbuf_wrapper Npm_parser.dependlist_top v ;;

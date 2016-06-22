@@ -646,7 +646,6 @@ CONFIG_PARMAP
 ZIP
 PKG_ZIP
 CONFIG_ZIP
-CPPOFLAGS
 LN
 OCAML_SYSTEM
 EGREP
@@ -3344,8 +3343,6 @@ fi
 if test x"$CPPO_CHECK" != x"yes" ; then
     as_fn_error $? "You must install the cppo pre-processor to compile dose3" "$LINENO" 5
 fi
-# this option cause problems with old versions of cppo
-CPPOFLAGS="-V OCAML:$OCAMLVERSION"
 
   # checking for ocamllex
   if test -n "$ac_tool_prefix"; then
@@ -5336,7 +5333,6 @@ else
   LN="ln -s"
 
 fi
-
 
 
 

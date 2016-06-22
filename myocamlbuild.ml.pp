@@ -2,11 +2,6 @@
 open Ocamlbuild_plugin;;
 
 Options.use_ocamlfind := true ;;
-#if OCAML_VERSION > (4, 1, 0)
-Ocamlbuild_pack.Flags.mark_tag_used "use_" ;;
-Ocamlbuild_pack.Flags.mark_tag_used "pkg_" ;;
-Ocamlbuild_pack.Flags.mark_tag_used "link_" ;;
-#endif
 
 let modules_dirs = [
   "common"; "versioning"; "pef"; "opam"; "npm"; "deb"; "opencsw"; "rpm"; "algo";

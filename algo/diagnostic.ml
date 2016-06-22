@@ -505,7 +505,7 @@ let print_error ?(condense=false) ?(minimal=false) pp root fmt l =
       type label = G.E.label
       type t = int
       type edge = G.E.t
-      let weight e = match G.E.label e with { contents = PkgE.Conflict _ } -> 1000 | _ -> 0
+      let weight = function { contents = PkgE.Conflict _ } -> 1000 | _ -> 0
       let compare = Pervasives.compare
       let add = (+)
       let zero = 0

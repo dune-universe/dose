@@ -1,12 +1,12 @@
 true: -traverse
 <{common,versioning,algo,doseparse,doseparseNoRpm,deb,opam,npm,opencsw,pef,rpm,applications,experimental}/**>: traverse
 
-<doseparseNoRpm/*.ml{i,}>: pp(cppo @CPPOFLAGS@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_OCAMLGRAPH@)
-<doseparse/*.ml{i,}>: pp(cppo @CPPOFLAGS@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_OCAMLGRAPH@)
+<doseparseNoRpm/*.ml{i,}>: pp(cppo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_OCAMLGRAPH@)
+<doseparse/*.ml{i,}>: pp(cppo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_OCAMLGRAPH@)
 
-<{common,algo,versioning}/*.ml{i,}>: pp(cppo @CPPOFLAGS@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_OCAMLGRAPH@)
+<{common,algo,versioning}/*.ml{i,}>: pp(cppo @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_OCAMLGRAPH@)
 
-<applications/*.ml> or <experimental/*/*.ml> or <experimental/*.ml>: pp(cppo @CPPOFLAGS@ @CONFIG_PARMAP@ @CONFIG_OCAMLGRAPH@)
+<applications/*.ml> or <experimental/*/*.ml> or <experimental/*.ml>: pp(cppo @CONFIG_PARMAP@ @CONFIG_OCAMLGRAPH@)
 
 <*/*.ml{i,}>: pp(cppo)
 <*/*.ml{i,}>: package(extlib), @PKG_CUDF@, package(re.pcre)
