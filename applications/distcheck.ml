@@ -133,7 +133,7 @@ let main () =
         fatal "Cannot find any package corresponding to the selector %s" 
         (Util.string_of_list ~sep:", " Pef.Printer.string_of_vpkg co)
       |l -> l
-    end else if bg_pkglist = [] then fg_pkglist else []
+    end else fg_pkglist
   in
 
   let coinstlist = 
