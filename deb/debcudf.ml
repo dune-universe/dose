@@ -224,13 +224,15 @@ let get_cudf_version tables (package,version) =
 let get_real_name name = 
   (* Remove --virtual- and architecture encoding *)
   let dn = (CudfAdd.decode name) in
-  if ExtString.String.starts_with dn "--vir" then
-    (ExtString.String.slice ~first:10 dn,None)
-  else
-    try
-      let (n,a) = ExtString.String.split dn ":" in
-      if n = "src" then (a,None) else (n,Some a)
-    with Invalid_string -> (dn,None)
+  let no_virtual =
+    if ExtString.String.starts_with dn "--vir"
+    then ExtString.String.slice ~first:10 dn
+    else dn
+  in
+  try
+    let (n,a) = ExtString.String.split no_virtual ":" in
+    if n = "src" then (a,None) else (n,Some a)
+  with Invalid_string -> (no_virtual,None)
 
 let get_real_version tables (cudfname,cudfversion) =
   let (debname,arch) = get_real_name cudfname in
