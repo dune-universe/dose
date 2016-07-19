@@ -28,6 +28,36 @@ let f_release = Filename.concat test_dir "DebianPackages/Release" ;;
 let f_discriminants = Filename.concat test_dir "deb/discriminants" ;;
 let f_essential = Filename.concat test_dir "deb/essential" ;;
 
+(* Useful test functions *)
+
+let returns_result ?(printer=(fun _ -> "(FIXME)")) function_to_test expected_result =
+  (fun args () -> assert_equal ~printer (function_to_test args) expected_result)
+and raises_failure function_to_test failure_text =
+  (fun args () -> assert_raises (Failure failure_text) (fun () -> function_to_test args) )
+
+(* let ch = Input.open_file f_packages ;; *)
+(* Extension of "bracket_tmpfile" function, filling
+    the temporary file with lines from the given list. *)
+let bracket_tmpfile_filled lines (test_fun : string -> unit)  =
+  bracket_tmpfile
+    (fun (file, ch) ->
+      List.iter (fun line ->
+        output_string ch (line ^ "\n")
+      ) lines;
+      close_out ch;
+      test_fun file
+    )
+;;
+
+(* Makes a list of test cases from a list of triplets:
+    (test_name, string_to_parse, assert_function) *)
+let make_test_cases triplets =
+  List.map (fun (test_name, input, assert_function) ->
+    test_name >:: assert_function input
+  ) triplets
+
+
+
 (* XXX TODO:
   * add test for default arch
   * add test for extras
@@ -215,6 +245,16 @@ let test_version =
     );
   ]
 ;;
+
+let test_realname =
+  let function_to_test = Debcudf.get_real_name in
+  let returns = returns_result function_to_test
+  in
+  [ ("none", "name", returns ("name",None) );
+    ("virtual simple", "--virtual-name", returns ("name",None) );
+    ("virtual arch", "--virtual-name:arch", returns ("name",Some "arch") );
+    ("virtual src", "--virtual-src:name", returns ("name",None) );
+  ] 
 
 let string_of_relop = function
   |`Eq -> "="
@@ -517,27 +557,6 @@ let test_mapping =
 
 (* Parsing tests *)
 
-(* Useful test functions *)
-
-let returns_result ?(printer=(fun _ -> "(FIXME)")) function_to_test expected_result =
-  (fun args () -> assert_equal ~printer (function_to_test args) expected_result)
-and raises_failure function_to_test failure_text =
-  (fun args () -> assert_raises (Failure failure_text) (fun () -> function_to_test args) )
-
-(* let ch = Input.open_file f_packages ;; *)
-(* Extension of "bracket_tmpfile" function, filling
-    the temporary file with lines from the given list. *)
-let bracket_tmpfile_filled lines (test_fun : string -> unit)  =
-  bracket_tmpfile
-    (fun (file, ch) ->
-      List.iter (fun line ->
-        output_string ch (line ^ "\n")
-      ) lines;
-      close_out ch;
-      test_fun file
-    )
-;;
-
 (* parse_inst *)
 
 (* List of triplets: (test_name, file_lines, expected_result) *)
@@ -699,13 +718,6 @@ let parse_pin_triplets =
   [ ("release 1", "release name1", returns (Apt.Pref.Release (Apt.parse_pref_labels "name1")));
     ("version 1", "version name1", returns (Apt.Pref.Version "name1"));
     ("origin 1",  "origin name1",  returns (Apt.Pref.Origin "name1")); ]
-
-(* Makes a list of test cases from a list of triplets:
-    (test_name, string_to_parse, assert_function) *)
-let make_test_cases triplets =
-  List.map (fun (test_name, input, assert_function) ->
-    test_name >:: assert_function input
-  ) triplets
 
 let test_parsing =
   "test_parsing" >::: [
@@ -1085,6 +1097,7 @@ let all =
     "test versioned provides" >::: make_test_cases test_versioned_provides;
     test_mapping ;
     test_conflicts;
+    "test real name" >::: make_test_cases test_realname;
     test_version;
     test_cluster;
     test_evolution;
