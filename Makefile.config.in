@@ -34,6 +34,10 @@ UNINSTALL=$(OCAMLFIND) remove -destdir $(LIBDIR)
 
 printconf:
 	@echo
+	@for i in "cudf re.pcre extlib ocamlgraph"; do \
+		m=`ocamlfind query -format "%p: %v" $$i`; \
+		echo "$$m\n"; \
+	done
 	@echo "DESTDIR: $(DESTDIR)"
 	@echo "OCAMLFIND_DESTDIR: $(OCAMLFIND_DESTDIR)"
 	@echo "Prefix: @prefix@"
