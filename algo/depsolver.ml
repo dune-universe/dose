@@ -431,8 +431,8 @@ let upgrade_constr universe name =
       in (name,Some(`Geq,p.Cudf.version))
 
 let check_request_using
-  ?call_solver ?criteria ?(dummy=dummy_request) ?(explain=false) (pre,universe,request) =
-  let intSolver ?(explain=false) universe request =
+  ?call_solver ?criteria ?dummy ?(explain=false) (pre,universe,request) =
+  let add_dummy universe request dummy =
     let deps = 
       let il = request.Cudf.install in
       (* we preserve the user defined constraints, while adding the upgrade constraint *)
@@ -461,27 +461,50 @@ let check_request_using
     (* XXX it should be possible to add a package to a cudf document ! *)
     let pkglist = Cudf.get_packages universe in
     let universe = Cudf.load_universe (dummy::pkglist) in
-    (dummy,edos_install universe dummy)
+    (universe,dummy)
   in
-  let callIntSolver ?(explain=false) (universe,request) =
-    let (dummy,d) = intSolver ~explain universe request in
+  let remove_dummy ?(explain=false) (dummy,d) =
     if Diagnostic.is_solution d then
-      let is = List.remove (Diagnostic.get_installationset d) dummy in
+      let is = List.remove_if (Cudf.(=%) dummy) (Diagnostic.get_installationset d) in
       Sat (Some pre,Cudf.load_universe is)
     else
       if explain then Unsat (Some d) else Unsat None
   in
-  match call_solver with
-  | None -> callIntSolver (universe,request)
-  | Some call_solver ->
-    try Sat(call_solver (pre,universe,request)) with
-    |CudfSolver.Unsat when not explain -> Unsat None
-    |CudfSolver.Unsat when explain -> begin
-        let sol = callIntSolver ~explain (universe,request) in
-        match sol with
-        |Sat _ -> warning "External and Internal Solver do not agree." ; sol
-        |_ -> sol end
-    |CudfSolver.Error s -> Error s
+  match call_solver,dummy with
+  |None,None ->
+      let (u,r) = add_dummy universe request dummy_request in
+      remove_dummy (r,edos_install u r)
+  |None,Some dummy ->
+      let (u,r) = add_dummy universe request dummy in
+      remove_dummy (r,edos_install u r)
+  |Some call_solver,None -> begin
+      try
+        let (presol,sol) = call_solver (pre,universe,request) in
+        Sat(presol,sol)
+      with
+      |CudfSolver.Unsat when not explain -> Unsat None
+      |CudfSolver.Unsat when explain ->
+          let (u,r) = add_dummy universe request dummy_request in
+          remove_dummy (r,edos_install u r)
+      end
+  |Some call_solver,Some dummy -> begin
+      let (u,dr) = add_dummy universe request dummy in
+      let dr_constr = (dr.Cudf.package,Some (`Eq,dr.Cudf.version)) in
+      let r = { request with Cudf.install = dr_constr::request.Cudf.install } in
+      try
+        let (presol,sol) = call_solver (pre,u,r) in
+        let is = List.remove_if (Cudf.(=%) dr) (Cudf.get_packages sol) in
+        Sat(presol,Cudf.load_universe is)
+      with
+        |CudfSolver.Unsat when not explain -> Unsat None
+        |CudfSolver.Unsat when explain -> begin
+            let (u,r) = add_dummy universe request dummy in
+            match remove_dummy (r,edos_install u r) with
+            |Sat _ as sol ->
+                warning "External and Internal Solver do not agree." ; sol
+            |sol -> sol end
+        |CudfSolver.Error s -> Error s
+      end
 ;;
 
 (** check if a cudf request is satisfiable. we do not care about

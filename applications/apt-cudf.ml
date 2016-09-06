@@ -98,7 +98,9 @@ let pp_pkg fmt (p,univ) =
     Format.fprintf fmt "Package: %s\n" pkg#name;
     Format.fprintf fmt "Version: %s\n" pkg#version;
     Format.fprintf fmt "Architecture: %s\n" pkg#architecture;
-  with Not_found -> fatal "apt-cudf internal error"
+  with Not_found -> 
+    fatal "apt-cudf internal error (Not found : %s)"
+      (Printf.sprintf "%s=%d" p.Cudf.package p.Cudf.version)
 
 let pp_pkg_list fmt (l,univ) =
   try 
@@ -106,13 +108,19 @@ let pp_pkg_list fmt (l,univ) =
       String.concat ", "
       (List.map (fun p ->
         let pkg = Hashtbl.find univ (p.Cudf.package,p.Cudf.version) in
-        Printf.sprintf "%s=%s/%s" 
-        pkg#name 
+        Printf.sprintf "%s=%s/%s"
+        pkg#name
         pkg#version
         pkg#architecture
       ) l)
     )
-  with Not_found -> fatal "apt-cudf internal error"
+  with Not_found ->
+    fatal "apt-cudf internal error (Not found : [%s])"
+      (String.concat ", "
+        (List.map (fun p ->
+          Printf.sprintf "%s=%d" p.Cudf.package p.Cudf.version
+        ) l)
+      )
 ;;
 
 let pp_pkg_list_tran fmt (l,univ) = pp_pkg_list fmt (List.map snd l,univ) ;;
