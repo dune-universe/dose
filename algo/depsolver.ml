@@ -463,19 +463,24 @@ let check_request_using
     let universe = Cudf.load_universe (dummy::pkglist) in
     (dummy,edos_install universe dummy)
   in
-  match call_solver with
-  | None ->
-    let (dummy,d) = intSolver universe request in
+  let callIntSolver ?(explain=false) (universe,request) =
+    let (dummy,d) = intSolver ~explain universe request in
     if Diagnostic.is_solution d then
       let is = List.remove (Diagnostic.get_installationset d) dummy in
       Sat (Some pre,Cudf.load_universe is)
     else
       if explain then Unsat (Some d) else Unsat None
+  in
+  match call_solver with
+  | None -> callIntSolver (universe,request)
   | Some call_solver ->
     try Sat(call_solver (pre,universe,request)) with
     |CudfSolver.Unsat when not explain -> Unsat None
-    |CudfSolver.Unsat when explain ->
-        Unsat (Some (snd(intSolver ~explain universe request)))
+    |CudfSolver.Unsat when explain -> begin
+        let sol = callIntSolver ~explain (universe,request) in
+        match sol with
+        |Sat _ -> warning "External and Internal Solver do not agree." ; sol
+        |_ -> sol end
     |CudfSolver.Error s -> Error s
 ;;
 
