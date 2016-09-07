@@ -131,6 +131,14 @@ Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf
 Type: edsp
 Printer: edsp
 
+Name: apt_cudf_essential
+Group: apt-cudf
+Expected: tests/applications/dose-tests/apt_cudf_essential_results
+Input: tests/deb/edsp/apt_cudf_essential.edsp
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf
+Type: edsp
+Printer: edsp
+
 Name: deb_coinstall_bug_16979
 Group: distcheck
 Expected: tests/applications/dose-tests/deb-coinstall-bug-16979
