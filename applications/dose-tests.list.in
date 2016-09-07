@@ -341,6 +341,16 @@ Printer: text
 ExitCode: 1
 Speed: slow
 
+Name: deb_buildcheck_explain_successes
+Group: buildcheck
+Expected: tests/applications/dose-tests/deb_buildcheck_explain_successes_results
+Input: tests/DebianPackages/Sid-amd64-Packages-050812.bz2 tests/DebianPackages/Sid-Sources-050812.bz2
+Cmd: ./deb-buildcheck.@OCAMLEXT@ --successes --explain --latest 1 --checkonly 3dchess --deb-native-arch=amd64
+Type: buildcheck
+Printer: text
+ExitCode: 0
+Speed: slow
+
 Name: deb_buildcheck_cross
 Group: buildcheck
 Expected: tests/applications/dose-tests/apt-get-build-dep-armel-results
