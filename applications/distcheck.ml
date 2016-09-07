@@ -221,7 +221,7 @@ let main () =
   Util.Timer.start timer;
 
   if (OptParse.Opt.is_set Options.coinst) && (List.length coinstlist) > 0 then begin
-    let rl = Depsolver.edos_coinstall_prod universe coinstlist in
+    let rl = Depsolver.edos_coinstall_prod ~global_constraints universe coinstlist in
     let nbt = List.length (List.filter (fun r -> not (Diagnostic.is_solution r)) rl) in
     let number_checks = List.length rl in 
     ignore(Util.Timer.stop timer ());
