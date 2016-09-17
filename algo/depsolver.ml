@@ -51,7 +51,7 @@ let univcheck ?(global_constraints=[]) ?callback ?(explain=true) universe =
      * universe as a package that must be tested like any other *)
     let size = (Cudf.universe_size univ) + 1 in
     let tested = Array.make size false in
-    Util.Progress.set_total Depsolver_int.progressbar_univcheck size ;
+    Util.Progress.set_total Depsolver_int.progressbar_univcheck (Cudf.universe_size univ) ;
     let check = Depsolver_int.pkgcheck callback explain solver tested in
     (* we do not test the last package that encodes the global constraints
      * on the universe as it is tested all the time with all other packages. *)
@@ -87,7 +87,7 @@ let listcheck ?(global_constraints=[]) ?callback ?(explain=true) universe pkglis
     let failed = ref 0 in
     let size = (Cudf.universe_size univ) + 1 in
     let tested = Array.make size false in
-    Util.Progress.set_total Depsolver_int.progressbar_univcheck size ;
+    Util.Progress.set_total Depsolver_int.progressbar_univcheck (List.length idlist) ;
     let check = Depsolver_int.pkgcheck callback explain solver tested in
     begin match (fst solver.Depsolver_int.globalid) with
     |(false,false) ->
