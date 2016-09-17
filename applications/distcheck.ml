@@ -15,14 +15,13 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open ExtLib
+open! ExtLib
 open Common
 open Algo
 open Doseparse
 
 module Options = struct
   open OptParse
-  open OptParser
   let description = "Compute the list broken packages in a repository"
   let options = OptParser.make ~description
   include StdOptions.MakeOptions(struct let options = options end)
@@ -88,7 +87,7 @@ let main () =
   let options = Options.set_options input_type in
   let (fg,bg) = Options.parse_cmdline (input_type,implicit) posargs in
 
-  let (preamble,pkgll,_,from_cudf,to_cudf,_,global_constraints) =
+  let (_,pkgll,_,from_cudf,to_cudf,_,global_constraints) =
     StdLoaders.load_list ~options [fg;bg]
   in
   let (fg_pkglist, bg_pkglist) =
@@ -207,7 +206,7 @@ let main () =
     let pp =
       if input_type = `Cudf then 
         fun pkg -> pp ~decode:(fun x -> x) pkg 
-      else fun pkg -> pp pkg
+      else fun pkg -> pp ?decode:None pkg
     in
     if summary then Diagnostic.collect results d ;
 
@@ -218,6 +217,7 @@ let main () =
     if failure || success then
       Diagnostic.fprintf ~pp ~failure ~success ~explain ~minimal ~condense fmt d
   in
+  let pp = pp ?decode:None in
   Util.Timer.start timer;
 
   if (OptParse.Opt.is_set Options.coinst) && (List.length coinstlist) > 0 then begin
