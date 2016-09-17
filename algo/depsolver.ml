@@ -56,6 +56,7 @@ let univcheck ?(global_constraints=[]) ?callback ?(explain=true) universe =
     (* we do not test the last package that encodes the global constraints
      * on the universe as it is tested all the time with all other packages. *)
     for id = 0 to size - 2 do if not(check id) then incr failed done;
+    Util.Progress.reset Depsolver_int.progressbar_univcheck;
     Util.Timer.stop timer_solver !failed
   in
   let map = new Common.Util.identity in
@@ -98,6 +99,7 @@ let listcheck ?(global_constraints=[]) ?callback ?(explain=true) universe pkglis
           |id ->if not(check id) then incr failed
         ) idlist 
     end;
+    Util.Progress.reset Depsolver_int.progressbar_univcheck;
     Util.Timer.stop timer_solver !failed
   in
   let idlist = List.map (CudfAdd.pkgtoint universe) pkglist in
