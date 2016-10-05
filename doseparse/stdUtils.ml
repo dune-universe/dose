@@ -77,8 +77,8 @@ let if_application ?(alternatives=[]) filename main =
   let normalize f = 
     let bf = Filename.basename f in
     try
-      if String.ends_with bf ".p.byte" then
-        String.slice ~last:(String.find bf ".p.byte") bf
+      if String.ends_with bf ".d.byte" then
+        String.slice ~last:(String.find bf ".d.byte") bf
       else if String.ends_with bf ".p.native" then
         String.slice ~last:(String.find bf ".p.native") bf
       else

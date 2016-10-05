@@ -214,6 +214,8 @@ module Progress = struct
     else warning "%s is an unbounded progress bar. Cannot set total" c.name
 
   let reset c =
+    (* we do not need to print a newline upon reset because a newline is
+     * already printed when the progress bar reaches 100% *)
     (* if c.enabled then Printf.eprintf "\n%!"; *)
     Buffer.clear c.buffer;
     c.perc <- 0;

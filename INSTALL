@@ -192,4 +192,8 @@ make testlib
 
 To run only the unit tests : make testlib
 
+To only run specific tests or groups of tests use unit and group parameters,
+respectively:
 
+make test group=distcheck
+make test unit=distcheck_coinst

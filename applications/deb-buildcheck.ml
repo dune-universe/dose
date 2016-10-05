@@ -10,7 +10,7 @@
 (*  library, see the COPYING file for more information.                               *)
 (**************************************************************************************)
 
-open ExtLib
+open! ExtLib
 open Debian
 open Common
 open Algo
@@ -140,9 +140,10 @@ let main () =
         end
   in
   let tables = Debcudf.init_tables (srclist @ pkglist) in
+  let global_constraints = Debian.Debcudf.get_essential ~options tables in
   let to_cudf (p,v) = (p,Debian.Debcudf.get_cudf_version tables (p,v)) in
   let from_cudf (p,v) = Debian.Debcudf.get_real_version tables (p,v) in
-  let pp = CudfAdd.pp from_cudf in 
+  let pp = CudfAdd.pp ?fields:None ?decode:None from_cudf in 
 
   (* XXX here latest could be a bit faster if done at the same time of the cudf
      conversion *)
@@ -212,21 +213,7 @@ let main () =
   in
 
   Util.Timer.start timer;
-  let subuniverse =
-    if checklist <> sl then
-      let l =
-        if not(OptParse.Opt.get Options.deb_ignore_essential) then
-          Cudf.fold_packages (fun acc pkg ->
-              match pkg.Cudf.keep with
-              |`Keep_package |`Keep_version  -> pkg::acc
-              |_ -> acc
-          ) checklist universe
-        else checklist
-      in
-      Cudf.load_universe (CudfAdd.cone universe l)
-    else universe
-  in
-  let nbp = Depsolver.listcheck ~callback ~explain subuniverse checklist in
+  let nbp = Depsolver.listcheck ~global_constraints ~callback ~explain universe checklist in
   ignore(Util.Timer.stop timer ());
 
   if failure || success then Format.fprintf fmt "@]@.";

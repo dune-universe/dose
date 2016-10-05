@@ -131,6 +131,14 @@ Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf
 Type: edsp
 Printer: edsp
 
+Name: apt_cudf_essential
+Group: apt-cudf
+Expected: tests/applications/dose-tests/apt_cudf_essential_results
+Input: tests/deb/edsp/apt_cudf_essential.edsp
+Cmd: ./apt-cudf.@OCAMLEXT@ -e --conf doc/apt-cudf/apt-cudf.conf
+Type: edsp
+Printer: edsp
+
 Name: deb_coinstall_bug_16979
 Group: distcheck
 Expected: tests/applications/dose-tests/deb-coinstall-bug-16979
@@ -261,6 +269,15 @@ Type: distcheck
 Printer: text
 ExitCode: 64
 
+Name: distcheck_coinst
+Group: distcheck
+Expected: /dev/null
+Input:  deb://tests/DebianPackages/sid.packages.bz2
+Cmd: ./distcheck.@OCAMLEXT@ -s -e --coinst "3dchess,supertuxkart"
+Type: distcheck
+Printer: text
+ExitCode: 0
+
 Name: failure_outdated
 Group: outdated
 Expected: tests/applications/dose-tests/outdated_failure
@@ -339,6 +356,16 @@ Cmd: ./deb-buildcheck.@OCAMLEXT@ --failures --explain --latest 1 --deb-native-ar
 Type: buildcheck
 Printer: text
 ExitCode: 1
+Speed: slow
+
+Name: deb_buildcheck_explain_successes
+Group: buildcheck
+Expected: tests/applications/dose-tests/deb_buildcheck_explain_successes_results
+Input: tests/DebianPackages/Sid-amd64-Packages-050812.bz2 tests/DebianPackages/Sid-Sources-050812.bz2
+Cmd: ./deb-buildcheck.@OCAMLEXT@ --successes --explain --latest 1 --checkonly 3dchess --deb-native-arch=amd64
+Type: buildcheck
+Printer: text
+ExitCode: 0
 Speed: slow
 
 Name: deb_buildcheck_cross

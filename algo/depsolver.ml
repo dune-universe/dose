@@ -51,11 +51,12 @@ let univcheck ?(global_constraints=[]) ?callback ?(explain=true) universe =
      * universe as a package that must be tested like any other *)
     let size = (Cudf.universe_size univ) + 1 in
     let tested = Array.make size false in
-    Util.Progress.set_total Depsolver_int.progressbar_univcheck size ;
+    Util.Progress.set_total Depsolver_int.progressbar_univcheck (Cudf.universe_size univ) ;
     let check = Depsolver_int.pkgcheck callback explain solver tested in
     (* we do not test the last package that encodes the global constraints
      * on the universe as it is tested all the time with all other packages. *)
     for id = 0 to size - 2 do if not(check id) then incr failed done;
+    Util.Progress.reset Depsolver_int.progressbar_univcheck;
     Util.Timer.stop timer_solver !failed
   in
   let map = new Common.Util.identity in
@@ -86,7 +87,7 @@ let listcheck ?(global_constraints=[]) ?callback ?(explain=true) universe pkglis
     let failed = ref 0 in
     let size = (Cudf.universe_size univ) + 1 in
     let tested = Array.make size false in
-    Util.Progress.set_total Depsolver_int.progressbar_univcheck size ;
+    Util.Progress.set_total Depsolver_int.progressbar_univcheck (List.length idlist) ;
     let check = Depsolver_int.pkgcheck callback explain solver tested in
     begin match (fst solver.Depsolver_int.globalid) with
     |(false,false) ->
@@ -98,6 +99,7 @@ let listcheck ?(global_constraints=[]) ?callback ?(explain=true) universe pkglis
           |id ->if not(check id) then incr failed
         ) idlist 
     end;
+    Util.Progress.reset Depsolver_int.progressbar_univcheck;
     Util.Timer.stop timer_solver !failed
   in
   let idlist = List.map (CudfAdd.pkgtoint universe) pkglist in
