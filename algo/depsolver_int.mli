@@ -58,7 +58,7 @@ and pool = dep_t array
     where all integers are interpreted as solver variables or a universe
     where all integers are interpreted as cudf package indentifiers. The
     boolean associate to the cudfpool is true if keep_constrains are 
-    present in the universe. *)
+    present in the universe. The last index of the pool is the globalid *)
 and t = [`SolverPool of pool | `CudfPool of (bool * pool)]
 
 type result =
@@ -68,7 +68,9 @@ type result =
                                                         failure explanations *)
 
 (** Given a cudf universe , this function returns a [CudfPool]. 
-    We assume that cudf uid are sequential and we can use them as an array index *)
+    We assume that cudf uid are sequential and we can use them as an array index.
+    The last index of the pool is the globalid.
+ *)
 val init_pool_univ : global_constraints : global_constraints -> Cudf.universe -> [> `CudfPool of (bool * pool)]
 
 (** this function creates an array indexed by solver ids that can be 
@@ -92,7 +94,7 @@ val solve :
 	Diagnostic.request_int ->
 		Diagnostic.result_int
 
-(* [pkgcheck callback solver tested id].
+(** [pkgcheck callback solver tested id].
    This function is used to "distcheck" a list of packages 
    *)
 val pkgcheck :
@@ -128,8 +130,15 @@ val copy_solver : solver -> solver
 *)
 val reverse_dependencies : Cudf.universe -> int list array
 
+(** [dependency_closure_cache pool l] return the union of the dependency closure of
+    all packages in [l] in the given pool of packages. The result always contains the
+    globalid.
+
+    @param maxdepth the maximum cone depth (infinite by default)
+    @param conjunctive consider only conjunctive dependencies (false by default)
+*)
 val dependency_closure_cache : ?maxdepth:int -> ?conjunctive:bool ->
-  [< `CudfPool of (bool * pool)] -> int list -> S.var list
+  [< `CudfPool of (bool * pool)] -> int list -> int list
 
 (** return the dependency closure of the reverse dependency graph.
     The visit is bfs.    

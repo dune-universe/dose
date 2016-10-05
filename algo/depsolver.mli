@@ -167,6 +167,9 @@ type solver_result =
 val dummy_request : Cudf.package
 
 (** [check_request] check if there exists a solution for the give cudf document 
+    if ?dummy is specified, adds this dummy package to the user request. This parameter
+    is used to encode a list of 'essential' packages that must always be installed in
+    the solution alongside with the user request.
     if ?cmd is specified, it will be used to call an external cudf solver to
     satisfy the request.
     if ?criteria is specified it will be used as optimization criteria. 
