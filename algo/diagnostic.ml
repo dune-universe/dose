@@ -539,7 +539,7 @@ let print_error ?(condense=false) ?(minimal=false) pp root fmt l =
     Format.fprintf fmt "@[<v 1>pkg:@,%a@]" 
       (pp_dependency_list ~label:"unsat-dependency" pp) (i,List.unique vpkgs);
     if not minimal then begin
-      let (pl,_) = DJ.shortest_path gr vroot vi in
+      let pl = try fst(DJ.shortest_path gr vroot vi) with Not_found -> [] in
       if pl <> [] then begin
         Format.fprintf fmt "@,@[<v 1>depchains:@,%a@]" (pp_dependencies pp) pl;
         Format.fprintf fmt "@]"
