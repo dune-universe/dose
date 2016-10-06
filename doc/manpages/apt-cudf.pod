@@ -118,7 +118,7 @@ A comma-separated list of foreign architectures to be used in the edsp -> cudf t
 Find a solution for installing the package ghc which minimizes the packages
 from experimental:
 
-	apt-get --simulate install --solver dump -o APT::Solver::Strict-Pinning=false ghc
+	APT_EDSP_DUMP_FILENAME=/tmp/dump.edsp apt-get --simulate install --solver dump -o APT::Solver::Strict-Pinning=false ghc
 	apt-cudf -v --solver=aspcud -c "-count(solution,APT-Release:=/a=experimental/),-removed,-changed,-new" /tmp/dump.edsp
 
 Usually apt-cudf is not called directly by the user but indirectly by apt-get.
