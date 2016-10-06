@@ -271,9 +271,9 @@ ExitCode: 64
 
 Name: distcheck_coinst
 Group: distcheck
-Expected: /dev/null
+Expected: tests/applications/dose-tests/distcheck_coinst
 Input:  deb://tests/DebianPackages/sid.packages.bz2
-Cmd: ./distcheck.@OCAMLEXT@ -s -e --coinst "3dchess,supertuxkart"
+Cmd: ./distcheck.@OCAMLEXT@ -s -e --coinst 3dchess,supertuxkart
 Type: distcheck
 Printer: text
 ExitCode: 0
