@@ -139,18 +139,16 @@ let main () =
     if OptParse.Opt.is_set Options.coinst then begin
       info "--coinst specified, consider all packages as background packages";
       let co = OptParse.Opt.get Options.coinst in
-      match
-        List.filter_map (fun ((n,a),c) ->
-          try
+      List.map (fun ((n,a),c) ->
+          match
             let (name,filter) = Pef.Pefcudf.pefvpkg to_cudf ((n,a),c) in
-            Some(Cudf.lookup_packages ~filter universe name)
-          with Not_found -> None
+            Cudf.lookup_packages ~filter universe name
+          with
+          |[] ->
+            fatal "Cannot find any package corresponding to the selector %s"
+              (Pef.Printer.string_of_vpkg ((n,a),c))
+          |l -> l
         ) co
-      with 
-      |[] ->
-        fatal "Cannot find any package corresponding to the selector %s" 
-        (Util.string_of_list ~sep:", " Pef.Printer.string_of_vpkg co)
-      |l -> l
     end else []
   in
   let fields = 
