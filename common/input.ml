@@ -29,7 +29,16 @@ let gzip_open_file file =
     fatal "gzip not supported. re-configure with --with-zip"
 #endif
 ;;
-
+    
+let xz_open_file file =
+  let ch = Unix.open_process_in ("xzcat "^ file) in
+  let read ch = try input ch with End_of_file -> raise IO.No_more_input in
+  IO.create_in
+  ~read:(fun () -> input_char ch)
+  ~input:(read ch)
+  ~close:(fun () -> close_in ch)
+;;
+  
 let bzip_open_file file =
 #ifdef HASBZ2
   (* workaround to avoid segfault :
@@ -85,7 +94,7 @@ let open_file file =
               | 0x37 -> (match input_byte ch with
                   | 0x7a -> (match input_byte ch with
                       | 0x58 -> (match input_byte ch with
-                          | 0x5a -> fatal "xz not supported."
+                          | 0x5a -> xz_open_file
                           | _ -> std_open_file)
                       | _ -> std_open_file)
                   | _ -> std_open_file)
