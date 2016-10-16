@@ -151,6 +151,19 @@ if test "$HAS_BZ2" = "yes" ; then
   BZ2=bz2
 fi
 
+AC_ARG_WITH(xz,
+        [ --with-xz ],
+        HAS_XZ=yes,
+        HAS_XZ=no)
+AC_SUBST(HAS_XZ)
+if test "$HAS_XZ" = "yes" ; then
+  AC_CHECK_PROG(XZCAT_CHECK,xzcat,yes)
+  if test x"$XZCAT_CHECK" != x"yes" ; then
+    AC_MSG_ERROR([xzcat Not Found. Please install the Debian package 'xz-utils'])
+  fi
+  CONFIG_XZ="-D HASXZ"
+fi
+
 AC_ARG_WITH(curl,
         [ --with-curl ],
         HAS_CURL=yes,
@@ -276,6 +289,7 @@ AC_SUBST(CONFIG_PARMAP)
 AC_SUBST(PKG_PARMAP)
 AC_SUBST(PARMAP)
 
+AC_SUBST(CONFIG_XZ)
 AC_SUBST(CONFIG_BZ2)
 AC_SUBST(PKG_BZ2)
 AC_SUBST(BZ2)

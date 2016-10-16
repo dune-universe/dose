@@ -4,7 +4,7 @@ true: -traverse
 <doseparseNoRpm/*.ml{i,}>: pp(cppo @CPPOFLAGS@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_OCAMLGRAPH@)
 <doseparse/*.ml{i,}>: pp(cppo @CPPOFLAGS@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_OCAMLGRAPH@)
 
-<{common,algo,versioning}/*.ml{i,}>: pp(cppo @CPPOFLAGS@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_OCAMLGRAPH@)
+<{common,algo,versioning}/*.ml{i,}>: pp(cppo @CPPOFLAGS@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_XZ@ @CONFIG_RPM@ @CONFIG_OCAMLGRAPH@)
 
 <applications/*.ml> or <experimental/*/*.ml> or <experimental/*.ml>: pp(cppo @CPPOFLAGS@ @CONFIG_PARMAP@ @CONFIG_OCAMLGRAPH@)
 

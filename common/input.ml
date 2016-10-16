@@ -31,12 +31,16 @@ let gzip_open_file file =
 ;;
     
 let xz_open_file file =
+#ifdef HASXZ
   let ch = Unix.open_process_in ("xzcat "^ file) in
   let read ch = try input ch with End_of_file -> raise IO.No_more_input in
   IO.create_in
   ~read:(fun () -> input_char ch)
   ~input:(read ch)
   ~close:(fun () -> close_in ch)
+#else
+    fatal "xz not supported. re-configure with --with-xz"
+#endif
 ;;
   
 let bzip_open_file file =
