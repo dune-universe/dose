@@ -4,7 +4,7 @@ apt-cudf.conf - Configuration file for apt-cudf
 
 =head1 DESCRIPTION
 
-The configuration file allows one to define default optimization criterias for
+The configuration file allows one to define default optimization criteria for
 all solvers known by apt-cudf
 
 =head1 SYNTAX

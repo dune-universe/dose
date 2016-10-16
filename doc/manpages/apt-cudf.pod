@@ -70,7 +70,7 @@ be converted into the optimization criteria language understood by the
 respective solver.
 
 As an extension to the MISC 2012 syntax, a variation of the count() measurement
-is supported by apt-cudf. The extension allows to minimize or maximize the
+is supported by apt-cudf. The extension allows one to minimize or maximize the
 number of packages in a set that have an EDSP field matching a regular
 expression. Two formats exist. The first searches for a plain string within the
 EDSP field value:
