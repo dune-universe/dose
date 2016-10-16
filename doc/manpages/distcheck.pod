@@ -231,13 +231,13 @@ B<opam>
 =item .
 
 B<deb> for Debian binary package files, also known as Packages files. Possibly
-compressed with L<gzip(1)> or L<bzip2(1)>, depending on compile-time options
+compressed with L<gzip(1)>, L<bzip2(1)> or L<xz(1)>, depending on compile-time options
 for dose3.
 
 =item .
 
 B<debsrc> for Debian source package files, also knows as Sources files.
-Possibly compressed with L<gzip(1)> or L<bzip2(1)>, depending on compile-time
+Possibly compressed with L<gzip(1)>, L<bzip2(1)> or L<xz>(1), depending on compile-time
 options for dose3.
 
 =item .
