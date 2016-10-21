@@ -354,6 +354,12 @@ module DistribOptions = struct
       (* if host arch is set, it is an implicit foreign arch *)
       if Opt.is_set deb_foreign_archs then begin
         let f = Opt.get deb_foreign_archs in
+        (* make the list unique *)
+        let f = List.unique f in
+        (* remove native arch and host arch from the list or otherwise we could
+         * have the situation where the native arch also appears as a foreign
+         * arch or where the host arch appears twice *)
+        let f = List.filter (fun e -> Some e <> host && Some e <> native) f in
         if Opt.is_set deb_host_arch then
           (Option.get host)::f
         else
