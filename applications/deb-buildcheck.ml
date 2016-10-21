@@ -191,17 +191,17 @@ let main () =
 
   Diagnostic.pp_out_version fmt;
 
-  if OptParse.Opt.is_set Options.deb_native_arch then
+  if Option.is_some options.Debian.Debcudf.native then
     Format.fprintf fmt "native-architecture: %s@."
-      (OptParse.Opt.get Options.deb_native_arch);
+      (Option.get options.Debian.Debcudf.native);
 
-  if OptParse.Opt.is_set Options.deb_foreign_archs then
+  if List.length options.Debian.Debcudf.foreign > 0 then
     Format.fprintf fmt "foreign-architecture: %s@."
-      (String.concat "," (OptParse.Opt.get Options.deb_foreign_archs));
+      (String.concat "," options.Debian.Debcudf.foreign);
 
-  if OptParse.Opt.is_set Options.deb_host_arch then
+  if Option.is_some options.Debian.Debcudf.host then
     Format.fprintf fmt "host-architecture: %s@."
-      (OptParse.Opt.get Options.deb_host_arch);
+      (Option.get options.Debian.Debcudf.host);
 
   let results = Diagnostic.default_result universe_size in
 

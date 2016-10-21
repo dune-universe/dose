@@ -190,14 +190,19 @@ let main () =
 
   Diagnostic.pp_out_version fmt;
 
-  if OptParse.Opt.is_set Options.deb_native_arch then
-    Format.fprintf fmt "native-architecture: %s@."
-	(OptParse.Opt.get Options.deb_native_arch);
- 
-  if OptParse.Opt.is_set Options.deb_foreign_archs then
-    Format.fprintf fmt "foreign-architecture: %s@."
-	(String.concat "," (OptParse.Opt.get Options.deb_foreign_archs));
- 
+  begin match options with
+    | Some (StdOptions.Deb o) | Some (StdOptions.Edsp o) -> begin
+        if Option.is_some o.Debian.Debcudf.native then
+          Format.fprintf fmt "native-architecture: %s@."
+            (Option.get o.Debian.Debcudf.native);
+
+        if List.length o.Debian.Debcudf.foreign > 0 then
+          Format.fprintf fmt "foreign-architecture: %s@."
+            (String.concat "," o.Debian.Debcudf.foreign);
+      end
+    | _ -> ()
+  end;
+
   if failure || success then Format.fprintf fmt "@[<v 1>report:@,";
 
   let callback d =
