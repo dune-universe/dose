@@ -33,66 +33,68 @@ let cpulist = ref [
 (* lines 35..41 *)  "ppc64"; "ppc64el"; "s390"; "s390x"; "sh3"; "sh3eb"; "sh4";
 (* lines 42..44 *)  "sh4eb"; "sparc"; "sparc64" ]
 
-(* from /usr/share/dpkg/triplettable
+(* from /usr/share/dpkg/tupletable
  *
  * the line numbers correspond to the line numbers in
- * /usr/share/dpkg/triplettable to be quickly able to find changes
+ * /usr/share/dpkg/tupletable to be quickly able to find changes
  *
- *   debian triplet (abi,os,cpu)      debian arch *)
-let triplettable = ref [
-  (("uclibceabi","linux","arm"),     "uclibc-linux-armel"); (* line 6  *)
-  (("uclibc","linux","<cpu>"),       "uclibc-linux-<cpu>");
-  (("musleabihf","linux","arm"),     "musl-linux-armhf");
-  (("musl","linux","<cpu>"),         "musl-linux-<cpu>");
-  (("gnueabihf","linux","arm"),      "armhf");              (* line 10 *)
-  (("gnueabi","linux","arm"),        "armel");
-  (("gnuabin32","linux","mips64el"), "mipsn32el");
-  (("gnuabin32","linux","mips64"),   "mipsn32");
-  (("gnuabi64","linux","mips64el"),  "mips64el");
-  (("gnuabi64","linux","mips64"),    "mips64");             (* line 15 *)
-  (("gnuspe","linux","powerpc"),     "powerpcspe");
-  (("gnux32","linux","amd64"),       "x32");
-  (("gnuhardened1","linux","<cpu>"), "hardened1-linux-<cpu>");
-  (("gnu","linux","<cpu>"),          "<cpu>");
-  (("gnu","kfreebsd","<cpu>"),       "kfreebsd-<cpu>");
-  (("gnu","knetbsd","<cpu>"),        "knetbsd-<cpu>");      (* line 20 *)
-  (("gnu","kopensolaris","<cpu>"),   "kopensolaris-<cpu>");
-  (("gnu","hurd","<cpu>"),           "hurd-<cpu>");
-  (("bsd","dragonflybsd","<cpu>"),   "dragonflybsd-<cpu>");
-  (("bsd","freebsd","<cpu>"),        "freebsd-<cpu>");
-  (("bsd","openbsd","<cpu>"),        "openbsd-<cpu>");      (* line 25 *)
-  (("bsd","netbsd","<cpu>"),         "netbsd-<cpu>");
-  (("bsd","darwin","<cpu>"),         "darwin-<cpu>");
-  (("sysv","solaris","<cpu>"),       "solaris-<cpu>");
-  (("uclibceabi","uclinux","arm"),   "uclinux-armel");
-  (("uclibc","uclinux","<cpu>"),     "uclinux-<cpu>");      (* line 30 *)
-  (("tos","mint","m68k"),            "mint-m68k");
-  (("gnu","linux","<cpu>"),          "linux-<cpu>") (* this entry is not from /usr/share/dpkg/triplettable *)
+ *   debian tuple (abi,libc,os,cpu)      debian arch *)
+let tupletable = ref [
+  (("eabi","uclibc","linux","arm"),       "uclibc-linux-armel"); (* line 6  *)
+  (("base","uclibc","linux","<cpu>"),     "uclibc-linux-<cpu>");
+  (("eabihf","musl","linux","arm"),       "musl-linux-armhf");
+  (("base","musl","linux","<cpu>"),       "musl-linux-<cpu>");
+  (("eabihf","gnu","linux","arm"),        "armhf");              (* line 10 *)
+  (("eabi","gnu","linux","arm"),          "armel");
+  (("abin32","gnu","linux","mips64el"),   "mipsn32el");
+  (("abin32","gnu","linux","mips64"),     "mipsn32");
+  (("abi64","gnu","linux","mips64el"),    "mips64el");
+  (("abi64","gnu","linux","mips64"),      "mips64");             (* line 15 *)
+  (("spe","gnu","linux","powerpc"),       "powerpcspe");
+  (("x32","gnu","linux","amd64"),         "x32");
+  (("hardened1","gnu","linux","<cpu>"),   "hardened1-linux-<cpu>");
+  (("base","gnu","linux","<cpu>"),        "<cpu>");
+  (("base","gnu","kfreebsd","<cpu>"),     "kfreebsd-<cpu>");
+  (("base","gnu","knetbsd","<cpu>"),      "knetbsd-<cpu>");      (* line 20 *)
+  (("base","gnu","kopensolaris","<cpu>"), "kopensolaris-<cpu>");
+  (("base","gnu","hurd","<cpu>"),         "hurd-<cpu>");
+  (("base","bsd","dragonflybsd","<cpu>"), "dragonflybsd-<cpu>");
+  (("base","bsd","freebsd","<cpu>"),      "freebsd-<cpu>");
+  (("base","bsd","openbsd","<cpu>"),      "openbsd-<cpu>");      (* line 25 *)
+  (("base","bsd","netbsd","<cpu>"),       "netbsd-<cpu>");
+  (("base","bsd","darwin","<cpu>"),       "darwin-<cpu>");
+  (("base","sysv","solaris","<cpu>"),     "solaris-<cpu>");
+  (("eabi","uclibc","uclinux","arm"),     "uclinux-armel");
+  (("base","uclibc","uclinux","<cpu>"),   "uclinux-<cpu>");      (* line 30 *)
+  (("base","tos","mint","m68k"),          "mint-m68k");
+  (("base","gnu","linux","<cpu>"),        "linux-<cpu>") (* this entry is not from /usr/share/dpkg/tupletable *)
   (* the "linux-" prefix is commented in scripts/Dpkg/Arch.pm with "XXX: Might disappear in the future, not sure yet." *)
 ]
 
-let debarch_to_debtriplet = Hashtbl.create ((List.length !triplettable)*(List.length !cpulist))
-let triplettable_done = ref false
+let debarch_to_debtuple = Hashtbl.create ((List.length !tupletable)*(List.length !cpulist))
+let tupletable_done = ref false
 
-let mangle_cpu_placeholder ((abi,os,cpu),debarch) =
+let mangle_cpu_placeholder ((abi,libc,os,cpu),debarch) =
   if cpu = "<cpu>" then begin
     List.iter (fun c ->
-        let dt = (abi,os,c) in
+        let dt = (abi,libc,os,c) in
         let _,da = String.replace ~str:debarch ~sub:"<cpu>" ~by:c in
-        Hashtbl.replace debarch_to_debtriplet da dt
+        Hashtbl.replace debarch_to_debtuple da dt
       ) !cpulist
   end else begin
-    Hashtbl.replace debarch_to_debtriplet debarch (abi,os,cpu)
+    Hashtbl.replace debarch_to_debtuple debarch (abi,libc,os,cpu)
   end
 ;;
 
-let read_triplettable ?(ttfile=None) ?(ctfile=None) () =
-  if !triplettable_done && ttfile = None && ctfile = None then () else begin
+let read_tupletable ?(ttfile=None) ?(ctfile=None) () =
+  if !tupletable_done && ttfile = None && ctfile = None then () else begin
     (* if cputable file was given, overwrite built-in table *)
     begin match ctfile with
       | Some fn -> begin
           cpulist := [];
           let ic = open_in fn in
+          if input_line ic <> "# Version=1.0" then
+            fatal "Require cputable version 1.0";
           (* to stay most compatible with dpkg, it would be best to use its
            * regex from from scripts/Dpkg/Arch.pm to parse this file.
            * Unfortunately Re.pcre doesnt support look-ahead/look-behind
@@ -109,13 +111,15 @@ let read_triplettable ?(ttfile=None) ?(ctfile=None) () =
           close_in ic;
         end
       | None -> () end;
-    (* if triplettable was given, overwrite built-in table, otherwise parse
+    (* if tupletable was given, overwrite built-in table, otherwise parse
      * built-in table *)
     begin match ttfile with
       | Some fn -> begin
           (* this is an implicit assumption of dpkg *)
-          mangle_cpu_placeholder (("gnu","linux","<cpu>"), "linux-<cpu>");
+          mangle_cpu_placeholder (("base","gnu","linux","<cpu>"), "linux-<cpu>");
           let ic = open_in fn in
+          if input_line ic <> "# Version=1.0" then
+            fatal "Require tupletable version 1.0";
           (* to stay most compatible with dpkg, it would be best to use its
            * regex from from scripts/Dpkg/Arch.pm to parse this file.
            * Unfortunately Re.pcre doesnt support look-ahead/look-behind
@@ -125,43 +129,49 @@ let read_triplettable ?(ttfile=None) ?(ctfile=None) () =
             else begin
               let spaceli = String.index line '\t' in
               let spaceri = String.rindex line '\t' in
-              let debtriplet = String.sub line 0 spaceli in
+              let debtuple = String.sub line 0 spaceli in
               let debarch = String.sub line (spaceri+1) ((String.length line)-spaceri-1) in
-              match String.nsplit debtriplet "-" with
-              | [abi;os;cpu] -> mangle_cpu_placeholder ((abi,os,cpu),debarch)
-              | _ -> fatal "Cannot parse debtriplet: %s" debtriplet
+              match String.nsplit debtuple "-" with
+              | [abi;libc;os;cpu] -> mangle_cpu_placeholder ((abi,libc,os,cpu),debarch)
+              | _ -> fatal "Cannot parse debtuple: %s" debtuple
             end
           in
           List.iter aux (Std.input_list ic);
           close_in ic;
         end
       | None -> begin
-          List.iter mangle_cpu_placeholder !triplettable;
+          List.iter mangle_cpu_placeholder !tupletable;
         end
     end;
-    triplettable_done := true;
+    tupletable_done := true;
   end
 ;;
 
+(* this function performs what debarch_is form libdpkg-perl does *)
 let src_matches_arch alias real =
-  read_triplettable ();
+  read_tupletable ();
   if alias=real || alias="any" || alias="all" then true else begin
-    let real = Hashtbl.find_option debarch_to_debtriplet real in
+    let real = Hashtbl.find_option debarch_to_debtuple real in
+    (* see libdpkg-perl function debwildcard_to_debtuple *)
     let alias = match String.nsplit alias "-" with
-      | ["any";os;cpu] ->  Some ("any",os,cpu)
-      | [abi;"any";cpu] -> Some (abi,"any",cpu)
-      | [abi;os;"any"] ->  Some (abi,os,"any")
-      | ["any";cpu] ->     Some ("any","any",cpu)
-      | [os;"any"] ->      Some ("any",os,"any")
-      | ["any"] ->         Some ("any","any","any")
+      | ["any";libc;os;cpu] ->  Some ("any",libc,os,cpu)
+      | [abi;"any";os;cpu] ->   Some (abi,"any",os,cpu)
+      | [abi;libc;"any";cpu] -> Some (abi,libc,"any",cpu)
+      | [abi;libc;os;"any"] ->  Some (abi,libc,os,"any")
+      | ["any";os;cpu] ->   Some ("any","any",os,cpu)
+      | [libc;"any";cpu] -> Some ("any",libc,"any",cpu)
+      | [libc;os;"any"] ->  Some ("any",libc,os,"any")
+      | ["any";cpu] ->     Some ("any","any","any",cpu)
+      | [os;"any"] ->      Some ("any","any",os,"any")
+      | ["any"] ->         Some ("any","any","any","any")
       | _ -> begin
           (* only look up in the table if none of the parts is "any" *)
-          Hashtbl.find_option debarch_to_debtriplet alias
+          Hashtbl.find_option debarch_to_debtuple alias
         end
     in
     match real,alias with
-    | Some (r1,r2,r3), Some (a1,a2,a3) ->
-      ((a1=r1 || a1="any") && (a2=r2 || a2="any") && (a3=r3 || a3="any"))
+    | Some (r1,r2,r3,r4), Some (a1,a2,a3,a4) ->
+      ((a1=r1 || a1="any") && (a2=r2 || a2="any") && (a3=r3 || a3="any") && (a4=r4 || a4="any"))
     | _ -> false
   end
 ;;

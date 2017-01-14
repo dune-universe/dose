@@ -200,9 +200,9 @@ packages installed.
 Add builds-from relationship of binary packages on source packages as
 dependency. This allows one to create graphs for bootstrapping purposes.
 
-=item B<--deb-triplettable=>I<file>
+=item B<--deb-tupletable=>I<file>
 
-Path to an architecture triplet table like /usr/share/dpkg/triplettable
+Path to an architecture tuple table like /usr/share/dpkg/tupletable
 
 =item B<--deb-cputable=>I<file>
 

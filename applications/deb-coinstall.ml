@@ -33,7 +33,7 @@ module Options = struct
 
   let sources = StdOpt.str_option ()
   let dump = StdOpt.str_option ()
-  let triplettable = StdOpt.str_option ()
+  let tupletable = StdOpt.str_option ()
   let cputable = StdOpt.str_option ()
 
   include StdOptions.DistcheckOptions ;;
@@ -60,8 +60,8 @@ module Options = struct
     ) StdOptions.DistribOptions.default_options ["deb-host-arch";"deb-drop-b-d-indep";"deb-profiles"]
   in
   StdOptions.DistribOptions.add_debian_options ~default options ;
-  StdOptions.DistribOptions.add_option options ~long_name:"deb-triplettable"
-    ~help:"Path to an architecture triplet table like /usr/share/dpkg/triplettable" triplettable;
+  StdOptions.DistribOptions.add_option options ~long_name:"deb-tupletable"
+    ~help:"Path to an architecture triplet table like /usr/share/dpkg/tupletable" tupletable;
   StdOptions.DistribOptions.add_option options ~long_name:"deb-cputable"
     ~help:"Path to a cpu table like /usr/share/dpkg/cputable" cputable;
 
@@ -85,16 +85,16 @@ let main () =
 
   let (fg,bg) = Options.parse_cmdline (`Deb,false) posargs in
 
-  if (((OptParse.Opt.is_set Options.triplettable)
+  if (((OptParse.Opt.is_set Options.tupletable)
        || OptParse.Opt.is_set Options.cputable)
       && (OptParse.Opt.is_set Options.sources)) then begin
-    let ttfile = if OptParse.Opt.is_set Options.triplettable then
-        Some (OptParse.Opt.get Options.triplettable)
+    let ttfile = if OptParse.Opt.is_set Options.tupletable then
+        Some (OptParse.Opt.get Options.tupletable)
       else None in
     let ctfile = if OptParse.Opt.is_set Options.cputable then
         Some (OptParse.Opt.get Options.cputable)
       else None in
-    Architecture.read_triplettable ~ttfile ~ctfile ()
+    Architecture.read_tupletable ~ttfile ~ctfile ()
   end;
 
   let cudftodeb_table = Hashtbl.create 30000 in

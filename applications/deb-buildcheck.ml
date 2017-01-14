@@ -31,7 +31,7 @@ module Options = struct
   let dump = StdOpt.str_option ()
   let maforeign = StdOpt.store_true ()
   let includextra = StdOpt.store_true ()
-  let triplettable = StdOpt.str_option ()
+  let tupletable = StdOpt.str_option ()
   let cputable = StdOpt.str_option ()
   let dropalternatives = StdOpt.store_true ()
 
@@ -54,8 +54,8 @@ module Options = struct
   include StdOptions.DistribOptions ;;
   StdOptions.DistribOptions.add_debian_options options ;;
   let group = StdOptions.DistribOptions.deb_group options in
-  StdOptions.DistribOptions.add_option options ~group ~long_name:"deb-triplettable"
-    ~help:"Path to an architecture triplet table like /usr/share/dpkg/triplettable" triplettable;
+  StdOptions.DistribOptions.add_option options ~group ~long_name:"deb-tupletable"
+    ~help:"Path to an architecture triplet table like /usr/share/dpkg/tupletable" tupletable;
   StdOptions.DistribOptions.add_option options ~group ~long_name:"deb-cputable"
     ~help:"Path to a cpu table like /usr/share/dpkg/cputable" cputable;
   StdOptions.DistribOptions.add_option options ~group ~long_name:"deb-defaulted-m-a-foreign"
@@ -108,15 +108,15 @@ let main () =
       with Not_found -> true
   in
 
-  if (OptParse.Opt.is_set Options.triplettable)
+  if (OptParse.Opt.is_set Options.tupletable)
   || OptParse.Opt.is_set Options.cputable then begin
-    let ttfile = if OptParse.Opt.is_set Options.triplettable then
-        Some (OptParse.Opt.get Options.triplettable)
+    let ttfile = if OptParse.Opt.is_set Options.tupletable then
+        Some (OptParse.Opt.get Options.tupletable)
       else None in
     let ctfile = if OptParse.Opt.is_set Options.cputable then
         Some (OptParse.Opt.get Options.cputable)
       else None in
-    Architecture.read_triplettable ~ttfile ~ctfile ()
+    Architecture.read_tupletable ~ttfile ~ctfile ()
   end;
 
   let pkglist, srclist =
