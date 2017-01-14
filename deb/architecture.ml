@@ -27,11 +27,12 @@ include Util.Logging(struct let label = label end) ;;
 (* the line numbers correspond to the line numbers in /usr/share/dpkg/cputable
  * to be quickly able to find changes *)
 let cpulist = ref [
-(* lines 17..23 *)  "i386"; "ia64"; "alpha"; "amd64"; "armeb"; "arm"; "arm64";
-(* lines 24..29 *)  "avr32"; "hppa"; "m32r"; "m68k"; "mips"; "mipsel";
-(* lines 30..34 *)  "mips64"; "mips64el"; "or1k"; "powerpc"; "powerpcel";
-(* lines 35..41 *)  "ppc64"; "ppc64el"; "s390"; "s390x"; "sh3"; "sh3eb"; "sh4";
-(* lines 42..44 *)  "sh4eb"; "sparc"; "sparc64" ]
+(* lines 19..25 *)  "i386"; "ia64"; "alpha"; "amd64"; "armeb"; "arm"; "arm64";
+(* lines 26..31 *)  "avr32"; "hppa"; "m32r"; "m68k"; "mips"; "mipsel";
+(* lines 32..36 *)  "mipsr6"; "mipsr6el"; "mips64"; "mips64el"; "mips64r6";
+(* lines 37..41 *)  "mips64r6el"; "nios2"; "or1k"; "powerpc"; "powerpcel";
+(* lines 42..48 *)  "ppc64"; "ppc64el"; "s390"; "s390x"; "sh3"; "sh3eb"; "sh4";
+(* lines 49..52 *)  "sh4eb"; "sparc"; "sparc64"; "tilegx"; ]
 
 (* from /usr/share/dpkg/tupletable
  *
@@ -40,32 +41,37 @@ let cpulist = ref [
  *
  *   debian tuple (abi,libc,os,cpu)      debian arch *)
 let tupletable = ref [
-  (("eabi","uclibc","linux","arm"),       "uclibc-linux-armel"); (* line 6  *)
+  (("eabi","uclibc","linux","arm"),       "uclibc-linux-armel"); (* line 8  *)
   (("base","uclibc","linux","<cpu>"),     "uclibc-linux-<cpu>");
-  (("eabihf","musl","linux","arm"),       "musl-linux-armhf");
+  (("eabihf","musl","linux","arm"),       "musl-linux-armhf");   (* line 10 *)
   (("base","musl","linux","<cpu>"),       "musl-linux-<cpu>");
-  (("eabihf","gnu","linux","arm"),        "armhf");              (* line 10 *)
+  (("eabihf","gnu","linux","arm"),        "armhf");
   (("eabi","gnu","linux","arm"),          "armel");
+  (("abin32","gnu","linux","mips64r6el"), "mipsn32r6el");
+  (("abin32","gnu","linux","mips64r6"),   "mipsn32r6");          (* line 15 *)
   (("abin32","gnu","linux","mips64el"),   "mipsn32el");
   (("abin32","gnu","linux","mips64"),     "mipsn32");
-  (("abi64","gnu","linux","mips64el"),    "mips64el");
-  (("abi64","gnu","linux","mips64"),      "mips64");             (* line 15 *)
+  (("abi64","gnu","linux","mips64r6el"),  "mips64r6el");
+  (("abi64","gnu","linux","mips64r6"),    "mips64r6");
+  (("abi64","gnu","linux","mips64el"),    "mips64el");           (* line 20 *)
+  (("abi64","gnu","linux","mips64"),      "mips64");
   (("spe","gnu","linux","powerpc"),       "powerpcspe");
   (("x32","gnu","linux","amd64"),         "x32");
-  (("hardened1","gnu","linux","<cpu>"),   "hardened1-linux-<cpu>");
   (("base","gnu","linux","<cpu>"),        "<cpu>");
+  (("eabihf","gnu","kfreebsd","arm"),     "kfreebsd-armhf");     (* line 25 *)
   (("base","gnu","kfreebsd","<cpu>"),     "kfreebsd-<cpu>");
-  (("base","gnu","knetbsd","<cpu>"),      "knetbsd-<cpu>");      (* line 20 *)
+  (("base","gnu","knetbsd","<cpu>"),      "knetbsd-<cpu>");
   (("base","gnu","kopensolaris","<cpu>"), "kopensolaris-<cpu>");
   (("base","gnu","hurd","<cpu>"),         "hurd-<cpu>");
-  (("base","bsd","dragonflybsd","<cpu>"), "dragonflybsd-<cpu>");
+  (("base","bsd","dragonflybsd","<cpu>"), "dragonflybsd-<cpu>"); (* line 30 *)
   (("base","bsd","freebsd","<cpu>"),      "freebsd-<cpu>");
-  (("base","bsd","openbsd","<cpu>"),      "openbsd-<cpu>");      (* line 25 *)
+  (("base","bsd","openbsd","<cpu>"),      "openbsd-<cpu>");
   (("base","bsd","netbsd","<cpu>"),       "netbsd-<cpu>");
   (("base","bsd","darwin","<cpu>"),       "darwin-<cpu>");
+  (("base","sysv","aix","<cpu>"),         "aix-<cpu>");          (* line 35 *)
   (("base","sysv","solaris","<cpu>"),     "solaris-<cpu>");
   (("eabi","uclibc","uclinux","arm"),     "uclinux-armel");
-  (("base","uclibc","uclinux","<cpu>"),   "uclinux-<cpu>");      (* line 30 *)
+  (("base","uclibc","uclinux","<cpu>"),   "uclinux-<cpu>");
   (("base","tos","mint","m68k"),          "mint-m68k");
   (("base","gnu","linux","<cpu>"),        "linux-<cpu>") (* this entry is not from /usr/share/dpkg/tupletable *)
   (* the "linux-" prefix is commented in scripts/Dpkg/Arch.pm with "XXX: Might disappear in the future, not sure yet." *)
