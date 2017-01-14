@@ -49,6 +49,7 @@ let read_deb ?filter ?(extras=[]) fname =
 let deb_load_list options ?(status=[]) ?(raw=false) dll =
   Util.Timer.start deb_load_list_timer;
   let noindep = options.Debian.Debcudf.drop_bd_indep in
+  let noarch = options.Debian.Debcudf.drop_bd_arch in
   let profiles = options.Debian.Debcudf.profiles in
   let pkgll = List.map (List.map (function
       | Deb p -> p
@@ -57,7 +58,7 @@ let deb_load_list options ?(status=[]) ?(raw=false) dll =
             fatal "--deb-native-arch was not specified while treating Debian Sources File";
         let buildarch = Option.get options.Debian.Debcudf.native in
         let hostarch = Option.get options.Debian.Debcudf.host in
-        Debian.Sources.src2pkg ~noindep ~profiles buildarch hostarch p
+        Debian.Sources.src2pkg ~noindep ~noarch ~profiles buildarch hostarch p
       | _ -> fatal "cannot handle input"
     )) dll 
   in
@@ -444,10 +445,10 @@ let supported_formats () =
 ;;
 
 (** return a list of Debian packages from a debian source file *)
-let deb_load_source ?filter ?(dropalternatives=false) ?(profiles=[]) ?(noindep=false) buildarch hostarch sourcefile =
+let deb_load_source ?filter ?(dropalternatives=false) ?(profiles=[]) ?(noindep=false) ?(noarch=false) buildarch hostarch sourcefile =
   Util.Timer.start deb_load_source_timer;
   let l = Debian.Sources.input_raw ?filter ~archs:[hostarch] [sourcefile] in
-  let r = Debian.Sources.sources2packages ~dropalternatives ~noindep ~profiles buildarch hostarch l in
+  let r = Debian.Sources.sources2packages ~dropalternatives ~noindep ~noarch ~profiles buildarch hostarch l in
   Util.Timer.stop deb_load_source_timer r
 ;;
 

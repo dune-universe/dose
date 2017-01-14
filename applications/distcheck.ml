@@ -48,7 +48,7 @@ module Options = struct
     List.fold_left
       List.remove
       StdOptions.DistribOptions.default_options
-      ["deb-host-arch";"deb-drop-b-d-indep";"deb-profiles"]
+      ["deb-host-arch";"deb-drop-b-d-indep";"deb-drop-b-d-arch";"deb-profiles"]
   in
   StdOptions.DistribOptions.add_debian_options ~default options ;
   StdOptions.DistribOptions.add_opam_options ~default options ;;

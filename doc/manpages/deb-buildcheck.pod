@@ -216,6 +216,10 @@ Convert Arch:all packages to Multi-Arch: foreign
 
 Drop Build-Indep dependencies
 
+=item B<--deb-drop-b-d-arch>
+
+Drop Build-Arch dependencies
+
 =item B<--deb-include-extra-source>
 
 Include packages with Extra-Source-Only:yes (dropped by default)

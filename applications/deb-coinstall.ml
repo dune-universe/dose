@@ -57,7 +57,7 @@ module Options = struct
   let default =
     List.fold_left (fun acc e ->
       List.remove acc e
-    ) StdOptions.DistribOptions.default_options ["deb-host-arch";"deb-drop-b-d-indep";"deb-profiles"]
+    ) StdOptions.DistribOptions.default_options ["deb-host-arch";"deb-drop-b-d-indep";"deb-drop-b-d-arch";"deb-profiles"]
   in
   StdOptions.DistribOptions.add_debian_options ~default options ;
   StdOptions.DistribOptions.add_option options ~long_name:"deb-tupletable"
@@ -121,7 +121,7 @@ let main () =
     in
     let srclist = 
       if not(Option.is_none sources) then
-        Sources.sources2packages ~noindep:true ~profiles:[] native native origsourcelist
+        Sources.sources2packages ~noindep:true ~noarch:false ~profiles:[] native native origsourcelist
       else []
     in
     let tables = Debian.Debcudf.init_tables ~options (srclist@pkglist) in

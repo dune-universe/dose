@@ -304,6 +304,10 @@ Comma separated list of activated build profiles.
 
 Drop Build-Depends-Indep dependencies from Debian source packages.
 
+=item B<--deb-drop-b-d-arch>
+
+Drop Build-Depends-Arch dependencies from Debian source packages.
+
 =back
 
 =head1 EXAMPLES

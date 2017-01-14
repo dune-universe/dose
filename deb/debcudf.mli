@@ -24,6 +24,7 @@ type options = {
   ignore_essential : bool ;
   builds_from : bool ;    (** whether to add the builds-from relationship from binary to source packages *)
   drop_bd_indep : bool ;  (** whether or not to ignore the Build-Depends-Indep field *)
+  drop_bd_arch : bool ;   (** whether or not to ignore the Build-Depends-Arch field *)
   profiles : string list ; (** list of active build profiles *)
 }
 

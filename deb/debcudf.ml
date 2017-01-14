@@ -65,6 +65,7 @@ type options = {
   ignore_essential : bool;
   builds_from : bool;
   drop_bd_indep : bool;
+  drop_bd_arch : bool;
   profiles : string list; (* list of active build profiles *)
 }
 
@@ -76,6 +77,7 @@ let default_options = {
   ignore_essential = false;
   builds_from = false;
   drop_bd_indep = false;
+  drop_bd_arch = false;
   profiles = [];
 }
 

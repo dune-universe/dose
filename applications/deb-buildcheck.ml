@@ -97,6 +97,7 @@ let main () =
   (* hostarch can be None *)
   let hostarch = match options.Debian.Debcudf.host with None -> "" | Some s -> s in
   let noindep = options.Debian.Debcudf.drop_bd_indep in
+  let noarch = options.Debian.Debcudf.drop_bd_arch in
   let dropalternatives = OptParse.Opt.get Options.dropalternatives in
   let profiles = options.Debian.Debcudf.profiles in
 
@@ -132,7 +133,7 @@ let main () =
               ~dropalternatives 
               ~profiles 
               ~filter:filter_external_sources 
-              ~noindep buildarch hostarch h 
+              ~noindep ~noarch buildarch hostarch h 
           in
           let pkglist = Deb.input_raw t in
           (pkglist,srclist)
