@@ -61,7 +61,7 @@ module Options = struct
   in
   StdOptions.DistribOptions.add_debian_options ~default options ;
   StdOptions.DistribOptions.add_option options ~long_name:"deb-tupletable"
-    ~help:"Path to an architecture triplet table like /usr/share/dpkg/tupletable" tupletable;
+    ~help:"Path to an architecture tuple table like /usr/share/dpkg/tupletable" tupletable;
   StdOptions.DistribOptions.add_option options ~long_name:"deb-cputable"
     ~help:"Path to a cpu table like /usr/share/dpkg/cputable" cputable;
 

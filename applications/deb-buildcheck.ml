@@ -55,7 +55,7 @@ module Options = struct
   StdOptions.DistribOptions.add_debian_options options ;;
   let group = StdOptions.DistribOptions.deb_group options in
   StdOptions.DistribOptions.add_option options ~group ~long_name:"deb-tupletable"
-    ~help:"Path to an architecture triplet table like /usr/share/dpkg/tupletable" tupletable;
+    ~help:"Path to an architecture tuple table like /usr/share/dpkg/tupletable" tupletable;
   StdOptions.DistribOptions.add_option options ~group ~long_name:"deb-cputable"
     ~help:"Path to a cpu table like /usr/share/dpkg/cputable" cputable;
   StdOptions.DistribOptions.add_option options ~group ~long_name:"deb-defaulted-m-a-foreign"
