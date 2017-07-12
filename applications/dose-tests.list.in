@@ -521,8 +521,8 @@ Printer: text
 
 Name: virtual_package_in_multiple_versions
 Group: distcheck_versioned_provides
-Input: deb://tests/deb/versionend_provides/multiple_virtual
-Expected: tests/deb/versionend_provides/multiple_virtual.expected
+Input: deb://tests/applications/dose-tests/versionend_provides/multiple_virtual
+Expected: tests/applications/dose-tests/versionend_provides/multiple_virtual.expected
 Cmd: ./distcheck.@OCAMLEXT@ --checkonly main
 Type: distcheck
 Printer: text
