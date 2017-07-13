@@ -523,7 +523,52 @@ Name: virtual_package_in_multiple_versions
 Group: distcheck_versioned_provides
 Input: deb://tests/applications/dose-tests/versionend_provides/multiple_virtual
 Expected: tests/applications/dose-tests/versionend_provides/multiple_virtual.expected
-Cmd: ./distcheck.@OCAMLEXT@ --checkonly main
+Cmd: ./distcheck.@OCAMLEXT@ --checkonly main -s
+Type: distcheck
+Printer: text
+ExitCode: 0
+
+Name: unversioned_provides_versioned_dependency
+Group: distcheck_versioned_provides
+Input: deb://tests/applications/dose-tests/versionend_provides/unversioned_provides_versioned_dependency
+Expected: tests/applications/dose-tests/versionend_provides/unversioned_provides_versioned_dependency.expected
+Cmd: ./distcheck.@OCAMLEXT@ --checkonly main -f
+Type: distcheck
+Printer: text
+ExitCode: 1
+
+Name: versioned_provides_unversioned_dependency
+Group: distcheck_versioned_provides
+Input: deb://tests/applications/dose-tests/versionend_provides/versioned_provides_unversioned_dependency
+Expected: tests/applications/dose-tests/versionend_provides/versioned_provides_unversioned_dependency.expected
+Cmd: ./distcheck.@OCAMLEXT@ --checkonly main -s
+Type: distcheck
+Printer: text
+ExitCode: 0
+
+Name: unversioned_provides_versioned_conflict
+Group: distcheck_versioned_provides
+Input: deb://tests/applications/dose-tests/versionend_provides/unversioned_provides_versioned_conflict
+Expected: tests/applications/dose-tests/versionend_provides/unversioned_provides_versioned_conflict.expected
+Cmd: ./distcheck.@OCAMLEXT@ --checkonly main -s
+Type: distcheck
+Printer: text
+ExitCode: 0
+
+Name: versioned_provides_unversioned_conflict
+Group: distcheck_versioned_provides
+Input: deb://tests/applications/dose-tests/versionend_provides/versioned_provides_unversioned_conflict
+Expected: tests/applications/dose-tests/versionend_provides/versioned_provides_unversioned_conflict.expected
+Cmd: ./distcheck.@OCAMLEXT@ --checkonly main -f
+Type: distcheck
+Printer: text
+ExitCode: 1
+
+Name: virtual_and_real
+Group: distcheck_versioned_provides
+Input: deb://tests/applications/dose-tests/versionend_provides/virtual_and_real
+Expected: tests/applications/dose-tests/versionend_provides/virtual_and_real.expected
+Cmd: ./distcheck.@OCAMLEXT@ --checkonly main -s
 Type: distcheck
 Printer: text
 ExitCode: 0
