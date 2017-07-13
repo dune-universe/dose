@@ -312,7 +312,7 @@ let loadlp ?native_arch ?package_arch tables l =
       |None -> [("--virtual-"^encname,Some(`Eq,Util.max32int - 1))]
       |Some("=",v) ->
         let constr = Some(`Eq,get_cudf_version tables (name,v)) in
-        [("--virtual-"^encname,constr);(encname,constr)]
+        [("--virtual-"^encname,constr)]
       |_ -> fatal "This should never happen : a provide can be either = or unversioned"
     ) l
   )
