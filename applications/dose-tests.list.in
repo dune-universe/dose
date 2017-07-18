@@ -579,7 +579,7 @@ Name: virtual_same_version
 Group: distcheck_versioned_provides
 Input: deb://tests/applications/dose-tests/versionend_provides/real_and_multiple_virtual_same_version
 Expected: tests/applications/dose-tests/versionend_provides/real_and_multiple_virtual_same_version.expected
-Cmd: ./distcheck.@OCAMLEXT@ --checkonly main -s -e
+Cmd: ./distcheck.@OCAMLEXT@ --checkonly main -s
 Type: distcheck
 Printer: text
 ExitCode: 0
