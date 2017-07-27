@@ -123,7 +123,7 @@ val pkgnames : Cudf.universe -> StringSet.t
 val add_properties : Cudf.preamble -> Cudf_types.typedecl -> Cudf.preamble
 
 (** return the value of the requested property. 
- * emit a warning and raise Not_found if the property does not exists *)
+ * emit a warning and raise Not_found if the property does not exist *)
 val get_property : string -> Cudf.package -> string
 
 (** Returns true if the package is essential, that is the cudf package has

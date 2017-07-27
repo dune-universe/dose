@@ -62,7 +62,7 @@ exception File_empty
 
 let open_file file =
   if not (Sys.file_exists file) then
-    fatal "Input file %s does not exists." file
+    fatal "Input file %s does not exist." file
   else if (Unix.stat file).Unix.st_size = 0 then (
     warning "Input file %s is empty" file;
     raise File_empty)
