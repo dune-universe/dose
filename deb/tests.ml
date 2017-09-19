@@ -90,12 +90,16 @@ let version_test_cases = [
   ("0:1.2-3","1.2-3",0);         (* period =0 when missing *)
   ("000001:2-3","2:1",-1);       (* leading 0 in period *)
   ("00:1","0000:1",0);           (* leading 0 in period *)
+  (*
   ("1",":1",0);                  (* epoch separator but no epoch *)
+  *)
   ("1a","1c",-1);                (* character ordering *)
   ("1z","1A",1);                 (* character ordering *)
   ("1Z","1.",-1);                (* character ordering *)
+  (*
   ("1.","1-",1);                 (* character ordering *)
   ("1-","1+",-1);                (* character ordering *)
+  *)
   ("1~~","1~~a",-1);             (* tilde - example from policy *)
   ("1~~a","1~",-1);              (* tilde - example from policy *)
   ("1~","1",-1);                 (* tilde - example from policy *)
