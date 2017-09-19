@@ -52,7 +52,8 @@ let _ = dispatch begin function
        ];
 
        (* Disable Warning 24: bad source file name *)
-       flag ["ocaml"; "compile"] & S[A"-w"; A"-24"];
+       (* Disable Warning 58: no cmx file was found in path *)
+       flag ["ocaml"; "compile"] & S[A"-w"; A"-24-58"];
 
        (* optimization to ocaml code *)
        flag ["ocaml"; "compile"] & S[A"-ccopt"; A"-O9"];
