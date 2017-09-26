@@ -640,6 +640,9 @@ LINK_RPM
 BZ2
 PKG_BZ2
 CONFIG_BZ2
+MCCS
+PKG_MCCS
+CONFIG_MCCS
 PARMAP
 PKG_PARMAP
 CONFIG_PARMAP
@@ -674,6 +677,8 @@ OCAML_PKG_zip
 HAS_ZIP
 OCAML_PKG_parmap
 HAS_PARMAP
+OCAML_PKG_mccs
+HAS_MCCS
 OCAML_PKG_ocamlgraph
 OCAML_PKG_re_pcre
 OCAML_PKG_extlib
@@ -747,6 +752,7 @@ ac_user_opts='
 enable_option_checking
 with_bytecodeonly
 with_libcudf
+with_mccs
 with_parmap
 with_zip
 with_bz2
@@ -1388,6 +1394,7 @@ Optional Packages:
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
  --with-bytecodeonly
  --without-libcudf
+ --with-mccs
  --with-parmap
  --with-zip
  --with-bz2
@@ -3767,6 +3774,7 @@ PKG_ZIP=pkg_
 PKG_PARMAP=pkg_
 PKG_XML=pkg_
 PKG_CUDF=use_cudf
+PKG_MCCS=pkg_
 PKG_CURL=pkg_
 PKG_OUNIT=pkg_
 PKG_BENCHMARK=pkg_
@@ -3908,6 +3916,48 @@ if test "$OCAML_PKG_ocamlgraph" = "no"; then
 fi
 TMPVERSION=`$OCAMLFIND query -format %v ocamlgraph | sed 's/\.//g'`
 CONFIG_OCAMLGRAPH="-D 'OCAMLGRAPHVERSION $TMPVERSION'"
+
+
+# Check whether --with-mccs was given.
+if test "${with_mccs+set}" = set; then :
+  withval=$with_mccs; HAS_MCCS=yes
+else
+  HAS_MCCS=no
+fi
+
+
+if test "$HAS_MCCS" = "yes" ; then
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package mccs" >&5
+$as_echo_n "checking for OCaml findlib package mccs... " >&6; }
+
+  unset found
+  unset pkg
+  found=no
+  for pkg in mccs  ; do
+    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
+       { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+       OCAML_PKG_mccs=$pkg
+       found=yes
+       break
+    fi
+  done
+  if test "$found" = "no" ; then
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+     OCAML_PKG_mccs=no
+  fi
+
+
+
+  if test "$OCAML_PKG_mccs" = "no"; then
+   as_fn_error $? "Please install OCaml findlib module 'mccs'." "$LINENO" 5
+  fi
+  CONFIG_MCCS="-D HASMCCS"
+  PKG_MCCS="package(mccs)"
+  MCCS=mccs
+fi
 
 
 # Check whether --with-parmap was given.
@@ -5336,6 +5386,10 @@ else
   LN="ln -s"
 
 fi
+
+
+
+
 
 
 

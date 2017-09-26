@@ -62,6 +62,7 @@ PKG_ZIP=pkg_
 PKG_PARMAP=pkg_
 PKG_XML=pkg_
 PKG_CUDF=use_cudf
+PKG_MCCS=pkg_
 PKG_CURL=pkg_
 PKG_OUNIT=pkg_
 PKG_BENCHMARK=pkg_
@@ -105,6 +106,21 @@ if test "$OCAML_PKG_ocamlgraph" = "no"; then
 fi
 TMPVERSION=`$OCAMLFIND query -format %v ocamlgraph | sed 's/\.//g'`
 CONFIG_OCAMLGRAPH="-D 'OCAMLGRAPHVERSION $TMPVERSION'"
+
+AC_ARG_WITH(mccs,
+        [ --with-mccs ],
+        HAS_MCCS=yes,
+        HAS_MCCS=no)
+AC_SUBST(HAS_MCCS)
+if test "$HAS_MCCS" = "yes" ; then
+  AC_CHECK_OCAML_PKG([mccs])
+  if test "$OCAML_PKG_mccs" = "no"; then
+   AC_MSG_ERROR([Please install OCaml findlib module 'mccs'.])
+  fi
+  CONFIG_MCCS="-D HASMCCS"
+  PKG_MCCS="package(mccs)"
+  MCCS=mccs
+fi
 
 AC_ARG_WITH(parmap,
         [ --with-parmap ],
@@ -275,6 +291,10 @@ AC_SUBST(ZIP)
 AC_SUBST(CONFIG_PARMAP)
 AC_SUBST(PKG_PARMAP)
 AC_SUBST(PARMAP)
+
+AC_SUBST(CONFIG_MCCS)
+AC_SUBST(PKG_MCCS)
+AC_SUBST(MCCS)
 
 AC_SUBST(CONFIG_BZ2)
 AC_SUBST(PKG_BZ2)
