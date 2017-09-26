@@ -483,19 +483,51 @@ let main () =
     exit 0
   end;
 
-  let exec_pat = fst (parse_solver_spec (Filename.concat solver_dir solver)) in
-
-  let solpre,soluniv = 
+  let check_request ((pre,universe,request) as cudf) =
     let dummy = { Algo.Depsolver.dummy_request with
       Cudf.depends =
         List.map (fun (_,pkglist) ->
           List.map (fun pkg ->
             (pkg.Cudf.package,Some(`Eq,pkg.Cudf.version))
           ) pkglist
-        ) (Debcudf.get_essential tables) }
+        ) (Debcudf.get_essential tables); 
+      Cudf.pkg_extra = [
+        ("apt-id", `Int 1);
+        ("apt-pin", `Int 500);
+        ("architecture", `String "");
+        ("type", `String "bin");
+        ("number", `String "1");
+        ("name", `String "dummy")
+      ]
+      }
     in
     let explain = false in
-    match Algo.Depsolver.check_request ~cmd:exec_pat ~dummy ~criteria ~explain cudf with
+    match solver with
+    |"internal" ->
+        #ifdef HASMCCS
+        begin
+          let (u,dr) = Algo.Depsolver.add_dummy universe request dummy in
+          let dr_constr = (dr.Cudf.package,Some (`Eq,dr.Cudf.version)) in
+          let r = { request with Cudf.install = dr_constr::request.Cudf.install } in
+          Cudf_printer.pp_preamble stdout pre;
+          Printf.fprintf stdout "\n";
+          Cudf_printer.pp_universe stdout u;
+          Printf.fprintf stdout "\n";
+          Cudf_printer.pp_request stdout r;
+          match Mccs.resolve_cudf ~verbose:true "-removed,-changed" (pre,u,r) with
+          |None -> Algo.Depsolver.Unsat None
+          |Some(p,s) -> Algo.Depsolver.Sat(Some p,s)
+        end
+        #else
+          raise Not_found
+        #endif
+    |_ ->
+      let exec_pat = fst (parse_solver_spec (Filename.concat solver_dir solver)) in
+      Algo.Depsolver.check_request ~cmd:exec_pat ~dummy ~criteria ~explain cudf
+  in
+
+  let solpre,soluniv = 
+    match check_request cudf with
     |Algo.Depsolver.Error s -> fatal "%s" s
     |Algo.Depsolver.Unsat None -> begin
       doseexit ();

@@ -166,6 +166,7 @@ type solver_result =
 (** an empty package used to enforce global contraints on the request *)
 val dummy_request : Cudf.package
 
+val add_dummy: Cudf.universe -> Cudf.request -> Cudf.package -> (Cudf.universe * Cudf.package)
 (** [check_request] check if there exists a solution for the give cudf document 
     if ?dummy is specified, adds this dummy package to the user request. This parameter
     is used to encode a list of 'essential' packages that must always be installed in

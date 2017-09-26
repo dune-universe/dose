@@ -6,7 +6,7 @@ true: -traverse
 
 <{common,algo,versioning}/*.ml{i,}>: pp(cppo @CPPOFLAGS@ @CONFIG_ZIP@ @CONFIG_BZ2@ @CONFIG_RPM@ @CONFIG_OCAMLGRAPH@)
 
-<applications/*.ml> or <experimental/*/*.ml> or <experimental/*.ml>: pp(cppo @CPPOFLAGS@ @CONFIG_PARMAP@ @CONFIG_OCAMLGRAPH@)
+<applications/*.ml> or <experimental/*/*.ml> or <experimental/*.ml>: pp(cppo @CPPOFLAGS@ @CONFIG_PARMAP@ @CONFIG_OCAMLGRAPH@ @CONFIG_MCCS@)
 
 <*/*.ml{i,}>: pp(cppo)
 <*/*.ml{i,}>: package(extlib), @PKG_CUDF@, package(re.pcre)
@@ -57,7 +57,7 @@ true: -traverse
 <{applications,experimental}/*>: package(extlib), package(re.pcre), package(unix), package(re.str), package(ocamlgraph)
 <{applications,experimental}/*>: @PKG_CUDF@, @PKG_ZIP@, @PKG_BZ2@
 
-<applications/apt-cudf.*>: use_doseparseNoRpm, use_algo
+<applications/apt-cudf.*>: use_doseparseNoRpm, use_algo, @PKG_MCCS@
 <applications/deb-buildcheck.*>: use_algo, use_doseparseNoRpm
 
 <applications/distcheck.*>: @USE_RPM@, use_algo, use_doseparse

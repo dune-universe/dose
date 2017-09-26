@@ -432,53 +432,53 @@ let upgrade_constr universe name =
       let p = List.hd(List.sort ~cmp:Cudf.(>%) pl) 
       in (name,Some(`Geq,p.Cudf.version))
 
+let add_dummy universe request dummy =
+  let deps = 
+    let il = request.Cudf.install in
+    (* we preserve the user defined constraints, while adding the upgrade constraint *)
+    let ulc =
+      List.filter (function (_,Some _) -> true | _ -> false) request.Cudf.upgrade 
+    in
+    let ulnc =
+      List.map (fun (name,_) ->
+        upgrade_constr universe name
+      ) request.Cudf.upgrade
+    in
+    let l = il @ ulc @ ulnc in
+    debug "request consistency (install %d) (upgrade %d) (remove %d) (# %d)"
+      (List.length request.Cudf.install) 
+      (List.length request.Cudf.upgrade)
+      (List.length request.Cudf.remove)
+      (Cudf.universe_size universe);
+      (List.map (fun j -> [j]) l)
+  in
+  let dummy =
+    { dummy with
+      Cudf.depends = deps@dummy.Cudf.depends;
+      conflicts = request.Cudf.remove@dummy.Cudf.conflicts
+    }
+  in
+  (* XXX it should be possible to add a package to a cudf document ! *)
+  let pkglist = Cudf.get_packages universe in
+  let universe = Cudf.load_universe (dummy::pkglist) in
+  (universe,dummy)
+
+let remove_dummy ?(explain=false) pre (dummy,d) =
+  if Diagnostic.is_solution d then
+    let is = List.remove_if (Cudf.(=%) dummy) (Diagnostic.get_installationset d) in
+    Sat (Some pre,Cudf.load_universe is)
+  else
+    if explain then Unsat (Some d) else Unsat None
+
 let check_request_using
   ?call_solver ?criteria ?dummy ?(explain=false) (pre,universe,request) =
-  let add_dummy universe request dummy =
-    let deps = 
-      let il = request.Cudf.install in
-      (* we preserve the user defined constraints, while adding the upgrade constraint *)
-      let ulc =
-        List.filter (function (_,Some _) -> true | _ -> false) request.Cudf.upgrade 
-      in
-      let ulnc =
-        List.map (fun (name,_) ->
-          upgrade_constr universe name
-        ) request.Cudf.upgrade
-      in
-      let l = il @ ulc @ ulnc in
-      debug "request consistency (install %d) (upgrade %d) (remove %d) (# %d)"
-        (List.length request.Cudf.install) 
-        (List.length request.Cudf.upgrade)
-        (List.length request.Cudf.remove)
-        (Cudf.universe_size universe);
-        (List.map (fun j -> [j]) l)
-    in
-    let dummy =
-      { dummy with
-        Cudf.depends = deps@dummy.Cudf.depends;
-        conflicts = request.Cudf.remove@dummy.Cudf.conflicts
-      }
-    in
-    (* XXX it should be possible to add a package to a cudf document ! *)
-    let pkglist = Cudf.get_packages universe in
-    let universe = Cudf.load_universe (dummy::pkglist) in
-    (universe,dummy)
-  in
-  let remove_dummy ?(explain=false) (dummy,d) =
-    if Diagnostic.is_solution d then
-      let is = List.remove_if (Cudf.(=%) dummy) (Diagnostic.get_installationset d) in
-      Sat (Some pre,Cudf.load_universe is)
-    else
-      if explain then Unsat (Some d) else Unsat None
-  in
   match call_solver,dummy with
   |None,None ->
       let (u,r) = add_dummy universe request dummy_request in
-      remove_dummy (r,edos_install u r)
+      remove_dummy pre (r,edos_install u r)
   |None,Some dummy ->
       let (u,r) = add_dummy universe request dummy in
-      remove_dummy (r,edos_install u r)
+      remove_dummy pre (r,edos_install u r)
   |Some call_solver,None -> begin
       try
         let (presol,sol) = call_solver (pre,universe,request) in
@@ -487,7 +487,7 @@ let check_request_using
       |CudfSolver.Unsat when not explain -> Unsat None
       |CudfSolver.Unsat when explain ->
           let (u,r) = add_dummy universe request dummy_request in
-          remove_dummy (r,edos_install u r)
+          remove_dummy pre (r,edos_install u r)
       end
   |Some call_solver,Some dummy -> begin
       let (u,dr) = add_dummy universe request dummy in
@@ -501,7 +501,7 @@ let check_request_using
         |CudfSolver.Unsat when not explain -> Unsat None
         |CudfSolver.Unsat when explain -> begin
             let (u,r) = add_dummy universe request dummy in
-            match remove_dummy (r,edos_install u r) with
+            match remove_dummy pre (r,edos_install u r) with
             |Sat _ as sol ->
                 warning "External and Internal Solver do not agree." ; sol
             |sol -> sol end
