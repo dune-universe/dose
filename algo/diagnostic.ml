@@ -262,8 +262,8 @@ let build_explanation_graph ?(addmissing=false) root l =
               ) [] vpkgs
             in
             (* we add this node if a package depends disjuctively on one
-               or more packages that exists in the repository, but are not
-               installable, and one that do not exists in the repository. For
+               or more packages that exist in the repository, but are not
+               installable, and one that do not exist in the repository. For
                the latter we add a missing node to the graph. *)
             if List.length missingvpkgs > 0 then begin
               let vp = G.V.create (PkgV.Missing missingvpkgs) in incr c;
