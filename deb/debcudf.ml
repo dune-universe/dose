@@ -224,12 +224,16 @@ let get_cudf_version tables (package,version) =
   end
 
 let get_real_name name = 
-  (* Remove --virtual- and architecture encoding *)
+  (* Remove --virtual(--versioned)- and architecture encoding *)
   let dn = (CudfAdd.decode name) in
   let no_virtual =
     if ExtString.String.starts_with dn "--vir"
-    then ExtString.String.slice ~first:10 dn
-    else dn
+    then begin
+      let maybe_versioned = ExtString.String.slice ~first:10 dn in
+      if ExtString.String.starts_with maybe_versioned "-ver"
+      then ExtString.String.slice ~first:11 maybe_versioned
+      else maybe_versioned
+    end else dn
   in
   try
     let (n,a) = ExtString.String.split no_virtual ":" in
@@ -260,35 +264,21 @@ let loadl ?native_arch ?package_arch tables l =
   List.flatten (
     List.map (fun ((name,_) as vpkgname,constr) ->
       let encname = add_arch_info ?native_arch ?package_arch vpkgname in
-      match constr with
-      |None ->
+      let (virt_prefix, constr) =
+        match constr with
+        |None ->
           (* Versioned virtual packages will satisfiy non versioned dependencies *)
-          if (OcamlHashtbl.mem tables.virtual_table name) then
-            [(encname, None);("--virtual-"^encname,Some(`Eq,Util.max32int - 1))]
-          else
-            [(encname, None)]
-      |Some(op,v) ->
+          ("--virtual-", None)
+        |Some(op,v) ->
           (* Non-versioned virtual packages will not satisfy versioned dependencies. *)
           let op = Pef.Pefcudf.pefcudf_op op in
-          try
-            match SSet.elements !(OcamlHashtbl.find tables.virtual_table name) with
-            |[] -> assert false
-            |l ->
-                let dl = 
-                  List.filter_map (function
-                    |(_,None) -> Some ("--virtual-"^encname,Some(`Eq,Util.max32int))
-                    |(_,Some _) ->
-                        let constr = Some(op,get_cudf_version tables (name,v)) in
-                        Some ("--virtual-"^encname,constr)
-                  ) l
-                in
-                if Util.StringHashtbl.mem tables.unit_table name then
-                  let constr = Some(op,get_cudf_version tables (name,v)) in
-                  (encname,constr)::dl
-                else dl
-          with Not_found -> 
-              let constr = Some(op,get_cudf_version tables (name,v)) in
-              [(encname,constr)]
+          let constr = Some(op,get_cudf_version tables (name,v)) in
+          ("--virtual--versioned-",constr)
+      in
+      if (OcamlHashtbl.mem tables.virtual_table name) then
+        [(encname, constr);(virt_prefix^encname,constr)]
+      else
+        [(encname, constr)]
     ) l
   )
 
@@ -308,12 +298,13 @@ let loadlp ?native_arch ?package_arch tables l =
   List.flatten (
     List.map (fun ((name,_) as vpkgname,constr) ->
         let encname = add_arch_info ?native_arch ?package_arch vpkgname in
-        let vencname = "--virtual-"^encname in 
+        let vencname = "--virtual-"^encname in
+        let vvencname = "--virtual--versioned-"^encname in
         match constr with
         |None -> [(vencname,Some(`Eq,Util.max32int - 1))]
         |Some("=",v) ->
           let constr = Some(`Eq,get_cudf_version tables (name,v)) in
-          [(vencname,constr);(vencname,Some(`Eq,Util.max32int - 1))]
+          [(vvencname,constr);(vencname,Some(`Eq,Util.max32int - 1))]
       |_ -> fatal "This should never happen : a provide can be either = or unversioned"
     ) l
   )

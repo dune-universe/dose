@@ -926,17 +926,17 @@ let test_sources2packages =
       unversioned   |        (<= 10)       | unsat | unsat
       unversioned   |        (>= 20)       | unsat | unsat
 --------------------+----------------------+-------+-------
-        (= 10)      |      unversioned     | sat   | unsat  ***
+        (= 10)      |      unversioned     | sat   | sat
         (= 10)      |        (= 20)        | unsat | unsat
         (= 10)      |        (<= 10)       | sat   | sat
         (= 10)      |        (>= 20)       | unsat | unsat
 --------------------+----------------------+-------+-------
-        (= 20)      |      unversioned     | sat   | unsat  ***
+        (= 20)      |      unversioned     | sat   | sat
         (= 20)      |        (= 20)        | sat   | sat
         (= 20)      |        (<= 10)       | unsat | unsat
         (= 20)      |        (>= 20)       | sat   | sat
 --------------------+----------------------+-------+-------
-    (= 10) (= 20)   |      unversioned     | sat   | unsat  ***
+    (= 10) (= 20)   |      unversioned     | sat   | sat
     (= 10) (= 20)   |        (= 20)        | sat   | sat
     (= 10) (= 20)   |        (<= 10)       | sat   | sat
     (= 10) (= 20)   |        (>= 20)       | sat   | sat
@@ -944,25 +944,25 @@ let test_sources2packages =
 
  pkgA provides pkgB | pkgC conflicts with pkgB | dpkg  | dose3
 --------------------+--------------------------+-------+-------
-      unversioned   |        unversioned       | unsat |  sat   ***
+      unversioned   |        unversioned       | unsat |  unsat
       unversioned   |          (= 20)          | sat   |  sat
       unversioned   |          (<= 10)         | sat   |  sat
       unversioned   |          (>= 20)         | sat   |  sat
 --------------------+--------------------------+-------+-------
-        (= 10)      |        unversioned       | unsat |  sat   ***
+        (= 10)      |        unversioned       | unsat |  unsat
         (= 10)      |          (= 20)          | sat   |  sat
-        (= 10)      |          (<= 10)         | unsat |  sat   ***
+        (= 10)      |          (<= 10)         | unsat |  unsat
         (= 10)      |          (>= 20)         | sat   |  sat
 --------------------+--------------------------+-------+-------
-        (= 20)      |        unversioned       | unsat |  sat   ***
-        (= 20)      |          (= 20)          | unsat |  sat   ***
+        (= 20)      |        unversioned       | unsat |  unsat
+        (= 20)      |          (= 20)          | unsat |  unsat
         (= 20)      |          (<= 10)         | sat   |  sat
-        (= 20)      |          (>= 20)         | unsat |  sat   ***
+        (= 20)      |          (>= 20)         | unsat |  unsat
 --------------------+--------------------------+-------+-------
-    (= 10) (= 20)   |        unversioned       | unsat |  sat   ***
-    (= 10) (= 20)   |          (= 20)          | unsat |  sat   ***
-    (= 10) (= 20)   |          (<= 10)         | unsat |  sat   ***
-    (= 10) (= 20)   |          (>= 20)         | unsat |  sat   ***
+    (= 10) (= 20)   |        unversioned       | unsat |  unsat
+    (= 10) (= 20)   |          (= 20)          | unsat |  unsat
+    (= 10) (= 20)   |          (<= 10)         | unsat |  unsat
+    (= 10) (= 20)   |          (>= 20)         | unsat |  unsat
 *)
 
 let test_versioned_provides =
