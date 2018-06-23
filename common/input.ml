@@ -42,7 +42,7 @@ let bzip_open_file file =
     with End_of_file -> raise IO.No_more_input
   in
   let read ch s pos len =
-    try Bz2.read ch s pos len 
+    try Bz2.read ch (Bytes.unsafe_to_string s) pos len 
     with End_of_file -> raise IO.No_more_input
   in
   IO.create_in
