@@ -96,7 +96,7 @@ val solve :
    This function is used to "distcheck" a list of packages 
    *)
 val pkgcheck :
-	(Diagnostic.result_int * Diagnostic.request_int -> 'a) option -> 
+	(Diagnostic.result_int * Diagnostic.request_int -> unit) option -> 
 	bool -> solver -> bool array -> int -> 
 		bool
 
